@@ -7,6 +7,7 @@
 local CommonUtil = require("Utils/CommonUtil")
 local CommonDefine = require("Define/CommonDefine")
 local LocDBUtil = require("Utils/LocDBUtil")
+local HashUtil = require("Utils/HashUtil")
 
 local FLOG_WARNING = _G.FLOG_WARNING
 local FDIR_EXISTFILE = _G.FDIR_EXISTFILE
@@ -458,24 +459,44 @@ function LocalizationUtil.GetLocalLocresList()
     return Ret
 end
 
+local function UTGetString(Ctx, Key)
+    local UTGetStrings = _G.UE.TArray(_G.UE.FString)
+    UTGetStrings:Add(Ctx .. "_" .. Key)
+    _G.UE.UKismetStringLibrary.CullArray("U2PM.UTGetString", UTGetStrings)
+    local Value
+    if UTGetStrings:Length() > 1 then Value = UTGetStrings:GetRef(2) end
+    return Value or nil
+end
+
+local function UTAppendStrings(Ctx, Key, Str)
+    _G.UE.UFGameInstance.ExecCmd("U2PM|UTAppendString|" .. Ctx .. "|" .. Key .. "|" .. Str)
+end
+
 ---GetLocalString
 ---@param Str string
 ---@param NameSpace string @命名空间
 ---@param IsFromExcel boolean @是否来源于表格数据
 ---@return string
 function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
+	local needHash = true
 	if type(Str) == "number" then
 		Str = tostring(Str)
+		needHash = false
 	end
 
 	if string.isnilorempty(Str) then
 		return Str
 	end
 
+	local Ctx_ = NameSpace or "c" -- c as common
+	local Key_ = Key or (needHash and string.gsub(HashUtil.BKDRHash(Str),"^%s+", "") or Str)
+
+	local LocalStr = UTGetString(Ctx_, Key_)
+    if LocalStr then return LocalStr end
+
 	Key = Key or Str
 	NameSpace = NameSpace or DefaultLocalizationNameSpace
 
-    local LocalStr = nil
     if IsFromExcel and MapLocDBCfg[NameSpace] then
         -- 语言列
         local Name = CommonUtil.GetCurrentCultureName()
@@ -488,6 +509,11 @@ function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
         LocalStr = LocDBUtil.FindValue(NameSpace, Str, ColumnName)
     else
         LocalStr = UCommonUtil.GetLocalString(Str, Key, NameSpace)
+        if Ctx_ == "u3" and string.isnilorempty(LocalStr) then
+            UTAppendStrings(Ctx_, Key_, Str)
+        else
+            UTAppendStrings(Ctx_, Key_, LocalStr)
+        end
     end
 
     if not string.isnilorempty(LocalStr) then
@@ -522,6 +548,10 @@ function LocalizationUtil.SplitStringPlural(Str)
 	return Ret_1, Ret_2
 end
 
+function LocalizationUtil.U3GetLocalString(Str, Namespace)
+    return LocalizationUtil.GetLocalString(Str, nil, Namespace or "u3", false)
+end
+
 -- LSTR用法和UE4的LOCTEXT_NAMESPACE类似，有两个作用：一个是多语言构建时扫描LSTR参数里的常量，提取到翻译表里，另一个作用是运行时获取翻译后的多语言字符串
 -- 需要翻译的字符串要通过LSTR函数获取，表格里读取的字符已经改成ukey了，不需要通过LSTR获取
 -- 但日志、玩家自定义的名称（玩家名、部队名、聊天内容）、资源路径等不需要翻译的，不要用LSTR
@@ -540,5 +570,6 @@ end
 -- LSTR(Cfg.Name) 新需求改用ukey了, 为了使用方便，对ukey无感知，如果是表需要本地化的字符，不再需要用LSTR
 
 _G.LSTR = LocalizationUtil.GetLocalString
+_G.U3TR = LocalizationUtil.U3GetLocalString
 
 return LocalizationUtil
