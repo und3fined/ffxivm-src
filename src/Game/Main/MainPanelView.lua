@@ -926,7 +926,7 @@ end
 
 function MainPanelView:OnClickAutoFight()
     -- _G.DynamicReloadLuaMgr.BeforeHandleClear()
-    _G.DynamicReloadLuaMgr.ReloadModule('U2pm/U2pmMgr')
+    _G.DynamicReloadLuaMgr.ReloadModule('U2pm/U2pm/U2pmMgr')
     -- _G.DynamicReloadLuaMgr.AfterHandleClear()
     MsgTipsUtil.ShowActiveTips("Module reloaded")
 end
