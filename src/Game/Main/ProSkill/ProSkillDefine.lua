@@ -1,0 +1,90 @@
+
+local ProSkillDefine = {
+}
+
+
+ProSkillDefine.SpectrumIDMap = {
+    PALADIN = 2,
+    WHITEMAGE_MP = 3,
+    WHITEMAGE_HP = 4,
+	BLACKMAGE_SLOT = 5,
+	BLACKMAGE_FIRE = 6,
+	BLACKMAGE_ICE = 7,
+    BARD_1 = 8,
+    BARD_2 = 9,
+    BARD_3 = 10,
+	Eragon_Blue = 12,
+	Eragon_Red = 13,
+	Eragon_Eye = 14,
+	Scholar_CL = 15,
+	Scholar_YX = 16,
+	MONK_FIST = 17,
+	MONK_CHAKRA = 18,
+	BARD_1_1 = 19,
+	BARD_2_1 = 20,
+	BARD_3_1 = 21,
+	BLACKMAGE_SLOT_ADVANCE = 22,
+	Scholar_BlueWing = 23,
+	Ninja_1 = 24,
+	Ninja_2 = 25,
+	Ninja_3 = 26,
+	Ninja_HUD = 27,
+	Summoner = 28,
+	Summoner_Rabbit = 29,
+	Summoner_Dragon = 30,
+	Warrior = 31,
+	PVP = 32,
+	PVP_2k = 32,
+	PVP_3k = 33,
+	PVP_4k = 34,
+}
+
+ProSkillDefine.SpectrumUIBP = {
+	["PALADIN"] = "Main/ProSkill/JobSkillKnight_UIBP",
+	["WHITEMAGE"] = "Main/ProSkill/JobSkillWhiteMage_UIBP",
+	["BARD"] = "Main/ProSkill/JobSkillPoet_UIBP",
+	["BLACKMAGE"] = "Main/ProSkill/JobSkillBlackMage_UIBP",
+	["Eragon"] = "Main/ProSkill/JobSkillEragon_UIBP",
+	["MONK"] = "Main/ProSkill/JobSkillMonk_UIBP",
+	["Scholar"] = "Main/ProSkill/JobSkillScholar_UIBP",
+	["Ninja"] = "Main/ProSkill/JobSkillNinja_UIBP",
+	["Warrior"] = "Main/ProSkill/JobSkillWarrior_UIBP",
+	["Summoner"] = "Main/ProSkill/JobSkillSummoner_UIBP",
+}
+
+ProSkillDefine.UIViewIDPair = {
+	[ProSkillDefine.SpectrumIDMap.PALADIN] = ProSkillDefine.SpectrumUIBP.PALADIN,
+	[ProSkillDefine.SpectrumIDMap.WHITEMAGE_HP] = ProSkillDefine.SpectrumUIBP.WHITEMAGE,
+	[ProSkillDefine.SpectrumIDMap.WHITEMAGE_MP] = ProSkillDefine.SpectrumUIBP.WHITEMAGE,
+	[ProSkillDefine.SpectrumIDMap.BARD_1] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BARD_2] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BARD_3] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BLACKMAGE_SLOT] = ProSkillDefine.SpectrumUIBP.BLACKMAGE,
+	[ProSkillDefine.SpectrumIDMap.BLACKMAGE_FIRE] = ProSkillDefine.SpectrumUIBP.BLACKMAGE,
+	[ProSkillDefine.SpectrumIDMap.BLACKMAGE_ICE] = ProSkillDefine.SpectrumUIBP.BLACKMAGE,
+	[ProSkillDefine.SpectrumIDMap.Eragon_Eye] = ProSkillDefine.SpectrumUIBP.Eragon,
+	[ProSkillDefine.SpectrumIDMap.Eragon_Blue] = ProSkillDefine.SpectrumUIBP.Eragon,
+	[ProSkillDefine.SpectrumIDMap.Eragon_Red] = ProSkillDefine.SpectrumUIBP.Eragon,
+	[ProSkillDefine.SpectrumIDMap.MONK_FIST] = ProSkillDefine.SpectrumUIBP.MONK,
+	[ProSkillDefine.SpectrumIDMap.MONK_CHAKRA] = ProSkillDefine.SpectrumUIBP.MONK,
+	[ProSkillDefine.SpectrumIDMap.Scholar_CL] = ProSkillDefine.SpectrumUIBP.Scholar,
+	[ProSkillDefine.SpectrumIDMap.Scholar_YX] = ProSkillDefine.SpectrumUIBP.Scholar,
+	[ProSkillDefine.SpectrumIDMap.BARD_1_1] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BARD_2_1] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BARD_3_1] = ProSkillDefine.SpectrumUIBP.BARD,
+	[ProSkillDefine.SpectrumIDMap.BLACKMAGE_SLOT_ADVANCE] = ProSkillDefine.SpectrumUIBP.BLACKMAGE,
+	[ProSkillDefine.SpectrumIDMap.Scholar_BlueWing] = ProSkillDefine.SpectrumUIBP.Scholar,
+	[ProSkillDefine.SpectrumIDMap.Ninja_1] = ProSkillDefine.SpectrumUIBP.Ninja,
+	[ProSkillDefine.SpectrumIDMap.Ninja_2] = ProSkillDefine.SpectrumUIBP.Ninja,
+	[ProSkillDefine.SpectrumIDMap.Ninja_3] = ProSkillDefine.SpectrumUIBP.Ninja,
+	[ProSkillDefine.SpectrumIDMap.Ninja_HUD] = ProSkillDefine.SpectrumUIBP.Ninja,
+	[ProSkillDefine.SpectrumIDMap.Warrior] = ProSkillDefine.SpectrumUIBP.Warrior,
+	[ProSkillDefine.SpectrumIDMap.Summoner_Dragon] = ProSkillDefine.SpectrumUIBP.Summoner,
+	[ProSkillDefine.SpectrumIDMap.Summoner_Rabbit] = ProSkillDefine.SpectrumUIBP.Summoner,
+	[ProSkillDefine.SpectrumIDMap.Summoner] = ProSkillDefine.SpectrumUIBP.Summoner,
+	-- [ProSkillDefine.SpectrumIDMap.PVP] = ProSkillDefine.SpectrumUIBP.PALADIN,
+}
+
+ProSkillDefine.UseSkillNotSummonTipsIDList = {106034, 106036}
+
+return ProSkillDefine

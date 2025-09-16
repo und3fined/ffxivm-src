@@ -1,0 +1,3 @@
+local CameraSettingsUtil = {}
+
+return CameraSettingsUtil

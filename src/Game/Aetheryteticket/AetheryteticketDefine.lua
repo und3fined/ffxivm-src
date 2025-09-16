@@ -1,0 +1,7 @@
+
+
+local AetheryteticketDefine = {
+
+}
+
+return AetheryteticketDefine;
