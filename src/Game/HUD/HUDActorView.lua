@@ -542,14 +542,7 @@ function HUDActorView:OnArmyShortNameChanged(NewValue, OldValue)
 		return
 	end
 
-	if string.isnilorempty(NewValue) then
-		UHUDMgr:SetVisible(self.TextArmyShortName, false)
-	else
-		UHUDMgr:SetVisible(self.TextArmyShortName, true)
-		UHUDMgr:SetText(self.TextArmyShortName, CommonUtil.GetTextFromStringWithSpecialCharacter(" <10006>" .. NewValue .. "<10007>"))
-	end
-
-	self:UpdateLayout()
+	UHUDMgr:SetVisible(self.TextArmyShortName, false)
 end
 
 function HUDActorView:OnInteractiveTargetVisibleChanged(NewValue, OldValue)

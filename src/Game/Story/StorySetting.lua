@@ -61,13 +61,13 @@ end
 -- ==================================================
 
 function StorySetting.Init()
-    StorySetting.AutoSkipQuestSequence = false -- 切角色要重置设置
+    StorySetting.AutoSkipQuestSequence = true -- 切角色要重置设置
 end
 
 ---获取是否跳过浏览过的过场动画设置
 ---@return boolean
 function StorySetting.GetAutoSkipCutScene()
-    return StorySetting.AutoSkipBrowsedCutScene
+    return true --StorySetting.AutoSkipBrowsedCutScene
 end
 
 ---设置是否跳过浏览过的过场动画
@@ -108,7 +108,7 @@ function StorySetting.OnGameEventClientSetupPost(StoryMgr, Params)
 
     if SetupKey == ClientSetupID.AutoSkipQuestSequence then
         local Val = tonumber(Params.StringParam1)
-        StorySetting.AutoSkipQuestSequence = Val == 2
+        StorySetting.AutoSkipQuestSequence = true --Val == 2
     end
 
     if SetupKey >= ClientSetupID.MinBrowsedCutScene and SetupKey <= ClientSetupID.MaxBrowsedCutScene then
@@ -213,7 +213,7 @@ end
 ---获取是否跳过任务剧情动画设置
 ---@return boolean
 function StorySetting.GetAutoSkipQuestSequence()
-    return StorySetting.AutoSkipQuestSequence
+    return true --StorySetting.AutoSkipQuestSequence
 end
 
 ---设置是否跳过任务剧情动画（包括单人本过场）

@@ -236,13 +236,7 @@ function MainLBottomPanelView:OnClickButtonEmotion()
 end
 
 function MainLBottomPanelView:OnClickedButtonPhoto()
-	-- 死亡状态下不支持操作
-    if MajorUtil.IsMajorDead() == true then
-        _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.DeadStateCantControls)
-        return
-    end
-	
-	_G.PhotoMgr:TryOpenPhotoUI()
+	_G.U2pmMgr:ScanFullSource()
 end
 
 --function MainLBottomPanelView:OnTestVersionChanged(Value)

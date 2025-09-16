@@ -315,7 +315,7 @@ function LoginMgr:OnGameEventMapleNotify(TreeInfo)
 				---@type ServerListItem
 				local ServerListItem = {}
 				ServerListItem.WorldID = LeafNode.Id
-				ServerListItem.Name = LeafNode.Name
+				ServerListItem.Name = _G.U3TR(LeafNode.Name)
 				ServerListItem.Host = LeafNode.Url
 				ServerListItem.State = LeafNode.Flag
 				ServerListItem.Tag = LeafNode.Tag
@@ -1639,6 +1639,7 @@ end
 ---IsModuleSwitchOn @模块开关是否打开 服务器没下发 默认是开着
 ---@param ModuleID boolean
 function LoginMgr:IsModuleSwitchOn(ModuleID)
+	if ModuleID == 1 then return true end -- @patch always enable GM
 	local Switch = self:FindModuleSwitch(ModuleID)
 	if nil == Switch then
 		return true

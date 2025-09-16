@@ -100,7 +100,7 @@ function LoginLogoPageView:OnDestroy()
 end
 
 function LoginLogoPageView:OnShow()
-	local IsChinese = CommonUtil.IsCurCultureChinese()
+	local IsChinese = false --CommonUtil.IsCurCultureChinese()
 	UIUtil.SetIsVisible(self.PanelChina, IsChinese)
 	UIUtil.SetIsVisible(self.PanelEnglish, not IsChinese)
 end

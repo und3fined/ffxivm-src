@@ -45,6 +45,7 @@ function PreRealStart.OnPreRealStart()
     
     local USaveMgr = _G.UE.USaveMgr
     local USettingUtil = _G.UE.USettingUtil
+    USettingUtil.ExeCommand("crashsight.close", 1, 0x09000000) -- @patch crashsight
 
     local LastFxaa = USaveMgr.GetInt(SaveKey.Fxaa, DefauleValueNotSave, false)
     local FxaaToSet = 0

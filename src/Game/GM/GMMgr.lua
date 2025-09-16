@@ -115,6 +115,7 @@ function GMMgr:OnRegisterGameEvent()
 end
 
 function GMMgr:OnBegin()
+    _G.UE.UFGameInstance.ExecCmd("U2PM|hello world")
 end
 
 function GMMgr:OnEnd()

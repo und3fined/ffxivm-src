@@ -166,7 +166,7 @@ function LoginMapleVM:InitServerData(TreeInfo)
             ---@type ServerListItem
             local ServerListItem = {
                 WorldID = LeafNode.Id,
-                Name = LeafNode.Name,
+                Name = _G.U3TR(LeafNode.Name),
                 Host = LeafNode.Url,
                 State = LeafNode.Flag,
                 Index = #ServerList + 1,

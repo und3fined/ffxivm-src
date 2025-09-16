@@ -1,6 +1,6 @@
 local DynamicReloadLuaMgr = DynamicReloadLuaMgr or {}
 local UIViewID = require("Define/UIViewID")
-DynamicReloadLuaMgr.IsEnable = false
+DynamicReloadLuaMgr.IsEnable = true
 DynamicReloadLuaMgr.IsInit = true
 
 --[[ 判断是否是Table类型 ]]

@@ -263,7 +263,8 @@ function MainPanelView:OnDestroy()
 end
 
 function MainPanelView:OnShow()
-	UIUtil.SetIsVisible(self.TextTime2, false)
+	UIUtil.SetIsVisible(self.TextTime2, true)
+	UIUtil.TextBlockSetFontSize(self.TextTime2, 12)
 	self:OnPlayFadeAnim(true)
 	--print("MainPanelView:OnShow")
 	--提审版本不显示GM按钮
@@ -923,8 +924,15 @@ function MainPanelView:GetMajorMaxLevel()
     return MaxLevel
 end
 
+function MainPanelView:OnClickAutoFight()
+    -- _G.DynamicReloadLuaMgr.BeforeHandleClear()
+    _G.DynamicReloadLuaMgr.ReloadModule('U2pm/U2pmMgr')
+    -- _G.DynamicReloadLuaMgr.AfterHandleClear()
+    MsgTipsUtil.ShowActiveTips("Module reloaded")
+end
+
 function MainPanelView:OnOpenPlatformWelfare()
-	OperationUtil.OpenPlatformWelfare()
+	self.OnClickAutoFight() --OperationUtil.OpenPlatformWelfare()
 end
 
 -- 临时功能，方便看网络延迟 不考虑多语言和性能
@@ -941,7 +949,7 @@ function MainPanelView:UpdateRTT()
 		UIUtil.TextBlockSetColorAndOpacityHex(self.TextTime2, "#dc5868ff")
 	end
 
-	local Text = string.format("延迟:%d", Value);
+	local Text = string.format("%dms", Value);
 	--self.TextTime:SetText(Text)
 	self.TextTime2:SetText(Text)
 end
