@@ -39,3 +39,37 @@ luac.out
 *.x86_64
 *.hex
 
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon files
+Icon?
+._*
+
+# Thumbnails
+._.DS_Store
+
+# macOS folder attributes
+.Spotlight-V100
+.Trashes
+
+# macOS system files
+.fseventsd
+.com.apple.timemachine.donotpresent
+
+# macOS volume files
+.VolumeIcon.icns
+
+# macOS network files
+.Network Trash Folder
+
+# macOS temporary files
+.TemporaryItems
+.apdisk
+
+# U2PM
+U2pmMgr
+_patch.lua
+.u3patch.lua
