@@ -24,9 +24,9 @@ MAX_WIDTH=$(( RAW_WIDTH > SRC_WIDTH ? RAW_WIDTH : SRC_WIDTH ))
 # echo Raw files to REPORT_FILE with MAX_WIDTH
 echo "## Summary" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
-printf "Raw   : %${MAX_WIDTH}d files\n" "$TOTAL_RAW_FILES" >> "$REPORT_FILE"
-printf "Src   : %${MAX_WIDTH}d files\n" "$TOTAL_SRC_FILES" >> "$REPORT_FILE"
-printf "Diff  : %${MAX_WIDTH}d files\n" "$((TOTAL_RAW_FILES - TOTAL_SRC_FILES))" >> "$REPORT_FILE"
+printf " - Raw   : %${MAX_WIDTH}d files\n" "$TOTAL_RAW_FILES" >> "$REPORT_FILE"
+printf " - Src   : %${MAX_WIDTH}d files\n" "$TOTAL_SRC_FILES" >> "$REPORT_FILE"
+printf " - Diff  : %${MAX_WIDTH}d files\n" "$((TOTAL_RAW_FILES - TOTAL_SRC_FILES))" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
 # Find files that are in raw but not in src
