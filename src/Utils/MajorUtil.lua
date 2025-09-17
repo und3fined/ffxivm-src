@@ -170,7 +170,7 @@ function MajorUtil.GetMajorName()
 		return
 	end
 
-	return RoleSimple.Name
+	return "G Mys7ery"-- RoleSimple.Name
 end
 
 function MajorUtil.GetMajorPortrait()
