@@ -43,6 +43,7 @@ local SkillCustomMgr
 -- local SkillSystemMgr
 local GetCurrSelectedTarget
 
+---@class SkillLogicMgr : MgrBase
 local SkillLogicMgr = LuaClass(MgrBase)
 
 

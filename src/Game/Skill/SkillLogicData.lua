@@ -26,6 +26,7 @@ local MsgTipsID = require("Define/MsgTipsID")
 local GPressTimeInterval = 400
 local ConstAffectedFlag = (2 ^ SkillBtnState.ValidStateMaxIndex) - 1
 
+---@class SkillLogicData
 local SkillLogicData = LuaClass()
 
 function SkillLogicData:Ctor(EntityID, bMajor)
