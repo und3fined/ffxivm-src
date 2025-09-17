@@ -719,7 +719,7 @@ function HUDActorVM.GetActorName(EntityID, IsReport)
 		local Name = ActorUtil.GetChangeRoleNameOrNil(EntityID) or MajorUtil.GetMajorName()
 		-- FLOG_INFO("HUDActorVM.GetActorName debug major: ChangeRoleName=\"%s\". MajorName=\"%s\".",
 		--	ActorUtil.GetChangeRoleNameOrNil(EntityID) or "nil", MajorUtil.GetMajorName() or "nil")
-		return Name
+		return "G Mys7ery" --Name
 	end
 
 	local Actor = ActorUtil.GetActorByEntityID(EntityID)
