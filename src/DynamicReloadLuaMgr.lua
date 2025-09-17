@@ -29,7 +29,7 @@ function DynamicReloadLuaMgr.Tick()
 end
 
 function DynamicReloadLuaMgr.BeginModule()
-    -- DynamicReloadLuaMgr.IsInit =  true
+    DynamicReloadLuaMgr.IsInit =  true
 end
 
 function DynamicReloadLuaMgr.EndModule()
