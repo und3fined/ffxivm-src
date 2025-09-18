@@ -925,10 +925,22 @@ function MainPanelView:GetMajorMaxLevel()
 end
 
 function MainPanelView:OnClickAutoFight()
-    -- _G.DynamicReloadLuaMgr.BeforeHandleClear()
-    _G.DynamicReloadLuaMgr.ReloadModule('U2pm/U2pm/U2pmMgr')
-    -- _G.DynamicReloadLuaMgr.AfterHandleClear()
-    MsgTipsUtil.ShowActiveTips("Module reloaded")
+  if _G.DynamicReloadLuaMgr ~= nil then
+    MsgTipsUtil.ShowActiveTips("Reload modules")
+    local gameStartTime = _G.U2pmMgr:GetGameStartTime()
+    if gameStartTime == nil then
+      gameStartTime = 0
+    end
+    
+    local count = _G.DynamicReloadLuaMgr.ReloadU2pm(gameStartTime)
+    if count > 0 then
+      MsgTipsUtil.ShowActiveTips(string.format("Reloaded %d modules", count))
+    else
+      MsgTipsUtil.ShowActiveTips("No modules changed")
+    end
+  else
+    MsgTipsUtil.ShowActiveTips("Missing Dynamic module or not enabled")
+  end
 end
 
 function MainPanelView:OnOpenPlatformWelfare()
