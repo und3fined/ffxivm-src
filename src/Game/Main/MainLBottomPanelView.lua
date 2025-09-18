@@ -236,7 +236,7 @@ function MainLBottomPanelView:OnClickButtonEmotion()
 end
 
 function MainLBottomPanelView:OnClickedButtonPhoto()
-	_G.U2pmMgr:ScanFullSource()
+	_G.U2pmMgr:ToggleAutoFight()
 end
 
 --function MainLBottomPanelView:OnTestVersionChanged(Value)
