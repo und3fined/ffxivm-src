@@ -14,10 +14,12 @@ end
 
 DynamicReloadLuaMgr.CheckFolder = {
     "Game",
+    "U2pm"
 }
 
 
 function DynamicReloadLuaMgr.Init()
+    
 end
 
 function DynamicReloadLuaMgr.Shutdown()
@@ -175,7 +177,7 @@ function DynamicReloadLuaMgr.GetFileName(FilePath)
 end
 
 function DynamicReloadLuaMgr.ReloadModule(module_name)
-    print("DynamicReloadLuaMgr.ReloadModule Start:", module_name)
+    print("DynamicReloadLuaMgr.ReloadModule Start====:",module_name)
     local old_module = package.loaded[module_name]
     if old_module == nil then
         print("DynamicReloadLuaMgr.ReloadModule module not found:",module_name)
@@ -223,28 +225,77 @@ function DynamicReloadLuaMgr.ReloadBaseModule(module_path)
     end
 end
 
-function DynamicReloadLuaMgr.ReloadU2pm(baseTimestamp)
-  local UPathMgr = _G.UE.UPathMgr
-  local projDir = _G.UE.UKismetSystemLibrary.GetProjectDirectory() -- ../../../FGame/
-  local U2pmPath = string.format("%sSource/Script/U2pm", projDir)
-  print("DynamicReloadLuaMgr.ReloadU2pm U2pmPath:", U2pmPath, " GameStartAt:", baseTimestamp)
+-- function DynamicReloadLuaMgr.TestGetFileName()
 
-  -- list all files in U2pmPath
-  local FileList = UPathMgr.GetFileList(U2pmPath, ".lua", true)
-  local changeCount = 0
-  for numb, File in pairs(FileList) do
-    local lastChangeAt = UPathMgr.GetFileLastModificationTime(File)
-    local filePath = DynamicReloadLuaMgr.NormalizePathStr(File , "/U2pm/")
+--     local module_name = "UMG/ViewModel/Cook/CookViewModel"
+--     local res = DynamicReloadLuaMgr.GetFileName(module_name)
+--     print("UDynamicReloadLuaModule res = "..res)
 
-    if lastChangeAt > baseTimestamp then
-      changeCount = changeCount + 1
-      DynamicReloadLuaMgr.ReloadModule(filePath)
-    end
-  end
-  
-  print("DynamicReloadLuaMgr.ReloadU2pm changeCount:", changeCount)
-  return changeCount
-end
+-- end
+
+-- function DynamicReloadLuaMgr.TestLoadModule()
+
+
+--     local Old1 = require("UMG/ViewModel/Cook/CookViewModel")
+--     DynamicReloadLuaMgr.Old2 = require("UMG/ViewModel/Cook/CookViewModel")
+--     Old1.TestValue = 10
+    
+
+--     print("Old2 TestValue "..DynamicReloadLuaMgr.Old2.TestValue)
+
+-- end
+
+-- function DynamicReloadLuaMgr.TestLoadModule2()
+
+--     local module_name = "UMG/ViewModel/Cook/CookViewModel"
+--     --[[local OldModule = package.loaded[module_name]
+   
+--     package.loaded[module_name] = nil
+--     local NewModule = require(module_name)
+
+--     for k, v in pairs(NewModule) do
+--         OldModule[k] = v
+--     end]]
+--     DynamicReloadLuaMgr.ReloadModule(module_name)
+    
+--     --DynamicReloadLuaMgr.Old2 = require("UMG/ViewModel/Cook/CookViewModel")
+--     print("Old2 TestValue "..DynamicReloadLuaMgr.Old2.TestValue)
+--     --print("Old TestValue "..OldModule.TestValue)
+-- end
+
+-- function DynamicReloadLuaMgr.TestBaseModule3()
+    
+--     local module_path = "BaseModule/PowerSaveMgr/TestLoadModule"
+--     local module_name = "TestLoadModule"
+
+--     --require(module_path)
+--     local old_module = _G[module_name]
+--     local CollectUpVaue = {}
+--     local CollectFunc = {}
+--     local CollectVar = DynamicReloadLuaMgr.CollectModuleVar(old_module , CollectUpVaue)
+    
+--     --_G[module_name] = nil
+--     package.loaded[module_path] = nil
+--     require(module_path)
+--     local new_module = _G[module_name]
+--     if new_module and IsTable(new_module) then
+        
+--         for k, v in pairs(new_module) do
+
+--             if CollectVar[k] then
+--                 new_module[k] = CollectVar[k]
+--             elseif type(v) == "function" then
+--                 DynamicReloadLuaMgr.UpdateUpValue(v, CollectUpVaue[k])
+--                 CollectFunc[k] = v
+--             end
+--         end
+        
+--     end
+
+--     print("DynamicReloadLuaMgr new_module TestValue" , new_module.TestValue)
+--     new_module:Print()
+-- end
+
 
 function DynamicReloadLuaMgr.CollectModuleVar(module , CollectUpVaue)
 
