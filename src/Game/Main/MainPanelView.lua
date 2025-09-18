@@ -938,6 +938,8 @@ function MainPanelView:OnClickAutoFight()
     else
       MsgTipsUtil.ShowActiveTips("No modules changed")
     end
+    
+    _G.U2pmMgr:RefreshGameStartTime()
   else
     MsgTipsUtil.ShowActiveTips("Missing Dynamic module or not enabled")
   end
