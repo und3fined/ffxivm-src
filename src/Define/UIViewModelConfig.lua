@@ -17,7 +17,6 @@
 
 ---@class UIViewModelConfig
 local UIViewModelConfig = {
-	{ Name = "U2pmVM", 				Life = "Game", Priority = 2000, 		Path = "U2pm/U2pm/U2pmVM" },
 	{ Name = "SampleVM", 				Life = "Game", Priority = 2000, 		Path = "Game/Sample/SampleVM" },
 	{ Name = "LoginRoleMainPanelVM", 	Life = "Game", Priority = 2000, 		Path = "Game/LoginRole/LoginRoleMainPanelVM" },
 	{ Name = "LoginRoleRaceGenderVM", 	Life = "Game", Priority = 2000, 		Path = "Game/LoginRole/LoginRoleRaceGenderVM" },
