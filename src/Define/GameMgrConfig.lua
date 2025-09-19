@@ -18,8 +18,6 @@
 ---@class GameMgrConfig
 --modulename(全局表中模块的table名), life, priority, luaPath, tickEnable(true/false)
 GameMgrConfig = GameMgrConfig or {
-    --region U2PM
-    "U2pmMgr",         	    "Game",         1600,       "U2pm/U2pm/U2pmMgr",                                false,
     -- Game
     "SampleMgr",         	"Game",         1600,       "Game/Sample/SampleMgr",                                false,
     "EventMgr",         	"Game",         1600,       "Event/EventMgr",                                       true,
