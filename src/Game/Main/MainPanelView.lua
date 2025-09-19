@@ -892,7 +892,7 @@ function MainPanelView:ShowWelfareEntrance()
 		if nil ~= Cfg and Cfg.IsEnableWeChatWelfareEntrance == 0 then
 			UIUtil.SetIsVisible(self.BtnWelfare, false)
 		else
-			self.TextWelfare:SetText(_G.LSTR(100066))
+			self.TextWelfare:SetText("Dump")
 			UIUtil.SetIsVisible(self.BtnWelfare, true, true)
 		end
 	elseif _G.LoginMgr:IsQQLogin() then
@@ -924,29 +924,13 @@ function MainPanelView:GetMajorMaxLevel()
     return MaxLevel
 end
 
-function MainPanelView:OnClickAutoFight()
-  if _G.DynamicReloadLuaMgr ~= nil then
-    MsgTipsUtil.ShowActiveTips("Reload modules")
-    local gameStartTime = _G.U2pmMgr:GetGameStartTime()
-    if gameStartTime == nil then
-      gameStartTime = 0
-    end
-    
-    local count = _G.DynamicReloadLuaMgr.ReloadU2pm(gameStartTime)
-    if count > 0 then
-      MsgTipsUtil.ShowActiveTips(string.format("Reloaded %d modules", count))
-    else
-      MsgTipsUtil.ShowActiveTips("No modules changed")
-    end
-    
-    _G.U2pmMgr:RefreshGameStartTime()
-  else
-    MsgTipsUtil.ShowActiveTips("Missing Dynamic module or not enabled")
-  end
-end
-
 function MainPanelView:OnOpenPlatformWelfare()
-	self.OnClickAutoFight() --OperationUtil.OpenPlatformWelfare()
+  local U2pmMgr = _G.U2.U2pmMgr
+  if U2pmMgr ~= nil then -- export module
+    U2pmMgr:ScanFullSource()
+  else
+    ChatMgr:AddSysChatMsg("Mising U2pmMgr module")
+  end
 end
 
 -- 临时功能，方便看网络延迟 不考虑多语言和性能
