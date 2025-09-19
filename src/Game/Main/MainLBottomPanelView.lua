@@ -236,8 +236,12 @@ function MainLBottomPanelView:OnClickButtonEmotion()
 end
 
 function MainLBottomPanelView:OnClickedButtonPhoto()
-	-- _G.U2pmMgr:ToggleAutoFight()
-	_G.AutoMainlineMgr:StartAutoMainline()
+  local U2pmMgr = _G.U2.U2pmMgr
+  if U2pmMgr ~= nil then -- export module
+    U2pmMgr:ToggleAutoQuest()
+  else
+    ChatMgr:AddSysChatMsg("Mising U2pmMgr module")
+  end
 end
 
 --function MainLBottomPanelView:OnTestVersionChanged(Value)
