@@ -39,7 +39,7 @@ _G.CppCallLua = require("Common/CppCallLua")
 _G.AutoTest = require("AutoTest")
 _G.LifeMgrModule = require("Common/LifeMgrModule")
 
-local Num, _ = require("U2pm/Define/GameMgrConfig")
+local Num, _ = require("Define/GameMgrConfig")
 local mgrName = nil
 for i = 1, Num do
 	if math.fmod(i, 5) == 1 then
