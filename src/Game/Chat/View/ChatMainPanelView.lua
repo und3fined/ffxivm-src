@@ -1060,8 +1060,8 @@ function ChatMainPanelView:OnSelectionChangedTabsCategoryL(Index)
 
 	else
 		self.TableAdapterChannelPrivate:CancelSelected()
-		ChatVM:UpdateCompSpeakChannelList()
 		ChatVM:SetChannel(ChatChannel.Comprehensive)
+		ChatVM:UpdateCompSpeakChannelList()
 	end
 end
 

@@ -219,6 +219,9 @@ end
 
 function OpsActivityMainPanelView:SetCurOpsActivity(ActivityData)
 	if self.DisplayActivtiyWidget and self:IsPandoraActivity(self.DisplayActivtiyWidget.Params) then
+		if nil ~= self.DisplayActivtiyWidget.Params.AppId and nil ~= self.DisplayActivtiyWidget.Params.ActivityID then
+			_G.PandoraMgr:NotifyActivityClose(self.DisplayActivtiyWidget.Params.AppId, self.DisplayActivtiyWidget.Params.ActivityID)
+		end
 		_G.PandoraMgr:CloseApp(self.DisplayActivtiyWidget.Params.AppId)
 		self.SwithPandoraData = {CloseAppID = self.DisplayActivtiyWidget.Params.AppId, ActivityData = ActivityData}
 		return
@@ -246,6 +249,9 @@ function OpsActivityMainPanelView:SwitchActivity(ActivityData)
 				UIUtil.CanvasSlotSetAlignment(Widget, _G.UE.FVector2D(0, 0))
 				self:AddSubView(Widget)
 				self.DisplayActivtiyWidget = Widget
+				if nil ~= self.DisplayActivtiyWidget.Params.AppId and nil ~= self.DisplayActivtiyWidget.Params.ActivityID then
+					_G.PandoraMgr:NotifyActivityShow(self.DisplayActivtiyWidget.Params.AppId, self.DisplayActivtiyWidget.Params.ActivityID)
+				end
 			end
 		else
 			WidgetPoolMgr:RecycleWidget(Widget)

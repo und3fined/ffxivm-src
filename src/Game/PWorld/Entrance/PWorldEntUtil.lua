@@ -442,6 +442,27 @@ function PWorldEntUtil.MatchCheck()
     end
 end
 
+function PWorldEntUtil.PVPMatchCheck(EntType)
+    local PWorldMatchMgr = _G.PWorldMatchMgr
+    local MatchCnt = PWorldMatchMgr:GetMatchItemCnt()
+
+    local IsPVP = PWorldEntUtil.IsPVP(EntType)
+    if IsPVP then
+        local NoMatch = MatchCnt == 0
+        local NoChoco = PWorldMatchMgr:GetMatchChocoboEntID() == -1
+        if NoMatch and NoChoco then
+            local PVPMatchCnt = PWorldMatchMgr:GetCrystallineItemCnt() + PWorldMatchMgr:GetFrontlineItemCnt()
+            if PVPMatchCnt < PWorldEntDefine.PVPMatchMaxCnt then
+                return true
+            else
+                return false, MatchTestRlt.PVPMatchOverflow
+            end
+        else
+            return false, MatchTestRlt.PoolTypePVPMutex
+        end
+    end
+end
+
 -- 默认副本模式
 function PWorldEntUtil.GetRandDefaultMode()
     return SceneMode.SceneModeNormal
@@ -513,14 +534,9 @@ function PWorldEntUtil.IsPrettyHardEntranceJoinable(EntID)
        return false
     end
 
-    local Level = GetPrettyHardPriority(Cfg)
-    if Level == 1 then
-       return true
-    end
-
-    local PreCfg =  SceneEnterCfg:FindCfg(string.sformat("ZeroFormPriority = %s", Level - 1)) 
+    local PreCfg =  SceneEnterCfg:FindCfgByKey(Cfg.PrepassEntID)
     if PreCfg == nil then
-       return false 
+       return true 
     end
 
     return PWorldEntUtil.IsEntancePass(PreCfg.ID), PreCfg.ID

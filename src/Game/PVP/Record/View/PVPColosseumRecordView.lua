@@ -25,7 +25,8 @@ local LSTR = _G.LSTR
 
 ---@class PVPColosseumRecordView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field CommBtnL CommBtnLView
+---@field BtnAgain CommBtnMView
+---@field BtnExit CommBtnMView
 ---@field CommonPopUpBG CommonPopUpBGView
 ---@field IconA1 UFImage
 ---@field IconA2 UFImage
@@ -94,7 +95,8 @@ local PVPColosseumRecordView = LuaClass(UIView, true)
 
 function PVPColosseumRecordView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.CommBtnL = nil
+	--self.BtnAgain = nil
+	--self.BtnExit = nil
 	--self.CommonPopUpBG = nil
 	--self.IconA1 = nil
 	--self.IconA2 = nil
@@ -163,7 +165,8 @@ end
 
 function PVPColosseumRecordView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.CommBtnL)
+	self:AddSubView(self.BtnAgain)
+	self:AddSubView(self.BtnExit)
 	self:AddSubView(self.CommonPopUpBG)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -216,7 +219,8 @@ function PVPColosseumRecordView:OnHide()
 end
 
 function PVPColosseumRecordView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.CommBtnL, self.OnClickedExit)
+	UIUtil.AddOnClickedEvent(self, self.BtnExit, self.OnClickedExit)
+	UIUtil.AddOnClickedEvent(self, self.BtnAgain, self.OnClickedAgain)
 	UIUtil.AddOnClickedEvent(self, self.ToggleBtnSwitch, self.OnClickBtnSwitch)
 
 	UIUtil.AddOnClickedEvent(self, self.IconTeamK1Btn, self.OnClickBtnK, self.IconTeamK1Btn)
@@ -247,6 +251,11 @@ function PVPColosseumRecordView:TimeOutCallback()
 	self:OnClickedExit()
 end
 
+function PVPColosseumRecordView:OnClickedAgain()
+	local CurPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
+	_G.PWorldMatchMgr:SetPVPMatchAgain(CurPWorldResID)
+	_G.PWorldMgr:SendLeavePWorld()
+end
 
 -- 点击图标提示
 function PVPColosseumRecordView:ShowBtnTips(Widget, Content)
@@ -301,7 +310,8 @@ function PVPColosseumRecordView:InitText()
 
 	self.TextReward:SetText(LSTR(810009)) -- "奖励"
 	self.TextRewardTips:SetText(LSTR(810046)) -- "奖励取消"
-	self.CommBtnL:SetText(LSTR(810010)) -- "退出"
+	self.BtnExit:SetText(LSTR(810010)) -- "退出"
+	self.BtnAgain:SetText(LSTR(810052)) -- 继续匹配
 end
 
 -- 初始化队伍红蓝方显示，左边固定是蓝方，右边固定是红方，我方队伍为蓝方

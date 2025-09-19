@@ -39,6 +39,7 @@ local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local BuffUtil = require("Utils/BuffUtil")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local SettingsTabRole = require("Game/Settings/SettingsTabRole")
+local MainPanelConfig = require("Game/Main/MainPanelConfig")
 
 local UAudioMgr = nil
 local MAP_DYNAMIC_DATA_TYPE_DYN_INSTANCE = ProtoCommon.MapDynType.MAP_DYNAMIC_DATA_TYPE_DYN_INSTANCE
@@ -1918,8 +1919,24 @@ function GoldSauserMgr:GetNPCHudIcon(InEntityID)
 end
 
 --- @type 设置收起或者展开游戏信息面板
-function GoldSauserMgr:SetToggleInfoPanel(bVisible)
-    MainPanelVM:SetPlayStyleInfoVisible(bVisible)
+function GoldSauserMgr:SetToggleInfoPanel(InbVisible)
+    if (InbVisible) then
+        local bAirForce = self.Entertain.ID == EntertainGameID.GameIDAirForceOne
+        if (bAirForce) then
+            -- 空军不显示
+            MainPanelVM:SetPlayStyleInfoVisible(false)
+        else
+            if (self:IsCurMapGoldSauserMap() or _G.GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith()) then
+                MainPanelVM:SetFunctionVisible(true, MainPanelConfig.TopRightInfoType.PlayStyleInfo)
+                MainPanelVM:SetPlayStyleInfoVisible(true)
+            else
+                MainPanelVM:SetPlayStyleInfoVisible(false)
+            end
+        end
+
+    else
+        MainPanelVM:SetPlayStyleInfoVisible(false)
+    end
 end
 
 ---------------------------------------------------End-----------------------------------------------

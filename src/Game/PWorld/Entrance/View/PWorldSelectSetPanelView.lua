@@ -863,7 +863,7 @@ function PWorldSelectSetPanelView:Join()
 			end
 		end
 		if PWorldEntUtil.IsCrystallineExercise(PWorldEntDetailVM.SubType) or PWorldEntUtil.IsCrystallineRank(PWorldEntDetailVM.SubType) then
-			if IsInTeam and _G.TeamMgr:IsCaptain() then
+			if IsInTeam then
 				MsgTipsUtil.ShowTipsByID(MsgTipsID.PWorldCrystallineInTeamBan)
 				return
 			end

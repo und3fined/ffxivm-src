@@ -29,6 +29,8 @@ local LightMgr = require("Game/Light/LightMgr")
 local ShopMgr = require("Game/Shop/ShopMgr")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local ActorUtil = require("Utils/ActorUtil")
+local UIViewMgr = require("UI/UIViewMgr")
+local UIViewID = require("Define/UIViewID")
 local EquipmentMgr = _G.EquipmentMgr
 local UCommonUtil = _G.UE.UCommonUtil
 local LSTR = _G.LSTR
@@ -359,7 +361,10 @@ function LegendaryWeaponMainPanelView:OnActive()
 	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and CommonUtil.IsObjectValid(self.SubWeaponActor) then
 		self.SubWeaponActor:HideMasterHand(false)
 	end
-	LightMgr:EnableUIWeather(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_LEGENDARY_WEAPON)
+	if self.IsCraf == true then
+		LightMgr:EnableUIWeather(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_LEGENDARY_WEAPON)
+		self.IsCraf = nil
+	end
 
 	if UCommonUtil.IsObjectValid(self.viewModel.BP_SceneActor) then
 		local CameraMgr = _G.UE.UCameraMgr.Get()
@@ -378,7 +383,11 @@ function LegendaryWeaponMainPanelView:OnInactive()
 	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and CommonUtil.IsObjectValid(self.SubWeaponActor) then
 		self.SubWeaponActor:HideMasterHand(true)
 	end
-	LightMgr:DisableUIWeather()
+	if UIViewMgr:IsViewVisible(UIViewID.CraftingLog) then
+		self.IsCraf = true
+		LightMgr:DisableUIWeather()
+	end
+
 end
 
 function LegendaryWeaponMainPanelView:OnClickedButtonShow()

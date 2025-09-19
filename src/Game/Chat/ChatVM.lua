@@ -110,11 +110,13 @@ local SettingItemSortFunc = function(lhs, rhs)
 end
 
 ---@class ChatVM : UIViewModel
+---@field private WTListMsg table
 local ChatVM = LuaClass(UIViewModel)
 
 ---Ctor
 function ChatVM:Ctor()
 	self.NotShowDeletePrivateMsgTip = false
+	rawset(self, "WTListMsg", setmetatable({}, {__mode = "kv"}))
 end
 
 function ChatVM:OnInit()
@@ -166,7 +168,7 @@ function ChatVM:Reset( IsInit )
 
 	self.ChatMsgItemVMList = nil
 
-	self.NoMsgTipsVisible = false
+	self:SetIsMsgEmpty(false)
 	self.NewMsgTipsCount = 0
 	self.NewMsgTipsVisible = false
 	self.NewMsgTipsText = ""
@@ -493,6 +495,7 @@ function ChatVM:SetChannel(Channel, ChannelID, NoCheckSameChannel)
 	self:UpdateChatInfo(true)
 	self:ClearNewMsgTips()
 	self:ClearRedDotNum()
+	self:UpdateMsgIsEmpty()
 
 	_G.VoiceMgr:StopPlayFiles()
 	_G.VoiceMgr:StopTranslatingVoiceFile()
@@ -578,28 +581,23 @@ function ChatVM:UpdateChatInfo(IsSortMsg)
 	local ChannelVM = self:FindChannelVM(CurChannel, self.CurChannelID)
 	if nil == ChannelVM then
 		self.ChatMsgItemVMList = nil 
-		self.NoMsgTipsVisible = true 
-
 	else
 		if IsSortMsg then
 			ChannelVM:SortMsgVM()
 		end
 
 		self.ChatMsgItemVMList = ChannelVM.BindableListMsg
-
-		local b = BarWidgetVisible
-		if not b then
-			if CurChannel == ChatChannel.Newbie then
-				b = _G.NewbieMgr:IsInNewbieChannel()
-			else
-				b = CurChannel == ChatChannel.Team or CurChannel == ChatChannel.SceneTeam
+		if self.ChatMsgItemVMList then
+			if self.WTListMsg[self.ChatMsgItemVMList] == nil then
+				self.WTListMsg[self.ChatMsgItemVMList] = self.ChatMsgItemVMList
+				self.ChatMsgItemVMList:RegisterUpdateListCallback(self, self.OnChatMsgListUpdate)
+				self.ChatMsgItemVMList:RegisterAddItemsCallback(self, self.OnChatMsgListUpdate)
+				self.ChatMsgItemVMList:RegisterRemoveItemsCallback(self, self.OnChatMsgListUpdate)
 			end
 		end
-
-		self.NoMsgTipsVisible = b and self.ChatMsgItemVMList:Length() <= 0
-
-		self.SendTimeCD = ChannelVM.SendTimeCD
 	end
+
+	self:UpdateMsgIsEmpty()
 end
 
 function ChatVM:UpdateChatBarVisible( )
@@ -744,17 +742,13 @@ function ChatVM:AddChatMsgInternal(ChannelVM, ChatMsg)
 		if Channel == CurChannel and (ChannelID == CurChannelID or ChannelID == 0 or ChannelID == nil) then
 			if MajorUtil.IsMajorByRoleID(Sender) then
 				self.NewMsgTipsCount = 0
-				self.NoMsgTipsVisible = false
 			else
 				self.NewMsgTipsCount = self.NewMsgTipsCount + 1
-				self.NoMsgTipsVisible = false
 			end
 		end
 	end
 
 	if self.UpdateComprehensiveMsg and CurChannel == ChatChannel.Comprehensive then 
-		self.NoMsgTipsVisible = false
-
 		-- 玩家通过综合频道发送消息成功
 		if self.ChatBarWidgetVisible and MajorUtil.IsMajorByRoleID(Sender) then
 			self.MsgScroolToBottom = true
@@ -1223,7 +1217,7 @@ function ChatVM:ClearChannelAllChatMsg(Channel, ChannelID, ShowNoMsgTips)
 		ChannelVM:ClearMsg()
 	end
 
-	self.NoMsgTipsVisible = ShowNoMsgTips ~= false 
+	self:UpdateMsgIsEmpty()
 end
 
 function ChatVM:GetSendCDRemainTime()
@@ -1969,7 +1963,7 @@ end
 
 ---@private
 function ChatVM:OnChatMsgListUpdate()
-	self.MsgDataUpdateCount = self.MsgDataUpdateCount + 1
+	self.MsgDataUpdateCount = (self.MsgDataUpdateCount or 0) + 1
 	self:UpdateMsgIsEmpty()
 end
 

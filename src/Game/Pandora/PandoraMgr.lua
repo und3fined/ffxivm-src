@@ -43,6 +43,8 @@ function PandoraMgr:OnInit()
     self.AnotherAppId = "" --被潘多拉活动打开的其他潘多拉活动
     self.RedDotList = {}
     self.SinkToBottomActivityList = {}
+
+    self.AppList = {}
 end
 
 function PandoraMgr:OnBegin()
@@ -137,6 +139,7 @@ end
 
 function PandoraMgr:IsActivityReady(AppId)
     local IsAppReady = _G.UE.UGameletMgr.Get():IsAppReady(AppId)
+    _G.FLOG_INFO("PandoraMgr:IsActivityReady, AppId:%s, IsAppReady:%s", AppId, tostring(IsAppReady))
 	if nil ~= IsAppReady and IsAppReady == true then
         return true
 	end
@@ -204,6 +207,7 @@ function PandoraMgr:ResetActivitStatus()
     self.HasOpenedFaceSlapApp = false
     self.RedDotList = {}
     self.SinkToBottomActivityList = {}
+    self.AppList = {}
 end
 
 function PandoraMgr:CloseTimer()
@@ -422,7 +426,11 @@ end
 function PandoraMgr:OnRecievedPandoraMsg(Msg)
     local JsonData = Json.decode(Msg)
     if nil ~= JsonData and nil ~= JsonData.type then
-        if JsonData.type == "pandoraShowItemTips" then
+        if JsonData.type == "pandoraShowEntrance" then
+            if not string.isnilorempty(JsonData.appId) then
+                self.AppList[JsonData.appId] = JsonData.appName or ""
+            end
+        elseif JsonData.type == "pandoraShowItemTips" then
             if nil ~= JsonData.itemId and nil ~= JsonData.xPos and nil ~= JsonData.yPos then
                 self:ShowItemDetailTips(tonumber(JsonData.itemId), _G.UE.FVector2D(JsonData.xPos, JsonData.yPos))
             end
@@ -531,6 +539,26 @@ function PandoraMgr:IsOpsActivityOpened(JsonData)
     else
         SendMessage:Add("content", "0")
     end
+    _G.UE.UGameletMgr.Get():SendMessageToApp(SendMessage)
+end
+
+function PandoraMgr:NotifyActivityShow(AppId, ActivityID)
+    _G.FLOG_INFO("PandoraMgr:NotifyActivityShow, AppId: %d, ActivityID: %s", AppId, ActivityID)
+    local SendMessage = _G.UE.TMap(_G.UE.FString, _G.UE.FString)
+    SendMessage:Add("type", "notifyActivityShow")
+    SendMessage:Add("appId", AppId)
+    SendMessage:Add("activityID", ActivityID)
+    SendMessage:Add("appName", self.AppList[AppId] or "")
+    _G.UE.UGameletMgr.Get():SendMessageToApp(SendMessage)
+end
+
+function PandoraMgr:NotifyActivityClose(AppId, ActivityID)
+    _G.FLOG_INFO("PandoraMgr:NotifyActivityClose, AppId: %d, ActivityID: %s", AppId, ActivityID)
+    local SendMessage = _G.UE.TMap(_G.UE.FString, _G.UE.FString)
+    SendMessage:Add("type", "notifyActivityClose")
+    SendMessage:Add("appId", AppId)
+    SendMessage:Add("activityID", ActivityID)
+    SendMessage:Add("appName", self.AppList[AppId] or "")
     _G.UE.UGameletMgr.Get():SendMessageToApp(SendMessage)
 end
 

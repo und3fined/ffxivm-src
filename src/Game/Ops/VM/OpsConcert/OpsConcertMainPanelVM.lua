@@ -116,6 +116,7 @@ function OpsConcertMainPanelVM:InitSocialFriendList(FriendMap)
     self.SocialFriendVMListInfo = {}
     local SocialFriendList = _G.LoginMgr.AllFriendServers
     if nil == SocialFriendList or #SocialFriendList < 1 then
+        self.SocialFriendVMList:Clear()
         self.CallFriendListEmpty = true
         self.MoreBtnIsVisible = false
         return
@@ -148,6 +149,7 @@ function OpsConcertMainPanelVM:InitSocialFriendList(FriendMap)
     if #self.SocialFriendVMListInfo < 1 then
         self.CallFriendListEmpty = true
         self.MoreBtnIsVisible = false
+        self.SocialFriendVMList:Clear()
         return
     end
     self.CallFriendListEmpty = false

@@ -19,7 +19,7 @@ local UIViewMgr = require("UI/UIViewMgr")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
 local UIBindableList = require("UI/UIBindableList")
-local ItemVM = require("Game/Item/ItemVM")
+local MailSlotItemViewVM = require("Game/Mail/View/Item/MailSlotItemViewVM")
 local UIViewID = require("Define/UIViewID")
 local AccountUtil = require("Utils/AccountUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
@@ -338,7 +338,7 @@ function OpsConcertMainPanelView:OnRecieveLotteryResult(MsgBody)
 		ViewModel:UpdateRewardList(self.Params)
 		UIViewMgr:HideView(UIViewID.CommonRewardPanel)
 	end
-	local VMList = UIBindableList.New(ItemVM)
+	local VMList = UIBindableList.New(MailSlotItemViewVM)
 	for _, V in pairs(RewardItem) do
 		VMList:AddByValue({GID = 1, ResID = V.ResID, Num = V.Num, IsValid = true, NumVisible = true, ItemNameVisible = true }, nil, true)
 	end

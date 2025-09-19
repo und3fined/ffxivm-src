@@ -1561,12 +1561,13 @@ function FateMgr:OnGameEventEnterWorld(Params)
     end
     local bIsReconnectInSameMap = _G.PWorldMgr:IsReconnectInSameMap() or false
     -- 注意，这里有可能是自动寻路FATE触发的传送水晶，一定是下面这样判断，否则会中断自动寻路
-    local bResetMapInfo = bChangeLine or bIsReconnectInSameMap
-    self:ResetData(nil, bNoSendMsg, bResetMapInfo)
+    -- local bResetMapInfo = bChangeLine or bIsReconnectInSameMap
+    self:ResetData(nil, bNoSendMsg, false)
     self:SendGetCurMapActiveFateList()
 end
 
 function FateMgr:OnGameEventExitWorld(Params)
+    self:ResetData(nil, false, false)
 end
 
 function FateMgr:InternalSendFateReqMsg(InMsgID, InSubMsgID, InMsgBody, InCurWorldInsID)

@@ -7,18 +7,18 @@ local CS = {
     _1_2 = '4',
     _1_3 = '4005',
     _1_4 = '35',
-    _1_5 = '4003',
-    _1_6 = '15&24',
+    _1_5 = '179',
+    _1_6 = '4003',
     _1_7 = '42',
-    _1_8 = '43',
-    _1_9 = '179',
+    _1_8 = '15&24',
+    _1_9 = '43',
     _1_10 = '4009',
     _1_11 = '24&70',
     _1_12 = '4004',
     _1_13 = '1',
-    _1_14 = '4008',
-    _1_15 = '4015',
-    _1_16 = '41',
+    _1_14 = '41',
+    _1_15 = '4008',
+    _1_16 = '4015',
     _1_17 = '128',
     _1_18 = '4002',
     _1_19 = '15',
@@ -160,7 +160,7 @@ local SkillTargetSelectCfg = {
             SelectType = 2,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 17,
             SelectFunc = 2,
             SkillRelationType = 2,
@@ -188,7 +188,7 @@ local SkillTargetSelectCfg = {
             SelectType = 0,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 22,
             SelectCount = 40,
             SelectFunc = 2,
@@ -235,11 +235,11 @@ local SkillTargetSelectCfg = {
             ID = 29,
         },
         {
-            ConditionExpr = CS._1_16,
+            ConditionExpr = CS._1_14,
             ID = 30,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 31,
         },
         {
@@ -323,7 +323,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 255,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 45,
             SelectCount = 40,
             SelectFunc = 2,
@@ -354,7 +354,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 16,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 50,
             SelectCount = 8,
             SelectFunc = 2,
@@ -462,7 +462,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 2,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 71,
             SelectCount = 8,
             SelectFunc = 2,
@@ -509,7 +509,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 2,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 79,
             SelectCount = 5,
         },
@@ -720,11 +720,11 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 10,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 164,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 165,
             SelectCount = 100,
         },
@@ -1017,7 +1017,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_6,
+            ConditionExpr = CS._1_8,
             ID = 504,
             SelectCount = 40,
             SelectFunc = 2,
@@ -1048,7 +1048,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1004,
             SelectCount = 5,
             SelectFunc = 2,
@@ -1078,7 +1078,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_14,
+            ConditionExpr = CS._1_15,
             ID = 1009,
             SelectFunc = 2,
         },
@@ -1124,7 +1124,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1016,
             SelectCount = 5,
             SelectFunc = 2,
@@ -1160,7 +1160,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1022,
             SelectType = 0,
             SkillRelationType = 255,
@@ -1182,14 +1182,14 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 4,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1025,
             SelectFunc = 2,
             SelectType = 11,
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1026,
             SelectCount = 5,
             SelectFunc = 2,
@@ -1212,14 +1212,14 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_15,
+            ConditionExpr = CS._1_16,
             ID = 1029,
             SelectFunc = 2,
             SelectType = 11,
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_15,
+            ConditionExpr = CS._1_16,
             ID = 1030,
             SelectCount = 5,
             SelectFunc = 2,
@@ -1242,14 +1242,14 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_14,
+            ConditionExpr = CS._1_15,
             ID = 1033,
             SelectFunc = 2,
             SelectType = 11,
             SkillRelationType = 3,
         },
         {
-            ConditionExpr = CS._1_14,
+            ConditionExpr = CS._1_15,
             ID = 1034,
             SelectCount = 2,
             SelectFunc = 2,
@@ -1287,31 +1287,31 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 2,
         },
         {
-            ConditionExpr = CS._1_15,
+            ConditionExpr = CS._1_16,
             ID = 1040,
             SelectFunc = 2,
             SelectType = 11,
             SkillRelationType = 16,
         },
         {
-            ConditionExpr = CS._1_15,
+            ConditionExpr = CS._1_16,
             ID = 1041,
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1042,
             SelectCount = 5,
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_14,
+            ConditionExpr = CS._1_15,
             ID = 1043,
             SelectFunc = 2,
             SelectType = 11,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1050,
             SelectCount = 5,
             SelectFunc = 2,
@@ -1319,7 +1319,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 16,
         },
         {
-            ConditionExpr = CS._1_5,
+            ConditionExpr = CS._1_6,
             ID = 1051,
             SelectFunc = 2,
             SelectType = 11,
@@ -1951,7 +1951,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 2,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 7314,
             SelectCount = 4,
         },
@@ -1968,7 +1968,7 @@ local SkillTargetSelectCfg = {
             ID = 7317,
         },
         {
-            ConditionExpr = '9034|9038|9035|9169|9170|7554|7555|7556|7551|7552',
+            ConditionExpr = '9034|9038|9035|9169|9170|7554|7555|7556|7551|7552|7557|7558|7559|7560|7561',
             ID = 7318,
             SelectCount = 24,
             SkillRelationType = 2,
@@ -2187,6 +2187,24 @@ local SkillTargetSelectCfg = {
             SelectCount = 99,
         },
         {
+            ConditionExpr = '7702',
+            ID = 7683,
+            SelectCount = 4,
+        },
+        {
+            ConditionExpr = '7703',
+            ID = 7684,
+            SelectCount = 8,
+        },
+        {
+            ConditionExpr = '7704',
+            ID = 7685,
+        },
+        {
+            ConditionExpr = '7705',
+            ID = 7686,
+        },
+        {
             ConditionExpr = '9002',
             ID = 9002,
             SelectFunc = 2,
@@ -2298,7 +2316,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 9049,
         },
         {
@@ -2400,7 +2418,7 @@ local SkillTargetSelectCfg = {
             ID = 9077,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 9078,
         },
         {
@@ -2741,7 +2759,7 @@ local SkillTargetSelectCfg = {
             SelectType = 0,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 9156,
         },
         {
@@ -2792,7 +2810,7 @@ local SkillTargetSelectCfg = {
             SelectCount = 10,
         },
         {
-            ConditionExpr = CS._1_9,
+            ConditionExpr = CS._1_5,
             ID = 9167,
             SelectFunc = 1,
         },
@@ -3064,7 +3082,7 @@ local SkillTargetSelectCfg = {
             SelectFunc = 2,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 9225,
             SelectFunc = 2,
         },
@@ -3073,11 +3091,11 @@ local SkillTargetSelectCfg = {
             ID = 9226,
         },
         {
-            ConditionExpr = CS._1_16,
+            ConditionExpr = CS._1_14,
             ID = 9227,
         },
         {
-            ConditionExpr = CS._1_16,
+            ConditionExpr = CS._1_14,
             ID = 9228,
         },
         {
@@ -3148,13 +3166,29 @@ local SkillTargetSelectCfg = {
             SelectCount = 2,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 9244,
             SelectCount = 2,
         },
         {
+            ConditionExpr = '9392|9393|9394|9395|9396|9397|9398',
+            ID = 9393,
+            SkillRelationType = 2,
+        },
+        {
             ConditionExpr = '7506|7666',
             ID = 9403,
+        },
+        {
+            ConditionExpr = CS._1_5,
+            ID = 9422,
+            SelectCount = 3,
+            SelectFunc = 1,
+        },
+        {
+            ConditionExpr = CS._1_5,
+            ID = 9423,
+            SelectCount = 8,
         },
         {
             ID = 10001,
@@ -3363,6 +3397,25 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 255,
         },
         {
+            ConditionExpr = CS._1_7,
+            ID = 72301,
+            SelectCount = 4,
+        },
+        {
+            ConditionExpr = '41|43',
+            ID = 72302,
+            SelectCount = 4,
+        },
+        {
+            ConditionExpr = '72303',
+            ID = 72303,
+            SelectCount = 10,
+        },
+        {
+            ConditionExpr = '85330',
+            ID = 85330,
+        },
+        {
             ConditionExpr = '4&93400',
             ID = 93400,
             SkillRelationType = 2,
@@ -3374,7 +3427,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 2,
         },
         {
-            ConditionExpr = CS._1_8,
+            ConditionExpr = CS._1_9,
             ID = 93403,
             SelectCount = 2,
         },
@@ -3461,6 +3514,11 @@ local SkillTargetSelectCfg = {
             ConditionExpr = '229601',
             ID = 229600,
             SelectCount = 8,
+        },
+        {
+            ConditionExpr = CS._1_14,
+            ID = 853301,
+            SelectCount = 2,
         },
 	},
 }

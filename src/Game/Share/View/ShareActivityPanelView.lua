@@ -173,6 +173,9 @@ function ShareActivityPanelView:Update(Callback, View, bForce)
 						if Texture then
 							_G.FLOG_INFO('ShareActivityPanelView:Update, Download image success.')
 							UIUtil.SetIsVisible(self.ImgBG, true)
+							local DefaultTexPath = "MaterialInstanceConstant'/Game/UI/Material/UI_Desaturate_share.UI_Desaturate_share'"
+							local DefaultTex = _G.ObjectMgr:LoadObjectSync(DefaultTexPath, 0)
+							UIUtil.ImageSetBrushResourceObject(self.ImgBG, DefaultTex)
 							UIUtil.ImageSetMaterialTextureParameterValue(self.ImgBG, 'Texture', Texture)
 						end
 						Callback(View)
@@ -238,7 +241,7 @@ function ShareActivityPanelView:GetShareID()
 end
 
 function ShareActivityPanelView:ResetResourceRef()
-	UIUtil.ImageSetMaterialTextureParameterValue(self.ImgBG, 'Texture', nil)
+	-- UIUtil.ImageSetMaterialTextureParameterValue(self.ImgBG, 'Texture', nil)
 end
 
 return ShareActivityPanelView

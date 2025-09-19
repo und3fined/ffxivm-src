@@ -133,9 +133,12 @@ function MapMgr:UpdateMapInfo(UIMapID)
 	end
 
 	FLOG_INFO("[MapMgr:UpdateMapInfo] UIMapID=%s MapID=%s self.UIMapID=%s self.MapID=%s", UIMapID, MapID, self.UIMapID, self.MapID)
-	if UIMapID == self.UIMapID and MapID == self.MapID then
+	local bSameWorldIns = _G.PWorldMgr.BaseInfo.LastPWorldInstID == _G.PWorldMgr.BaseInfo.CurrPWorldInstID
+	if UIMapID == self.UIMapID and MapID == self.MapID and bSameWorldIns then
+		-- 这里增加一个世界实例判断
 		return
 	end
+
 	self.UIMapID = UIMapID
 	self.MapID = MapID
 

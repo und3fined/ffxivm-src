@@ -571,21 +571,22 @@ function StoreMainVM:ChangeTab(Index, SubIndex)
 	self.PanelGoodsVisible = not IsPropsPage and not IsPosterPage
 	self.GoodsExpandPageVisible = false
 	self.PanelBuyVisible = self.PanelGoodsVisible or self.PosterPanelVisible
-	local TempProductSubList = {}
+
 	local Children = self.TabList[Index].Children
-	if Children ~= nil then
-		for i = 1, #Children do
-			TempProductSubList[i] = Children[i].Name
-		end
-		self.FilterDataList = TempProductSubList
-	end
-    self.FilterSelecteIndex = 1
-	self.TabSelecteIndex = Index
-    local Category = StoreMgr:GetProductCategory(Index)
+
+	local Category = StoreMgr:GetProductCategory(Index)
 	if Category == nil then
 		FLOG_ERROR("StoreMainVM:ChangeTab   Category is nil")
 		return
 	end
+
+	if Category.SubCategory and next(Category.SubCategory) then
+		if Children ~= nil and next(Children) then
+			self.FilterDataList = Category.SubCategory
+		end
+	end
+    self.FilterSelecteIndex = 1
+	self.TabSelecteIndex = Index
 	self.CurrentSelectedTabType = Category.Type
 	--- 切换标签页先隐藏各界面功能按钮Panel并初始化按钮state
 	--- 预览套装时隐藏武器
@@ -1176,14 +1177,16 @@ function StoreMainVM:BuyProps(GoodsID)
 end
 
 ---@type 是否持有足够的货币多件
-function StoreMainVM:bAvailableBuyByMultiBuy()
+function StoreMainVM:bAvailableBuyByMultiBuy(ItemData)
     if self.QuantityPurchased == 0 then
         MsgTipsUtil.ShowTipsByID(StoreDefine.InSelectedPurchased)
         return false
     end
 
     local PropsData
-	if table.is_nil_empty(self.GoodFilterDataList) then
+	if table.is_nil_empty(ItemData) then
+		PropsData = ItemData
+	elseif table.is_nil_empty(self.GoodFilterDataList) then
 		PropsData = StoreMgr.ProductDataList[self.CurrentselectedID]
 	else
 		PropsData = self.GoodFilterDataList[self.PropsSelecteIndex]
