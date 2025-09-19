@@ -84,6 +84,7 @@ function PWorldMatchMgr:OnInit()
     self.InValidMatchSet = {}
 
     self.CurCrystallineInterval = 0
+    self.PVPMatchAgainParam = nil   -- PVP再来一局参数记录
 
     PWorldEntVM = require("Game/PWorld/Entrance/PWorldEntVM")
     PWorldMatchVM = require("Game/PWorld/Match/PWorldMatchVM")
@@ -108,6 +109,7 @@ function PWorldMatchMgr:OnEnd()
     self.InValidMatchSet = {}
     self.PunishStartTime = 0
     self.CurCrystallineInterval = 0
+    self.PVPMatchAgainParam = nil
 end
 
 function PWorldMatchMgr:OnRegisterNetMsg()
@@ -125,6 +127,7 @@ function PWorldMatchMgr:OnRegisterGameEvent()
 
     self:RegisterGameEvent(_G.EventID.RoleLoginRes,     self.OnLogin)
     self:RegisterGameEvent(_G.EventID.PWorldExit,       self.OnPWorldExit)
+	self:RegisterGameEvent(_G.EventID.PWorldReady, self.OnPWorldReady)
     self:RegisterGameEvent(_G.EventID.UpdateQuest,  self.OnQuestUpdate)
     self:RegisterGameEvent(_G.EventID.TeamVoteEnterSceneEnd, self.OnVoteEnterSceneEnd)
 end
@@ -334,9 +337,11 @@ function PWorldMatchMgr:OnLogin(Params)
     self.DutyMatchCount = 0
     self.PVPMatchCount = 0
     self.LastRankQueryUpdateTime = os.time()
+    self.PVPMatchAgainParam = nil
     self:ReqQueryMatch()
     self:ReqPunish()
 end
+
 function PWorldMatchMgr:OnQuestUpdate(Params)
 end
 
@@ -349,6 +354,10 @@ end
 ---@private
 function PWorldMatchMgr:OnPWorldExit()
     self:OnTimer()
+end
+
+function PWorldMatchMgr:OnPWorldReady()
+    self:CheckPVPMatchAgain()
 end
 
 --[[
@@ -1485,6 +1494,80 @@ function PWorldMatchMgr:CancelAllChocobosMatches()
             self:ReqCancelMatch(TypeID, EntID)
         end
     end
+end
+
+function PWorldMatchMgr:SetPVPMatchAgain(EntID)
+    local EntType = SceneEnterCfg:FindValue(EntID, "TypeID")
+    if EntType then
+        self.PVPMatchAgainParam = {
+            EntType = EntType
+        }
+    else
+        self.PVPMatchAgainParam = nil
+    end
+end
+
+function PWorldMatchMgr:CheckPVPMatchAgain()
+    if self.PVPMatchAgainParam then
+        self:ReqStartPVPMatch(self.PVPMatchAgainParam.EntType)
+        self.PVPMatchAgainParam = nil
+    end
+end
+
+--- 发起PVP匹配
+function PWorldMatchMgr:ReqStartPVPMatch(Type)
+    if not PWorldEntUtil.IsPVP(Type) then
+        _G.FLOG_ERROR("[PWorldMatchMgr]ReqStartPVPMatch invalid pvp type: " .. Type)
+        return
+    end
+
+    if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.PWorldEnterConfirm) or _G.UIViewMgr:FindVisibleView(_G.UIViewID.PWorldConfirm) ~= nil then
+		MsgTipsUtil.ShowTipsByID(146061)
+		return
+	end
+
+    if PWorldEntUtil.IsCrystallineExercise(Type) or PWorldEntUtil.IsCrystallineRank(Type) then
+        if TeamMgr:IsInTeam() then
+            MsgTipsUtil.ShowTipsByID(MsgTipsID.PWorldCrystallineInTeamBan)
+            return
+        end
+    end
+    
+    if PWorldEntUtil.IsCrystalline(Type) then
+        local EntID = nil
+        if PWorldEntUtil.IsCrystallineExercise(Type) then
+            EntID = 1218010
+        elseif PWorldEntUtil.IsCrystallineRank(Type) then
+            EntID = 1218020
+        end
+
+        if EntID then
+            local IsPreCheckPass, PreCheckFailedReasons = PWorldEntUtil.PreCheck(EntID, Type)
+            if not IsPreCheckPass and PreCheckFailedReasons then
+                local FailReasonTypeList = { "IsOpen", "IsPassMem", "IsPassLv", "IsPassEquipLv", "IsPassTime" }
+                local FailReasonMap = {
+                    IsOpen = LSTR(1320210),
+                    IsPassMem = LSTR(1320213),
+                    IsPassLv = LSTR(1320042),
+                    IsPassEquipLv = LSTR(1320043),
+                    IsPassTime = LSTR(1320124),
+                }
+                for _, Reason in ipairs(FailReasonTypeList) do
+                    if PreCheckFailedReasons[Reason] ~= true then
+                        MsgTipsUtil.ShowTips(FailReasonMap[Reason])
+                        return
+                    end
+                end
+            end
+        end
+
+		local CanMatch, ErrorCode = PWorldEntUtil.PVPMatchCheck(Type)
+        if CanMatch then
+            self:ReqStartMatch(Type)
+        else
+			MsgTipsUtil.ShowTipsByID(ErrorCode)
+        end
+	end
 end
 
 return PWorldMatchMgr

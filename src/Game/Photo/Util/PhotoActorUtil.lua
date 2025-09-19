@@ -3,11 +3,46 @@ local Util = {}
 
 local MajorUtil = require("Utils/MajorUtil")
 local ActorUtil = require("Utils/ActorUtil")
+local PhotoDefine = require("Game/Photo/PhotoDefine")
 
+local FriendMgr = _G.FriendMgr
+local TeamMgr = _G.TeamMgr
+local ArmyMgr = _G.ArmyMgr
+local CompanionMgr = _G.CompanionMgr
+
+local EActorSubType = _G.UE.EActorSubType
 
 
 function Util.GetActorByEID(EID)
     return ActorUtil.GetActorByEntityID(EID)
+end
+
+local function CheckMates(Player)
+    if not Player then
+        return false
+    end
+    local AttrComponent = Player:GetAttributeComponent()
+    if AttrComponent then
+        local RID = AttrComponent.RoleID
+        if RID then
+            if FriendMgr:IsFriend(RID) then
+                return true
+            end
+
+            if TeamMgr:IsTeamMemberByRoleID(RID) then
+                return true
+            end
+
+            if ArmyMgr:GetMemberDataByRoleID(RID) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function Util.IsMates(Player)
+    return CheckMates(Player)
 end
 
 function Util.GetMateEIDSet(IgnoreMajor)
@@ -32,36 +67,12 @@ function Util.GetMateEIDSet(IgnoreMajor)
 
 		return Set
 	end
-
-    local function Check(Player)
-		local AttrComponent = Player:GetAttributeComponent()
-		
-        if AttrComponent then
-            local RID = AttrComponent.RoleID
-
-            if RID then
-                if FriendMgr:IsFriend(RID) then
-                    return true
-                end
-
-                if TeamMgr:IsTeamMemberByRoleID(RID) then
-                    return true
-                end
-
-                if ArmyMgr:GetMemberDataByRoleID(RID) then
-                    return true
-                end
-            end
-        end
-
-		return false
-	end
     
     for i = 1, All:Length() do
 		local Player = All:Get(i)
 		local AttrComponent = Player:GetAttributeComponent()
 
-		if Check(Player) then
+		if CheckMates(Player) then
             Set[AttrComponent.EntityID] = true
 		end
 	end
@@ -82,7 +93,7 @@ function Util.GetMajor()
 end
 
 function Util.GetMajorPet()
-    local EID = _G.CompanionMgr.CallingOutCompanionEntityID
+    local EID = CompanionMgr.CallingOutCompanionEntityID
 
     if EID then
         return Util.GetActorByEID(EID)
@@ -517,6 +528,51 @@ end
 function Util.GetMajorRotator()
     local Major = Util.GetMajor()
     return Major:FGetActorRotation()
+end
+
+function Util.GetSettingTypeByEntityID(EntityID)
+    local Actor = ActorUtil.GetActorByEntityID(EntityID)
+    if not Actor then return end
+
+    local ActorSubType = ActorUtil.GetActorSubType(EntityID)
+    local ActorType = ActorUtil.GetActorType(EntityID)
+    local OwnerEntityID = ActorUtil.GetActorOwner(EntityID)
+
+    local MainTypes = PhotoDefine.RoleSettingType
+    local SubTypes =  PhotoDefine.RoleCtrlSetting
+    local IsMate = false
+    local SettingType, SubType
+
+    if ActorUtil.IsPlayer(EntityID) then
+        IsMate = CheckMates(Actor) -- 是否有关系（是否可控）
+        SettingType = IsMate and MainTypes.Ctrl or MainTypes.UnCtrl
+        SubType = IsMate and SubTypes.Ctrl.Mate or SubTypes.UnCtrl.Other
+    elseif ActorSubType == EActorSubType.Buddy then
+        IsMate = CheckMates(ActorUtil.GetActorByEntityID(OwnerEntityID))
+        SettingType = IsMate and MainTypes.Ctrl or MainTypes.UnCtrl
+        SubType = IsMate and SubTypes.Ctrl.Chocobo or SubTypes.UnCtrl.OtherChocobo
+    elseif ActorType == _G.UE.EActorType.Summon then
+        IsMate = CheckMates(ActorUtil.GetActorByEntityID(OwnerEntityID))
+        SettingType = IsMate and MainTypes.Ctrl or MainTypes.UnCtrl
+        SubType = IsMate and SubTypes.Ctrl.Summon or SubTypes.UnCtrl.OtherSummon
+    --elseif Actor:Cast(_G.UE.ACompanionCharacter) then
+    elseif ActorType == _G.UE.EActorType.Companion then
+        local isMyPet = OwnerEntityID == MajorUtil.GetMajorEntityID()
+        IsMate = CheckMates(ActorUtil.GetActorByEntityID(OwnerEntityID))
+        SettingType = (isMyPet or IsMate) and MainTypes.Ctrl or MainTypes.UnCtrl
+        if isMyPet then
+            SubType = SubTypes.Ctrl.MyPet
+        else
+            SubType = IsMate and SubTypes.Ctrl.MatePet or SubTypes.UnCtrl.OtherPet 
+        end
+    elseif ActorUtil.IsNpc(EntityID) then
+        SettingType = MainTypes.UnCtrl
+        SubType = SubTypes.UnCtrl.NPC
+    elseif ActorType == _G.UE.EActorType.Monster then
+        SettingType = MainTypes.UnCtrl
+        SubType = SubTypes.UnCtrl.Enemy
+    end
+    return SettingType, SubType
 end
 
 return Util

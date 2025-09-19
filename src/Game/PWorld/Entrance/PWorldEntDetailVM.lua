@@ -29,6 +29,7 @@ local MajorUtil = require("Utils/MajorUtil")
 
 local ProtoRes = require("Protocol/ProtoRes")
 local GlobalCfg = require("TableCfg/GlobalCfg")
+local PworldCfg = require("TableCfg/PworldCfg")
 
 local PWorldEntMgr
 local ProtoCommon = require("Protocol/ProtoCommon")
@@ -678,6 +679,11 @@ function PWorldEntDetailVM:UpdateForbidText()
 
         if PWorldEntUtil.IsPrettyHardPWorld(self.CurEntID) and not PWorldEntUtil.IsPrettyHardEntranceJoinable(self.CurEntID) then
             Desc = _G.LSTR(1320233)
+        elseif self.EntCfg then
+            local PrepassEntID = self.EntCfg.PrepassEntID
+            if PrepassEntID and PrepassEntID ~= 0 and not PWorldEntUtil.IsPassPWorld(PrepassEntID) then
+                Desc = _G.LSTR(1320233)
+            end
         end
     end
     self.ForbidText = Desc
@@ -749,7 +755,7 @@ function PWorldEntDetailVM:CheckDirector()
             local ECfg = SceneEnterCfg:FindCfgByKey(PWorldID)
             if ECfg then
                 if PolUtil.HasPreQuestFinish(ECfg.PreQuestID) then
-                    local PCfg = require('TableCfg/PworldCfg'):FindCfgByKey(PWorldID)
+                    local PCfg = PworldCfg:FindCfgByKey(PWorldID)
                     if PCfg then
                         if not PWorldEntUtil.IsEntancePass(PCfg) then
                             table.insert(DirectorCatList[1].IDList, PWorldID)
@@ -1106,6 +1112,11 @@ function PWorldEntDetailVM:SetExtraCondDetail(Value)
     self.ExtraCondDetail = Value
 end
 
+local function GetNotPassDesc(EntID)
+    local Cfg = PworldCfg:FindCfgByKey(EntID)
+    return GetColorReqDesc(string.sformat(_G.LSTR(1320235), Cfg and Cfg.PWorldName or ""))
+end
+
 function PWorldEntDetailVM:UpdateExtraCondition()
     local Title
     local Content
@@ -1117,10 +1128,16 @@ function PWorldEntDetailVM:UpdateExtraCondition()
         local OK, EntID = PWorldEntUtil.IsPrettyHardEntranceJoinable(self.CurEntID)
         if not OK then
             Title = _G.LSTR(1320234)
-            local Cfg = require("TableCfg/PworldCfg"):FindCfgByKey(EntID)
-            Content = GetColorReqDesc(string.sformat(_G.LSTR(1320235), Cfg and Cfg.PWorldName or ""))
+            Content = GetNotPassDesc(EntID)
         end
         bPassExtraCondition = OK
+    else
+        local EntID = self:GetEntranceCfgAttr("PrepassEntID", 0)
+        if EntID ~= 0 and not PWorldEntUtil.IsPassPWorld(EntID) then
+            Title = _G.LSTR(1320234)
+            Content = GetNotPassDesc(EntID)
+            bPassExtraCondition = false
+        end
     end
 
     self.bPassExtraCondition = bPassExtraCondition

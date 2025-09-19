@@ -2,23 +2,17 @@ local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local PhotoRoleStatCfg = require("TableCfg/PhotoRoleStatCfg")
 local UIUtil = require("Utils/UIUtil")
-
 local EventID = require("Define/EventID")
-
 local CommonUtil = require("Utils/CommonUtil")
 local PhotoMediaUtil = require("Game/Photo/Util/PhotoMediaUtil")
-
 local PhotoCameraUtil = require("Game/Photo/Util/PhotoCameraUtil")
 local PhotoEffectUtil = require("Game/Photo/Util/PhotoEffectUtil")
 local PhotoSceneUtil = require("Game/Photo/Util/PhotoSceneUtil")
 local PhotoDefine = require("Game/Photo/PhotoDefine")
-
 local PhotoMouthMoveCfg = require("TableCfg/PhotoMouthMoveCfg")
 local PhotoEndueCfg = require("TableCfg/PhotoEndueCfg")
 local PhotoTemplateUtil = require("Game/Photo/Util/PhotoTemplateUtil")
-
 local PhotoActorAgent = require("Game/Photo/PhotoActorAgent")
-
 local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local EmotionAnimUtils = require("Game/Emotion/Common/EmotionAnimUtils")
@@ -27,6 +21,21 @@ local AnimationUtil = require("Utils/AnimationUtil")
 local UIViewID = require("Define/UIViewID")
 local ProtoRes = require("Protocol/ProtoRes")
 local PhotoActorUtil = require("Game/Photo/Util/PhotoActorUtil")
+local PhotoSettingFunc = require("Game/Photo/Util/PhotoSettingFunc")
+local CommonDefine = require("Define/CommonDefine")
+local DataReportUtil = require("Utils/DataReportUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local Weather = require("Game/Weather/Weather")
+local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
+local ObjectGCType = require("Define/ObjectGCType")
+local PhotoTemplateCfg = require("TableCfg/PhotoTemplateCfg")
+local PhotoFilterCfg = require("TableCfg/PhotoFilterCfg")
+-- local PWorldQuestDefine = require("Game/PWorld/Quest/PWorldQuestDefine")
+local ProtoCS = require("Protocol/ProtoCS")
+local Json = require("Core/Json")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ProtoRes = require("Protocol/ProtoRes")
+local PhotoUtil = require("Game/Photo/PhotoUtil")
 local MainPanelVID = UIViewID.MainPanel
 local PhotoVID = UIViewID.PhotoMain
 local UIViewMgr
@@ -42,37 +51,13 @@ local PhotoTemplateVM
 local PhotoDarkEdgeVM
 local PhotoActionVM
 local PhotoEmojiVM
-local CommonDefine = require("Define/CommonDefine")
-local DataReportUtil = require("Utils/DataReportUtil")
-local ProtoCS = require("Protocol/ProtoCS")
 local ClientReportType = ProtoCS.ReportType
-
-local Weather = require("Game/Weather/Weather")
-local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
-
 local GameNetworkMgr
 local TeamMgr
-local ObjectGCType = require("Define/ObjectGCType")
-
 local HUDMgr
-
-local PhotoTemplateCfg = require("TableCfg/PhotoTemplateCfg")
-local PhotoFilterCfg = require("TableCfg/PhotoFilterCfg")
-
--- local PWorldQuestDefine = require("Game/PWorld/Quest/PWorldQuestDefine")
-local ProtoCS = require("Protocol/ProtoCS")
-
 local MAIN_CMD = ProtoCS.CS_CMD.CS_CMD_PHOTOS
 local SUB_CMD = ProtoCS.Role.Photos.PhotosOptCmd
-
-local Json = require("Core/Json")
-
-local MsgTipsUtil = require("Utils/MsgTipsUtil")
-local ProtoRes = require("Protocol/ProtoRes")
-local PhotoUtil = require("Game/Photo/PhotoUtil")
-
 local ShowTips = MsgTipsUtil.ShowTips
-
 local WARN = _G.FLOG_WARNING
 local ERR = _G.FLOG_ERROR
 local LOG = _G.FLOG_INFO
@@ -96,7 +81,7 @@ function PhotoMgr:OnBegin()
         PhotoEmojiVM     = PhotoEmojiVM,
         PhotoVM          = PhotoVM,
     }
-
+    self.SettingValues = {}
     self:BeginTemplate()
     self:BeginRoleEffect()
     self:BeginAnim()
@@ -120,6 +105,7 @@ function PhotoMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.TeamLeave,                   self.OnEveTeamChg)
     self:RegisterGameEvent(EventID.TeamJoin,                    self.OnEveTeamChg)
     self:RegisterGameEvent(EventID.ActorVelocityUpdate,         self.OnEveMoveChg)
+    self:RegisterGameEvent(EventID.VisionEnter,                 self.OnVisionEnter)
 end
 
 function PhotoMgr:Reset()
@@ -344,7 +330,7 @@ function PhotoMgr:OnClosePhotoUI()
 
     PhotoActorUtil.PauseAllActorAnim(false)
     self.IsOnPhoto = false
-
+    self.SettingValues = {}
     EventMgr:SendEvent(EventID.PhotoEnd)
 	EventMgr:SendCppEvent(EventID.PhotoEndCpp)
 end
@@ -579,6 +565,45 @@ function PhotoMgr:PauseSeltAnim(IsPause)
     end
 end
 
+function PhotoMgr:OnVisionEnter(Params)
+	if not Params or not self.IsOnPhoto then
+		return
+	end
+
+	local EntityID = Params.ULongParam1
+
+    self:CheckNewActorVisible(EntityID)
+end
+
+function PhotoMgr:CheckNewActorVisible(EntityID)
+    if not self.SettingValues[PhotoDefine.RoleSettingType.Ctrl] and not self.SettingValues[PhotoDefine.RoleSettingType.UnCtrl] then
+        return
+    end
+
+    local SettingType, SubType = PhotoActorUtil.GetSettingTypeByEntityID(EntityID)
+    if not SettingType or not SubType then
+        return
+    end
+
+    local CtrlSettings = self.SettingValues[SettingType]
+    if CtrlSettings then
+        local isOpen = CtrlSettings[SubType]
+        if isOpen == false then
+            PhotoSettingFunc.CallRoleSettingFunc(SettingType, SubType, false)
+        end
+    end
+end
+
+--- func desc
+---@param SettingType PhotoDefine.RoleSettingType
+---@param SubType PhotoDefine.RoleCtrlSetting
+---@param Value any
+function PhotoMgr:CallSettingFunc(SettingType, SubType, Value)
+    self.SettingValues[SettingType] = self.SettingValues[SettingType] or {}
+    self.SettingValues[SettingType][SubType] = Value
+
+    PhotoSettingFunc.CallRoleSettingFunc(SettingType, SubType, Value)
+end
 
 function PhotoMgr:SetActorVisible(Actor, IsOpen)
     if not Actor then

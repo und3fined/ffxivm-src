@@ -87,12 +87,13 @@ function CollectionMgr:OnNetMsgCollection(MsgBody)
         self:OnEnterCollection(true, CollectionRsp)
     elseif CollectionRsp.OP_Type == ProtoCS.Gather_Collection_OP.COLLECTION_ENTER_FAIL then
         self:OnEnterCollection(false, CollectionRsp)
-    elseif
-        self.AddLifeSkillBuff and self.SkillIndex == 2 and
-            CollectionRsp.OP_Type == ProtoCS.Gather_Collection_OP.COLLECTION_SCOUR
-     then
+    elseif self.SkillIndex == 2 and CollectionRsp.OP_Type == ProtoCS.Gather_Collection_OP.COLLECTION_SCOUR then
+        if self.AddLifeSkillBuff then
         self.AddLifeSkillBuff = false
         self:DoGatherResult(MsgBody)
+        else
+            _G.GatheringJobSkillPanelVM.CollectionRsp = CollectionRsp
+        end
     else
         self:RefreshEffect(MsgBody)
     end
@@ -307,6 +308,7 @@ function CollectionMgr:CastSkill(index, SkillID, IsExpendDurability)
     --先缓存，等技能表现结束的时候再播放技能结果的特效
     self.EffectNodeMap[MajorEntityID] = EffectNode
 
+    self.AddLifeSkillBuff = false
     SkillUtil.CastLifeSkill(index, SkillID)
     _G.EventMgr:SendEvent(_G.EventID.OnCastSkillUpdateMask, true)
     return true

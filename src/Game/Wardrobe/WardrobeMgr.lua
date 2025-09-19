@@ -3409,6 +3409,11 @@ function WardrobeMgr:GetQuickUnlockAppearanceListVisible(IsNeedItem)
 				if JudegeFunction(AppID) then
 					return true
 				end
+			else
+				local IsEnough = BagMgr:GetItemNum(WardrobeUtil.GetUnlockCostItemID(AppID)) > 0
+				if self:IsLessReduceConditionEquipment(AppID) and IsEnough then
+					return true
+				end
 			end
 		end
 	end

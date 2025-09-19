@@ -6,7 +6,6 @@
 
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
-local UIViewMgr = require("UI/UIViewMgr")
 
 local EventID = require("Define/EventID")
 local UIViewID = require("Define/UIViewID")
@@ -46,7 +45,7 @@ function RideShootingMgr:OnBegin()
     self.InitCfg = false
     self.IsRunning = false
     self.IsGameOver = false -- 已经结算
-    self.IsArrived = false -- 抵达终点
+    self.IsSendGameEnd = false -- 请求结算
     self.Time = 0
     self.IsCheckUnfinishGame = true    --检查上一次未完成的游戏
     --UE.URideShootingMgr:Get().PlaySpeed = 4  --测试代码
@@ -59,7 +58,7 @@ end
 function RideShootingMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventEnterWorld)
     self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventExitWorld)
-    self:RegisterGameEvent(EventID.RideShootingGameEnd, self.OnGameEventGameEnd)
+    self:RegisterGameEvent(EventID.RideShootingGameEnd, self.OnArriveAtDestination)
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
     self:RegisterGameEvent(EventID.GoldSauserAirForceGameOver, self.OnGameEventGameOver)
 end
@@ -168,6 +167,10 @@ function RideShootingMgr:IsRideShootingDungeon()
     return false
 end
 
+function RideShootingMgr:EndGame()
+    self.IsSendGameEnd = true
+end
+
 function RideShootingMgr:OnAlreadyEnd()
     if self.IsRunning then
         --主动退出副本
@@ -200,7 +203,7 @@ function RideShootingMgr:OnGameEventEnterWorld()
     local PWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
     local EventParams = _G.EventMgr:GetEventParams()
     if self:IsRideShootingDungeon() then -- 如果是空军副本
-        if self.IsArrived then -- 如果已经抵达了，不再重新开始
+        if self.IsSendGameEnd then -- 如果已经发过结算请求，不再重新开始
             _G.BusinessUIMgr:HideMainPanel(UIViewID.MainPanel)
             CommonUtil.DisableShowJoyStick(true) --关闭摇杆显示
             CommonUtil.HideJoyStick()
@@ -208,11 +211,11 @@ function RideShootingMgr:OnGameEventEnterWorld()
             return
         end
         _G.BusinessUIMgr:HideMainPanel(UIViewID.MainPanel)
-        local GateMainView = UIViewMgr:FindView(UIViewID.GoldSauserMainPanel)
+        local GateMainView = _G.UIViewMgr:FindView(UIViewID.GoldSauserMainPanel)
         if GateMainView then
             GateMainView:OnShow()
         else
-            UIViewMgr:ShowView(UIViewID.GoldSauserMainPanel)
+            _G.UIViewMgr:ShowView(UIViewID.GoldSauserMainPanel)
         end
         local ObjectMgr = _G.ObjectMgr
         -- 预加载临时处理,需要eobj预加载统一处理
@@ -254,7 +257,7 @@ function RideShootingMgr:OnGameEventEnterWorld()
 
         self.IsRunning = true
         self.IsGameOver = false
-        self.IsArrived = false
+        self.IsSendGameEnd = false
 
         CommonUtil.DisableShowJoyStick(true) --关闭摇杆显示
         CommonUtil.HideJoyStick()
@@ -312,16 +315,15 @@ function RideShootingMgr:OnGameEventExitWorld()
     end
     self.IsRunning = false
     self.IsGameOver = false
-    self.IsArrived = false
+    self.IsSendGameEnd = false
 end
 
-function RideShootingMgr:OnGameEventGameEnd(Params)
+function RideShootingMgr:OnArriveAtDestination(Params) --抵达终点
     --local Location = UE.FVector(Params.FloatParam1, Params.FloatParam2, Params.FloatParam3)
     --local Rotator = UE.FRotator(Params.IntParam1, Params.IntParam2, Params.IntParam3)
     --local UMajor = MajorUtil.GetMajor()
     --UMajor:K2_SetActorLocation(Location, false, nil, false)
     --UMajor:K2_SetActorRotation(Rotator, false)
-    self.IsArrived = true
 
     if self.IsGameOver then
         return
@@ -352,7 +354,7 @@ function RideShootingMgr:OnGameEventGameEnd(Params)
     _G.ObjectMgr:CollectGarbage(true, false)
 end
 
-function RideShootingMgr:OnGameEventGameOver()
+function RideShootingMgr:OnGameEventGameOver() --收到结算包
     _G.GoldSauserMgr:SendUpdateScoreReq(0) --重置历史分数
     self.IsGameOver = true
 end
@@ -420,8 +422,8 @@ end
 
 function RideShootingMgr:OnGameEventLoginRes(Params)
     if not CommonUtil.IsShipping() then
-        FLOG_INFO(string.format("[RideShooting] OnGameEventLoginRes bReconnect=%s IsGameOver=%s IsArrived=%s",
-        tostring(Params.bReconnect), tostring(self.IsGameOver), tostring(self.IsArrived)))
+        FLOG_INFO(string.format("[RideShooting] OnGameEventLoginRes bReconnect=%s IsGameOver=%s IsSendGameEnd=%s",
+        tostring(Params.bReconnect), tostring(self.IsGameOver), tostring(self.IsSendGameEnd)))
     end
     if Params.bReconnect then
         if self.IsGameOver then
@@ -429,7 +431,7 @@ function RideShootingMgr:OnGameEventLoginRes(Params)
             _G.PWorldMgr:SendLeavePWorld()
             return
         end
-        if self.IsArrived then
+        if self.IsSendGameEnd then --请求过了，但是没回包
             _G.LootMgr:SetDealyState(true)
             _G.GoldSauserMgr:EndGame(true)
         else
@@ -500,18 +502,19 @@ function RideShootingMgr:OnNetMsgGoldSauserUpdate(MsgBody)
     if Entertain.ID ~= ProtoRes.Game.GameID.GameIDAirForceOne then
         FLOG_WARNING("[RideShootingMgr] game error gameID="..tostring(Entertain.ID))
         _G.PWorldMgr:SendLeavePWorld()
-        UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
+        _G.UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
         return
     end
 
     if Data.Player == ProtoCS.GoldSauserPlayer.GoldSauserPlayer_NotSignUp then
         FLOG_WARNING("[RideShootingMgr] game status error Player="..tostring(Data.Player))
         _G.PWorldMgr:SendLeavePWorld()
-        UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
+        _G.UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
         return
     end
 
-    if not self.IsGameOver and Data.Player == ProtoCS.GoldSauserPlayer.GoldSauserPlayer_End then
+
+    if not self.IsSendGameEnd and Data.Player == ProtoCS.GoldSauserPlayer.GoldSauserPlayer_End then
         if (Data.RewardRecord ~= nil and Data.RewardRecord.FinishTime > 0) then
             -- 如果有奖励那么会去走奖励显示相关的
             local ServerTimeNow = TimeUtil.GetServerTimeMS()
@@ -522,14 +525,14 @@ function RideShootingMgr:OnNetMsgGoldSauserUpdate(MsgBody)
         end
         FLOG_WARNING("[RideShootingMgr] game status error Player="..tostring(Data.Player))
         _G.PWorldMgr:SendLeavePWorld()
-        UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
+        _G.UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
         return
     end
 
-    if Entertain.State == ProtoCS.GoldSauserEntertainState.GoldSauserEntertainState_End then
+    if not self.IsSendGameEnd and Entertain.State == ProtoCS.GoldSauserEntertainState.GoldSauserEntertainState_End then
         FLOG_WARNING("[RideShootingMgr] game status error State="..tostring(Entertain.State))
         _G.PWorldMgr:SendLeavePWorld()
-        UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
+        _G.UIViewMgr:HideView(UIViewID.GoldSauserMainPanel)
     end
 end
 

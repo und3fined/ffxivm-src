@@ -1,6 +1,6 @@
 # File Comparison Report
 
-Generated on: 2025-09-16 13:09:37 UTC
+Generated on: 2025-09-19 09:55:52 UTC
 
 ## Summary
 
@@ -13,11 +13,5 @@ Generated on: 2025-09-16 13:09:37 UTC
 - Config/PreDownloadConfig.lua.template
 - Config/UserAgreementUpdateConfig.lua.template
 - Game/LoginCreate/LoginCreate.csv
-- Game/PWorld/Match/VIew/PWorldMatchDetailItemView.lua
-- Game/PWorld/Match/VIew/PWorldMatchDetailWinView.lua
 
 ## Files in src but not in raw
-
-- Game/PWorld/Match/View/PWorldMatchDetailItemView.lua
-- Game/PWorld/Match/View/PWorldMatchDetailWinView.lua
-

@@ -51,6 +51,7 @@ local EventMgr = nil
 local TimerMgr = nil
 local USaveMgr = nil
 local PhotoMgr = nil
+local MountMgr = nil
 local LSTR = nil
 
 local EmotionMgr = LuaClass(MgrBase)
@@ -98,6 +99,7 @@ function EmotionMgr:OnBegin()
 	UIViewMgr = _G.UIViewMgr
 	EventMgr = _G.EventMgr
 	PhotoMgr = _G.PhotoMgr
+	MountMgr = _G.MountMgr
 	UKismetMathLibrary = _G.UE.UKismetMathLibrary
 
 	self.MajorActiveEmotionIDs = {}		---由服务器激活的ID为true
@@ -716,11 +718,17 @@ end
 
 --- 其他玩家回包的情感动作的即时广播
 function EmotionMgr:OnEmotionNotify(MsgBody)
+	if not MsgBody or not MsgBody.Notify then
+		return
+	end
 	local EntityID = MsgBody.Notify.EntityID
-	self:PlayEmotionServer(EntityID, MsgBody.Notify, false)
-
 	local EmotionID = MsgBody.Notify.EmotionID
 	local Target = MsgBody.Notify.Target
+
+	self:MountCustomEmoteNotify(EntityID, EmotionID, Target)	  ---坐骑皮肤
+
+	self:PlayEmotionServer(EntityID, MsgBody.Notify, false)
+
 	self:CompanionStartEmoteNotify(EntityID, EmotionID, Target)  ---宠物交互
 
 	if EmotionID == 0 and 0 == MsgBody.Notify.StatEmotion then
@@ -3437,6 +3445,38 @@ function EmotionMgr:StopAllEmotionsByMount(EntityID)
 	end
 
 	self:StopAllEmotions(EntityID, false, EmotionDefines.CancelReason.MOVE)
+end
+
+function EmotionMgr:SetFaceAnimIgnoreRest(EntityID, IsEmoFaceAnimPlaying)
+	local PlayerAnimInst, PlayerAnimParam = EmotionAnimUtils.GetPlayerAnimParam(EntityID)
+	if PlayerAnimInst == nil or PlayerAnimParam == nil then
+		return
+	end
+	if nil ~= IsEmoFaceAnimPlaying then
+		PlayerAnimInst.IsEmoFaceAnimPlaying = IsEmoFaceAnimPlaying
+	else
+		local IsFace = self:IsFacePlaying(EntityID)
+		PlayerAnimInst.IsEmoFaceAnimPlaying = IsFace == true	--强制为bool值
+	end
+end
+
+function EmotionMgr:MountCustomEmoteNotify(EntityID, EmotionID, Target)
+	if EmotionID ~= 0 and Target and Target.IDType then
+		if Target.IDType == EmotionTargetType.EmotionTargetTypeMountFacade then
+			-- 坐骑外观
+			local EntityActor = ActorUtil.GetActorByEntityID(EntityID)
+			if Target.ID and EntityActor then
+				local MountResID = 1001
+				local CustomMadeID = 1
+				if Target.ID == 0 then
+					CustomMadeID = 1
+				else
+					CustomMadeID = Target.ID
+				end
+				MountMgr:SetCustomMadeID(EntityActor, MountResID, CustomMadeID)
+			end
+		end
+	end
 end
 
 -----------------------------------------------------------------------------

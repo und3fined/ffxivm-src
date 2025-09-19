@@ -13,7 +13,7 @@ local SkillConditionCfg = {
     },
     DefaultValues = {
         FaultTolerantRange = 0,
-        ID = 0,
+        ID = 1,
         ObjectType = 2,
         Param1 = 0,
         Param2 = 1,
@@ -22,13 +22,7 @@ local SkillConditionCfg = {
     },
 	LuaData = {
         {
-            Param1 = 32,
-            Param2 = 0,
-            Type = 18,
-        },
-        {
             FaultTolerantRange = 500,
-            ID = 1,
             Param2 = 1200,
             Sign = 3,
             Type = 1,
@@ -3810,6 +3804,41 @@ local SkillConditionCfg = {
             Type = 17,
         },
         {
+            ID = 7557,
+            Param2 = 20420207,
+            Type = 17,
+        },
+        {
+            ID = 7558,
+            Param2 = 20420208,
+            Type = 17,
+        },
+        {
+            ID = 7559,
+            Param2 = 20420202,
+            Type = 17,
+        },
+        {
+            ID = 7560,
+            Param2 = 20420203,
+            Type = 17,
+        },
+        {
+            ID = 7561,
+            Param2 = 20420204,
+            Type = 17,
+        },
+        {
+            ID = 7562,
+            Param2 = 20420209,
+            Type = 17,
+        },
+        {
+            ID = 7563,
+            Param2 = 20420206,
+            Type = 17,
+        },
+        {
             ID = 7640,
             Param1 = 7640,
         },
@@ -4062,6 +4091,34 @@ local SkillConditionCfg = {
             ID = 7701,
             Param1 = 8801,
             Sign = 6,
+        },
+        {
+            ID = 7702,
+            Param1 = 61006,
+        },
+        {
+            ID = 7703,
+            Param1 = 61007,
+        },
+        {
+            ID = 7704,
+            Param1 = 64034,
+            Sign = 6,
+        },
+        {
+            ID = 7705,
+            Param1 = 64033,
+            Sign = 6,
+        },
+        {
+            ID = 7706,
+            Param2 = 20420207,
+            Type = 17,
+        },
+        {
+            ID = 7707,
+            Param2 = 20420208,
+            Type = 17,
         },
         {
             ID = 9002,
@@ -5643,6 +5700,41 @@ local SkillConditionCfg = {
             Param2 = 0,
         },
         {
+            ID = 9392,
+            Param2 = 99027100,
+            Type = 17,
+        },
+        {
+            ID = 9393,
+            Param2 = 99027101,
+            Type = 17,
+        },
+        {
+            ID = 9394,
+            Param2 = 99027102,
+            Type = 17,
+        },
+        {
+            ID = 9395,
+            Param2 = 99027105,
+            Type = 17,
+        },
+        {
+            ID = 9396,
+            Param2 = 99027106,
+            Type = 17,
+        },
+        {
+            ID = 9397,
+            Param2 = 99027107,
+            Type = 17,
+        },
+        {
+            ID = 9398,
+            Param2 = 99027120,
+            Type = 17,
+        },
+        {
             ID = 20901,
             ObjectType = 0,
             Param2 = 0,
@@ -5846,6 +5938,11 @@ local SkillConditionCfg = {
             Type = 17,
         },
         {
+            ID = 72303,
+            Param1 = 64043,
+            Param2 = 0,
+        },
+        {
             ID = 73011,
             ObjectType = 1,
             Param2 = 1500,
@@ -5858,6 +5955,10 @@ local SkillConditionCfg = {
             Param2 = 1500,
             Sign = 4,
             Type = 1,
+        },
+        {
+            ID = 85330,
+            Param1 = 64047,
         },
         {
             ID = 93400,

@@ -105,6 +105,13 @@ function PWorldEntPol:CheckJoinPre(EntID)
         IsPass = PWorldEntUtil.IsPrettyHardEntranceJoinable(EntID)
     end
 
+   local ECfg = SceneEnterCfg:FindCfgByKey(EntID)
+   if ECfg and ECfg.PrepassEntID and ECfg.PrepassEntID ~= 0 then
+        if not PWorldEntUtil.IsPassPWorld(ECfg.PrepassEntID) then
+            IsPass = false
+        end
+   end
+
     return IsPass, Ret
 end
 

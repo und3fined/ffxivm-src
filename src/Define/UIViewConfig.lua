@@ -3562,7 +3562,8 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		ListToSetInvisible = {
 			UIViewID.NewNPCTalkTips,
-			UIViewID.InfoAreaTips
+			UIViewID.InfoAreaTips,
+			UIViewID.SidebarMain
 		},
 		bInputModeUIOnly = true,
 	},

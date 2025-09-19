@@ -1033,27 +1033,38 @@ function MusicPerformanceMgr:PlayKey(EntityID, Sound, Key, Timbre, IsSelf, IsKey
 			end
 		end
 	else
+		--合奏时
 		if self:IsInEnsembleWithAssistant() then
+			-- 合奏时仅有只听自己 / 延迟播放队伍整体声音的选项
+			-- 故延迟播放关闭时 不听任何非自己的声音
 			if MusicPerformanceUtil.IsPerformanceSyncedWithParty() == false then
-				-- 合奏时仅有只听自己 / 延迟播放队伍整体声音的选项
-				-- 故延迟播放关闭时 不听任何非自己的声音
 				IsSound = false
 				if EntityID == MajorUtil.GetMajorEntityID() then
-					-- 排除自己的动作
-					IsMotion = false
+					IsMotion = false -- 排除自己的动作
 				end
 			end
+
+			--当播放其他人演奏时，如果当前的按键key已经在播放，就不要再重复播放，否则会出现不连贯音效
+			if Work.KeySet and Work.KeySet[Key] then
+				IsSound = false
+			end
 		else
-			if EntityID == MajorUtil.GetMajorEntityID() then
+			--处理IsSelf为false时的自己，自己弹的时候PlayKey会进来二次(一次IsSelf为true,还一次为false)
+			if EntityID == MajorUtil.GetMajorEntityID() then 
 				IsMotion = false
 				IsSound = false
-			-- else
-			-- 	if self:IsEnable(true) == true then
-			-- 		if MusicPerformanceUtil.IsOtherPerformanceMuted() then
-			-- 			-- 不听别人的声音
-			-- 			IsSound = false
-			-- 		end
-			-- 	end
+			else
+				--合奏过程中才处理，其他情况都不进来
+				if _G.MusicPerformanceVM.Status == ProtoCS.EnsembleStatus.EnsembleStatusEnsemble then
+					if self:IsOpenEnsembleAssistant() and MusicPerformanceUtil.IsPerformanceSyncedWithParty() == false then
+						IsSound = false
+					end
+				end
+
+				--当播放其他人演奏时，如果当前的按键key已经在播放，就不要再重复播放，否则会出现不连贯音效
+				if Work.KeySet and Work.KeySet[Key] then
+					IsSound = false
+				end
 			end
 		end
 	end

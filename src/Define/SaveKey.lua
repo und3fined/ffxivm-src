@@ -286,6 +286,7 @@ local SaveKey = {
 	MentorUpdateNoticeUI = 200000,
 	MentorUpdateEdition = 200001,
 	NewbieLastInviterInfo = 200002,
+	MentorDailyRandomOnlineState = 200003,
 
 	TutorialState = 200100,
 	TutorialGuideState = 200101,

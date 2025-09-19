@@ -52,6 +52,7 @@ end
 function GoldAirForce:EndGame(isSuccess)
     GateMainVM:SetGameRunning(false)
     GoldSauserMgr:SendEndGameReq(GateMainVM:GetScore(), isSuccess)
+    _G.RideShootingMgr:EndGame()
 end
 
 -- 子类用，判断是否能注册报名倒计时，默认是可以注册的
@@ -74,7 +75,9 @@ end
 
 -- 机遇临门奖励动画播放完成后
 function GoldAirForce:AfterGateOpportunityRewardAnimEnd(Params)
-    _G.UIViewMgr:ShowView(UIViewID.GoldSauserResultPanel, Params)
+    if _G.RideShootingMgr:IsRideShootingDungeon() then
+        _G.UIViewMgr:ShowView(UIViewID.GoldSauserResultPanel, Params)
+    end
     _G.LootMgr:SetDealyState(false)
 end
 

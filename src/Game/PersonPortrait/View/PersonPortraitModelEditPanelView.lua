@@ -14,6 +14,10 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local PersonPortraitVM = require("Game/PersonPortrait/VM/PersonPortraitVM")
 local PersonPortraitDefine = require("Game/PersonPortrait/PersonPortraitDefine")
 local PersonPortraitUtil = require("Game/PersonPortrait/PersonPortraitUtil")
+local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+local ActorUtil = require("Utils/ActorUtil")
+local ProtoCommon = require("Protocol/ProtoCommon")
+local EquipParts = ProtoCommon.equip_part
 
 local LSTR = _G.LSTR
 local SliderMaxFOV = PersonPortraitDefine.SliderMaxFOV
@@ -289,6 +293,9 @@ function PersonPortraitModelEditPanelView:OnStateChangedToggleHand(ToggleButton,
 	if ComImageView then
 		ComImageView:HideWeapon(IsHide)
 	end
+	-- 染色处理
+	self:UpdateModelEquipments(EquipParts.EQUIP_PART_MASTER_HAND)
+	self:UpdateModelEquipments(EquipParts.EQUIP_PART_SLAVE_HAND)
 end
 
 ---显示/隐藏 头盔 
@@ -306,11 +313,41 @@ function PersonPortraitModelEditPanelView:OnStateChangedToggleHat(ToggleButton, 
 	if ComImageView then
 		ComImageView:HideHead(IsHide)
 	end
+	-- 染色处理
+	self:UpdateModelEquipments(EquipParts.EQUIP_PART_HEAD)
 end
 
 ---隐藏/显示装饰
 function PersonPortraitModelEditPanelView:OnStateChangedToggleDecorate(ToggleButton, State)
 	PersonPortraitVM:UpdateDecorateVisible(UIUtil.IsToggleButtonChecked(State))
+end
+
+---重新设置装备染色数据
+function PersonPortraitModelEditPanelView:UpdateModelEquipments(EquipPartID)
+	local EquipList = PersonPortraitVM.CurEquipList
+	if nil == EquipList then
+		return
+	end
+
+	local ComImageView = self.CommonRender2DToImageView
+	local UIComplexCharacter = ComImageView:GetUIComplexCharacter()
+	if nil == UIComplexCharacter then
+		return
+	end
+
+	if EquipPartID > 0 then
+		local EquipAvatar = table.find_by_predicate(EquipList, function(e) return e.Part == EquipPartID end) or {}
+		local EquipID = WardrobeUtil.GetEquipID(EquipAvatar.EquipID, EquipAvatar.ResID, EquipAvatar.RandomID)
+
+		ComImageView:PreViewEquipmentEx(EquipID, EquipPartID, EquipAvatar.ColorID, false)
+		ActorUtil.UpdateEquipRegionDyes(UIComplexCharacter, EquipPartID, EquipList)
+	end
+
+	local AvatarComp = UIComplexCharacter:GetAvatarComponent()
+	if AvatarComp then
+		AvatarComp:ForceUpdateCurRoleAvatar()
+		AvatarComp:SetForcedLODForAll(1)
+	end
 end
 
 ---面向镜头/取消面向镜头

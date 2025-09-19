@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local EventID = require("Define/EventID")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local MainVM = require("Game/LegendaryWeapon/VM/LegendaryWeaponMainPanelVM")
+local LegendaryWeaponChapterCfg = require("TableCfg/LegendaryWeaponChapterCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local EquipmentMgr = require("Game/Equipment/EquipmentMgr")
 local ProtoCommon = require("Protocol/ProtoCommon")
@@ -22,6 +23,7 @@ local ViewVM
 ---@class LegendaryWeaponMaterialPageView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
+---@field BtnInfor CommInforBtnView
 ---@field EquipTips LegendaryWeaponEquipTipsView
 ---@field ItemTips LegendaryWeaponItemTipsView
 ---@field PanelAtma UFCanvasPanel
@@ -38,6 +40,7 @@ local LegendaryWeaponMaterialPageView = LuaClass(UIView, true)
 function LegendaryWeaponMaterialPageView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
+	--self.BtnInfor = nil
 	--self.EquipTips = nil
 	--self.ItemTips = nil
 	--self.PanelAtma = nil
@@ -54,6 +57,7 @@ end
 function LegendaryWeaponMaterialPageView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
+	self:AddSubView(self.BtnInfor)
 	self:AddSubView(self.EquipTips)
 	self:AddSubView(self.ItemTips)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -66,6 +70,11 @@ function LegendaryWeaponMaterialPageView:OnInit()
 
 	self.AdapterAtmaList = UIAdapterTableView.CreateAdapter(self, self.TableViewAtma)
 	self.AdapterMaterialList = UIAdapterTableView.CreateAdapter(self, self.TableViewMaterial)
+
+	if self.BtnInfor then
+		self.BtnInfor.HelpInfoID = -1
+		self.BtnInfor.Type = 4
+	end
 end
 
 function LegendaryWeaponMaterialPageView:OnShow()
@@ -119,7 +128,31 @@ end
 -- end
 
 function LegendaryWeaponMaterialPageView:OnRegisterUIEvent()
-	self.BtnBack:AddBackClick(self, self.OnClickedBtnBack)
+	if self.BtnInfor then
+		self.BtnInfor:SetCallback(self.BtnInfor, self.OnClickedBtnInfor)
+	end
+	
+	if self.BtnBack then
+		self.BtnBack:AddBackClick(self, self.OnClickedBtnBack)
+	end
+end
+
+function LegendaryWeaponMaterialPageView:OnClickedBtnInfor()
+	if not MainVM then
+		return
+	end
+	local ChapterID = MainVM.ChapterID
+	for k, v in pairs(MainVM.ChapterList) do
+		if v.ID == ChapterID then
+			local SpecialItemsHelp = v.SpecialItemsHelp
+			if string.isnilorempty(SpecialItemsHelp) then
+				break
+			end
+			local MsgTipsUtil = require("Utils/MsgTipsUtil")
+			MsgTipsUtil.ShowTips(SpecialItemsHelp)
+			return
+		end
+	end
 end
 
 function LegendaryWeaponMaterialPageView:OnClickedBtnBack()

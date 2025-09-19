@@ -14,6 +14,7 @@ local OnlineStatusDefine = require("Game/OnlineStatus/OnlineStatusDefine")
 local ActorUtil = require("Utils/ActorUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
 local EventID = require("Define/EventID")
+local SaveKey = require("Define/SaveKey")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
 local UILayer = require("UI/UILayer")
@@ -28,6 +29,7 @@ local CSOnlineStatusCmd =  ProtoCS.CSOnlineStatusCmd
 local GameNetworkMgr
 local ClientReportMgr
 local LSTR = _G.LSTR
+local USaveMgr
 
 -- 表述多长时间未点击屏幕，玩家将会自动设置为离开状态，单位：秒
 local AutoLeaveTime = 9 * 60 + 30 -- 9 * 60 + 30
@@ -73,6 +75,8 @@ function OnlineStatusMgr:OnBegin()
 	self.LastActionTime = TimeUtil.GetServerTime()
 	GameNetworkMgr = _G.GameNetworkMgr
 	ClientReportMgr = _G.ClientReportMgr
+	USaveMgr = _G.UE.USaveMgr
+	self.MentorDailyRandomOnlineState = USaveMgr.GetInt(SaveKey.MentorDailyRandomOnlineState, 0, true)
 end
 
 function OnlineStatusMgr:OnEnd()
@@ -319,8 +323,22 @@ function OnlineStatusMgr:OnGameEventPWorldMapEnter()
 	self:UpdateDungeonTeamRelatedStatus()
 	if _G.PWorldMgr.DailyRandomID == 4 then 
 		if OnlineStatusUtil.CheckBit(self.MajorIdentity, ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyBattleMentor) then
+			local RoleVM = MajorUtil.GetMajorRoleVM() or {}
+			local IsOnlineStatusMentor = RoleVM.OnlineStatusCustomID == OnlineStatusRes.OnlineStatusMentor
 			-- 进入导随副本切为战斗指导者在线状态
 			self:SetCustomStatus(OnlineStatusRes.OnlineStatusCombatMentor)
+			if IsOnlineStatusMentor then
+				self.MentorDailyRandomOnlineState = 1
+				USaveMgr.SetInt(SaveKey.MentorDailyRandomOnlineState, 1, true)
+			end
+		end
+	else
+		if self.MentorDailyRandomOnlineState == 1 then
+			self.MentorDailyRandomOnlineState = 0
+			USaveMgr.SetInt(SaveKey.MentorDailyRandomOnlineState, 0, true)
+			if OnlineStatusUtil.CheckBit(self.MajorIdentity, ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyMentor) then
+				self:SetCustomStatus(OnlineStatusRes.OnlineStatusMentor)
+			end
 		end
 	end
 end
@@ -805,6 +823,11 @@ function OnlineStatusMgr:SetCustomStatus(StatusID, FromView)
 	end
 
 	if FromView then 
+		if self.MentorDailyRandomOnlineState == 1 and StatusID ~= OnlineStatusRes.OnlineStatusMentor then
+			self.MentorDailyRandomOnlineState = 0
+			USaveMgr.SetInt(SaveKey.MentorDailyRandomOnlineState, 0, true)
+		end
+
 		self.ViewStateSetting = self:RegisterTimer(self.StateSettingTiming, 2)  -- 其他状态，加个回包时间判定
 	end
 end

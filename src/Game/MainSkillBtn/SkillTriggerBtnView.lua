@@ -13,6 +13,7 @@ local SkillUtil = require("Utils/SkillUtil")
 local TimeUtil = require("Utils/TimeUtil")
 local SkillMainCfg = require("TableCfg/SkillMainCfg")
 local MajorUtil = require("Utils/MajorUtil")
+local BuffUIUtil = require("Game/Buff/BuffUIUtil")
 local EventID = require("Define/EventID")
 local BuffCfg = require("TableCfg/BuffCfg")
 local SkillSystemReplaceCfg = require("TableCfg/SkillSystemReplaceCfg")
@@ -107,6 +108,7 @@ function SkillTriggerBtnView:OnInit()
 	self.bSelected = false
 	self.ExpireTimerID = 0
 	self.QTECDTimerID = 0
+	self.QTECDTextTimerID = 0
 	self.SmimulateSkillTimerID = 0
 	self.QTECDCnt = 0
 
@@ -192,7 +194,8 @@ function SkillTriggerBtnView:OnRegisterGameEvent()
 		self:RegisterGameEvent(EventID.SkillSystemClickBlank, self.OnSkillSystemClickBlank)
 	else
 		self:RegisterGameEvent(EventID.SkillAssetAttrUpdate, self.OnSkillAssetAttrUpdate)
-		self:RegisterGameEvent(EventID.MajorUpdateBuffTime, self.OnUpdateBuffTime)
+		self:RegisterGameEvent(EventID.UpdateBuff, self.OnQTEBuffTimerStart)
+		self:RegisterGameEvent(EventID.RemoveBuff, self.OnQTEBuffTimerStop)
 	end
 end
 
@@ -394,11 +397,48 @@ function SkillTriggerBtnView:OnSkillAssetAttrUpdate(Params)
 	end
 end
 
-function SkillTriggerBtnView:OnUpdateBuffTime(BuffInfoParam)
-	if BuffInfoParam.BuffID == self.BLMQTEBuffID then
-		self.BaseBtnVM.QTECDTime = BuffInfoParam.BuffLeftTime
-		self.QTECDCnt = 0
+function SkillTriggerBtnView:OnQTEBuffTimerStart(Params)
+	local BuffID = Params.IntParam1
+	local EntityID = Params.ULongParam1
+
+	if EntityID ~= MajorUtil.GetMajorEntityID() then
+		return
 	end
+
+	if BuffID ~= self.BLMQTEBuffID then
+		return
+	end
+
+	local ExpdTime = Params.ULongParam3
+	self.ExpdTime = ExpdTime
+	if self.QTECDTextTimerID ~= 0 then
+		self:UnRegisterTimer(self.QTECDTextTimerID)
+		self.QTECDTextTimerID = 0
+	end
+	self.QTECDTextTimerID = self:RegisterTimer(self.OnUpdateBuffTime,0,1,0,ExpdTime)
+end
+
+function SkillTriggerBtnView:OnQTEBuffTimerStop(Params)
+	local BuffID = Params.IntParam1
+	local EntityID = Params.ULongParam1
+
+	if EntityID ~= MajorUtil.GetMajorEntityID() then
+		return
+	end
+
+	if BuffID ~= self.BLMQTEBuffID then
+		return
+	end
+	if self.QTECDTextTimerID ~= 0 then
+		self:UnRegisterTimer(self.QTECDTextTimerID)
+		self.QTECDTextTimerID = 0
+	end
+end
+
+function SkillTriggerBtnView:OnUpdateBuffTime(ExpdTime)
+	local BuffTime = BuffUIUtil.GetLeftTimeSecondByExpdTime(ExpdTime)
+	self.BaseBtnVM.QTECDTime = BuffTime
+	self.QTECDCnt = 0
 end
 
 function SkillTriggerBtnView:UpdateQTECanUse(CanUse)

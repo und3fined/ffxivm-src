@@ -75,7 +75,7 @@ function PVPColosseumRecordVM:UpdateVM(IsWinner, ExitEndTime, PvPColosseumGameRe
 	self.PlayResultText = IsWinner and _G.LSTR(810031) or _G.LSTR(810032)
 	self.ExitEndTime = ExitEndTime
 
-	local TotalTime = PvPColosseumGameResultRsp.Duration + PvPColosseumGameResultRsp.DurationDelay
+	local TotalTime = PvPColosseumGameResultRsp.Duration
 	TotalTime = math.floor(TotalTime / 1000) -- 后台下发的是毫秒
 	self.PlayTime = _G.DateTimeTools.TimeFormat(TotalTime, "mm:ss")
 

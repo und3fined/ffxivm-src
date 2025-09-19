@@ -18,23 +18,23 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 ---@class LegendaryWeaponMainPanelVM : UIViewModel
 local LegendaryWeaponMainPanelVM = LuaClass(UIViewModel)
 
-function LegendaryWeaponMainPanelVM:Ctor()      --启动游戏时触发
+function LegendaryWeaponMainPanelVM:Ctor()
 end
 
-function LegendaryWeaponMainPanelVM:OnInit()    --登录指定角色时
+function LegendaryWeaponMainPanelVM:OnInit()
     self.CameraFOV = 60
     self.SelectWeaponID = 0
     self.SelectSubWeaponID = 0
     self.SelectWeaponIndex = 1  --选中的武器序号
     self.TopicID = 1            --选中的主题ID
-    self.ChapterID = 1          --选中的章节ID
+    self.ChapterID = 1          --选中的章节序号
     self.WeaponDesc = ""
     self.SelectID = 0
     self.IsComposeMode = false  -- 是否为制造模式(切换展示武器或材料界面)
     self.IsShowWeaponModel = true   --- 是否显示武器模型
 end
 
-function LegendaryWeaponMainPanelVM:OnShow()            --打开主界面时
+function LegendaryWeaponMainPanelVM:OnShow()
     self.BP_SceneActor = nil        --- 蓝图场景
     self.Render2DActor = nil        --- 2D角色
     self.bIsCompletion = false      --- 当前武器已制作
@@ -43,7 +43,7 @@ function LegendaryWeaponMainPanelVM:OnShow()            --打开主界面时
     LegendaryWeaponMgr:SendQueryMsg()
 end
 
-function LegendaryWeaponMainPanelVM:OnEnd()    --退出当前角色时
+function LegendaryWeaponMainPanelVM:OnEnd()
     self.CameraFOV = 60
     self.SelectWeaponID = 0
     self.SelectSubWeaponID = 0
@@ -88,7 +88,7 @@ function LegendaryWeaponMainPanelVM:GetChapterList(index)
 
 	for _, ChapterInfo in pairs(ChapterCfgList) do
         local bUnLock = LegendaryWeaponMgr.ChapterVersion and LegendaryWeaponMgr.ChapterVersion[ChapterInfo.ID] == true
-        table.insert(ChapterList, {ID = ChapterInfo.ChapterID, IsUnLock = bUnLock})
+        table.insert(ChapterList, {ID = ChapterInfo.ChapterID, IsUnLock = bUnLock, SpecialItemsHelp = ChapterInfo.SpecialItemsHelp})
 	end
     table.sort(ChapterList, function(A, B)
         return A.ID < B.ID

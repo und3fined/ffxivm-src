@@ -1192,6 +1192,7 @@ local ProtoCS = {
 		EmotionTargetTypeListNpc = 2,
 		EmotionTargetTypeListEObj = 3,
 		EmotionTargetTypeListCompanion = 4,
+		EmotionTargetTypeMountFacade = 5,
 	},
 	Entourage = {
 		EntourageCmd = {

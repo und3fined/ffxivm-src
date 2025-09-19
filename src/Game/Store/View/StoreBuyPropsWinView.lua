@@ -219,7 +219,7 @@ function StoreBuyPropsWinView:OnClickButtonBuy()
 	if not IsCan then
 		MsgTipsUtil.ShowTips(StoreUtil.GetTipsByCannotBuyReason(CanNotReason))
 	else
-		if StoreMainVM:bAvailableBuyByMultiBuy() then
+		if StoreMainVM:bAvailableBuyByMultiBuy(ItemData) then
 			self:Hide()
 			StoreMainVM:BuyProps(ItemData.Cfg.ID)
 		end

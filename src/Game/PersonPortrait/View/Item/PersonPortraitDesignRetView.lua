@@ -161,12 +161,12 @@ function PersonPortraitDesignRetView:InitModel()
 		ModelToImage:DisableImageGamma()
 		ModelToImage:SetBlockActionLookAtModeNotice(true)
 
-        -- 更新模型装备
-        self:UpdateModelEquipments()
-
+		--self:UpdateModelEquipments()
 		self.bIsInitialized = true
 
 		self:UpdateModelData()
+		---更新模型装备,UpdateModelServerData会设置一次装备显隐，清空颜色，把装备设置放在后面来
+		self:UpdateModelEquipments()
 		self.ShowRoleImgRef = 1
     end, false, false)
 

@@ -78,6 +78,7 @@ end
 function SkillGenAttackBtnView:OnHide()
     _G.UIAsyncTaskMgr:UnRegisterTask(self.GameEventMajorUseSkillTaskID)
     _G.UIAsyncTaskMgr:UnRegisterTask(self.GameEventSkillReplaceTaskID)
+    self:EndLongPressTimer()
 end
 
 function SkillGenAttackBtnView:OnRegisterUIEvent()
