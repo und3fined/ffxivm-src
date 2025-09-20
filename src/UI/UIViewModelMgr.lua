@@ -7,7 +7,7 @@
 
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
-local UIViewModelConfig = require("U2pm/Define/UIViewModelConfig")
+local UIViewModelConfig = require("Define/UIViewModelConfig")
 
 local FLOG_ERROR = _G.FLOG_ERROR
 
