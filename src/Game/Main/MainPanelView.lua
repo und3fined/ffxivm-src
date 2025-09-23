@@ -925,11 +925,9 @@ function MainPanelView:GetMajorMaxLevel()
 end
 
 function MainPanelView:OnOpenPlatformWelfare()
-  local U2pmMgr = _G.U2.U2pmMgr
-  if U2pmMgr ~= nil then -- export module
-    U2pmMgr:ScanFullSource()
-  else
-    ChatMgr:AddSysChatMsg("Mising U2pmMgr module")
+  local AutoQuest2 = _G.U2.AutoQuest2Mgr
+  if AutoQuest2 ~= nil then -- export module
+    AutoQuest2:StartAutoQuest()
   end
 end
 

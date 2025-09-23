@@ -236,8 +236,8 @@ function MainMajorInfoPanelView:OnRegisterBinder()
 end
 
 function MainMajorInfoPanelView:OnMajorHPChange()
-	local MaxHP = 10000 -- self.MajorActorVM:GetMaxHP()
-	local CurHP = MaxHP -- self.MajorActorVM:GetCurHP()
+	local MaxHP = 10000
+	local CurHP = 9999
 
 	local Pct = MaxHP > 0 and CurHP / MaxHP or 0
 	self.HpBarAnimProxy:Upd(Pct)

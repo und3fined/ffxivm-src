@@ -41,10 +41,8 @@ StoryDefine.AutoWaitTime = 0.3
 
 StoryDefine.SpeedLevelData = {
 	[1] = 1,
-	[2] = 0.2,
-	[3] = 0.1,
-	[4] = 0.05,
-	[5] = 0.01
+	[2] = 0.1,
+	[3] = 0.01,
 }
 
 -- 来源：https://doc.weixin.qq.com/sheet/e3_AT8AVQYhALQwE0E0yb4SZqU07UhyW?scode=AJEAIQdfAAopRbyXtpAT8AVQYhALQ&tab=BB08J2
