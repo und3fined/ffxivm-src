@@ -37,7 +37,7 @@ function SequenceCfgClass:Ctor(SequencePath)
 	self.SequencePath = SequencePath or ""
 	self.SequenceObject = nil
 	self.SceneCharacterShowType = ProtoRes.dialogue_scene_character_show_type.HIDE_ALL_EXCEPT_NPC
-	self.IsAutoPlay = false
+	self.IsAutoPlay = true
 	self.BlendTime = 0
 	self.bUseSyncLoad = false
 	self.bHasAnyDialog = true

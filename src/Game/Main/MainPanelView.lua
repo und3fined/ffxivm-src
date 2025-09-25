@@ -264,6 +264,7 @@ end
 
 function MainPanelView:OnShow()
 	UIUtil.SetIsVisible(self.TextTime2, true)
+	UIUtil.SetIsVisible(self.TextTime_1, true)
 	UIUtil.TextBlockSetFontSize(self.TextTime2, 12)
 	self:OnPlayFadeAnim(true)
 	--print("MainPanelView:OnShow")
