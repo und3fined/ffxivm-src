@@ -893,7 +893,7 @@ function MainPanelView:ShowWelfareEntrance()
 		if nil ~= Cfg and Cfg.IsEnableWeChatWelfareEntrance == 0 then
 			UIUtil.SetIsVisible(self.BtnWelfare, false)
 		else
-			self.TextWelfare:SetText("Dump")
+			self.TextWelfare:SetText("Auto")
 			UIUtil.SetIsVisible(self.BtnWelfare, true, true)
 		end
 	elseif _G.LoginMgr:IsQQLogin() then
@@ -928,7 +928,7 @@ end
 function MainPanelView:OnOpenPlatformWelfare()
   local U2pmMgr = _G.U2.U2pmMgr
   if U2pmMgr ~= nil then -- export module
-    U2pmMgr:ExportSource()
+    U2pmMgr:ToggleU2Fighting()
   end
 end
 
