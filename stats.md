@@ -1,6 +1,6 @@
 # File Comparison Report
 
-Generated on: 2025-09-19 09:55:52 UTC
+Generated on: 2025-09-25 05:47:40 UTC
 
 ## Summary
 
@@ -13,5 +13,11 @@ Generated on: 2025-09-19 09:55:52 UTC
 - Config/PreDownloadConfig.lua.template
 - Config/UserAgreementUpdateConfig.lua.template
 - Game/LoginCreate/LoginCreate.csv
+- Network/Protobuff.lua
+- TableCfg/FineplayCfg.lua
+- TableCfg/LifeskillConditionCfg.lua
+- TableCfg/LoginshowMenuCfg.lua
 
 ## Files in src but not in raw
+
+- (none)
