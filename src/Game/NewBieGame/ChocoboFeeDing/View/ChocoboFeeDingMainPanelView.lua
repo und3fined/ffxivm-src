@@ -587,7 +587,7 @@ function ChocoboFeeDingMainPanelView:CheckGameResult()
     CurOuterScale = math.floor(CurOuterScale * 100) / 100
     CurInnerScale = math.floor(CurInnerScale * 100) / 100
     _G.FLOG_INFO("ChocoboFeeDingMainPanelView.CheckGameResult CurOuterScale = " .. CurOuterScale .. "  CurInnerScale = " .. CurInnerScale)
-    local IsSuc = CurOuterScale <= CurInnerScale
+    local IsSuc = true
     if IsSuc then
         self:GameOver(true)
     else
