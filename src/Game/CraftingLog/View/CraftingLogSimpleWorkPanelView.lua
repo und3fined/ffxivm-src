@@ -244,7 +244,12 @@ function CraftingLogSimpleWorkPanelView:ToMake()
 
 	--请求制作，释放制作技能
 	_G.CrafterMgr:CastLifeSkill(0)
-	CrafterMgr.bResultShown = false
+	_G.CrafterMgr.bResultShown = false
+
+	self.IsInCD = true
+	self:RegisterTimer(function ()
+		self.IsInCD = false
+	end, 0.5, 0, 1)
 end
 
 function CraftingLogSimpleWorkPanelView:OnAnimationFinished(Animation)
@@ -265,6 +270,10 @@ end
 
 --立即完成
 function CraftingLogSimpleWorkPanelView:OnFinishBtnClicked()
+	if self.IsInCD then
+		_G.FLOG_INFO("CraftingLogSimpleWork CDing...")
+		return
+	end
 	--判断金币
 	if _G.CraftingLogMgr.ScoreNotEnough then
 		_G.MsgTipsUtil.ShowTips(_G.LSTR(80046)) --金币不足

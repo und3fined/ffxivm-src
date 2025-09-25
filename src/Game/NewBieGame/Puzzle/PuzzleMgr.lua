@@ -57,7 +57,7 @@ function PuzzleMgr:OnGameEventEnterWorld()
     if not CurGameType then
         return
     end
-    local bBurritos = CurGameType ~= nil and CurGameType == ProtoRes.PuzzleGameType.Burritos
+    local bBurritos = CurGameType ~= nil and CurGameType == ProtoRes.Game.PuzzleGameType.Burritos
     if self.IsPuzzling and self.LeaveMapID and self.LeaveMapID == MapID and self.CurGameID and bBurritos then
         self:EnterPuzzleGame(self.GameType, self.CurGameID)
         self.LeaveMapID = nil
@@ -66,7 +66,7 @@ end
 
 function PuzzleMgr:OnPWorldExit(_)
     -- 任务流程拼装剪影专属逻辑
-    local bBurritos = self.GameType ~= nil and self.GameType == ProtoRes.PuzzleGameType.Burritos
+    local bBurritos = self.GameType ~= nil and self.GameType == ProtoRes.Game.PuzzleGameType.Burritos
     if self.IsPuzzling and bBurritos then
         self:ForceEndBurritos()
         self.IsNeedRecoverGame = true
@@ -134,9 +134,9 @@ end
 ---@param InGameTime number 外部指定的游戏时间，不传入则使用表格的数据
 ---@return  Type Description
 function PuzzleMgr:EnterPuzzleGame(InGameType, InGameID, InGameTime)
-    if InGameType == ProtoRes.PuzzleGameType.Burritos then
+    if InGameType == ProtoRes.Game.PuzzleGameType.Burritos then
         self.PuzzleGameInst = PuzzleBurritosGameInst.New()
-    elseif (InGameType == ProtoRes.PuzzleGameType.PenguinJigsaw) then
+    elseif (InGameType == ProtoRes.Game.PuzzleGameType.PenguinJigsaw) then
         self.PuzzleGameInst = PuzzlePenguinJigsawGameIns.New()
     else
         _G.FLOG_ERROR("传入的游戏类型 : %s , 不正确，请检查", InGameType)

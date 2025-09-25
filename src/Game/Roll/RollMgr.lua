@@ -662,7 +662,7 @@ end
 function RollMgr:OnTimerTeamRollResult(Params)
 	local TeamID = Params.TeamID
 	local Key = tostring(TeamID)
-	if TeamRollItemVM.AwardExpireTime == 0 then
+	if TeamRollItemVM.AwardExpireTime == 0 and self.AwardMap[self.CurrentAwardKey] ~= nil then
 		TeamRollItemVM.AwardExpireTime = self.AwardMap[self.CurrentAwardKey].ExpireTime
 	end
 	EventMgr:SendEvent(EventID.TeamRollItemUpdateTick)

@@ -343,7 +343,9 @@ function WardrobeUnlockPanelView:ClearOlderApp()
 						local TempEquip = EquipList[part]
 						if TempEquip ~= nil then
 							local EquipID = TempEquip.ResID
-							self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+							if EquipID ~= nil then
+								self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+							end
 						else
 							self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
 						end

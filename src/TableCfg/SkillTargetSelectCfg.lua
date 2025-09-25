@@ -1887,7 +1887,6 @@ local SkillTargetSelectCfg = {
         {
             ConditionExpr = '7047',
             ID = 7047,
-            SelectCount = 8,
         },
         {
             ID = 7048,
@@ -1900,7 +1899,6 @@ local SkillTargetSelectCfg = {
         {
             ConditionExpr = '7047&7031',
             ID = 7050,
-            SelectCount = 8,
         },
         {
             ConditionExpr = '7051',

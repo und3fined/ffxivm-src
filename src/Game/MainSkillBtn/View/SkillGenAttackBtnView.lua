@@ -348,7 +348,7 @@ function SkillGenAttackBtnView:OnCastSkill()
             return
         end
         
-        if _G.SkillLogicMgr.bAutoGenSkillAttack then
+        if _G.SkillLogicMgr:CanAutoGenSkillAttack() then
             FLOG_INFO("Enter AutoGenAttack")
             self:StartLongPressTimer()
         end

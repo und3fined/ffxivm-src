@@ -1042,23 +1042,31 @@ end
 function PWorldEntDetailVM:GetCrystallineMapTimeInfo(IsInEventTime, CurIntervalData, NextIntervalData)
     local CurMapString
     if IsInEventTime then
+        local StartTimeHour = CurIntervalData.StartTime.hour
+        local StartTimeMinute = CurIntervalData.StartTime.min
+        local EndTimeHour = CurIntervalData.EndTime.hour
+        local EndTimeMinute = CurIntervalData.EndTime.min
         -- 00:00是新一天的第一秒，但是策划希望显示24:00，所以在展示上对数字做处理，接口里实际返回时间还是新一天的00:00，只对EndTime处理是因为开始时间不会是24:00，只有结束时间要这样显示
-        if CurIntervalData.EndTime.hour == 0 and CurIntervalData.EndTime.min == 0 and CurIntervalData.EndTime.sec == 0 then
-            CurIntervalData.EndTime.hour = 24
+        if EndTimeHour == 0 and EndTimeMinute == 0 and CurIntervalData.EndTime.sec == 0 then
+            EndTimeHour = 24
         end
-        local CurMapStartTime = string.format(LSTR(1320123), CurIntervalData.StartTime.hour, CurIntervalData.StartTime.min)
-        local CurMapEndTime = string.format(LSTR(1320123), CurIntervalData.EndTime.hour, CurIntervalData.EndTime.min)
+        local CurMapStartTime = string.format(LSTR(1320123), StartTimeHour, StartTimeMinute)
+        local CurMapEndTime = string.format(LSTR(1320123), EndTimeHour, EndTimeMinute)
         CurMapString = string.format(LSTR(1320118), CurIntervalData.MapName, CurMapStartTime, CurMapEndTime)
     else
         CurMapString = LSTR(1320122)
     end
 
+    local StartTimeHour = NextIntervalData.StartTime.hour
+    local StartTimeMinute = NextIntervalData.StartTime.min
+    local EndTimeHour = NextIntervalData.EndTime.hour
+    local EndTimeMinute = NextIntervalData.EndTime.min
     -- 00:00是新一天的第一秒，但是策划希望显示24:00，所以在展示上对数字做处理，接口里实际返回时间还是新一天的00:00，只对EndTime处理是因为开始时间不会是24:00，只有结束时间要这样显示
-    if NextIntervalData.EndTime.hour == 0 and NextIntervalData.EndTime.min == 0 and NextIntervalData.EndTime.sec == 0 then
-        NextIntervalData.EndTime.hour = 24
+    if EndTimeHour == 0 and EndTimeMinute == 0 and NextIntervalData.EndTime.sec == 0 then
+        EndTimeHour = 24
     end
-    local NextMapStartTime = string.format(LSTR(1320123), NextIntervalData.StartTime.hour, NextIntervalData.StartTime.min)
-    local NextMapEndTime = string.format(LSTR(1320123), NextIntervalData.EndTime.hour, NextIntervalData.EndTime.min)
+    local NextMapStartTime = string.format(LSTR(1320123), StartTimeHour, StartTimeMinute)
+    local NextMapEndTime = string.format(LSTR(1320123), EndTimeHour, EndTimeMinute)
     local NextMapString = string.format(LSTR(1320119), NextIntervalData.MapName, NextMapStartTime, NextMapEndTime)
 
     return CurMapString, NextMapString
@@ -1073,7 +1081,7 @@ function PWorldEntDetailVM:GetCrystallineEventTimeInfo(EventTimeData)
     local EndTimeMinute = EventTimeData.EndTime.min
 
     -- 00:00是新一天的第一秒，但是策划希望显示24:00，所以在展示上对数字做处理，接口里实际返回时间还是新一天的00:00，只对EndTime处理是因为开始时间不会是24:00，只有结束时间要这样显示
-    if EventTimeData.EndTime.hour == 0 and EventTimeData.EndTime.hour == 0 and EventTimeData.EndTime.hour == 0 then
+    if EndTimeHour == 0 and EndTimeMinute == 0 and EventTimeData.EndTime.sec == 0 then
         EndTimeHour = 24
     end
     

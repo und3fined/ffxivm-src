@@ -76,7 +76,7 @@ local StorageSkillCfg = {
         },
         {
             ID = 20831,
-            _LevelList = '[{"MaxTime":2500,"ActionID":"","SkillID":20815},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0}]',
+            _LevelList = '[{"MaxTime":2500,"ActionID":"","SkillID":20836},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0}]',
             LimitTime = 2500,
             MaxTime = 2500,
             SingID = 2083101,

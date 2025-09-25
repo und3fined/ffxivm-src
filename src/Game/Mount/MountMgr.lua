@@ -2137,7 +2137,7 @@ function MountMgr:OnReceiveCustomMadeChange(Msg)
 
     local Actor = MajorUtil.GetMajor()
     if Actor == nil then return end
-    
+    _G.EmotionMgr:StopMountCustomEmotion()
     self:SetCustomMadeID(Actor, MountResID, CustomMadeID)
     MountVM:SetCustomMadeID(MountResID, CustomMadeID)
     --MountCustomMadeVM:SetCustomMadeID(MountResID, CustomMadeID)

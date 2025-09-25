@@ -40779,6 +40779,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1531,
             _Attr = '[{"type":0,"attr":12,"value":296},{"type":0,"attr":14,"value":296},{"type":0,"attr":1,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":26},{"type":0,"attr":23,"value":26},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270011,
@@ -40791,6 +40792,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1534,
             _Attr = CS._1_398,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270012,
@@ -40803,6 +40805,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1532,
             _Attr = CS._1_398,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270013,
@@ -40815,6 +40818,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1532,
             _Attr = CS._1_398,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270014,
@@ -40827,6 +40831,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1533,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":3,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":26},{"type":0,"attr":21,"value":26},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270015,
@@ -40839,6 +40844,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1535,
             _Attr = CS._1_706,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270016,
@@ -40851,6 +40857,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1536,
             _Attr = CS._1_707,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ExchangeCompanySealNum = 312,
             ID = 50270017,
@@ -40891,6 +40898,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 801,
             _Attr = '[{"type":0,"attr":12,"value":380},{"type":0,"attr":14,"value":380},{"type":0,"attr":1,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":36},{"type":0,"attr":17,"value":36}]',
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270021,
             ModelString = CS._4_222,
@@ -40902,6 +40910,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 804,
             _Attr = CS._1_401,
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270022,
             ModelString = CS._4_223,
@@ -40913,6 +40922,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 802,
             _Attr = CS._1_401,
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270023,
             ModelString = CS._4_77,
@@ -40924,6 +40934,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 802,
             _Attr = CS._1_401,
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270024,
             ModelString = CS._4_77,
@@ -40935,6 +40946,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 803,
             _Attr = '[{"type":0,"attr":12,"value":202},{"type":0,"attr":14,"value":202},{"type":0,"attr":3,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":39},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":32}]',
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270025,
             ModelString = CS._4_224,
@@ -40946,6 +40958,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 805,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":4,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":39},{"type":0,"attr":21,"value":32},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270026,
             ModelString = CS._4_225,
@@ -40957,6 +40970,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 806,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":5,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":39},{"type":0,"attr":21,"value":32},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             ExchangeCompanySealNum = 468,
             ID = 50270027,
             ModelString = CS._4_226,
@@ -40994,6 +41008,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 544,
             _Attr = '[{"type":0,"attr":12,"value":296},{"type":0,"attr":14,"value":296},{"type":0,"attr":1,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":23},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":29}]',
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270031,
@@ -41006,6 +41021,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 547,
             _Attr = CS._1_402,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270032,
@@ -41018,6 +41034,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 545,
             _Attr = CS._1_402,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270033,
@@ -41030,6 +41047,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 545,
             _Attr = CS._1_402,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270034,
@@ -41042,6 +41060,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 546,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":3,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":23},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":29}]',
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270035,
@@ -41054,6 +41073,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 548,
             _Attr = CS._1_706,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270036,
@@ -41066,6 +41086,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 549,
             _Attr = CS._1_707,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ExchangeCompanySealNum = 312,
             ID = 50270037,
@@ -41106,6 +41127,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1121,
             _Attr = '[{"type":0,"attr":12,"value":380},{"type":0,"attr":14,"value":380},{"type":0,"attr":1,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":36},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":36}]',
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270041,
@@ -41118,6 +41140,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1124,
             _Attr = CS._1_403,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270042,
@@ -41130,6 +41153,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1122,
             _Attr = CS._1_403,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270043,
@@ -41142,6 +41166,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1122,
             _Attr = CS._1_403,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270044,
@@ -41154,6 +41179,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1123,
             _Attr = '[{"type":0,"attr":12,"value":202},{"type":0,"attr":14,"value":202},{"type":0,"attr":3,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":36},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":36}]',
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270045,
@@ -41166,6 +41192,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1125,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":4,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":39},{"type":0,"attr":17,"value":32}]',
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270046,
@@ -41178,6 +41205,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1126,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":5,"value":80},{"type":0,"attr":6,"value":43},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":39},{"type":0,"attr":17,"value":32}]',
+            CanBeDyed = 1,
             EquipmentType = 8,
             ExchangeCompanySealNum = 468,
             ID = 50270047,
@@ -41218,6 +41246,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 250,
             _Attr = '[{"type":0,"attr":12,"value":296},{"type":0,"attr":14,"value":296},{"type":0,"attr":1,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":0},{"type":0,"attr":21,"value":23},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":29}]',
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270051,
@@ -41230,6 +41259,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 253,
             _Attr = CS._1_404,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270052,
@@ -41242,6 +41272,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 251,
             _Attr = CS._1_404,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270053,
@@ -41254,6 +41285,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 251,
             _Attr = CS._1_404,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270054,
@@ -41266,6 +41298,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 252,
             _Attr = '[{"type":0,"attr":12,"value":157},{"type":0,"attr":14,"value":157},{"type":0,"attr":3,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":26},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":26},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270055,
@@ -41278,6 +41311,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 254,
             _Attr = '[{"type":0,"attr":12,"value":122},{"type":0,"attr":14,"value":122},{"type":0,"attr":4,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":23},{"type":0,"attr":21,"value":0},{"type":0,"attr":23,"value":29},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270056,
@@ -41290,6 +41324,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 255,
             _Attr = '[{"type":0,"attr":12,"value":122},{"type":0,"attr":14,"value":122},{"type":0,"attr":5,"value":62},{"type":0,"attr":6,"value":34},{"type":0,"attr":18,"value":23},{"type":0,"attr":21,"value":29},{"type":0,"attr":23,"value":0},{"type":0,"attr":17,"value":0}]',
+            CanBeDyed = 1,
             EquipmentType = 9,
             ExchangeCompanySealNum = 312,
             ID = 50270057,
@@ -52135,6 +52170,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1416,
             _Attr = CS._1_431,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321011,
             ModelString = CS._4_234,
@@ -52146,6 +52182,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1417,
             _Attr = CS._1_36,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321012,
             ModelString = CS._4_235,
@@ -52157,6 +52194,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1418,
             _Attr = CS._1_36,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321013,
             ModelString = CS._4_79,
@@ -52168,6 +52206,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1418,
             _Attr = CS._1_36,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321014,
             ModelString = CS._4_79,
@@ -52179,6 +52218,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1422,
             _Attr = CS._1_432,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321015,
             ModelString = CS._4_236,
@@ -52190,6 +52230,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1423,
             _Attr = CS._1_110,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321016,
             ModelString = CS._4_237,
@@ -52201,6 +52242,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1421,
             _Attr = CS._1_111,
+            CanBeDyed = 1,
             EquipmentType = 5,
             ID = 50321017,
             ModelString = CS._4_238,
@@ -52212,6 +52254,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 688,
             _Attr = CS._1_433,
+            CanBeDyed = 1,
             ID = 50321021,
             ModelString = CS._4_234,
             Part = 4,
@@ -52222,6 +52265,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 689,
             _Attr = CS._1_37,
+            CanBeDyed = 1,
             ID = 50321022,
             ModelString = CS._4_235,
             Part = 4,
@@ -52232,6 +52276,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 690,
             _Attr = CS._1_37,
+            CanBeDyed = 1,
             ID = 50321023,
             ModelString = CS._4_79,
             Part = 4,
@@ -52242,6 +52287,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 690,
             _Attr = CS._1_37,
+            CanBeDyed = 1,
             ID = 50321024,
             ModelString = CS._4_79,
             Part = 4,
@@ -52252,6 +52298,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 692,
             _Attr = CS._1_434,
+            CanBeDyed = 1,
             ID = 50321025,
             ModelString = CS._4_236,
             Part = 4,
@@ -52262,6 +52309,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 693,
             _Attr = CS._1_435,
+            CanBeDyed = 1,
             ID = 50321026,
             ModelString = CS._4_237,
             Part = 4,
@@ -52272,6 +52320,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 691,
             _Attr = CS._1_436,
+            CanBeDyed = 1,
             ID = 50321027,
             ModelString = CS._4_238,
             Part = 4,
@@ -52282,6 +52331,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 435,
             _Attr = CS._1_437,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321031,
             ModelString = CS._4_234,
@@ -52293,6 +52343,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 436,
             _Attr = CS._1_38,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321032,
             ModelString = CS._4_235,
@@ -52304,6 +52355,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 437,
             _Attr = CS._1_38,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321033,
             ModelString = CS._4_79,
@@ -52315,6 +52367,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 437,
             _Attr = CS._1_38,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321034,
             ModelString = CS._4_79,
@@ -52326,6 +52379,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 439,
             _Attr = CS._1_438,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321035,
             ModelString = CS._4_236,
@@ -52337,6 +52391,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 440,
             _Attr = CS._1_110,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321036,
             ModelString = CS._4_237,
@@ -52348,6 +52403,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 438,
             _Attr = CS._1_111,
+            CanBeDyed = 1,
             EquipmentType = 7,
             ID = 50321037,
             ModelString = CS._4_238,
@@ -52359,6 +52415,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1011,
             _Attr = CS._1_439,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321041,
             ModelString = CS._4_234,
@@ -52370,6 +52427,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1012,
             _Attr = CS._1_39,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321042,
             ModelString = CS._4_235,
@@ -52381,6 +52439,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1013,
             _Attr = CS._1_39,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321043,
             ModelString = CS._4_79,
@@ -52392,6 +52451,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1013,
             _Attr = CS._1_39,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321044,
             ModelString = CS._4_79,
@@ -52403,6 +52463,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1015,
             _Attr = CS._1_440,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321045,
             ModelString = CS._4_236,
@@ -52414,6 +52475,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1016,
             _Attr = CS._1_441,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321046,
             ModelString = CS._4_237,
@@ -52425,6 +52487,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 1014,
             _Attr = CS._1_442,
+            CanBeDyed = 1,
             EquipmentType = 8,
             ID = 50321047,
             ModelString = CS._4_238,
@@ -52436,6 +52499,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 135,
             _Attr = CS._1_443,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321051,
             ModelString = CS._4_234,
@@ -52447,6 +52511,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 136,
             _Attr = CS._1_40,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321052,
             ModelString = CS._4_235,
@@ -52458,6 +52523,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 137,
             _Attr = CS._1_40,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321053,
             ModelString = CS._4_79,
@@ -52469,6 +52535,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 137,
             _Attr = CS._1_40,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321054,
             ModelString = CS._4_79,
@@ -52480,6 +52547,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 139,
             _Attr = CS._1_444,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321055,
             ModelString = CS._4_236,
@@ -52491,6 +52559,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 140,
             _Attr = CS._1_445,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321056,
             ModelString = CS._4_237,
@@ -52502,6 +52571,7 @@ local EquipmentCfg = {
         {
             AppearanceID = 138,
             _Attr = CS._1_446,
+            CanBeDyed = 1,
             EquipmentType = 9,
             ID = 50321057,
             ModelString = CS._4_238,

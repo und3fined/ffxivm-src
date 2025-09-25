@@ -87,6 +87,7 @@ function EmotionMgr:OnInit()
 		[2] = 56,
 		[3] = 57,
 	}
+	self.MountEmotionID = 1001			--滑板
 	self.RotationInterpSpeed = nil
 	self.IsInterpRota = nil
 end
@@ -3474,6 +3475,18 @@ function EmotionMgr:MountCustomEmoteNotify(EntityID, EmotionID, Target)
 					CustomMadeID = Target.ID
 				end
 				MountMgr:SetCustomMadeID(EntityActor, MountResID, CustomMadeID)
+			end
+		end
+	end
+end
+
+function EmotionMgr:StopMountCustomEmotion()
+	local EntityID = MajorUtil.GetMajorEntityID()
+	if self.Tasks[EntityID] then
+		for k, v in pairs(self.Tasks[EntityID]) do
+			if v and v.EmotionID == self.MountEmotionID then
+				self:StopAllEmotions(EntityID, false, EmotionDefines.CancelReason.ChangeRole)
+				return
 			end
 		end
 	end

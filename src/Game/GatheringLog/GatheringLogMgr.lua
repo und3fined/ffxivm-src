@@ -2096,6 +2096,9 @@ function GatheringLogMgr:ShowProfUnmatchTips(GatheringItemJobID)
     local Message = string.format(LSTR(70061),--"职业不符，是否切换为<span color=\"#D1BA8E\">“%s”</>？"
         RoleInitCfg:FindCfgByKey(GatheringItemJobID).ProfName)
     local function RightCB()
+        if not _G.ProfMgr:CanChangeProf(GatheringItemJobID) then
+            return
+        end
         _G.EquipmentMgr:SwitchProfByID(GatheringItemJobID)
     end
 	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, Title, Message, RightCB, nil, nil, LSTR(10002))

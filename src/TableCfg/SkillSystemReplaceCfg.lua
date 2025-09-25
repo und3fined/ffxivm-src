@@ -212,6 +212,11 @@ local SkillSystemReplaceCfg = {
             ReplaceSkillID = 20656,
         },
         {
+            BaseSkillID = 20106,
+            Prof = 10,
+            ReplaceSkillID = 20133,
+        },
+        {
             BaseSkillID = 20107,
             Prof = 10,
             ReplaceSkillID = 20131,
@@ -324,6 +329,11 @@ local SkillSystemReplaceCfg = {
             BaseSkillID = 20912,
             Prof = 12,
             ReplaceSkillID = 20921,
+        },
+        {
+            BaseSkillID = 21118,
+            Prof = 22,
+            ReplaceSkillID = 21129,
         },
 	},
 }

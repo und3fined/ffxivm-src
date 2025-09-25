@@ -386,7 +386,7 @@ local SkillSystemSeriesCfg = {
             BaseSkillID = 21117,
             ID = 64,
             Prof = 22,
-            SkillQueue = '21117,21118,21116',
+            SkillQueue = '21117,21129,21116',
         },
         {
             BaseSkillID = 20201,

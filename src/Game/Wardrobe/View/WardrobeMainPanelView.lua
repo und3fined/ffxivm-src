@@ -2457,7 +2457,10 @@ function WardrobeMainPanelView:UpdateModelEquipment()
 			local AppID = Suit[partID].Avatar
 			local EquipID = WardrobeMgr:IsRandomAppID(AppID) and WardrobeMgr:GetEquipIDByRandomApp(AppID) or WardrobeUtil.GetEquipIDByAppearanceID(AppID)
 			local ColorID =  Suit[partID].Color
-			local RegionDye = WardrobeUtil.GetRegionDye(AppID, Suit[partID].RegionDye or {})
+			local RegionDye = {}
+			if  WardrobeUtil.GetRegionDye ~= nil then
+				RegionDye = WardrobeUtil.GetRegionDye(AppID, Suit[partID].RegionDye or {})
+			end
 			if CurCurrentSuit[partID] ~= nil and CurCurrentSuit[partID].Avatar == Suit[partID].Avatar and CurCurrentSuit[partID].Color ~= Suit[partID].Color then
 				ColorID = CurCurrentSuit[partID].Color
 			end

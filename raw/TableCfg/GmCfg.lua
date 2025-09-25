@@ -12041,6 +12041,13 @@ local GmCfg = {
             SecondLevelCN = CS._6_5,
             TopLevelCN = CS._9_1,
         },
+        {
+            CmdList = 'scene enter 1205024 0 0',
+            DescCN = '入侵4激斗',
+            ID = 1628,
+            SecondLevelCN = CS._6_2,
+            TopLevelCN = CS._9_1,
+        },
 	},
 }
 

@@ -565,10 +565,10 @@ end
 --Tab栏选择
 function MusicAtlasMainView:OnTabSelectChanged(Index, ItemData, ItemView)
 	self.IsCanDeal = false
-	if ItemData.RedDotData.RedDotName and ItemData.RedDotData.RedDotName ~= "" and self.CurTypeIndex ~= nil then
+	if ItemData and ItemData.RedDotData and ItemData.RedDotData.RedDotName and ItemData.RedDotData.RedDotName ~= "" and self.CurTypeIndex ~= nil then
 		_G.RedDotMgr:DelRedDotByName(ItemData.RedDotData.RedDotName)
 	end
-	if self.LastTabData and self.LastTabData.RedDotData.RedDotName and self.LastTabData.RedDotData.RedDotName ~= "" then
+	if self.LastTabData and self.LastTabData.RedDotData and self.LastTabData.RedDotData.RedDotName and self.LastTabData.RedDotData.RedDotName ~= "" then
 		_G.RedDotMgr:DelRedDotByName(self.LastTabData.RedDotData.RedDotName)
 	end
 	self.CurTypeIndex = Index

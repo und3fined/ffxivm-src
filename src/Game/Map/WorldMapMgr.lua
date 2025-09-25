@@ -1718,14 +1718,16 @@ function WorldMapMgr:StartMapAutoPathMove(DstMapID, DstPos, TargetType, IsDstPos
 	if not DstMapID or not DstPos then
 		return
 	end
-
 	if not self:IsOpenAutoPath(DstMapID) then
 		return
 	end
 
+	local Major = MajorUtil.GetMajor()
+	if not Major then
+		return
+	end
+	local MajorPos = Major:FGetActorLocation()
 	local CurrMapID = PWorldMgr:GetCurrMapResID()
-	local MajorActor = MajorUtil.GetMajor()
-	local MajorPos = MajorActor:FGetActorLocation()
 
 	local Result, MapPathTable = AutoPathMoveMgr:AutoPathMoveForMapSystem(CurrMapID, MajorPos, DstMapID, DstPos, TargetType, IsDstPosRejust)
 	if not Result then

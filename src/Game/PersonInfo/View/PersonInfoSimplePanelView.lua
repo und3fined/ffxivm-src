@@ -455,13 +455,17 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 				local NewbieState = self:GetNewbieBtnState()
 				if NewbieState ~= 0 then
 					local IsAdd = NewbieState == 2
-					local NewName = IsAdd and LSTR(620044) or LSTR(620043)
-					local Ele = MakeBtnEle(Item, IsAdd)
-					Ele.Name = NewName
-					if not IsAdd then
-						Ele.Icon = "PaperSprite'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_ChannelRemoval_png.UI_Profile_Icon_ChannelRemoval_png'"
+					--local NewName = IsAdd and LSTR(620044) or LSTR(620043)
+					---屏蔽频道移除按钮
+					if IsAdd then
+						local NewName =  LSTR(620044)
+						local Ele = MakeBtnEle(Item, IsAdd)
+						Ele.Name = NewName
+						if not IsAdd then
+							Ele.Icon = "PaperSprite'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_ChannelRemoval_png.UI_Profile_Icon_ChannelRemoval_png'"
+						end
+						table.insert(List, Ele)
 					end
-					table.insert(List, Ele)
 				end
 			end
 		elseif ID == PopupBtnType.Friend then

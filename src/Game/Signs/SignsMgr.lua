@@ -472,7 +472,7 @@ end
 function SignsMgr:OnGameUpdateInDialogOrSeq(Params)
 	for k,v in pairs(self.CurrentUseSceneMarkerEffects) do
 		local SignEffectActor = v
-		if SignEffectActor ~= nil then
+		if SignEffectActor ~= nil and _G.CommonUtil.IsObjectValid(SignEffectActor) then
 			SignEffectActor:ShowEffect(Params)
 		end
 	end
@@ -608,7 +608,7 @@ end
 
 function SignsMgr:OnTeamSceneMarkAdd(param)
 	if param ~= nil then
-		if self.CurrentUseSceneMarkerEffects[param.Index] ~= nil and param.Pos ~= nil then
+		if self.CurrentUseSceneMarkerEffects[param.Index] ~= nil and _G.CommonUtil.IsObjectValid(self.CurrentUseSceneMarkerEffects[param.Index]) and param.Pos ~= nil then
 			self.CurrentUseSceneMarkerEffects[param.Index]:SetActorPosition(_G.UE.FVector(param.Pos.X, param.Pos.Y, param.Pos.Z))
 			_G.EventMgr:SendEvent(_G.EventID.TeamSceneMarkPosChangedEvent, {Index = param.Index, Pos = param.Pos})
 		else

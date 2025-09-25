@@ -964,7 +964,7 @@ function FateMgr:OnFateStartPuzzleRsp(InMsg)
     end
 
     _G.PuzzleMgr:EnterPuzzleGame(
-        ProtoRes.PuzzleGameType.PenguinJigsaw,
+        ProtoRes.Game.PuzzleGameType.PenguinJigsaw,
         TargetData.PuzzleID,
         RemainTime
     )
