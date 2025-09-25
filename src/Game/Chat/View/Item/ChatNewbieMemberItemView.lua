@@ -57,7 +57,8 @@ end
 
 function ChatNewbieMemberItemView:OnShow()
 	local IsMentor = OnlineStatusUtil.IsMentorMajor()
-	UIUtil.SetIsVisible(self.BtnRemove, IsMentor, IsMentor)
+	-- UIUtil.SetIsVisible(self.BtnRemove, IsMentor, IsMentor)
+	UIUtil.SetIsVisible(self.BtnRemove, false)  -- 暂时隐藏移除按钮
 end
 
 function ChatNewbieMemberItemView:OnHide()

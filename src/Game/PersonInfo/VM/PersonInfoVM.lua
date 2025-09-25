@@ -569,9 +569,10 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
         if IsAdd then
             _G.NewbieMgr:InviteJoinNewbieChannelReq(RoleID)
             ReportType = DataReportType.ClickChannelInvite
-        else
-            _G.NewbieMgr:EvictNewbieChannel(self.RoleID)
-            ReportType = DataReportType.ClickChannelRemove
+        ---屏蔽掉移除新人频道
+        -- else
+        --     _G.NewbieMgr:EvictNewbieChannel(self.RoleID)
+        --     ReportType = DataReportType.ClickChannelRemove
 
         end
     elseif Type == PopupBtnType.BlackList then -- 加入黑名单/移出黑名单

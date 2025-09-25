@@ -25,9 +25,9 @@ local LegendaryWeaponDefine = require("Game/LegendaryWeapon/LegendaryWeaponDefin
 local SystemLightCfg = require("TableCfg/SystemLightCfg")
 local EquipmentType = ProtoRes.EquipmentType
 local TipsUtil = require("Utils/TipsUtil")
-local LightMgr = require("Game/Light/LightMgr")
 local ShopMgr = require("Game/Shop/ShopMgr")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local LightMgr = require("Game/Light/LightMgr")
 local ActorUtil = require("Utils/ActorUtil")
 local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = require("Define/UIViewID")
@@ -81,6 +81,7 @@ local LSTR = _G.LSTR
 ---@field PanelTopRight UFCanvasPanel
 ---@field RaidalCD URadialImage
 ---@field ScalePanel UFCanvasPanel
+---@field ScrollBoxCraftGuide UScrollBox
 ---@field TableViewPages UTableView
 ---@field TableViewStat1 UTableView
 ---@field TableViewStat2 UTableView
@@ -146,6 +147,7 @@ function LegendaryWeaponMainPanelView:Ctor()
 	--self.PanelTopRight = nil
 	--self.RaidalCD = nil
 	--self.ScalePanel = nil
+	--self.ScrollBoxCraftGuide = nil
 	--self.TableViewPages = nil
 	--self.TableViewStat1 = nil
 	--self.TableViewStat2 = nil
@@ -230,7 +232,7 @@ function LegendaryWeaponMainPanelView:OnShow()
 	self.CommonTitle.CommInforBtn.HelpInfoID = 11183
 	self.bHoldWeapon = false
 	self.bIsFirstWeapon = true
-	_G.LightMgr:EnableUIWeather(5)
+	LightMgr:EnableUIWeather(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_LEGENDARY_WEAPON)
 	self:ShowPlayerWeaponActor()							--创建角色
 	self:LoadSceneActor()  									--创建场景
 	if self.Params then
@@ -262,6 +264,15 @@ function LegendaryWeaponMainPanelView:OnHide()
 	if not _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_LEGEND_WEAPON, true) then
 		return
 	end
+	local CameraMgr = _G.UE.UCameraMgr.Get()
+	if CameraMgr ~= nil then
+		if CommonUtil.IsObjectValid(self.viewModel.BP_SceneActor) then
+			CameraMgr:ResumeCamera(0, true, self.viewModel.BP_SceneActor)
+		else
+			print("[LegendaryWeaponMainPanelView] OnHide BP_SceneActor is nil ")
+		end
+	end
+	self:ShowWeaponVFX(false)
 	if self.WeaponActor ~= nil then
 		_G.UE.UActorManager:Get():RemoveClientActor(self.WeaponActor:GetActorEntityID())
 	end
@@ -269,16 +280,17 @@ function LegendaryWeaponMainPanelView:OnHide()
 		_G.UE.UActorManager:Get():RemoveClientActor(self.SubWeaponActor:GetActorEntityID())
 	end
 	UCommonUtil.CloseWaitForLegendaryWeaponTextureMips()
-	self:ShowWeaponVFX(false)
 	self.LastLoadWeapon = nil
+	self.WeaponActorRef = nil
 	self.WeaponActor = nil
+	self.SubWeaponActorRef = nil
 	self.SubWeaponActor = nil
 	self.viewModel.BP_SceneActor = nil
 	self.viewModel.Render2DActor = nil
 	if self.Common_Render2D_UIBP_1.RenderActor ~= nil then
 		self.Common_Render2D_UIBP_1.RenderActor:Destroy()
 	end
-	_G.LightMgr:DisableUIWeather()
+	LightMgr:DisableUIWeather()
 	local UActorManager = _G.UE.UActorManager.Get()
 	if self.CreatedNPCEntityID ~= nil then
 		UActorManager:RemoveClientActor(self.CreatedNPCEntityID)
@@ -355,7 +367,7 @@ end
 -- 在显示状态
 function LegendaryWeaponMainPanelView:OnActive()
 	if (self.viewModel.IsShowWeaponModel == true) and CommonUtil.IsObjectValid(self.WeaponActor) then
-		self.WeaponActor:HideMasterHand(false)
+		self.WeaponActor:HideMasterHand(false)		--显示武器false
 		self:ShowWeaponVFX(true)
 	end
 	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and CommonUtil.IsObjectValid(self.SubWeaponActor) then
@@ -377,7 +389,7 @@ end
 -- 不活跃状态
 function LegendaryWeaponMainPanelView:OnInactive()
 	if (self.viewModel.IsShowWeaponModel == true) and CommonUtil.IsObjectValid(self.WeaponActor) then
-		self.WeaponActor:HideMasterHand(true)
+		self.WeaponActor:HideMasterHand(true)		--隐藏武器true
 		self:ShowWeaponVFX(false)
 	end
 	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and CommonUtil.IsObjectValid(self.SubWeaponActor) then
@@ -420,6 +432,7 @@ function LegendaryWeaponMainPanelView:SetShowWeaponModel(flag)
 
 	else
 		-- 显示角色
+		LegendaryWeaponMgr:SetFade(self.Common_Render2D_UIBP.ChildActor, 0.8, true, 0, true)
 		UIUtil.SetIsVisible(self.BtnPose, true, true)
 		UIUtil.SetIsVisible(self.CommGesture_UIBP, false, false, false)
 
@@ -515,6 +528,10 @@ function LegendaryWeaponMainPanelView:OnSelectionChangedDropDownList(Index)
 	self:RefreshComposePanel()
 	self:PlayAnimMaterial(1)
 
+	if self.ScrollBoxCraftGuide then
+		self.ScrollBoxCraftGuide:ScrollToStart()
+	end
+
 	-- if self.viewModel.IsComposeMode then
 	-- 	self:PlayRInterpToWeapon(true)
 	-- else
@@ -558,12 +575,12 @@ function LegendaryWeaponMainPanelView:RefreshComposePanel()
 			local bHaveSubEquip = (WeaponCfg.SubEquipmentID ~= 0)
 			UIUtil.SetIsVisible(self.PanelStatSwitch, bHaveSubEquip)
 		end
-		self:OnToggleGroupCheckChanged1(1)
+		self.CommTabs_UIBP_1:SetSelectedIndex(1, true)
 		self:RefreshCompletionStatus()
 		self:RefreshMaterialList()
 		self.CommonTitle.TextTitleName:SetText(LSTR(220059))		--"材料详情"
 	else
-		self.TextRightTitle:SetText(LSTR(220018))	--"武器制作指南"
+		self.TextRightTitle:SetText(LSTR(220018))					--"武器制作指南"
 		self.CommonTitle.TextTitleName:SetText(LSTR(220008))		--"传奇武器"
 	end
 end
@@ -624,9 +641,9 @@ function LegendaryWeaponMainPanelView:RefreshNotCompletionStatus()
 	if not self.viewModel then return end
 	local ChapterID = self.viewModel.ChapterID or 1		--第几章节
 	if ChapterID == 1 then
-		self.BtnCraft:SetText(LSTR(220020))	--"制作"
+		self.BtnCraft:SetText(LSTR(220020))	--"制  作"
 	elseif ChapterID > 1 then
-		self.BtnCraft:SetText(LSTR(220021))	--"强化"
+		self.BtnCraft:SetText(LSTR(220021))	--"强  化"
 	end
 
 	local bIsEnough = self.viewModel:CheckMaterialEnough()	--判断材料是否满足
@@ -762,45 +779,6 @@ function LegendaryWeaponMainPanelView:StartLoadWeaponModel()
 	end
 end
 
--- 加载武器模型（先初始化好两个空的Actor并记录下EntityID）
--- function LegendaryWeaponMainPanelView:ShowWeaponModel()
-	-- local UActorManager = _G.UE.UActorManager.Get()
-	-- if self.CreatedNPCEntityID ~= nil then
-	-- 	UActorManager:RemoveClientActor(self.CreatedNPCEntityID)
-	-- 	self.CreatedNPCEntityID = nil
-	-- end
-	-- if self.CreatedSubNPCEntityID ~= nil then
-	-- 	UActorManager:RemoveClientActor(self.CreatedSubNPCEntityID)
-	-- 	self.CreatedSubNPCEntityID = nil
-	-- end
-	-- local MajorActor = MajorUtil.GetMajor()
-	-- local MajorLocation = MajorActor:FGetLocation(_G.UE.EXLocationType.ServerLoc)
-	-- local MajorRotation = MajorActor:FGetActorRotation()
-	-- local majorForward = MajorRotation:GetForwardVector()
-	-- local majorRight = MajorRotation:GetRightVector()
-	-- local npcLocation = MajorLocation-- + majorForward * 300
-	-- local ModelRotate = -130
-	-- local finalRotator = _G.UE.FRotator(0, ModelRotate, 0)--MajorRotation  
-	-- self.CreatedNPCEntityID = UActorManager:CreateClientActor(_G.UE.EActorType.Player, 0, 0, npcLocation + majorRight * 500, finalRotator)
-	-- print("LegendaryWeaponMainPanelView:SetWeaponResID ShowWeaponModel", self.CreatedNPCEntityID)
-	-- if (self.CreatedNPCEntityID > 0) then
-	-- 	local Target = ActorUtil.GetActorByEntityID(self.CreatedNPCEntityID)
-	-- 	Target:GetAvatarComponent():SetForcedLODForAll(0)
-	-- 	print("LegendaryWeaponMainPanelView:SetWeaponResID LoadWeapon",self.viewModel.SelectWeaponID)
-	-- 	Target:GetAvatarComponent():LoadWeaponOnly(self.viewModel.SelectWeaponID, true)
-	-- end
-	-- self.CreatedSubNPCEntityID = UActorManager:CreateClientActor(_G.UE.EActorType.Player, 0, 0, npcLocation - majorRight * 500, finalRotator)
-	-- print("LegendaryWeaponMainPanelView:SetWeaponResID ShowWeaponSubModel", self.CreatedSubNPCEntityID)
-	-- if (self.CreatedSubNPCEntityID > 0) then
-	-- 	local Target = ActorUtil.GetActorByEntityID(self.CreatedSubNPCEntityID)
-	-- 	Target:GetAvatarComponent():SetForcedLODForAll(0)
-	-- 	-- if self.viewModel.SelectSubWeaponID ~= 0 then
-	-- 	print("LegendaryWeaponMainPanelView:SetWeaponResID LoadSubWeapon",self.viewModel.SelectSubWeaponID)
-	-- 	Target:GetAvatarComponent():LoadWeaponOnly(self.viewModel.SelectSubWeaponID, true)
-	-- 	-- end
-	-- end
--- end
-
 function LegendaryWeaponMainPanelView:OnAssembleAllEnd(Params)
 	if nil == Params then
 		return
@@ -813,9 +791,14 @@ function LegendaryWeaponMainPanelView:OnAssembleAllEnd(Params)
 	if self.Common_Render2D_UIBP.ChildActor and self.Common_Render2D_UIBP.ChildActor:GetAttributeComponent() then
 		ID_Role = self.Common_Render2D_UIBP.ChildActor:GetAttributeComponent().EntityID
 	end
-	local ID_Weapon = self.WeaponActor and self.WeaponActor:GetAttributeComponent().EntityID or nil
-	local ID_SubWeapon = self.SubWeaponActor and self.SubWeaponActor:GetAttributeComponent().EntityID or nil
-
+	local ID_Weapon = nil
+	if CommonUtil.IsObjectValid(self.WeaponActor) and self.WeaponActor:GetAttributeComponent() then
+		ID_Weapon = self.WeaponActor:GetAttributeComponent().EntityID
+	end
+	local ID_SubWeapon = nil
+	if CommonUtil.IsObjectValid(self.SubWeaponActor) and self.SubWeaponActor:GetAttributeComponent() then
+		ID_SubWeapon = self.SubWeaponActor:GetAttributeComponent().EntityID
+	end
 	if EntityID == ID_Role or EntityID == ID_Weapon or EntityID == ID_SubWeapon then
 		--入场和切换武器时，都会运行到这里
 		local SceneActor = self.viewModel.BP_SceneActor
@@ -853,13 +836,15 @@ function LegendaryWeaponMainPanelView:SetWeaponTransform()
 	local BPActor = self.viewModel.BP_SceneActor
 
 	--- 调整主武器  注意两个坑 正确应该是用ChildActor调位置和缩放 用mesh调旋转FRotator(Pitch, Yaw, Roll)分别对应(y, z, x)
-	if (self.viewModel.IsShowWeaponModel == true) and self.WeaponActor ~= nil then
+	if (self.viewModel.IsShowWeaponModel == true) and CommonUtil.IsObjectValid(self.WeaponActor) then
 		if BPActor ~= nil then
 			BPActor:SetWeaponMasterCharacter(self.WeaponActor)
 		end
 		self.WeaponActor:DoClientModeEnter()
-		self.WeaponActor.CharacterMovement:DisableMovement()
-		self.WeaponActor.CharacterMovement:SetComponentTickEnabled(false)
+		if CommonUtil.IsObjectValid(self.WeaponActor.CharacterMovement) then
+			self.WeaponActor.CharacterMovement:DisableMovement()
+			self.WeaponActor.CharacterMovement:SetComponentTickEnabled(false)	
+		end
 
 		local WeaponLocation = _G.UE.FVector(self.WeaponLocationX, self.WeaponLocationY, self.WeaponLocationZ)
 		local WeaponRotation = _G.UE.FRotator(self.WeaponRotationY, self.WeaponRotationZ, self.WeaponRotationX)
@@ -875,13 +860,15 @@ function LegendaryWeaponMainPanelView:SetWeaponTransform()
 	end
 
 	--- 调整副武器
-	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and self.SubWeaponActor ~= nil then
+	if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and CommonUtil.IsObjectValid(self.SubWeaponActor) then
 		if BPActor ~= nil then
 			BPActor:SetWeaponSlaveCharacter(self.SubWeaponActor)
 		end
 		self.SubWeaponActor:DoClientModeEnter()
-		self.SubWeaponActor.CharacterMovement:DisableMovement()
-		self.SubWeaponActor.CharacterMovement:SetComponentTickEnabled(false)
+		if CommonUtil.IsObjectValid(self.SubWeaponActor.CharacterMovement) then
+			self.SubWeaponActor.CharacterMovement:DisableMovement()
+			self.SubWeaponActor.CharacterMovement:SetComponentTickEnabled(false)	
+		end
 
 		local SubWeaponLocation = _G.UE.FVector(self.SubWeaponLocationX, self.SubWeaponLocationY, self.SubWeaponLocationZ)
 		local SubWeaponRotation = _G.UE.FRotator(self.SubWeaponRotationY, self.SubWeaponRotationZ, self.SubWeaponRotationX)
@@ -1038,7 +1025,7 @@ function LegendaryWeaponMainPanelView:OnBtnCraftClick()
 		else
 			Message2 = ItemCfg:GetItemName(self.viewModel.SelectWeaponID)
 		end
-		local Message2 = string.format("<span color=\"#%s\">%s</>", "E1CB9C", Message2)
+		Message2 = string.format("<span color=\"#%s\">%s</>", "E1CB9C", Message2)
 		local RedTips = string.format("<span color=\"#%s\">%s</>", "B03A38", LSTR(220025))	--"所有需求材料将被消耗"
 		local Message = string.format(LSTR(220026), Message1, Message2)	  --"即将制作%s:%s\n请问是否继续？"
 		local function CallBack1()
@@ -1277,6 +1264,7 @@ function LegendaryWeaponMainPanelView:LoadSceneActor()
 					local Location  = BPActor.WeaponActor.ChildActor:K2_GetActorLocation()
 				    local tempEntity = _G.UE.UActorManager:Get():CreateClientActorByParams(_G.UE.EActorType.ClientShow, 0, 0,Location ,BPActor.WeaponActor.ChildActor:K2_GetActorRotation(),Params)
 				    self.WeaponActor = ActorUtil.GetActorByEntityID(tempEntity)
+					self.WeaponActorRef = _G.UnLua.Ref(self.WeaponActor)
 					BPActor:SetWeaponMasterCharacter(self.WeaponActor)
 
 					if CommonUtil.IsObjectValid(self.WeaponActor) then
@@ -1301,6 +1289,7 @@ function LegendaryWeaponMainPanelView:LoadSceneActor()
 					local Location  = BPActor.SubWeaponActor.ChildActor:K2_GetActorLocation()
 				    local tempEntity = _G.UE.UActorManager:Get():CreateClientActorByParams(_G.UE.EActorType.ClientShow, 0, 0,Location ,BPActor.SubWeaponActor.ChildActor:K2_GetActorRotation(),Params)
 				    self.SubWeaponActor = ActorUtil.GetActorByEntityID(tempEntity)
+					self.SubWeaponActorRef = _G.UnLua.Ref(self.SubWeaponActor)
 					BPActor:SetWeaponSlaveCharacter(self.SubWeaponActor)
 					if CommonUtil.IsObjectValid(self.SubWeaponActor) and self.viewModel.SelectSubWeaponID ~= 0 then
 						self.SubWeaponActor:HideMasterHand(false)
@@ -1502,34 +1491,20 @@ function LegendaryWeaponMainPanelView:ShowWeaponVFX(bIsVisible)
 				self.WeaponActor.bIsClientHoldWeapon = true		--播放武器的展开动画 并通知显示特效
 				local AvatarCom = self.WeaponActor:GetAvatarComponent()
 				if AvatarCom then
-					--[[local AnimComp = self.WeaponActor:GetAnimationComponent()
-					if AnimComp ~= nil then
-						local Anim = _G.ObjectMgr:LoadObjectSync("AnimMontage'/Game/Assets/Character/Action/weapon/bow_Action/bow_start.bow_start'")
-						local SoftPath = _G.UE.FSoftObjectPath()
-						SoftPath:SetPath("/Game/Assets/Character/Action/weapon/battle_idle.battle_idle")
-						AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_MASTER_HAND,SoftPath)
-					end]]
 					AvatarCom:SimulatedSetWeaponActive(true)
 					AvatarCom:WaitForTextureMipsByReason(_G.UE.EAvatarWaitTextureStreamReason.EAWTSR_LegendaryWeapon)
-					AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND, true, false)
-					AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND, true, false)
+					-- AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND, true, false)
+					-- AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND, true, false)
 				end
 			end
 			if (self.viewModel.IsShowWeaponModel == true) and self.viewModel.SelectSubWeaponID ~= 0 and self.SubWeaponActor ~= nil then
 				self.SubWeaponActor.bIsClientHoldWeapon = true
 				local AvatarCom = self.SubWeaponActor:GetAvatarComponent()
 				if AvatarCom then
-					--[[local AnimComp = self.WeaponActor:GetAnimationComponent()
-					if AnimComp ~= nil then
-						local Anim = _G.ObjectMgr:LoadObjectSync("AnimMontage'/Game/Assets/Character/Action/weapon/battle_idle.battle_idle'")
-						local SoftPath = _G.UE.FSoftObjectPath()
-						SoftPath:SetPath("/Game/Assets/Character/Action/weapon/battle_idle.battle_idle")
-						AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND,SoftPath)
-					end]]
 					AvatarCom:SimulatedSetWeaponActive(true)
 					AvatarCom:WaitForTextureMipsByReason(_G.UE.EAvatarWaitTextureStreamReason.EAWTSR_LegendaryWeapon)
-					AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND, true, false)
-					AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND, true, false)
+					-- AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND, true, false)
+					-- AvatarCom:PlayEffect(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND, true, false)
 				end
 			end
 		end
@@ -1541,11 +1516,11 @@ function LegendaryWeaponMainPanelView:ShowWeaponVFX(bIsVisible)
 		if self.WeaponActor ~= nil  then
 			local AnimComp = self.WeaponActor:GetAnimationComponent()
 			if AnimComp ~= nil then
-				--local Anim = _G.ObjectMgr:LoadObjectSync("AnimMontage'/Game/Assets/Character/Action/weapon/bow_Action/bow_start.bow_start'")
 				local SoftPath = _G.UE.FSoftObjectPath()
 				SoftPath:SetPath("/Game/Assets/Character/Action/weapon/battle_idle.battle_idle")
 				self.WeaponActor:SetSimulatedHoldWeapon(true)
 				AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_MASTER_HAND,SoftPath,1,0)
+				AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND,SoftPath,1,0)
 			end
 			local AvatarCom = self.WeaponActor:GetAvatarComponent()
 			if AvatarCom then
@@ -1555,10 +1530,10 @@ function LegendaryWeaponMainPanelView:ShowWeaponVFX(bIsVisible)
 		if self.SubWeaponActor ~= nil then
 			local AnimComp = self.SubWeaponActor:GetAnimationComponent()
 			if AnimComp ~= nil then
-				--local Anim = _G.ObjectMgr:LoadObjectSync("AnimMontage'/Game/Assets/Character/Action/weapon/battle_idle.battle_idle'")
 				local SoftPath = _G.UE.FSoftObjectPath()
 				SoftPath:SetPath("/Game/Assets/Character/Action/weapon/battle_idle.battle_idle")
 				self.SubWeaponActor:SetSimulatedHoldWeapon(true)
+				AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_MASTER_HAND,SoftPath,1,0)
 				AnimComp:PlayWeaponAnimation(ProtoRes.EquipmentType.WEAPON_SLAVE_HAND,SoftPath,1,0)
 			end
 			local AvatarCom = self.SubWeaponActor:GetAvatarComponent()
@@ -1567,11 +1542,12 @@ function LegendaryWeaponMainPanelView:ShowWeaponVFX(bIsVisible)
 			end
 		end
 
+		LegendaryWeaponMgr:SetFade(self.WeaponActor, 0.8, true, 0, true)
+		LegendaryWeaponMgr:SetFade(self.SubWeaponActor, 0.8, true, 0, true)
 	end
 
 	if bIsVisible == false then
 		if self.WeaponActor ~= nil then
-			-- self.WeaponActor.bIsClientHoldWeapon = false
 			local AvatarCom = self.WeaponActor:GetAvatarComponent()
 			if AvatarCom then
 				AvatarCom:BreakEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND)	--隐藏主特效
@@ -1579,7 +1555,6 @@ function LegendaryWeaponMainPanelView:ShowWeaponVFX(bIsVisible)
 			end
 		end
 		if self.SubWeaponActor ~= nil then
-			-- self.SubWeaponActor.bIsClientHoldWeapon = false
 			local AvatarCom = self.SubWeaponActor:GetAvatarComponent()
 			if AvatarCom then
 				AvatarCom:BreakEffect(ProtoRes.EquipmentType.WEAPON_MASTER_HAND)	--隐藏子特效
@@ -1595,7 +1570,6 @@ end
 
 --- 点击关闭界面
 function LegendaryWeaponMainPanelView:OnClickButtonClose()
-	-- self:ShowWeaponVFX(false)
 	self:Hide()
 	self.viewModel.IsShowWeaponModel = true  --在Hide之后执行，避免再次触发SetShowWeaponModel()
 end
@@ -1715,6 +1689,13 @@ function LegendaryWeaponMainPanelView:UpdateRedDot()
 		if self.viewModel.DownListVMList then
 			self.viewModel.DownListVMList:UpdateByValues(self.ProfList)
 		end
+	end
+
+	-- 制作按钮红点
+	if self.RedDot then
+		UIUtil.SetIsVisible( self.RedDot, true )
+		local RedDotID = LegendaryWeaponDefine.RedDotID.MakeBtn
+		self.RedDot:SetRedDotIDByID(RedDotID)
 	end
 
 	_G.EventMgr:SendEvent(EventID.LegendaryUpdateRedDot)  --更新红点

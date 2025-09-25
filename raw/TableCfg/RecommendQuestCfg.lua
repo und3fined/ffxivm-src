@@ -321,6 +321,12 @@ local RecommendQuestCfg = {
             Priority = 10,
             Type = 3,
         },
+        {
+            ChapterID = 27016,
+            ID = 46,
+            Priority = 16,
+            Type = 3,
+        },
 	},
 }
 

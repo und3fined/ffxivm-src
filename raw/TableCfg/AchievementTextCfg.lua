@@ -634,6 +634,14 @@ local AchievementTextCfg = {
             ID = 1030096,
         },
         {
+            AchievePoint = 20,
+            ID = 1030104,
+        },
+        {
+            AchievePoint = 30,
+            ID = 1030105,
+        },
+        {
             AchievePoint = 5,
             ID = 1040001,
         },

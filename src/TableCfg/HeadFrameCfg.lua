@@ -41,6 +41,12 @@ local HeadFrameCfg = {
             ItemID = 61900039,
         },
         {
+            FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame15.UI_Profile_Img_Frame15\'',
+            FrameType = 2,
+            ID = 11,
+            ItemID = 61900105,
+        },
+        {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame10.UI_Profile_Img_Frame10\'',
             ID = 101,
             ItemID = 61900093,

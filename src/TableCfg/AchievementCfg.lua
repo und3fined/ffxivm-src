@@ -936,6 +936,21 @@ local AchievementCfg = {
             Type = 1,
         },
         {
+            _Awards = '[{"Type":6,"Num":1,"ResID":60900207}]',
+            Category = 103,
+            ID = 1030104,
+            OnOff = 1,
+            Type = 1,
+        },
+        {
+            _Awards = '[{"Type":2,"Num":0,"ResID":599}]',
+            Category = 103,
+            ID = 1030105,
+            IsAutoReceive = 1,
+            OnOff = 1,
+            Type = 1,
+        },
+        {
             Category = 717,
             ID = 1040001,
             Type = 7,

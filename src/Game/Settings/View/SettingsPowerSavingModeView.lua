@@ -79,7 +79,7 @@ function SettingsPowerSavingModeView:Reset(bAnim)
 
 	self.LastPercent = 0
 
-	if self.ProgressBar and _G.CommonUtil.IsObjectValid(self.ProgressBar) then
+	if _G.CommonUtil.IsObjectValid(self.Object) and self.ProgressBar and _G.CommonUtil.IsObjectValid(self.ProgressBar) then
 		self.ProgressBar:SetPercent(0)
 		self.Slider:SetValue(0)
 		UIUtil.PlayAnimationTimePointPct(self, self.AnimProBar, 0, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, false)

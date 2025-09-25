@@ -50,13 +50,13 @@ function UIBinderSetIsVisibleByBit:OnValueChanged(NewValue, OldValue)
         NewMask = NewMask & ~(1 << (BitIndex - 1))
     end
 
-    if NewMask == Mask then
+    if not Data.IsForceUpdate and NewMask == Mask then
        return
     end
     local MaxBitIndex = Data.MaxIndex
     Data.Mask = NewMask
     local bVisible = NewMask == (2 ^ MaxBitIndex - 1)
-    if Data.bVisible == bVisible then
+    if not Data.IsForceUpdate and Data.bVisible == bVisible then
         return
     end
     Data.bVisible = bVisible

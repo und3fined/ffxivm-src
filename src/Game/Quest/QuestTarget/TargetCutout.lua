@@ -21,7 +21,7 @@ function TargetCutout:DoStartTarget()
     --self:RegisterEvent(EventID.PuzzleFinishNotify, self.OnPuzzleFinishNotifyHandle)
     self:RegisterEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
     --self:RegisterEvent(EventID.PWorldMapEnter, self.OnGameEventEnterWorld)
-    --_G.PuzzleMgr:EnterPuzzleGame(ProtoRes.PuzzleGameType.Burritos, self.GameID)
+    --_G.PuzzleMgr:EnterPuzzleGame(ProtoRes.Game.PuzzleGameType.Burritos, self.GameID)
     -- !拼装任务废弃,防止线上数据出错,保留目标节点。目标开始直接请求完成
     _G.QuestMgr:SendFinishTarget(self.QuestID, self.TargetID)
 end
@@ -40,7 +40,7 @@ end
 
 function TargetCutout:OnGameEventLoginRes(Params)
     if Params.bReconnect then --断线重连重新进入拼装游戏
-        --_G.PuzzleMgr:EnterPuzzleGame(ProtoRes.PuzzleGameType.Burritos, self.GameID)
+        --_G.PuzzleMgr:EnterPuzzleGame(ProtoRes.Game.PuzzleGameType.Burritos, self.GameID)
         -- !拼装任务废弃,防止线上数据出错,保留目标节点。目标开始直接请求完成
         _G.QuestMgr:SendFinishTarget(self.QuestID, self.TargetID)
     end
@@ -50,7 +50,7 @@ function TargetCutout:OnGameEventEnterWorld()
     if not _G.PWorldMgr:CurrIsInDungeon() then
         local IsRecover = _G.PuzzleMgr:IsBurritosGameNeedRecover()
         if IsRecover then
-            _G.PuzzleMgr:EnterPuzzleGame(ProtoRes.PuzzleGameType.Burritos, self.GameID)
+            _G.PuzzleMgr:EnterPuzzleGame(ProtoRes.Game.PuzzleGameType.Burritos, self.GameID)
         end
     end
 end

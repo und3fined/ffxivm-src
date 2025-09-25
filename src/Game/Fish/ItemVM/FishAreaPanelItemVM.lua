@@ -130,7 +130,9 @@ function FishAreaPanelItemVM:SetFishUnSelected()
     local index = self.ClickedIndex
     if index ~= 0 then
         local ItemVM = self.FishItemList:Get(index)
-        ItemVM:SetSelected(false)
+        if nil ~= ItemVM then
+            ItemVM:SetSelected(false)
+        end
         self.ClickedIndex = 0
     end
 end

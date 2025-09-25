@@ -985,6 +985,10 @@ local DynamicCutsceneCfg = {
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosram/bosram00120/bosram00120_proj/bosram00120.bosram00120\'',
         },
         {
+            ID = 365,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunfst/dunfst1b421/dunfst1b421_proj/dunfst1b421.dunfst1b421\'',
+        },
+        {
             ID = 3000000,
             SequencePath = 'LevelSequence\'/Game/EditorRes/StaffRoll/StaffRoll_20000.StaffRoll_20000\'',
         },

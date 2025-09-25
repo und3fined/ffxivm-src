@@ -230,6 +230,8 @@ function MainControlPanelView:OnShow()
     self:CheckButtonTargetShow()
 
     self.BtnSwitch_1:SetIsDisabledState(true)
+
+    self:CheckIsMountPanelVisible()
 end
 
 function MainControlPanelView:OnHide()
@@ -308,7 +310,7 @@ end
 function MainControlPanelView:OnRegisterBinder()
 
     self:PostSkillEntityChange(_G.PWorldMgr.MajorEntityID)
-    local UIBinderSetIsVisibleByBitData = {MaxIndex = 0}
+    local UIBinderSetIsVisibleByBitData = {MaxIndex = 0, IsForceUpdate = true}
     local MainPanelBinders = {
 		{ "NotesVisible", UIBinderSetIsVisible.New(self, self.BtnFishingNotes,false,true)},
 		{ "IconBook", UIBinderSetBrushFromAssetPath.New(self, self.IconBook)},
@@ -316,9 +318,9 @@ function MainControlPanelView:OnRegisterBinder()
 	}
 	self:RegisterBinders(MainPanelVM, MainPanelBinders)
 
-    local UIBinderSetGenAttackIsVisibleByBitData = {MaxIndex = 0}
+    local UIBinderSetGenAttackIsVisibleByBitData = {MaxIndex = 0, IsForceUpdate = true}
     local MountBinders = {
-        { "IsPanelFlyingVisible", UIBinderSetIsVisibleByBit.New(self, self.SkillGenAttackBtn_UIBP, UIBinderSetGenAttackIsVisibleByBitData, true)},
+        { "IsMajorInFly", UIBinderSetIsVisibleByBit.New(self, self.SkillGenAttackBtn_UIBP, UIBinderSetGenAttackIsVisibleByBitData, true)},
         { "IsInOtherRide", UIBinderSetIsVisibleByBit.New(self, self.SkillGenAttackBtn_UIBP, UIBinderSetGenAttackIsVisibleByBitData, true)},
         { "IsControlMountBtnVisible", UIBinderSetIsVisible.New(self, self.SkillMountBtn)},
     }
@@ -1026,6 +1028,12 @@ function MainControlPanelView:OnMajorRemoveBuff(Params)
     if DefaultCombatState > 0 then
         self:Combat_ViewShow(true)
     end
+end
+
+--刷新下UI，不然按钮默认是显示的
+function MainControlPanelView:CheckIsMountPanelVisible()
+    MainControlPanelVM:PropertyValueChanged("SkillSprintVisible")
+    MainControlPanelVM:PropertyValueChanged("LimitGenAttackVisible")
 end
 
 return MainControlPanelView

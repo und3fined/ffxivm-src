@@ -121,7 +121,7 @@ function MonthCardMainPanelVM:UpdateBaseData()
 			TempStr = string.format("%s%s×%s +", TempStr, RichTextUtil.GetTexture(UIUtil.GetIconPath(ItemUtil.GetItemIcon(v.ID)), 40, 40, -10), string.formatint(Num * VaildDay))
 		end
 	end
-	self.TotalTips = string.format(LSTR(840005), TempStr, tostring(VaildDay))
+	self.TotalTips = string.format(LSTR(840005), TempStr or "",  tostring(VaildDay) or "")
 	
 	--  购买立得
 	self.MonthCardAwardNum = string.format("x%s", string.formatint(GainCrystalNum))

@@ -1936,7 +1936,14 @@ function CrafterMgr:SendMkChangeEvent(NewMkValue)
 end
 
 function CrafterMgr:OnCombatAttrUpdate(MsgBody)
+    if not MsgBody then
+        return
+    end
+
     local CombatAttrUpdate = MsgBody.AttrUpdate
+    if not CombatAttrUpdate then
+        return
+    end
 	local EntityID = CombatAttrUpdate.ObjID
 	if EntityID == MajorUtil.GetMajorEntityID() then
 		local Attrs = CombatAttrUpdate.Attrs.KeyValue

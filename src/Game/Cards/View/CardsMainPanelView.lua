@@ -455,7 +455,9 @@ function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
                 if (_opponentVM.IsExposed) then
                     _opponentVM.FlipType = FlipTypeEnum.FLIP_MOVEMENT_VERTICAL
                 end
-                AudioUtil.LoadAndPlayUISound(self.BattleBeginFlipCard_SoundEffect:ToString())
+                if CommonUtil.IsObjectValid(self.BattleBeginFlipCard_SoundEffect) then
+                    AudioUtil.LoadAndPlayUISound(self.BattleBeginFlipCard_SoundEffect:ToString())
+                end
                 _playerVM.ExchangedCardId = _opponentCardID
                 _opponentVM.ExchangedCardId = _playerCardID
                 Utils.DelayAsync(LocalDef.ExchangeRuleDisplayAnimTime)
@@ -472,8 +474,10 @@ function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
         self.CardsTextPrompt.PlayKeyTextAsyc(self.CardsTextPrompt, "Start")
         Utils.DelayAsync(LocalDef.FlipToExposeCardAnimTime)
 
-        print("【开局：显示先后手】")
-        AudioUtil.LoadAndPlayUISound(self.BattleShowFirst_SoundEffect:ToString())
+        FLOG_INFO("【开局：显示先后手】")
+        if CommonUtil.IsObjectValid(self.BattleShowFirst_SoundEffect) then
+            AudioUtil.LoadAndPlayUISound(self.BattleShowFirst_SoundEffect:ToString())
+        end
         UIUtil.SetIsVisible(self.PanelFirst, true)
         self:PlayAnimation(self.AnimFirst)
         Utils.DelayAsync(LocalDef.TimeWaitForShowWhosFirst)
@@ -514,7 +518,9 @@ function CardsMainPanelView:OnRecoverGame(FantasyCardEnterRsp)
 end
 
 function CardsMainPanelView:FlipCardToExpose()
-    AudioUtil.LoadAndPlayUISound(self.BattleBeginFlipCard_SoundEffect:ToString())
+    if CommonUtil.IsObjectValid(self.BattleBeginFlipCard_SoundEffect) then
+        AudioUtil.LoadAndPlayUISound(self.BattleBeginFlipCard_SoundEffect:ToString())
+    end
     -- 翻牌
     ---@param CardItemVm CardsSingleCardVM
     local function TriggerFlipToExposeCard(CardItemVm)
@@ -542,7 +548,9 @@ function CardsMainPanelView:OnShow()
     UActorManager:HideActor(MajorEntityID, false)
 
     UIUtil.SetIsVisible(self.MainLBottomPanel, false) -- 聊天模块有问题，暂时屏蔽
-    AudioUtil.LoadAndPlayUISound(self.BattleShow_SoundEffect:ToString())
+    if CommonUtil.IsObjectValid(self.BattleShow_SoundEffect) then
+        AudioUtil.LoadAndPlayUISound(self.BattleShow_SoundEffect:ToString())
+    end
     UIUtil.SetIsVisible(self.EffectForOther01, false)
     UIUtil.SetIsVisible(self.EffectForSelf01, false)
 

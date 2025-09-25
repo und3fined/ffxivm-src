@@ -481,7 +481,6 @@ local TeamRecruitCfg = {
         {
             EquipLv = 155,
             ID = 612,
-            IsWeeklyRewards = 1,
             Task = 1205024,
             TypeID = 6,
             bFilterDifficulty = 0,

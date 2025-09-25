@@ -915,4 +915,15 @@ function LegendaryWeaponMgr:OnGameEventPreCrystalTransferReq()
     end
 end
 
+--- 传奇武器渐显渐隐效果
+function LegendaryWeaponMgr:SetFade(BaseCharacter, FadeTime, bForce, Param, bStartFadeIn)
+    if BaseCharacter ~= nil and _G.UE.UCommonUtil.IsObjectValid(BaseCharacter) then
+        if bStartFadeIn then
+            BaseCharacter:StartFadeIn(FadeTime, bForce)
+        else
+            BaseCharacter:StartFadeOut(FadeTime, Param)
+        end
+    end
+end
+
 return LegendaryWeaponMgr

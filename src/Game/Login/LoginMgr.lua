@@ -1158,7 +1158,7 @@ end
 function LoginMgr:OnNetMsgSampleRegisterRes(MsgBody)
 	FLOG_INFO("LoginMgr:OnNetMsgSampleRegisterRes")
 
-	if not MsgBody.Register then
+	if not MsgBody.Register or not MsgBody.Register.Simple then
 		return
 	end
 

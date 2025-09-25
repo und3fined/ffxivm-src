@@ -36,6 +36,7 @@ local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = require("Define/UIViewID")
 local CommPlayerDefine = require("Game/Common/Player/CommPlayerDefine")
 local StateType = CommPlayerDefine.StateType
+local MajorUtil = require("Utils/MajorUtil")
 
 local RoleInfoMgr = require("Game/Role/RoleInfoMgr")
 local LSTR = _G.LSTR
@@ -1150,7 +1151,9 @@ function ArmyMemberPageVM:RefreshTransferLeaderData(NewLeaderData, OldLeaderData
             OldLeaderMemberVM:UpdateCategoryID(OldLeaderData.CategotyID)
         end
     end
-    self:UpdateSetIsLeader(NewLeaderData.RoleID == self.MyRoleData.Simple.RoleID)
+    self:UpdateSetIsLeader(NewLeaderData.RoleID == MajorUtil.GetMajorRoleID())
+
+
     self:UpdateSelfData()
 end
 

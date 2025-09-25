@@ -82,7 +82,7 @@ function SkillLogicMgr:OnInit()
     GetCurrSelectedTarget = USelectEffectMgr.GetCurrSelectedTarget
 
     self.ReqSkillListTimerID = 0
-    self.bAutoGenSkillAttack = false
+    self.bAutoGenSkillAttack = false    --这个只是记录设置，得用CanAutoGenSkillAttack这个接口判定能否自动工具生效
 end
 
 function SkillLogicMgr:ShowSkillTipsFlag(Value)
@@ -1153,6 +1153,21 @@ function SkillLogicMgr:AddMajorDieMsg(Params)
     local Content = RichTextUtil.GetText(string.format(LSTR(140085), Killer),
      "d1ba8e")
     _G.ChatMgr:AddSysChatMsgBattle(Content)
+end
+
+function SkillLogicMgr:CanAutoGenSkillAttack()
+    if self.bAutoGenSkillAttack then
+        --Pvp区域
+        local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
+        local bPVP = PworldCfg:FindValue(CurrPWorldResID, "CanPK")
+        if bPVP ~= 0 then
+            return false
+        end
+
+        return true
+    end
+
+    return false
 end
 
 function SkillLogicMgr:PushSysChatMsgBattle(Params)

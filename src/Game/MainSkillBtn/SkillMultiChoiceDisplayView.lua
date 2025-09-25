@@ -362,7 +362,7 @@ end
 function SkillMultiChoiceDisplayView:OnHoverSkillSelect(SelectIndex, ForceNotify)
 	if nil == SelectIndex then return end
 
-	local SelectIDInfo = self.SelectIdList[SelectIndex]
+	local SelectIDInfo = self.SelectIdList and self.SelectIdList[SelectIndex]
 	if self.bAsync then
 		if SelectIndex > 0 then
 			local SkillName = SkillMainCfg:FindValue(SelectIDInfo and SelectIDInfo.ID or 0, "SkillName")
