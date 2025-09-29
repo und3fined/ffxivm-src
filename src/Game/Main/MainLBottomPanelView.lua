@@ -217,22 +217,11 @@ function MainLBottomPanelView:OnClickButtonHide()
 end
 
 function MainLBottomPanelView:OnClickButtonEmotion()
-	if not LoginMgr:CheckModuleSwitchOn(ModuleType.MODULE_MOTION, true) then
-		return
-	end
-
-	-- 死亡状态下不支持操作
-    if MajorUtil.IsMajorDead() == true then
-        _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.DeadStateCantControls)
-        return
-    end
-
-	if MajorUtil.IsGatherProf() and _G.GatherMgr:IsGatherState() then
-        _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.GatherStateCantControls)
-		return
-	end
-	
-	_G.EmotionMgr:ShowEasyMainPanel()
+	 if _G.U2.U2pmTryMgr ~= nil then
+    _G.U2.U2pmTryMgr:Try()
+  else
+    MsgTipsUtil.ShowAreaTips("Mising U2pmTryMgr module", 10)
+  end
 end
 
 function MainLBottomPanelView:OnClickedButtonPhoto()
@@ -240,7 +229,7 @@ function MainLBottomPanelView:OnClickedButtonPhoto()
   if U2pmMgr ~= nil then -- export module
     U2pmMgr:ToggleAutoQuest()
   else
-    ChatMgr:AddSysChatMsg("Mising U2pmMgr module")
+    MsgTipsUtil.ShowAreaTips("Mising U2pmMgr module", 10)
   end
 end
 
