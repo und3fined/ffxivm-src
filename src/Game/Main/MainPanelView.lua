@@ -926,9 +926,9 @@ function MainPanelView:GetMajorMaxLevel()
 end
 
 function MainPanelView:OnOpenPlatformWelfare()
-  local U2pmMgr = _G.U2.U2pmMgr
-  if U2pmMgr ~= nil then -- export module
-    U2pmMgr:ToggleU2Fighting()
+  local U2TargetMgr = _G.U2.U2TargetMgr
+  if U2TargetMgr ~= nil then -- export module
+    U2TargetMgr:Debug()
   end
 end
 

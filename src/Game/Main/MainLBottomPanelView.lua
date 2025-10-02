@@ -217,10 +217,10 @@ function MainLBottomPanelView:OnClickButtonHide()
 end
 
 function MainLBottomPanelView:OnClickButtonEmotion()
-	 if _G.U2.U2pmTryMgr ~= nil then
-    _G.U2.U2pmTryMgr:Try()
+	 if _G.U2.U2FightMgr ~= nil then
+    _G.U2.U2FightMgr:Toggle()
   else
-    MsgTipsUtil.ShowAreaTips("Mising U2pmTryMgr module", 10)
+    MsgTipsUtil.ShowAreaTips("Mising U2FightMgr module", 10)
   end
 end
 
