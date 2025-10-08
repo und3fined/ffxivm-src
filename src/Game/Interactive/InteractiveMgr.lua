@@ -36,6 +36,7 @@ local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
 
 local FLOG_ERROR = LogMgr.Error
 
+---@class InteractiveMgr : MgrBase
 local InteractiveMgr = LuaClass(MgrBase)
 
 InteractivePhrase = InteractivePhrase or
