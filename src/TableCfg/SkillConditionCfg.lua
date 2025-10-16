@@ -6092,6 +6092,16 @@ local SkillConditionCfg = {
             Type = 17,
         },
         {
+            ID = 93427,
+            Param2 = 20380600,
+            Type = 17,
+        },
+        {
+            ID = 93428,
+            Param2 = 20380601,
+            Type = 17,
+        },
+        {
             ID = 103079,
             Param1 = 41148,
             Param2 = 4,

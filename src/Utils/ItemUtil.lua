@@ -544,9 +544,6 @@ function ItemUtil.JumpGetWayByItemData(ItemData)
 		local TransferData = ItemData.TransferData
 		_G.ArmyMgr:JumpToArmyShopGoods(ItemData.ItemID, TransferData)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_Making then
-		if _G.UIViewMgr:FindView(UIViewID.EquipmentMainPanel) then
-			_G.UIViewMgr:HideView(UIViewID.EquipmentMainPanel)
-		end
 		SystemEntranceMgr:ShowCraftingLogEntrance(ItemData.ItemID)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_Collection then
 		if _G.UIViewMgr:IsViewVisible(UIViewID.GatheringLogMainPanelView) then

@@ -1091,6 +1091,7 @@ local CS = {
     _1_1086 = '[{"Num":1,"ID":60110015}]',
     _1_1087 = '[{"Num":1,"ID":60110016}]',
     _1_1088 = '[{"Num":1,"ID":60110017}]',
+    _2_1 = '2099-10-30_05:00:00',
     _3_1 = '3.0.0',
     _3_2 = '2.2.0',
     _3_3 = '2.1.0',
@@ -1171,93 +1172,94 @@ local CS = {
     _6_65 = '[{"Count":280,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
     _6_66 = '[{"Count":200,"Type":1,"ID":19000203,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
     _6_67 = '[{"Count":2,"Type":2,"ID":66401028,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_68 = '[{"Count":8000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_69 = '[{"Count":200000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_70 = '[{"Count":610,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_71 = '[{"Count":610,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_72 = '[{"Count":610,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_73 = '[{"Count":2000,"Type":1,"ID":19000108,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_74 = '[{"Count":1000000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_75 = '[{"Count":2000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_76 = '[{"Count":1620,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_77 = '[{"Count":1710,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_78 = '[{"Count":1620,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_79 = '[{"Count":1710,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_80 = '[{"Count":1620,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_81 = '[{"Count":1710,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_82 = '[{"Count":125,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_83 = '[{"Count":125,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_84 = '[{"Count":500,"Type":1,"ID":19000203,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_85 = '[{"Count":200,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_86 = '[{"Count":50,"Type":2,"ID":66500030,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_87 = '[{"Count":12100,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_88 = '[{"Count":16400,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_89 = '[{"Count":20000,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_90 = '[{"Count":500,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_91 = '[{"Count":12100,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_92 = '[{"Count":16400,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_93 = '[{"Count":20000,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_94 = '[{"Count":500,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_95 = '[{"Count":12100,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_96 = '[{"Count":16400,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_97 = '[{"Count":20000,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_98 = '[{"Count":500,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_99 = '[{"Count":175,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_100 = '[{"Count":300,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_101 = '[{"Count":175,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_102 = '[{"Count":10,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_103 = '[{"Count":5,"Type":1,"ID":19000203,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_104 = '[{"Count":3000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_105 = '[{"Count":6000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_106 = '[{"Count":1,"Type":2,"ID":66700202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_107 = '[{"Count":1,"Type":2,"ID":66700206,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_108 = '[{"Count":100,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_109 = '[{"Count":20,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_110 = '[{"Count":3,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_111 = '[{"Count":2,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_112 = '[{"Count":600,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_113 = '[{"Count":840,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_114 = '[{"Count":4800,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_115 = '[{"Count":9600,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_116 = '[{"Count":400000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_117 = '[{"Count":500000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_118 = '[{"Count":520,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_119 = '[{"Count":1150,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_120 = '[{"Count":2160,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_121 = '[{"Count":25000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_122 = '[{"Count":30000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_123 = '[{"Count":7000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_124 = '[{"Count":80000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_125 = '[{"Count":6000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_126 = '[{"Count":13900,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_127 = '[{"Count":750,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_128 = '[{"Count":1860,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_129 = '[{"Count":13900,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_130 = '[{"Count":750,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_131 = '[{"Count":1860,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_132 = '[{"Count":13900,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_133 = '[{"Count":750,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_134 = '[{"Count":1860,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_135 = '[{"Count":350,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_136 = '[{"Count":100,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_137 = '[{"Count":350,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_138 = '[{"Count":80,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_139 = '[{"Count":500,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_140 = '[{"Count":1500,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_141 = '[{"Count":10000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_142 = '[{"Count":1000,"Type":1,"ID":19000108,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_143 = '[{"Count":2000,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_144 = '[{"Count":10000,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_145 = '[{"Count":100,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_146 = '[{"Count":200,"Type":1,"ID":19000602,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_147 = '[{"Count":100,"Type":2,"ID":66500030,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_148 = '[{"Count":200,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_149 = '[{"Count":2,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_150 = '[{"Count":25000,"Type":1,"ID":19000002,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_151 = '[{"Count":120000,"Type":1,"ID":19000002,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_152 = '[{"Count":3,"Type":1,"ID":19000300,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_153 = '[{"Count":1,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
-    _6_154 = '[{"Count":1,"Type":1,"ID":19000100,"Show":"False"},{"Count":10,"Type":1,"ID":19000101,"Show":"False"},{"Count":10,"Type":1,"ID":19000102,"Show":"False"}]',
+    _6_68 = '[{"Count":5000,"Type":1,"ID":19000108,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_69 = '[{"Count":8000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_70 = '[{"Count":200000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_71 = '[{"Count":610,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_72 = '[{"Count":610,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_73 = '[{"Count":610,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_74 = '[{"Count":2000,"Type":1,"ID":19000108,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_75 = '[{"Count":1000000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_76 = '[{"Count":2000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_77 = '[{"Count":1620,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_78 = '[{"Count":1710,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_79 = '[{"Count":1620,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_80 = '[{"Count":1710,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_81 = '[{"Count":1620,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_82 = '[{"Count":1710,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_83 = '[{"Count":125,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_84 = '[{"Count":125,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_85 = '[{"Count":500,"Type":1,"ID":19000203,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_86 = '[{"Count":200,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_87 = '[{"Count":50,"Type":2,"ID":66500030,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_88 = '[{"Count":12100,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_89 = '[{"Count":16400,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_90 = '[{"Count":20000,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_91 = '[{"Count":500,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_92 = '[{"Count":12100,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_93 = '[{"Count":16400,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_94 = '[{"Count":20000,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_95 = '[{"Count":500,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_96 = '[{"Count":12100,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_97 = '[{"Count":16400,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_98 = '[{"Count":20000,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_99 = '[{"Count":500,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_100 = '[{"Count":175,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_101 = '[{"Count":300,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_102 = '[{"Count":175,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_103 = '[{"Count":10,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_104 = '[{"Count":5,"Type":1,"ID":19000203,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_105 = '[{"Count":3000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_106 = '[{"Count":6000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_107 = '[{"Count":1,"Type":2,"ID":66700202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_108 = '[{"Count":1,"Type":2,"ID":66700206,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_109 = '[{"Count":100,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_110 = '[{"Count":20,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_111 = '[{"Count":3,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_112 = '[{"Count":2,"Type":1,"ID":19000005,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_113 = '[{"Count":600,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_114 = '[{"Count":840,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_115 = '[{"Count":4800,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_116 = '[{"Count":9600,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_117 = '[{"Count":400000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_118 = '[{"Count":500000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_119 = '[{"Count":520,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_120 = '[{"Count":1150,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_121 = '[{"Count":2160,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_122 = '[{"Count":25000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_123 = '[{"Count":30000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_124 = '[{"Count":7000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_125 = '[{"Count":80000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_126 = '[{"Count":6000,"Type":1,"ID":19000004,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_127 = '[{"Count":13900,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_128 = '[{"Count":750,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_129 = '[{"Count":1860,"Type":1,"ID":19000105,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_130 = '[{"Count":13900,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_131 = '[{"Count":750,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_132 = '[{"Count":1860,"Type":1,"ID":19000106,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_133 = '[{"Count":13900,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_134 = '[{"Count":750,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_135 = '[{"Count":1860,"Type":1,"ID":19000107,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_136 = '[{"Count":350,"Type":1,"ID":19000200,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_137 = '[{"Count":100,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_138 = '[{"Count":350,"Type":1,"ID":19000202,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_139 = '[{"Count":80,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_140 = '[{"Count":500,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_141 = '[{"Count":1500,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_142 = '[{"Count":10000,"Type":1,"ID":19000103,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_143 = '[{"Count":1000,"Type":1,"ID":19000108,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_144 = '[{"Count":2000,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_145 = '[{"Count":10000,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_146 = '[{"Count":100,"Type":1,"ID":19000001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_147 = '[{"Count":200,"Type":1,"ID":19000602,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_148 = '[{"Count":100,"Type":2,"ID":66500030,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_149 = '[{"Count":200,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_150 = '[{"Count":2,"Type":2,"ID":65800001,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_151 = '[{"Count":25000,"Type":1,"ID":19000002,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_152 = '[{"Count":120000,"Type":1,"ID":19000002,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_153 = '[{"Count":3,"Type":1,"ID":19000300,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_154 = '[{"Count":1,"Type":1,"ID":19000100,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"},{"Count":0,"Type":0,"ID":0,"Show":"False"}]',
+    _6_155 = '[{"Count":1,"Type":1,"ID":19000100,"Show":"False"},{"Count":10,"Type":1,"ID":19000101,"Show":"False"},{"Count":10,"Type":1,"ID":19000102,"Show":"False"}]',
     _7_1 = '[{"CondType": 8, "_DescNum": 1, "Values": [4]}]',
     _7_2 = '[{"CondType": 13, "_DescNum": 1, "Values": [170858]}]',
     _7_3 = '[{"CondType": 13, "_DescNum": 1, "Values": [170973]}]',
@@ -1333,6 +1335,7 @@ local CS = {
     _8_1 = '[{"CondType":13,"Values":[[150221]],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}}]',
     _8_2 = '[{"CondType":9,"Values":[[4050014,4050015,4050016,4050017,4050018,4050019,4050020,4050021,4050022,4050023]],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}}]',
     _8_3 = '[{"CondType":9,"Values":[[4060014,4060015,4060016,4060017,4060018,4060019,4060020,4060021,4060022,4060023]],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}},{"CondType":0,"Values":[{}],"Desc":{}}]',
+    _9_1 = '2.1.5',
 }
 
 ---@class GoodsCfg : CfgBase
@@ -1387,6 +1390,7 @@ local GoodsCfg = {
         ShowDiscount = 0,
         ShowNumsSelect = 0,
         ShowOwnCount = 0,
+        ShowVersion = '',
     },
 	LuaData = {
         {
@@ -29862,7 +29866,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_109,
+            _Price = CS._6_110,
         },
         {
             CheckUsable = 0,
@@ -29875,7 +29879,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_109,
+            _Price = CS._6_110,
         },
         {
             CheckUsable = 0,
@@ -29888,7 +29892,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_110,
+            _Price = CS._6_111,
         },
         {
             CheckUsable = 0,
@@ -29901,7 +29905,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_111,
+            _Price = CS._6_112,
         },
         {
             CheckUsable = 0,
@@ -29914,7 +29918,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_111,
+            _Price = CS._6_112,
         },
         {
             CheckUsable = 0,
@@ -29927,7 +29931,7 @@ local GoodsCfg = {
             MallID = 2001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_110,
+            _Price = CS._6_111,
         },
         {
             CheckUsable = 0,
@@ -29950,7 +29954,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_112,
+            _Price = CS._6_113,
         },
         {
             CheckUsable = 0,
@@ -29963,7 +29967,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_113,
+            _Price = CS._6_114,
         },
         {
             CheckUsable = 0,
@@ -29976,7 +29980,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_114,
+            _Price = CS._6_115,
         },
         {
             CheckUsable = 0,
@@ -29989,7 +29993,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_115,
+            _Price = CS._6_116,
         },
         {
             CheckUsable = 0,
@@ -30002,7 +30006,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_116,
+            _Price = CS._6_117,
         },
         {
             CheckUsable = 0,
@@ -30015,7 +30019,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_117,
+            _Price = CS._6_118,
         },
         {
             CheckUsable = 0,
@@ -30028,7 +30032,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_74,
+            _Price = CS._6_75,
         },
         {
             CheckUsable = 0,
@@ -30041,7 +30045,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_118,
+            _Price = CS._6_119,
         },
         {
             CheckUsable = 0,
@@ -30054,7 +30058,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_119,
+            _Price = CS._6_120,
         },
         {
             CheckUsable = 0,
@@ -30067,7 +30071,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_120,
+            _Price = CS._6_121,
         },
         {
             CheckUsable = 0,
@@ -30235,7 +30239,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_121,
+            _Price = CS._6_122,
         },
         {
             CheckUsable = 0,
@@ -30248,7 +30252,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_122,
+            _Price = CS._6_123,
         },
         {
             CheckUsable = 0,
@@ -30261,7 +30265,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_121,
+            _Price = CS._6_122,
         },
         {
             CheckUsable = 0,
@@ -30404,7 +30408,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_122,
+            _Price = CS._6_123,
         },
         {
             CheckUsable = 0,
@@ -30473,7 +30477,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_68,
+            _Price = CS._6_69,
             _PurchaseConditions = CS._7_47,
         },
         {
@@ -30487,7 +30491,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_68,
+            _Price = CS._6_69,
             _PurchaseConditions = CS._7_47,
         },
         {
@@ -30500,7 +30504,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_69,
+            _Price = CS._6_70,
         },
         {
             CheckUsable = 0,
@@ -30513,7 +30517,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_74,
+            _Price = CS._6_75,
         },
         {
             CheckUsable = 0,
@@ -30539,7 +30543,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_69,
+            _Price = CS._6_70,
         },
         {
             CheckUsable = 0,
@@ -30552,7 +30556,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_69,
+            _Price = CS._6_70,
         },
         {
             CheckUsable = 0,
@@ -30565,7 +30569,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_69,
+            _Price = CS._6_70,
         },
         {
             CheckUsable = 0,
@@ -30578,7 +30582,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_69,
+            _Price = CS._6_70,
         },
         {
             CheckUsable = 0,
@@ -30986,7 +30990,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_75,
+            _Price = CS._6_76,
             _ShowConditions = CS._8_1,
         },
         {
@@ -31000,7 +31004,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_75,
+            _Price = CS._6_76,
             _ShowConditions = CS._8_1,
         },
         {
@@ -31044,7 +31048,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_123,
+            _Price = CS._6_124,
             _PurchaseConditions = CS._7_15,
             _ShowConditions = CS._8_1,
         },
@@ -31105,7 +31109,7 @@ local GoodsCfg = {
             OnTime = '2025-09-29_05:00:00',
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_124,
+            _Price = CS._6_125,
         },
         {
             CheckUsable = 0,
@@ -31117,7 +31121,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_125,
+            _Price = CS._6_126,
         },
         {
             CheckUsable = 0,
@@ -31130,7 +31134,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_68,
+            _Price = CS._6_69,
         },
         {
             CheckUsable = 0,
@@ -31143,7 +31147,7 @@ local GoodsCfg = {
             MallID = 2002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_125,
+            _Price = CS._6_126,
         },
         {
             CheckUsable = 0,
@@ -31167,9 +31171,11 @@ local GoodsCfg = {
             IsSpecial = 1,
             _Items = '[{"Num":1,"ID":65900066}]',
             MallID = 2002,
+            OffTime = CS._2_1,
+            OnTime = '2025-10-16_05:00:00',
             OnVersion = '2.1.5',
             PopOut = 1,
-            _Price = CS._6_74,
+            _Price = CS._6_75,
             _PurchaseConditions = '[{"CondType": 17, "_DescNum": 1, "Values": [1001]}]',
         },
         {
@@ -31181,11 +31187,11 @@ local GoodsCfg = {
             IsSpecial = 1,
             _Items = CS._1_974,
             MallID = 2002,
-            OffTime = '2099-10-30_05:00:00',
+            OffTime = CS._2_1,
             OnTime = '2025-10-13_05:00:00',
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_124,
+            _Price = CS._6_125,
         },
         {
             CheckUsable = 0,
@@ -31264,7 +31270,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_87,
+            _Price = CS._6_88,
             _PurchaseConditions = CS._7_25,
         },
         {
@@ -31278,7 +31284,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_87,
+            _Price = CS._6_88,
             _PurchaseConditions = CS._7_25,
         },
         {
@@ -31292,7 +31298,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_87,
+            _Price = CS._6_88,
             _PurchaseConditions = CS._7_25,
         },
         {
@@ -31376,7 +31382,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_88,
+            _Price = CS._6_89,
             _PurchaseConditions = CS._7_26,
         },
         {
@@ -31390,7 +31396,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_88,
+            _Price = CS._6_89,
             _PurchaseConditions = CS._7_26,
         },
         {
@@ -31404,7 +31410,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_88,
+            _Price = CS._6_89,
             _PurchaseConditions = CS._7_26,
         },
         {
@@ -31418,7 +31424,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_126,
+            _Price = CS._6_127,
             _PurchaseConditions = CS._7_53,
         },
         {
@@ -31432,7 +31438,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_126,
+            _Price = CS._6_127,
             _PurchaseConditions = CS._7_53,
         },
         {
@@ -31446,7 +31452,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_89,
+            _Price = CS._6_90,
             _PurchaseConditions = CS._7_36,
         },
         {
@@ -31460,7 +31466,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_89,
+            _Price = CS._6_90,
             _PurchaseConditions = CS._7_36,
         },
         {
@@ -31474,7 +31480,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_89,
+            _Price = CS._6_90,
             _PurchaseConditions = CS._7_36,
         },
         {
@@ -31526,7 +31532,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_90,
+            _Price = CS._6_91,
             _PurchaseConditions = CS._7_33,
         },
         {
@@ -31538,7 +31544,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_90,
+            _Price = CS._6_91,
             _PurchaseConditions = CS._7_33,
         },
         {
@@ -31550,7 +31556,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_90,
+            _Price = CS._6_91,
             _PurchaseConditions = CS._7_33,
         },
         {
@@ -31562,7 +31568,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_70,
+            _Price = CS._6_71,
             _PurchaseConditions = CS._7_24,
         },
         {
@@ -31574,7 +31580,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_70,
+            _Price = CS._6_71,
             _PurchaseConditions = CS._7_24,
         },
         {
@@ -31586,7 +31592,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_70,
+            _Price = CS._6_71,
             _PurchaseConditions = CS._7_24,
         },
         {
@@ -31598,7 +31604,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_70,
+            _Price = CS._6_71,
             _PurchaseConditions = CS._7_24,
         },
         {
@@ -31682,7 +31688,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_127,
+            _Price = CS._6_128,
             _PurchaseConditions = CS._7_25,
         },
         {
@@ -31694,7 +31700,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_127,
+            _Price = CS._6_128,
             _PurchaseConditions = CS._7_25,
         },
         {
@@ -31706,7 +31712,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_76,
+            _Price = CS._6_77,
             _PurchaseConditions = CS._7_34,
         },
         {
@@ -31718,7 +31724,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_76,
+            _Price = CS._6_77,
             _PurchaseConditions = CS._7_34,
         },
         {
@@ -31730,7 +31736,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_76,
+            _Price = CS._6_77,
             _PurchaseConditions = CS._7_34,
         },
         {
@@ -31742,7 +31748,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_76,
+            _Price = CS._6_77,
             _PurchaseConditions = CS._7_34,
             ShowNumsSelect = 1,
         },
@@ -31755,7 +31761,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_77,
+            _Price = CS._6_78,
             _PurchaseConditions = CS._7_35,
         },
         {
@@ -31767,7 +31773,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_77,
+            _Price = CS._6_78,
             _PurchaseConditions = CS._7_35,
         },
         {
@@ -31851,7 +31857,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_128,
+            _Price = CS._6_129,
             _PurchaseConditions = CS._7_26,
         },
         {
@@ -31863,7 +31869,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_128,
+            _Price = CS._6_129,
             _PurchaseConditions = CS._7_26,
         },
         {
@@ -31887,7 +31893,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_2,
             OnceLimitation = 10,
-            _Price = CS._6_70,
+            _Price = CS._6_71,
             _PurchaseConditions = CS._7_24,
         },
         {
@@ -31899,7 +31905,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_77,
+            _Price = CS._6_78,
             _PurchaseConditions = CS._7_35,
         },
         {
@@ -31911,7 +31917,7 @@ local GoodsCfg = {
             MallID = 2003,
             OnVersion = CS._5_10,
             OnceLimitation = 10,
-            _Price = CS._6_77,
+            _Price = CS._6_78,
             _PurchaseConditions = CS._7_35,
         },
         {
@@ -31977,7 +31983,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_91,
+            _Price = CS._6_92,
             _PurchaseConditions = CS._7_28,
         },
         {
@@ -31991,7 +31997,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_91,
+            _Price = CS._6_92,
             _PurchaseConditions = CS._7_28,
         },
         {
@@ -32005,7 +32011,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_91,
+            _Price = CS._6_92,
             _PurchaseConditions = CS._7_28,
         },
         {
@@ -32089,7 +32095,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_92,
+            _Price = CS._6_93,
             _PurchaseConditions = CS._7_29,
         },
         {
@@ -32103,7 +32109,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_92,
+            _Price = CS._6_93,
             _PurchaseConditions = CS._7_29,
         },
         {
@@ -32117,7 +32123,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_92,
+            _Price = CS._6_93,
             _PurchaseConditions = CS._7_29,
         },
         {
@@ -32131,7 +32137,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_129,
+            _Price = CS._6_130,
             _PurchaseConditions = CS._7_54,
         },
         {
@@ -32145,7 +32151,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_129,
+            _Price = CS._6_130,
             _PurchaseConditions = CS._7_54,
         },
         {
@@ -32159,7 +32165,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_93,
+            _Price = CS._6_94,
             _PurchaseConditions = CS._7_40,
         },
         {
@@ -32173,7 +32179,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_93,
+            _Price = CS._6_94,
             _PurchaseConditions = CS._7_40,
         },
         {
@@ -32187,7 +32193,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_93,
+            _Price = CS._6_94,
             _PurchaseConditions = CS._7_40,
         },
         {
@@ -32239,7 +32245,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_94,
+            _Price = CS._6_95,
             _PurchaseConditions = CS._7_37,
         },
         {
@@ -32251,7 +32257,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_94,
+            _Price = CS._6_95,
             _PurchaseConditions = CS._7_37,
         },
         {
@@ -32263,7 +32269,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_94,
+            _Price = CS._6_95,
             _PurchaseConditions = CS._7_37,
         },
         {
@@ -32275,7 +32281,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_71,
+            _Price = CS._6_72,
             _PurchaseConditions = CS._7_27,
         },
         {
@@ -32287,7 +32293,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_71,
+            _Price = CS._6_72,
             _PurchaseConditions = CS._7_27,
         },
         {
@@ -32299,7 +32305,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_71,
+            _Price = CS._6_72,
             _PurchaseConditions = CS._7_27,
         },
         {
@@ -32311,7 +32317,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_71,
+            _Price = CS._6_72,
             _PurchaseConditions = CS._7_27,
         },
         {
@@ -32395,7 +32401,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_130,
+            _Price = CS._6_131,
             _PurchaseConditions = CS._7_28,
         },
         {
@@ -32407,7 +32413,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_130,
+            _Price = CS._6_131,
             _PurchaseConditions = CS._7_28,
         },
         {
@@ -32419,7 +32425,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_78,
+            _Price = CS._6_79,
             _PurchaseConditions = CS._7_38,
         },
         {
@@ -32431,7 +32437,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_78,
+            _Price = CS._6_79,
             _PurchaseConditions = CS._7_38,
         },
         {
@@ -32443,7 +32449,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_78,
+            _Price = CS._6_79,
             _PurchaseConditions = CS._7_38,
         },
         {
@@ -32455,7 +32461,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_78,
+            _Price = CS._6_79,
             _PurchaseConditions = CS._7_38,
             ShowNumsSelect = 1,
         },
@@ -32468,7 +32474,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_79,
+            _Price = CS._6_80,
             _PurchaseConditions = CS._7_39,
         },
         {
@@ -32480,7 +32486,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_79,
+            _Price = CS._6_80,
             _PurchaseConditions = CS._7_39,
         },
         {
@@ -32564,7 +32570,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_131,
+            _Price = CS._6_132,
             _PurchaseConditions = CS._7_29,
         },
         {
@@ -32576,7 +32582,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_131,
+            _Price = CS._6_132,
             _PurchaseConditions = CS._7_29,
         },
         {
@@ -32600,7 +32606,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_2,
             OnceLimitation = 10,
-            _Price = CS._6_71,
+            _Price = CS._6_72,
             _PurchaseConditions = CS._7_27,
         },
         {
@@ -32612,7 +32618,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_79,
+            _Price = CS._6_80,
             _PurchaseConditions = CS._7_39,
         },
         {
@@ -32624,7 +32630,7 @@ local GoodsCfg = {
             MallID = 2004,
             OnVersion = CS._5_10,
             OnceLimitation = 10,
-            _Price = CS._6_79,
+            _Price = CS._6_80,
             _PurchaseConditions = CS._7_39,
         },
         {
@@ -32690,7 +32696,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_95,
+            _Price = CS._6_96,
             _PurchaseConditions = CS._7_31,
         },
         {
@@ -32704,7 +32710,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_95,
+            _Price = CS._6_96,
             _PurchaseConditions = CS._7_31,
         },
         {
@@ -32718,7 +32724,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_95,
+            _Price = CS._6_96,
             _PurchaseConditions = CS._7_31,
         },
         {
@@ -32802,7 +32808,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_96,
+            _Price = CS._6_97,
             _PurchaseConditions = CS._7_32,
         },
         {
@@ -32816,7 +32822,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_96,
+            _Price = CS._6_97,
             _PurchaseConditions = CS._7_32,
         },
         {
@@ -32830,7 +32836,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_96,
+            _Price = CS._6_97,
             _PurchaseConditions = CS._7_32,
         },
         {
@@ -32844,7 +32850,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_132,
+            _Price = CS._6_133,
             _PurchaseConditions = CS._7_55,
         },
         {
@@ -32858,7 +32864,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_132,
+            _Price = CS._6_133,
             _PurchaseConditions = CS._7_55,
         },
         {
@@ -32872,7 +32878,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_97,
+            _Price = CS._6_98,
             _PurchaseConditions = CS._7_44,
         },
         {
@@ -32886,7 +32892,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_97,
+            _Price = CS._6_98,
             _PurchaseConditions = CS._7_44,
         },
         {
@@ -32900,7 +32906,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_97,
+            _Price = CS._6_98,
             _PurchaseConditions = CS._7_44,
         },
         {
@@ -32952,7 +32958,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_98,
+            _Price = CS._6_99,
             _PurchaseConditions = CS._7_41,
         },
         {
@@ -32964,7 +32970,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_98,
+            _Price = CS._6_99,
             _PurchaseConditions = CS._7_41,
         },
         {
@@ -32976,7 +32982,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_98,
+            _Price = CS._6_99,
             _PurchaseConditions = CS._7_41,
         },
         {
@@ -32988,7 +32994,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_72,
+            _Price = CS._6_73,
             _PurchaseConditions = CS._7_30,
         },
         {
@@ -33000,7 +33006,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_72,
+            _Price = CS._6_73,
             _PurchaseConditions = CS._7_30,
         },
         {
@@ -33012,7 +33018,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_72,
+            _Price = CS._6_73,
             _PurchaseConditions = CS._7_30,
         },
         {
@@ -33024,7 +33030,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_72,
+            _Price = CS._6_73,
             _PurchaseConditions = CS._7_30,
         },
         {
@@ -33108,7 +33114,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_133,
+            _Price = CS._6_134,
             _PurchaseConditions = CS._7_31,
         },
         {
@@ -33120,7 +33126,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_133,
+            _Price = CS._6_134,
             _PurchaseConditions = CS._7_31,
         },
         {
@@ -33132,7 +33138,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_80,
+            _Price = CS._6_81,
             _PurchaseConditions = CS._7_42,
         },
         {
@@ -33144,7 +33150,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_80,
+            _Price = CS._6_81,
             _PurchaseConditions = CS._7_42,
         },
         {
@@ -33156,7 +33162,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_80,
+            _Price = CS._6_81,
             _PurchaseConditions = CS._7_42,
         },
         {
@@ -33168,7 +33174,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_80,
+            _Price = CS._6_81,
             _PurchaseConditions = CS._7_42,
             ShowNumsSelect = 1,
         },
@@ -33181,7 +33187,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_81,
+            _Price = CS._6_82,
             _PurchaseConditions = CS._7_43,
         },
         {
@@ -33193,7 +33199,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_81,
+            _Price = CS._6_82,
             _PurchaseConditions = CS._7_43,
         },
         {
@@ -33277,7 +33283,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_134,
+            _Price = CS._6_135,
             _PurchaseConditions = CS._7_32,
         },
         {
@@ -33289,7 +33295,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_134,
+            _Price = CS._6_135,
             _PurchaseConditions = CS._7_32,
         },
         {
@@ -33313,7 +33319,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_2,
             OnceLimitation = 10,
-            _Price = CS._6_72,
+            _Price = CS._6_73,
             _PurchaseConditions = CS._7_30,
         },
         {
@@ -33325,7 +33331,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_7,
             OnceLimitation = 10,
-            _Price = CS._6_81,
+            _Price = CS._6_82,
             _PurchaseConditions = CS._7_43,
         },
         {
@@ -33337,7 +33343,7 @@ local GoodsCfg = {
             MallID = 2005,
             OnVersion = CS._5_10,
             OnceLimitation = 10,
-            _Price = CS._6_81,
+            _Price = CS._6_82,
             _PurchaseConditions = CS._7_43,
         },
         {
@@ -33361,7 +33367,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_112,
+            _Price = CS._6_113,
         },
         {
             CheckUsable = 0,
@@ -33374,7 +33380,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_113,
+            _Price = CS._6_114,
         },
         {
             CheckUsable = 0,
@@ -33387,7 +33393,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_114,
+            _Price = CS._6_115,
         },
         {
             CheckUsable = 0,
@@ -33400,7 +33406,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_115,
+            _Price = CS._6_116,
         },
         {
             CheckUsable = 0,
@@ -33413,7 +33419,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_116,
+            _Price = CS._6_117,
         },
         {
             CheckUsable = 0,
@@ -33426,7 +33432,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_117,
+            _Price = CS._6_118,
         },
         {
             CheckUsable = 0,
@@ -33439,7 +33445,7 @@ local GoodsCfg = {
             MallID = 2006,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_74,
+            _Price = CS._6_75,
         },
         {
             CheckUsable = 0,
@@ -33452,7 +33458,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_118,
+            _Price = CS._6_119,
         },
         {
             CheckUsable = 0,
@@ -33465,7 +33471,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_119,
+            _Price = CS._6_120,
         },
         {
             CheckUsable = 0,
@@ -33478,7 +33484,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_120,
+            _Price = CS._6_121,
         },
         {
             CheckUsable = 0,
@@ -33546,7 +33552,7 @@ local GoodsCfg = {
             MallID = 2007,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_68,
+            _Price = CS._6_69,
             _PurchaseConditions = CS._7_47,
         },
         {
@@ -33560,7 +33566,7 @@ local GoodsCfg = {
             MallID = 2007,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_68,
+            _Price = CS._6_69,
             _PurchaseConditions = CS._7_47,
         },
         {
@@ -33774,7 +33780,7 @@ local GoodsCfg = {
             MallID = 2008,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_75,
+            _Price = CS._6_76,
         },
         {
             CheckUsable = 0,
@@ -33786,7 +33792,7 @@ local GoodsCfg = {
             MallID = 2008,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_75,
+            _Price = CS._6_76,
         },
         {
             CheckUsable = 0,
@@ -33824,7 +33830,7 @@ local GoodsCfg = {
             MallID = 2008,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_123,
+            _Price = CS._6_124,
             _PurchaseConditions = CS._7_15,
         },
         {
@@ -34024,7 +34030,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230019}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_99,
+            _Price = CS._6_100,
         },
         {
             DisplayID = 18,
@@ -34033,7 +34039,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230029}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_135,
+            _Price = CS._6_136,
         },
         {
             DisplayID = 19,
@@ -34042,7 +34048,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230039}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_99,
+            _Price = CS._6_100,
         },
         {
             DisplayID = 20,
@@ -34051,7 +34057,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230049}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_135,
+            _Price = CS._6_136,
         },
         {
             DisplayID = 21,
@@ -34060,7 +34066,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230059}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_99,
+            _Price = CS._6_100,
         },
         {
             DisplayID = 22,
@@ -34069,7 +34075,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230077}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_82,
+            _Price = CS._6_83,
         },
         {
             DisplayID = 23,
@@ -34078,7 +34084,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230087}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_82,
+            _Price = CS._6_83,
         },
         {
             DisplayID = 24,
@@ -34087,7 +34093,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230097}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_82,
+            _Price = CS._6_83,
         },
         {
             DisplayID = 25,
@@ -34096,7 +34102,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230107}]',
             MallID = 3001,
             OnVersion = CS._5_1,
-            _Price = CS._6_82,
+            _Price = CS._6_83,
         },
         {
             FirstType = 300102,
@@ -34634,6 +34640,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_27,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -34646,6 +34653,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_27,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -34658,6 +34666,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_27,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -34670,6 +34679,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_64,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -34682,6 +34692,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_64,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -34694,6 +34705,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_64,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35011,7 +35023,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230370}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_100,
+            _Price = CS._6_101,
             _PurchaseConditions = '[{"CondType": 13, "_DescNum": 1, "Values": [190185]}]',
         },
         {
@@ -35021,7 +35033,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230380}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_100,
+            _Price = CS._6_101,
             _PurchaseConditions = '[{"CondType": 13, "_DescNum": 1, "Values": [200079]}]',
         },
         {
@@ -35031,7 +35043,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230390}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_100,
+            _Price = CS._6_101,
             _PurchaseConditions = '[{"CondType": 13, "_DescNum": 1, "Values": [171153]}]',
         },
         {
@@ -35041,7 +35053,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230480}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_136,
+            _Price = CS._6_137,
         },
         {
             DisplayID = 5,
@@ -35050,7 +35062,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230490}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_136,
+            _Price = CS._6_137,
         },
         {
             FirstType = 300301,
@@ -35058,7 +35070,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230018}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_101,
+            _Price = CS._6_102,
         },
         {
             DisplayID = 2,
@@ -35067,7 +35079,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230028}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_137,
+            _Price = CS._6_138,
         },
         {
             DisplayID = 3,
@@ -35076,7 +35088,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230038}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_101,
+            _Price = CS._6_102,
         },
         {
             DisplayID = 4,
@@ -35085,7 +35097,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230048}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_137,
+            _Price = CS._6_138,
         },
         {
             DisplayID = 5,
@@ -35094,7 +35106,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230058}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_101,
+            _Price = CS._6_102,
         },
         {
             DisplayID = 6,
@@ -35103,7 +35115,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230076}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_83,
+            _Price = CS._6_84,
         },
         {
             DisplayID = 7,
@@ -35112,7 +35124,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230086}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_83,
+            _Price = CS._6_84,
         },
         {
             DisplayID = 8,
@@ -35121,7 +35133,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230096}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_83,
+            _Price = CS._6_84,
         },
         {
             DisplayID = 9,
@@ -35130,7 +35142,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50230106}]',
             MallID = 3003,
             OnVersion = CS._5_1,
-            _Price = CS._6_83,
+            _Price = CS._6_84,
         },
         {
             FirstType = 300302,
@@ -35274,7 +35286,7 @@ local GoodsCfg = {
             MallID = 3003,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_102,
+            _Price = CS._6_103,
             ShowNumsSelect = 1,
         },
         {
@@ -35286,7 +35298,7 @@ local GoodsCfg = {
             MallID = 3003,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_102,
+            _Price = CS._6_103,
             ShowNumsSelect = 1,
         },
         {
@@ -35298,7 +35310,7 @@ local GoodsCfg = {
             MallID = 3003,
             OnVersion = CS._5_1,
             OnceLimitation = 99,
-            _Price = CS._6_102,
+            _Price = CS._6_103,
             ShowNumsSelect = 1,
         },
         {
@@ -35578,6 +35590,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_43,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35590,6 +35603,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_43,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35602,6 +35616,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_43,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35614,6 +35629,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_66,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35626,6 +35642,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_66,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35638,6 +35655,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_66,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -35686,7 +35704,7 @@ local GoodsCfg = {
             MallID = 3004,
             OffVersion = CS._3_1,
             OnVersion = CS._5_3,
-            _Price = CS._6_84,
+            _Price = CS._6_85,
             _PurchaseConditions = CS._7_66,
         },
         {
@@ -35699,7 +35717,7 @@ local GoodsCfg = {
             MallID = 3004,
             OffVersion = CS._3_1,
             OnVersion = CS._5_3,
-            _Price = CS._6_84,
+            _Price = CS._6_85,
             _PurchaseConditions = CS._7_67,
         },
         {
@@ -35712,7 +35730,7 @@ local GoodsCfg = {
             MallID = 3004,
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
-            _Price = CS._6_84,
+            _Price = CS._6_85,
             _PurchaseConditions = CS._7_66,
         },
         {
@@ -35725,7 +35743,7 @@ local GoodsCfg = {
             MallID = 3004,
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
-            _Price = CS._6_84,
+            _Price = CS._6_85,
             _PurchaseConditions = CS._7_67,
         },
         {
@@ -35737,7 +35755,7 @@ local GoodsCfg = {
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_103,
+            _Price = CS._6_104,
             ShowNumsSelect = 1,
         },
         {
@@ -35750,7 +35768,7 @@ local GoodsCfg = {
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_103,
+            _Price = CS._6_104,
             ShowNumsSelect = 1,
         },
         {
@@ -35763,7 +35781,7 @@ local GoodsCfg = {
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_103,
+            _Price = CS._6_104,
             ShowNumsSelect = 1,
         },
         {
@@ -36378,7 +36396,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":50211060}]',
             MallID = 3005,
             OnVersion = CS._5_1,
-            _Price = CS._6_138,
+            _Price = CS._6_139,
             _PurchaseConditions = CS._7_2,
         },
         {
@@ -37703,7 +37721,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_2,
             OnceLimitation = 3,
-            _Price = CS._6_85,
+            _Price = CS._6_86,
         },
         {
             CheckUsable = 0,
@@ -37715,7 +37733,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_2,
             OnceLimitation = 3,
-            _Price = CS._6_85,
+            _Price = CS._6_86,
         },
         {
             CheckUsable = 0,
@@ -37727,7 +37745,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_2,
             OnceLimitation = 3,
-            _Price = CS._6_85,
+            _Price = CS._6_86,
         },
         {
             CheckUsable = 0,
@@ -37739,7 +37757,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_2,
             OnceLimitation = 3,
-            _Price = CS._6_85,
+            _Price = CS._6_86,
         },
         {
             CheckUsable = 0,
@@ -37750,7 +37768,7 @@ local GoodsCfg = {
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
             OnceLimitation = 10,
-            _Price = CS._6_138,
+            _Price = CS._6_139,
         },
         {
             CheckUsable = 0,
@@ -37880,7 +37898,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_3,
             OnceLimitation = 5,
-            _Price = CS._6_139,
+            _Price = CS._6_140,
         },
         {
             CheckUsable = 0,
@@ -37902,7 +37920,7 @@ local GoodsCfg = {
             MallID = 3005,
             OnVersion = CS._5_2,
             OnceLimitation = 5,
-            _Price = CS._6_139,
+            _Price = CS._6_140,
         },
         {
             CheckUsable = 0,
@@ -37923,7 +37941,7 @@ local GoodsCfg = {
             MallID = 3005,
             OffVersion = CS._3_2,
             OnVersion = CS._5_3,
-            _Price = CS._6_140,
+            _Price = CS._6_141,
         },
         {
             DisplayID = 2,
@@ -37934,7 +37952,7 @@ local GoodsCfg = {
             MallID = 3005,
             OffVersion = CS._3_1,
             OnVersion = CS._5_2,
-            _Price = CS._6_140,
+            _Price = CS._6_141,
         },
         {
             DisplayID = 2,
@@ -38692,6 +38710,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_52,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38704,6 +38723,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_52,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38716,6 +38736,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_52,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38728,6 +38749,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_52,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38740,6 +38762,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 3,
             _Price = CS._6_53,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38752,6 +38775,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 3,
             _Price = CS._6_53,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38764,6 +38788,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 3,
             _Price = CS._6_53,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -38776,6 +38801,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 3,
             _Price = CS._6_53,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49056,7 +49082,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_104,
+            _Price = CS._6_105,
         },
         {
             CheckUsable = 0,
@@ -49069,7 +49095,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_104,
+            _Price = CS._6_105,
         },
         {
             CheckUsable = 0,
@@ -49160,7 +49186,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_8,
             PopOut = 1,
-            _Price = CS._6_105,
+            _Price = CS._6_106,
             _PurchaseConditions = CS._7_48,
         },
         {
@@ -49174,7 +49200,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_8,
             PopOut = 1,
-            _Price = CS._6_104,
+            _Price = CS._6_105,
             _PurchaseConditions = CS._7_48,
         },
         {
@@ -49495,7 +49521,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":66401028}]',
             MallID = 3010,
             OnVersion = CS._5_1,
-            _Price = CS._6_141,
+            _Price = CS._6_142,
         },
         {
             CheckUsable = 0,
@@ -49505,7 +49531,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":66401029}]',
             MallID = 3010,
             OnVersion = CS._5_7,
-            _Price = CS._6_141,
+            _Price = CS._6_142,
         },
         {
             CheckUsable = 0,
@@ -49569,6 +49595,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_46,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49581,6 +49608,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_46,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49593,6 +49621,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_46,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49605,6 +49634,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_46,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49708,7 +49738,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_105,
+            _Price = CS._6_106,
         },
         {
             CheckUsable = 0,
@@ -49747,7 +49777,7 @@ local GoodsCfg = {
             MallID = 3010,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_105,
+            _Price = CS._6_106,
         },
         {
             CheckUsable = 0,
@@ -49799,6 +49829,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_54,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49811,6 +49842,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_54,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49823,6 +49855,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_54,
+            ShowVersion = CS._9_1,
         },
         {
             CheckUsable = 0,
@@ -49835,6 +49868,7 @@ local GoodsCfg = {
             OnVersion = CS._5_2,
             OnceLimitation = 10,
             _Price = CS._6_54,
+            ShowVersion = CS._9_1,
         },
         {
             Disabled = 1,
@@ -49845,7 +49879,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_5,
             PopOut = 1,
-            _Price = CS._6_73,
+            _Price = CS._6_74,
         },
         {
             Disabled = 1,
@@ -49857,7 +49891,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_5,
             PopOut = 1,
-            _Price = CS._6_142,
+            _Price = CS._6_143,
         },
         {
             Disabled = 1,
@@ -49977,7 +50011,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_5,
             PopOut = 1,
-            _Price = CS._6_73,
+            _Price = CS._6_74,
         },
         {
             Disabled = 1,
@@ -49989,7 +50023,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_5,
             PopOut = 1,
-            _Price = CS._6_73,
+            _Price = CS._6_74,
         },
         {
             Disabled = 1,
@@ -50001,7 +50035,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_5,
             PopOut = 1,
-            _Price = CS._6_73,
+            _Price = CS._6_74,
         },
         {
             Disabled = 1,
@@ -50372,7 +50406,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_73,
+            _Price = CS._6_74,
         },
         {
             DisplayID = 32,
@@ -50384,7 +50418,7 @@ local GoodsCfg = {
             MallID = 3011,
             OnVersion = CS._5_4,
             PopOut = 1,
-            _Price = CS._6_142,
+            _Price = CS._6_143,
         },
         {
             DisplayID = 33,
@@ -50853,6 +50887,78 @@ local GoodsCfg = {
             OnVersion = CS._5_4,
             PopOut = 1,
             _Price = CS._6_1,
+        },
+        {
+            DisplayID = 72,
+            FirstType = 301104,
+            GoodsCounterFirst = 36604,
+            ID = 30110086,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800086}]',
+            MallID = 3011,
+            OnVersion = '2.3.8',
+            PopOut = 1,
+            _Price = CS._6_68,
+        },
+        {
+            DisplayID = 73,
+            FirstType = 301104,
+            GoodsCounterFirst = 36704,
+            ID = 30110087,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800087}]',
+            MallID = 3011,
+            OnVersion = CS._5_4,
+            PopOut = 1,
+            _Price = CS._6_68,
+        },
+        {
+            DisplayID = 74,
+            FirstType = 301104,
+            GoodsCounterFirst = 36804,
+            ID = 30110088,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800088}]',
+            MallID = 3011,
+            OnVersion = CS._5_4,
+            PopOut = 1,
+            _Price = CS._6_68,
+        },
+        {
+            DisplayID = 75,
+            FirstType = 301104,
+            GoodsCounterFirst = 36904,
+            ID = 30110089,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800089}]',
+            MallID = 3011,
+            OnVersion = CS._5_2,
+            PopOut = 1,
+            _Price = CS._6_68,
+        },
+        {
+            DisplayID = 76,
+            FirstType = 301104,
+            GoodsCounterFirst = 37004,
+            ID = 30110090,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800090}]',
+            MallID = 3011,
+            OnVersion = CS._5_2,
+            PopOut = 1,
+            _Price = CS._6_68,
+        },
+        {
+            DisplayID = 77,
+            FirstType = 301104,
+            GoodsCounterFirst = 37104,
+            ID = 30110091,
+            IsSpecial = 1,
+            _Items = '[{"Num":1,"ID":61800241}]',
+            MallID = 3011,
+            OnVersion = CS._5_10,
+            PopOut = 1,
+            _Price = CS._6_68,
         },
         {
             FirstType = 301201,
@@ -52292,7 +52398,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_3,
             OnceLimitation = 99,
-            _Price = CS._6_106,
+            _Price = CS._6_107,
         },
         {
             CheckUsable = 0,
@@ -52303,7 +52409,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_3,
             OnceLimitation = 99,
-            _Price = CS._6_106,
+            _Price = CS._6_107,
         },
         {
             CheckUsable = 0,
@@ -52314,7 +52420,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_3,
             OnceLimitation = 99,
-            _Price = CS._6_106,
+            _Price = CS._6_107,
         },
         {
             CheckUsable = 0,
@@ -52325,7 +52431,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_107,
+            _Price = CS._6_108,
         },
         {
             CheckUsable = 0,
@@ -52336,7 +52442,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_107,
+            _Price = CS._6_108,
         },
         {
             CheckUsable = 0,
@@ -52347,7 +52453,7 @@ local GoodsCfg = {
             MallID = 3012,
             OnVersion = CS._5_2,
             OnceLimitation = 99,
-            _Price = CS._6_107,
+            _Price = CS._6_108,
         },
         {
             CheckUsable = 0,
@@ -52429,7 +52535,7 @@ local GoodsCfg = {
             MallID = 4001,
             OnVersion = CS._5_4,
             OnceLimitation = 5,
-            _Price = CS._6_143,
+            _Price = CS._6_144,
             _ShowConditions = CS._8_2,
         },
         {
@@ -52440,7 +52546,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":60900096}]',
             MallID = 4001,
             OnVersion = CS._5_4,
-            _Price = CS._6_144,
+            _Price = CS._6_145,
             _ShowConditions = CS._8_2,
         },
         {
@@ -52452,7 +52558,7 @@ local GoodsCfg = {
             MallID = 4001,
             OnVersion = CS._5_4,
             OnceLimitation = 100,
-            _Price = CS._6_145,
+            _Price = CS._6_146,
             _ShowConditions = CS._8_2,
         },
         {
@@ -52464,7 +52570,7 @@ local GoodsCfg = {
             MallID = 4001,
             OnVersion = CS._5_6,
             OnceLimitation = 5,
-            _Price = CS._6_143,
+            _Price = CS._6_144,
             _ShowConditions = CS._8_3,
         },
         {
@@ -52475,7 +52581,7 @@ local GoodsCfg = {
             _Items = '[{"Num":1,"ID":60900097}]',
             MallID = 4001,
             OnVersion = CS._5_6,
-            _Price = CS._6_144,
+            _Price = CS._6_145,
             _ShowConditions = CS._8_3,
         },
         {
@@ -52487,7 +52593,7 @@ local GoodsCfg = {
             MallID = 4001,
             OnVersion = CS._5_6,
             OnceLimitation = 100,
-            _Price = CS._6_145,
+            _Price = CS._6_146,
             _ShowConditions = CS._8_3,
         },
         {
@@ -52587,7 +52693,7 @@ local GoodsCfg = {
             MallID = 5001,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_146,
+            _Price = CS._6_147,
             _PurchaseConditions = CS._7_11,
         },
         {
@@ -52599,7 +52705,7 @@ local GoodsCfg = {
             MallID = 5001,
             OnVersion = CS._5_1,
             OnceLimitation = 10,
-            _Price = CS._6_146,
+            _Price = CS._6_147,
             _PurchaseConditions = CS._7_11,
         },
         {
@@ -53188,7 +53294,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_147,
+            _Price = CS._6_148,
         },
         {
             CheckUsable = 0,
@@ -53201,7 +53307,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_147,
+            _Price = CS._6_148,
         },
         {
             CheckUsable = 0,
@@ -53214,7 +53320,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_86,
+            _Price = CS._6_87,
         },
         {
             CheckUsable = 0,
@@ -53227,7 +53333,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_86,
+            _Price = CS._6_87,
         },
         {
             CheckUsable = 0,
@@ -53240,7 +53346,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_86,
+            _Price = CS._6_87,
         },
         {
             CheckUsable = 0,
@@ -53253,7 +53359,7 @@ local GoodsCfg = {
             MallID = 7001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_86,
+            _Price = CS._6_87,
         },
         {
             CheckUsable = 0,
@@ -53288,7 +53394,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_148,
+            _Price = CS._6_149,
         },
         {
             DisplayID = 2,
@@ -53300,7 +53406,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_148,
+            _Price = CS._6_149,
         },
         {
             DisplayID = 3,
@@ -53312,7 +53418,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_108,
+            _Price = CS._6_109,
         },
         {
             DisplayID = 4,
@@ -53324,7 +53430,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_108,
+            _Price = CS._6_109,
         },
         {
             DisplayID = 5,
@@ -53336,7 +53442,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_108,
+            _Price = CS._6_109,
         },
         {
             CheckUsable = 0,
@@ -53348,7 +53454,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             OnceLimitation = 50,
-            _Price = CS._6_149,
+            _Price = CS._6_150,
         },
         {
             CheckUsable = 0,
@@ -53360,7 +53466,7 @@ local GoodsCfg = {
             MallID = 7002,
             OnVersion = CS._5_1,
             OnceLimitation = 50,
-            _Price = CS._6_149,
+            _Price = CS._6_150,
         },
         {
             CheckUsable = 0,
@@ -53430,7 +53536,7 @@ local GoodsCfg = {
             MallID = 8001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_150,
+            _Price = CS._6_151,
             _PurchaseConditions = CS._7_56,
         },
         {
@@ -53442,7 +53548,7 @@ local GoodsCfg = {
             MallID = 8001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_151,
+            _Price = CS._6_152,
             _PurchaseConditions = CS._7_56,
         },
         {
@@ -53501,7 +53607,7 @@ local GoodsCfg = {
             MallID = 8001,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_152,
+            _Price = CS._6_153,
             _PurchaseConditions = CS._7_56,
         },
         {
@@ -53560,7 +53666,7 @@ local GoodsCfg = {
             MallID = 8002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_150,
+            _Price = CS._6_151,
             _PurchaseConditions = CS._7_57,
         },
         {
@@ -53572,7 +53678,7 @@ local GoodsCfg = {
             MallID = 8002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_151,
+            _Price = CS._6_152,
             _PurchaseConditions = CS._7_57,
         },
         {
@@ -53631,7 +53737,7 @@ local GoodsCfg = {
             MallID = 8002,
             OnVersion = CS._5_1,
             PopOut = 1,
-            _Price = CS._6_152,
+            _Price = CS._6_153,
             _PurchaseConditions = CS._7_57,
         },
         {
@@ -53643,7 +53749,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_153,
+            _Price = CS._6_154,
         },
         {
             DisplayID = 2,
@@ -53655,7 +53761,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_153,
+            _Price = CS._6_154,
         },
         {
             DisplayID = 3,
@@ -53667,7 +53773,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_154,
+            _Price = CS._6_155,
         },
         {
             DisplayID = 4,
@@ -53679,7 +53785,7 @@ local GoodsCfg = {
             OnVersion = CS._5_1,
             OnceLimitation = 10,
             PopOut = 1,
-            _Price = CS._6_154,
+            _Price = CS._6_155,
         },
         {
             FirstType = 999901,

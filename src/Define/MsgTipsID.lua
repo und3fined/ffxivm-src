@@ -221,6 +221,7 @@ local MsgTipsID = {
 	MusicAddMusic = 156011,
 	MusicStop = 156013,
 	MusicPlay = 156016,
+	UseBookSuccTips = 131005,		--成功收录管弦乐琴乐谱
 	-- endregion
 
 	-- region 拍照

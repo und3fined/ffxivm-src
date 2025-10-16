@@ -2427,6 +2427,7 @@ local UIViewConfig = {
 			UIViewID.CrafterWeaverMainPanel,
 			UIViewID.CrafterLeatherworkerMainPanel,
 		},
+		ListToHideOnShow = {UIViewID.EquipmentMainPanel, UIViewID.BagDrugsSetPanel}
 		--ListToSetInvisible = {UIViewID.BagMain, UIViewID.MarketMainPanel, UIViewID.ShopMainPanelView,UIViewID.ShopBuyPropsWinView,UIViewID.CompanySealMainPanelView, UIViewID.CollectablesMainPanelView},
 	},
 

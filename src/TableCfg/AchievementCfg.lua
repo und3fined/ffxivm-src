@@ -471,6 +471,7 @@ local AchievementCfg = {
         {
             Category = 103,
             ID = 1030008,
+            OnOff = 1,
             Type = 1,
         },
         {
@@ -9816,6 +9817,7 @@ local AchievementCfg = {
         {
             Category = 512,
             ID = 5120028,
+            OnOff = 1,
         },
         {
             Category = 512,
@@ -12120,6 +12122,7 @@ local AchievementCfg = {
         {
             Category = 605,
             ID = 6050058,
+            OnOff = 1,
             Type = 6,
         },
         {
@@ -12523,6 +12526,7 @@ local AchievementCfg = {
             Category = 699,
             ID = 6990017,
             IsAutoReceive = 1,
+            OnOff = 1,
             Type = 6,
         },
         {
@@ -13403,6 +13407,7 @@ local AchievementCfg = {
         },
         {
             ID = 7150034,
+            OnOff = 1,
             Type = 7,
         },
         {

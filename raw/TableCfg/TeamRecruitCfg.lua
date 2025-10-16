@@ -271,7 +271,7 @@ local TeamRecruitCfg = {
             TypeID = 6,
         },
         {
-            EquipLv = 140,
+            EquipLv = 150,
             ID = 31,
             _RecruitModel = CS._2_1,
             Task = 1206004,
@@ -308,7 +308,6 @@ local TeamRecruitCfg = {
         {
             EquipLv = 135,
             ID = 36,
-            IsWeeklyRewards = 1,
             _RecruitModel = CS._2_1,
             Task = 1205011,
             TypeID = 6,
@@ -316,7 +315,6 @@ local TeamRecruitCfg = {
         {
             EquipLv = 135,
             ID = 37,
-            IsWeeklyRewards = 1,
             _RecruitModel = CS._2_1,
             Task = 1206002,
             TypeID = 6,
@@ -324,7 +322,6 @@ local TeamRecruitCfg = {
         {
             EquipLv = 135,
             ID = 38,
-            IsWeeklyRewards = 1,
             _RecruitModel = CS._2_1,
             Task = 1205010,
             TypeID = 6,
@@ -332,7 +329,6 @@ local TeamRecruitCfg = {
         {
             EquipLv = 135,
             ID = 39,
-            IsWeeklyRewards = 1,
             _RecruitModel = CS._2_1,
             Task = 1205013,
             TypeID = 6,

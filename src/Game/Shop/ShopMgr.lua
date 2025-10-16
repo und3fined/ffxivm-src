@@ -1037,31 +1037,18 @@ function ShopMgr:IsCanShow(Goods)
 	if TmpGoodsCfg == nil then
 		return false
 	end
-	--商品是否在当前版本内
-	local CurVersion = self.CurShopVersion
-	local OnVersion = string.split(Goods.OnVersion, ".")
-	local OffVersion = string.split(Goods.OffVersion, ".")
-	local IsAllConformOn
-	local IsAllConformOfF
-	if Goods.OnVersion ~= "" and Goods.OffVersion == "" then
-		IsAllConformOn = self:CompareOnVersion(CurVersion, OnVersion)
-		if not IsAllConformOn then
-			return false
-		end
-	elseif Goods.OnVersion == "" and Goods.OffVersion ~= "" then
-		IsAllConformOfF = self:CompareOffVersion(CurVersion, OffVersion)
-		if not IsAllConformOfF then
-			return false
-		end
-	elseif Goods.OnVersion ~= "" and Goods.OffVersion ~= "" then
-		IsAllConformOn = self:CompareOnVersion(CurVersion, OnVersion)
-		if not IsAllConformOn then
-			return false
-		end
-		IsAllConformOfF = self:CompareOffVersion(CurVersion, OffVersion)
-		if not IsAllConformOfF then
-			return false
-		end
+
+	local CurVersionIsShow
+
+	--ShowVersion优先级比OnVersion高，有些商品需要在ShowVersion版本号内展示，在OnVersion版本号内才可以购买，所以分开
+	if Goods.ShowVersion and Goods.ShowVersion ~= "" then
+		CurVersionIsShow = self:IsOnVersion(Goods.ShowVersion, Goods.OffVersion)
+	else
+		CurVersionIsShow = self:IsOnVersion(Goods.OnVersion, Goods.OffVersion)
+	end
+
+	if not CurVersionIsShow then
+		return false
 	end
 
 	--商品是否在上架时间内
@@ -1249,6 +1236,46 @@ function ShopMgr:IsCanShow(Goods)
 	return true
 end
 
+--判断商品上下架版本号是否符合当前版本号
+function ShopMgr:IsOnVersion(FirstVersion, SecondVersion)
+	--商品是否在当前版本内
+	if not FirstVersion or not SecondVersion then
+		return false
+	end
+
+	if type(FirstVersion) ~= "string" or type(SecondVersion) ~= "string" then
+        return false
+    end
+	
+	local CurVersion = self.CurShopVersion
+	local OnVersion = string.split(FirstVersion, ".")
+	local OffVersion = string.split(SecondVersion, ".")
+	local IsAllConformOn
+	local IsAllConformOfF
+	if FirstVersion ~= "" and SecondVersion == "" then
+		IsAllConformOn = self:CompareOnVersion(CurVersion, OnVersion)
+		if not IsAllConformOn then
+			return false
+		end
+	elseif FirstVersion == "" and SecondVersion ~= "" then
+		IsAllConformOfF = self:CompareOffVersion(CurVersion, OffVersion)
+		if not IsAllConformOfF then
+			return false
+		end
+	elseif FirstVersion ~= "" and SecondVersion ~= "" then
+		IsAllConformOn = self:CompareOnVersion(CurVersion, OnVersion)
+		if not IsAllConformOn then
+			return false
+		end
+		IsAllConformOfF = self:CompareOffVersion(CurVersion, OffVersion)
+		if not IsAllConformOfF then
+			return false
+		end
+	end
+
+	return true
+end
+
 
 --比较当前版本号和下架版本号是否一致
 ---@param Version1 table@当前版本号
@@ -1324,7 +1351,12 @@ function ShopMgr:IsCanBuy(GoodsInfo)
 		end
 	end
 
-
+	--优先版本号判断
+	local CurVersionIsCanBuy = self:IsOnVersion(TmpGoodsCfg.OnVersion, TmpGoodsCfg.OffVersion)
+	if not CurVersionIsCanBuy then
+		return false, LSTR(1200100)--未到版本不可购买
+	end
+	
 	---配表条件检查
 	local PurchaseConditions = TmpGoodsCfg.PurchaseConditions
 	if next(PurchaseConditions) == nil then
@@ -1835,6 +1867,9 @@ function ShopMgr:UpdateSpecificMallInfo(MsgBody)
 				TmpGoods.ItemInfo = GoodsData.ItemInfo
 				TmpGoods.OnTime = GoodsInfo.OnTime
 				TmpGoods.OffTime = GoodsInfo.OffTime
+				TmpGoods.DisplayID = GoodsInfo.DisplayID
+				TmpGoods.OnVersion = GoodsInfo.OnVersion
+				TmpGoods.OffVersion = GoodsInfo.OffVersion
 				if #ServerGoods > 0 then
 					for j = 1,#ServerGoods do
 						if ServerGoods[j].GoodID == GoodsID then
@@ -3588,6 +3623,9 @@ function ShopMgr:SetSearchGoodsInfo(List)
 				TmpGoods.ItemInfo = value.ItemInfo
 				TmpGoods.OnTime = GoodsInfo.OnTime
 				TmpGoods.OffTime = GoodsInfo.OffTime
+				TmpGoods.DisplayID = GoodsInfo.DisplayID
+				TmpGoods.OnVersion = GoodsInfo.OnVersion
+				TmpGoods.OffVersion = GoodsInfo.OffVersion
 				local CounterInfo = self:GetGoodsCounterInfo(ShopID, GoodsInfo.ID)
 				if CounterInfo then
 					TmpGoods.CounterInfo = CounterInfo
