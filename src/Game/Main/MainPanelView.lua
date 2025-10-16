@@ -270,7 +270,7 @@ function MainPanelView:OnShow()
 	--print("MainPanelView:OnShow")
 	--提审版本不显示GM按钮
 	_G.GMMgr:OpenGMPanel()
-	
+
 	-- UIUtil.SetIsVisible(self.ButtonActivity, ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard), true)
 	-- UIUtil.SetIsVisible(self.ButtonActivity, ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDActivitySystem), true)
 	-- UIUtil.SetIsVisible(self.ButtonActivity, false, false)
@@ -528,7 +528,7 @@ function MainPanelView:OnClickButtonSkip()
 	else
 		-- _G.GMMgr:ReqGM("role quest clear")
 		-- _G.GMMgr:ReqGM("role quest accept 140224")
-		
+
 		if _G.DemoMajorType == 0 then
 			_G.GMMgr:ReqGM("role quest dochapter 14028")
 		else
@@ -637,7 +637,7 @@ function MainPanelView:IsCanShowAdventureTips(ModuleID)
 	if self.IsMapMOpen then
 		return false
 	end
-		
+
 	return true
 end
 
@@ -674,7 +674,7 @@ function MainPanelView:ShowNewRecommendTask()
 	if not self:IsCanShowAdventureTips(ProtoCommon.ModuleID.ModuleIDAdviseTask) then
 		return
 	end
-	
+
 	local EndPosX, EndPosY = self:GetAdvtureGuideTipsPos()
 	self.AdventureTaskTips:SetType(1)
 	self.AdventureTaskTips:SetTipsPosition(_G.UE.FVector2D(EndPosX, EndPosY))
@@ -926,9 +926,9 @@ function MainPanelView:GetMajorMaxLevel()
 end
 
 function MainPanelView:OnOpenPlatformWelfare()
-  local U2TargetMgr = _G.U2.U2TargetMgr
-  if U2TargetMgr ~= nil then -- export module
-    U2TargetMgr:Debug()
+  local U2pmMgr = _G.U2.U2pmMgr
+  if U2pmMgr ~= nil then -- export module
+    U2pmMgr:Debug()
   end
 end
 
