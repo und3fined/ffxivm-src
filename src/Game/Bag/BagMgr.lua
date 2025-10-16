@@ -169,7 +169,7 @@ function BagMgr:OnNetMsgBagUseItem(MsgBody)
 	--有使用成功需要弹tips的 显示tips
 	local Cfg = ItemCfg:FindCfgByKey(ResID)
     if Cfg ~= nil and Cfg.UseSuccTipsID ~= nil then
-		if Cfg.UseSuccTipsID == MsgTipsID.UseMusicSuccTips then
+		if Cfg.UseSuccTipsID == MsgTipsID.UseMusicSuccTips or Cfg.UseSuccTipsID == MsgTipsID.UseBookSuccTips then
 			MsgTipsUtil.ShowTipsByID(Cfg.UseSuccTipsID, nil, Cfg.ItemName)
 		else
 			if Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_BUDDYEQUIT then

@@ -361,6 +361,8 @@ function StoreNewMainPanelView:OnShow()
 	if not _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_MALL, true) then
 		return
 	end
+	--设置等待理发数据状态
+	self.WaitCutHairData = true
 	if RechargingMgr:ShouldShowShopkeeper() then
 		RechargingMgr:PreloadScene()
 	end
@@ -371,6 +373,8 @@ function StoreNewMainPanelView:OnShow()
 	FriendMgr:SendGetFriendListMsg()
 
 	-- 设置角色原始外观数据
+	self.DefaultModelGender = MajorUtil.GetMajorGender()
+	self.CurrentModelGender = self.DefaultModelGender
 	local RoleSimple = MajorUtil.GetMajorRoleSimple()
 	if nil ~= RoleSimple then
 		self.StoreRender2D:SetRawAvatar(RoleSimple.Avatar)
@@ -510,11 +514,18 @@ function StoreNewMainPanelView:OnGoodListSelectChanged(Index, ItemData, ItemView
 			if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
 				self.StoreRender2D:WearSuit({})
 			else
-				if ItemData.GenderLimit == 0 or ItemData.GenderLimit == self.CurrentModelGender then
+				if ItemData.GenderLimit == 0 or ItemData.GenderLimit == self.DefaultModelGender then
 					-- if self.SelectedGoodID ~= ItemData.GoodID then
+					self.CurrentModelGender = self.DefaultModelGender
 					self:WearSuit()
+					UIUtil.SetIsVisible(self.TableViewSlot, true)
 					-- end
 				else
+					self.CurrentModelGender = ItemData.GenderLimit
+					if bIsByClick then
+						_G.MsgTipsUtil.ShowTips(LSTR(950105))
+					end
+					UIUtil.SetIsVisible(self.TableViewSlot, false)
 					-- self:OnUpdateNPCModel() -- 异性服装逻辑待重构
 				end
 			end
@@ -840,6 +851,7 @@ function StoreNewMainPanelView:OnClickRecharge()
 end
 
 function StoreNewMainPanelView:OnHide()
+	self.WaitCutHairData = true
 	self:StopMountBGM()
 	_G.HUDMgr:SetIsDrawHUD(true)
 	self.BtnHand:SetIsChecked(true)
@@ -896,6 +908,7 @@ function StoreNewMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.CompanionCreate, self.OnCompanionCreated)
 	self:RegisterGameEvent(EventID.StoreUpdateBlindText, self.OnStoreUpdateBlindText)
 	self:RegisterGameEvent(EventID.UpdateScore, self.OnScoreUpdate)
+	self:RegisterGameEvent(EventID.HairUnlockListChange, self.OnHairUnlockListChange)
 	self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
 	self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
 end
@@ -984,6 +997,10 @@ function StoreNewMainPanelView:OnStoreUpdateBlindText(Params)
 			self.RichTextBoxBlindBoxHint:SetText("")
 		end
 	end
+end
+
+function StoreNewMainPanelView:OnHairUnlockListChange()
+	self.WaitCutHairData = false
 end
 
 function StoreNewMainPanelView:OnScoreUpdate(Params)
@@ -1158,6 +1175,12 @@ end
 
 --- 素体
 function StoreNewMainPanelView:OnChangedToggleBtnEquipment(ToggleButton, BtnState)
+	if self.DefaultModelGender ~= self.CurrentModelGender then
+		-- 异性角色禁止原装备显示
+		StoreMainVM.bIsShowRawAvatar = false
+		self.BtnEquipment:SetChecked(false) -- UToggleButton::SlateOnToggleButtonClicked会默认切换按钮状态，这里强制给他切走
+		return
+	end
 	StoreMainVM.bIsShowRawAvatar = not StoreMainVM.bIsShowRawAvatar
 	self.ReportBrowseFlow(StoreDefine.BrowseOperationType.ClickRawEquipment)
 end
@@ -1206,6 +1229,9 @@ function StoreNewMainPanelView:OnClickBuy()
 			nil, StoreMainVM:GetCurrentGoodsID())
 	else
 		if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
+			if self.WaitCutHairData then
+				return
+			end
 			if self.IsNeedGotoMadePanel then
 				if not MountMgr:IsMountOwned(self.MountID) then
 					MsgTipsUtil.ShowTipsByID(157046)

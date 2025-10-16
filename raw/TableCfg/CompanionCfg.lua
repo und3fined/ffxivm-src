@@ -34,10 +34,11 @@ local CS = {
     _6_4 = '2.3.0',
     _6_5 = '2.1.0',
     _6_6 = '手游作废',
-    _6_7 = '2.1.5',
-    _6_8 = '2.2.5',
-    _6_9 = '2.3.5',
+    _6_7 = '2.2.5',
+    _6_8 = '2.3.5',
+    _6_9 = '2.1.5',
     _6_10 = '2.0.5',
+    _6_11 = '2.3.8',
 }
 
 ---@class CompanionCfg : CfgBase
@@ -1201,7 +1202,7 @@ local CompanionCfg = {
             Scale = 90,
             UISortPriority = 8007,
             UnlockItemID = 61800076,
-            VersionName = CS._6_9,
+            VersionName = CS._6_8,
         },
         {
             CanPoke = 1,
@@ -1238,7 +1239,7 @@ local CompanionCfg = {
             PackageName = CS._4_1,
             UISortPriority = 10,
             UnlockItemID = 61800079,
-            VersionName = CS._6_7,
+            VersionName = CS._6_9,
         },
         {
             ArchiveModelRotation = 56.0,
@@ -1327,7 +1328,7 @@ local CompanionCfg = {
             PackageName = CS._4_1,
             UISortPriority = 9501,
             UnlockItemID = 61800085,
-            VersionName = CS._6_9,
+            VersionName = CS._6_8,
         },
         {
             CanLookAt = 1,
@@ -1339,9 +1340,11 @@ local CompanionCfg = {
             InactiveIdle2 = 20,
             MoveType = 2,
             NPCBaseID = 2000086,
+            PackageName = CS._4_1,
             Species = 2,
             UISortPriority = 1025,
             UnlockItemID = 61800086,
+            VersionName = CS._6_11,
         },
         {
             CanLookAt = 1,
@@ -1354,9 +1357,11 @@ local CompanionCfg = {
             InactiveIdle2 = 10,
             MoveType = 2,
             NPCBaseID = 2000087,
+            PackageName = CS._4_1,
             Species = 2,
             UISortPriority = 1025,
             UnlockItemID = 61800087,
+            VersionName = CS._6_5,
         },
         {
             CanLookAt = 1,
@@ -1369,9 +1374,11 @@ local CompanionCfg = {
             InactiveIdle2 = 10,
             MoveType = 2,
             NPCBaseID = 2000088,
+            PackageName = CS._4_1,
             Species = 2,
             UISortPriority = 1025,
             UnlockItemID = 61800088,
+            VersionName = CS._6_5,
         },
         {
             CanLookAt = 1,
@@ -1383,9 +1390,11 @@ local CompanionCfg = {
             InactiveIdle2 = 10,
             MoveType = 2,
             NPCBaseID = 2000089,
+            PackageName = CS._4_1,
             Species = 2,
             UISortPriority = 1025,
             UnlockItemID = 61800089,
+            VersionName = CS._6_2,
         },
         {
             CanLookAt = 1,
@@ -1398,9 +1407,11 @@ local CompanionCfg = {
             InactiveIdle2 = 5,
             MoveType = 2,
             NPCBaseID = 2000090,
+            PackageName = CS._4_1,
             Species = 2,
             UISortPriority = 1025,
             UnlockItemID = 61800090,
+            VersionName = CS._6_2,
         },
         {
             CanPoke = 1,
@@ -1424,7 +1435,7 @@ local CompanionCfg = {
             PackageName = CS._4_1,
             UISortPriority = 12031,
             UnlockItemID = 61800092,
-            VersionName = CS._6_7,
+            VersionName = CS._6_9,
         },
         {
             CanStroke = 1,
@@ -1516,7 +1527,7 @@ local CompanionCfg = {
             PackageName = CS._4_1,
             UISortPriority = 9002,
             UnlockItemID = 61800098,
-            VersionName = CS._6_8,
+            VersionName = CS._6_7,
         },
         {
             CanPoke = 1,
@@ -1542,7 +1553,7 @@ local CompanionCfg = {
             Species = 3,
             UISortPriority = 11005,
             UnlockItemID = 61800100,
-            VersionName = CS._6_8,
+            VersionName = CS._6_7,
         },
         {
             _ArchiveModelLocation = CS._1_3,
@@ -1556,7 +1567,7 @@ local CompanionCfg = {
             SpecialType = 2,
             UISortPriority = 2101,
             UnlockItemID = 61800101,
-            VersionName = CS._6_9,
+            VersionName = CS._6_8,
         },
         {
             ArchiveModelRotation = 56.0,
@@ -1598,7 +1609,7 @@ local CompanionCfg = {
             PackageName = CS._4_1,
             UISortPriority = 9503,
             UnlockItemID = 61800104,
-            VersionName = CS._6_8,
+            VersionName = CS._6_7,
         },
         {
             CanPoke = 1,
@@ -2538,7 +2549,7 @@ local CompanionCfg = {
             NPCBaseID = 2000190,
             UISortPriority = 10013,
             UnlockItemID = 61800189,
-            VersionName = '2.3.8',
+            VersionName = CS._6_11,
         },
         {
             CanBattle = 1,
@@ -2893,7 +2904,7 @@ local CompanionCfg = {
             Species = 2,
             UISortPriority = 10014,
             UnlockItemID = 61800223,
-            VersionName = CS._6_7,
+            VersionName = CS._6_9,
         },
         {
             CanLookAt = 1,
@@ -3090,7 +3101,7 @@ local CompanionCfg = {
             Species = 2,
             UISortPriority = 1067,
             UnlockItemID = 61800241,
-            VersionName = CS._6_7,
+            VersionName = '4.0.0',
         },
         {
             CanLookAt = 1,
@@ -5201,7 +5212,7 @@ local CompanionCfg = {
             Species = 2,
             UISortPriority = 3033,
             UnlockItemID = 61800465,
-            VersionName = CS._6_8,
+            VersionName = CS._6_7,
         },
         {
             _ArchiveModelLocation = CS._1_1,

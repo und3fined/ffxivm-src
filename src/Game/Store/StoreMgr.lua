@@ -135,6 +135,7 @@ function StoreMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MajorCreate, self.OnGameEventMajorCreate)
 	self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnModuleOpenNotify)
 	self:RegisterGameEvent(EventID.CounterUpdate, self.OnCounterUpdate)
+	self:RegisterGameEvent(EventID.BagUpdate, self.OnBagUpdate)
 end
 --endregion
 
@@ -775,7 +776,7 @@ function StoreMgr:OnNetBuyGood(MsgBody)
 	-- GoodFilterDataList好像没有更新数据先注释掉
 	--StoreMainVM:UpdateGoodList(StoreMainVM.GoodFilterDataList)
 	-- 性能优化：从更新全量列表改为更新单个商品
-	StoreMainVM:UpdateSingleGoods(MallPurchaseGood.GoodID)
+	-- StoreMainVM:UpdateSingleGoods(MallPurchaseGood.GoodID) -- 后台不保证背包与购买消息的顺序，改为收到背包更新消息时再更新商品信息
 
 	--- 通知其他界面购买完成+关闭购买界面，暂时留着参数
 	EventMgr:SendEvent(EventID.StoreBuyGoodsDisplay, Msg)
@@ -1074,7 +1075,7 @@ function StoreMgr:CheckGender(GoodsCfgData)
 end
 
 function StoreMgr:CheckProf(GoodsCfgData)
-	local GoodData = GoodsCfgData or _G.StoreMainVM.SkipTempData
+	local GoodData = (GoodsCfgData and next(GoodsCfgData)) and GoodsCfgData or _G.StoreMainVM.SkipTempData
 	if nil == GoodData then
 		return
 	end
@@ -1712,6 +1713,30 @@ function StoreMgr:OnCounterUpdate(Params)
 	end
 	if bIsStoreCounterUpdated then
 		_G.StoreMainVM:UpdateProductList()
+	end
+end
+
+function StoreMgr:OnBagUpdate(Params)
+	if nil == Params then
+		return
+	end
+	local GoodsID = _G.StoreMainVM:GetCurrentGoodsID()
+	if nil == GoodsID then
+		return
+	end
+	local bHasItem = false
+	for _, Item in ipairs(Params) do
+		if Item.PstItem and Item.PstItem.ResID then
+			bHasItem = StoreMgr.HasItem(GoodsID, Item.PstItem.ResID)
+			if bHasItem then
+				break
+			end
+		end
+	end
+
+	if bHasItem then
+		_G.StoreMainVM:UpdateSingleGoods(GoodsID)
+		FLOG_INFO("[StoreMgr:OnBagUpdate] Bag update goods " .. tostring(GoodsID))
 	end
 end
 
@@ -2421,6 +2446,24 @@ function StoreMgr.LabelMainToMallType(LabelMain)
 	return LabelToMallTypeMap[LabelMain]
 end
 
+-- 商品是否包含物品
+function StoreMgr.HasItem(GoodsID, ItemID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData or table.is_nil_empty(GoodsCfgData.Items) then
+		return false
+	end
+	local bHasItem = false
+	for Index = 1, #GoodsCfgData.Items do
+		if ItemID == GoodsCfgData.Items[Index].ID then
+			bHasItem = true
+			break
+		end
+	end
+	return bHasItem
+end
+
+--endregion
+
 function StoreMgr:PreLoadCommRewardPannel()
 	local function Callback()
 		self.CommRewardPannel = _G.ObjectMgr:GetClass(self.CommRewardPannelResPath)
@@ -2430,7 +2473,5 @@ function StoreMgr:PreLoadCommRewardPannel()
 		_G.ObjectMgr:LoadClassAsync(self.CommRewardPannelResPath, Callback)
 	end
 end
-
---endregion
 
 return StoreMgr

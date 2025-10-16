@@ -897,14 +897,19 @@ function MainTeamPanelView:UpdateButtonFold()
 end
 
 function MainTeamPanelView:RegisterHalloweenBinder(ViewModel)
-	local AdapterTableView = UIAdapterTableView.CreateAdapter(self, self.TableView_39)
-	local HalloweenBinders = {
-		{ "Title",    				UIBinderSetText.New(self, self.TextTitle)},
-		{ "TaskDesc",    			UIBinderSetText.New(self, self.RichTextTask)},
-		{ "ClueTitle",    			UIBinderSetText.New(self, self.RichTextClue)},
-		{ "ClueList",    			UIBinderUpdateBindableList.New(self, AdapterTableView)},
-	}
-	self:RegisterBinders(ViewModel, HalloweenBinders)
+	if not self.HalloweenAdapterTableView then
+		self.HalloweenAdapterTableView = UIAdapterTableView.CreateAdapter(self, self.TableView_39)
+	end
+	if not self.HalloweenBinders then
+		self.HalloweenBinders = {
+			{ "Title",    				UIBinderSetText.New(self, self.TextTitle)},
+			{ "TaskDesc",    			UIBinderSetText.New(self, self.RichTextTask)},
+			{ "ClueTitle",    			UIBinderSetText.New(self, self.RichTextClue)},
+			{ "ClueList",    			UIBinderUpdateBindableList.New(self, self.HalloweenAdapterTableView)},
+		}
+	end
+	self:UnRegisterBinders(ViewModel, self.HalloweenBinders)
+	self:RegisterBinders(ViewModel, self.HalloweenBinders)
 end
 
 function MainTeamPanelView:OnClickBtnInvite()

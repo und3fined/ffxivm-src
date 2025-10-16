@@ -336,7 +336,7 @@ local GlobalCfg = {
         },
         {
             ID = 106,
-            _Value = '[2,1,0]',
+            _Value = '[2,1,5]',
         },
         {
             ID = 113,
