@@ -11170,6 +11170,7 @@ local EquipmentCfg = {
         },
         {
             AppearanceID = 10556,
+            CanBeDyed = 1,
             _ClosetParam = '{"AchievementID":{},"UnlockCostItemID":62200614,"Special":1,"UnlockCostItemNum":1}',
             ClosetPartSubID = CS._3_1,
             EquipProperty = 0,
@@ -11182,6 +11183,7 @@ local EquipmentCfg = {
         },
         {
             AppearanceID = 10557,
+            CanBeDyed = 1,
             _ClosetParam = '{"AchievementID":{},"UnlockCostItemID":62200615,"Special":1,"UnlockCostItemNum":1}',
             ClosetPartSubID = CS._3_1,
             EquipProperty = 0,

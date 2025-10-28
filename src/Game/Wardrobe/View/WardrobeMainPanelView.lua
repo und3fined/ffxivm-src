@@ -1819,6 +1819,11 @@ function WardrobeMainPanelView:OnClickedBtnHat(ToggleButton, State)
 		self.WardrobeOperateItem.BtnHat:SetChecked(self.VM.BtnHatChecked, false)
 		return false
 	end
+
+	if not _G.EquipmentMgr:GetCanSwitchHatVisble() then
+		return false
+	end
+
 	self.LastHatBtnTime = LocalTime
 
 	local IsShow = State == _G.UE.EToggleButtonState.Checked

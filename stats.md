@@ -1,12 +1,12 @@
 # File Comparison Report
 
-Generated on: 2025-10-16 06:54:57 UTC
+Generated on: 2025-10-28 16:52:57 UTC
 
 ## Summary
 
-- Raw : 5406 files
-- Src : 5403 files
-- Diff : 3 files
+ - Raw   :     5403 files
+ - Src   :     5400 files
+ - Diff  :        3 files
 
 ## Files in raw but not in src
 
@@ -16,4 +16,5 @@ Generated on: 2025-10-16 06:54:57 UTC
 
 ## Files in src but not in raw
 
-- (none)
+No extra files in src.
+

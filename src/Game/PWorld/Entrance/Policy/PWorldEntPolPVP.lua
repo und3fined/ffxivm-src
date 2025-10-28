@@ -168,8 +168,6 @@ function PWorldEntPolPVP:CheckIsInEventTime(EntID)
     local NextIntervalData = {}
     local EnterCfg = SceneEnterCfg:FindCfgByKey(EntID)
     local Type = EnterCfg and EnterCfg.TypeID or 0
-    local StartTime = 0
-    local EndTime = 0
     if PWorldEntUtil.IsCrystalline(Type) then
         -- 是否在活动时间
         local StartTimeCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_ACTTIMEBEGIN)
@@ -185,13 +183,19 @@ function PWorldEntPolPVP:CheckIsInEventTime(EntID)
         local ServerTimeZoneSec = ServerTimeZone * 3600
         local CurTimeZone = DateTimeTools.GetTimeZone()
         local CurTimeZoneSec = CurTimeZone * 3600
+        local IsDst = os.date("*t", os.time()).isdst    -- 获取玩家是否在夏令时
+        if IsDst then
+            CurTimeZoneSec = CurTimeZoneSec + 3600  -- 夏令时会把时间往后调1个小时，所以计算时也要推迟1小时
+        end
+ 
         local StartTimeTable = {
             year = ServerToLocalTimeTable.year,
             month = ServerToLocalTimeTable.month,
             day = ServerToLocalTimeTable.day,
             hour = StartTimeHour,
             min = StartTimeMin,
-            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec    -- 减去原时区获得UTC时间再转到当前需要的时区,
+            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
+            isdst = IsDst
         }
         local EndTimeTable = {
             year = ServerToLocalTimeTable.year,
@@ -199,32 +203,73 @@ function PWorldEntPolPVP:CheckIsInEventTime(EntID)
             day = ServerToLocalTimeTable.day,
             hour = EndTimeHour,
             min = EndTimeMin,
-            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec    -- 减去原时区获得UTC时间再转到当前需要的时区,
+            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
+            isdst = IsDst
         }
 
-        StartTime = os.time(StartTimeTable)
-        EndTime = os.time(EndTimeTable)
+        local StartTime = os.time(StartTimeTable)
+        local EndTime = os.time(EndTimeTable)
 
         local function TimeToSec(Hour, Min, Sec)
             return Hour * 3600 + Min * 60 + Sec
         end
 
-        local StartSec = TimeToSec(StartTimeTable.hour, StartTimeTable.min, StartTimeTable.sec)
-        local EndSec = TimeToSec(EndTimeTable.hour, EndTimeTable.min, EndTimeTable.sec)
-        local IsCrossDay = EndSec <= StartSec
+        local StartTimeToSec = TimeToSec(StartTimeTable.hour, StartTimeTable.min, StartTimeTable.sec)
+        local EndTimeToSec = TimeToSec(EndTimeTable.hour, EndTimeTable.min, EndTimeTable.sec)
+        local IsCrossDay = EndTimeToSec <= StartTimeToSec
 
         if not IsCrossDay then
             IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
         else
-            -- 跨天的情况先看看会不会在前一天的活动时间里
-            StartTimeTable.day = ServerToLocalTimeTable.day - 1
-            EndTimeTable.day = ServerToLocalTimeTable.day
+            -- 已经转换为本地时间，可以直接使用
+            local StartHour = StartTimeTable.hour
+            local StartMin = StartTimeTable.min
+            local StartSec = StartTimeTable.sec
+            local EndHour = EndTimeTable.hour
+            local EndMin = EndTimeTable.min
+            local EndSec = EndTimeTable.sec
+
+            -- 跨天的情况先看看会不会在前一天开始的活动时间里
+            StartTimeTable = {
+                year = ServerToLocalTimeTable.year,
+                month = ServerToLocalTimeTable.month,
+                day = ServerToLocalTimeTable.day - 1,
+                hour = StartHour,
+                min = StartMin,
+                sec = StartSec,
+                isdst = IsDst
+            }
+            EndTimeTable = {
+                year = ServerToLocalTimeTable.year,
+                month = ServerToLocalTimeTable.month,
+                day = ServerToLocalTimeTable.day,
+                hour = EndHour,
+                min = EndMin,
+                sec = EndSec,
+                isdst = IsDst
+            }
             IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
 
             -- 如果不在前一天的活动时间里再判断是否在今天开始的活动时间里
             if not IsInEventTime then
-                StartTimeTable.day = ServerToLocalTimeTable.day
-                EndTimeTable.day = ServerToLocalTimeTable.day + 1
+                StartTimeTable = {
+                    year = ServerToLocalTimeTable.year,
+                    month = ServerToLocalTimeTable.month,
+                    day = ServerToLocalTimeTable.day,
+                    hour = StartHour,
+                    min = StartMin,
+                    sec = StartSec,
+                    isdst = IsDst
+                }
+                EndTimeTable = {
+                    year = ServerToLocalTimeTable.year,
+                    month = ServerToLocalTimeTable.month,
+                    day = ServerToLocalTimeTable.day + 1,
+                    hour = EndHour,
+                    min = EndMin,
+                    sec = EndSec,
+                    isdst = IsDst
+                }
                 IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
             end
         end

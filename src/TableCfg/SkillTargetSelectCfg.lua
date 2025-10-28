@@ -2693,7 +2693,7 @@ local SkillTargetSelectCfg = {
             SkillRelationType = 10,
         },
         {
-            ConditionExpr = '9163',
+            ConditionExpr = '9163&9159',
             ID = 9145,
             SelectCount = 8,
             SelectFunc = 0,

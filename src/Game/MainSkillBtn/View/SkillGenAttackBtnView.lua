@@ -348,7 +348,8 @@ function SkillGenAttackBtnView:OnCastSkill()
             return
         end
         
-        if _G.SkillLogicMgr:CanAutoGenSkillAttack() then
+        local IsGenAttack = SkillMainCfg:FindValue(self.BtnSkillID, "Type") == ProtoRes.skill_type.SKILL_TYPE_NORMAL
+        if _G.SkillLogicMgr:CanAutoGenSkillAttack() and IsGenAttack then
             FLOG_INFO("Enter AutoGenAttack")
             self:StartLongPressTimer()
         end
