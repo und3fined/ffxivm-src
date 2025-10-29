@@ -5,8 +5,8 @@ echo "Syncing files from FFXIV extract..."
 FGAME_BUNDLE="com.tencent.tmgp.fmgame"
 EXPORTED_DIR="$HOME/Library/Containers/$FGAME_BUNDLE/Data/Documents/FF_U2PM/extract"
 
-RAW_FOLDER="Encrypted"
-SRC_FOLDER="Source"
+RAW_FOLDER="Encrypted/Source/Script"
+SRC_FOLDER="Source/Script"
 
 # Ensure the exported directory exists
 if [ ! -d "$EXPORTED_DIR" ]; then

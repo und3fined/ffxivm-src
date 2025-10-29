@@ -227,7 +227,7 @@ function CurrrentEquipPageView:OnBtnHatClick(ToggleButton, ButtonState)
 	if nil ~= AttrComponent then
 		local ChangeRoleID = AttrComponent:GetChangeRoleID()
         if ChangeRoleID ~= 0 then
-			_G.MsgTipsUtil:ShowTips(LSTR(1050233))
+			_G.MsgTipsUtil.ShowTips(LSTR(1050233))
 			self.Btn_Hat:SetCheckedState(_G.UE.EToggleButtonState.Checked,false)
 			return
         end
