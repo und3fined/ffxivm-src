@@ -80,25 +80,25 @@ function ChatMgr:OnRegisterNetMsg()
 	-- 默认丢弃
 	self:SetPioneerChannelNetPackDiscardFlag(true)
 
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_PUSH, self.OnNetMsgChatMsgPush) -- 发送频道消息
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_PULL, self.OnNetMsgChatMsgPull) -- 频道消息请求
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_CHANNEL_HAVE_READ, self.OnNetMsgChatChannelHaveRead) -- 获得各个频道的已读序列号
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_SET_CHANNEL_HAVE_READ, self.OnNetMsgSetChannelHaveRead) -- 设置玩家已读序列号
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_PUSH, self.OnNetMsgChatMsgPush) -- 发送频道消息
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_PULL, self.OnNetMsgChatMsgPull) -- 频道消息请求
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_CHANNEL_HAVE_READ, self.OnNetMsgChatChannelHaveRead) -- 获得各个频道的已读序列号
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_SET_CHANNEL_HAVE_READ, self.OnNetMsgSetChannelHaveRead) -- 设置玩家已读序列号
 
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_SEQ_NOTIFY, self.OnNetMsgChatMsgSeqNotify) -- 主动通知最新序列号
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_DETAIL_NOTIFY, self.OnNetMsgChatMsgDetailNotify) -- 主动通知详细消息
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_CHANNEL_UPDATE_NOTIFY, self.OnNetMsgChatChannelUpdateNotify) -- 频道下发通知
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_PRIVATE_CHAT_MSG_NTF, self.OnNetMsgChatPrivateNtf) -- 私聊通知
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_GET_CLIENT_SETUP, self.OnNetMsgGetClientSetup) -- 聊天设置 
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_QUERY_MEMBER, self.OnNetMsgQueryMember) -- 频道成员查询 
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_QUERY_UNLOCK_GIF, self.OnNetMsgQueryUnlockGifs) -- 查询已解锁的Gifs
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_UNLOCK_GIF_NOFITY, self.OnNetMsgUnlockGifsNtf) -- 解锁Gifs通知
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_INFO, self.OnNetMsgQueryPioneerChannelInfo) -- 查询先锋频道信息
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_JOIN, self.OnNetMsgJoinPioneer) -- 加入先锋频道
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_QUIT, self.OnNetMsgQuitPioneer) -- 退出先锋频道
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_NOTIFY, self.OnNetMsgPioneerChannelMsgNotify) -- 先锋频道消息推送 先锋特殊命令字，包体内容和PULL包相同 
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_SEQ_NOTIFY, self.OnNetMsgChatMsgSeqNotify) -- 主动通知最新序列号
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_MSG_DETAIL_NOTIFY, self.OnNetMsgChatMsgDetailNotify) -- 主动通知详细消息
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_CHANNEL_UPDATE_NOTIFY, self.OnNetMsgChatChannelUpdateNotify) -- 频道下发通知
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_PRIVATE_CHAT_MSG_NTF, self.OnNetMsgChatPrivateNtf) -- 私聊通知
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_GET_CLIENT_SETUP, self.OnNetMsgGetClientSetup) -- 聊天设置 
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_QUERY_MEMBER, self.OnNetMsgQueryMember) -- 频道成员查询 
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_QUERY_UNLOCK_GIF, self.OnNetMsgQueryUnlockGifs) -- 查询已解锁的Gifs
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_UNLOCK_GIF_NOFITY, self.OnNetMsgUnlockGifsNtf) -- 解锁Gifs通知
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_INFO, self.OnNetMsgQueryPioneerChannelInfo) -- 查询先锋频道信息
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_JOIN, self.OnNetMsgJoinPioneer) -- 加入先锋频道
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_QUIT, self.OnNetMsgQuitPioneer) -- 退出先锋频道
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_NOTIFY, self.OnNetMsgPioneerChannelMsgNotify) -- 先锋频道消息推送 先锋特殊命令字，包体内容和PULL包相同 
 
-	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_DELETE_ROLE_MSG, self.OnNetMsgDeleteRoleMsg) -- 删除玩家公聊类频道消息 
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_DELETE_ROLE_MSG, self.OnNetMsgDeleteRoleMsg) -- 删除玩家公聊类频道消息 
 end
 
 function ChatMgr:OnRegisterGameEvent()
