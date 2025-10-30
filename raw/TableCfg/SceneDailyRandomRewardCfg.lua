@@ -52,7 +52,7 @@ local SceneDailyRandomRewardCfg = {
     },
     DefaultValues = {
         DailyExpReword = 0,
-        _DailyRewards = '[{"Count":1748,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":30,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+        _DailyRewards = '[{"Count":1748,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":30,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
         ID = 1,
         LackExpReword = 0,
         _LackRewards = '[{"Count":91,"ResID":19000002}]',
@@ -62,14 +62,14 @@ local SceneDailyRandomRewardCfg = {
 	LuaData = {
         {
             DailyExpReword = 588,
-            _DailyRewards = '[{"Count":74,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":74,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             LackExpReword = 59,
             _LackRewards = '[{"Count":37,"ResID":19000002}]',
             Level = 10,
         },
         {
             DailyExpReword = 669,
-            _DailyRewards = '[{"Count":81,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":81,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 2,
             LackExpReword = 67,
             _LackRewards = '[{"Count":40,"ResID":19000002}]',
@@ -77,7 +77,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 757,
-            _DailyRewards = '[{"Count":89,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":89,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 3,
             LackExpReword = 76,
             _LackRewards = '[{"Count":44,"ResID":19000002}]',
@@ -85,7 +85,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 851,
-            _DailyRewards = '[{"Count":96,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":96,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 4,
             LackExpReword = 85,
             _LackRewards = '[{"Count":48,"ResID":19000002}]',
@@ -93,7 +93,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 948,
-            _DailyRewards = '[{"Count":104,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":104,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 5,
             LackExpReword = 95,
             _LackRewards = '[{"Count":52,"ResID":19000002}]',
@@ -101,7 +101,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1053,
-            _DailyRewards = '[{"Count":111,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":111,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 6,
             LackExpReword = 105,
             _LackRewards = CS._2_1,
@@ -109,7 +109,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1162,
-            _DailyRewards = '[{"Count":118,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":118,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 7,
             LackExpReword = 116,
             _LackRewards = CS._2_2,
@@ -117,7 +117,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1278,
-            _DailyRewards = '[{"Count":126,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":126,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 8,
             LackExpReword = 128,
             _LackRewards = CS._2_3,
@@ -125,7 +125,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1398,
-            _DailyRewards = '[{"Count":133,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":133,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 9,
             LackExpReword = 140,
             _LackRewards = CS._2_4,
@@ -133,7 +133,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1524,
-            _DailyRewards = '[{"Count":141,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":141,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 10,
             LackExpReword = 152,
             _LackRewards = CS._2_5,
@@ -141,7 +141,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1657,
-            _DailyRewards = '[{"Count":148,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":148,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 11,
             LackExpReword = 166,
             _LackRewards = CS._2_6,
@@ -149,7 +149,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1795,
-            _DailyRewards = '[{"Count":156,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":156,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 12,
             LackExpReword = 180,
             _LackRewards = CS._2_7,
@@ -157,7 +157,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1937,
-            _DailyRewards = '[{"Count":163,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":163,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 13,
             LackExpReword = 194,
             _LackRewards = CS._2_8,
@@ -165,7 +165,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2086,
-            _DailyRewards = '[{"Count":170,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":170,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 14,
             LackExpReword = 209,
             _LackRewards = CS._2_9,
@@ -173,7 +173,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2242,
-            _DailyRewards = '[{"Count":178,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":178,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 15,
             LackExpReword = 224,
             _LackRewards = CS._2_10,
@@ -181,7 +181,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2403,
-            _DailyRewards = '[{"Count":185,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":185,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 16,
             LackExpReword = 240,
             _LackRewards = CS._2_11,
@@ -189,7 +189,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2570,
-            _DailyRewards = '[{"Count":193,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":193,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 17,
             LackExpReword = 257,
             _LackRewards = CS._2_12,
@@ -197,7 +197,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2742,
-            _DailyRewards = '[{"Count":200,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":200,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 18,
             LackExpReword = 274,
             _LackRewards = CS._2_13,
@@ -205,7 +205,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2921,
-            _DailyRewards = '[{"Count":208,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":208,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 19,
             LackExpReword = 292,
             _LackRewards = CS._2_14,
@@ -213,7 +213,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3107,
-            _DailyRewards = '[{"Count":215,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":215,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 20,
             LackExpReword = 311,
             _LackRewards = CS._2_15,
@@ -221,7 +221,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3298,
-            _DailyRewards = '[{"Count":222,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":222,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 21,
             LackExpReword = 330,
             _LackRewards = CS._2_16,
@@ -229,7 +229,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3495,
-            _DailyRewards = '[{"Count":230,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":230,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 22,
             LackExpReword = 350,
             _LackRewards = CS._2_17,
@@ -237,7 +237,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3699,
-            _DailyRewards = '[{"Count":237,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":237,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 23,
             LackExpReword = 370,
             _LackRewards = CS._2_18,
@@ -245,7 +245,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3908,
-            _DailyRewards = '[{"Count":245,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":245,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 24,
             LackExpReword = 391,
             _LackRewards = CS._2_19,
@@ -253,7 +253,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4122,
-            _DailyRewards = '[{"Count":252,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":252,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 25,
             LackExpReword = 412,
             _LackRewards = CS._2_20,
@@ -261,7 +261,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4345,
-            _DailyRewards = '[{"Count":260,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":260,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 26,
             LackExpReword = 435,
             _LackRewards = CS._2_21,
@@ -269,7 +269,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4573,
-            _DailyRewards = '[{"Count":267,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":267,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 27,
             LackExpReword = 457,
             _LackRewards = CS._2_22,
@@ -277,7 +277,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4807,
-            _DailyRewards = '[{"Count":274,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":274,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 28,
             LackExpReword = 481,
             _LackRewards = CS._2_23,
@@ -285,7 +285,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 5048,
-            _DailyRewards = '[{"Count":282,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":282,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 29,
             LackExpReword = 505,
             _LackRewards = CS._2_24,
@@ -293,7 +293,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 5296,
-            _DailyRewards = '[{"Count":289,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":289,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 30,
             LackExpReword = 530,
             _LackRewards = CS._2_25,
@@ -301,7 +301,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 5548,
-            _DailyRewards = '[{"Count":297,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":297,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 31,
             LackExpReword = 555,
             _LackRewards = CS._2_26,
@@ -309,7 +309,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 5808,
-            _DailyRewards = '[{"Count":304,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":304,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 32,
             LackExpReword = 581,
             _LackRewards = CS._2_27,
@@ -317,7 +317,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 6075,
-            _DailyRewards = '[{"Count":312,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":312,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 33,
             LackExpReword = 608,
             _LackRewards = CS._2_28,
@@ -325,7 +325,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 6349,
-            _DailyRewards = '[{"Count":319,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":319,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 34,
             LackExpReword = 635,
             _LackRewards = CS._2_29,
@@ -333,7 +333,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 6628,
-            _DailyRewards = '[{"Count":326,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":326,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 35,
             LackExpReword = 663,
             _LackRewards = CS._2_30,
@@ -341,7 +341,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 6914,
-            _DailyRewards = '[{"Count":334,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":334,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 36,
             LackExpReword = 691,
             _LackRewards = CS._2_31,
@@ -349,7 +349,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 7207,
-            _DailyRewards = '[{"Count":341,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":341,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 37,
             LackExpReword = 721,
             _LackRewards = CS._2_32,
@@ -357,7 +357,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 7505,
-            _DailyRewards = '[{"Count":349,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":349,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 38,
             LackExpReword = 751,
             _LackRewards = CS._2_33,
@@ -365,7 +365,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 7813,
-            _DailyRewards = '[{"Count":356,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":356,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 39,
             LackExpReword = 781,
             _LackRewards = CS._2_34,
@@ -373,20 +373,20 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 8126,
-            _DailyRewards = '[{"Count":364,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":364,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 40,
             LackExpReword = 813,
             _LackRewards = CS._2_35,
             Level = 49,
         },
         {
-            _DailyRewards = '[{"Count":728,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":70,"ResID":19000101},{"Count":20,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":728,"ResID":19000002},{"Count":70,"ResID":19000100},{"Count":70,"ResID":19000101},{"Count":20,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 41,
             _LackRewards = CS._2_36,
         },
         {
             DailyExpReword = 657,
-            _DailyRewards = '[{"Count":111,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":111,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 42,
             LackExpReword = 66,
             _LackRewards = CS._2_1,
@@ -395,7 +395,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 725,
-            _DailyRewards = '[{"Count":118,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":118,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 43,
             LackExpReword = 73,
             _LackRewards = CS._2_2,
@@ -404,7 +404,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 797,
-            _DailyRewards = '[{"Count":126,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":126,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 44,
             LackExpReword = 80,
             _LackRewards = CS._2_3,
@@ -413,7 +413,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 873,
-            _DailyRewards = '[{"Count":133,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":133,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 45,
             LackExpReword = 87,
             _LackRewards = CS._2_4,
@@ -422,7 +422,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 951,
-            _DailyRewards = '[{"Count":141,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":141,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 46,
             LackExpReword = 95,
             _LackRewards = CS._2_5,
@@ -431,7 +431,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1034,
-            _DailyRewards = '[{"Count":148,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":148,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 47,
             LackExpReword = 103,
             _LackRewards = CS._2_6,
@@ -440,7 +440,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1121,
-            _DailyRewards = '[{"Count":156,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":156,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 48,
             LackExpReword = 112,
             _LackRewards = CS._2_7,
@@ -449,7 +449,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1208,
-            _DailyRewards = '[{"Count":163,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":163,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 49,
             LackExpReword = 121,
             _LackRewards = CS._2_8,
@@ -458,7 +458,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1302,
-            _DailyRewards = '[{"Count":170,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":170,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 50,
             LackExpReword = 130,
             _LackRewards = CS._2_9,
@@ -467,7 +467,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1399,
-            _DailyRewards = '[{"Count":178,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":178,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 51,
             LackExpReword = 140,
             _LackRewards = CS._2_10,
@@ -476,7 +476,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1501,
-            _DailyRewards = '[{"Count":185,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":185,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 52,
             LackExpReword = 150,
             _LackRewards = CS._2_11,
@@ -485,7 +485,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1606,
-            _DailyRewards = '[{"Count":193,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":193,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 53,
             LackExpReword = 161,
             _LackRewards = CS._2_12,
@@ -494,7 +494,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1714,
-            _DailyRewards = '[{"Count":200,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":200,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 54,
             LackExpReword = 171,
             _LackRewards = CS._2_13,
@@ -503,7 +503,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1826,
-            _DailyRewards = '[{"Count":208,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":208,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 55,
             LackExpReword = 183,
             _LackRewards = CS._2_14,
@@ -512,7 +512,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 1941,
-            _DailyRewards = '[{"Count":215,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":215,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 56,
             LackExpReword = 194,
             _LackRewards = CS._2_15,
@@ -521,7 +521,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2060,
-            _DailyRewards = '[{"Count":222,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":222,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 57,
             LackExpReword = 206,
             _LackRewards = CS._2_16,
@@ -530,7 +530,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2183,
-            _DailyRewards = '[{"Count":230,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":230,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 58,
             LackExpReword = 218,
             _LackRewards = CS._2_17,
@@ -539,7 +539,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2311,
-            _DailyRewards = '[{"Count":237,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":237,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 59,
             LackExpReword = 231,
             _LackRewards = CS._2_18,
@@ -548,7 +548,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2442,
-            _DailyRewards = '[{"Count":245,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":245,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 60,
             LackExpReword = 244,
             _LackRewards = CS._2_19,
@@ -557,7 +557,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2574,
-            _DailyRewards = '[{"Count":252,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":252,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 61,
             LackExpReword = 257,
             _LackRewards = CS._2_20,
@@ -566,7 +566,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2715,
-            _DailyRewards = '[{"Count":260,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":260,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 62,
             LackExpReword = 272,
             _LackRewards = CS._2_21,
@@ -575,7 +575,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 2858,
-            _DailyRewards = '[{"Count":267,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":267,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 63,
             LackExpReword = 286,
             _LackRewards = CS._2_22,
@@ -584,7 +584,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3004,
-            _DailyRewards = '[{"Count":274,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":274,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 64,
             LackExpReword = 300,
             _LackRewards = CS._2_23,
@@ -593,7 +593,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3155,
-            _DailyRewards = '[{"Count":282,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":282,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 65,
             LackExpReword = 316,
             _LackRewards = CS._2_24,
@@ -602,7 +602,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3309,
-            _DailyRewards = '[{"Count":289,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":289,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 66,
             LackExpReword = 331,
             _LackRewards = CS._2_25,
@@ -611,7 +611,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3468,
-            _DailyRewards = '[{"Count":297,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":297,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 67,
             LackExpReword = 347,
             _LackRewards = CS._2_26,
@@ -620,7 +620,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3629,
-            _DailyRewards = '[{"Count":304,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":304,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 68,
             LackExpReword = 363,
             _LackRewards = CS._2_27,
@@ -629,7 +629,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3796,
-            _DailyRewards = '[{"Count":312,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":312,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 69,
             LackExpReword = 380,
             _LackRewards = CS._2_28,
@@ -638,7 +638,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 3967,
-            _DailyRewards = '[{"Count":319,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":319,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 70,
             LackExpReword = 397,
             _LackRewards = CS._2_29,
@@ -647,7 +647,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4141,
-            _DailyRewards = '[{"Count":326,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":326,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 71,
             LackExpReword = 414,
             _LackRewards = CS._2_30,
@@ -656,7 +656,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4319,
-            _DailyRewards = '[{"Count":334,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":334,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 72,
             LackExpReword = 432,
             _LackRewards = CS._2_31,
@@ -665,7 +665,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4502,
-            _DailyRewards = '[{"Count":341,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":341,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 73,
             LackExpReword = 450,
             _LackRewards = CS._2_32,
@@ -674,7 +674,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4689,
-            _DailyRewards = '[{"Count":349,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":349,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 74,
             LackExpReword = 469,
             _LackRewards = CS._2_33,
@@ -683,7 +683,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 4883,
-            _DailyRewards = '[{"Count":356,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":356,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 75,
             LackExpReword = 488,
             _LackRewards = CS._2_34,
@@ -692,7 +692,7 @@ local SceneDailyRandomRewardCfg = {
         },
         {
             DailyExpReword = 5077,
-            _DailyRewards = '[{"Count":364,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":364,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":0,"ResID":19000101},{"Count":0,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 76,
             LackExpReword = 508,
             _LackRewards = CS._2_35,
@@ -700,13 +700,13 @@ local SceneDailyRandomRewardCfg = {
             Type = 2,
         },
         {
-            _DailyRewards = '[{"Count":728,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":50,"ResID":19000101},{"Count":15,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":728,"ResID":19000002},{"Count":50,"ResID":19000100},{"Count":50,"ResID":19000101},{"Count":15,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 77,
             _LackRewards = CS._2_36,
             Type = 2,
         },
         {
-            _DailyRewards = '[{"Count":874,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":80,"ResID":19000101},{"Count":80,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":874,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":80,"ResID":19000101},{"Count":80,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 78,
             _LackRewards = '[{"Count":437,"ResID":19000002}]',
             Type = 3,
@@ -912,19 +912,19 @@ local SceneDailyRandomRewardCfg = {
             Type = 4,
         },
         {
-            _DailyRewards = '[{"Count":1748,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":30,"ResID":19000101},{"Count":10,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":1748,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":30,"ResID":19000101},{"Count":10,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 119,
             _LackRewards = '[{"Count":874,"ResID":19000002}]',
             Type = 4,
         },
         {
-            _DailyRewards = '[{"Count":582,"ResID":19000002},{"Count":200,"ResID":19000100},{"Count":100,"ResID":19000101},{"Count":70,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":582,"ResID":19000002},{"Count":200,"ResID":19000100},{"Count":100,"ResID":19000101},{"Count":70,"ResID":19000102},{"Count":1,"ResID":66700207}]',
             ID = 120,
             _LackRewards = '[{"Count":291,"ResID":19000002}]',
             Type = 5,
         },
         {
-            _DailyRewards = '[{"Count":473,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":100,"ResID":19000101},{"Count":25,"ResID":19000102}]',
+            _DailyRewards = '[{"Count":473,"ResID":19000002},{"Count":0,"ResID":19000100},{"Count":100,"ResID":19000101},{"Count":25,"ResID":19000102},{"Count":0,"ResID":0}]',
             ID = 121,
             _LackRewards = '[{"Count":218,"ResID":19000002}]',
             Type = 6,

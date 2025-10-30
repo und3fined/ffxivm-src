@@ -34,4 +34,10 @@ if [ $? -ne 0 ]; then
 		echo "Warning: rsync from $EXPORTED_DIR/$SRC_FOLDER to src/ failed."
 fi
 
+# Sync Localization
+rsync -a --delete "${RSYNC_EXCLUDES[@]}" "$EXPORTED_DIR/Encrypted/Content/Localization/" localization
+if [ $? -ne 0 ]; then
+		echo "Warning: rsync from $EXPORTED_DIR/Encrypted/Content/Localization to localization failed."
+fi
+
 echo "Sync completed."

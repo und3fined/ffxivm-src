@@ -23,7 +23,7 @@ local HeadFrameCfg = {
     },
     DefaultValues = {
         FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame.UI_Profile_Img_Frame\'',
-        FrameType = 3,
+        FrameType = 2,
         ID = 1,
         ItemID = 0,
         LifeTimeDesc = '',
@@ -32,27 +32,38 @@ local HeadFrameCfg = {
     },
 	LuaData = {
         {
-            FrameType = 2,
             UnlockType = 1,
         },
         {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame4.UI_Profile_Img_Frame4\'',
+            FrameType = 3,
             ID = 2,
             ItemID = 61900039,
         },
         {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame15.UI_Profile_Img_Frame15\'',
-            FrameType = 2,
             ID = 11,
             ItemID = 61900105,
         },
         {
+            FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame16.UI_Profile_Img_Frame16\'',
+            ID = 12,
+            ItemID = 61900149,
+        },
+        {
+            FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame17.UI_Profile_Img_Frame17\'',
+            ID = 13,
+            ItemID = 61900150,
+        },
+        {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame10.UI_Profile_Img_Frame10\'',
+            FrameType = 3,
             ID = 101,
             ItemID = 61900093,
         },
         {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame11.UI_Profile_Img_Frame11\'',
+            FrameType = 3,
             ID = 102,
             ItemID = 61900097,
         },

@@ -1130,6 +1130,7 @@ local ProtoRes = {
 		Fun_ForeverConcentric = 43, --永结同心
 		Fun_LegendaryWeapon = 44, --传奇武器
 		Fun_JumpTableCfgID = 45, --跳转表跳转
+		Fun_DailyRandomPword = 46, --每日随机副本
 	},
 	target_connect_type = {
 		NONE = 0,

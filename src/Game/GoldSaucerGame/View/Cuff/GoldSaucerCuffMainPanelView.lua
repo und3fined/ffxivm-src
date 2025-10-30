@@ -417,7 +417,7 @@ function GoldSaucerCuffMainPanelView:OnPlayAnimSettlementIn()
 end
 
 function GoldSaucerCuffMainPanelView:OnPlayCtiticalAnim()
-	local ShowEndAnimTime = 1.67
+	local ShowEndAnimTime = 0.7
 	local MiniGameInst = self:GetGameInst()
 	if MiniGameInst == nil then
 		return

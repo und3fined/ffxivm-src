@@ -710,6 +710,19 @@ function AdventureMgr:GetSceneEnterDailyTask()
     return DailyTaskData
 end
 
+function AdventureMgr:IsCurDailyRandomUnlock(ID)
+    if not ID then return false end
+    
+    local SceneEnterData = self:GetSceneEnterDailyTask()
+    for i, v in ipairs(SceneEnterData) do
+        if v.ID == ID then
+            return true
+        end
+    end
+
+    return false
+end
+
 --- 冒险周任务跳转军需 根据不同军队ID
 function AdventureMgr:JumpSupplyByGrandCompanyID()
     local MapID = {
