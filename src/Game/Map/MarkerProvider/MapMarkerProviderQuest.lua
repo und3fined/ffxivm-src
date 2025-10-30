@@ -56,8 +56,11 @@ function MapMarkerProviderQuest:OnCreateMarker(Params)
 		X, Y = MapUtil.GetUIPosByLocation(Pos, MappingMapCfg.MappingUIMapID)
 	end
 	Marker:SetAreaMapPos(X, Y)
-	Marker:SetWorldPos(Pos.X, Pos.Y, Pos.Z)
+	if Pos then
+		Marker:SetWorldPos(Pos.X, Pos.Y, Pos.Z)
+	end
 
+	-- 记录标记所属的三级地图信息
 	-- 任务所属UIMapID，同个地图可以多层即多个UIMapID
 	Marker:SetAreaUIMapID(Quest.UIMapID)
 	-- 任务所属MapID
@@ -65,7 +68,6 @@ function MapMarkerProviderQuest:OnCreateMarker(Params)
 
 	return Marker
 end
-
 
 
 -- 是否已接取的追踪中任务
@@ -100,9 +102,18 @@ function MapMarkerProviderQuest:CreateQuestMarkers()
 	local MainlimeQuestList = _G.QuestTrackMgr:GetMainlineQuestParam()
 	--print("[MapMarkerProviderQuest] CreateQuestMarkers MainlimeQuestList", table.tostring_block(MainlimeQuestList))
 
-	-- 任务排序：1.按任务追踪状态排序，追踪任务优先 2.按任务接取状态排序，接取任务优先 3.按任务ID排序，ID小的优先
+	-- 任务排序
 	local function SortQuestList(QuestList)
 		table.sort(QuestList, function(Left, Right)
+			-- 按任务跳转查看状态排序，当前查看的任务优先
+			local LeftQuestShow = _G.WorldMapMgr:IsWorldMapShowQuest(Left.QuestID)
+			local RightQuestShow = _G.WorldMapMgr:IsWorldMapShowQuest(Right.QuestID)
+			if LeftQuestShow ~= RightQuestShow then
+				if LeftQuestShow then return true end
+				if RightQuestShow then return false end
+			end
+
+			-- 按任务追踪状态排序，追踪任务优先
 			local LeftQuestTrack = self:IsTrackQuest(Left.QuestID) or self:IsFollowQuest(Left.QuestID)
 			local RightQuestTrack = self:IsTrackQuest(Right.QuestID) or self:IsFollowQuest(Right.QuestID)
 			if LeftQuestTrack ~= RightQuestTrack then
@@ -110,12 +121,21 @@ function MapMarkerProviderQuest:CreateQuestMarkers()
 				if RightQuestTrack then return false end
 			end
 
+			-- 按任务接取状态排序，接取任务优先
 			local LeftQuestStatus = _G.QuestMgr:GetQuestStatus(Left.QuestID)
 			local RightQuestStatus = _G.QuestMgr:GetQuestStatus(Right.QuestID)
 			if LeftQuestStatus ~= RightQuestStatus then
 				return LeftQuestStatus > RightQuestStatus
 			end
 
+			-- 按任务类型排序，类型小（规则：主线>重要支线>普通支线）的优先
+			local LeftQuestType = _G.QuestMgr:GetQuestType(Left.QuestID)
+			local RightQuestType = _G.QuestMgr:GetQuestType(Right.QuestID)
+			if LeftQuestType ~= RightQuestType then
+				return LeftQuestType < RightQuestType
+			end
+
+			-- 按任务ID排序，ID小的优先
 			if Left.QuestID ~= Right.QuestID then
 				return Left.QuestID < Right.QuestID
 			end
@@ -129,6 +149,7 @@ function MapMarkerProviderQuest:CreateQuestMarkers()
 		if not MappingMapCfgList then
 			return
 		end
+
 		local ShowMappingQuestList = nil
 		for _, MappingMapCfg in ipairs(MappingMapCfgList) do
 			-- 主角已经在目标地图内，查看地图时不显示映射任务，否则才显示映射任务
@@ -151,7 +172,10 @@ function MapMarkerProviderQuest:CreateQuestMarkers()
 								ShowMappingQuestList = {}
 							end
 							table.insert(ShowMappingQuestList, ShowMappingQuest)
-							break
+							-- 限制显示5个
+							if #ShowMappingQuestList >= 5 then
+								break
+							end
 						end
 					end
 				end

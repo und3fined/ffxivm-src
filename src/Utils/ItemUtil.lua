@@ -295,6 +295,8 @@ function ItemUtil.QueryIsUnLock(ItemAccessFunType, FunValue, ItemID)
 	elseif ItemAccessFunType == AccessFuntype.Fun_JumpTableCfgID then
 		local JumpUtil = require("Utils/JumpUtil")
 		return JumpUtil.IsCurJumpIDCanJump(FunValue)
+	elseif ItemAccessFunType == AccessFuntype.Fun_DailyRandomPword then
+		return _G.AdventureMgr:IsCurDailyRandomUnlock(FunValue)
 	else
 		-- 这里包含了默认开启的模块
 		return true
@@ -652,6 +654,8 @@ function ItemUtil.JumpGetWayByItemData(ItemData)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_JumpTableCfgID then
 		local JumpUtil = require("Utils/JumpUtil")
 		JumpUtil.JumpTo(ItemData.FunValue)
+	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_DailyRandomPword then
+		PWorldEntUtil.ShowPWorldEntViewDR(ItemData.FunValue)
 	else
 		MsgTipsUtil.ShowTips(LSTR(1020064))
 	end

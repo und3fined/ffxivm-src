@@ -2186,6 +2186,7 @@ local ProtoEnumAliasConfig = {
 		[43] = "ProtoRes.ItemAccessFunType.Fun_ForeverConcentric",
 		[44] = "ProtoRes.ItemAccessFunType.Fun_LegendaryWeapon",
 		[45] = "ProtoRes.ItemAccessFunType.Fun_JumpTableCfgID",
+		[46] = "ProtoRes.ItemAccessFunType.Fun_DailyRandomPword",
 	},
 
 	[ProtoRes.game_pak_area] = {
