@@ -462,9 +462,10 @@ end
 local function UTGetString(Ctx, Key)
     local UTGetStrings = _G.UE.TArray(_G.UE.FString)
     UTGetStrings:Add(Ctx .. "_" .. Key)
-    _G.UE.UKismetStringLibrary.CullArray("U2PM.UTGetString", UTGetStrings)
+    local resultCode = _G.UE.UKismetStringLibrary.CullArray("U2PM.UTGetString", UTGetStrings)
     local Value
-    if UTGetStrings:Length() > 1 then Value = UTGetStrings:GetRef(2) end
+    if resultCode == 0 then Value = UTGetStrings:GetRef(2) end
+
     return Value or nil
 end
 
