@@ -27,7 +27,7 @@ local NpcDialogPlayVM = LuaClass(UIViewModel)
 ---Ctor
 function NpcDialogPlayVM:Ctor()
 	FLOG_INFO("NpcDialogPlayVM:Ctor()  1111")
-	self.SpeedLevel = 3
+	self.SpeedLevel = 1
 end
 
 function NpcDialogPlayVM:OnBegin()
@@ -99,9 +99,13 @@ function NpcDialogPlayVM:ShowDialog(Name, Post, Content, TexturePath)
 	self.bIsDialogVisible = true
 	self.MajorIsSing = false
 	self.RichTextLen = self.RichTextSplitter:RichTextLen()
+	local IsAutoPlayValue = USaveMgr.GetInt(SaveKey.IsAutoPlay, 1, true)
+	if _G.LevelRecordMgr ~= nil and _G.LevelRecordMgr:InRecordState() then
+		IsAutoPlayValue = 0
+	end
 	self.DialogTexturePath = TexturePath
 	self.IsTextureShow = self.DialogTexturePath ~= "" and true or false
-	self:SetAutoPlay(true)
+	self:SetAutoPlay(IsAutoPlayValue == 1)
 	self:TimeFuncCallBack()
 end
 
