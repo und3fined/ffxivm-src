@@ -64,9 +64,7 @@ function UIViewMgr:OnBegin()
 	--_G.UE.UUIMgr.Get():InitEmulatorInfo()
 	_G.UE.UUIMgr.Get():InitKeyboardListen()
 
-	if _G.UE.UUIMgr.Get():IsWithEmulator() then
-		_G.UE.UCrashSightMgr.Get():CloseCrashReport()
-	end
+	_G.UE.UCrashSightMgr.Get():CloseCrashReport()
 
 	self:InitDeviceAdapter()
 	--end
