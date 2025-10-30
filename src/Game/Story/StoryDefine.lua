@@ -36,13 +36,13 @@ StoryDefine.DialogHistoryClass = {
 }
 
 -- 仅作保护用，实际读取客户端全局配置
-StoryDefine.TouchWaitTimeMS = 100
-StoryDefine.AutoWaitTime = 0.3
+StoryDefine.TouchWaitTimeMS = 205
+StoryDefine.AutoWaitTime = 1.0
 
 StoryDefine.SpeedLevelData = {
 	[1] = 1,
-	[2] = 0.1,
-	[3] = 0.01,
+	[2] = 0.5,
+	[3] = 0.3
 }
 
 -- 来源：https://doc.weixin.qq.com/sheet/e3_AT8AVQYhALQwE0E0yb4SZqU07UhyW?scode=AJEAIQdfAAopRbyXtpAT8AVQYhALQ&tab=BB08J2

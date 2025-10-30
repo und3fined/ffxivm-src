@@ -79,11 +79,7 @@ function Main2ndMoreTipsListView:OnMenuItemClicked(Index, ItemData, ItemView)
     end
     FLOG_INFO("[Main2ndMoreTipsListView:OnMenuItemClicked] ID:%d, Name:%s " , ItemData.ID, ItemData.BtnName)
 
-    if ItemData.BtnEntranceID == MoreMenuType.XinYue then
-      if _G.U2 ~= nil and _G.U2.U2pmMgr ~= nil then
-        _G.U2.U2pmMgr:ExportSource()
-      end
-    elseif ItemData.BtnEntranceID == MoreMenuType.Questionnaire then
+    if ItemData.BtnEntranceID == MoreMenuType.Questionnaire then
         _G.MURSurveyMgr:ShowOrHideRedDot(false)
         _G.MURSurveyMgr:OpenMURSurvey(1, false, true, "", false)
     elseif ItemData.BtnEntranceID == MoreMenuType.CustomService then
@@ -108,6 +104,9 @@ function Main2ndMoreTipsListView:OnMenuItemClicked(Index, ItemData, ItemView)
     end
 
     UIViewMgr:HideView(UIViewID.OperationChannelPanel)
+
+    -- local ClickPos = _G.UE.UWidgetLayoutLibrary.GetMousePositionOnViewport(FWORLD())
+    -- TipsUtil.ShowInfoTips("", nil, ClickPos, _G.UE.FVector2D(0.5, 0.5), false)
 end
 
 return Main2ndMoreTipsListView
