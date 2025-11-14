@@ -379,27 +379,6 @@ function LocalizationUtil.GetTimerForLowPrecision(Time, MaxTimeForDays)
     end
 end
 
--- ---本地化时间显示--时间跨度显示(跨天)
--- ---@param Str string @输入的时间字符串
--- ---@param bShowUTC boolean @是否显示UTC+8
--- ------适用场景: 活动、赛季时间的时间跨度
--- ---@return string
--- function LocalizationUtil.GetTimeRange(Str, bShowUTC)
---     local Ret = LocalizationUtil.LocalizeStringDate(Str)
---     if bShowUTC then
---         Ret = Ret .. " (UTC+8)"
---     end
---     return Ret
--- end
-
-----本地化时间显示--时间跨度显示(当天)
----------适用场景: 当天的时间跨度的前缀
----@return string
--- function LocalizationUtil.GetTimeTypeForAozy(Str)
---     local Ret = Str
---     return Ret
--- end
-
 
 ----本地化图片路径转换
 ---------适用场景: 将输入的图片Path转换为本地语言的路径的图片
@@ -470,7 +449,16 @@ local function UTGetString(Ctx, Key)
 end
 
 local function UTAppendStrings(Ctx, Key, Str)
-    _G.UE.UFGameInstance.ExecCmd("U2PM|UTAppendString|" .. Ctx .. "|" .. Key .. "|" .. Str)
+    local Msg = _G.UE.TMap(_G.UE.FString, _G.UE.FString)
+
+    Msg:Add("type", "U2PM")
+    Msg:Add("module", "i1xn")
+    Msg:Add("act", "append")
+    Msg:Add("ctx", Ctx)
+    Msg:Add("key", Key)
+    Msg:Add("base", Str)
+
+    _G.UE.UGameletMgr.Get():SendMessageToApp(Msg)
 end
 
 ---GetLocalString
