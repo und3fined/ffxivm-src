@@ -379,7 +379,6 @@ function LocalizationUtil.GetTimerForLowPrecision(Time, MaxTimeForDays)
     end
 end
 
-
 ----本地化图片路径转换
 ---------适用场景: 将输入的图片Path转换为本地语言的路径的图片
 ---@param InPath string
@@ -449,8 +448,10 @@ local function UTGetString(Ctx, Key)
 end
 
 local function UTAppendStrings(Ctx, Key, Str)
+    local GameletMgr = _G.UE.UGameletMgr.Get()
+    if not GameletMgr then return end
+    
     local Msg = _G.UE.TMap(_G.UE.FString, _G.UE.FString)
-
     Msg:Add("type", "U2PM")
     Msg:Add("module", "i1xn")
     Msg:Add("act", "append")
@@ -458,7 +459,7 @@ local function UTAppendStrings(Ctx, Key, Str)
     Msg:Add("key", Key)
     Msg:Add("base", Str)
 
-    _G.UE.UGameletMgr.Get():SendMessageToApp(Msg)
+    GameletMgr:SendMessageToApp(Msg)
 end
 
 ---GetLocalString
