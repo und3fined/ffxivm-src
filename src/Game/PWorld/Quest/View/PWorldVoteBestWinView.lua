@@ -13,6 +13,7 @@ local UIUtil = require("Utils/UIUtil")
 local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local PWorldTeamVM = require("Game/PWorld/Team/PWorldTeamVM")
 
 ---@class PWorldVoteBestWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -72,12 +73,11 @@ function PWorldVoteBestWinView:OnPostInit()
 	self.MemAdp2 = UIAdapterTableView.CreateAdapter(self, self.TableViewPlayer02, self.OnTableItemSelected, true, false)
 
 	self.Binders = {
-        { "MatchMems",				UIBinderUpdateBindableList.New(self, self.MemAdp)},
-		{ "MatchMems",				UIBinderUpdateBindableList.New(self, self.MemAdp2)},
+        { "VoteBestMems",				UIBinderUpdateBindableList.New(self, self.MemAdp)},
+		{ "VoteBestMems",				UIBinderUpdateBindableList.New(self, self.MemAdp2)},
 		{ "BestPlayerIDVoted", UIBinderValueChangedCallback.New(self, nil, function(_, NewValue)
 			self.CommonThroughFrameS_UIBP.BtnCheck2:SetIsEnabled(NewValue and true or false, false)
 		end)},
-		{ "MatchMemCount", UIBinderValueChangedCallback.New(self, nil, self.OnMatchMemCountChanged)},
     }
 
 	self.ExpelBinders = {
@@ -92,6 +92,9 @@ function PWorldVoteBestWinView:OnPostInit()
 	UIUtil.SetIsVisible(self.CommonThroughFrameS_UIBP.Panel1Btn, false)
 	UIUtil.SetIsVisible(self.CommonThroughFrameS_UIBP.Panel2Btn, true)
 	UIUtil.SetIsVisible(self.CommonThroughFrameS_UIBP.Panel3Btn, false)
+
+	-- disable hide onclick
+	self.CommonThroughFrameS_UIBP.PopUpBG.HideOnClick = false
 end
 
 function PWorldVoteBestWinView:OnShow()
@@ -101,14 +104,16 @@ function PWorldVoteBestWinView:OnShow()
 	end
 
 	self.MemAdp:ClearSelectedItem()
+	self.MemAdp2:ClearSelectedItem()
 
 	_G.UIViewMgr:HideView(_G.UIViewID.PWorldQuestMenu)
 	
 	if self.Params.ShowType == TeamVoteType.BEST_PLAYER then
-		_G.PWorldTeamVM:SetVoteBestPlayer(nil)
-		_G.PWorldTeamVM:ClearMembersSelection()
+		PWorldTeamVM:SetVoteBestPlayer(nil)
+		PWorldTeamVM:ClearMembersSelection()
 		self.CommonThroughFrameS_UIBP.BtnClose2:SetText(_G.LSTR(1320191))
 		self.CommonThroughFrameS_UIBP.BtnCheck2:SetText(_G.LSTR(1320192))
+		self:OnItemsCountChanged(_G.PWorldTeamVM:GetVoteBestMemsCount())
 	elseif self.Params.ShowType == TeamVoteType.EXPEL_PLAYER then
 		_G.PWorldTeamVM:SetExpelPlayer(nil)
 		_G.PWorldTeamVM:ClearMatchMembersSelection()
@@ -122,7 +127,14 @@ function PWorldVoteBestWinView:OnShow()
 end
 
 function PWorldVoteBestWinView:OnHide()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
+	self.MemAdp:CancelSelected()
+	self.MemAdp2:CancelSelected()
+
+	if self.Params and self.Params.ShowType == TeamVoteType.BEST_PLAYER then
+		_G.PWorldTeamVM:SetVoteBestPlayer(nil)
+	elseif self.Params and self.Params.ShowType == TeamVoteType.EXPEL_PLAYER then
+		_G.PWorldTeamVM:SetExpelPlayer(nil)
+	end
 end
 
 function PWorldVoteBestWinView:OnRegisterUIEvent()
@@ -167,6 +179,10 @@ function PWorldVoteBestWinView:OnPanel2LeftButtonClick()
 end
 
 function PWorldVoteBestWinView:OnMatchMemCountChanged(NewCount)
+	self:OnItemsCountChanged(NewCount)
+end
+
+function PWorldVoteBestWinView:OnItemsCountChanged(NewCount)
 	local bShow4 = NewCount == nil or NewCount <= 4
 	UIUtil.SetIsVisible(self.TableViewPlayer, not bShow4)
 	UIUtil.SetIsVisible(self.TableViewPlayer02, bShow4)

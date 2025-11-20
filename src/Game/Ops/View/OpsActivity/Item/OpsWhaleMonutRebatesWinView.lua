@@ -64,9 +64,10 @@ function OpsWhaleMonutRebatesWinView:OnDestroy()
 end
 
 function OpsWhaleMonutRebatesWinView:OnShow()
-	self.BtnRecommend:SetBtnName(_G.LSTR(100040))
-	self.CommSidebarFrameS_UIBP:SetTitleText(_G.LSTR(100041))
-	self.TextHint:SetText(_G.LSTR(100042))
+	local Params = self.Params or {}
+	self.BtnRecommend:SetBtnName(Params.BtnText or _G.LSTR(100040))
+	self.CommSidebarFrameS_UIBP:SetTitleText(Params.TitleText or _G.LSTR(100041))
+	self.TextHint:SetText(Params.TextHint or _G.LSTR(100042))
 	if self.Params and self.Params.ViewModel then
 		local ViewModel = self.Params.ViewModel
 		local GoodsID = ViewModel:GetGoodsID()

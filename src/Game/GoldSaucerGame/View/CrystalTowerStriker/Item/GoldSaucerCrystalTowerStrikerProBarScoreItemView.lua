@@ -12,6 +12,8 @@ local UIUtil = require("Utils/UIUtil")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field TextScore UFTextBlock
 ---@field AnimIn UWidgetAnimation
+---@field AnimScoreAdd UWidgetAnimation
+---@field AnimScoreSubtract UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerCrystalTowerStrikerProBarScoreItemView = LuaClass(UIView, true)
 
@@ -19,6 +21,8 @@ function GoldSaucerCrystalTowerStrikerProBarScoreItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.TextScore = nil
 	--self.AnimIn = nil
+	--self.AnimScoreAdd = nil
+	--self.AnimScoreSubtract = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

@@ -45,6 +45,7 @@ local MonthCardMgr =_G.MonthCardMgr
 ---@field BtnSubtractPrice UFButton
 ---@field BtnSubtractQuantity UFButton
 ---@field CommInforBtn_UIBP_81 CommInforBtnView
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field EditPrice CommEditQuantityItemView
 ---@field EditQuantity CommEditQuantityItemView
 ---@field EmptyTips CommBackpackEmptyView
@@ -99,6 +100,7 @@ function MarketOnSaleWinView:Ctor()
 	--self.BtnSubtractPrice = nil
 	--self.BtnSubtractQuantity = nil
 	--self.CommInforBtn_UIBP_81 = nil
+	--self.CommWinSlotQuality = nil
 	--self.EditPrice = nil
 	--self.EditQuantity = nil
 	--self.EmptyTips = nil
@@ -147,6 +149,7 @@ function MarketOnSaleWinView:OnRegisterSubView()
 	self:AddSubView(self.BtnOnSale)
 	self:AddSubView(self.BtnOnSale2)
 	self:AddSubView(self.CommInforBtn_UIBP_81)
+	self:AddSubView(self.CommWinSlotQuality)
 	self:AddSubView(self.EditPrice)
 	self:AddSubView(self.EditQuantity)
 	self:AddSubView(self.EmptyTips)
@@ -250,6 +253,8 @@ function MarketOnSaleWinView:SetUIInfoWithReSell()
 
 	self.EditPrice:SetCurValue(Stall.SinglePrice)
 	self.EditQuantity:SetCurValue(Num)
+
+	self.CommWinSlotQuality:UpdateUIByItem(ResID)
 end
 
 function MarketOnSaleWinView:SetUIInfoWithSell()
@@ -286,7 +291,8 @@ function MarketOnSaleWinView:SetUIInfoWithSell()
 		self.EditPrice:SetCurValue(BaseSugPrice)
 		self.EditQuantity:SetCurValue(1)
 	end	
-
+	
+	self.CommWinSlotQuality:UpdateUIByItem(ResID)
 end
 
 

@@ -83,7 +83,7 @@ function PlayStyleStageMapItemView:OnShow()
 		if (SignUpEndTime == nil) then
 			return
 		end
-		local ServerTime = TimeUtil.GetServerTimeMS()
+		local ServerTime = TimeUtil.GetServerLogicTimeMS()
 		local RemainTime = SignUpEndTime - ServerTime
 		local RemainSec = math.floor(RemainTime / 1000)
 		-- local ReaminMin = math.floor(RemainSec / 60)

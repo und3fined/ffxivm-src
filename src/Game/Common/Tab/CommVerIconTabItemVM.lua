@@ -32,6 +32,10 @@ function CommVerIconTabItemVM:Ctor()
 	self.RedDotData = nil
 	self.ConditionFunc = nil
 	self.ConditionData = nil
+
+	-- 自定义红点控制
+	self.bCustomsizedRedDot = false -- 是否是自定义红点
+	self.bCustomsizedRedDotShow = false -- 更新自定义红点状态
 end
 
 function CommVerIconTabItemVM:OnInit()
@@ -76,6 +80,9 @@ function CommVerIconTabItemVM:UpdateVM(Data)
 	self.RedDotData = Data.RedDotData
 	self.ConditionFunc = Data.ConditionFunc
 	self.ConditionData = Data.ConditionData
+
+	self.bCustomsizedRedDot = Data.bCustomsizedRedDot
+	self.bCustomsizedRedDotShow = Data.bCustomsizedRedDotShow
 end
 
 function CommVerIconTabItemVM:OnBegin()

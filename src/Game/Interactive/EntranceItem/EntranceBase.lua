@@ -29,11 +29,13 @@ function EntranceBase:Ctor()
     self.TargetName = ""
     self.EnableSwitch = true
     self.EntranceClickInterval = 200  --毫秒
+    self.IsValidItem = true      --是否是有效的入口
 end
 
 function EntranceBase:Init(EntranceParams, ExtraParam)
     --目前有Npc、Gather等Actor类型
     --虚拟的就从1000开始定义，比如矿场：1001
+    self.EntranceParams = EntranceParams
     self.TargetType = EntranceParams.IntParam1
     self.EntityID = EntranceParams.ULongParam1
     self.ResID = EntranceParams.ULongParam2
@@ -55,8 +57,8 @@ function EntranceBase:UpdateDistance()
     self:OnUpdateDistance()
 end
 
-function EntranceBase:CanInterative(EnableCheckLog)
-    return self:CheckInterative(EnableCheckLog)
+function EntranceBase:CanInterative(EnableCheckLog, IsFromQuestUpdate)
+    return self:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
 end
 
 --false：有阻挡  true：无eyeline阻挡
@@ -96,6 +98,12 @@ function EntranceBase:GenFunctionList()
 end
 
 function EntranceBase:Click()
+    local ActorManager = _G.UE.UActorManager:Get()
+    if ActorManager then
+        --_G.FLOG_INFO("EntranceBase:Click, SetVirtualJoystickIsSprintLocked(false)")
+        ActorManager:SetVirtualJoystickIsSprintLocked(false)    --关闭自动锁定移动
+    end
+
     local CurServerTime = TimeUtil.GetServerTimeMS()
     local EntranceLastClickTime = InteractiveMgr:GetEntranceLastClickTime()
 	if (CurServerTime - EntranceLastClickTime) < self.EntranceClickInterval then
@@ -158,6 +166,7 @@ function EntranceBase:Click()
                     local NPCActor = ActorUtil.GetActorByEntityID(self.EntityID)
                     local Cfg = NpcCfg:FindCfgByKey(self.ResID)
                     if MajorActor == nil or NPCActor == nil or Cfg == nil then
+                        InteractiveMgr.bHideEntranceByNpcClick = true
                         return
                     end
 
@@ -166,6 +175,7 @@ function EntranceBase:Click()
                     local NPCDistanceToMajor = ((NPCActorPos.X - MajorPos.X) ^ 2) + ((NPCActorPos.Y - MajorPos.Y) ^ 2) + ((NPCActorPos.Z - MajorPos.Z) ^ 2)
                     if NPCDistanceToMajor > Cfg.InteractionRange ^ 2 then
                         MsgTipsUtil.ShowTips(_G.LSTR(90031))
+                        InteractiveMgr.bHideEntranceByNpcClick = true
                         return
                     end
                 end
@@ -177,9 +187,11 @@ function EntranceBase:Click()
                 if not InteractiveMgr:OnEntranceClick(self) then
                     rlt = self:OnClick()
                 end
+                InteractiveMgr.bHideEntranceByNpcClick = false
                 --InteractiveMgr:SetCancelMountingState(false)
             end
             --InteractiveMgr:SetCancelMountingState(true)
+            InteractiveMgr.bHideEntranceByNpcClick = true
             _G.MountMgr:SendMountCancelCall(CancelCallback)
             _G.EventMgr:SendEvent(EventID.ClickEntranceItems)
             return

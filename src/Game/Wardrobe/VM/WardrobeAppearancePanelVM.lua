@@ -135,7 +135,7 @@ function WardrobeAppearancePanelVM:UpdateBoxList()
 end
 
 function WardrobeAppearancePanelVM:UpdateBaseInfo()
-    self.CurCharismNum = WardrobeMgr:GetCharismNum()
+    self.CurCharismNum = WardrobeMgr:GetCharmNum()
     if not WardrobeMgr:IsExceedCfgLevel() then
         self.TotalCharismNum = string.format("/%d", WardrobeMgr:GetCharismTotalNum())
         self.CharismPercent = self.CurCharismNum / WardrobeMgr:GetCharismTotalNum()
@@ -171,9 +171,9 @@ function WardrobeAppearancePanelVM:UpdateRewardList(RewardID)
 end
 
 function WardrobeAppearancePanelVM:UpdateReward()
-    self.ProgressBarEff = WardrobeMgr:GetCharismNum() >= WardrobeMgr:GetCharismTotalNum()
+    self.ProgressBarEff = WardrobeMgr:GetCharmNum() >= WardrobeMgr:GetCharismTotalNum()
     if not WardrobeMgr:IsExceedCfgLevel() then
-        self.TreasureEff = WardrobeMgr:GetCharismNum() >= WardrobeMgr:GetCharismTotalNum()
+        self.TreasureEff = WardrobeMgr:GetCharmNum() >= WardrobeMgr:GetCharismTotalNum()
     else
         self.TreasureEff = false
     end

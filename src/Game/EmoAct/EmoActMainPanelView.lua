@@ -27,6 +27,7 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 local DataReportUtil = require("Utils/DataReportUtil")
 local LSTR = _G.LSTR	--多语言ukey值对应文本配置在21EmotionText.xlsx
 local EventID = _G.EventID
+local CommonUtil = require("Utils/CommonUtil")
 
 ---@class EmoActMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -149,6 +150,9 @@ function EmoActMainPanelView:OnShow()
 			EmotionMgr:SetNewTargetEntityID(0)
 		end
 	end
+
+	UIUtil.SetIsVisible(self.CommTabs, true)
+	UIUtil.SetIsVisible(self.SearchBar, true)
 	self.CommTabs:OnShow()
 	self.CommTabs:SetSelectedIndex(ArgIndex)	--打开对应类型的界面
 	self:SetTypeRedDot()
@@ -174,6 +178,8 @@ function EmoActMainPanelView:OnHide()
 	_G.TimerMgr:CancelTimer(self.QuestTimerID)
 	EmoActPanelVM.SelectList = {}
 	EmoActPanelVM.ShowTemporaryTagID = nil
+	UIUtil.SetIsVisible(self.CommTabs, false)
+	UIUtil.SetIsVisible(self.SearchBar, false)
 end
 
 --- 这个注册只会在首次打开界面时执行一次
@@ -258,34 +264,29 @@ function EmoActMainPanelView:OnGameEventPostEmotionEnd(Params)
 	end
 end
 
---- 获取正在显示的Item
-function EmoActMainPanelView:GetItemViewList()
-	local ItemViewList = {}
-	if self:IsLike() then
-		--最近使用、收藏
-		for _, RecentList in pairs(self.TableViewRecentAdapter.ItemViewList) do
-			for _, Item in pairs(RecentList.TableViewEmoActAdapter.ItemViewList) do
-				if nil ~= Item and nil ~= Item.Params.Data and nil ~= Item.Params.Data.ID then
-					table.insert(ItemViewList,Item)
-				end
-			end
-		end
-	else
-		--非收藏分类
-		ItemViewList = self.TableViewEmoActAdapter.ItemViewList
-	end
-	return ItemViewList
-end
+-- --- 获取正在显示的Item
+-- function EmoActMainPanelView:GetItemViewList()
+-- 	local ItemViewList = {}
+-- 	if self:IsLike() then
+-- 		--最近使用、收藏
+-- 		for _, RecentList in pairs(self.TableViewRecentAdapter.ItemViewList) do
+-- 			for _, Item in pairs(RecentList.TableViewEmoActAdapter.ItemViewList) do
+-- 				if nil ~= Item and nil ~= Item.Params.Data and nil ~= Item.Params.Data.ID then
+-- 					table.insert(ItemViewList,Item)
+-- 				end
+-- 			end
+-- 		end
+-- 	else
+-- 		--非收藏分类
+-- 		ItemViewList = self.TableViewEmoActAdapter.ItemViewList
+-- 	end
+-- 	return ItemViewList
+-- end
 
 --主角死亡，禁用所有动作
 function EmoActMainPanelView:OnGameEventMajorDead()
 	if MajorUtil.IsMajorDead() then
-		local ItemViewList = self:GetItemViewList()
-		for _, Item in pairs(ItemViewList) do
-			if Item then
-				Item:SetEnable(false)
-			end
-		end
+		self:OnGameEventEmotionRefreshItemUI()
 	end
 end
 
@@ -304,20 +305,18 @@ function EmoActMainPanelView:OnGameEventEmotionRefreshItemUI(Params)
 		self.TimeID = nil
 	end
 	self.TimeID = _G.TimerMgr:AddTimer(self, function()
-		self.UpdateItemList = {}	--待更新的小图标
-		self:UpdateEnableList(self:GetEmotionList())
-		self:SetItemEnable(self:GetItemViewList())
+		self:UpdateEnableList(self:GetCurEmoActList())
 	end, 0.1, 0, 1)
 end
 
 --- 获取当前分类的动作ID
-function EmoActMainPanelView:GetEmotionList()
+function EmoActMainPanelView:GetCurEmoActList()
 	local EmotionList = {}
-	if self:IsLike() then
+	if self:IsLike() and not ( self.bIsFind and self.EmoActText ) then
 		--最近使用、收藏
-		for _, RecentList in pairs(EmoActPanelVM.ListRecentFavorite) do
-			for _, Item in pairs(RecentList.EmotionList) do
-				if nil ~= Item and nil ~= Item.ID then
+		for _, RecentList in pairs(self.TableViewRecentAdapter.ItemViewList) do
+			for _, Item in pairs(RecentList.VM.RecentEmotionList.Items) do
+				if nil ~= Item and nil ~= Item.ID and 0 < Item.ID then
 					table.insert(EmotionList,Item)
 				end
 			end
@@ -336,24 +335,9 @@ function EmoActMainPanelView:UpdateEnableList(EmotionList)
 	for _, Item in pairs(EmotionList) do
 		local EmoActID = Item.ID
 		bIsEnable = EmotionMgr:IsEnableID(EmoActID)
-		if EmoActPanelVM.CanUseList[EmoActID] ~= bIsEnable then
-			self.UpdateItemList[EmoActID] = bIsEnable		--仅对有变更且已显示的View进行手动更新EmoActMainPanelView:SetItemEnable
-			EmoActPanelVM.CanUseList[EmoActID] = bIsEnable	--在EmoActSlotView更新ID时会用到
-		end
+		EmoActPanelVM.CanUseList[EmoActID] = bIsEnable
+		Item.bEnable = bIsEnable
 	end
-end
-
---- 设置可用性
-function EmoActMainPanelView:SetItemEnable(ItemViewList)
-	for _, Item in pairs(ItemViewList) do
-		if CommonUtil.IsObjectValid(Item) then
-			local ID = Item.Params.Data.ID
-			if nil ~= self.UpdateItemList[ID] then
-				Item:SetEnable(self.UpdateItemList[ID])
-			end
-		end
-	end
-	self.UpdateItemList = {}	--使用后一定要清空
 end
 
 function EmoActMainPanelView:OnGameEventEmotionUpdateFavorite()
@@ -419,7 +403,8 @@ function EmoActMainPanelView:UpdateAllEmoAct(NewValue)
 			self:OnChangeCallback(self.EmoActText)  				   		---正在搜索
 		else
 			EmoActPanelVM.CurEmotionList:Clear()
-			EmoActPanelVM.CurEmotionList:UpdateByValues(EmotionMgr:EmotionTab(NewValue))   	---更新列表
+			local Tab = EmotionMgr:EmotionTab(NewValue)
+			EmoActPanelVM.CurEmotionList:UpdateByValues(Tab)   					---更新列表
 		end
 	end
 	self:OnGameEventEmotionRefreshItemUI()
@@ -476,6 +461,7 @@ function EmoActMainPanelView:UpdateAllFavorite()
 				EmoActPanelVM.ListFavorite = EmoActList[1].EmotionList
 			end
 		end
+		self:OnGameEventEmotionRefreshItemUI()
 	end
 end
 
@@ -535,7 +521,7 @@ function EmoActMainPanelView:OnChangeCallback(Text)
 		UIUtil.SetIsVisible(self.TableViewRecent, false)
 		UIUtil.SetIsVisible(self.TableViewEmoAct, true)
 	end
-
+	UIUtil.SetIsVisible(self.RichTextUnselected, false)
 	if string.isnilorempty(Text) then
 		self:OnClickCancelSearchBar()
 		return
@@ -609,7 +595,7 @@ function EmoActMainPanelView:SetScrollCenter(Params)
 		if Column < 4 then
 			return
 		end
-		local AllEmotionList = self:GetEmotionList()
+		local AllEmotionList = self:GetCurEmoActList()
 		if AllEmotionList then
 			for k, Item in pairs(AllEmotionList) do
 				if Item and Item.ID and Item.ID > 0 then

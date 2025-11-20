@@ -11,6 +11,8 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local InteractiveMainPanelVM = require("Game/Interactive/MainPanel/InteractiveMainPanelVM")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
+local EventID = require("Define/EventID")
 --local ProtoRes = require("Protocol/ProtoRes")
 
 ---@class InteractiveMainPanelView : UIView
@@ -87,6 +89,9 @@ function InteractiveMainPanelView:OnInit()
 		{ "FuctionTableViewTop", UIBinderValueChangedCallback.New(self, nil, self.OnSetFuctionTableViewTop) },
 		{ "TargetName", UIBinderValueChangedCallback.New(self, nil, self.OnSetTargetName) },
 		{ "PlayerName", UIBinderValueChangedCallback.New(self, nil, self.OnSetPlayerName) },
+		{ "IsHandleAttached",UIBinderValueChangedCallback.New(self, nil, self.InitHandleInteractive)  },
+		{ "ItemListNum",UIBinderValueChangedCallback.New(self, nil, self.InitHandleInteractive)  },
+		{ "ItemListVisible",UIBinderValueChangedCallback.New(self, nil, self.InitHandleInteractive)  },
 	}
 end
 
@@ -94,10 +99,29 @@ function InteractiveMainPanelView:OnDestroy()
 end
 
 function InteractiveMainPanelView:OnShow()
+--[[	local Params1 = _G.EventMgr:GetEventParams()
+	Params1.StringParam1 = ""
+	Params1.StringParam2 = "MoveForward"
+	Params1.IntParam1 = EventID.HandleBUp
+	Params1.IntParam2 = 0
+	local Params2 = _G.EventMgr:GetEventParams()
+	Params2.StringParam1 = ""
+	Params2.StringParam2 = "MoveRight"
+	Params2.IntParam1 = EventID.HandleBDown
+	Params2.IntParam2 = 0
+	_G.EventMgr:SendCppEvent(EventID.RegisiterAxisData,Params1)
+	_G.EventMgr:SendCppEvent(EventID.RegisiterAxisData,Params2)]]
+
 end
 
 function InteractiveMainPanelView:OnHide()
-
+	local IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	if IsHandleAttached then
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleUp")
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleDown")
+	end
 end
 
 function InteractiveMainPanelView:OnRegisterUIEvent()
@@ -106,9 +130,17 @@ function InteractiveMainPanelView:OnRegisterUIEvent()
 end
 
 function InteractiveMainPanelView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(EventID.GamepadDPadUp, self.OnGamepadDPadUp)
+	self:RegisterGameEvent(EventID.GamepadDPadDown, self.OnGamepadDPadDown)
+	self:RegisterGameEvent(EventID.OnUpdateHandleCusAction, self.InitHandleInteractive)
 end
 
+--function InteractiveMainPanelView:OnHandleBDown()
+	--print("ccppeng HandleBDown()")
+--end
+--function InteractiveMainPanelView:OnHandleBUp()
+--	print("ccppeng HandleBUp()")
+--end
 function InteractiveMainPanelView:OnRegisterBinder()
 	self:RegisterBinders(InteractiveMainPanelVM, self.Binders)
 end
@@ -146,6 +178,7 @@ end
 function InteractiveMainPanelView:SetPanelTargetSwitchVisible(bShow)
 	--_G.FLOG_INFO("InteractiveMainPanelView:PanelTargetSwitchVisible, bShow=%s", tostring(bShow))
 	UIUtil.SetIsVisible(self.PanelNpcSwitchSingle, bShow)
+	self:InitHandleInteractive()
 end
 
 function InteractiveMainPanelView:SetPanelPlayerSwitchVisible(bShow)
@@ -156,6 +189,7 @@ end
 function InteractiveMainPanelView:SetEntranceItems(ItemList)
 	if self.mIsShowEntrance then
 		self.TableViewEntrance:UpdateAll(ItemList)
+		--self:InitHandleInteractive()
 	end
 end
 
@@ -214,6 +248,60 @@ end
 
 function InteractiveMainPanelView:OnBtnPlayerSwitchClicked()
 	InteractiveMgr:SwitchPlayer()
+end
+
+---手柄交互相关---
+function InteractiveMainPanelView:InitHandleInteractive()
+	local IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	if IsHandleAttached then
+		--UI表现
+		local InputAction = _G.SettingsHandleMgr:GetHandleInputActionByCusAction(SettingsHandleDefine.HandleCustomActionType.ChangeTarget)
+		if InputAction then
+			self.NpcSwitchHandleDirection:SetHandleDirectionType(SettingsHandleDefine.HandleInputActionConfig[InputAction].Interactive)
+		else
+			self.NpcSwitchHandleDirection:SetHandleDirectionType("Hide")
+		end
+		--注册按键抢占
+		if InteractiveMainPanelVM.PanelTargetSwitchVisible then
+			_G.InteractiveMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.ChangeTarget)
+		else
+			_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.ChangeTarget)
+		end
+		if InteractiveMainPanelVM.ItemListVisible and InteractiveMainPanelVM.ItemListNum > 0 then
+			local IsSingle = InteractiveMainPanelVM.ItemListNum > 1
+			if IsSingle then
+				_G.InteractiveMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+				_G.InteractiveMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+				_G.InteractiveMgr:RegisterHandleKeyDownData("HandleUp")
+				_G.InteractiveMgr:RegisterHandleKeyDownData("HandleDown")
+			else
+				_G.InteractiveMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+				_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+				_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleUp")
+				_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleDown")
+			end
+		else
+			_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+			_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+			_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleUp")
+			_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleDown")
+		end
+	else
+		self.NpcSwitchHandleDirection:SetHandleDirectionType("Hide")
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleUp")
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleDown")
+		_G.InteractiveMgr:UnRegisterHandleKeyDownData("HandleRight")
+	end
+end
+
+function InteractiveMainPanelView:OnGamepadDPadUp()
+	_G.InteractiveMgr:SwitchCurSelectEntranceItem(false)
+end
+
+function InteractiveMainPanelView:OnGamepadDPadDown()
+	_G.InteractiveMgr:SwitchCurSelectEntranceItem(true)
 end
 
 return InteractiveMainPanelView

@@ -7,6 +7,7 @@ local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local RoleInfoMgr = require("Game/Role/RoleInfoMgr")
 local MagicCardTourneyDefine = require("Game/MagicCardTourney/MagicCardTourneyDefine")
+local MagicCardTourneyVMUtils = require("Game/MagicCardTourney/MagicCardTourneyVMUtils")
 local MajorUtil = require("Utils/MajorUtil")
 
 ---@class MagicCardTourneyRankItemVM : UIViewModel
@@ -40,11 +41,7 @@ function MagicCardTourneyRankItemVM:UpdateVM(Value)
     self.Rank = Value.Rank
     self.IsCupIconVisible = true
     self.Score = Value.Score
-    if self.Rank <=3 then
-        self.CupIcon = MagicCardTourneyDefine.CupIconPath[self.Rank] or ""
-    else
-        self.CupIcon = MagicCardTourneyDefine.CupIconPath[4]
-    end
+    self.CupIcon = MagicCardTourneyVMUtils.GetRankIcon(self.Rank)
     _G.RoleInfoMgr:QueryRoleSimple(
         self.RoleID,
         function(_, RoleVM)

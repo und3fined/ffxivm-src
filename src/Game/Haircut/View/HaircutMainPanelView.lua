@@ -22,6 +22,8 @@ local HaircutMgr = nil
 local LoginAvatarMgr = nil
 local LoginUIMgr = nil
 
+local FLinearColor = _G.UE.FLinearColor
+
 --@Binder
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
@@ -56,6 +58,7 @@ local HaircutMainVM = require("Game/Haircut/VM/HaircutMainVM")
 ---@field PanelBtnNone HaircutTypeNoneItemView
 ---@field PanelColor UFCanvasPanel
 ---@field PanelFace UFCanvasPanel
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelPart_1 UFCanvasPanel
 ---@field PanelSideTab UFCanvasPanel
 ---@field PanelTopBtn UFCanvasPanel
@@ -80,6 +83,8 @@ local HaircutMainVM = require("Game/Haircut/VM/HaircutMainVM")
 ---@field AnimFaceIn UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
+---@field AnimSpacer1 UWidgetAnimation
+---@field AnimSpacer2 UWidgetAnimation
 ---@field AnimTypeIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local HaircutMainPanelView = LuaClass(UIView, true)
@@ -102,6 +107,7 @@ function HaircutMainPanelView:Ctor()
 	--self.PanelBtnNone = nil
 	--self.PanelColor = nil
 	--self.PanelFace = nil
+	--self.PanelMask3 = nil
 	--self.PanelPart_1 = nil
 	--self.PanelSideTab = nil
 	--self.PanelTopBtn = nil
@@ -126,6 +132,8 @@ function HaircutMainPanelView:Ctor()
 	--self.AnimFaceIn = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
+	--self.AnimSpacer1 = nil
+	--self.AnimSpacer2 = nil
 	--self.AnimTypeIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -187,6 +195,7 @@ function HaircutMainPanelView:OnActive()
 end
 
 function HaircutMainPanelView:OnShow()
+	self:SetBackMask()
 	self:SetComTabStyle()
 	UIUtil.SetIsVisible(self.CommonTitleNew, true)
 	self.CommonTitleNew:SetSubTitleIsVisible(true)
@@ -393,6 +402,8 @@ function HaircutMainPanelView:OnRegisterBinder()
 
 		{ "bParamNone", UIBinderSetIsVisible.New(self, self.PanelBtnNone.ImgFocus) },
 
+		{ "bExpanded", UIBinderValueChangedCallback.New(self, nil, self.OnExpandedChange) },
+
 	}
 
 	self:RegisterBinders(self.ViewModel, Binders)
@@ -469,6 +480,14 @@ function HaircutMainPanelView:UpdateSubMenuTable(Index)
 		self.ColorTableView:SetSelectedIndex(self.ViewModel.ColorTableIndex)
 		self.ColorTableView:ScrollIndexIntoView(self.ViewModel.ColorTableIndex)
 	end
+
+	self:SetNoneTextColor()
+	if self.ViewModel.SubType == LoginAvatarMgr.CustomizeSubType.LipColor or
+		self.ViewModel.SubType == LoginAvatarMgr.CustomizeSubType.FaceDecalColor then
+		self:OnClickedTypeSwitchParam(not self.ViewModel.bLightColor)
+	elseif self.ViewModel.bShowSwitch then
+		self:OnClickedTypeSwitchParam(not self.ViewModel.bOperateSub)
+	end
 end
 -- 图片列表所选变化
 function HaircutMainPanelView:OnFaceTableSelectChange(Index, ItemData, ItemView)
@@ -482,6 +501,7 @@ end
 -- 色号所选列表发生变化
 function HaircutMainPanelView:OnColorTableSelectChange(Index, ItemData, ItemView)
 	self.ViewModel:UpdateColorTableSelected(Index)
+	self:SetNoneTextColor()
 end
 
 -- 色板展开
@@ -510,6 +530,7 @@ end
 function HaircutMainPanelView:OnClickedBtnNone()
 	self.ColorTableView:CancelSelected()
 	self.ViewModel:SetColorTypeNone()
+	self:SetNoneTextColor()
 end
 
 -- 类型列表所选变化
@@ -562,6 +583,7 @@ function HaircutMainPanelView:OnClickRefresh()
 	self:ResetTieUp()
 	LoginAvatarMgr:SetRefreshHistory()
 	LoginAvatarMgr:SetCurAvatarFace(self.ViewModel.DefaultCustomData)
+	self.ViewModel:ResetHair()
 	self:RefreshUIState()
 end
 -- 撤销
@@ -632,7 +654,7 @@ function HaircutMainPanelView:RefreshUIState()
 		return
 	end
 	--
-	if (self.ViewModel.bOperateSub == false or self.ViewModel.bShowWordPanel) and self.ViewModel.bShowSwitch == false then
+	if (self.ViewModel.bOperateSub ~= true or self.ViewModel.bShowWordPanel) and self.ViewModel.bShowSwitch == false then
 		self:UpdateSubMenuTable(self.ViewModel.PreSelectSubIndex)
 	elseif self.ViewModel.bShowPanelColor then
 		self:OnClickedTypeSwitchParam(not self.ViewModel.bOperateSub)
@@ -643,6 +665,7 @@ function HaircutMainPanelView:RefreshUIState()
 		self:OnClickedTypeSwitch(false)
 	end
 	self.ViewModel:UpdateExpandedAction()
+	self:SetNoneTextColor()
 end
 
 -- 色板大小调整
@@ -725,7 +748,7 @@ function HaircutMainPanelView:OnClickedApply()
         end
     end
 	local Params = {}
-	if self.ViewModel.bUseUnlock then
+	if self.ViewModel:IsUseLockHair() then
 		-- 未拥有发型保存时提示
 		local HairLockID = self.ViewModel:GetUnlockHair()
 		if HairLockID ~= nil then
@@ -740,7 +763,6 @@ function HaircutMainPanelView:OnClickedApply()
 				SureCallback = Callback1,
 			}
 		end
-		
 	elseif CurData ~= nil and DefaultData ~= nil and table.compare_table(CurData, DefaultData) == false then
 		-- 修改后保存
 		local Callback1 = function()
@@ -870,5 +892,43 @@ function HaircutMainPanelView:SetComTabStyle()
 	local TableStyle = bDarkMap and 0 or 1
 	self.CommTabs1:SetTabStyle(TableStyle)
 	self.CommTabs2:SetTabStyle(TableStyle)
+end
+
+function HaircutMainPanelView:SetBackMask()
+	local bDarkMap = _G.LoginMapMgr:IsHaircutDefaultMap()
+	UIUtil.SetIsVisible(self.PanelMask3, bDarkMap)
+end
+
+function HaircutMainPanelView:OnExpandedChange()
+	local SceneMask = _G.LoginUIMgr.CommonSceneMaskBkg_UIBP
+	if self.ViewModel.bExpanded then
+		self:PlayAnimation(self.AnimSpacer1)
+		if SceneMask ~= nil and SceneMask:IsValid() then
+			SceneMask:PlayAnimation(SceneMask.AnimSpacer1)
+		end
+	else
+		self:PlayAnimation(self.AnimSpacer2)
+		if SceneMask ~= nil and SceneMask:IsValid() then
+			SceneMask:PlayAnimation(SceneMask.AnimSpacer2)
+		end
+	end
+end
+
+-- 面板无的颜色刷新
+function HaircutMainPanelView:SetNoneTextColor()
+	if self.ViewModel.bShowBtnNone == false then return end
+	local HexColor = "#d5d5d5"
+	local OutlineColor = "2121217F"
+	if self.ViewModel.bParamNone == false then
+		local bDarkMap = _G.LoginMapMgr:IsHaircutDefaultMap()
+		if bDarkMap then
+			HexColor = "#828282"
+		end
+	end
+	local LinearColor = FLinearColor.FromHex(HexColor)
+
+	self.PanelBtnNone.TextContent:SetColorAndOpacity(LinearColor)
+
+	UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.PanelBtnNone.TextContent, OutlineColor)
 end
 return HaircutMainPanelView

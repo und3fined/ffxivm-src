@@ -33,6 +33,14 @@ local VfxSoundCfg = require("TableCfg/VfxSoundCfg")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
+local FoodsCfg = require("TableCfg/FoodsCfg")
+local ProfUtil = require("Game/Profession/ProfUtil")
+local LevelExpCfg = require("TableCfg/LevelExpCfg")
+local MsgBoxUtil = require("Utils/MsgBoxUtil")
+local ItemCfg = require("TableCfg/ItemCfg")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
+local EObjCfg = require("TableCfg/EobjCfg")
+local CarryInteractiveLimitCfg = require("TableCfg/CarryInteractiveLimitCfg")
 
 local FLOG_ERROR = LogMgr.Error
 
@@ -45,11 +53,12 @@ InteractivePhrase = InteractivePhrase or
     Second = 2, --二级交互
 }
 
+
 --暂时没用，先放着
 InteractiveMgr.CurPhrase = InteractivePhrase.None
 
 function InteractiveMgr:OnInit()
-    self.EnablePrintNormalLog = false
+    self.EnablePrintNormalLog = true
     self.EnablePrintCheckLog = false
     self.InteractorParamsList = {}
     self.CurrentFunctionViewID = 0
@@ -108,7 +117,7 @@ function InteractiveMgr:OnInit()
     self.QueryPWorldBranchInterval = 30
     self.CurrentCrystalEntityID = 0
     self.CurInteractionEntityID = 0
-    self.CurSingInteractionID = 0
+    self.CurInteractionIDWithServer = 0
     self.bIsSinging = false
 
     self.bSendInteractionReqSuccess = false
@@ -133,11 +142,25 @@ function InteractiveMgr:OnInit()
     self.HideOtherUITypeBySing = ""
 
     self.DuelInteractiveID = 501208
+    self.InviteRideID = 501210
+    self.ApplyRideID = 501211
     self.EnableDuelMapID = 13026
+    self.TransToPersonalHouseID = 500200
+    self.TransToArmyHouseID = 500201
 
     self.TimeToStopMajorMove = 0.5
 
     self.MountRideNpcIDList = { 2006110 }
+
+    self.bHideEntranceByNpcClick = false
+
+    self.bIsMountCancelCallHideEntrance = false
+
+    self.RegisterHandleKeyList = {}
+
+    self.IsTransAreaTrigger = false
+
+    self.AllCarryCfgs = CarryInteractiveLimitCfg:FindAllCfg()
 end
 
 function InteractiveMgr:OnBegin()
@@ -167,6 +190,8 @@ function InteractiveMgr:OnShutdown()
 
     self:SetEnablePrintNormalLog(false)
     self:SetEnablePrintCheckLog(false)
+    
+    self.IsTransAreaTrigger = false
 end
 
 function InteractiveMgr:OnRegisterNetMsg()
@@ -184,6 +209,7 @@ function InteractiveMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.LeaveInteractionRange, self.OnGameEventLeaveInteractionRange)
     -- self:RegisterGameEvent(EventID.MajorCreate, self.OnGameEventMajorCreate)
     self:RegisterGameEvent(EventID.PWorldExit, self.OnGameEventPWorldExit)
+    self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldMapExit)
     self:RegisterGameEvent(EventID.HideUI, self.OnGameEventHideUI)
     self:RegisterGameEvent(EventID.WorldPreLoad, self.OnEventWorldPreLoad)
     self:RegisterGameEvent(EventID.WorldPostLoad, self.OnGameEventWorldPostLoad)
@@ -224,6 +250,10 @@ function InteractiveMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MajorDead, self.OnGameEventMajorDead)
     self:RegisterGameEvent(EventID.OtherCharacterDead, self.OnGameEventCharacterDead)
     self:RegisterGameEvent(EventID.EndPlaySequence, self.OnEndPlaySequence)
+
+    --手柄
+    self:RegisterGameEvent(EventID.InputActionTypeChange, self.OnInputActionTypeChange)
+    self:RegisterGameEvent(EventID.GamepadDPadSwitchInteractive, self.SwitchInteractiveTarget)
 end
 
 -- --先沿用之前的，以后再优化调整
@@ -361,11 +391,11 @@ end
 
 function InteractiveMgr:ClientSendInteractionStartReq(InteractionID)
     --FLOG_INFO("InteractiveMgr:ClientSendInteractionStartReq, InteractionID:%d", InteractionID)
-    self.CurSingInteractionID = InteractionID
+    self:SetInteractionIDWithServer(InteractionID)
     self.bSendInteractionReqSuccess = false
     local function CheckNextInteractive()
         if not self.bSendInteractionReqSuccess then
-            self.CurSingInteractionID = 0
+            self:SetInteractionIDWithServer(0)
             self:StartTickTimer()
         end
     end
@@ -395,19 +425,19 @@ function InteractiveMgr:OnInteractionStartRsp(MsgBody)
     -- FLOG_INFO("InteractiveMgr:OnInteractionStartRsp, ObjID:%d, InteractionID:%d",
     --  self.CurInteractionEntityID, InteractionID)
 
-     if self.CurSingInteractionID == InteractionID then
+     if self.CurInteractionIDWithServer == InteractionID then
         self.bSendInteractionReqSuccess = true
         if nil ~= self.SendInteractionStartReqTimer then
             self:UnRegisterTimer(self.SendInteractionStartReqTimer)
         end
         self:StartTickTimer()
     end
-    self.CurSingInteractionID = InteractionID
+    self:SetInteractionIDWithServer(InteractionID)
 end
 
-function InteractiveMgr:SetCurrentSingInteractionId(InteractionID)
-    --FLOG_INFO("InteractiveMgr:SetCurrentSingInteractionId, InteractionID:%d", InteractionID)
-    self.CurSingInteractionID = InteractionID
+function InteractiveMgr:SetInteractionIDWithServer(InteractionID)
+    --FLOG_INFO("InteractiveMgr:SetInteractionIDWithServer, InteractionID:%d", InteractionID)
+    self.CurInteractionIDWithServer = InteractionID
 end
 
 function InteractiveMgr:SendInteractiveBreakReq()
@@ -422,18 +452,18 @@ end
 
 function InteractiveMgr:OnInteractionBreakRsp(MsgBody)
     FLOG_INFO("InteractiveMgr:OnInteractionBreakRsp, MsgBody:%s", tostring(MsgBody))
-    self.CurSingInteractionID = 0
+    self:SetInteractionIDWithServer(0)
 end
 
 function InteractiveMgr:SendInteractiveEndReq()
-    --FLOG_INFO("InteractiveMgr:SendInteractiveEndReq, InteractionID:%d",self.CurSingInteractionID)
-    if self.CurSingInteractionID ~= 0 then
+    --FLOG_INFO("InteractiveMgr:SendInteractiveEndReq, InteractionID:%d",self.CurInteractionIDWithServer)
+    if self.CurInteractionIDWithServer ~= 0 then
         local MsgID = ProtoCS.CS_CMD.CS_CMD_INTERAVIVE
         local SubMsgID = ProtoCS.CsInteractionCMD.CsInteractionCMDEnd
 
         local MsgBody = {}
         MsgBody.Cmd = SubMsgID
-        MsgBody.End = {InteractiveID = self.CurSingInteractionID}
+        MsgBody.End = {InteractiveID = self.CurInteractionIDWithServer}
 
         GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
     end
@@ -444,8 +474,8 @@ function InteractiveMgr:OnInteractionEndRsp(MsgBody)
     if nil ~= InteractionEndRsp then
         local InteractionID = InteractionEndRsp.InteractiveID
         --FLOG_INFO("InteractiveMgr:OnInteractionEndRsp, InteractionID:%d", InteractionID)
-        if self.CurSingInteractionID == InteractionID then
-            self.CurSingInteractionID = 0
+        if self.CurInteractionIDWithServer == InteractionID then
+            self:SetInteractionIDWithServer(0)
         end
     else
         if MsgBody.ErrorCode then
@@ -456,7 +486,7 @@ end
 
 function InteractiveMgr:SendInteractiveSpellChgReq(SingStateID)
     --FLOG_INFO("InteractiveMgr:SendInteractiveSpellChgReq, SpellId:%d", SingStateID)
-    if self.CurSingInteractionID ~= 0 then
+    if self.CurInteractionIDWithServer ~= 0 then
         local MsgID = ProtoCS.CS_CMD.CS_CMD_INTERAVIVE
         local SubMsgID = ProtoCS.CsInteractionCMD.CsInteractionCMDSpellChg
 
@@ -478,7 +508,7 @@ function InteractiveMgr:SetMajorIsinging(IsSinging)
         if self.HideOtherUITypeBySing == "1" then
             if IsSinging then
                 if IsMainPanelShowed then
-                    self:PrintInfo("InteractiveMgr:SetMajorIsinging, HideMainPanel")
+                    --self:PrintInfo("InteractiveMgr:SetMajorIsinging, HideMainPanel")
                     --_G.BusinessUIMgr:HideMainPanel(_G.UIViewID.MainPanel, true)
 
                     -- local MainPanleView = _G.UIViewMgr:FindView(_G.UIViewID.MainPanel)
@@ -583,6 +613,7 @@ function InteractiveMgr:OnEventUseItem(_)
 end
 
 function InteractiveMgr:HideMainPanel()
+    --_G.FLOG_INFO("InteractiveMgr:HideMainPanel, %s", debug.traceback())
     self:TriggerObjInteraction(0)
     _G.UIViewMgr:HideView(UIViewID.InteractiveMainPanel)
     self:StopTickTimer()
@@ -871,7 +902,7 @@ function InteractiveMgr:OnGameEventEnterInteractionRange(Params)
 
     do
         local _ <close> = CommonUtil.MakeProfileTag("InteractiveMgr.OnGameEventEnterInteractionRange.CanInterative")
-        if IUnit and IUnit:CanInterative(true) then
+        if IUnit and IUnit:CanInterative(true, false) then
             table.insert(self.InteractorParamsList, IUnit)
             self:ChangeSelectPriority()
 
@@ -962,7 +993,7 @@ end
 
 function InteractiveMgr:OnUpdateQuest()
     self.ProcessorUseItem:ClearAllException()
-    if self:UpdateInteractiveList(true) then
+    if self:UpdateInteractiveList(true, true) then
         if not InteractiveMainPanelVM.FunctionVisible and
          not InteractiveMainPanelVM.EntranceVisible and
          not self:IsMajorPlayingDialogue() then
@@ -998,6 +1029,11 @@ function InteractiveMgr:UpdateInteractorList()
     --FLOG_INFO("InteractiveMgr:UpdateInteractorList, InteractorNum:%d", InteractorNum)
     if InteractorNum > 0 then
         if not InteractiveMainPanelVM:GetFunctionVisible() then
+            local IsPanelVisible = _G.UIViewMgr:IsViewVisible(UIViewID.InteractiveMainPanel)
+            --self:PrintInfo("InteractiveMgr:UpdateInteractorList, IsPanelVisible:%s", tostring(IsPanelVisible))
+            if not IsPanelVisible then
+                _G.UIViewMgr:ShowView(UIViewID.InteractiveMainPanel)
+            end
             InteractiveMainPanelVM:SetEntrancesVisible(true)
         end
     end
@@ -1030,7 +1066,7 @@ function InteractiveMgr:UpdateInteractorList()
         bNeedRefresh = true
         self.LastUseItemEntrance = self.EntranceUseItem
     end
-
+    --_G.FLOG_INFO("InteractiveMgr:UpdateInteractorList, bNeedRefresh:%s", tostring(bNeedRefresh))
     if bNeedRefresh then
         self:SetEntranceItems()
     end
@@ -1068,6 +1104,10 @@ function InteractiveMgr:IsTakingPhoto()
     return IsPhotoMainMainPanelShowed
 end
 
+function InteractiveMgr:SetMountCancelCallHideEntrance(IsHide)
+    self.bIsMountCancelCallHideEntrance = IsHide
+end
+
 function InteractiveMgr:IsNeedHideEntrances()
     local CurEntityID = nil ~= self.LastInteractiveEntance and self.LastInteractiveEntance.EntityID or 0
     -- _G.FLOG_INFO("InteractiveMgr:IsNeedHideEntrances, IsGathering:%s, bMainPanelClosedByOtherUI:%s, IsDoingEmotion:%s, IsMajorCancelMounting:%s, IsInFishState:%s, IsInMiniGame:%s, IsPlayingSequence:%s, IsTreasureHuntBoxOpened:%s, IsPendingDisableMerchant:%s, MountHide:%s",
@@ -1089,6 +1129,7 @@ function InteractiveMgr:IsNeedHideEntrances()
         self.IsMajorCancelMounting or
         _G.FishMgr:IsInFishState() or
         _G.StoryMgr:SequenceIsPlaying() or 
+        self.bIsSinging == true or
         --_G.TreasureHuntMgr:IsTreasureHuntBoxOpened(CurEntityID) or
         _G.MysterMerchantMgr:IsPendingDisableMerchant(CurEntityID) or
         _G.MountMgr:IsNeedHideInteractiveEntrances()
@@ -1150,6 +1191,12 @@ function InteractiveMgr:OnEventActorDestroy(Params)
                 break
             end
         end
+    end
+
+    if #self.InteractorParamsList == 0 and self.bHasSpecialSelectedTarget == false and nil == self.EntranceUseItem and (not self:GetIsTransAreaTrigger()) then
+        --self:PrintInfo("InteractiveMgr:OnEventActorDestroy, HideMainPanel")
+        self:TriggerObjInteraction(0)
+        _G.UIViewMgr:HideView(UIViewID.InteractiveMainPanel)
     end
 
     if IsNeedRefreshEntrance then 
@@ -1392,6 +1439,7 @@ function InteractiveMgr:OnPreFunctionItemClick(FunctionItem)
 		InteractiveMainPanelVM:SetEntrancesVisible(true)
         self:SetEntranceItems()
 	end
+    InteractiveMainPanelVM:UpdateItemListNum()
 end
 
 -- function InteractiveMgr:OnPostFunctionItemClick(FunctionItem, ClickRlt)
@@ -1420,6 +1468,7 @@ function InteractiveMgr:ShowEntranceUseItem(EntranceParams, bIntendedCall)
 
     if not bIntendedCall then -- 从定时器调用过来才会触发以下逻辑
         if not InteractiveMainPanelVM.FunctionVisible and not InteractiveMainPanelVM.EntranceVisible then
+            self:ShowMainPanel()
             InteractiveMainPanelVM:SetEntrancesVisible(true)
         end
     end
@@ -1435,6 +1484,7 @@ end
 
 function InteractiveMgr:HideEntrance()
     InteractiveMainPanelVM:SetEntrancesVisible(false)
+    InteractiveMainPanelVM:UpdateItemListNum()
 end
 
 function InteractiveMgr:SetExeptionUseItem(ItemID, EntityID)
@@ -1443,7 +1493,7 @@ end
 
 ---------------------------------------- private ----------------------------------------
 ---
-function InteractiveMgr:UpdateInteractiveList(EnableCheckLog)
+function InteractiveMgr:UpdateInteractiveList(EnableCheckLog, IsFromQuestUpdate)
 
     local IndxListToRemove = {}
     local bNeedRefresh = false
@@ -1452,7 +1502,7 @@ function InteractiveMgr:UpdateInteractiveList(EnableCheckLog)
     --Show=>Hide
     for i = 1, #self.InteractorParamsList do
         local IUnit = self.InteractorParamsList[i]
-        if not IUnit:CanInterative(EnableCheckLog) then
+        if IUnit and not IUnit:CanInterative(EnableCheckLog, IsFromQuestUpdate) then
             self:PrintInfo("InteractiveMgr UpdateInteractorList Show=>Hide Entrance:" .. IUnit.EntityID)
             table.insert(self.InteractorParamsListToShow, IUnit)
             table.insert(IndxListToRemove, 1, i)
@@ -1472,7 +1522,7 @@ function InteractiveMgr:UpdateInteractiveList(EnableCheckLog)
     -- IndxListToRemove = {}
     for i = #self.InteractorParamsListToShow, 1, -1 do
         local IUnit = self.InteractorParamsListToShow[i]
-        if IUnit:CanInterative(EnableCheckLog) then
+        if IUnit:CanInterative(EnableCheckLog, IsFromQuestUpdate) then
             self:PrintInfo("InteractiveMgr UpdateInteractorList Hide=>Show Entrance:" .. IUnit.EntityID)
             table.insert(self.InteractorParamsList, IUnit)
             self:ChangeSelectPriority()
@@ -1481,6 +1531,12 @@ function InteractiveMgr:UpdateInteractiveList(EnableCheckLog)
 
             bNeedRefresh = true
         end
+    end
+
+    if #self.InteractorParamsList == 0 and self.bHasSpecialSelectedTarget == false and nil == self.EntranceUseItem and (not self:GetIsTransAreaTrigger()) then
+        --self:PrintInfo("InteractiveMgr UpdateInteractorList, HideMainPanel")
+        self:TriggerObjInteraction(0)
+        _G.UIViewMgr:HideView(UIViewID.InteractiveMainPanel)
     end
 
     -- for i = #IndxListToRemove, 1, -1 do
@@ -1597,6 +1653,39 @@ end
 
 function InteractiveMgr:SetEntranceItems()
     local _ <close> = CommonUtil.MakeProfileTag("InteractiveMgr.SetEntranceItems.SortInteractorParamsList")
+
+    local HasEntranceUseItem = nil ~= self.EntranceUseItem
+    for index = 1, #self.InteractorParamsList do
+        local IUnit = self.InteractorParamsList[index]
+        if HasEntranceUseItem then
+            if IUnit.EntityID == self.EntranceUseItem.EntityID then
+                IUnit.InteractivePriority = -1
+                IUnit.IsValidItem = false
+            end
+        else
+            if IUnit.InteractivePriority == -1 then
+                IUnit.InteractivePriority = 0
+                IUnit.IsValidItem = true
+            end
+        end
+    end
+
+    -- if HasEntranceUseItem then
+    --     local IndxListToRemove = {}
+    --     for i = 1, #self.InteractorParamsList do
+    --         local IUnit = self.InteractorParamsList[i]
+    --         if IUnit.EntityID == self.EntranceUseItem.EntityID then
+    --             table.insert(IndxListToRemove, 1, i)
+    --         end
+    --     end
+
+    --     if #IndxListToRemove > 0 then
+    --         for i = 1, #IndxListToRemove do
+    --             table.remove(self.InteractorParamsList, IndxListToRemove[i])
+    --         end
+    --     end
+    -- end
+
     self:SortInteractorParamsList()
 
     -- if #self.InteractorParamsList > 0 and self.LastInteractiveObjEntityID == self.InteractorParamsList[1].EntityID then
@@ -1749,6 +1838,7 @@ function InteractiveMgr:OnManualSelectTarget(Params)
         -- 玩家处在战斗状态
         -- 能工巧匠各个职业制作状态、钓鱼状态、采集状态、决斗状态
         -- 某些副本中
+        -- 对话中
         
         if ActorType == _G.UE.EActorType.Companion then
             local MajorEntityID = MajorUtil.GetMajorEntityID()
@@ -1772,6 +1862,10 @@ function InteractiveMgr:OnManualSelectTarget(Params)
             -- if _G.PWorldMgr:CurrIsInDungeon() then
             --     return
             -- end
+        end
+
+        if self:IsMajorPlayingDialogue() then
+            return
         end
     end
 
@@ -1857,6 +1951,57 @@ function InteractiveMgr:OnUnSelectTarget(Params)
     self.LastSelectedTargetEntityID = 0
     self.bHasSpecialSelectedTarget = false
     self:ResetNearByPlayerCheck()
+end
+
+function InteractiveMgr:SkipRideInteractive(EntityID, InteractiveID)
+	--local RoleID = PersonInfoVM.RoleID
+    local RoleID = ActorUtil.GetRoleIDByEntityID(EntityID)
+
+	if nil == RoleID then
+		return true
+	end
+
+	local Actor = ActorUtil.GetActorByRoleID(RoleID)
+	if nil == Actor then -- 玩家不在视野范围内
+		return true
+	end
+
+	-- 玩家和主角在同一个队伍里面
+	if not _G.TeamMgr:IsTeamMemberByRoleID(RoleID) then
+		return true
+	end
+
+	local Major = MajorUtil.GetMajor()
+	if nil == Major then
+		return true
+	end
+
+	local RideComponent = Actor:GetRideComponent()
+	if nil == RideComponent then
+		return true
+	end
+
+	local MajorRideCom = Major:GetRideComponent()
+    if nil == MajorRideCom then
+		return true
+	end
+
+	if InteractiveID == self.InviteRideID and
+        MajorRideCom:IsInMultiplayerRide() and
+        not MajorRideCom:IsInOtherRide() and
+        not RideComponent:IsInRide() then 
+        -- 主角在多人骑乘且非次乘状态，玩家不在骑乘状态（邀请骑乘）
+		return false
+
+	elseif InteractiveID == self.ApplyRideID and
+        not MajorRideCom:IsInRide() and
+        RideComponent:IsInMultiplayerRide() and
+        not RideComponent:IsInOtherRide() then
+        -- 主角不在骑乘状态，玩家在多人骑乘且非次乘状态（申请骑乘）
+		return false
+	end
+
+	return true
 end
 
 function InteractiveMgr:OnTeamMemberBeSelected(Params)
@@ -1977,6 +2122,10 @@ function InteractiveMgr:IsSpecialSelectInteractiveTarget(EntityID)
 end
 
 function InteractiveMgr:OnFightSkillPanelShowed(Param)
+    --对话中不修改functionlist
+    if self:IsMajorPlayingDialogue() or self.bLockTimer then
+        return
+    end
     if nil ~= Param then
         if Param == self.bPanelShowed then
             return
@@ -2069,6 +2218,11 @@ function InteractiveMgr:ShowSelectedTargetFunctionPanel(EntityID)
                     if CurMapResID ~= self.EnableDuelMapID then
                         IsNeedInteractFunctionUnit = false
                     end
+                elseif IdList[i] == self.InviteRideID or IdList[i] == self.ApplyRideID then
+                    local IsSkip = self:SkipRideInteractive(EntityID, IdList[i])
+                    if IsSkip then
+                        IsNeedInteractFunctionUnit = false
+                    end
                 end
                 if IsNeedInteractFunctionUnit then
                     local InteractFunctionUnit = FunctionItemFactory:CreateInteractiveDescFunc({FuncValue = IdList[i], EntityID = EntityID, ResID = ResID})
@@ -2089,12 +2243,14 @@ end
 
 function InteractiveMgr:IsTargetOwnedByMajor(EntityID)
     local AttributeComponent = ActorUtil.GetActorAttributeComponent(EntityID)
-	local OwnerEntityID = AttributeComponent.Owner
-    local MajorEntityID = MajorUtil.GetMajorEntityID()
-	if OwnerEntityID and OwnerEntityID == MajorEntityID then
-		return true
-	end
-
+    if nil ~= AttributeComponent then
+        local OwnerEntityID = AttributeComponent.Owner
+        local MajorEntityID = MajorUtil.GetMajorEntityID()
+        if OwnerEntityID and OwnerEntityID == MajorEntityID then
+            return true
+        end
+    end
+	
     return false
 end
 
@@ -2185,7 +2341,9 @@ function InteractiveMgr:FindWorldViewObj()
                 local IsBed = PlayerAnimInst:FindBed(MajorEntityID)
                 --IsBed = false
                 if IsBed ~= true then
-                    self:CreateWorldViewInteractionEntrance()
+                    if _G.EmotionMgr:IsActivatedID(_G.EmotionMgr.SitChairID) then   --是否解锁坐下功能
+                        self:CreateWorldViewInteractionEntrance()
+                    end
                 else
                     self:PrintInfo("InteractiveMgr:FindWorldViewObj, it is a bed!")
                 end
@@ -2203,6 +2361,11 @@ function InteractiveMgr:FindWorldViewObj()
 end
 
 function InteractiveMgr:EnableFindWorldViewObj()
+    -- _G.FLOG_INFO("InteractiveMgr:EnableFindWorldViewObj, bHasSpecialSelectedTarget:%s, IsFunctionVisible:%s, bEnableShowMainPanel:%s, bIsMountCancelCallHideEntrance:%s",
+    --     tostring(self.bHasSpecialSelectedTarget),
+    --     tostring(InteractiveMainPanelVM:GetFunctionVisible()),
+    --     tostring(self.bEnableShowMainPanel),
+    --     tostring(self.bIsMountCancelCallHideEntrance))
     if self.bHasSpecialSelectedTarget or self.EntranceUseItem ~= nil or
         InteractiveMainPanelVM:GetFunctionVisible() or not self.bEnableShowMainPanel then
         return false
@@ -2211,6 +2374,10 @@ function InteractiveMgr:EnableFindWorldViewObj()
     local Major = MajorUtil.GetMajor()
     if Major and Major:GetRideComponent():IsInRide() then
         self:ResetWorldViewObjEntranceItem()
+        return false
+    end
+
+    if self.bHideEntranceByNpcClick then
         return false
     end
 
@@ -2314,7 +2481,7 @@ function InteractiveMgr:ShowInteractiveEntrance()
 end
 
 function InteractiveMgr:SetMainPanelIsVisible(View, IsVisible)
-    --_G.FLOG_WARNING("InteractiveMgr:SetMainPanelIsVisible, %s", debug.traceback())
+    --_G.FLOG_WARNING("InteractiveMgr:SetMainPanelIsVisible, IsVisible=%s, %s", tostring(IsVisible), debug.traceback())
     self:PrintInfo("InteractiveMgr:SetMainPanelIsVisible, IsVisible=%s", tostring(IsVisible))
     UIUtil.SetIsVisible(View, IsVisible)
 end
@@ -2362,16 +2529,28 @@ function InteractiveMgr:ResetWorldViewObjEntranceItem()
 end
 
 function InteractiveMgr:TriggerObjInteraction(EntityID)
+    local ResID = ActorUtil.GetActorResID(EntityID)
+    local Cfg = EObjCfg:FindCfgByKey(ResID)
+    local IsHousingOrnamentEobj = false
+    if Cfg and Cfg.EObjType == ProtoRes.ClientEObjType.ClientEObjTypeHousingOrnament then
+        IsHousingOrnamentEobj = true
+    end
     if self.LastInteractiveObjEntityID ~= EntityID then
         if self.LastInteractiveObjEntityID ~= 0 then
             -- _G.FLOG_INFO("InteractiveMgr:TriggerObjInteraction, DisactiveEntityID=%d, ActorName=%s",
             --     self.LastInteractiveObjEntityID, ActorUtil.GetActorName(self.LastInteractiveObjEntityID))
-            _G.EventMgr:SendEvent(_G.EventID.TriggerObjInteractive, { IsActive = false, EntityID = self.LastInteractiveObjEntityID })
+            if not IsHousingOrnamentEobj then
+                -- 如果是房屋摆件，则不发送事件
+                _G.EventMgr:SendEvent(_G.EventID.TriggerObjInteractive, { IsActive = false, EntityID = self.LastInteractiveObjEntityID })
+            end
         end
         if EntityID ~= 0 then
             -- _G.FLOG_INFO("InteractiveMgr:TriggerObjInteraction, ActiveEntityID=%d, ActorName=%s",
             --     EntityID, ActorUtil.GetActorName(EntityID))
-            _G.EventMgr:SendEvent(_G.EventID.TriggerObjInteractive, { IsActive = true, EntityID = EntityID })
+            if not IsHousingOrnamentEobj then
+                -- 如果是房屋摆件，则不发送事件
+                _G.EventMgr:SendEvent(_G.EventID.TriggerObjInteractive, { IsActive = true, EntityID = EntityID })
+            end
             self:ShowTriggerEffect(EntityID)
         end
         self.LastInteractiveObjEntityID = EntityID
@@ -2428,22 +2607,45 @@ end
 
 function InteractiveMgr:OnGameEventFateUpdate(Params)
     local Fate = Params
-    if (Fate == nil or Fate.NPCEntityID == nil) then
+    if (Fate == nil) then
+        return
+    end
+    if (Fate == nil or Fate.NPCEntityID == nil or Fate.MultiNpcEntityIDList == nil) then
         return
     end
 
-    if Fate.State > ProtoCS.FateState.FateState_WaitNPCTrigger then
+    if (Fate.State <= ProtoCS.FateState.FateState_WaitNPCTrigger) then
+        -- 未开启的就不检测了
+        return
+    end
+
+    if (Fate.NPCEntityID ~= nil and Fate.NPCEntityID > 0) then
         local IUnit = self.CurInteractEntrance
         if IUnit ~= nil and IUnit.EntityID == Fate.NPCEntityID and IUnit.TargetType == _G.UE.EActorType.Npc then
             IUnit:UpdateListByFateStart()
         end
-
+    
         for _, IUnit in ipairs(self.InteractorParamsList) do
             if (IUnit.EntityID == Fate.NPCEntityID  and IUnit.TargetType == _G.UE.EActorType.Npc) then
                 IUnit:UpdateListByFateStart()
             end
         end
+    elseif (Fate.MultiNpcEntityIDList ~= nil) then
+        for _, EntityID in pairs(Fate.MultiNpcEntityIDList) do
+            -- body
+            local IUnit = self.CurInteractEntrance
+            if IUnit ~= nil and IUnit.EntityID == EntityID and IUnit.TargetType == _G.UE.EActorType.Npc then
+                IUnit:UpdateListByFateStart()
+            end
+        
+            for _, IUnit in ipairs(self.InteractorParamsList) do
+                if (IUnit.EntityID == EntityID and IUnit.TargetType == _G.UE.EActorType.Npc) then
+                    IUnit:UpdateListByFateStart()
+                end
+            end
+        end
     end
+
 end
 
 function InteractiveMgr:OnPWorldLineQueryResult(Params)
@@ -2603,6 +2805,9 @@ function InteractiveMgr:OnRecievePlayVfx(MsgBody)
     if Msg.Type and Msg.Type == 1 then
         self:PlayItemUsedPlayATL(VfxID, RoleID)
         return
+    elseif Msg.Type and Msg.Type == 2 then
+        self:PlayFoodATL(VfxID, RoleID)
+        return
     end
     local bTargetSelf = Msg.TargetSelf
     if nil == bTargetSelf then
@@ -2648,6 +2853,54 @@ function InteractiveMgr:PlayItemUsedPlayATL(VfxID, RoleID)
         end
     end
 
+end
+
+function InteractiveMgr:PlayFoodATL(ItemID, RoleID)
+    local EntityID = ActorUtil.GetEntityIDByRoleID(RoleID)
+    if EntityID then
+        local IsMajor = MajorUtil.IsMajor(EntityID)
+        if not IsMajor then
+            -- 视野不显示的玩家无需处理
+            local Actor = ActorUtil.GetActorByRoleID(RoleID)
+            if Actor~= nil then
+                local VisionLoadMeshState = Actor:GetVisionLoadMeshState()
+                if VisionLoadMeshState ~= _G.UE.EVisionLoadMeshState.E_LOADED_SHOW then
+                    return
+                end
+            end
+        end
+        local FoodCfg = FoodsCfg:FindCfgByKey(ItemID)
+        if FoodCfg == nil then
+            return
+        end
+        local VfxID = FoodCfg.ActionTimelineID
+        local ModelID = FoodCfg.ModelID
+        if VfxID == nil or VfxID == 0 or ModelID == nil or #ModelID == 0 then
+            return
+        end
+        local ActionCfg = ActiontimelinePathCfg:FindCfgByKey(VfxID)
+        if ActionCfg and ActionCfg.Filename then
+            local AnimPathStr = _G.AnimMgr:GetActionTimeLinePath(ActionCfg.Filename)
+            if AnimPathStr == nil or #AnimPathStr == 0 then
+                FLOG_INFO("InteractiveMgr:PlayFoodATL, AnimPathStr is nil ATL:%s", ActionCfg.Filename)
+                return
+            end
+            local Actor = ActorUtil.GetActorByRoleID(RoleID)
+            if Actor == nil then
+                return
+            end
+            -- 挂载systemweapon
+            Actor:SetFoodModelID(ModelID)
+            local ActionTimelines = {
+                [1] = {AnimPath = AnimPathStr, Callback = CommonUtil.GetDelegatePair(function()
+                    ModelID = ""
+                    Actor:SetFoodModelID(ModelID)
+                    _G.EventMgr:SendEvent(_G.EventID.PlayItemUsedPlayATLEnd,EntityID,VfxID)
+                    end,true)},
+            }
+           _G.AnimMgr:PlayAnimationMulti(EntityID, ActionTimelines)
+        end
+    end
 end
 
 --- 播放物品使用后的Vfx
@@ -2700,7 +2953,9 @@ function InteractiveMgr:PlayItemUsedVfx(VfxID, RoleID, bTargetSelf)
 
             local SoundCfg = VfxSoundCfg:FindCfgByKey(VfxID)
             local function PlaySoundAndVfx()
-                self:PlaySound(SoundCfg, Actor)
+                local Location = Actor:FGetActorLocation()
+                local Rotation = Actor:FGetActorRotation()
+                self:PlaySound(SoundCfg, Location, Rotation)
                 EffectUtil.PlayVfx(VfxParameter)
             end
             if SoundCfg ~= nil and SoundCfg.DelayTime ~= nil and SoundCfg.DelayTime > 0 then
@@ -2721,11 +2976,27 @@ function InteractiveMgr:PlayItemUsedVfx(VfxID, RoleID, bTargetSelf)
     end
 end
 
-function InteractiveMgr:PlaySound(SoundCfg, Actor)
+--- 烟花音效
+function InteractiveMgr:PlaySound(SoundCfg, Location, Rotation)
     if SoundCfg ~= nil and SoundCfg.FirworkSound ~= nil then
-        local Location = Actor:FGetActorLocation()
-        local Rotation = Actor:FGetActorRotation()
-        AudioUtil.LoadAndPlaySoundAtLocation(SoundCfg.FirworkSound, Location, Rotation, _G.UE.EObjectGC.NoCache)
+        if not SoundCfg.IsLoop or SoundCfg.IsLoop ~= 1 then
+            AudioUtil.LoadAndPlaySoundAtLocation(SoundCfg.FirworkSound, Location, Rotation, _G.UE.EObjectGC.Cache_LRU)
+        else
+            self.FirworkSoundTimer = self:RegisterTimer(function()
+                AudioUtil.LoadAndPlaySoundAtLocation(SoundCfg.FirworkSound, Location, Rotation, _G.UE.EObjectGC.Cache_LRU)
+            end, 1, SoundCfg.IntervalTime, SoundCfg.LoopNum)
+        end
+    end
+end
+
+function InteractiveMgr:OnGameEventPWorldMapExit()
+    self:StopFirworkTimer()
+end
+
+function InteractiveMgr:StopFirworkTimer()
+    if self.FirworkSoundTimer then
+        self:UnRegisterTimer(self.FirworkSoundTimer)
+        self.FirworkSoundTimer = nil
     end
 end
 
@@ -2734,6 +3005,7 @@ function InteractiveMgr:OnEnterDialogue()
     -- FLOG_ERROR("InteractiveMgr:OnEnterDialogue"..TraceBack)
     self.bLockTimer = true
     self:StopTickTimer()
+    self:StopFirworkTimer()
 end
 
 function InteractiveMgr:OnExitDialogue()
@@ -3105,6 +3377,222 @@ function InteractiveMgr:GetEntranceItemByEntityID(EntityID)
     end
 
     return nil
+end
+
+function InteractiveMgr:SetHousingPortalFunctionList(HousingPortalFuncs)
+    local FunctionList = {}
+
+    for _, FuncParams in ipairs(HousingPortalFuncs) do
+        local FunctionUnit = FunctionItemFactory:CreateInteractiveDescFunc(FuncParams)
+        if FunctionUnit then
+            table.insert(FunctionList, FunctionUnit)
+        end
+    end
+
+    local FunctionQuit = FunctionItemFactory:CreateFunction(LuaFuncType.QUIT_FUNC, _G.LSTR(90003), {})
+    table.insert(FunctionList, FunctionQuit)
+    self:SetFunctionList(FunctionList)
+end
+
+function InteractiveMgr:TryGetDetailMapItem(InteractiveID, ItemResID, EntityID)
+    local function ExitCurrentInteractive()
+        _G.NpcDialogMgr:EndInteraction()
+        self:ExitInteractive()
+        self:ShowOrHideMainPanel(true)
+    end
+
+    -- 是否有当前地图的道具
+    if nil == ItemResID then
+        _G.FLOG_ERROR("InteractiveMgr:TryGetDetailMapItem, ItemResID is nil, CurMapID:%d", _G.PWorldMgr:GetCurrMapResID())
+        ExitCurrentInteractive()
+        return
+    end
+
+    -- local DetailMapItem = _G.BagMgr:GetItemByResID(ItemResID)
+    -- if DetailMapItem == nil or _G.DepotVM:GetDepotItemNum(ItemResID) > 0 then
+    --     return
+    -- end
+
+    -- 是否已领取过该道具
+    local ItemName = ItemCfg:GetItemName(ItemResID)
+    local IsRecieved = _G.MountMgr:CheckIsExistItem(ItemResID)
+    if IsRecieved then
+        _G.NpcDialogMgr:PushDialog(string.format(_G.LSTR(1280020), ItemName), 8, _G.LSTR(10004), nil, ExitCurrentInteractive) --1280020("你已经领取过%s了!")
+        return
+    end
+
+    -- 是否是战斗职业
+    local MajorProfID = MajorUtil.GetMajorProfID()
+    local IsCombatProf = ProfUtil.IsCombatProf(MajorProfID)
+    if not IsCombatProf then
+        _G.NpcDialogMgr:PushDialog(_G.LSTR(1280017), 8, _G.LSTR(10004), nil, ExitCurrentInteractive) --1280017("需要战斗职业才可领取！")
+        return
+    end
+
+    -- 是否为满级战斗职业
+    local MajorLvel = MajorUtil.GetMajorLevel()
+    local MaxProfLevel = LevelExpCfg:GetMaxLevel()
+    if MajorLvel < MaxProfLevel then
+        _G.NpcDialogMgr:PushDialog(string.format(_G.LSTR(1280018), tostring(MaxProfLevel)), 8, _G.LSTR(10004), nil, ExitCurrentInteractive) --1280018("需要战斗职业%s级后才可领取！")
+        return
+    end
+
+    -- 当前职业是否是已经登记过的职业
+    local IsRecievedProf = _G.MountMgr:CheckIsExistProf(MajorProfID)
+    if IsRecievedProf then
+        local RecievedProfList = _G.MountMgr:GetProfIDList()
+        if #RecievedProfList > 0 then
+            local ProfNameList = {}
+            for _, ProfID in ipairs(RecievedProfList) do
+                local ProfName = _G.EquipmentMgr:GetProfName(ProfID)
+                table.insert(ProfNameList, ProfName)
+            end
+            local ProfNames = table.concat(ProfNameList, "、")
+            _G.NpcDialogMgr:PushDialog(string.format(_G.LSTR(1280019), ProfNames), 8, _G.LSTR(10004), nil, ExitCurrentInteractive) --1280019("你已经使用过满级%s领取过了，请更换其他满级战斗职业再来领取！")
+            return
+        end
+    end
+
+    if _G.BagMgr:GetBagLeftNum() <= 0 then
+		-- 背包已满
+        _G.MsgTipsUtil.ShowTipsByID(171001)
+        ExitCurrentInteractive()
+        return
+	end
+
+    ExitCurrentInteractive()
+
+    local function SureCallBack()
+		-- 确定领取
+        self:SendInteractiveStartReq(InteractiveID, EntityID)
+	end
+
+    local MajorProfName = _G.EquipmentMgr:GetProfName(MajorProfID)
+    MsgBoxUtil.MessageBox(string.format(_G.LSTR(400010), MajorProfName, ItemName), _G.LSTR(10002), _G.LSTR(10003), SureCallBack) --400010=你确定使用满级%s领取%s？
+    
+end
+
+---手柄交互相关
+function InteractiveMgr:SwitchCurSelectEntranceItem(IsDown)
+    InteractiveMainPanelVM:SwitchCurSelectEntranceItem(IsDown)
+    _G.EventMgr:SendEvent(EventID.GamePadUpdateInteractive)
+end
+
+function InteractiveMgr:OnInputActionTypeChange(IsHandleAttached)
+    if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+    InteractiveMainPanelVM.IsHandleAttached = IsHandleAttached
+end
+
+function InteractiveMgr:RegisterHandleKeyDownData(HandleAction)
+    --已经注册过了，无需重复
+    if self.RegisterHandleKeyList[HandleAction] then
+        return
+    end
+    local HandleActionID = HandleAction
+    local InteractiveName
+    local Params1 = _G.EventMgr:GetEventParams()
+    if nil ~= SettingsHandleDefine.HandleCustomActionConfig[HandleAction] and
+        SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.InteractiveCustom
+    end
+    if nil ~= SettingsHandleDefine.HandleInputActionConfig[HandleAction] and
+       SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive
+        HandleActionID = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Index
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.Interactive
+    end
+    if nil == InteractiveName then
+        return
+    end
+    local InteractiveID = SettingsHandleDefine.HandleCusActionFunc[InteractiveName]
+    if nil == InteractiveID then
+        return
+    end
+	Params1.IntParam1 = HandleActionID
+	Params1.IntParam2 = InteractiveID
+	_G.EventMgr:SendCppEvent(EventID.RegisiterKeyDownData, Params1)
+    Params1.IntParam2 = 0
+    _G.EventMgr:SendCppEvent(EventID.RegisiterKeyUpData, Params1)
+    self.RegisterHandleKeyList[HandleAction] = 1
+end
+
+function InteractiveMgr:UnRegisterHandleKeyDownData(HandleAction)
+    if nil == self.RegisterHandleKeyList[HandleAction] then
+        return
+    end
+    local HandleActionID = HandleAction
+    local InteractiveName
+    local Params1 = _G.EventMgr:GetEventParams()
+    if nil ~= SettingsHandleDefine.HandleCustomActionConfig[HandleAction] and
+        SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.InteractiveCustom
+    end
+    if nil ~= SettingsHandleDefine.HandleInputActionConfig[HandleAction] and
+       SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive
+        HandleActionID = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Index
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.Interactive
+    end
+    if nil == InteractiveName then
+        return
+    end
+    local InteractiveID = SettingsHandleDefine.HandleCusActionFunc[InteractiveName]
+    if nil == InteractiveID then
+        return
+    end
+	Params1.IntParam1 = HandleActionID
+	Params1.IntParam2 = InteractiveID
+	_G.EventMgr:SendCppEvent(EventID.UnRegisiterKeyDownData, Params1)
+    Params1.IntParam2 = 0
+    _G.EventMgr:SendCppEvent(EventID.UnRegisiterKeyUpData, Params1)
+    self.RegisterHandleKeyList[HandleAction] = nil
+end
+
+---设置是否由房屋传送带触发交互
+---@param IsTransArea boolean 是否传送带触发交互
+function InteractiveMgr:SetIsTransAreaTrigger(IsTransArea)
+    self.IsTransAreaTrigger = IsTransArea
+end
+
+--获取是否由房屋传送带触发交互
+---@return boolean 是否房屋传送带触发交互
+function InteractiveMgr:GetIsTransAreaTrigger()
+    return self.IsTransAreaTrigger
+end
+
+-- Major是否处于搬运状态
+function InteractiveMgr:IsMajorInCarryState()
+    return CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatCarry)
+end
+
+function InteractiveMgr:IsEnableCarryInteractive(ObjType, ObjResID)
+    if nil ~= self.AllCarryCfgs and #self.AllCarryCfgs > 0 then
+        local CarryID = _G.SkillBuffMgr:GetMajorCurrentCarryID()
+        if CarryID and CarryID > 0 then
+            for _, Cfg in ipairs(self.AllCarryCfgs) do
+                if CarryID == Cfg.CarryID then
+                    for _, value in ipairs(Cfg.Obj) do
+                        if value.Type == ObjType and value.Value == ObjResID then
+                            --self:PrintInfo("InteractiveMgr:IsEnableCarryInteractive, ObjType:%d, ObjID:%d", ObjType, ObjResID)
+                            return true
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
+function InteractiveMgr:ExitCarryState()
+    local Major = MajorUtil.GetMajor()
+    if nil ~= Major then
+        Major:ExitCarryState()
+    end
 end
 
 return InteractiveMgr

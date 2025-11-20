@@ -27,7 +27,10 @@ local TimeUtil = require("Utils/TimeUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local MonsterTossAudioDefine = require("Game/GoldSaucerMiniGame/MonsterToss/MonsterTossAudioDefine")
 local MiniGameCuffAudioDefine = require("Game/GoldSaucerMiniGame/Cuff/MiniGameCuffAudioDefine")
+local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
 local ObjectGCType = require("Define/ObjectGCType")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
+local MonsterBasketballBlessCfg = require("TableCfg/MonsterBasketballBlessCfg")
 
 local EventID = _G.EventID
 local FLOG_ERROR = _G.FLOG_ERROR
@@ -38,13 +41,16 @@ local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMini
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
+local ChallengeTargetIconPath = GoldSaucerBlessingDefine.ChallengeTargetIconPath
 local ColorType = MiniGameClientConfig[MiniGameType.MonsterToss].ColorType
 local ActionPath = MiniGameClientConfig[MiniGameType.MonsterToss].ActionPath
 local ZOrderPriority = MiniGameClientConfig[MiniGameType.MonsterToss].ZOrder
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
+local GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
 local DelayTime = GoldSaucerMiniGameDefine.DelayTime
 local BasketballType = ProtoCS.BasketballType
 local BasketballParamType = ProtoRes.Game.BasketballParamType
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 
 local DynaID = {Success = 1, Defeat = 3,}
 local PointerAngle = {Min = -90, Max = 90, RightBorder = -86, LefeBorder = 86 }
@@ -65,6 +71,8 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field BottomPanel MainLBottomPanelView
 ---@field Btn1 CommBtnMView
 ---@field Btn2 CommBtnMView
+---@field Btn3 CommBtnLView
+---@field BtnClickCactus UFButton
 ---@field BtnShoot UFButton
 ---@field ChallengeBegins GoldSaucerCuffchallengeBeginsItemView
 ---@field ChallengeResults GoldSaucerMonsterTossChallengeResultsItemView
@@ -75,6 +83,7 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field HorizontalReward UFHorizontalBox
 ---@field IconGold UFImage
 ---@field ImgArrow_1 UFImage
+---@field ImgCactusPeople UFImage
 ---@field ImgPointerFocus UFImage
 ---@field ImgPointerNormal UFImage
 ---@field ImgShootDisable UFImage
@@ -87,7 +96,10 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field MultiplePoints GoldSaucerMonsterTossMultiplePointsItemView
 ---@field P_DX_TheFinerMiner_7 UUIParticleEmitter
 ---@field PanelAward UFCanvasPanel
+---@field PanelBallBox UFCanvasPanel
+---@field PanelCactus UFCanvasPanel
 ---@field PanelChallengeFailurePrompt UFCanvasPanel
+---@field PanelChallengeFailurePrompt_1 UFCanvasPanel
 ---@field PanelChallengeRecordList UFVerticalBox
 ---@field PanelCold UFCanvasPanel
 ---@field PanelGearCrack UFCanvasPanel
@@ -105,12 +117,15 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field ProgressBarDeco7 UFImage
 ---@field ProgressBarFull UProgressBar
 ---@field Score GoldSaucerGameCuffScoreItemView
+---@field SpineCactusPeople1 USpineWidget
+---@field SpineCactusPeople2 USpineWidget
 ---@field TableViewList UTableView
 ---@field TextAward UFTextBlock
 ---@field TextFraction UFTextBlock
 ---@field TextFraction1 UFTextBlock
 ---@field TextHighestScore UFTextBlock
 ---@field TextHint1 UFTextBlock
+---@field TextHint1_1 UFTextBlock
 ---@field TextNumberReward UFTextBlock
 ---@field TextQuantity_1 UFTextBlock
 ---@field TextScore UFTextBlock
@@ -119,16 +134,21 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field TextTime2 UFTextBlock
 ---@field TextTips UFTextBlock
 ---@field AnimBallBoom UWidgetAnimation
+---@field AnimBenedictionBallEffectHide UWidgetAnimation
+---@field AnimBenedictionBallEffectShow UWidgetAnimation
 ---@field AnimBtnShootLoop UWidgetAnimation
+---@field AnimClickCactus UWidgetAnimation
 ---@field AnimConsecutiveHits1 UWidgetAnimation
 ---@field AnimConsecutiveHits2 UWidgetAnimation
 ---@field AnimConsecutiveHits3 UWidgetAnimation
+---@field AnimConsecutiveHits3Loop UWidgetAnimation
 ---@field AnimConsecutiveHitsStop UWidgetAnimation
 ---@field AnimDropBall UWidgetAnimation
 ---@field AnimGearLoop UWidgetAnimation
 ---@field AnimGearShakeLoop UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimNextBall UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---@field AnimProgressBar UWidgetAnimation
 ---@field AnimRefreshHighestScore UWidgetAnimation
 ---@field AnimResult UWidgetAnimation
@@ -136,6 +156,7 @@ local ShootingTipsBPName = "GoldSaucerGame/MonsterToss/Item/GoldSaucer_MonsterTo
 ---@field AnimScoreMultiplierIn3 UWidgetAnimation
 ---@field AnimScoreMultiplierIn5 UWidgetAnimation
 ---@field AnimScoreShow UWidgetAnimation
+---@field AnimSectionGreenShow UWidgetAnimation
 ---@field AnimShootRight UWidgetAnimation
 ---@field AnimShootWrong UWidgetAnimation
 ---@field AnimStart UWidgetAnimation
@@ -161,6 +182,8 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.BottomPanel = nil
 	--self.Btn1 = nil
 	--self.Btn2 = nil
+	--self.Btn3 = nil
+	--self.BtnClickCactus = nil
 	--self.BtnShoot = nil
 	--self.ChallengeBegins = nil
 	--self.ChallengeResults = nil
@@ -171,6 +194,7 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.HorizontalReward = nil
 	--self.IconGold = nil
 	--self.ImgArrow_1 = nil
+	--self.ImgCactusPeople = nil
 	--self.ImgPointerFocus = nil
 	--self.ImgPointerNormal = nil
 	--self.ImgShootDisable = nil
@@ -183,7 +207,10 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.MultiplePoints = nil
 	--self.P_DX_TheFinerMiner_7 = nil
 	--self.PanelAward = nil
+	--self.PanelBallBox = nil
+	--self.PanelCactus = nil
 	--self.PanelChallengeFailurePrompt = nil
+	--self.PanelChallengeFailurePrompt_1 = nil
 	--self.PanelChallengeRecordList = nil
 	--self.PanelCold = nil
 	--self.PanelGearCrack = nil
@@ -201,12 +228,15 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.ProgressBarDeco7 = nil
 	--self.ProgressBarFull = nil
 	--self.Score = nil
+	--self.SpineCactusPeople1 = nil
+	--self.SpineCactusPeople2 = nil
 	--self.TableViewList = nil
 	--self.TextAward = nil
 	--self.TextFraction = nil
 	--self.TextFraction1 = nil
 	--self.TextHighestScore = nil
 	--self.TextHint1 = nil
+	--self.TextHint1_1 = nil
 	--self.TextNumberReward = nil
 	--self.TextQuantity_1 = nil
 	--self.TextScore = nil
@@ -215,16 +245,21 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.TextTime2 = nil
 	--self.TextTips = nil
 	--self.AnimBallBoom = nil
+	--self.AnimBenedictionBallEffectHide = nil
+	--self.AnimBenedictionBallEffectShow = nil
 	--self.AnimBtnShootLoop = nil
+	--self.AnimClickCactus = nil
 	--self.AnimConsecutiveHits1 = nil
 	--self.AnimConsecutiveHits2 = nil
 	--self.AnimConsecutiveHits3 = nil
+	--self.AnimConsecutiveHits3Loop = nil
 	--self.AnimConsecutiveHitsStop = nil
 	--self.AnimDropBall = nil
 	--self.AnimGearLoop = nil
 	--self.AnimGearShakeLoop = nil
 	--self.AnimIn = nil
 	--self.AnimNextBall = nil
+	--self.AnimOut = nil
 	--self.AnimProgressBar = nil
 	--self.AnimRefreshHighestScore = nil
 	--self.AnimResult = nil
@@ -232,6 +267,7 @@ function GoldSaucerMonsterTossMainPanelView:Ctor()
 	--self.AnimScoreMultiplierIn3 = nil
 	--self.AnimScoreMultiplierIn5 = nil
 	--self.AnimScoreShow = nil
+	--self.AnimSectionGreenShow = nil
 	--self.AnimShootRight = nil
 	--self.AnimShootWrong = nil
 	--self.AnimStart = nil
@@ -253,6 +289,7 @@ function GoldSaucerMonsterTossMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BottomPanel)
 	self:AddSubView(self.Btn1)
 	self:AddSubView(self.Btn2)
+	self:AddSubView(self.Btn3)
 	self:AddSubView(self.ChallengeBegins)
 	self:AddSubView(self.ChallengeResults)
 	self:AddSubView(self.CloseBtn)
@@ -292,6 +329,7 @@ function GoldSaucerMonsterTossMainPanelView:OnInit()
 		{"AddScoreColor", UIBinderSetColorAndOpacityHex.New(self, self.Score.FTextBlock_44)},
 		{"AddScoreOutLineColor", UIBinderSetOutlineColor.New(self, self.Score.FTextBlock_44)},
 		{"AddScorePos", UIBinderCanvasSlotSetPosition.New(self, self.Score, true)},
+		{"AddScoreText", UIBinderValueChangedCallback.New(self, nil, self.OnScoreChangeAnimPlay)},
 
 		{"MonsterTossTimeText", UIBinderSetText.New(self, self.TextTime1)},
 		{"TimeTextColor", UIBinderSetColorAndOpacityHex.New(self, self.TextTime1)},
@@ -309,19 +347,23 @@ function GoldSaucerMonsterTossMainPanelView:OnInit()
 		{"PurpleProportOrder", UIBinderSetZOrder.New(self, self.ImgTurntableColor1)},
 		{"BlueProportOrder", UIBinderSetZOrder.New(self, self.ImgTurntableColor2)},
 		{"RedProportOrder", UIBinderSetZOrder.New(self, self.ImgTurntableColor3)},
+		{"GreenProportOrder", UIBinderSetZOrder.New(self, self.ImgTurntableColor4)},
 
 		{"PurplePercent", UIBinderSetPercent.New(self, self.ImgTurntableColor1)},
 		{"BluePercent", UIBinderSetPercent.New(self, self.ImgTurntableColor2)},
 		{"RedPercent", UIBinderSetPercent.New(self, self.ImgTurntableColor3)},
+		{"GreenPercent", UIBinderSetPercent.New(self, self.ImgTurntableColor4)},
 
         {"GameState", UIBinderValueChangedCallback.New(self, nil, self.OnMiniGameStateChanged)},
 		{"bActBtnEnable", UIBinderSetIsVisible.New(self, self.BtnShoot, nil, true)},
 		{"bActBtnEnable", UIBinderSetIsVisible.New(self, self.ImgShootDisable, true)},
 
-		{"RewardGotEnd",  UIBinderSetText.New(self, self.TextNumberReward)},
+	
 		{"RewardGot",  UIBinderSetText.New(self, self.MainTeamPanel.TextNumber)},
 
 		{"CriticalText",  UIBinderSetText.New(self, self.Critical.TextQuantity)},
+		--{"bBless", UIBinderValueChangedCallback.New(self, nil, self.OnPlayBlessBgAnim)},
+		{"bBless", UIBinderSetIsVisible.New(self, self.PanelCactus)},
 		
 	}
 	self.ResultTableViewAdapter =  UIAdapterTableView.CreateAdapter(self, self.TableViewList, nil, true)
@@ -337,10 +379,13 @@ function GoldSaucerMonsterTossMainPanelView:OnInit()
 		{"TryAgainTipColor", UIBinderSetColorAndOpacityHex.New(self, self.TextQuantity_1)}, 
 		{"BtnText", UIBinderSetText.New(self, self.Btn2.TextContent)}, 
 
-		{"bFail", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
-		{"bSuccess", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRltFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
+		{"bRecordListPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt_1)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelAward, true)},
 		{"ResultVMList", UIBinderUpdateBindableList.New(self, self.ResultTableViewAdapter)},
 		{"RewardGot", UIBinderSetTextFormatForMoney.New(self, self.Award.TextQuantity)},
+		{"ChangeRewardText",  UIBinderSetText.New(self, self.TextNumberReward)},
 		{"AwardIconPath", UIBinderSetBrushFromAssetPath.New(self, self.Award.Comm96Slot.Icon)},
 
 	}
@@ -362,25 +407,73 @@ function GoldSaucerMonsterTossMainPanelView:OnShow()
 	self.TextFraction1:SetText(LSTR(270004)) -- 得分
 	self.TextTips:SetText(LSTR(270048)) -- 看准颜色，投篮得分
 	self.TextHint1:SetText(LSTR(270047)) -- 不要气馁，再挑战看看吧！
+	self.TextHint1_1:SetText(LSTR(270047))
 	self.TextAward:SetText(LSTR(250017)) -- 奖励
 	self.Btn1.TextContent:SetText(LSTR(10036)) -- 离 开
+	self.Btn3.TextContent:SetText(LSTR(10036)) -- 离开
 	self.TextQuantity_1:SetText(1) -- 阿拉伯数字1
 end
 
+function GoldSaucerMonsterTossMainPanelView:PlayNextBallItemShowAnim()
+	local CurBallWidget = self.CurShootBall
+	if not CurBallWidget then
+		return
+	end
+
+	local BallType = CurBallWidget:GetWidgetBallType()
+	if not BallType then
+		return
+	end
+
+	if BallType == BasketballType.BasketballType_Star then
+		CurBallWidget:PlayAnimation(CurBallWidget.AnimBenedictionToCurrentBall)
+	else
+		CurBallWidget:PlayAnimation(CurBallWidget.AnimResume)
+	end
+end
+
 function GoldSaucerMonsterTossMainPanelView:ReInitGame()
+	self:UnRegisterAllTimer()
 	self.Btn2.Button:SetIsEnabled(true)
 	self.Btn1.Button:SetIsEnabled(true)
 
 	self.Award:StopAllAnimations()
+	self:PlayAnimation(self.AnimSectionGreenShow, 0.2, 1, _G.UE.EUMGSequencePlayMode.Reverse)
 
 	UIUtil.SetIsVisible(self.CloseBtn, true)
 
 	UIUtil.SetIsVisible(self.Critical, false)
 
-	--self.BottomPanel:SetButtonEmotionVisible(false)
-	--self.BottomPanel:SetButtonPhotoVisible(false)
-	self.MainTeamPanel:SwitchTab(4)
-	self.MainTeamPanel:SetShowGameInfo()
+	self:SetBlessGameChallengeInfoPanelVisible(true)
+
+	--self.MainTeamPanel:SwitchTab(4)
+	local MiniGameInst = self:GetMiniGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	-- 赐福仙人掌动画种类切换
+	local bBigBlessMode = MiniGameInst:IsBigBlessMode()
+	UIUtil.SetIsVisible(self.SpineCactusPeople1, not bBigBlessMode)
+	UIUtil.SetIsVisible(self.SpineCactusPeople2, bBigBlessMode)
+	local TargetIconPath = bBigBlessMode and ChallengeTargetIconPath.BigBless or ChallengeTargetIconPath.LittleBless
+	UIUtil.ImageSetBrushFromAssetPath(self.MainTeamPanel.IconGold_1, TargetIconPath)
+	local Params = {}
+	local bBless = MiniGameInst:IsBless()
+	Params.bBless = bBless
+	local BlessKind = MiniGameInst.BlessKind
+	Params.BlessKind = BlessKind
+	Params.ChallengeTarget = ""
+	local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.MonsterToss)
+	local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(BlessKind)
+	if TargetCfg and BlessCfg then
+		Params.ExtraReward = BlessCfg.Reward or 0
+		if BLESSED_KIND.BLESSED_KIND_LITTLE == BlessKind then
+			Params.ChallengeTarget = TargetCfg.LChallengeTarget or ""
+		elseif BLESSED_KIND.BLESSED_KIND_BIG == BlessKind then
+			Params.ChallengeTarget = TargetCfg.BChallengeTarget or ""
+		end
+	end
+	self.MainTeamPanel:SetShowGameInfo(Params)
 	self.MainTeamPanel.TextGameName:SetText(LSTR(270001)) -- 怪物投篮 
 	self.MainTeamPanel.TextGameName_1:SetText(LSTR(270053)) -- 当前奖励
 	local IconGamePath = MiniGameClientConfig[MiniGameType.MonsterToss].IconGamePath
@@ -392,9 +485,7 @@ function GoldSaucerMonsterTossMainPanelView:ReInitGame()
 	self.ProgressBarFull:SetPercent(0)
 	self:UnRegisterAllTimer()
 	self:PlayAnimation(self.AnimConsecutiveHitsStop)
-	if self.CurShootBall ~= nil then
-		self.CurShootBall:PlayAnimation(self.CurShootBall.AnimResume)
-	end
+	self:PlayNextBallItemShowAnim()
 	local ViewModel = self:GetTheParamsVM()
     if ViewModel == nil then
         return
@@ -424,6 +515,7 @@ function GoldSaucerMonsterTossMainPanelView:OnHide()
 	self:StopAllAnimations()
 	self.Award:StopAllAnimations()
 	self:UnRegisterAllTimer()
+	GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.MonsterToss, false) -- 保底用，防止异常情况退出界面未退出小游戏实例
 end
 
 function GoldSaucerMonsterTossMainPanelView:OnExistGame()
@@ -443,6 +535,8 @@ function GoldSaucerMonsterTossMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnPressedEvent(self, self.Btn1.Button, self.OnLeaveBtnClick)
 	UIUtil.AddOnPressedEvent(self, self.Btn2.Button, self.OnFightAgainBtnClick)
 	UIUtil.AddOnClickedEvent(self, self.BtnShoot, self.OnBtnShootClick)
+	UIUtil.AddOnClickedEvent(self, self.BtnClickCactus, self.OnBtnClickCactusClick)
+	UIUtil.AddOnPressedEvent(self, self.Btn3.Button, self.OnLeaveBtnClick)
 	self:BindBtnCloseCallBack()
 end
 
@@ -450,7 +544,9 @@ function GoldSaucerMonsterTossMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MonsterTossEndEvent, self.OnReciveMonsterTossEndEvent)
 	self:RegisterGameEvent(EventID.MiniGameMainPanelPlayAnim, self.MiniGameMonsterTossMainPlayAnimEvent)
 	self:RegisterGameEvent(EventID.ScoreUpdate, self.OnReciveMonsterTossEndEvent)
-
+	self:RegisterGameEvent(EventID.MiniGameBigBlessStartTipsShow, self.MiniGameBigBlessStartTipsShow)
+	self:RegisterGameEvent(EventID.MiniGameBigBlessEnterMsgRspSuccess, self.MiniGameBigBlessEnterMsgRspSuccess)
+	self:RegisterGameEvent(EventID.MiniGameMarkerBlessStateChange, self.OnResultPanelBtnChange)
 end
 
 function GoldSaucerMonsterTossMainPanelView:OnRegisterBinder()
@@ -470,6 +566,58 @@ function GoldSaucerMonsterTossMainPanelView:OnRegisterBinder()
 
 	local ResultPanelVM = ViewModel:GetResultPanelVM()
 	self:RegisterBinders(ResultPanelVM, self.ResultBinders)
+end
+
+function GoldSaucerMonsterTossMainPanelView:MiniGameBigBlessStartTipsShow()
+	self:SetActBtnEnbale(false)
+	UIUtil.SetIsVisible(self.PanelBallBox, false)
+	UIUtil.SetIsVisible(self.PanelPointer, false)
+	GoldSaucerMiniGameMgr:SendMsgBaskMonsterEnterBlessReq() -- 同步服务器进入赐福模式
+end
+
+function GoldSaucerMonsterTossMainPanelView:MiniGameBigBlessEnterMsgRspSuccess()
+	local ChallengeBegins = self.ChallengeBegins
+	if not ChallengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(ChallengeBegins, true)
+	self:PlayAnimation(self.AnimSectionGreenShow)
+	ChallengeBegins:SetBlessRoundReady()
+	self:RegisterTimer(function()
+		local GameInst = self:GetMiniGameInst()
+		if not GameInst then
+			return
+		end
+		self:SetActBtnEnbale(true)
+		UIUtil.SetIsVisible(self.PanelBallBox, true)
+		UIUtil.SetIsVisible(self.PanelPointer, true)
+		GameInst:RecoverGameTimeLoop()
+	end, 2)
+end
+
+function GoldSaucerMonsterTossMainPanelView:OnBtnClickCactusClick()
+	self:PlayAnimation(self.AnimClickCactus)
+end
+
+function GoldSaucerMonsterTossMainPanelView:OnPlayBlessBgAnim(bBless)
+	if bBless then
+		self:PlayAnimation(self.AnimSectionGreenShow)
+	else
+		self:PlayAnimation(self.AnimSectionGreenShow, 0.2, 1, _G.UE.EUMGSequencePlayMode.Reverse)
+	end
+end
+
+function GoldSaucerMonsterTossMainPanelView:OnScoreChangeAnimPlay(ScoreText)
+	local Score = tonumber(string.sub(ScoreText, 2))
+	if not Score or not type(Score) ~= "number" then
+		return
+	end
+	if self:IsAnimationPlaying(self.AnimConsecutiveHits3Loop) then
+		self:StopAnimation(self.AnimConsecutiveHits3Loop)
+	end
+	if Score == 3 then
+		self:PlayAnimation(self.AnimConsecutiveHits3Loop, 0, 0)
+	end
 end
 
 function GoldSaucerMonsterTossMainPanelView:ShowShootingTips()
@@ -518,17 +666,24 @@ end
 function GoldSaucerMonsterTossMainPanelView:OnReciveMonsterTossEndEvent()
 	local JDResID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE
 	self.MoneySlot:UpdateView(JDResID, true, -1, true)
+	
 end
 
-function GoldSaucerMonsterTossMainPanelView:MiniGameMonsterTossMainPlayAnimEvent(InAnim, bCritical)
+function GoldSaucerMonsterTossMainPanelView:MiniGameMonsterTossMainPlayAnimEvent(InAnim, FirstParam)
 	local Anim = MiniGameClientConfig[MiniGameType.MonsterToss].Anim
 	local ChallengeResults = self.ChallengeResults
 	local CurShootBall = self.CurShootBall
 	
 	if InAnim == Anim.AnimNextBall then
 		UIUtil.SetIsVisible(self.MultiplePoints, true)
+		self:PlayAnimation(self.AnimBenedictionBallEffectHide)
 		self:RegisterTimer(function() UIUtil.SetIsVisible(self.MultiplePoints, false) end, 1) -- 无论是否投进都要消失
-		CurShootBall:PlayAnimation(CurShootBall.AnimResume)
+		if type(FirstParam) == "number" then
+			self:PlayNextBallItemShowAnim()
+			if FirstParam == BasketballType.BasketballType_Star then
+				self:PlayAnimation(self.AnimBenedictionBallEffectShow)
+			end			
+		end
 		self:PlayAnimation(self.AnimNextBall)
 	elseif InAnim == Anim.AnimObtainNumberIn then
 		self:PlayAnimation(self.AnimObtainNumberIn)
@@ -544,8 +699,10 @@ function GoldSaucerMonsterTossMainPanelView:MiniGameMonsterTossMainPlayAnimEvent
 		self:PlayAnimation(self.AnimConsecutiveHits2)
 	elseif InAnim == Anim.AnimConsecutiveHits3 then
 		self:PlayAnimation(self.AnimConsecutiveHits3)
+		self:PlayAnimation(self.AnimConsecutiveHits3Loop, 0, 0)
 	elseif InAnim == Anim.AnimConsecutiveHitsStop then
 		self:PlayAnimation(self.AnimConsecutiveHitsStop)
+		self:StopAnimation(self.AnimConsecutiveHits3Loop)
 	elseif InAnim == Anim.AnimResult then
 		self:OnPlayAnimResult()
 	elseif InAnim == Anim.AnimBombReady then
@@ -571,13 +728,59 @@ function GoldSaucerMonsterTossMainPanelView:MiniGameMonsterTossMainPlayAnimEvent
 		self:PlayAnimation(self.AnimRefreshHighestScore)
 	elseif InAnim == Anim.AnimProgressBar then
 		local GameInst = self:GetMiniGameInst()
+		if not GameInst then
+			return
+		end
 		self:SetStartProValue(self:GetEndProValue())
-		self:SetEndProValue(math.clamp(GameInst.ComboNum / 8, 0, 1))
-		self:PlayAnimation(self.AnimProgressBar)
+		local CurCombNum = GameInst.ComboNum
+		self:SetEndProValue(math.clamp(CurCombNum / 8, 0, 1))
+		local AnimProgressBar = self.AnimProgressBar
+		self:PlayAnimation(AnimProgressBar)
+		local ProgressBarEndTime = AnimProgressBar:GetEndTime()
+		if not GameInst.bAddScoreTextVisible then
+			return
+		end
+		self:RegisterTimer(function()
+			local VM = self:GetTheParamsVM()
+			if VM == nil then
+				return
+			end
+			VM.bAddScoreTextVisible = true
+			local ScoreItem = self.Score
+			if ScoreItem then
+				local AnimScore = ScoreItem.AnimScore
+				if AnimScore then
+					local ScoreEndTime = AnimScore:GetEndTime()
+					ScoreItem:PlayAnimation(AnimScore) -- 替换为子蓝图统一动画
+					self:RegisterTimer(function() 
+						VM.bAddScoreTextVisible = false
+					end, ScoreEndTime)
+				end
+			end
+		end, ProgressBarEndTime)
 	end
-	if bCritical then
-		self:OnActiveCritical()
+
+	-- 暂时用type区分参数，后续如果有更多发送参数需要处理再修改
+	if type(FirstParam) == "boolean" then
+		if FirstParam then
+			self:OnActiveCritical()
+		end
 	end
+end
+
+--- 封装控制赐福挑战模式面板是否显示
+function GoldSaucerMonsterTossMainPanelView:SetBlessGameChallengeInfoPanelVisible(bVisible)
+	local GameInst = self:GetMiniGameInst()
+	if GameInst == nil then
+		return
+	end
+	local bBless = GameInst:IsBless()
+	if not bBless then
+		UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, false)
+		return
+	end
+
+	UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, bVisible)
 end
 
 function GoldSaucerMonsterTossMainPanelView:OnPlayAnimResult()
@@ -591,17 +794,52 @@ function GoldSaucerMonsterTossMainPanelView:OnPlayAnimResult()
 		-- View:Reset()
 		View:CheckPlayAnim()
 	end
-	-- self:RegisterTimer(function() 
-		
-	-- end, 0.5)
+	
+	self:SetBlessGameChallengeInfoPanelVisible(false)
+	--- 更新赐福时的按钮显示情况
+	local MiniGameInst = self:GetMiniGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local bBless = MiniGameInst:IsBless()
+	if bBless then
+		local bBlessChallengeSuccess = MiniGameInst:IsBlessChallengeSuccess()
+		UIUtil.SetIsVisible(self.Btn1, not bBlessChallengeSuccess)
+		UIUtil.SetIsVisible(self.Btn2, not bBlessChallengeSuccess)
+		UIUtil.SetIsVisible(self.PanelCold, not bBlessChallengeSuccess)
+		UIUtil.SetIsVisible(self.Btn3, bBlessChallengeSuccess)
+	else
+		local SgInstanceID = MiniGameInst:GetInstanceID()
+		if SgInstanceID then
+			local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+			UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+			UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+			UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+			UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
+		end
+	end
+end
 
-	-- local function PlaySubViewAnim()
-	-- 	local SubViews = self.ResultTableViewAdapter.SubViews
-	-- 	for _, View in pairs(SubViews) do
-	-- 		View:CheckPlayAnim()
-	-- 	end
-	-- end
-	-- self:RegisterTimer(PlaySubViewAnim, 1.5)
+function GoldSaucerMonsterTossMainPanelView:OnResultPanelBtnChange(_)
+	local MiniGameInst = self:GetMiniGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local VM = self:GetTheParamsVM()
+	if VM == nil then
+		return
+	end
+	if not VM.bResultVisible then
+		return
+	end
+	local SgInstanceID = MiniGameInst:GetInstanceID()
+	if SgInstanceID then
+		local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+		UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
+	end
 end
 
 function GoldSaucerMonsterTossMainPanelView:OnActiveCritical()
@@ -740,7 +978,7 @@ function GoldSaucerMonsterTossMainPanelView.OnBegin(self)
 	self.bIsShootOnce = false
 	self.CurShootBall = self.Ball1
 	UIUtil.SetIsVisible(self.challengeBegins, false)
-	self.CurShootBall:PlayAnimation(self.CurShootBall.AnimResume)
+	self:PlayNextBallItemShowAnim()
 
 	local ViewModel = self:GetTheParamsVM()
 	if ViewModel == nil then
@@ -952,8 +1190,8 @@ function GoldSaucerMonsterTossMainPanelView:UpdateByShootResult(Type, bHit, Game
 	self:ShowShootResultTip(bHit, GameInst) 					-- 展示投篮结果提示
 	if bHit then
 		self:UpdateScoreMultByType(Type)										-- 更新几倍得分
-		self:RegisterTimer(function() 
-			self:PlayAnimation(self.AnimScoreShow) 
+		self:RegisterTimer(function()
+			
 		end, 1) 
 		self:RegisterTimer(function() AudioUtil.LoadAndPlay2DSound(MonsterTossAudioDefine.AudioPath.BallEnterNet) end, 1.2)
 	else
@@ -1010,10 +1248,19 @@ end
 --- @type 当重新激活可投篮
 function GoldSaucerMonsterTossMainPanelView:OnCanShoot(bResetPointer)
 	local CurShootBall = self.CurShootBall
+	if not CurShootBall then
+		return
+	end
 	local ItemVM = CurShootBall:GetViewModel()
-	local Type = ItemVM:GetType()
-	CurShootBall:PlayAnimation(CurShootBall.AnimResume)
+	if not ItemVM then
+		return
+	end
+	
+	self:PlayNextBallItemShowAnim()
 	local GameInst = self:GetMiniGameInst()
+	if not GameInst then
+		return
+	end
 	GameInst:SetbOnShoot(false)
 
 	self:PointerStopRotation()
@@ -1028,19 +1275,44 @@ function GoldSaucerMonsterTossMainPanelView:OnCanShoot(bResetPointer)
 	self:ChangeShowPointerType(true, false)
 
 	local ViewModel = self:GetTheParamsVM()
-	if bResetPointer then
-		GameInst:CaculateZOreder()			--- 重置布局
-		ViewModel:UpdateProportLayOut()		--- 重置布局
+	if ViewModel then
+		if bResetPointer then
+			GameInst:CaculateZOreder()			--- 重置布局
+			ViewModel:UpdateProportLayOut()		--- 重置布局
+		end
 	end
 
+	local Type = ItemVM:GetType()
 	if Type == BasketballType.BasketballType_Bang then
 		local GlobalParams = GameInst.GlobalParams
-		local DelayExplodeTime = GlobalParams[BasketballParamType.BasketballParamTypeBangTime].Value / 1000 -- 1.6S
+		if not GlobalParams then
+			return
+		end
+
+		local DelayExplodeTime = 1.6 -- DefaultTime
+		local BangTimeParam = GlobalParams[BasketballParamType.BasketballParamTypeBangTime]-- 红球爆炸时间
+		if BangTimeParam then
+			local CfgBangTime = BangTimeParam.Value
+			if CfgBangTime and type(CfgBangTime) == "number" then
+				DelayExplodeTime = CfgBangTime / 1000 
+			end
+		end
 		local ExplodeAnimTime = 2.2 -- 2.2s就会动画播放到爆炸效果
 		local PlayRate = ExplodeAnimTime / DelayExplodeTime
+		if CurShootBall:IsAnimationPlaying(CurShootBall.AnimBombLoop) then
+			CurShootBall:StopAnimation(CurShootBall.AnimBombLoop) -- 爆炸球需要在播放Ready动画前停止loop动画
+		end
 		CurShootBall:PlayAnimation(CurShootBall.AnimBombReady, 0, 1, _G.UE.EUMGSequencePlayMode.Forward, PlayRate)
 		self.ExploreAlarmHandle = AudioUtil.LoadAndPlay2DSound(MonsterTossAudioDefine.AudioPath.ExploreAlarm)
-		local StiffTime = GlobalParams[BasketballParamType.BasketballParamTypeBangBallTime].Value / 1000 --爆炸造成僵直时间
+
+		local StiffTime = 0.7 -- DefaultTime
+		local StiffTimeParam = GlobalParams[BasketballParamType.BasketballParamTypeBangBallTime]--爆炸造成僵直时间
+		if StiffTimeParam then
+			local CfgStiffTime = StiffTimeParam.Value
+			if CfgStiffTime and type(CfgStiffTime) == "number" then
+				StiffTime = CfgStiffTime / 1000 
+			end
+		end
 		local ReActiveTime = DelayExplodeTime + StiffTime
 		self.WaitExplodeTimer = self:RegisterTimer(function() self:SetActBtnEnbale(false) end, DelayExplodeTime - 0.1)
 		self.SendMsgTimer = self:RegisterTimer(function()
@@ -1079,7 +1351,7 @@ function GoldSaucerMonsterTossMainPanelView:TryStopExploreAlarmAudio()
 	end
 end
 
---- @type 检测是否命中
+--- @type 检测是否命中(由三色固定判断改为可变数组判断。后续也支持再添加颜色)
 function GoldSaucerMonsterTossMainPanelView:CheckIsHit(Type)
 	self:PointerStopRotation()
 	FLOG_INFO("MonsterToss PointerRotateAudioStop Check Is Hit")
@@ -1091,41 +1363,43 @@ function GoldSaucerMonsterTossMainPanelView:CheckIsHit(Type)
 		CurAngle = CurAngle + PointerAngle.Max
 	end
 	local GameInst = self:GetMiniGameInst()
-	local CurZOrderData = GameInst.CurZOrderData
+	--local CurZOrderData = GameInst.CurZOrderData
 	local CurStageDiffParams = GameInst:GetCurStageDiffParams()
 	if CurStageDiffParams == nil then
 		return
 	end
 	local ZOrderCfg = CurStageDiffParams.ZOrderCfg
-	local BlueMaxAngle, PurpleMaxAngle, RedMaxAngle
-	local Data = self:ConstructColorData(ZOrderCfg, CurStageDiffParams)
-	local MaxZOrderColorAngle = self:GetMaxZOrderColorAngle(CurZOrderData, CurStageDiffParams)
-	for _, v in pairs(Data) do
+	local Data = self:ConstructColorData(ZOrderCfg, CurStageDiffParams) -- 排序过,赐福为4个元素的数组表，非赐福为3个元素
+	local AngleJudgeRangeData = {}
+	local TotalCalAngle = 0
+	for _, v in ipairs(Data) do
 		local SubData = v
-		if ColorType.Blue == SubData.ColorType then
-			BlueMaxAngle = self:GetMaxAngle(SubData.ZOrder, SubData.Proportion, MaxZOrderColorAngle)
-		elseif ColorType.Red == SubData.ColorType then
-			RedMaxAngle = self:GetMaxAngle(SubData.ZOrder, SubData.Proportion, MaxZOrderColorAngle)
-		elseif ColorType.Purple == SubData.ColorType then
-			PurpleMaxAngle = self:GetMaxAngle(SubData.ZOrder, SubData.Proportion, MaxZOrderColorAngle)
-		end	
+		local ColorCircleType = SubData.ColorType
+		local Proportion = SubData.Proportion
+		local DeltaAngle = MaxAngle * Proportion / 100
+		local CurMaxAngle = math.clamp(TotalCalAngle + DeltaAngle, 0, MaxAngle) 
+		if ColorType.Blue == ColorCircleType then
+			AngleJudgeRangeData[#AngleJudgeRangeData + 1] = { MaxAngle = CurMaxAngle, ZOrder = ZOrderCfg.BlueProportOrder, ColorType = ColorType.Blue}
+		elseif ColorType.Red == ColorCircleType then
+			AngleJudgeRangeData[#AngleJudgeRangeData + 1] = { MaxAngle = CurMaxAngle, ZOrder = ZOrderCfg.RedProportOrder, ColorType = ColorType.Red}
+		elseif ColorType.Purple == ColorCircleType then
+			AngleJudgeRangeData[#AngleJudgeRangeData + 1] = { MaxAngle = CurMaxAngle, ZOrder = ZOrderCfg.PurpleProportOrder, ColorType = ColorType.Purple}
+		elseif ColorType.Green == ColorCircleType then
+			AngleJudgeRangeData[#AngleJudgeRangeData + 1] = { MaxAngle = CurMaxAngle, ZOrder = ZOrderCfg.GreenProportOrder, ColorType = ColorType.Green}
+		end
+		TotalCalAngle = CurMaxAngle
 	end
-	local NeedData = {
-		{ MaxAngle = BlueMaxAngle, ZOrder = ZOrderCfg.BlueProportOrder, ColorType = ColorType.Blue},
-		{ MaxAngle = RedMaxAngle, ZOrder = ZOrderCfg.RedProportOrder, ColorType = ColorType.Red},
-		{ MaxAngle = PurpleMaxAngle, ZOrder = ZOrderCfg.PurpleProportOrder, ColorType = ColorType.Purple},
-	}
-	local function SortByZOrder(Right, Left)
-		return Right.ZOrder > Left.ZOrder
-	end
-	table.sort(NeedData, SortByZOrder)
-	local StopColor = self:GetStopColor(CurAngle, NeedData)
+
+	local StopColor = self:GetStopColor(CurAngle, AngleJudgeRangeData)
 	local bSuccess = false
 	if StopColor == ColorType.Red and Type == BasketballType.BasketballType_Bang then
 		bSuccess = true
 	elseif StopColor == ColorType.Blue and Type == BasketballType.BasketballType_Normal then
 		bSuccess = true
 	elseif StopColor == ColorType.Purple and Type == BasketballType.BasketballType_Super then
+		bSuccess = true
+	elseif StopColor == ColorType.Green and Type == BasketballType.BasketballType_Star then
+		GameInst:AddBlessInteractorNum()
 		bSuccess = true
 	end
 	return bSuccess
@@ -1138,9 +1412,9 @@ function GoldSaucerMonsterTossMainPanelView:GetStopColor(CurAngle, NeedData)
 			return Elem.ColorType
 		end
 	end
-
 end
 
+---@deprecated(非三色圈不适用此方法)
 function GoldSaucerMonsterTossMainPanelView:GetMaxAngle(ZOrder, Proportion, MaxZOrderColorAngle)
 	if ZOrder == ZOrderPriority.Max then
 		return MaxAngle * (Proportion / 100)
@@ -1152,6 +1426,7 @@ function GoldSaucerMonsterTossMainPanelView:GetMaxAngle(ZOrder, Proportion, MaxZ
 	return
 end
 
+---@deprecated(非三色圈不适用此方法)
 function GoldSaucerMonsterTossMainPanelView:GetMaxZOrderColorAngle(CurZOrderData, CurStageDiffParams)
 	local MaxZOrderColorType
     for _, v in pairs(CurZOrderData) do
@@ -1175,12 +1450,19 @@ function GoldSaucerMonsterTossMainPanelView:ConstructColorData(ZOrderCfg, CurSta
 	local RedProportion = CurStageDiffParams.RedProportion
 	local PurpleProportion = CurStageDiffParams.PurpleProportion
 	local BlueProportion = CurStageDiffParams.BlueProportion
+	local StarProportion = CurStageDiffParams.StarProportion
 	local Data = {
 		{ZOrder = ZOrderCfg.BlueProportOrder, ColorType = ColorType.Blue, Proportion = BlueProportion },
 		{ZOrder = ZOrderCfg.PurpleProportOrder, ColorType = ColorType.Purple, Proportion = PurpleProportion },
 		{ZOrder = ZOrderCfg.RedProportOrder, ColorType = ColorType.Red, Proportion = RedProportion },
 	}
-	-- table.sort(Data)
+
+	local GreenProportOrder = ZOrderCfg.GreenProportOrder
+	if GreenProportOrder then
+		Data[#Data + 1] = {ZOrder = GreenProportOrder, ColorType = ColorType.Green, Proportion = StarProportion }
+	end
+
+	table.sort(Data, function(A, B) return A.ZOrder > B.ZOrder end)
 	return Data
 end
 
@@ -1194,6 +1476,8 @@ function GoldSaucerMonsterTossMainPanelView:UpdateScoreMultByType(Type)
         -- bVisible = false
     elseif Type == BasketballType.BasketballType_Super then
 		NeedAnim = MultiplePoints.AnimScoreMultiple2
+	elseif Type == BasketballType.BasketballType_Star then
+		NeedAnim = MultiplePoints.AnimScoreBenediction
     end
 	if NeedAnim ~= nil then
 		MultiplePoints:PlayAnimation(NeedAnim) -- 预播放，当显示出来后会播放此动画

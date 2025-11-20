@@ -299,18 +299,38 @@ function FogMgr:OnNetMsgFogActivate(MsgBody)
     local BytesSet = BitUtil.StringToByteArray(Data.AreaIDList)
 
     local Flag = self:BytesToFlag(BytesSet)-- + 1 --+1默认显示区域0
+
+    if self.DictDiscoveryFlag[Data.MapResID] == Flag then --弱网的情况同时触碰多个同discoveryID的mapArea，会回多个同样的包
+        FLOG_INFO("[FogMgr] recieve same info "..tostring(Data.MapResID).."Flag="..tostring(Flag))
+        return
+    end
+
     self.DictDiscoveryFlag[Data.MapResID] = Flag
     self.DictAllActivate[Data.MapResID] = Data.AllActivate
 
-    if Data.MapResID == _G.PWorldMgr:GetCurrMapResID() then
-        WorldMapVM:SetDiscoveryFlag(Flag)
+    local ActiveMapID = Data.MapResID or 0
+    -- 场景所属地图
+    if ActiveMapID == _G.PWorldMgr:GetCurrMapResID() then
         MapVM:SetDiscoveryFlag(Flag)
         MapVM:SetIsAllActivate(Data.AllActivate)
+        if Data.AllActivate then
+            MapVM:SetMapMaskPath(nil)
+        end
+    end
+
+    -- 世界地图界面所处地图
+    if ActiveMapID == _G.WorldMapMgr:GetMapID() then
+        WorldMapVM:SetDiscoveryFlag(Flag)
+        if Data.AllActivate then
+            WorldMapVM:SetMapMaskPath(nil)
+        end
+    end
+
+    -- 便捷使用地图显示地图
+    if ModuleMapContentVM:IsTheFogMap(ActiveMapID) then
         ModuleMapContentVM:SetDiscoveryFlag(Flag)
         ModuleMapContentVM:SetIsAllActivate(Data.AllActivate)
         if Data.AllActivate then
-            WorldMapVM:SetMapMaskPath(nil)
-            MapVM:SetMapMaskPath(nil)
             ModuleMapContentVM:SetMapMaskPath(nil)
         end
     end
@@ -339,7 +359,7 @@ function FogMgr:OnNetMsgFogActivate(MsgBody)
             _G.ChatMgr:AddSysChatMsg(NoticeCfgItem.Content[1])
         end
 
-        AudioUtil.LoadAndPlaySoundEvent(MajorUtil.GetMajorEntityID(), FOG_UNLOCK_SOUND_PATH)
+        AudioUtil.LoadAndPlay2DSound( FOG_UNLOCK_SOUND_PATH)
     end
 
     _G.EventMgr:SendEvent(EventID.UpdateFogInfo)

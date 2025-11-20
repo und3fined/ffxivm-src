@@ -23,7 +23,6 @@ local LSTR
 
 ---@class BuddyUseAccelerateWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field BtnCancel CommBtnLView
 ---@field Btnaccelerate CommBtnLView
 ---@field Comm2FrameM_UIBP Comm2FrameMView
 ---@field CommCurrency CommMoneySlotView
@@ -32,10 +31,8 @@ local LSTR
 ---@field HorizontalUseCoin UFHorizontalBox
 ---@field ProbarOrange UProgressBar
 ---@field ProbarYellow UProgressBar
----@field RichTextUseCoin URichTextBox
----@field RichTextUseCoin_1 URichTextBox
+---@field RichTextTips URichTextBox
 ---@field RichTextUseCoin_2 URichTextBox
----@field SingleBox CommSingleBoxView
 ---@field TextAccelerate UFTextBlock
 ---@field TextAccelerateCountDown UFTextBlock
 ---@field TextCountDown UFTextBlock
@@ -55,7 +52,6 @@ local BuddyUseAccelerateWinView = LuaClass(UIView, true)
 
 function BuddyUseAccelerateWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.BtnCancel = nil
 	--self.Btnaccelerate = nil
 	--self.Comm2FrameM_UIBP = nil
 	--self.CommCurrency = nil
@@ -64,10 +60,8 @@ function BuddyUseAccelerateWinView:Ctor()
 	--self.HorizontalUseCoin = nil
 	--self.ProbarOrange = nil
 	--self.ProbarYellow = nil
-	--self.RichTextUseCoin = nil
-	--self.RichTextUseCoin_1 = nil
+	--self.RichTextTips = nil
 	--self.RichTextUseCoin_2 = nil
-	--self.SingleBox = nil
 	--self.TextAccelerate = nil
 	--self.TextAccelerateCountDown = nil
 	--self.TextCountDown = nil
@@ -87,12 +81,10 @@ end
 
 function BuddyUseAccelerateWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.BtnCancel)
 	self:AddSubView(self.Btnaccelerate)
 	self:AddSubView(self.Comm2FrameM_UIBP)
 	self:AddSubView(self.CommCurrency)
 	self:AddSubView(self.CommSlot)
-	self:AddSubView(self.SingleBox)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -107,6 +99,7 @@ function BuddyUseAccelerateWinView:OnInit()
 		{ "AccelerateTimeText", UIBinderSetText.New(self, self.TextAccelerateCountDown) },
 		{ "CDTimeText", UIBinderSetText.New(self, self.TextTime) },
 		{ "ItemDesc", UIBinderSetText.New(self, self.TextSlotName) },
+		{ "Desc", UIBinderSetText.New(self, self.RichTextTips) },
 		
 		{ "UseCoinVisible", UIBinderSetIsVisible.New(self, self.HorizontalUseCoin) },
 		{ "UseCoinDescText", UIBinderSetText.New(self, self.RichTextUseCoin_2) },
@@ -114,9 +107,7 @@ function BuddyUseAccelerateWinView:OnInit()
 
 		{ "EFFVisible", UIBinderSetIsVisible.New(self, self.EFF) },
 
-		{"TriggerCheck",UIBinderSetIsChecked.New(self,self.SingleBox.ToggleButton)}, 
-		{"TriggerEnabled",UIBinderSetIsEnabled.New(self,self.SingleBox.ToggleButton)}, 
-		{"BtnaccelerateEnabled",UIBinderSetIsEnabled.New(self,self.Btnaccelerate)}, 
+		{ "BtnaccelerateEnabled",UIBinderSetIsEnabled.New(self,self.Btnaccelerate, false , true)}, 
 	}
 end
 
@@ -133,14 +124,12 @@ function BuddyUseAccelerateWinView:OnShow()
 end
 
 function BuddyUseAccelerateWinView:OnHide()
-
+	self:StopAnimation(self.AnimMaxSpeedLightLoop)
 end
 
 function BuddyUseAccelerateWinView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.SingleBox.ToggleButton, self.OnBtnClickedSingleBox)
-	UIUtil.AddOnClickedEvent(self, self.BtnCancel.Button, self.OnClickedCancelBtn)
 	UIUtil.AddOnClickedEvent(self, self.Btnaccelerate.Button, self.OnClickedAccelerateBtn)
-	UIUtil.AddOnClickedEvent(self, self.CommSlot.FBtn_Item, self.OnBtnSlotClick)
+	UIUtil.AddOnClickedEvent(self, self.CommSlot.Btn, self.OnBtnSlotClick)
 end
 
 function BuddyUseAccelerateWinView:OnRegisterGameEvent()
@@ -155,19 +144,8 @@ function BuddyUseAccelerateWinView:OnRegisterBinder()
 	self.Comm2FrameM_UIBP:SetTitleText(LSTR(1000062))
 	self.TextCountDown:SetText(LSTR(1000063))
 	self.TextAccelerate:SetText(LSTR(1000064))
-	self.BtnCancel:SetText(LSTR(10003))
 	self.Btnaccelerate:SetText(LSTR(1000011))
-	self.RichTextUseCoin:SetText(LSTR(1000065))
-	self.RichTextUseCoin_1:SetText(LSTR(1000066))
 end
-
-function BuddyUseAccelerateWinView:OnBtnClickedSingleBox()
-	if self.ViewModel == nil then
-		return
-	end
-	self.ViewModel:ChangeUseCoinTrigger()
-end
-
 
 function BuddyUseAccelerateWinView:OnMoneyUpdate()
 	if self.ViewModel == nil then
@@ -187,21 +165,29 @@ function BuddyUseAccelerateWinView:OnUpdateBuddyCDOnTime()
 	end
 end
 
-function BuddyUseAccelerateWinView:OnClickedCancelBtn()
-	self:Hide()
-	self:StopAnimation(self.AnimMaxSpeedLightLoop)
-end
-
 function BuddyUseAccelerateWinView:OnClickedAccelerateBtn() 
+	if self.ViewModel.BtnaccelerateEnabled == false then
+		_G.MsgTipsUtil.ShowTips(LSTR(1000071))
+		return
+	end 
+	if self.AccelerateAni then
+		return
+	end
 	self.ValueAnimProBarYellowStart = math.clamp(self.ViewModel.NormalProgressPercent, 0, 1)
 	self.ValueAnimProBarYellowEnd = math.clamp(self.ViewModel.AccelerateProgressPercent, 0, 1)
 	self:PlayAnimation(self.AnimProBarYellowControl)
+	self.AccelerateAni = true
 end
 
 function BuddyUseAccelerateWinView:OnAnimationFinished(Animation)
 	if Animation == self.AnimProBarYellowControl then
+		self.AccelerateAni = false
 		self:StopAnimation(self.AnimProBarYellow)
-		BuddyMgr:ReqReduceCD(BuddyMgr.SurfaceViewCurID, self.ViewModel.Trigger == false and 1 or 0, BuddyMgr.AccelerateItemID)
+		local ConsumeCoin = 1
+		if self.ViewModel.UseCoinVisible == true then
+			ConsumeCoin = 0
+		end
+		BuddyMgr:ReqReduceCD(BuddyMgr.SurfaceViewCurID, ConsumeCoin, BuddyMgr.AccelerateItemID)
 		if self.ViewModel.EFFVisible == true then
 			self:Hide()
 		end
@@ -214,7 +200,6 @@ function BuddyUseAccelerateWinView:SequenceEvent_AnimProBarYellow()
 		self.ViewModel.NormalProgressPercent = self.ValueAnimProBarYellowEnd
 	end
 end
-
 
 function BuddyUseAccelerateWinView:OnBtnSlotClick()
 	ItemTipsUtil.ShowTipsByResID(BuddyMgr.AccelerateItemID, self.CommSlot)

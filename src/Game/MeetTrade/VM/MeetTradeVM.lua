@@ -5,6 +5,7 @@ local UIBindableBagSlotList = require("Game/NewBag/VM/UIBindableBagSlotList")
 local ScoreMgr = require("Game/Score/ScoreMgr")
 local BagMgr = require("Game/Bag/BagMgr")
 local RichTextUtil = require("Utils/RichTextUtil")
+local ItemUtil = require("Utils/ItemUtil")
 local LSTR = _G.LSTR
 local FLOG_ERROR = _G.FLOG_ERROR
 ---@class MeetTradeVM : UIViewModel
@@ -48,17 +49,20 @@ end
 function MeetTradeVM:SetParams()
     ---我方交易的金币数量
     self.MajorGoldForTrade = 0
+    self.MajorGoldForTradeText = "0"
     ---对方交易的金币数量
     self.RoleGoldForTrade = 0
+    self.RoleGoldForTradeText = "0"
     ---我方显示的交易税
     self.MajorGoldTax = 0
+    self.MajorGoldTaxText = "0"
     ---交易金币的选中是否可见
     self.GlodNumForTradeVisible = false
     --- 面对面交易的格子数量
-    --- TODO 读表还是直接写死比较好
-    self.Capacity = 15
     self.EmptyItemCache = {}
     self.IsLock = false
+    self.PlayGoldNumChangeAnimation = nil
+    self:SetBindPropertyNoCheckValueChange("PlayGoldNumChangeAnimation")
 end
 
 ---角色相关信息要在界面关闭时清空，不能在界面show时清空，因为绑定在OnShow之前
@@ -71,8 +75,9 @@ function MeetTradeVM:ResetVMInfo()
     self.MajorID = nil
     ---对方的RoleID
     self.RoleID = nil
+    self.IsClickLock = nil
 end
----根据月卡状态设置交易税率
+---设置交易税率
 function MeetTradeVM:SetTradeTaxRate(TaxRate)
     if not TaxRate then
         return
@@ -103,6 +108,13 @@ end
 
 function MeetTradeVM:UpdateRoleInfo(RoleVM)
     self.RoleVM = RoleVM
+    local CurNickName = _G.FriendMgr:GetFriendNickname(RoleVM.RoleID)
+    if CurNickName and CurNickName ~= "" then
+        self.RoleVM.NickName = "(" .. CurNickName .. ")"
+        self.RoleVM.NickNameVisible = true
+    else
+        self.RoleVM.NickNameVisible = false
+    end
     self:SetRoleID(RoleVM.RoleID)
 end
 
@@ -118,13 +130,14 @@ function MeetTradeVM:GetMajorVM()
 end
 --- 初始化用
 function MeetTradeVM:UpdateMajorTradeItemListInfo(Items)
-    if(nil ~= Items and #Items > self.Capacity) then
-        FLOG_ERROR("MeetTradeVM:MajorTradeItemVMList capacity is %d, but Items count is %d", self.Capacity, #Items)
+    local Capacity = self:GetItemCapacity()
+    if(nil ~= Items and #Items > Capacity) then
+        FLOG_ERROR("MeetTradeVM:MajorTradeItemVMList capacity is %d, but Items count is %d", Capacity, #Items)
         return
     end
     local ItemList = Items or {}
     --- 在第一个空ItemList后添加设置“+”显示
-    if(#ItemList < self.Capacity) then
+    if(#ItemList < Capacity) then
         local Index = #ItemList + 1
         ItemList[Index] = {ImgAddOpacity = 1}
     end
@@ -132,14 +145,16 @@ function MeetTradeVM:UpdateMajorTradeItemListInfo(Items)
     for i, v in ipairs(ItemList) do
         v.BtnAddVisible = true
         v.Index = i
+        v.ImgAdd = "Texture2D'/Game/UI/Texture/Icon/UI_Icon_PlusSign_Noraml.UI_Icon_PlusSign_Noraml'"
     end
 	self.MajorTradeItemVMList:UpdateByValues(ItemList)
 end
 
 ---初始化用
 function MeetTradeVM:UpdateRoleTradeItemListInfo(Items)
-    if(nil ~= Items and #Items > self.Capacity) then
-        FLOG_ERROR("MeetTradeVM:RoleTradeItemVMList capacity is %d, but Items count is %d", self.Capacity, #Items)
+    local Capacity = self:GetItemCapacity()
+    if(nil ~= Items and #Items > Capacity) then
+        FLOG_ERROR("MeetTradeVM:RoleTradeItemVMList capacity is %d, but Items count is %d", Capacity, #Items)
         return
     end
     local ItemList = Items or {}
@@ -151,14 +166,17 @@ function MeetTradeVM:UpdateRoleTradeItemListInfo(Items)
 end
 
 function MeetTradeVM:FillCapacityByEmptyItem(ItemList)
+    local Capacity = self:GetItemCapacity()
 	local ResultList = ItemList or {}
 	local ItemLen = #ResultList
-	for i = 1, self.Capacity - ItemLen do
+	for i = 1, Capacity - ItemLen do
 		ResultList[ItemLen + i] = self.EmptyItemCache
 	end
 	return ResultList
 end
-
+function MeetTradeVM:GetItemCapacity()
+	return _G.MeetTradeMgr.SelectListCapacity
+end
 function MeetTradeVM:SendMajorGoldNumForTrade(NewNum)
     if NewNum >= 0 and NewNum <= self:GetMajorMaxGoldNumForTrade() then
         self:SetMajorGoldNumForTrade(NewNum)
@@ -181,11 +199,22 @@ end
 
 function MeetTradeVM:SetMajorGoldNumForTrade(NewNum)
 	self.MajorGoldForTrade = NewNum
-    self.MajorGoldTax = math.floor(self.MajorGoldForTrade * self.MajorGoldTaxRate)
+    self.MajorGoldForTradeText = ItemUtil.GetItemNumTextWithoutBehind(self.MajorGoldForTrade)
+    self.MajorGoldTax = math.ceil(self.MajorGoldForTrade * self.MajorGoldTaxRate)
+    self.MajorGoldTaxText = ItemUtil.GetItemNumTextWithoutBehind(self.MajorGoldTax)
 end
 
 function MeetTradeVM:SetRoleGoldNumForTrade(NewNum)
+    self.AnimNum = {OldNum = self.RoleGoldForTrade, Num = NewNum}
+    if NewNum > self.RoleGoldForTrade then
+        self.PlayGoldNumChangeAnimation = 1
+    elseif NewNum < self.RoleGoldForTrade then
+        self.PlayGoldNumChangeAnimation = 2
+    else
+        self.PlayGoldNumChangeAnimation = 0
+    end
     self.RoleGoldForTrade = NewNum
+    --self.RoleGoldForTradeText = ItemUtil.GetItemNumTextWithoutBehind(self.RoleGoldForTrade)
 end
 
 function MeetTradeVM:GetMajorCurrentGoldNumForTrade()
@@ -197,31 +226,44 @@ function MeetTradeVM:GetRoleCurrentGoldNumForTrade()
 end
 
 function MeetTradeVM:GetMajorMaxGoldNumForTrade()
-    return ScoreMgr:GetScoreValueByID(BagMgr.RecoveryScoreID)
+    local CurrentHaveGoldNum = ScoreMgr:GetScoreValueByID(BagMgr.RecoveryScoreID)
+    local MajorMaxGoldNumForTrade = math.floor(CurrentHaveGoldNum / (1 + self.MajorGoldTaxRate))
+    -- 向下取整，保证不会超过当前持有金币数
+    return MajorMaxGoldNumForTrade
 end
 
 function MeetTradeVM:GetMajorGoldTax()
     return self.MajorGoldTax
 end
 
+function MeetTradeVM:UpdateImgAdd(IsReadyForTrade)
+    local ImgAdd = "Texture2D'/Game/UI/Texture/Icon/UI_Icon_PlusSign_Noraml.UI_Icon_PlusSign_Noraml'"
+    if IsReadyForTrade then
+        ImgAdd = "Texture2D'/Game/UI/Texture/MeetTrade/UI_Icon_MeetTrade_Add.UI_Icon_MeetTrade_Add'"
+    end
+    local Items = self.MajorTradeItemVMList.Items
+    for _, Item in ipairs(Items) do
+        if Item.ImgAddOpacity == 1 then
+            Item.ImgAdd = ImgAdd
+            Item:UpdateByValue(Item)
+            break
+        end
+    end
+end
+
 function MeetTradeVM:UpdateMajorTradeItemList(Params)
     local CreateParams = {}
-    local GoldNumCheck = false
     self.MajorTradeItemListParams = {}
     for i = 1, #Params do
         local ItemParam = self:GetTradeItemListParams(Params[i])
         if nil ~= ItemParam then
             if ItemParam.ResID == _G.BagMgr.RecoveryScoreID then --表示金币
                self:SetMajorGoldNumForTrade(ItemParam.Num)
-               GoldNumCheck = true
             else
                 table.insert(CreateParams, ItemParam)
                 table.insert(self.MajorTradeItemListParams, ItemParam)
             end
         end
-    end
-    if GoldNumCheck == false then
-        self:SetMajorGoldNumForTrade(0)
     end
     self:UpdateMajorTradeItemListInfo(CreateParams)
 end
@@ -229,6 +271,7 @@ end
 function MeetTradeVM:UpdateRoleTradeItemListParams(Params)
     local CreateParams = {}
     local GoldNumCheck = false
+    local OldRoleTradeItemListParams = self.RoleTradeItemListParams
     self.RoleTradeItemListParams = {}
     for i = 1, #Params do
         local ItemParam = self:GetTradeItemListParams(Params[i])
@@ -244,6 +287,30 @@ function MeetTradeVM:UpdateRoleTradeItemListParams(Params)
     end
     if GoldNumCheck == false then
         self:SetRoleGoldNumForTrade(0)
+    end
+    if #CreateParams > #OldRoleTradeItemListParams then
+        for i = 1, #OldRoleTradeItemListParams do
+            local ItemParam = CreateParams[i]
+            local ItemParam2 = OldRoleTradeItemListParams[i]
+            if ItemParam.GID ~= ItemParam2.GID or ItemParam.Num ~= ItemParam2.Num then
+                CreateParams[i].PlayAnim = true
+            else
+                CreateParams[i].PlayAnim = false
+            end
+        end
+        for i = #OldRoleTradeItemListParams + 1, #CreateParams do
+            CreateParams[i].PlayAnim = true
+        end
+    else
+        for i = 1, #CreateParams do
+            local ItemParam = CreateParams[i]
+            local ItemParam2 = OldRoleTradeItemListParams[i]
+            if ItemParam.GID ~= ItemParam2.GID or ItemParam.Num ~= ItemParam2.Num then
+                CreateParams[i].PlayAnim = true
+            else
+                CreateParams[i].PlayAnim = false
+            end
+        end
     end
     self:UpdateRoleTradeItemListInfo(CreateParams)
 end
@@ -297,7 +364,7 @@ function MeetTradeVM:CheckMajorItemListChange(Params)
 end
 
 --传入的参数带有金币,所以需要先检查金币有没有变化
-function MeetTradeVM:CheckRoleItemListChange(Params)
+function MeetTradeVM:MarkRoleItemListChange(Params)
     local CreateParams = {}
     local NewGoldNum = 0
     for i = 1, #Params do
@@ -324,5 +391,22 @@ function MeetTradeVM:CheckRoleItemListChange(Params)
         end
     end
     return false
+end
+
+function MeetTradeVM:SetTotalMoneyNumStrByAminVlaue(AminVlaue)
+    local AnimNum = self.AnimNum
+	local OldNum = AnimNum.OldNum
+	local Num = AnimNum.Num
+	if OldNum and Num and AminVlaue then
+		local TotalNum = (Num - OldNum) * AminVlaue + OldNum
+		self.RoleGoldForTradeText = _G.ArmyMgr:FormatMoneyNumber(TotalNum)
+	end
+end
+
+function MeetTradeVM:SetBindPropertyNoCheckValueChange(BindName)
+    local BindProperty = self:FindBindableProperty(BindName)
+    if BindProperty then
+        BindProperty:SetNoCheckValueChange(true)
+    end
 end
 return MeetTradeVM

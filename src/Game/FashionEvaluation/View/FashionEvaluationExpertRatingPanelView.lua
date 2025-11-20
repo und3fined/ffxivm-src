@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local UIViewID = require("Define/UIViewID")
 local ActorUtil = require("Utils/ActorUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
@@ -26,10 +27,13 @@ local EFashionView = FashionEvaluationDefine.EFashionView
 ---@field BtnArrowLeft UFButton
 ---@field BtnArrowRight UFButton
 ---@field BtnStart CommBtnLView
+---@field CommonTitle CommonTitleView
 ---@field EFF_Score1 UFCanvasPanel
 ---@field EFF_Score2 UFCanvasPanel
 ---@field EFF_Score3 UFCanvasPanel
 ---@field EFF_Score4 UFCanvasPanel
+---@field IconTitle UFImage
+---@field PanelIcon UFCanvasPanel
 ---@field TableViewDrop UTableView
 ---@field TableView_43 UTableView
 ---@field Target FashionEvaluationTargetItemView
@@ -47,10 +51,13 @@ function FashionEvaluationExpertRatingPanelView:Ctor()
 	--self.BtnArrowLeft = nil
 	--self.BtnArrowRight = nil
 	--self.BtnStart = nil
+	--self.CommonTitle = nil
 	--self.EFF_Score1 = nil
 	--self.EFF_Score2 = nil
 	--self.EFF_Score3 = nil
 	--self.EFF_Score4 = nil
+	--self.IconTitle = nil
+	--self.PanelIcon = nil
 	--self.TableViewDrop = nil
 	--self.TableView_43 = nil
 	--self.Target = nil
@@ -66,6 +73,7 @@ function FashionEvaluationExpertRatingPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BackBtn)
 	self:AddSubView(self.BtnStart)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Target)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -122,15 +130,36 @@ function FashionEvaluationExpertRatingPanelView:OnRegisterUIEvent()
 end
 
 function FashionEvaluationExpertRatingPanelView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(_G.EventID.ShowUI, self.OnShowView)
+	self:RegisterGameEvent(_G.EventID.HideUI, self.OnHideView)
 end
 
 function FashionEvaluationExpertRatingPanelView:OnRegisterBinder()
 	self:RegisterBinders(FashionEvaluationVM, self.Binders)
 end
 
+function FashionEvaluationExpertRatingPanelView:OnShowView(ViewID)
+	-- 衣橱界面打开时，隐藏NPC
+	if ViewID == UIViewID.WardrobeMainPanel or ViewID == UIViewID.StoreNewMainPanel then
+		if self.CurNPCEntityID then
+			_G.UE.UActorManager.Get():HideActor(self.CurNPCEntityID, true)
+		end
+	end
+end
+
+function FashionEvaluationExpertRatingPanelView:OnHideView(ViewID)
+	-- 衣橱界面关闭时，恢复NPC显示
+	if ViewID == UIViewID.WardrobeMainPanel or ViewID == UIViewID.StoreNewMainPanel then
+		if self.CurNPCEntityID then
+			_G.UE.UActorManager.Get():HideActor(self.CurNPCEntityID, false)
+		end
+	end
+end
+
 function FashionEvaluationExpertRatingPanelView:SetLSTR()
-	self.TextTitle:SetText(_G.LSTR(1120037)) -- 1120037("达人评分")
+	self.CommonTitle:SetSubTitleIsVisible(false)
+	self.CommonTitle:SetCommInforBtnIsVisible(false)
+	self.CommonTitle:SetTextTitleName(_G.LSTR(1120037)) -- 1120037("达人评分")
 	self.BtnStart:SetBtnName(_G.LSTR(1120032)) --1120032("开始挑战")
 end
 

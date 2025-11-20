@@ -161,7 +161,8 @@ function ChatPrivateChannelItemView:OnValueChangedOnline( )
 	local ViewModel = self.ViewModel
 	if ViewModel then
 		local IsOnline = ViewModel.IsOnline
-		self.PlayerHeadSlot:SetIsGreyIcon(self.ChannelID, not IsOnline)
+		--_G.FLOG_INFO("[ChatPrivateChannelItemView:OnValueChangedOnline] IsOnline: %s", tostring(IsOnline))
+		--self.PlayerHeadSlot:SetIsGreyIcon(self.ChannelID, not IsOnline)
 		self.PlayerHeadSlot:SetRenderOpacity(IsOnline and 1 or 0.5)
 	end
 end

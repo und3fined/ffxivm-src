@@ -11,6 +11,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIUtil = require("Utils/UIUtil")
+local TimeUtil = require("Utils/TimeUtil")
 
 ---@class TouringBandSupportPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -92,14 +93,7 @@ function TouringBandSupportPanelView:OnDestroy()
 end
 
 function TouringBandSupportPanelView:OnShow()
-	self.TextHint:SetText(_G.LSTR(450030)) -- 点击动作完成应援
-	UIUtil.SetIsVisible(self.PanelText, false)
-	UIUtil.SetIsVisible(self.PanelHint, false)
-	if self.SkillVM and self.SkillVM.CurActionNum >= _G.TouringBandMgr:GetCheeringMaxNum() then
-		self.TextSuccess:SetText(_G.LSTR(450024)) -- 应援成功
-	else
-		self.TextSuccess:SetText(_G.LSTR(450027)) -- 气氛提升！
-	end
+	
 end
 
 function TouringBandSupportPanelView:OnHide()
@@ -134,14 +128,35 @@ function TouringBandSupportPanelView:OnPlayClickAnim(NewValue)
 	
 	if NewValue then
 		if self:IsAnimationPlaying(self.AnimTips) then
-			self:StopAnimation(self.AnimTips)
+			self:PlayAnimToEnd(self.AnimTips)
 		end
-
-		UIUtil.SetIsVisible(self.PanelHint, false)
+		
+		-- 三种情况：1.没有成功，2.常驻乐团成功，3.巡回乐团成功
 		if self.SkillVM.CurActionNum >= _G.TouringBandMgr:GetCheeringMaxNum() then
-			self.TextSuccess:SetText(_G.LSTR(450024))
-			self:PlayAnimation(self.AnimSuccessLoop,0,0)
+			if self.TimerID then
+				self:UnRegisterTimer(self.TimerID)
+				self.TimerID = nil
+			end
+			local Time = _G.TouringBandMgr:GetCurTimelineLeftTime()
+			if Time > 0 then
+				UIUtil.SetIsVisible(self.PanelText, false)
+				UIUtil.SetIsVisible(self.PanelHint, true)
+				self.TimerID = self:RegisterTimer(self.OnTimer, 0, 1, 0)
+			else
+				UIUtil.SetIsVisible(self.PanelText, true)
+				UIUtil.SetIsVisible(self.PanelHint, false)
+				self.TextSuccess:SetText(_G.LSTR(450024)) -- 应援成功
+			end
+			if not self:IsAnimationPlaying(self.AnimSuccessLoop) then
+				self:PlayAnimation(self.AnimSuccessLoop,0,0)
+			end
 		else
+			if self.TimerID then
+				self:UnRegisterTimer(self.TimerID)
+				self.TimerID = nil
+			end
+			UIUtil.SetIsVisible(self.PanelText, true)
+			UIUtil.SetIsVisible(self.PanelHint, false)
 			self.TextSuccess:SetText(_G.LSTR(450027))
 			for i, Effect in ipairs(self.ProgressMDX) do
 				UIUtil.SetIsVisible(Effect, i == self.SkillVM.CurActionNum, false, true)
@@ -154,16 +169,38 @@ end
 
 function TouringBandSupportPanelView:OnRootVisible(NewValue)
 	if self:IsAnimationPlaying(self.AnimTips) then
-		self:StopAnimation(self.AnimTips)
+		self:PlayAnimToEnd(self.AnimTips)
 	end
 	if self:IsAnimationPlaying(self.AnimClick) then
-		self:StopAnimation(self.AnimClick)
+		self:PlayAnimToEnd(self.AnimClick)
 	end
+	
 	if NewValue then
 		UIUtil.SetIsVisible(self.PanelText, false)
 		UIUtil.SetIsVisible(self.PanelHint, false)
 		if self.SkillVM and self.SkillVM.CurActionNum >= _G.TouringBandMgr:GetCheeringMaxNum() then
-			UIUtil.SetIsVisible(self.PanelText, true)
+			if self.TimerID then
+				self:UnRegisterTimer(self.TimerID)
+				self.TimerID = nil
+			end
+
+			local Time = _G.TouringBandMgr:GetCurTimelineLeftTime()
+			if Time > 0 then
+				UIUtil.SetIsVisible(self.PanelText, false)
+				UIUtil.SetIsVisible(self.PanelHint, true)
+				self.TimerID = self:RegisterTimer(self.OnTimer, 0, 1, 0)
+			else
+				UIUtil.SetIsVisible(self.PanelText, true)
+				UIUtil.SetIsVisible(self.PanelHint, false)
+				self.TextSuccess:SetText(_G.LSTR(450024)) -- 应援成功
+			end
+		else
+			if self.TimerID then
+				self:UnRegisterTimer(self.TimerID)
+				self.TimerID = nil
+			end
+			self.TextHint:SetText(_G.LSTR(450030)) -- 点击动作完成应援
+			self.TextSuccess:SetText(_G.LSTR(450027)) -- 气氛提升！
 		end
 		self:PlayAnimation(self.AnimShow)
 	end
@@ -179,6 +216,18 @@ function TouringBandSupportPanelView:OnAnimationFinished(Anim)
 			UIUtil.SetIsVisible(self.PanelHint, true)
 			self:PlayAnimation(self.AnimTips)
 		end
+	end
+end
+
+function TouringBandSupportPanelView:OnTimer()
+	local Time = _G.TouringBandMgr:GetCurTimelineLeftTime()
+	if Time > 0 then
+		local TimerStr = TimeUtil.GetTimeFormat("%M:%S", Time)
+		self.TextHint:SetText(_G.LSTR(450034) .. ":" .. TimerStr)
+	else
+		self.TextSuccess:SetText(_G.LSTR(450024)) -- 应援成功
+		self:UnRegisterTimer(self.TimerID)
+		self.TimerID = nil
 	end
 end
 

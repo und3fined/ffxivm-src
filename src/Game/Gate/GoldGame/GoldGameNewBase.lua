@@ -490,18 +490,12 @@ function GoldGameNewBase:AfterGateOpportunityRewardAnimEnd(Params)
     if IsInPanelMiniGame then
         return
     end
-    local RewardDataList = {}
-    for Key, Value in pairs(Params.RewardData.Items) do
-        table.insert(RewardDataList, {ResID = Value.ID, Num = Value.Num})
-    end
-
-    local RewardItemListVM = _G.GoldSauserMgr:UpdateRewardListVM(RewardDataList)
 
     local Title = LSTR(1270005)
     local HideCallback = function()
         _G.GoldSauserMgr:RecoverSpecialJumpTips()
     end
-    _G.GoldSauserMgr:ShowCommRewardPanel(RewardItemListVM, Title, HideCallback)
+    _G.GoldSauserMgr:ShowCommRewardPanel(Params.RewardData, Title, HideCallback)
 end
 
 --- 逻辑代码END

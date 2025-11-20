@@ -1,7 +1,7 @@
 ---
 --- Author: peterxie
 --- DateTime: 2024-06-03 19:31
---- Description:
+--- Description: 采集点区域
 ---
 
 local UIView = require("UI/UIView")

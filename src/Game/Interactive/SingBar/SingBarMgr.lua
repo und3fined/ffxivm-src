@@ -116,6 +116,8 @@ function SingBarMgr:Reset()
     self.EndingATLIDTable = {}
 
     self.SingCallBack = nil
+    --物品表配置读条id，只是客户端读条的使用物品 --另外就是物品表配置交互id会同步第三方的使用物品读条
+    self.IsMajorClientSingUsingItem = false
 
     --传送有概率在吟唱结束前收到跳转场景消息,这里重置参数
     self.MajorIsSinging = false
@@ -243,7 +245,13 @@ function SingBarMgr:MajorSingByInteractiveID(InteractiveDescID, InteractiveEntit
 end
 
 function SingBarMgr:MajorSingBySingStateIDWithoutInteractiveID(SingStateID, SingCallback, ParamsTable, InteractiveEntityID, InteractiveListID)
-    _G.InteractiveMgr:SetCurrentSingInteractionId(0)
+    _G.InteractiveMgr:SetInteractionIDWithServer(0)
+    -- if ParamsTable and ParamsTable.ResID then
+    --     self.IsMajorClientSingUsingItem = true
+    -- else
+    --     self.IsMajorClientSingUsingItem = false
+    -- end
+
     self:MajorSingBySingStateID(SingStateID, SingCallback, ParamsTable, InteractiveEntityID, InteractiveListID)
 end
 
@@ -325,6 +333,23 @@ function SingBarMgr:MajorSingByParamTable(SingParam, SingCallback, IsClientOnly)
     return false
 end
 
+function SingBarMgr:SetSingPercent(CurPercent)
+    local EntityID = MajorUtil:GetMajorEntityID()
+	local MajorSingInfo = self.PlayerSingMap and self.PlayerSingMap[EntityID]
+    if MajorSingInfo then
+        MajorSingInfo.SingPercent = CurPercent
+    end
+end
+
+-- 0-1
+function SingBarMgr:GetSingPercent(EntityID)
+	local MajorSingInfo = self.PlayerSingMap and self.PlayerSingMap[EntityID]
+    if MajorSingInfo then
+        return MajorSingInfo.SingPercent
+    end
+
+    return 0
+end
 ----------------------------------------  内部接口 begin ------------------------
 ---
 ---
@@ -348,7 +373,7 @@ function SingBarMgr:OnMajorSingStartByChgRsp(InteractiveID, ServerSpellID)
     --读条前记录一下主角当前的CurHP
     self:GetMajorHp()
 
-    _G.InteractiveMgr:SetCurrentSingInteractionId(InteractiveID)
+    _G.InteractiveMgr:SetInteractionIDWithServer(InteractiveID)
     _G.InteractiveMgr:PrintInfo("SingBarMgr:OnMajorSingStartByChgRsp, SpellChgRsp first, ServerSpellID: %d, time:%d", ServerSpellID, TimeUtil.GetLocalTimeMS())
     local rlt = self:MajorSingBySingStateID(ServerSpellID, nil)
     if rlt then
@@ -383,12 +408,13 @@ function SingBarMgr:OnOtherPlayerSingBarBegin(EntityID, SingStateID)
         return
     end
 
+    local bUseItem = SingstateDesc and SingstateDesc.IsUseItem == 1 or false
+    self.PlayerSingMap[EntityID] = {SingStateID = SingStateID, bUseItem = bUseItem}
     self:StartTimer(EntityID, SingstateDesc.Time + self.OtherPlayerSingLifeAddTime)
 
     self:DoSingDisplay(EntityID, false, SingstateDesc)
 
 	_G.EventMgr:SendEvent(_G.EventID.OthersSingBarBegin, EntityID, SingStateID)
-    self.PlayerSingMap[EntityID] = {SingStateID = SingStateID}
 end
 
 --CS_VISION_CMD_SPELL_CHG，打断读条或者结束，这个服务器目前没识别
@@ -403,7 +429,7 @@ function SingBarMgr:OnOtherPlayerSingBarBreak(EntityID, SpellID)
         _G.EventMgr:SendEvent(_G.EventID.OthersSingBarOver, EntityID, true, SingStateID)
     end
     self:BreakCurSingDisplay(EntityID, nil, self.OverType.BREAK)
-    _G.EventMgr:SendEvent(_G.EventID.OthersSingBarBreak, EntityID)
+    _G.EventMgr:SendEvent(_G.EventID.OthersSingBarBreak, EntityID,SingStateID)
 
     if  SpellID and SpellID > 0 then
         local SingstateDesc = SingstateCfg:FindCfgByKey(SpellID)
@@ -523,6 +549,8 @@ function SingBarMgr:MajorSingBySecondSingStateID(SingStateID)
     MajorSingInfo.SingStateID = SingStateID
     _G.InteractiveMgr:PrintInfo("SingBarMgr SecondSing SingStateID: %d, Time:%d", SingStateID, TimeUtil.GetLocalTimeMS())
 
+    local bUseItem = SingstateDesc and SingstateDesc.IsUseItem == 1 or false
+    MajorSingInfo.bUseItem = bUseItem
 
     _G.InteractiveMgr:SendInteractiveSpellChgReq(SingStateID)
 
@@ -554,6 +582,41 @@ function SingBarMgr:IsActionTimeLineSing(SingStateID, SingstateDesc)
     return false
 end
 
+function SingBarMgr:IsNeedCheck(EntityID)
+    local MajorEntityID = MajorUtil.GetMajorEntityID()
+    local bNeedCheck = false
+    if self.IsMajorClientSingUsingItem and EntityID == MajorEntityID then
+        bNeedCheck = true
+    else
+        local SingInfo = self.PlayerSingMap[EntityID]
+        if SingInfo and SingInfo.bUseItem then
+            bNeedCheck = true
+        end
+    end
+
+    return bNeedCheck
+end
+
+--吃药的时候，如果是移动、采集制作钓鱼的时候，就不播放动作
+function SingBarMgr:CanPlayAnim(EntityID)
+    local bNeedCheck = self:IsNeedCheck(EntityID)
+    if bNeedCheck then
+        if _G.GatherMgr:IsGatherState() or _G.CrafterMgr:GetIsMaking() or _G.FishMgr:IsInFishState() then
+            return false
+        end
+        
+        local Major = MajorUtil.GetMajor()
+        if Major and Major.CharacterMovement then
+            local Velocity = Major.CharacterMovement.Velocity
+            if Velocity.X ~= 0 or Velocity.Y ~= 0 or Velocity.Z ~= 0 then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 function SingBarMgr:DoSingDisplay(EntityID, IsMajor, SingstateDesc)
     local IsPlay = false
     if IsMajor or not IsMajor and SingstateDesc.NotSyncEffectAndSound == 0 then
@@ -567,9 +630,22 @@ function SingBarMgr:DoSingDisplay(EntityID, IsMajor, SingstateDesc)
             self.SingEffectMap[EntityID] = _G.SkillSingEffectMgr:PlaySingEffect(EntityID, SubSkillID)
         end
     elseif self:IsActionTimeLineSing(SingstateDesc.ID, SingstateDesc) then
-        if IsPlay and (not self:GetIsTransferSing(SingstateDesc.ID) or not ActorUtil.IsInRide(EntityID)) then
+        local bPlayAnim = self:CanPlayAnim(EntityID)
+        local bNeedCheck = self:IsNeedCheck(EntityID)
+        if IsPlay and bPlayAnim and (not self:GetIsTransferSing(SingstateDesc.ID) or not ActorUtil.IsInRide(EntityID)) then
             local Actor = ActorUtil.GetActorByEntityID(EntityID)
             if Actor ~= nil and Actor:GetAnimationComponent() ~= nil then
+                if SingstateDesc.ID == 2 or SingstateDesc.ID == 500015 then
+                    local AppearanceTeleportEffectID = _G.UE.FAppearanceEffectObject_TeleportEffect.GetTeleportEffectSingStateID(Actor:GetAppearanceComponent())
+                    if AppearanceTeleportEffectID > 0 then
+                        local NewSingstateDesc = SingstateCfg:FindCfgByKey(AppearanceTeleportEffectID)
+                        if NewSingstateDesc then
+                            SingstateDesc = NewSingstateDesc
+                            self.PlayerSingMap[EntityID].SingStateID = AppearanceTeleportEffectID
+                        end
+                    end
+                end
+
                 local StartPath = _G.AnimMgr:GetActionTimeLinePath(SingstateDesc.AnimStart)
                 local LoopPath = _G.AnimMgr:GetActionTimeLinePath(SingstateDesc.AnimLoop)
                 _G.InteractiveMgr:PrintInfo("SingBarMgr AnimStart  %s", StartPath)
@@ -585,14 +661,18 @@ function SingBarMgr:DoSingDisplay(EntityID, IsMajor, SingstateDesc)
         end
 
         --vfx
-        self:PlayVfx(EntityID, SingstateDesc.SingEffect)
+        if not bNeedCheck or bNeedCheck and not bPlayAnim then
+            self:PlayVfx(EntityID, SingstateDesc.SingEffect)
+        end
     else
         if IsPlay then
             self:PlayEffect(EntityID, SingstateDesc.SingEffect, SingstateDesc.EffectSocketName, SingstateDesc.EffectDeviation)
             self:PlayEffect(EntityID, SingstateDesc.SingEffect2, SingstateDesc.EffectSocketName2, SingstateDesc.EffectDeviation2)
         end
 
-        self:PlayAnim(EntityID, SingstateDesc.SingAnim)
+        if self:CanPlayAnim(EntityID) then
+            self:PlayAnim(EntityID, SingstateDesc.SingAnim)
+        end
     end
 
     if IsPlay then
@@ -606,7 +686,8 @@ end
 
 function SingBarMgr:BreakSingBarView(IsBreak)
     if IsBreak then
-        _G.EventMgr:SendEvent(EventID.MajorSingBarBreak)
+        local PassTime = TimeUtil.GetLocalTimeMS() - self.BeginSingTime
+        _G.EventMgr:SendEvent(EventID.MajorSingBarBreak, PassTime)
     else
         _G.UIViewMgr:HideView(UIViewID.SingBarAttuning)
         _G.UIViewMgr:HideView(UIViewID.SingBarQuestUseItem)
@@ -657,10 +738,14 @@ function SingBarMgr:OnSelectTarget()
     if SingStateID == nil then return end
     if self.CanSelectSingStateList[SingStateID] == nil then
         _G.InteractiveMgr:SendInteractiveBreakReq()
+        --_G.InteractiveMgr:SetInteractionIDWithServer(0)
         local function SendInteractiveBreakReqTimeOut()
+            --_G.InteractiveMgr:PrintInfo("SingBarMgr:OnSelectTarget, SendInteractiveBreakReqTimeOut")
             self:OnInteractionBreakRsp()
         end
-        self.SendInteractionBreakReqTimer = TimerMgr:AddTimer(nil, SendInteractiveBreakReqTimeOut, 0.5, 1, 1)
+        --if nil == self.SendInteractionBreakReqTimer then
+            self.SendInteractionBreakReqTimer = TimerMgr:AddTimer(nil, SendInteractiveBreakReqTimeOut, 0.5, 1, 1)
+        --end
     end
 end
 
@@ -668,6 +753,7 @@ function SingBarMgr:OnInteractionBreakRsp(MsgBody)
     --FLOG_INFO("SingBarMgr:OnInteractionBreakRsp, MsgBody:%s", tostring(MsgBody))
     if nil ~= self.SendInteractionBreakReqTimer then
         TimerMgr:CancelTimer(self.SendInteractionBreakReqTimer)
+        --self.SendInteractionBreakReqTimer = nil
     end
     self:OnBreakSingOver()
     --_G.InteractiveMgr:ExitInteractive()
@@ -836,16 +922,12 @@ function SingBarMgr:OnMajorSingBegin(EntityID, UIStyle, SingLife, SingCallback, 
         ShowSingTimeCountDown = not self:IsActionTimeLineSing(SingstateDesc.ID, SingstateDesc)
     end
 
-    local AvatarComp = ActorUtil.GetActorAvatarComponent(EntityID)
-    if AvatarComp then
-        AvatarComp:SetPartTranslucencySortPriority(AvatarType_Hair, HairRenderPriority)
-    end
-
     if SingstateDesc and SingstateDesc.HideOtherUIType ~= nil then
         _G.InteractiveMgr:PrintInfo("SingBarMgr:OnMajorSingBegin, SingstateID:%d, UIStyle:%d, HideUIType:%s", SingstateDesc.ID, UIStyle, SingstateDesc.HideOtherUIType)
         _G.InteractiveMgr:SetHideOtherUITypeBySing(SingstateDesc.HideOtherUIType)
         ParamsTable.HideOtherUIType = SingstateDesc.HideOtherUIType
     end
+
     if UIStyle == ProtoRes.SingStateUIStyle.UISTYLE_NORMAL then
         local SingBarView = _G.UIViewMgr:ShowView(UIViewID.SingBarAttuning, ParamsTable)
         if SingBarView then
@@ -859,6 +941,7 @@ function SingBarMgr:OnMajorSingBegin(EntityID, UIStyle, SingLife, SingCallback, 
     else
         self:StartTimer(EntityID, SingLife)
     end
+    self.BeginSingTime = TimeUtil.GetLocalTimeMS()
 
     self.MajorIsSinging = true
 	CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.COMM_STAT_SPELL, true)
@@ -866,11 +949,22 @@ function SingBarMgr:OnMajorSingBegin(EntityID, UIStyle, SingLife, SingCallback, 
     self:RegisterGameEvents()
 
     local SingStateID =  SingstateDesc and SingstateDesc.ID or 0
+    local bUseItem = SingstateDesc and SingstateDesc.IsUseItem == 1 or false
 	_G.EventMgr:SendEvent(_G.EventID.MajorSingBarBegin, EntityID, SingStateID)
     if nil ~= InteractiveEntityID and nil ~= InteractiveListID then
-        self.PlayerSingMap[EntityID] = {Callback = SingCallback, IsNoSync = IsClientOnly, IsFirst = true, InteractiveEntityID = InteractiveEntityID, InteractiveListID = InteractiveListID}
+        self.PlayerSingMap[EntityID] = {Callback = SingCallback, IsNoSync = IsClientOnly, IsFirst = true, InteractiveEntityID = InteractiveEntityID, InteractiveListID = InteractiveListID, bUseItem = bUseItem}
     else
-        self.PlayerSingMap[EntityID] = {Callback = SingCallback, IsNoSync = IsClientOnly, IsFirst = true}
+        self.PlayerSingMap[EntityID] = {Callback = SingCallback, IsNoSync = IsClientOnly, IsFirst = true, bUseItem = bUseItem}
+    end
+    
+    local AvatarComp = ActorUtil.GetActorAvatarComponent(EntityID)
+    if AvatarComp then
+        AvatarComp:SetPartTranslucencySortPriority(AvatarType_Hair, HairRenderPriority)
+        -- 读条取消收刀
+        if self:CanPlayAnim(EntityID) then
+            _G.EmotionMgr:SendStopEmotionAll()
+            AvatarComp:TempSetAvatarBack(1)
+        end
     end
 end
 
@@ -892,6 +986,17 @@ function SingBarMgr:GetIsActiveCrystalSing(SingID)
         return false
     end
     return self.ActiveCrystalSingIDList[SingID]
+end
+
+--- 手动塞入读条信息，实现客户端的二段读条效果
+function SingBarMgr:InsertSecondSingInfoManually(EntityID, SecondSingStateID)
+    local SingInfo = self.PlayerSingMap[EntityID]
+    if not SingInfo then
+        return
+    end
+
+    SingInfo.IsFirst = true
+    SingInfo.SecondSingStateID = SecondSingStateID
 end
 
 --打断或者正常结束
@@ -926,6 +1031,8 @@ function SingBarMgr:OnMajorSingOver(EntityID, IsBreak, IsForce)
     if StateComponent ~= nil then
         StateComponent:SetActorControlState(_G.UE.EActorControllStat.CanTurn, true, "InteractiveSing")
         StateComponent:SetActorControlState(_G.UE.EActorControllStat.CanUseSkill, true, "InteractiveSing")
+    else
+        FLOG_INFO("SingBarMgr:OnMajorSingOver InteractiveSing SetCanUseSkill Fail Reason: StateComponent == nil")
     end
 
     self:UnRegisterGameEvents()
@@ -952,12 +1059,13 @@ function SingBarMgr:OnMajorSingOver(EntityID, IsBreak, IsForce)
 
     self:BreakCurSingDisplay(EntityID, nil, overtype)
 
+    self.IsMajorClientSingUsingItem = false
     if not IsBreak then
         --读条效果正常结束
         _G.InteractiveMgr:SendInteractiveEndReq()
     else
         --读条被打断了
-        _G.InteractiveMgr:SetCurrentSingInteractionId(0)
+        _G.InteractiveMgr:SetInteractionIDWithServer(0)
     end
 end
 
@@ -1014,6 +1122,10 @@ function SingBarMgr:PlayEffect(EntityID, EffectPath, EffectSocket, EffectDeviati
 end
 
 function SingBarMgr:RemoveEffect(EntityID)
+    if not self:CanPlayAnim(EntityID) then
+        return 
+    end
+
     local EffectTable = self.EffectIDTable[EntityID] or {}
     for index = 1, #EffectTable do
         local EffectID = EffectTable[index]
@@ -1048,8 +1160,10 @@ end
 function SingBarMgr:RemoveVfx(EntityID)
     local VfxIDList = self.VfxIDTable[EntityID]
     if VfxIDList then
-        for i=1, #VfxIDList do
-            EffectUtil.StopVfx(VfxIDList[i])
+        if self:CanPlayAnim(EntityID) then
+            for i=1, #VfxIDList do
+                EffectUtil.StopVfx(VfxIDList[i])
+            end
         end
     end
     self.VfxIDTable[EntityID] = nil
@@ -1059,6 +1173,10 @@ function SingBarMgr:PlayAnim(EntityID, AnimPath, PlayRate, BlendIn, BlendOut)
     if not AnimPath or string.len(AnimPath) == 0 then
         --AnimPath = SingBarMgr.DefaultAnimMontage
         --[sammrli] 不设默认动作了
+        return
+    end
+
+    if not self:CanPlayAnim(EntityID) then
         return
     end
 
@@ -1080,6 +1198,10 @@ function SingBarMgr:StopAnimation(EntityID, IsForceStopAnim, SingstateDesc, Sing
         return
     end
     if self:GetIsTransferSing(SingstateDesc.ID) and ActorUtil.IsInRide(EntityID) then
+        return
+    end
+
+    if not self:CanPlayAnim(EntityID) then
         return
     end
 
@@ -1130,11 +1252,19 @@ function SingBarMgr:StopAnimation(EntityID, IsForceStopAnim, SingstateDesc, Sing
                     local AnimComp = Actor:GetAnimationComponent()
                     if AnimComp then
                         local EndPath = _G.AnimMgr:GetActionTimeLinePath(SingstateDesc.AnimEnd)
-                        local ActionTimelines = {
+                        local ActionTimelines
+                        if SingstateDesc.AnimEnd ~= "" then 
+                            ActionTimelines = {
                             [1] = {AnimPath = EndPath,Callback = CommonUtil.GetDelegatePair(function()
                                 _G.EventMgr:SendEvent(_G.EventID.SingBarAllOver,EntityID)
                                 end,true)},
                         }
+                        else
+                            ActionTimelines = {
+                            [1] = {AnimPath = EndPath},
+                        }
+                        end
+
                         local ATLID = _G.AnimMgr:PlayAnimationMulti(EntityID, ActionTimelines)
                         self.EndingATLIDTable[EntityID] = ATLID
                     end
@@ -1155,13 +1285,22 @@ function SingBarMgr:PlaySound(EntityID, SoundPath)
         return
     end
 
-    local AudioMgr = _G.UE.UAudioMgr:Get()
-    local SoundID = AudioMgr:LoadAndPostEvent(SoundPath, Me, false)
+    local bNeedCheck = self:IsNeedCheck(EntityID)
+    local bPlayAnim = self:CanPlayAnim(EntityID)
+    if not bNeedCheck or bNeedCheck and not bPlayAnim then
+        local AudioMgr = _G.UE.UAudioMgr:Get()
+        local SoundID = AudioMgr:LoadAndPostEvent(SoundPath, Me, false)
+    
+        if not EntityID then
+            return
+        end
 
-    if not EntityID then
-        return
-    end
-    self.SoundIDTable[EntityID] = SoundID
+        if not self.SoundIDTable then
+            self.SoundIDTable = {}
+        end
+
+        self.SoundIDTable[EntityID] = SoundID
+    end    
 end
 
 function SingBarMgr:PlayActorSound(Actor, SoundPath)
@@ -1173,13 +1312,15 @@ function SingBarMgr:PlayActorSound(Actor, SoundPath)
 end
 
 function SingBarMgr:StopSound(EntityID)
-    if not EntityID then
+    if not EntityID or not self:CanPlayAnim(EntityID) then
         return
     end
-    local SoundID = self.SoundIDTable[EntityID]
-    if SoundID then
-        local AudioMgr = _G.UE.UAudioMgr:Get()
-        AudioMgr:StopPlayingID(SoundID, 0, 0)
+    if nil ~= self.SoundIDTable and nil ~= self.SoundIDTable[EntityID] then
+        local SoundID = self.SoundIDTable[EntityID]
+        if SoundID then
+            local AudioMgr = _G.UE.UAudioMgr:Get()
+            AudioMgr:StopPlayingID(SoundID, 0, 0)
+        end
     end
 end
 
@@ -1248,7 +1389,8 @@ function SingBarMgr:BreakCurSingDisplay(EntityID, NotClearPlayerSingMap, SingOve
             end
         end
     end
-
+    
+    self.PlayerSingMap[EntityID].bUseItem = false
     if not NotClearPlayerSingMap then
         self.PlayerSingMap[EntityID] = nil
     end
@@ -1258,6 +1400,10 @@ end
 ---
 
 function SingBarMgr:StartTimer(EntityID, SingLife)
+    if not self.TimerIDTable then
+        self.TimerIDTable = {}
+    end
+    
     local LastTimerID = self.TimerIDTable[EntityID]
     if LastTimerID and LastTimerID > 0 then
         TimerMgr:CancelTimer(LastTimerID)

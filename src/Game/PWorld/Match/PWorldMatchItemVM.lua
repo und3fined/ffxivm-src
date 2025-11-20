@@ -17,7 +17,7 @@ local MATCH_ITEM_TYPE =
     DAILY_RANDOM = 3,
     CHOCOBO = 4,
     CHOCOBO_RANDOM_TRACK = 5,
-    CRYSTALLINE = 6,
+    PVP = 6,
 }
 
 ---@class PWorldMatchItemVM: UIViewModel
@@ -68,10 +68,12 @@ function PWorldMatchItemVM:UpdateVM(Value)
 
     do
         self.bShowRobotMatchCheck = _G.PWorldMatchMgr.IsRobotMatchNeed(self.EntID)
-        self.bUseRobotMatch =  self.bShowRobotMatchCheck
-        if self.bShowRobotMatchCheck then
+        local bUseRobotMatch = self.bShowRobotMatchCheck and self.IsRobotNavChecked(self.EntID)
+        self.bUseRobotMatch = bUseRobotMatch
+        if bUseRobotMatch then
             _G.PWorldMatchMgr:SetUseRobotMatch(self.EntID, true)
         end
+
         local bNormalEntrance = false
         local ECfg = SceneEnterCfg:FindCfgByKey(self.EntID)
         if ECfg and (ECfg.TypeID or 0) <= 4 and (ECfg.TypeID or 0) > 0 then
@@ -105,9 +107,9 @@ function PWorldMatchItemVM:UpdateVM(Value)
             end
         end
 
-        Item = PWorldMatchMgr:GetCrystallineItem(self.EntID)
+        Item = PWorldMatchMgr:GetPVPItem(self.EntID)
         if Item then
-            MatchItemType = MATCH_ITEM_TYPE.CRYSTALLINE
+            MatchItemType = MATCH_ITEM_TYPE.PVP
         end
     end
     
@@ -135,7 +137,7 @@ function PWorldMatchItemVM:UpdateVM(Value)
     if MatchItemType == MATCH_ITEM_TYPE.CHOCOBO_RANDOM_TRACK then
         -- LSTR string: 陆行鸟竞赛 随机赛道
         self.Name = _G.LSTR(430008)
-    elseif MatchItemType == MATCH_ITEM_TYPE.CRYSTALLINE then
+    elseif MatchItemType == MATCH_ITEM_TYPE.PVP then
         if PWorldEntUtil.IsCrystallineExercise(Cfg.TypeID) then
             self.Name = _G.LSTR(1320137)
         elseif PWorldEntUtil.IsCrystallineRank(Cfg.TypeID) then
@@ -171,7 +173,7 @@ function PWorldMatchItemVM:UpdateVM(Value)
         self.Prof = Item.Prof
         self.Lv = Item.Level
         self:SetOrder(0)
-    elseif MatchItemType == MATCH_ITEM_TYPE.CRYSTALLINE then
+    elseif MatchItemType == MATCH_ITEM_TYPE.PVP then
         self.IsShowProf = true
         self.IsShowStatus = false
         self.Prof = Item.Prof
@@ -234,12 +236,31 @@ end
 function PWorldMatchItemVM:SetRobotMatchChecked(bChecked)
     if self.bShowRobotMatchCheck then
        self.bUseRobotMatch = bChecked 
+       self.MarkRobotNavChecked(self.EntID, bChecked)
        _G.PWorldMatchMgr:SetUseRobotMatch(self.EntID, bChecked)
     end
 end
 
 function PWorldMatchItemVM:UpdateLackProf()
     self.LackProf = _G.PWorldMatchMgr:GetLackProfFunc(self.EntID)
+end
+
+local MemRobotCheckMap = {}
+
+function PWorldMatchItemVM.MarkRobotNavChecked(EntID, bChecked)
+    if EntID == nil then
+        return
+    end
+
+   MemRobotCheckMap[EntID] = bChecked
+end
+
+function PWorldMatchItemVM.IsRobotNavChecked(EntID)
+    if EntID == nil then
+        return
+    end
+
+   return MemRobotCheckMap[EntID] == true
 end
 
 return PWorldMatchItemVM

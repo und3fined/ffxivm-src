@@ -217,7 +217,11 @@ function BagPropsSideFrameView:OnClickedUseBtn()
 	elseif Item.FreezeGroup == 6 then
 		local MajorEntityID = MajorUtil.GetMajorEntityID()
 		local PlayerAnimInst = AnimationUtil.GetPlayerAnimInst(MajorEntityID)
-		local MoveComp = MajorUtil.GetMajor():GetMovementComponent()
+		local MoveComp = nil
+		local Major = MajorUtil.GetMajor()
+		if Major then
+			MoveComp = Major:GetMovementComponent()
+		end
 		if EmotionMgr.MajorCanUseType == EmotionDefines.CanUseTypes.SIT_GROUND or 
 			EmotionMgr.MajorCanUseType == EmotionDefines.CanUseTypes.SIT_CHAIR then
 			_G.MsgTipsUtil.ShowTips(LSTR(990102)) -- 坐下状态无法使用道具

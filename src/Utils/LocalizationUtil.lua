@@ -85,6 +85,9 @@ local LocalizationUtil = {
         { Pattern = "（UTC%d+）", Repl = "（UTC%d）" },
         { Pattern = "%(UTC%d+%)", Repl = "(UTC%d)" },
     },
+
+    IsEnabledLQATag = UCommonUtil.GetIsEnabledLQATag(),
+    LQATagMap = {}, -- {ukey1=true, ukey2=true}
 }
 
 function LocalizationUtil.GetLocalDateCfg()
@@ -495,6 +498,11 @@ function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
         local FlagPos = string.find(LocalStr, '|')
         if FlagPos then
             local Single = string.sub(LocalStr, 1, FlagPos - 1)
+
+            if LocalizationUtil.IsEnabledLQATag then
+                LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+            end
+
             return Single
         end
     end
@@ -502,6 +510,10 @@ function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
 	if not IsFromExcel and string.isnilorempty(LocalStr) then
 		return Str
 	end
+
+    if LocalizationUtil.IsEnabledLQATag then
+        LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+    end
 
 	return LocalStr
 end
@@ -521,6 +533,68 @@ function LocalizationUtil.SplitStringPlural(Str)
 
 	return Ret_1, Ret_2
 end
+
+-------------------------------------------------------------------------------------------------------
+--- LQA
+
+function LocalizationUtil.SetIsEnabledLQATag(b)
+    LocalizationUtil.IsEnabledLQATag = b
+end
+
+function LocalizationUtil.EmptyLQATagData()
+    LocalizationUtil.LQATagMap = {}
+end
+
+function LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+    if string.isnilorempty(Key) or string.isnilorempty(NameSpace) or string.isnilorempty(LocalStr) then
+        return
+    end
+
+    local TagType = NameSpace
+    local UKey = Key
+    if IsFromExcel then
+        UKey = NameSpace .. "_" .. Key
+        TagType = "excel"
+    end
+
+    local Data = LocalizationUtil.LQATagMap[TagType]
+    if nil == Data then
+        Data = {}
+        LocalizationUtil.LQATagMap[TagType] = Data
+    end
+
+    if nil == Data[UKey] then
+        Data[UKey] = LocalStr
+    end
+end
+
+function LocalizationUtil.GenerateLQATagFile()
+    local Json = require("Core/Json")
+    local PathMgr = require("Path/PathMgr")
+
+    local Text = Json.encode(LocalizationUtil.LQATagMap or {})
+
+	local Dir = string.format("%s/LQA", _G.FDIR_PERSISTENT())
+    if not PathMgr.ExistDir(Dir) then
+        PathMgr.CreateDir(Dir, false)
+    end
+
+	local Path = string.format("%s/LQATag_%s.json", Dir, CommonUtil.GetCurrentCultureName())
+	local File = io.open(Path, "wb")
+	if File then
+		if not File:write(Text) then
+			File:close()
+			os.remove(Path)
+
+			return
+		end
+
+		File:flush()
+		File:close()
+	end	
+end
+
+-------------------------------------------------------------------------------------------------------
 
 -- LSTR用法和UE4的LOCTEXT_NAMESPACE类似，有两个作用：一个是多语言构建时扫描LSTR参数里的常量，提取到翻译表里，另一个作用是运行时获取翻译后的多语言字符串
 -- 需要翻译的字符串要通过LSTR函数获取，表格里读取的字符已经改成ukey了，不需要通过LSTR获取

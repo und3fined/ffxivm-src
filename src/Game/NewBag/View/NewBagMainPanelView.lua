@@ -25,14 +25,18 @@ local ProtoRes = require("Protocol/ProtoRes")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local ScoreMgr = require("Game/Score/ScoreMgr")
 local MsgTipsID = require("Define/MsgTipsID")
+local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local EToggleButtonState = _G.UE.EToggleButtonState
-
+local FMath = _G.UE.UKismetMathLibrary
 local UIViewMgr = _G.UIViewMgr
 local UIViewID = _G.UIViewID
 local EventID = _G.EventID
 local BagMgr = _G.BagMgr
 local AetherCurrentsMgr = _G.AetherCurrentsMgr
 local LSTR = _G.LSTR
+local UKismetInputLibrary = UE.UKismetInputLibrary
+local USlateBlueprintLibrary = UE.USlateBlueprintLibrary
+local UUIUtil = _G.UE.UUIUtil
 
 ---@class NewBagMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -43,10 +47,12 @@ local LSTR = _G.LSTR
 ---@field BtnRecoveryOK CommBtnSView
 ---@field BtnRecoveryOff UFCanvasPanel
 ---@field BtnRetract UFButton
+---@field BtnTidy UFButton
 ---@field CommMoneySlot CommMoneySlotView
 ---@field CommonBkgMask_UIBP CommonBkgMaskView
 ---@field CommonRedDot CommonRedDotView
 ---@field FBtn_Drugs UFButton
+---@field IconBlank USpacer
 ---@field ImgBagEmpty UFImage
 ---@field ImgBagFull UFImage
 ---@field ImgBagNotFull URadialImage
@@ -67,12 +73,14 @@ local LSTR = _G.LSTR
 ---@field TextSelect UFTextBlock
 ---@field TextSelectTips UFTextBlock
 ---@field TextSubtitle UFTextBlock
+---@field TextTidy UFTextBlock
 ---@field TextTitleName UFTextBlock
 ---@field TextWarehouseClose UFTextBlock
 ---@field TextWarehouseOpen UFTextBlock
 ---@field ToggleBtnWarehouse UToggleButton
 ---@field ToggleButtonExpand UToggleButton
 ---@field VerIconTabs CommVerIconTabsView
+---@field AnimBagCapacityIncrease UWidgetAnimation
 ---@field AnimCloseBag UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOpenBag UWidgetAnimation
@@ -94,10 +102,12 @@ function NewBagMainPanelView:Ctor()
 	--self.BtnRecoveryOK = nil
 	--self.BtnRecoveryOff = nil
 	--self.BtnRetract = nil
+	--self.BtnTidy = nil
 	--self.CommMoneySlot = nil
 	--self.CommonBkgMask_UIBP = nil
 	--self.CommonRedDot = nil
 	--self.FBtn_Drugs = nil
+	--self.IconBlank = nil
 	--self.ImgBagEmpty = nil
 	--self.ImgBagFull = nil
 	--self.ImgBagNotFull = nil
@@ -118,12 +128,14 @@ function NewBagMainPanelView:Ctor()
 	--self.TextSelect = nil
 	--self.TextSelectTips = nil
 	--self.TextSubtitle = nil
+	--self.TextTidy = nil
 	--self.TextTitleName = nil
 	--self.TextWarehouseClose = nil
 	--self.TextWarehouseOpen = nil
 	--self.ToggleBtnWarehouse = nil
 	--self.ToggleButtonExpand = nil
 	--self.VerIconTabs = nil
+	--self.AnimBagCapacityIncrease = nil
 	--self.AnimCloseBag = nil
 	--self.AnimIn = nil
 	--self.AnimOpenBag = nil
@@ -155,6 +167,8 @@ function NewBagMainPanelView:OnInit()
 
 	self.TableViewAdapter:SetOnClickedCallback(self.OnItemClicked)
 	self.TableViewAdapter:SetOnDoubleClickedCallback(self.OnItemDoubleClicked)
+
+	self.TableViewAdapter:SetOnTouchCallback(self.OnTouchTableStarted, self.OnTouchTableMoved, self.OnTouchTableEnded)
 
 	self.RecoveryTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewRecovery)
 	self.RecoveryTableViewAdapter:SetOnClickedCallback(self.OnRecoveryItemClicked)
@@ -241,6 +255,7 @@ function NewBagMainPanelView:OnShow()
 
 	-- 魔晶石预加载
 	_G.EquipmentMgr:PreLoadMagicspar()
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(true)
 end
 
 function NewBagMainPanelView:GetTabMenuList()
@@ -257,6 +272,8 @@ end
 
 function NewBagMainPanelView:OnHide()
 	self:OnClickedCallback()
+	_G.ObjectMgr:CollectGarbage(false)
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 function NewBagMainPanelView:OnRegisterUIEvent()
@@ -277,15 +294,15 @@ function NewBagMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.ToggleButtonExpand, self.OnClickedButtonExpand)
 
 	UIUtil.AddOnClickedEvent(self, self.BtnRecoveryOK.Button, self.OnBtnRecoveryOKClicked)
-
+	UIUtil.AddOnClickedEvent(self, self.BtnTidy, self.OnBtnTydyClicked)
 
 	self.VerIconTabs:SetClickButtonSwitchCallback(self, self.OnClickedTrimButton)
 end
 
 function NewBagMainPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.BagBuyCapacity, self.OnUpdateBagMain)
+	self:RegisterGameEvent(EventID.BagBuyCapacity, self.OnUpdateBagMainByCapacityIncrease)
 	self:RegisterGameEvent(EventID.BagUpdate, self.OnUpdateBagMain)
-		self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
+	self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
 	self:RegisterGameEvent(EventID.MagicsparInlaySucc, self.OnInlaySucc)
 	self:RegisterGameEvent(EventID.MagicsparUnInlaySucc, self.OnInlaySucc)
 	self:RegisterGameEvent(EventID.BagInit, self.OnUpdateBagMain)
@@ -302,6 +319,7 @@ function NewBagMainPanelView:OnRegisterBinder()
 	self.TextObtain:SetText(LSTR(990086))
 	self.TextSelect:SetText(LSTR(990085))
 	self.BtnRecoveryOK:SetBtnName(LSTR(990047))
+	self.TextTidy:SetText(LSTR(990133))
 end
 
 function NewBagMainPanelView:OnClickedTrimButton()
@@ -318,9 +336,12 @@ function NewBagMainPanelView:OnClickedTrimButton()
 	end
 	self.VerIconTabs:UpdateItems(self:GetTabMenuList(), BagMainVM.TabIndex)
 	self.VerIconTabs:ScrollIndexIntoView(BagMainVM.TabIndex)
+
+	_G.ObjectMgr:CollectGarbage(false, true, false)
 end
 
 function NewBagMainPanelView:OnItemClicked(Index, ItemData, ItemView)
+	self.StarTouchPos = nil
 	if ItemData == nil then
 		return
 	end 
@@ -374,11 +395,122 @@ function NewBagMainPanelView:OnRecoveryItemClicked(Index, ItemData, ItemView)
 end
 
 function NewBagMainPanelView:OnItemDoubleClicked(Index, ItemData, ItemView)
+	self.StarTouchPos = nil
 	if ItemData == nil then
 		return
 	end
 	if BagMainVM.IsBag == false then
 		BagMgr:SendMsgBagTransDepot(ItemData.GID, DepotVM:GetCurDepotIndex(), 0)
+	end
+end
+
+
+function NewBagMainPanelView:OnTouchTableStarted(TableName, InGeometry, InTouchEvent)
+	if not self:CapCondFunc(TableName) then
+		return 
+	end
+
+	local PointerIndex = UKismetInputLibrary.PointerEvent_GetPointerIndex(InTouchEvent)
+	if not self:CheckPointIdx(PointerIndex) then
+		return 
+	end
+
+	local ScreenSpacePosition = UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(InTouchEvent)
+	local LocalPosition = USlateBlueprintLibrary.AbsoluteToLocal(InGeometry, ScreenSpacePosition)
+
+	self.StarTouchPos = LocalPosition
+	--_G.FLOG_INFO('NewBagMainPanelView:OnTouchTableStarted X  = ' .. tostring(self.StarTouchPos.X) .. " Y = " .. tostring(self.StarTouchPos.Y))
+	
+	
+end
+
+function NewBagMainPanelView:CapCondFunc(TableName)
+	if BagMainVM.RecoveryPanelVisible == false then
+		return false
+	end
+	if self.TableViewAdapter == nil then
+		return false
+	end
+
+	return self.TableViewAdapter.WidgetName == TableName
+end
+
+
+function NewBagMainPanelView:OnTouchTableMoved(TableName, InGeometry, InTouchEvent)
+	if not self:CapCondFunc(TableName) then
+		return 
+	end
+
+	local PointerIndex = UKismetInputLibrary.PointerEvent_GetPointerIndex(InTouchEvent)
+	if not self:CheckPointIdx(PointerIndex) then
+		return
+	end
+
+	local ScreenSpacePosition = UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(InTouchEvent)
+	local LocalPosition = USlateBlueprintLibrary.AbsoluteToLocal(InGeometry, ScreenSpacePosition)
+	if self.StarTouchPos == nil then
+		self.StarTouchPos = LocalPosition
+	else
+		self:SelectItemsByTouchMoved(self.StarTouchPos, LocalPosition)
+	end
+	--_G.FLOG_INFO('NewBagMainPanelView:OnTouchTableMoved X = ' .. tostring(LocalPosition.X) .. " Y = " .. tostring(LocalPosition.Y))
+
+end
+
+function NewBagMainPanelView:OnTouchTableEnded(TableName, InGeometry, InTouchEvent)
+	self.StarTouchPos = nil
+	if not self:CapCondFunc(TableName) then
+		return 
+	end
+
+	if BagMainVM:IsRecoveryNumExceedLimit() then
+		MsgTipsUtil.ShowTips(LSTR(990042))
+		return
+	end
+end
+
+function NewBagMainPanelView:CheckPointIdx(PointIdx)
+	if PointIdx == -99 then
+		return false
+	end
+	return true
+end
+
+function NewBagMainPanelView:SelectItemsByTouchMoved(StarTouchPos, CurTouchPos)
+	if BagMainVM:IsRecoveryNumExceedLimit() then
+		return
+	end
+
+	if self.TableViewAdapter ~= nil then
+		local ItemViewList = self.TableViewAdapter.ItemViewList
+		if nil ~= ItemViewList then
+			for _, Widget in ipairs(ItemViewList) do
+				if Widget.Params and Widget.Params.Data then
+					local ItemVM = Widget.Params.Data
+					local TargetWidgetSize = UUIUtil.GetLocalSize(Widget)
+					if math.abs(StarTouchPos.X - CurTouchPos.X) < TargetWidgetSize.X then
+						return
+					end
+					if ItemVM.IsMask == false and BagMainVM.RecoveryList[ItemVM.GID] == nil then
+						--local TargetWidgetSize = UUIUtil.GetLocalSize(Widget)
+						local TargetWidgetPosition = UIUtil.GetWidgetPosition(Widget)
+						local MinX = math.max(TargetWidgetPosition.X - TargetWidgetSize.X, math.min(StarTouchPos.X, CurTouchPos.X))
+						local MinY = math.max(TargetWidgetPosition.Y - TargetWidgetSize.Y, math.min(StarTouchPos.Y, CurTouchPos.Y))
+		
+						local MaxX = math.min(TargetWidgetPosition.X, math.max(StarTouchPos.X, CurTouchPos.X))
+						local MaxY = math.min(TargetWidgetPosition.Y, math.max(StarTouchPos.Y, CurTouchPos.Y))
+		
+						if MinX <= MaxX and MinY <= MaxY then
+							if BagMainVM:IsRecoveryNumExceedLimit() then
+								return
+							end
+							BagMainVM:AddItemToRecoveryList(ItemVM.GID, ItemVM.Item)
+						end
+					end
+				end
+
+			end
+		end
 	end
 end
 
@@ -391,6 +523,8 @@ function NewBagMainPanelView:OnSelectionChangedVerIconTabs(MenuIndex)
 	end
 	self:PlayAnimation(self.AnimSwitchTab)
 	self.TableViewAdapter:ScrollToTop()
+
+	_G.ObjectMgr:CollectGarbage(false, true, false)
 end
 
 
@@ -435,6 +569,11 @@ function NewBagMainPanelView:SetCurItemInfo(CurItem)
 	if CurItem then
 		self.NewBagItemTips:UpdateItem(CurItem)
 	end
+end
+
+function NewBagMainPanelView:OnUpdateBagMainByCapacityIncrease()
+	self:PlayAnimation(self.AnimBagCapacityIncrease)
+	self:OnUpdateBagMain()
 end
 
 function NewBagMainPanelView:OnUpdateBagMain()
@@ -554,7 +693,12 @@ function NewBagMainPanelView:OnRecoveryConfirm()
 	local HighValueItems = BagMainVM:GetRecoveryHighValueItems()
 	if #HighValueItems > 0 then
 		local Message = LSTR(990046)
-		_G.UIViewMgr:ShowView(_G.UIViewID.BagItemListActionTips, {Title = LSTR(990047), Message = Message, MultiItemList = BagMainVM:GetRecoveryItems(), ClickedOkAction = Callback})
+		local RecoveryItems = BagMainVM:GetRecoveryItems()
+		if #RecoveryItems > 7 then
+			_G.UIViewMgr:ShowView(_G.UIViewID.BagItemListActionTips, {Title = LSTR(990047), Message = Message, MultiItemList = BagMainVM:GetRecoveryItems(), ClickedOkAction = Callback})
+		else
+			_G.UIViewMgr:ShowView(_G.UIViewID.BagItemListActionTips, {Title = LSTR(990047), Message = Message, SingleItemList = BagMainVM:GetRecoveryItems(), ClickedOkAction = Callback})
+		end
 	else
 		self:OnRecoveryActionOk()
 	end
@@ -563,6 +707,33 @@ end
 function NewBagMainPanelView:OnRecoveryActionOk()
 	BagMgr:SendMsgBatchRecoveryReq(BagMainVM:GetRecoveryListGIDs())
 	self:OnBtnRetractClicked()
+end
+
+function NewBagMainPanelView:OnBtnTydyClicked()
+	local RecoveryList = BagMainVM.RecoveryList
+	local function RightCallBack()
+		BagMainVM.RecoveryList = {}
+		BagMainVM:UpdateRecoveryItemList()
+		BagMainVM:UpdateTabInfo()
+		BagMainVM:SetCurItem(1)
+		self:SetCurItemInfo(BagMainVM:GetCurItem())
+		_G.UIViewMgr:ShowView(_G.UIViewID.BagTidyWin)
+    end
+
+	if next(RecoveryList) then
+		MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(10004), LSTR(990134), RightCallBack, nil, LSTR(10003), LSTR(10002))
+	else
+		_G.UIViewMgr:ShowView(_G.UIViewID.BagTidyWin)
+	end
+end
+
+
+function NewBagMainPanelView:SequenceEvent_AnimBagCapacityIncrease()
+	local BagCount = BagMgr:CalcBagUseCapacity()
+	local ValueAnim = self:GetAnimBagCapacityIncreaseProgress() -- 蓝图函数，会跟随动画从0涨到1
+	local Capacity = tostring(FMath.round(FMath.lerp( BagMgr.Capacity -  BagMgr.Enlarge, BagMgr.Capacity, ValueAnim))) -- OldCapacity为之前的上限
+	local FinalText = string.format("%d/%d", BagCount, Capacity)
+	self.TextNumber:SetText(FinalText)
 end
 
 return NewBagMainPanelView

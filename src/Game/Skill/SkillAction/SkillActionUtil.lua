@@ -24,10 +24,23 @@ local USkillUtil = UE.USkillUtil
 local FLOG_WARNING = _G.FLOG_WARNING
 local FLOG_INFO = _G.FLOG_INFO
 
+local PWorldMgr, SkillLogicMgr
+
+local MonsterPriorityMap = {}
+
 
 
 ---@class SkillActionUtil
 local SkillActionUtil = {}
+
+function SkillActionUtil.Init()
+    PWorldMgr = _G.PWorldMgr
+    SkillLogicMgr = _G.SkillLogicMgr
+end
+
+function SkillActionUtil.ClearCache()
+    MonsterPriorityMap = {}
+end
 
 function SkillActionUtil.SendQuitAction(EntityID, SkillID)
     local MsgID = ProtoCS.CS_CMD.CS_CMD_COMBAT
@@ -73,34 +86,7 @@ function SkillActionUtil.SendAttack(ObjID, SkillID, TargetList, FDir, SelectPos,
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
-function SkillActionUtil.GetLODLevel(EntityID)
-    local LODLevel = 0
-    local bHighPriority = false
-    local Actor = ActorUtil.GetActorByEntityID(EntityID)
-    if USkillUtil.IsSimulateMajor(Actor) then
-        LODLevel = EffectUtil.GetMajorEffectLOD()
-        bHighPriority = true
-    elseif ActorUtil.IsPlayer(EntityID) then
-        LODLevel = EffectUtil.GetPlayerEffectLOD()
-    elseif ActorUtil.IsMonster(EntityID) then
-        LODLevel = EffectUtil.GetBOSSEffectLOD()
-        bHighPriority = SkillActionUtil.GetMonsterIsHighPriority(EntityID)
-    end
-    return LODLevel, bHighPriority
-end
-
-function SkillActionUtil.GetMonsterIsHighPriority(EntityID)
-    local Actor = ActorUtil.GetActorByEntityID(EntityID)
-    if nil == Actor then
-        return false
-    end
-
-    local AttributeComponent = Actor:GetAttributeComponent()
-    if nil == AttributeComponent then
-        return false
-    end
-
-    local ResID = AttributeComponent.ResID
+local function GetResIDIsHighPriorityInternal(ResID)
     local Cfg = MonsterCfg:FindCfgByKey(ResID)
     if Cfg == nil then
         return false
@@ -118,9 +104,65 @@ function SkillActionUtil.GetMonsterIsHighPriority(EntityID)
     return false
 end
 
+local function GetResIDIsHighPriority(ResID)
+    local bHighPriority = MonsterPriorityMap[ResID]
+    if bHighPriority ~= nil then
+        return bHighPriority
+    end
+
+    bHighPriority = GetResIDIsHighPriorityInternal(ResID)
+    MonsterPriorityMap[ResID] = bHighPriority
+
+    return bHighPriority
+end
+
+local ELODEntityType = UE.ELODEntityType
+local ELODEntityType_Major   <const> = ELODEntityType.Major
+local ELODEntityType_Monster <const> = ELODEntityType.Monster
+
+local GetLODEntityType <const> = USkillUtil.GetLODEntityType
+
+local LODFuncMap = {
+    [ELODEntityType.Major] = EffectUtil.GetMajorEffectLOD,
+    [ELODEntityType.Player] = EffectUtil.GetPlayerEffectLOD,
+    [ELODEntityType.Monster] = EffectUtil.GetBOSSEffectLOD,
+}
+
+function SkillActionUtil.GetLODLevel(EntityID)
+    local LODLevel = 0
+    local bHighPriority = false
+    local Type, ResID = GetLODEntityType(EntityID, 0)
+    local Func = LODFuncMap[Type]
+    if Func then
+        LODLevel = Func()
+    end
+
+    if Type == ELODEntityType_Major then
+        bHighPriority = true
+    elseif Type == ELODEntityType_Monster then
+        bHighPriority = GetResIDIsHighPriority(ResID)
+    end
+
+    return LODLevel, bHighPriority
+end
+
+function SkillActionUtil.GetMonsterIsHighPriority(EntityID)
+    local Actor = ActorUtil.GetActorByEntityID(EntityID)
+    if nil == Actor then
+        return false
+    end
+
+    local AttributeComponent = Actor:GetAttributeComponent()
+    if nil == AttributeComponent then
+        return false
+    end
+
+    return GetResIDIsHighPriority(AttributeComponent.ResID)
+end
+
 
 function SkillActionUtil.ConvertClientVector(InVector)
-    local Origin = _G.PWorldMgr:GetWorldOriginLocation()
+    local Origin = PWorldMgr:GetWorldOriginLocation()
     return Origin + InVector
 end
 
@@ -136,7 +178,7 @@ function SkillActionUtil.CSPosition2FVector(InVector)
 end
 
 function SkillActionUtil.ConvertServerVector(InVector)
-    local Origin = _G.PWorldMgr:GetWorldOriginLocation()
+    local Origin = PWorldMgr:GetWorldOriginLocation()
     local Vector = SkillActionUtil.CSPosition2FVector(InVector)
     return Vector - Origin
 end
@@ -160,6 +202,17 @@ function SkillActionUtil.ProtoTransform2FTransform(InTransform)
     return FTransform(Rotation, Translation, Scale3D)
 end
 
+function SkillActionUtil.CppProtoTransform2FTransform(Transform, ProtoTransform)
+    local Translation = ProtoTransform.Translation
+    local Scale3D = ProtoTransform.Scale3D
+    local Rotation = ProtoTransform.Rotation
+    return USkillUtil.SetTransform(
+        Transform,
+        Translation.X, Translation.Y, Translation.Z,
+        Scale3D.X, Scale3D.Y, Scale3D.Z,
+        Rotation.X, Rotation.Y, Rotation.Z, Rotation.W)
+end
+
 function SkillActionUtil.ProtoColor2FLinearColor(InColor)
     return FLinearColor(InColor.R, InColor.G, InColor.B, InColor.A)
 end
@@ -180,18 +233,22 @@ function SkillActionUtil.LogPoolInfo(Name, ObjectPool, DefaultNum)
     end
 end
 
+local CS_ATTACK_EFFECT_MISS     <const> = ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_MISS
+local CS_ATTACK_EFFECT_DODGE    <const> = ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_DODGE
+local CS_ATTACK_EFFECT_SUPERMAN <const> = ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_SUPERMAN
+
 function SkillActionUtil.NeedSkipHitEffAndSound(EffectType,bIsBulletVfx)
     if bIsBulletVfx==nil  then bIsBulletVfx = true end
     return
-        (ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_MISS == EffectType or ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_DODGE == EffectType or
-            ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_SUPERMAN == EffectType) and not bIsBulletVfx
+        (CS_ATTACK_EFFECT_MISS == EffectType or CS_ATTACK_EFFECT_DODGE == EffectType or
+            CS_ATTACK_EFFECT_SUPERMAN == EffectType) and not bIsBulletVfx
 end
 
 function SkillActionUtil.CanShow(IsMajorShow, OwnerEntityID)
     local bCanShow = false
     if not IsMajorShow or
        ActorUtil.IsMajor(OwnerEntityID) or
-       _G.SkillLogicMgr:IsSkillSystem(OwnerEntityID) then
+       SkillLogicMgr:IsSkillSystem(OwnerEntityID) then
         bCanShow = true
     end
 
@@ -200,7 +257,7 @@ end
 
 --主角或技能系统角色均视为主角
 function SkillActionUtil.IsSimulateMajor(OwnerEntityID)
-    return ActorUtil.IsMajor(OwnerEntityID) or _G.SkillLogicMgr:IsSkillSystem(OwnerEntityID)
+    return ActorUtil.IsMajor(OwnerEntityID) or SkillLogicMgr:IsSkillSystem(OwnerEntityID)
 end
 
 return SkillActionUtil

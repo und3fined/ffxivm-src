@@ -14,11 +14,36 @@ local RedDotIsPointStyle = false
 
 local RedDotIsYellow = true
 
+local ListRedDotStyleType = 
+{
+    TopAndBottom = 1,
+    LeftAndRight = 2,
+}
+
+local ListRedDotPosType = 
+{
+    Top = 1,
+    Bottom = 2,
+    Left = 3,
+    Right = 4,
+}
+
+local ListRedDotPosMap = 
+{
+    [ListRedDotStyleType.TopAndBottom] = {Mini = ListRedDotPosType.Top, Max = ListRedDotPosType.Bottom},
+    [ListRedDotStyleType.LeftAndRight] = {Mini = ListRedDotPosType.Left,Max = ListRedDotPosType.Right},
+}
+
+local BorderRedDotPath = "Common/CommonRedDot/CommonBorderRedDot_UIBP"
 
 local RedDotDefine = {
     RedDotStyle = RedDotStyle,
     RedDotIsYellow = RedDotIsYellow,
     RedDotIsPointStyle = RedDotIsPointStyle,
+    ListRedDotStyleType = ListRedDotStyleType,
+    ListRedDotPosType = ListRedDotPosType,
+    ListRedDotPosMap = ListRedDotPosMap,
+    BorderRedDotPath = BorderRedDotPath,
 }
 
 return RedDotDefine

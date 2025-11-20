@@ -15,11 +15,13 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.MonthCardCmd
+local CS_PAY_CMD = ProtoCS.CS_PAY_CMD
 
 local EventID = require("Define/EventID")
 local UIViewID = require("Define/UIViewID")
 local MonthCardDefine = require("Game/MonthCard/MonthCardDefine")
 local ActivityCfg = require("TableCfg/ActivityCfg")
+local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 local LSTR
 local GameNetworkMgr
 local EventMgr
@@ -42,6 +44,9 @@ function MonthCardMgr:OnInit()
 	self.PayFinished = false
 	self.MonthCardOverdueTimer = nil
 	self.IsPaying = false  --是否正在支付中
+	self.CurrentProductID = ""
+	self.OrderToken = ""
+	self.CurrentRequestOrder = 0
 end
 
 ---OnBegin
@@ -66,6 +71,7 @@ function MonthCardMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MONTH_CARD, SUB_MSG_ID.MonthCardCmd_DailyReward, self.OnGetMonthCardDayRewardRsq)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MONTH_CARD, SUB_MSG_ID.MonthCardCmd_RechargePreCheck, self.OnBuyMonthCardCheckRsq)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MONTH_CARD, SUB_MSG_ID.MonthCardCmd_RewardShow, self.OnPushRewardShow)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ERR, 0, self.OnNetMsgError)
 
 end
 
@@ -74,9 +80,35 @@ function MonthCardMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MajorCreate, self.OnGameEventLoginRes)
 	self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
 	self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnMonthCardModuleOpen)
+	self:RegisterGameEvent(EventID.AppEnterBackground, self.ResetPaying)
+	self:RegisterGameEvent(EventID.AppEnterForeground, self.ResetPaying)
 end
 
-function MonthCardMgr:OnGameEventLoginRes()
+function MonthCardMgr:OnNetMsgError(MsgBody)
+	local Msg = MsgBody
+    if nil == Msg then
+        return
+    end
+
+    local ErrorCode = Msg.ErrCode
+
+	if Msg.Cmd and Msg.SubCmd and Msg.Cmd == CS_CMD.CS_CMD_PAY and Msg.SubCmd == CS_PAY_CMD.CS_CMD_PAY_DISTRIBUTE_ORDER then
+		self.IsPaying = false
+	end
+
+	if ErrorCode and ErrorCode == 135851 then
+		self.IsPaying = false
+	end
+end
+
+function MonthCardMgr:OnGameEventLoginRes(Params)
+	if nil ~= Params and nil ~= Params.bReconnect and Params.bReconnect == true then
+		_G.FLOG_INFO("MonthCardMgr:OnGameEventLoginRes, bReconnect is true")
+		if self.CurrentProductID ~= "" then
+			-- 断线重连时，可能有未收到完成通知的订单，需要重新查询状态
+			_G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, false, self.OrderToken)
+		end
+	end
 	if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard) then
 		self:SendMonthCardDataReq()
 	end
@@ -202,6 +234,7 @@ function MonthCardMgr:OnBuyMonthCardCheckRsq(MsgBody)
 	end
 
 	EventMgr:SendEvent(EventID.MonthCardUpdate)
+	self.IsPaying = false
 end
 
 
@@ -222,7 +255,7 @@ function MonthCardMgr:OnPushRewardShow(MsgBody)
 	end
 
 	UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
-
+	self.IsPaying = false
 	MonthCardMgr:SendMonthCardDataReq()
 end
 
@@ -268,6 +301,7 @@ function MonthCardMgr:BuyMonthCard(Order, Crystas, Bonus, View)
 	FLOG_INFO("MonthCardMgr amount: "..tostring(Crystas))
 	FLOG_INFO("MonthCardMgr bonus: "..tostring(Bonus))
 
+	_G.FLOG_INFO(string.format("MonthCardMgr:BuyMonthCard self.IsPaying  %s", tostring(self.IsPaying)))
 	if not self.IsPaying then
 	self.IsPaying = true
 	self.CurrentRequestOrder = Order
@@ -277,22 +311,29 @@ function MonthCardMgr:BuyMonthCard(Order, Crystas, Bonus, View)
 	PayUtil.BuyCoins(Order,
 	function(_, BillData) self:OnBillReceived(BillData) end,
 	function(_) self:OnLoginExpired() end,
-	nil, --- -- 切后台可能导致米大师回调丢失，不再使用
+	function(_, PayReturnData) self:OnPayFinished(PayReturnData) end,
 	function(_, GoodsData) self:OnGoodsReceived(GoodsData) end,
 	View)
+	self.CurrentProductID = PayUtil.GetProductID(Order)
 	end
 end
 
 function MonthCardMgr:OnBillReceived(BillData)
 	if BillData == nil then
-		FLOG_ERROR("Cannot get pay bill data")
+		FLOG_ERROR("MonthCardMgr:OnBillReceived, Cannot get pay bill data")
 		return
 	end
 
-	if BillData.URL == "" then
-		FLOG_ERROR("Pay bill is empty")
+	if string.isnilorempty(BillData.Token) then
+		FLOG_ERROR("MonthCardMgr:OnBillReceived, Pay token is empty")
+	else
+		self.OrderToken = BillData.Token
 	end
-	self.IsPaying = false
+
+	if BillData.URL == "" then
+		FLOG_ERROR("MonthCardMgr:OnBillReceived, Pay bill is empty")
+	end
+	-- self.IsPaying = false
 end
 
 function MonthCardMgr:OnLoginExpired()
@@ -301,28 +342,30 @@ function MonthCardMgr:OnLoginExpired()
 end
 
 function MonthCardMgr:OnPayFinished(PayReturnData)
+	local IsPaySuccess = true
 	if PayReturnData == nil then
-		FLOG_ERROR("Cannot get pay return data")
-		return
-	end
-
-	if PayReturnData.ResultCode == 0 then
-		FLOG_INFO("Pay succeeded.")
-		if not self.ReceivedGoods then
-			FLOG_INFO("Waiting for goods...")
-			self.PayFinished = true
+		_G.FLOG_ERROR("MonthCardMgr:OnPayFinished, Cannot get pay return data")
+		IsPaySuccess = false
+	else
+		if PayReturnData.ResultCode == 0 then
+			_G.FLOG_INFO("MonthCardMgr:OnPayFinished, Pay succeeded.")
+			--self.CurrentProductID = ""
+			local TipsContent = string.format(_G.LSTR(940042), PayUtil.GetProductTypeName(self.CurrentRequestOrder))
+			MsgTipsUtil.ShowTips(TipsContent)
 		else
-			self:OnRechargeSucceed(self.CurrentRequestSum)
+			IsPaySuccess = false
 		end
 	end
+    _G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, IsPaySuccess, self.OrderToken)
 end
 
 function MonthCardMgr:OnGoodsReceived(GoodsData)
 	self:OnRechargeSucceed()
+	self.CurrentProductID = ""
+	self.OrderToken = ""
 end
 
 function MonthCardMgr:OnRechargeSucceed(Quantity)
-	-- FLOG_INFO("Recharge succeeded. Append %d crystas", Quantity)
 
 	self.ReceivedGoods = false
 	self.PayFinished = false
@@ -332,9 +375,18 @@ end
 
 --- 红点
 function MonthCardMgr:SetRedDot()
+	--更新活动系统的红点
 	local Cfg = ActivityCfg:FindCfgByKey(MonthCardMgr.ActiviyID)
 	if Cfg ~= nil then
 		_G.OpsActivityMgr:UpdateActivityRedDot(Cfg.ClassifyID, Cfg)
+	end
+
+	--更新月卡增加的红点
+	local Status = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard) and MonthCardMgr:GetMonthCardStatus() and MonthCardMgr:GetMonthCardReward()
+	if Status then
+		RedDotMgr:AddRedDotByID(MonthCardDefine.RedDefines.MonthCard)
+	else
+		RedDotMgr:DelRedDotByID(MonthCardDefine.RedDefines.MonthCard)
 	end
 end
 

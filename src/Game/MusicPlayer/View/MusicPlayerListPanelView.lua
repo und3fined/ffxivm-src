@@ -126,23 +126,27 @@ function MusicPlayerListPanelView:OnCancelSearchClicked()
 	UIUtil.SetIsVisible(self.MusicDropDownListNew, true)
 	UIUtil.SetIsVisible(self.CommSearchBar2, false)
 	UIUtil.SetIsVisible(self.SearchBtnPanel, true)
-	local BackpackEmptyVisible = UIUtil.IsVisible(self.BackpackEmpty)
-	if BackpackEmptyVisible then
-		UIUtil.SetIsVisible(self.BackpackEmpty, false)
+	if #self.CurMusicList > 0 then
+		local BackpackEmptyVisible = UIUtil.IsVisible(self.BackpackEmpty)
+		if BackpackEmptyVisible then
+			UIUtil.SetIsVisible(self.BackpackEmpty, false)
+		end
+
+		self.ViewModel:UpdateMusicListInfo(self.CurMusicList) 
+		local TypeIndex = self.DropDownIndex
+		if MusicPlayerMgr.RighListChoseMusicID and MusicPlayerMgr.RightListChoseType then
+			TypeIndex = self:GetTabIndexByType(self.CurSerachChosedType)
+		end
+		self.MusicDropDownListNew:SetSelectedIndex(TypeIndex)
+	else
+		local Content = string.format("<span color=\"#6c6964\">%s</>", LSTR(1190022))--暂未收录乐曲哦, 快去找找吧库啵!
+		self.BackpackEmpty:SetTipsContent(Content)
 	end
-	local Content = string.format("<span color=\"#6c6964\">%s</>", LSTR(1190022))--暂未收录乐曲哦, 快去找找吧库啵!
-	self.BackpackEmpty:SetTipsContent(Content)
-	self.ViewModel:UpdateMusicListInfo(self.CurMusicList) 
-	local TypeIndex = self.DropDownIndex
-	if MusicPlayerMgr.RighListChoseMusicID and MusicPlayerMgr.RightListChoseType then
-		TypeIndex = self:GetTabIndexByType(self.CurSerachChosedType)
-	end
-	self.MusicDropDownListNew:SetSelectedIndex(TypeIndex)
 end
 
 function MusicPlayerListPanelView:OnSearchCommit(Text)
 	local result = self.ViewModel:MatchMusic(Text)
-	local MusicList = self:GetMusicList(result)
+	local MusicList = result
 	local BackpackEmptyVisible = UIUtil.IsVisible(self.BackpackEmpty)
 	if #MusicList > 0 then
 		self.ViewModel:UpdateMusicListInfo(MusicList) 
@@ -163,7 +167,7 @@ function MusicPlayerListPanelView:OnSelectionChangedDropDownList(Index, ItemData
 	local DropListInfo = self.ViewModel.DropListInfo and self.ViewModel.DropListInfo[Index]
 	local MusicList
 	if DropListInfo then
-		MusicList = self:GetMusicList(DropListInfo.MusicInfo)
+		MusicList = DropListInfo.MusicInfo or {}
 	else
 		MusicList = {}
 	end
@@ -224,7 +228,7 @@ function MusicPlayerListPanelView:InitMusicInfo()
 		Index = MusicPlayerMgr.RightListChoseType
 	end
 	self:InitDropList(Index)
-	local MusicList = self:GetMusicList(self.ViewModel.DropListInfo[Index].MusicInfo)
+	local MusicList = self.ViewModel.DropListInfo[Index].MusicInfo
 	self.MusicDropDownListNew:SetSelectedIndex(Index)
 	if MusicList == nil then
 		MusicList = {}
@@ -300,29 +304,9 @@ function MusicPlayerListPanelView:GetTabList()
 	return NewList
 end
 
-function MusicPlayerListPanelView:GetMusicList(List)
-	local MusicList = {}
-	
-	if not List then
-		return MusicList
-	end
-
-	for _, Value in ipairs(List) do
-		if Value and Value.MusicID then
-			local MusicInfo = MusicPlayerMgr.AllAtlasList[Value.MusicID]
-			if MusicInfo.OnOff == 1 then
-				Value.Type = MusicInfo.PlayType
-				table.insert(MusicList, Value)
-			end
-		end
-	end
-
-	return MusicList
-end
-
 function MusicPlayerListPanelView:GetTabIndexByType(Type)
 	for Index, Value in ipairs(self.TabList) do
-		if Value.Type == Type then
+		if Value.Type and Value.Type == Type then
 			return Index
 		end
 	end

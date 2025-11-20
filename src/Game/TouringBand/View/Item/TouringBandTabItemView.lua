@@ -6,7 +6,7 @@
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
-local UIUtil = require("Utils/UIUtil")
+local TouringBandDefine = require("Game/TouringBand/TouringBandDefine")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
@@ -44,7 +44,6 @@ function TouringBandTabItemView:OnRegisterSubView()
 end
 
 function TouringBandTabItemView:OnInit()
-	self.RedDot:SetIsCustomizeRedDot(true)
 end
 
 function TouringBandTabItemView:OnDestroy()
@@ -52,7 +51,12 @@ function TouringBandTabItemView:OnDestroy()
 end
 
 function TouringBandTabItemView:OnShow()
-	self:UpdateRedDot()
+	if not self.VM then
+		return
+	end
+	
+	local RedDotName = TouringBandDefine.RED_DOT_NAME .. '/' .. tostring(self.VM.BandID)
+	self.RedDot:SetRedDotNameByString(RedDotName)
 end
 
 function TouringBandTabItemView:OnHide()
@@ -106,41 +110,16 @@ function TouringBandTabItemView:OnSelectChanged(Value)
 	end
 end
 
-function TouringBandTabItemView:UpdateRedDot()
-	if self.VM == nil or self.VM.BandID == nil then
-		return
-	end
-	local IsShow = self.VM.IsUnLock
-	if self.VM.IsUnLock then
-		local RedDotList = _G.TouringBandMgr:GetCustomizeRedDotList()
-		local RedDotName = "TabItemList" .. self.VM.BandID
-
-		for __, ItemName in pairs(RedDotList) do
-			if RedDotName == ItemName then
-				IsShow = false
-			end
-		end
-	end
-
-
-	if self.RedDot and self.RedDot.ItemVM then
-		self.RedDot.ItemVM:SetIsVisible(IsShow)
-	end
-end
-
 function TouringBandTabItemView:DelRedDot()
 	if self.VM == nil or self.VM.BandID == nil then
 		return
 	end
 
-	local IsShow = self.RedDot.ItemVM.IsVisible
-	if IsShow and self.VM.IsSelect then
-		local RedDotName = "TabItemList" .. self.VM.BandID
-		_G.TouringBandMgr:AddCustomizeRedDotName(RedDotName)
-	end
-	
-	if self.RedDot and self.RedDot.ItemVM then
-		self.RedDot.ItemVM.IsVisible = false
+	_G.TouringBandMgr:RemoveBandRecord(self.VM.BandID, TouringBandDefine.RECORD_TYPE.UNLOCK)
+	local RedDotName = _G.TouringBandMgr:GetRedDotName(self.VM.BandID)
+	local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+	if not IsSaveDel then
+		_G.RedDotMgr:DelRedDotByName(RedDotName)
 	end
 end
 

@@ -156,7 +156,7 @@ function MountMainPanelView:OnRegisterUIEvent()
 end
 
 function MountMainPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.MountRefreshList, self.OnMountListChange)
+	self:RegisterGameEvent(_G.EventID.MountRefreshList, self.UpdateMountList)
 	self:RegisterGameEvent(_G.EventID.MountFilterUpdate, self.OnMountFilterUpdate)
 	self:RegisterGameEvent(_G.EventID.MountRefreshLike, self.OnMountLikeChange)
 end
@@ -178,12 +178,10 @@ function MountMainPanelView:OnRegisterBinder()
 		-- { "IsInRide", UIBinderSetIsVisible.New(self, self.BtnCall, true, true) },
 		{ "IsPanelCustomMadeVisible", UIBinderSetIsVisible.New(self, self.PanelCustomMade) },
 		{ "IsCustomMadeRedDotVisible", UIBinderValueChangedCallback.New(self, nil, self.OnSetCustomMadeRedDot) },
-		{ "IsInRide", UIBinderValueChangedCallback.New(self, nil, self.OnIsInRideChange) },
 	}
 	self:RegisterBinders(self.ViewModel, Binders)
 
 	local Binders1 = {
-		{ "MountList", UIBinderValueChangedCallback.New(self, nil, self.OnMountListChange) },
 		{ "CallSetting", UIBinderValueChangedCallback.New(self, nil, self.OnCallSettingChange) },
 		{ "CurRideResID", UIBinderValueChangedCallback.New(self, nil, self.OnCurRideChange) },
 	}
@@ -237,21 +235,30 @@ end
 
 function MountMainPanelView:OnCurRideChange(NewValue, OldValue)
 	self.ViewModel.IsInRide = NewValue > 0
-end
 
-function MountMainPanelView:OnIsInRideChange(NewValue, OldValue)
-	self.ViewModel:UpdateMountList(nil, false)
-	self:UpdateSelectedIndex()
+	for i = 1, self.MountTableViewAdapter:GetNum() do
+		local ItemData = self.MountTableViewAdapter:GetItemDataByIndex(i)
+		if ItemData ~= nil and ItemData.Mount ~= nil then
+			if ItemData.Mount.ResID == NewValue or ItemData.Mount.ResID == OldValue then
+				ItemData:UpdateData()
+			end
+		end
+	end
+	if MountVM.IsInRide then
+		self:UpdateSelectedIndex()
+	end
+	self:UpdateButton()
 end
 
 function MountMainPanelView:OnMountTableViewSelectChange(Index, ItemData, ItemView)
+	if ItemData == nil then return end
+	
 	local Mount = ItemData.Mount
 	if Mount == nil then
 		return
 	end
-	local bChanged = true
-	if self.MountSelectResID == Mount.ResID then bChanged = false end
 	self.MountSelectResID = Mount.ResID
+	self.SelectedItemData = ItemData
 	DataReportUtil.ReportMountInterSystemFlowData(3, 1, Mount.ResID)
 	self.ViewModel.IsShowDetail = true
 	if self.bSetSelectedIndexOnShow == false then
@@ -264,26 +271,33 @@ function MountMainPanelView:OnMountTableViewSelectChange(Index, ItemData, ItemVi
 		end
         MountVM:ClearNewByResID(Mount.ResID)
 	end
-	ItemData:UpdateData()
+	if self.SelectedItemData == nil then return end
+	self.SelectedItemData:UpdateData()
 	self.DetailViewModel:UpdateDetail(Mount)
+	self:UpdateButton()
 
-	local IsInRide = self.ViewModel.IsInRide
-	local IsInOtherRide = MountVM.IsInOtherRide
-	local IsInChocoboTransport = ChocoboTransportMgr:GetIsTransporting() -- 运输陆行鸟使用的陆行鸟不是玩家的陆行鸟，额外判断处理
-	local bIsRidingSelectedMount = IsInRide and not IsInOtherRide and MountVM.CurRideResID == Mount.ResID and not IsInChocoboTransport
-	UIUtil.SetIsVisible(self.BtnCall, not bIsRidingSelectedMount)
-	UIUtil.SetIsVisible(self.BtnCancelCall, bIsRidingSelectedMount)
-	
     self.ViewModel.IsPanelCustomMadeVisible = _G.MountMgr:IsCustomMadeEnabled(Mount.ResID)
 	self.ViewModel.IsCustomMadeRedDotVisible = MountCustomMadeVM:MountIsNew(Mount.ResID)
 	if self.bSetSelectedIndexOnShow == true then
+		self.MountTableViewAdapter:ScrollToIndex(Index)
 		self.bSetSelectedIndexOnShow = false
 	end
 
 	DataReportUtil.ReportMountInterfaceFlowData("MountInterfaceFlow", 2, Mount.ResID)
 end
 
-function MountMainPanelView:OnMountListChange(Params)
+function MountMainPanelView:UpdateButton()
+	if self.SelectedItemData == nil then return end
+
+	local IsInRide = self.ViewModel.IsInRide
+	local IsInOtherRide = MountVM.IsInOtherRide
+	local IsInChocoboTransport = ChocoboTransportMgr:GetIsTransporting() -- 运输陆行鸟使用的陆行鸟不是玩家的陆行鸟，额外判断处理
+	local bIsRidingSelectedMount = IsInRide and not IsInOtherRide and MountVM.CurRideResID == self.SelectedItemData.Mount.ResID and not IsInChocoboTransport
+	UIUtil.SetIsVisible(self.BtnCall, not bIsRidingSelectedMount)
+	UIUtil.SetIsVisible(self.BtnCancelCall, bIsRidingSelectedMount)
+end
+
+function MountMainPanelView:UpdateMountList()
 	self.ViewModel:UpdateMountList(nil, false)
 end
 
@@ -300,7 +314,6 @@ function MountMainPanelView:UpdateSelectedIndex()
 		for Index, MountSlotVM in ipairs(self.ViewModel.ListSlotVM) do
 			if MountSlotVM.Mount.ResID == self.MountSelectResIDOnShow then
 				self.MountTableViewAdapter:SetSelectedIndex(Index)
-				self.MountTableViewAdapter:ScrollToIndex(Index)
 				return
 			end
 		end
@@ -309,13 +322,13 @@ function MountMainPanelView:UpdateSelectedIndex()
 		for Index, MountSlotVM in ipairs(self.ViewModel.ListSlotVM) do
 			if MountSlotVM.Mount.ResID == MountVM.CurRideResID then
 				self.MountTableViewAdapter:SetSelectedIndex(Index)
-				self.MountTableViewAdapter:ScrollToIndex(Index)
 				return
 			end
 		end
 	end
-	self.MountTableViewAdapter:SetSelectedIndex(1)
-	self.MountTableViewAdapter:ScrollToIndex(1)
+	if self.bSetSelectedIndexOnShow then
+		self.MountTableViewAdapter:SetSelectedIndex(1)
+	end
 end
 
 function MountMainPanelView:OnMountFilterUpdate(Params)

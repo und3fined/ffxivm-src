@@ -123,6 +123,7 @@ function ArmySpecialEffectsItem04View:OnSetGrey(IsGrey)
 		Color = "AEAEAEFF"
 	end
 	UIUtil.SetColorAndOpacityHex(self.ImgIcon, Color)
+	self.ImgIcon:SetIsEnabled(not IsGrey)
 end
 
 ---设置已使用
@@ -241,7 +242,7 @@ function ArmySpecialEffectsItem04View:OnClickedUse()
 				end,
 				nil,
 				-- LSTR string:取消
-				LSTR(910083),
+				LSTR(910081),
 				-- LSTR string:确定
 				LSTR(910182)
 			)

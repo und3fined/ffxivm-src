@@ -11,19 +11,17 @@ local ExclusiveBattleQuestInfoVM = LuaClass(UIViewModel)
 ---Ctor
 function ExclusiveBattleQuestInfoVM:Ctor()
 	self.QuestName = nil
-    self.Progress = 0
+    self.OldProgress = 0
+    self.NewProgress = 0
     self.MaxProgress = 0
-    self.SliderPercent = 0
     self.IsFold = false
 end
 
 function ExclusiveBattleQuestInfoVM:UpdateVM(Data)
     self.QuestName = Data.QuestName
-    self.Progress = Data.Progress
     self.MaxProgress = Data.MaxProgress
-    if Data.MaxProgress ~= 0 then
-        self.SliderPercent = Data.Progress / Data.MaxProgress
-    end
+    self.OldProgress = self.NewProgress
+    self.NewProgress = Data.Progress
 end
 
 function ExclusiveBattleQuestInfoVM:SetIsFold(IsFold)
@@ -32,6 +30,14 @@ end
 
 function ExclusiveBattleQuestInfoVM:GetIsFold()
     return self.IsFold
+end
+
+function ExclusiveBattleQuestInfoVM:GetOldProgress()
+    return self.OldProgress
+end
+
+function ExclusiveBattleQuestInfoVM:GetNewProgress()
+    return self.NewProgress
 end
 
 function ExclusiveBattleQuestInfoVM:GetMaxProgress()

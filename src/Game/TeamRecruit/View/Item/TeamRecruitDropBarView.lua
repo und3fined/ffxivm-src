@@ -26,7 +26,11 @@ local PWorldQuestUtil = require("Game/PWorld/Quest/PWorldQuestUtil")
 ---@field TextTaskSetUp UFTextBlock
 ---@field ToggleBtnArrow UToggleButton
 ---@field AnimToggleBtnArrowChecked UWidgetAnimation
+---@field AnimToggleBtnArrowCheckedBottom UWidgetAnimation
+---@field AnimToggleBtnArrowIn UWidgetAnimation
+---@field AnimToggleBtnArrowInBottom UWidgetAnimation
 ---@field AnimToggleBtnArrowUnchecked UWidgetAnimation
+---@field AnimToggleBtnArrowUncheckedBottom UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local TeamRecruitDropBarView = LuaClass(UIView, true)
 
@@ -40,7 +44,11 @@ function TeamRecruitDropBarView:Ctor()
 	--self.TextTaskSetUp = nil
 	--self.ToggleBtnArrow = nil
 	--self.AnimToggleBtnArrowChecked = nil
+	--self.AnimToggleBtnArrowCheckedBottom = nil
+	--self.AnimToggleBtnArrowIn = nil
+	--self.AnimToggleBtnArrowInBottom = nil
 	--self.AnimToggleBtnArrowUnchecked = nil
+	--self.AnimToggleBtnArrowUncheckedBottom = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -87,7 +95,11 @@ function TeamRecruitDropBarView:UpdateToggle()
 
 	self.bToggleShow = not self.bToggleShow
 	UIUtil.SetIsVisible(self.TableViewTasksetUp, true)
-	self:PlayAnimation(self.bToggleShow and self.AnimToggleBtnArrowChecked or self.AnimToggleBtnArrowUnchecked)
+	if self.bUpToggle then
+		self:PlayAnimation(self.bToggleShow and self.AnimToggleBtnArrowChecked or self.AnimToggleBtnArrowUnchecked)
+	else
+		self:PlayAnimation(self.bToggleShow and self.AnimToggleBtnArrowCheckedBottom or self.AnimToggleBtnArrowUncheckedBottom)
+	end
 end
 
 function TeamRecruitDropBarView:OnEditSceneModeChanged(Mode)
@@ -134,6 +146,10 @@ end
 
 function TeamRecruitDropBarView:SetSelectedDifficultyIcon(Icon)
 	UIUtil.ImageSetBrushFromAssetPath(self.ImgSetUpIcon, Icon)
+end
+
+function TeamRecruitDropBarView:SetUpToggleType(bUp)
+	self.bUpToggle = bUp
 end
 
 return TeamRecruitDropBarView

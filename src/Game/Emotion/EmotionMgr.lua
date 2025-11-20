@@ -45,6 +45,7 @@ local EMOTION_SUB_ID = ProtoCS.EmotionSubMsg
 local EMOTION_TYPE = ProtoCS.EmotionType
 local CS_CMD = ProtoCS.CS_CMD
 local UKismetMathLibrary = nil
+local MountCustomMadeVM = nil
 local PWorldMgr = nil
 local UIViewMgr = nil
 local EventMgr = nil
@@ -87,9 +88,9 @@ function EmotionMgr:OnInit()
 		[2] = 56,
 		[3] = 57,
 	}
-	self.MountEmotionID = 1001			--滑板
 	self.RotationInterpSpeed = nil
 	self.IsInterpRota = nil
+	self.EmotionNameEidMountPoint = "EID_HEAD_TOP"
 end
 
 function EmotionMgr:OnBegin()
@@ -117,6 +118,7 @@ function EmotionMgr:OnBegin()
 	self.bBecomeHuman = nil				---变人
 	self.CannotText = {}				---用来打日志的
 	self:RegisterCheckItemUsedFun()
+	self.EmotionNameOffsetMap = {}
 end
 
 function EmotionMgr:OnRegisterTimer()
@@ -134,6 +136,7 @@ function EmotionMgr:OnRegisterNetMsg()
 
 	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_LIFE_SKILL, CS_SUB_CMD.LIFE_SKILL_CRAFTER_START_MAKE, self.OnNetMsgStartMake)
     -- self:RegisterGameNetMsg(CS_CMD.CS_CMD_LIFE_SKILL, CS_SUB_CMD.LIFE_SKILL_CRAFTER_QUIT_MAKE, self.OnNetMsgQuitMake)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_GRAND_COMPANY, SUB_MSG_ID.GrandCompanyCmdState, self.OnNetMsgGrandCompanyState)	--登录游戏时会更新军团
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GRAND_COMPANY, SUB_MSG_ID.GrandCompanyCmdJoinCompany, self.OnNetMsgJoinCompany)	--加入军团
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GRAND_COMPANY, SUB_MSG_ID.GrandCompanyCmdTransferCompany, self.OnNetMsgTransferCompany)	--更换军团
 
@@ -199,6 +202,7 @@ function EmotionMgr:OnEnd()
 	self.TargetQuestEmotionID = nil
 	self.CannotText = {}
 	self:ClearPoseTimerHandle()
+	self.EmotionNameOffsetMap = {}
 	self.IdleSetupValue = nil
 end
 
@@ -348,15 +352,6 @@ function EmotionMgr:OnGameEventActorVelocityUpdate(InParams)
 	if not Actor then return end
 	local IsMajor = MajorUtil.IsMajor(EntityID)
 	local Velocity = Actor.CharacterMovement.Velocity
-	if Velocity:Size() < self.INF then
-		if not IsMajor then
-			local PlayerAnimInst = AnimationUtil.GetAnimInst(EntityID)
-			if PlayerAnimInst and PlayerAnimInst.bUseChair then
-				self:StopAllEmotionsNotHoldWeapon(EntityID, false, EmotionDefines.CancelReason.MOVE)
-			end
-		end
-		return
-	end
 
 	if self:IsEmotionPlaying(EntityID, self.EXD_EMOTE_SLEEP) then
 		return
@@ -365,11 +360,24 @@ function EmotionMgr:OnGameEventActorVelocityUpdate(InParams)
 		return
 	end
 
-	-- 移动时后台会自动停止非持刀情感动作
-	self:StopAllEmotionsNotHoldWeapon(EntityID, false, EmotionDefines.CancelReason.MOVE)
+	-- 是其他玩家
+	if not IsMajor then
+		if Velocity:Size() > self.INF then
+			-- local PlayerAnimInst = AnimationUtil.GetAnimInst(EntityID)
+			-- if PlayerAnimInst and PlayerAnimInst.bUseChair then
+				self:StopAllEmotionsNotHoldWeapon(EntityID, true, EmotionDefines.CancelReason.MOVE)
+			-- end
+			return
+		end
+	end
 
 	-- 是主角
 	if IsMajor then
+		if Velocity:Size() > self.INF then
+			-- 移动时后台会自动停止非持刀情感动作
+			self:StopAllEmotionsNotHoldWeapon(EntityID, false, EmotionDefines.CancelReason.MOVE)
+		end
+
 		self:ClearLookAtTimer(Actor)
 	end
 
@@ -505,28 +513,49 @@ function EmotionMgr:OnAvatarUpdateMaster(Params)
 	end
 end
 
+--- 登录游戏时，添加当前对应军团的动作(ProtoRes.grand_company_type)
+function EmotionMgr:OnNetMsgGrandCompanyState(MsgBody)
+    if MsgBody.State then
+        local CurGrandCompanyID = MsgBody.State.ID
+		if CurGrandCompanyID then
+			for GrandCompanyID, EmotionID in pairs(self.GrandCompany) do
+				if GrandCompanyID == CurGrandCompanyID then
+					self:ActiveEmotion(EmotionID)
+				else
+					self:DeactiveEmotion(EmotionID)
+				end
+			end
+		end
+    end
+end
+
+--- 增删军团相关的情感动作
+function EmotionMgr:OnCompanyEmotion(CurGrandCompanyID)
+	local ActiveSet = {}
+	local UnActiveList = {}
+	for GrandCompanyID, EmotionID in pairs(self.GrandCompany) do
+		if GrandCompanyID == CurGrandCompanyID then
+			table.insert(ActiveSet, EmotionID)
+		else
+			table.insert(UnActiveList, EmotionID)
+		end
+		
+	end
+	self:OnActiveListID(ActiveSet)
+	self:OnDeactiveListID(UnActiveList)
+end
+
 --- 加入军团时 更新EmotionID
 function EmotionMgr:OnNetMsgJoinCompany(MsgBody)
 	if MsgBody.JoinCompany.ID then
         local GrandCompanyID = MsgBody.JoinCompany.ID
 
-		for k, ID in pairs(self.GrandCompany) do
-			if k == GrandCompanyID then
-				local ActiveList = {ID}
-				self:OnActiveListID(ActiveList)
-			else
-				local DeactiveList = {ID}
-				self:OnDeactiveListID(DeactiveList)
-			end
-		end
+		self:OnCompanyEmotion(GrandCompanyID)
+
 		--若已打开主界面，需刷新一下图标
 		if UIViewMgr:IsViewVisible(UIViewID.CommEasytoUseView) then
 			self:ShowEmotionMainPanel()
 		end
-
-	--	local EmotionID = self.GrandCompany[GrandCompanyID]
-	--	local Name = ProtoEnumAlias.GetAlias(ProtoRes.grand_company_type, GrandCompanyID)
-    --   print(" 加入军团时 更新EmotionID", Name, EmotionID)
     end
 end
 
@@ -535,23 +564,12 @@ function EmotionMgr:OnNetMsgTransferCompany(MsgBody)
 	if MsgBody.TransferCompany then
 		local GrandCompanyID = MsgBody.TransferCompany.ID
 
-        for k, ID in pairs(self.GrandCompany) do
-			if k == GrandCompanyID then
-				local ActiveList = {ID}
-				self:OnActiveListID(ActiveList)
-			else
-				local DeactiveList = {ID}
-				self:OnDeactiveListID(DeactiveList)
-			end
-		end
+        self:OnCompanyEmotion(GrandCompanyID)
+
 		--若已打开主界面，需刷新一下图标
 		if UIViewMgr:IsViewVisible(UIViewID.CommEasytoUseView) then
 			self:ShowEmotionMainPanel()
 		end
-		
-		-- local EmotionID = self.GrandCompany[GrandCompanyID]
-		-- local Name = ProtoEnumAlias.GetAlias(ProtoRes.grand_company_type, GrandCompanyID)
-        -- print(" 更换军团时 更新EmotionID", Name, EmotionID)
     end
 end
 
@@ -706,7 +724,7 @@ function EmotionMgr:OnEmotionEnter(MsgBody)
 	end
 	local EntityID = MajorUtil.GetMajorEntityID()
 	local EmotionID = MsgBody.Enter.EmotionID ~= 0 and MsgBody.Enter.EmotionID or MsgBody.Enter.StatEmotion
-	if false == self:IsNetMsgBody(nil, false, MsgBody.Enter, EntityID) then
+	if false == self:IsNetMsgBody(EmotionID, false, MsgBody.Enter, EntityID) then
 		print(" [EmotionMgr] OnEmotionEnter: not Is NetMsgBody ")
 		local Params = {EntityID = EntityID, EmotionID = EmotionID}
 		EventMgr:SendEvent(EventID.BreakPlayEmotion, Params)
@@ -800,9 +818,9 @@ function EmotionMgr:OnActiveListID(ActiveList)
 	for _, ID in pairs(ActiveList) do
 		self:ActiveEmotion(ID)
 		
-		local EmotionCfg = EmotionCfg:FindCfgByKey(ID)
-		if EmotionCfg and EmotionCfg.EmotionName then
-			local EmotionName = string.format("<span color=\"%s\">%s</>", "#d1ba8e", EmotionCfg.EmotionName)
+		local EmotionData = EmotionCfg:FindCfgByKey(ID)
+		if EmotionData and EmotionData.EmotionName then
+			local EmotionName = string.format("<span color=\"%s\">%s</>", "#d1ba8e", EmotionData.EmotionName)
 			MsgTipsUtil.ShowTips(string.format(LSTR(210025), EmotionName))	--"学会了新的情感动作%s"
 		end
 
@@ -811,8 +829,8 @@ function EmotionMgr:OnActiveListID(ActiveList)
 end
 
 --- 删除动作
-function EmotionMgr:OnDeactiveListID(ActiveList)
-	for _, ID in pairs(ActiveList) do
+function EmotionMgr:OnDeactiveListID(DeactiveList)
+	for _, ID in pairs(DeactiveList) do
 		self:DeactiveEmotion(ID)
 		self:DelRedDot(ID)	--红点相关
 	end
@@ -847,9 +865,9 @@ function EmotionMgr:OnEmotionLike(MsgBody)
 	
 	local Num = self:GetFavoriteNum()
 	local EmotionName = ""
-	local EmotionCfg = EmotionCfg:FindCfgByKey(EmotionID)
-	if EmotionCfg and EmotionCfg.EmotionName then
-		EmotionName = string.format("<span color=\"%s\">%s</>", "#FF8C00", EmotionCfg.EmotionName)
+	local EmotionData = EmotionCfg:FindCfgByKey(EmotionID)
+	if EmotionData and EmotionData.EmotionName then
+		EmotionName = string.format("<span color=\"%s\">%s</>", "#FF8C00", EmotionData.EmotionName)
 	end
 	if IsLike then
 		local T = LSTR(210033)
@@ -860,7 +878,7 @@ function EmotionMgr:OnEmotionLike(MsgBody)
 end
 
 --- 骑乘状态使用情感动作，角色会在坐在坐骑上播放
-function EmotionMgr:UpdateEmoteState(FromID)
+function EmotionMgr:UpdateEmoteState(FromID, EmotionID)
 	local Tasks = self.Tasks[FromID] or {}
 	local IsInEmote = false
 	for _, Task in pairs(Tasks) do
@@ -870,7 +888,10 @@ function EmotionMgr:UpdateEmoteState(FromID)
 		end
 	end
 	if PhotoMgr.IsOnPhoto then
-		IsInEmote = true
+		local IsMove = self:IsValidVelocity(FromID, EmotionID)
+		if not IsMove then
+			IsInEmote = true
+		end
 	end
 
 	if self:IsSitStateFace(FromID) then
@@ -898,7 +919,7 @@ function EmotionMgr:OnGameEventPostEmotionEnter(Params)
 
 	do
 		local _ <close> = CommonUtil.MakeProfileTag("EmotionMgr:OnGameEventPostEmotionEnter_UpdateEmoteState")
-		self:UpdateEmoteState(FromID)
+		self:UpdateEmoteState(FromID, EmotionID)
 	end
 	if MajorUtil.IsMajor(FromID) then
 		CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.COMM_STAT_EMOTION, true)
@@ -942,8 +963,14 @@ function EmotionMgr:OnGameEventPostEmotionEnter(Params)
 
 	if EmotionID == self.EXD_EMOTE_SLEEP then		--开始睡觉动作
 		self:UseBed(FromID, EmotionID)
+		if MajorUtil.IsMajor(FromID) then
+			self:ReqRefreshUI()
+		end
 	elseif EmotionID == self.EXD_EMOTE_WAKE then	--开始起床动作
 		self:EndBed(FromID, EmotionID)
+		if MajorUtil.IsMajor(FromID) then
+			self:ReqRefreshUI()
+		end
 	end
 
 	do
@@ -958,19 +985,23 @@ function EmotionMgr:OnGameEventPostEmotionEnter(Params)
 
 	do
 		--调整名字位置
-		if Params.BoolParam3 == true then 	--（外部调用动作不调整名字）
+		local MiniGameMgr = _G.GoldSaucerMiniGameMgr
+		local IsMiniGame = MiniGameMgr and MiniGameMgr:IsInGoldSaucerMiniGame() or false
+		if not IsMiniGame then 	--（外部调用动作不调整名字）
 			if not self.IsHoldWeaponID(EmotionID) then	--不是拔刀时
 				local Actor = ActorUtil.GetActorByEntityID(FromID)
 				local RideComp = Actor and Actor:GetRideComponent() or nil
 				local bIsRide = RideComp and RideComp:IsInRide() or nil
 				if bIsRide ~= true then	--不是坐骑上
 					if not self:IsFacePlaying(FromID) then	--不是表情
-						self:UpdateName(FromID, -30)
+						self:UpdateName(FromID, 10)
 					end
 				end
 			end
 		end
 	end
+
+	self:SetFaceAnimIgnoreRest(FromID)
 end
 
 --- 停止播放事件
@@ -1001,7 +1032,7 @@ function EmotionMgr:OnGameEventPostEmotionEnd(Params)
 		self:UpdateName(FromID)		--起床后
 	end
 
-	self:UpdateEmoteState(FromID)
+	self:UpdateEmoteState(FromID, EmotionID)
 	self:OnBaHaFireEnd(EmotionID, FromID)	--巴哈烈焰
 	do
 		--恢复名字位置
@@ -1020,6 +1051,7 @@ function EmotionMgr:OnGameEventPostEmotionEnd(Params)
 		end
 	end
 
+	self:SetFaceAnimIgnoreRest(FromID)
 	-- 非持刀状态特效结束保底
 	local Actor = ActorUtil.GetActorByEntityID(FromID)
 	if nil ~= Actor and nil ~= Actor:GetAvatarComponent() and not Actor:IsHoldWeapon() then
@@ -1076,6 +1108,18 @@ function EmotionMgr:OnGameEventSkillStart(Params)
 	local SkillID = Params.IntParam2
 	if _G.UE.UStateComponent.ShouldTempHoldWeapon(SkillID) and StateComp then
 		StateComp:TempHoldWeapon(_G.UE.ETempHoldMask.Skill)
+
+		-- 立即切换挂点
+		local Actor = ActorUtil.GetActorByEntityID(EntityID)
+		local AttrCmp = ActorUtil.GetActorAttributeComponent(EntityID)
+		local AvatarCom = ActorUtil.GetActorAvatarComponent(EntityID)
+		if (not ActorUtil.IsInRide(EntityID)) and Actor ~= nil and AttrCmp ~= nil and AvatarCom ~= nil then
+			local ProfID = AttrCmp.ProfID
+			local Specialization = RoleInitCfg:FindProfSpecialization(ProfID)
+			if Specialization ~= ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION then
+				AvatarCom:TempSetAvatarBack(0)
+			end
+		end
 	end
 
 	if MajorUtil.IsMajor(Params.ULongParam1) then
@@ -1195,7 +1239,7 @@ function EmotionMgr:ShowTipsChat(bIsTips, EmotionID, FromID, TargetID, IDType, b
 		if CompanionName ~= nil then			--要先判断选中宠物
 			TipsDesc, ChatMes = self:TargetTips(FromID, EmotionID, TargetID, CompanionName)
 		elseif TargetID ~= FromID then 			--选中其他玩家
-			local TargetName = ActorUtil.GetActorName(TargetID)
+			local TargetName = self:GetHUDActorName(TargetID)
 			TipsDesc, ChatMes = self:TargetTips(FromID, EmotionID, TargetID, TargetName)
 		elseif TargetID == FromID then 			--选中自身（宠物共用自身ID）
 			TipsDesc, ChatMes = self:NoTargetTips(FromID, EmotionID)
@@ -1215,12 +1259,12 @@ function EmotionMgr:ShowTipsChat(bIsTips, EmotionID, FromID, TargetID, IDType, b
 		self:UnRegisterTimer(self.TipsTimeID)
 		self.TipsTimeID = nil
 	end
+	if UIViewMgr:IsViewVisible(UIViewID.EmotionUsingTips) then
+		UIViewMgr:HideView(UIViewID.EmotionUsingTips, true)  --若存在则先销毁旧tips，再创建新tips
+	end
 	self.TipsTimeID = self:RegisterTimer(function()
-		if _G.UIViewMgr:IsViewVisible(UIViewID.EmotionUsingTips) then
-			_G.UIViewMgr:HideView(UIViewID.EmotionUsingTips)  --若存在则先销毁旧tips，再创建新tips
-		end
-		_G.UIViewMgr:ShowView(UIViewID.EmotionUsingTips, ViewParams)
-	end, 0.15, 0, 1, ViewParams)
+		UIViewMgr:ShowView(UIViewID.EmotionUsingTips, ViewParams)
+	end, 0.25, 0, 1, ViewParams)
 
 end
 
@@ -1251,7 +1295,7 @@ end
 function EmotionMgr:TargetChat(EmotionID, FromID, ToID, IDType)
 	if nil == ToID and nil == IDType then return end
 	local FromName = ActorUtil.GetActorName(FromID)
-	local TargetName = ActorUtil.GetActorName(ToID)
+	local TargetName = self:GetHUDActorName(ToID)
 	if string.isnilorempty(TargetName) then return end
 	local CompanionName = self:GetCompanionName(ToID, IDType)
 	if not string.isnilorempty(CompanionName) then
@@ -1353,6 +1397,51 @@ function EmotionMgr:SendChatMessage(Content)
 	end
 
 	_G.ChatMgr:AddEmotionTipsMsgInNearbyChannel(Content)
+end
+
+--- 参考HUDActorVM.GetActorName
+function EmotionMgr:GetHUDActorName(EntityID)
+	if MajorUtil.IsMajor(EntityID) then
+		--如果有变身，显示变身后的名字
+		local Name = ActorUtil.GetChangeRoleNameOrNil(EntityID) or MajorUtil.GetMajorName()
+		return Name
+	end
+
+	local Actor = ActorUtil.GetActorByEntityID(EntityID)
+	if nil == Actor then
+		FLOG_ERROR("HUDActorVM.GetActorName Actor is nil")
+		return
+	end
+
+	local AttributeComponent = Actor:GetAttributeComponent()
+	if nil == AttributeComponent then
+		FLOG_ERROR("HUDActorVM.GetActorName AttributeComponent is nil")
+		return
+	end
+
+	local ActorType = AttributeComponent:GetActorType()
+	--如果有变身，显示变身后的名字
+	local ActorName = ActorUtil.GetChangeRoleNameOrNil(EntityID) or ActorUtil.GetActorName(EntityID)
+	local EActorType = _G.UE.EActorType
+	if EActorType.Monster == ActorType then
+		local ResID = AttributeComponent.ResID
+		ActorName = _G.SelectMonsterMgr:GetMonsterNameHasTagStr(ResID, EntityID, ActorName)
+
+		if ActorUtil.GetActorSubType(EntityID) == _G.UE.EActorSubType.Buddy then
+			local OwnerID = ActorUtil.GetActorOwner(EntityID)
+			local AttrComp = ActorUtil.GetActorAttributeComponent(OwnerID)
+			local BuddyName = (AttrComp or {}).BuddyName
+
+			if string.isnilorempty(BuddyName) and MajorUtil.IsMajor(OwnerID) then
+				BuddyName = _G.BuddyMgr:GetBuddyName()
+			end
+
+			if not string.isnilorempty(BuddyName) then
+				ActorName = BuddyName
+			end
+		end
+	end
+	return ActorName
 end
 
 ------------↑ 气泡提示与聊天消息 end ↑------------
@@ -1733,6 +1822,9 @@ end
 ---不经由服务器进⾏情感动作的播放
 function EmotionMgr:OnPlayEmotion(Params)
 	local _ <close> = CommonUtil.MakeProfileTag("EmotionMgr:OnPlayEmotion")
+	if nil == Params then
+		return
+	end
 	local EmotionTask = EmotionTaskFactory:CreateTask(Params)
 	local FromID = Params.ULongParam1
 	if EmotionTask:CanPlayEmotion() then
@@ -1756,9 +1848,9 @@ function EmotionMgr:RemoveIncompatibleEmotion(Task)
 		local TasksRemove = {}
 		for _, v in ipairs(self.Tasks[EntityID]) do
 			if not self:CheckIncompatible(MotionType, v.MotionType) then
-				if self:IsBattleAndWeapon(EmotionID, v.IsBattleEmotion) then
+				-- if self:IsBattleAndWeapon(EmotionID, v.IsBattleEmotion, EntityID) then
 					table.insert(TasksRemove, v)
-				end
+				-- end
 			end
 		end
 		-- 服务器亦会检测
@@ -1784,11 +1876,16 @@ function EmotionMgr:CheckIncompatible(MotionType1, MotionType2)
 end
 
 -- 拔刀兼容战斗动作
-function EmotionMgr:IsBattleAndWeapon(OnEmotionID, LastIsBattleEmotion)
-	if (LastIsBattleEmotion == 1) and self.IsHoldWeaponID(OnEmotionID) then
-		return false
+function EmotionMgr:IsBattleAndWeapon(OnEmotionID, LastIsBattleEmotion, EntityID)
+	if LastIsBattleEmotion == 1 then
+		if self.IsHoldWeaponID(OnEmotionID) then
+			return false
+		end
+		local Actor = ActorUtil.GetActorByEntityID(EntityID)
+		if Actor and Actor:IsHoldWeapon() then
+			return false
+		end
 	end
-
 	return true
 end
 
@@ -2038,15 +2135,41 @@ function EmotionMgr:UpdateMajorCanUseType()
 	end
 end
 
+--- 上坐骑
 function EmotionMgr:OnGameEventMountCall(Params)
 	if Params.EntityID == MajorUtil.GetMajorEntityID() then
 		self:UpdateMajorCanUseType()
 	end
+
+	self:RegisterTimer(function()
+		----bug=144331558 【主干】【系统】【优化建议】【多人坐骑】在战斗姿态进入骑乘模式时应该自动收回武器
+		local EntityID = Params.EntityID
+		local IsCombatState = ActorUtil.IsCombatState(EntityID)
+		if not IsCombatState then
+			self:StopAllEmotions(EntityID, false, EmotionDefines.CancelReason.SERVER_NOTIFY)
+			local Actor = ActorUtil.GetActorByEntityID(EntityID)
+			if nil ~= Actor and nil ~= Actor:GetAvatarComponent() then
+				Actor:GetAvatarComponent():TempSetAvatarBack(1)
+			
+				local StateComp = ActorUtil.GetActorStateComponent(EntityID)
+				if StateComp then
+					StateComp:ClearTempHoldWeapon(_G.UE.ETempHoldMask.ExitCombat, false)
+				end
+
+				-- 非持刀状态特效结束保底
+				if not Actor:IsHoldWeapon() then
+					Actor:GetAvatarComponent():BreakEffect(_G.UE.EAvatarPartType.WEAPON_MASTER_HAND)
+					Actor:GetAvatarComponent():BreakEffect(_G.UE.EAvatarPartType.WEAPON_SLAVE_HAND)
+				end
+			end
+		end
+	end, 0.05, 0, 1)
 end
 
 function EmotionMgr:OnGameEventMountBack(Params)
 	if Params.EntityID == MajorUtil.GetMajorEntityID() then
 		self:UpdateMajorCanUseType()
+		self.ReqPastTime = TimeUtil.GetLocalTimeMS() + 500
 	end
 end
 
@@ -2072,8 +2195,8 @@ function EmotionMgr:OnGameEventRoleLoginRes(Params)
 	if Params and Params.bReconnect then
 		self:StopSitChairByMajor()
 		self:SendEmotionStatQueryReq()
-	-- else
-		-- CommSideBarUtil.ClearCurEasyUseLastType()
+	else
+		CommSideBarUtil.ClearCurEasyUseLastType()
 	end
 end
 
@@ -2242,6 +2365,23 @@ function EmotionMgr:SetCameraLookAt(EmotionID, bIsStat, bHeightAdjust)
 	CameraMoveParam.ResetType = _G.UE.ECameraResetType.Interp
 	CameraMoveParam.LagValue = 0.01
 	CameraMoveParam.SocketExternOffset = OffsetLocation
+
+	-- do	--bug=142406216 【OBT分支】【情感动作】猫男使用持续动作“坐地面上”时，镜头下移速度过快，身体还没下移镜头已经下移
+	-- 	if AttachType == "c0701" then
+	-- 		if bIsStat then
+	-- 			self.C7Camera = self:RegisterTimer(function()
+	-- 				MajorCameraCom:ResetSpringArmByParam(CameraResetType, CameraMoveParam)
+	-- 			end, 0.7)
+	-- 			return
+	-- 		else
+	-- 			if self.C7Camera then
+	-- 				self:UnRegisterTimer(self.C7Camera)
+	-- 				self.C7Camera = nil
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end
+
 	MajorCameraCom:ResetSpringArmByParam(CameraResetType, CameraMoveParam)
 
 	self:UnRegisterGameEvent(EventID.PhotoEnd, self.SetCameraLookAt)
@@ -2305,7 +2445,7 @@ function EmotionMgr:OnBaHaFire(EmotionID, EntityID)
 
 		--实时调整名字位置
 	--	self:OnNameTask(EntityID)
-		--self:UpdateName(EntityID, -50)
+		--self:UpdateName(EntityID, 25)
 
 		--调整相机
 		if MajorUtil.IsMajor(EntityID) then
@@ -2337,53 +2477,71 @@ function EmotionMgr:OnBaHaFireEnd(EmotionID, EntityID)
 end
 
 --- 开始调整玩家名字(方案未启用)
-function EmotionMgr:OnNameTask(EntityID)
-	if self.TimeHandle ~= nil then  --清除定时器
-		self:UnRegisterTimer(self.TimeHandle)
-		self.TimeHandle = nil
-	end
+-- function EmotionMgr:OnNameTask(EntityID)
+-- 	if self.TimeHandle ~= nil then  --清除定时器
+-- 		self:UnRegisterTimer(self.TimeHandle)
+-- 		self.TimeHandle = nil
+-- 	end
 
-	local Params = {}
-	Params.EntityID = EntityID
-	self.TimeHandle = self:RegisterTimer(self.UpdateNameLocation, 0.0, 0.02, -1, Params)
-end
+-- 	local Params = {}
+-- 	Params.EntityID = EntityID
+-- 	self.TimeHandle = self:RegisterTimer(self.UpdateNameLocation, 0.0, 0.02, -1, Params)
+-- end
 
 --- 实时调整名字位置
-function EmotionMgr:UpdateNameLocation(Params)
-	local EntityID = (Params.EntityID ~= nil) and Params.EntityID or MajorUtil.GetMajorEntityID()
-	local ActorInfoObject = _G.HUDMgr:GetActorInfoObject(EntityID)
-	if ActorInfoObject then
-		local FromActor = ActorUtil.GetActorByEntityID(EntityID)
-		if FromActor == nil then return end
-		self.IsNameOffset = true
-		local HeadLocation = FromActor:GetSocketLocationByName("head_M")
-		local MajorDistance, _ = self:GetDistance(HeadLocation)
-		local OffsetFactor = 50
-		OffsetFactor = UKismetMathLibrary.MapRangeClamped(MajorDistance, 100, 1600, 100, 50)
-		self.NameScreenLocation = _G.UE.FVector2D()
-		UIUtil.ProjectWorldLocationToScreen(HeadLocation, self.NameScreenLocation)
-		self.NameScreenLocation.Y = self.NameScreenLocation.Y - OffsetFactor
-		--上面给气泡用
-		--下面给名字用
-		local NameOffset = _G.UE.FVector2D()
-		UIUtil.ProjectWorldLocationToScreen(HeadLocation, NameOffset)
-		local Scale = UIUtil.GetViewportScale()
-		NameOffset.Y = NameOffset.Y - UKismetMathLibrary.MapRangeClamped(MajorDistance, 100, 1600, 900*Scale, 0)
+-- function EmotionMgr:UpdateNameLocation(Params)
+-- 	local EntityID = (Params.EntityID ~= nil) and Params.EntityID or MajorUtil.GetMajorEntityID()
+-- 	local ActorInfoObject = _G.HUDMgr:GetActorInfoObject(EntityID)
+-- 	if ActorInfoObject then
+-- 		local FromActor = ActorUtil.GetActorByEntityID(EntityID)
+-- 		if FromActor == nil then return end
+-- 		self.IsNameOffset = true
+-- 		local HeadLocation = FromActor:GetSocketLocationByName("head_M")
+-- 		local MajorDistance, _ = self:GetDistance(HeadLocation)
+-- 		local OffsetFactor = 50
+-- 		OffsetFactor = UKismetMathLibrary.MapRangeClamped(MajorDistance, 100, 1600, 100, 50)
+-- 		self.NameScreenLocation = _G.UE.FVector2D()
+-- 		UIUtil.ProjectWorldLocationToScreen(HeadLocation, self.NameScreenLocation)
+-- 		self.NameScreenLocation.Y = self.NameScreenLocation.Y - OffsetFactor
+-- 		--上面给气泡用
+-- 		--下面给名字用
+-- 		local NameOffset = _G.UE.FVector2D()
+-- 		UIUtil.ProjectWorldLocationToScreen(HeadLocation, NameOffset)
+-- 		local Scale = UIUtil.GetViewportScale()
+-- 		NameOffset.Y = NameOffset.Y - UKismetMathLibrary.MapRangeClamped(MajorDistance, 100, 1600, 900*Scale, 0)
 
-		ActorInfoObject:SetOffset(0, NameOffset.Y)
-	end
-end
+-- 		ActorInfoObject:SetOffset(0, NameOffset.Y)
+-- 	end
+-- end
 
 --- 播放动作时使名字跟随头顶一起动
-function EmotionMgr:UpdateName(EntityID, OffsetY)
+function EmotionMgr:UpdateName(EntityID, OffsetZ)
 	local HUDMgr = _G.HUDMgr
-	if OffsetY then
-		HUDMgr:SetEidMountPoint(EntityID, "EID_HEAD_TOP")
-		HUDMgr:SetOffsetY(EntityID, OffsetY)
+	if nil == HUDMgr then
+		return
+	end
+
+	if OffsetZ then
+		HUDMgr:SetEidMountPoint(EntityID, self.EmotionNameEidMountPoint)
+		HUDMgr:SetLocationOffsetZ(EntityID, OffsetZ)
+		self.EmotionNameOffsetMap[EntityID] = OffsetZ
 		return
 	end
 	HUDMgr:ResetEidMountPoint(EntityID)
-	HUDMgr:SetOffsetY(EntityID, 0)
+	HUDMgr:SetLocationOffsetZ(EntityID, 0)
+	self.EmotionNameOffsetMap[EntityID] = 0
+end
+
+--- 获取播放动作时名字的偏移量(对HUD提供的接口)
+function EmotionMgr:GetEmotionNameOffset(EntityID)
+	local OffsetZ = self.EmotionNameOffsetMap[EntityID]
+	if OffsetZ == nil then
+		return nil,nil
+	end
+	if OffsetZ < 0.1 then
+		return nil,nil
+	end
+	return OffsetZ, self.EmotionNameEidMountPoint
 end
 
 --- 计算屏幕中心到世界某点的距离、视角
@@ -2425,11 +2583,14 @@ function EmotionMgr:UseEyeAndMouth(EmotionID, EntityID)
 		end
 	end
 
+	-- if AnimComp ~= nil then
+	-- 	AnimComp:SetDisableEyeBlink(true)
+	-- end
 end
 
 ------------↓ 椅子(床)相关  ↓------------
 function EmotionMgr:SitChairStat(EntityID)
-	local Major = ActorUtil.GetActorByEntityID(EntityID)
+	-- local Major = ActorUtil.GetActorByEntityID(EntityID)
 	local PlayerAnimInst = AnimationUtil.GetPlayerAnimInst(EntityID)
 	if PlayerAnimInst then
 	--	PlayerAnimInst:DisableMove()
@@ -2475,7 +2636,7 @@ function EmotionMgr:UseBed(EntityID, EmotionID)
 		self:SetCameraLookAt(EmotionID, true)
 		self:MajorCanUseSkill(false, EntityID, EmotionID)
 	end
-	self:UpdateName(EntityID, -40)
+	self:UpdateName(EntityID, 15)
 end
 
 --- 起床
@@ -2512,6 +2673,7 @@ end
 
 ------------↑ 椅子(床)相关 End  ↑------------
 
+------------↓ 任务相关 ↓------------
 function EmotionMgr:OnGameEventSelectTarget(Params)
 	local EntityID = Params.ULongParam1
 	local IsResumeCamera = Params.BoolParam2
@@ -2526,10 +2688,12 @@ function EmotionMgr:OnGameEventSelectTarget(Params)
 end
 
 function EmotionMgr:OnGameEventUnSelectTarget(Params)
+	--处于对话中不能把任务ID置为nil
+	if _G.NpcDialogMgr:IsDialogPlaying() or  _G.InteractiveMgr.bLockTimer then
+		return
+	end
 	self:HideMainPanelView(Params)  --任务相关
 end
-
-------------↓ 任务相关 ↓------------
 
 --- 添加任务显示图标角标的标识UI
 function EmotionMgr:AddQuestID(EmotionID)
@@ -2618,12 +2782,8 @@ function EmotionMgr:ShowMainPanelViewByQuest(Params)
 
 			--这里模拟一次一级交互的点击
 			local EntranceItem = _G.InteractiveMgr:GetEntranceItemByEntityID(EntityID)
-			if EntranceItem then
-				_G.InteractiveMgr:OnEntranceClick(EntranceItem)
-			else
-				_G.FLOG_ERROR("EmotionMgr Get EntranceItem is nil, ResID ====="..tostring(ResID))
-			end
-
+			_G.InteractiveMgr:OnEntranceClick(EntranceItem)
+			
 			local TabType = self:GetEmoActType(value.EmotionID)  --自动打开ID所在的菜单页签列表
 			self:ShowEmotionMainPanel({TabType = TabType, QuestEmoID = value.EmotionID })
 			self:AddQuestID(value.EmotionID)	 	--存放任务角标
@@ -2765,7 +2925,8 @@ function EmotionMgr:RInterpToLookAtActor(FromActor, ToActor)
 end
 
 function EmotionMgr:UpdateRotation(Params)
-	if Params and Params.FromActor ~= nil and Params.TargetRotation and UKismetMathLibrary ~= nil then
+	if not Params then return end
+	if Params.FromActor ~= nil and Params.TargetRotation and UKismetMathLibrary ~= nil then
 		local InterpRotation = UKismetMathLibrary.RInterpTo(Params.FromActor:FGetActorRotation(), Params.TargetRotation, 0.02, 10)
 		if InterpRotation ~= nil then
 			Params.FromActor:FSetRotationForServer(InterpRotation)
@@ -2904,9 +3065,9 @@ function EmotionMgr:IsValidVelocity(EntityID, EmotionID)
 	return false
 end
 
---- 协议安全
+--- 协议安全 (注意：此仅用于Major 不要拿去判断其他玩家)
 ---@param SendID 		向服务器发送的情感动作ID
----@param IsSendReq   	判断是否为主角客户端向服务器发送请求
+---@param IsSendReq   	是发送播放请求
 ---@param MsgBody		服务器回包
 ---@param EntityID		主角实例ID
 ---@return boolean
@@ -2946,7 +3107,18 @@ function EmotionMgr:IsNetMsgBody(SendID, IsSendReq, MsgBody, EntityID)
 		return false
 	end
 
-	if BuffUtil.IsMajorBuffExist(7621) or BuffUtil.IsMajorBuffExist(48042) then	--狂欢
+	local IsInDungeon = StateCom and StateCom:IsInDungeon() or false
+	if PWorldMgr and IsInDungeon then	--在副本中
+		if (PWorldMgr:GetCurrPWorldSubType() == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_8R) then
+			--在8人副本 && 莫古力贤王歼灭战
+			if PWorldMgr.BaseInfo.CurrPWorldResID == 1202024 then
+				print("处于莫古力贤王歼灭战中,无法播放情感动作 ")
+				return false
+			end	
+		end
+	end
+
+	if BuffUtil.IsMajorBuffExist(7621) or BuffUtil.IsMajorBuffExist(48042) then	--狂欢Buff
 		local bIsUseSkill = ActorUtil.IsCanUseSkill(MajorUtil.GetMajorEntityID())
 		if not bIsUseSkill then
 			print("处于狂欢buff中,无法播放情感动作 ")
@@ -2959,6 +3131,13 @@ function EmotionMgr:IsNetMsgBody(SendID, IsSendReq, MsgBody, EntityID)
 		MsgTipsUtil.ShowTips(LSTR(" 检测到当前不能使用技能,可能处于眩晕等buff中,无法播放情感动作 "))
 		print(" 检测到当前不能使用技能,可能处于眩晕等buff中,无法播放情感动作 ")
 		return false
+	end
+
+	if self:IsEmotionPlaying(MajorUtil.GetMajorEntityID(), self.EXD_EMOTE_SLEEP) then
+		if SendID ~= self.EXD_EMOTE_NOD and SendID ~= self.EXD_EMOTE_WAKE and SendID ~= self.EXD_EMOTE_SLEEP then
+			print(" 睡觉中不可用 ", SendID)
+			return false
+		end
 	end
 
 	if IsSendReq == true then	--在主角发包前
@@ -3035,11 +3214,11 @@ function EmotionMgr:AddRedDot(ID)
 	end
 
 	--接入红点
-	local EmotionCfg = EmotionCfg:FindCfgByKey(ID)
-	if EmotionCfg == nil or nil == EmotionCfg.MotionType then return end
-	local TabName = EmotionDefines.MotionTypeKeyRedDots[EmotionCfg.MotionType]
+	local EmotionData = EmotionCfg:FindCfgByKey(ID)
+	if EmotionData == nil or nil == EmotionData.MotionType then return end
+	local TabName = EmotionDefines.MotionTypeKeyRedDots[EmotionData.MotionType]
 	if string.isnilorempty(TabName) then return end
-	local RedDotName = string.format( "%s/%s", TabName, EmotionCfg.ID)
+	local RedDotName = string.format( "%s/%s", TabName, EmotionData.ID)
 	RedDotMgr:AddRedDotByName(RedDotName, nil, true)
 
 	--保存未读红点，用于下次登录游戏时显示未读红点
@@ -3065,11 +3244,11 @@ function EmotionMgr:DelRedDot(ID)
 		USaveMgr.SetString(SaveKey.RedDotEmotions, IDList, true)
 
 		--隐藏红点
-		local EmotionCfg = EmotionCfg:FindCfgByKey(ID)
-		if EmotionCfg == nil or nil == EmotionCfg.MotionType then return end
-		local TabName = EmotionDefines.MotionTypeKeyRedDots[EmotionCfg.MotionType]
+		local EmotionData = EmotionCfg:FindCfgByKey(ID)
+		if EmotionData == nil or nil == EmotionData.MotionType then return end
+		local TabName = EmotionDefines.MotionTypeKeyRedDots[EmotionData.MotionType]
 		if string.isnilorempty(TabName) then return end
-		local RedDotName = string.format( "%s/%s", TabName, EmotionCfg.ID)
+		local RedDotName = string.format( "%s/%s", TabName, EmotionData.ID)
 		RedDotMgr:DelRedDotByName(RedDotName)
 	end
 end
@@ -3098,7 +3277,11 @@ end
 --- 点击不能使用的动作时 弹当前状态不能使用的提示
 function EmotionMgr:ShowCannotUseTips(ID)
 	local EmoCfg = EmotionCfg:FindCfgByKey(ID)
-	if EmoCfg and EmoCfg.IsBattleEmotion == 1 then
+	if not EmoCfg then
+		print("[Emotion]CannotText",self.CannotText[ID],ID)
+		return
+	end
+	if EmoCfg.IsBattleEmotion == 1 then
 		-- 生产职业不能使用战斗情感动作
 		local EntityID = MajorUtil.GetMajorEntityID()
 		local ProfID = ActorUtil.GetActorAttributeComponent(EntityID).ProfID
@@ -3140,11 +3323,11 @@ function EmotionMgr:ShowCannotUseTips(ID)
 
 	print("【情感动作】当前状态无法使用", 
 	"动作ID:",ID, 
-	"列表数量：", #EmoActPanelVM.CanUseList, 
-	"此动作是否有效：",EmoActPanelVM.CanUseList[ID], 
-	"CanUse配置",EmoCfg.CanUse[self.MajorCanUseType], 
-	"主角状态",self.MajorCanUseType,
-	self.CannotText[ID])
+	"列表数量:",#EmoActPanelVM.CanUseList, 
+	"是否有效:",EmoActPanelVM.CanUseList[ID], 
+	"CanUse配置:",EmoCfg.CanUse[self.MajorCanUseType], 
+	"主角状态:",self.MajorCanUseType,
+	"记录原因:",self.CannotText[ID])
 
 	MsgTipsUtil.ShowTipsByID(MsgTipsID.EmitionCannotUse)
 end
@@ -3461,32 +3644,50 @@ function EmotionMgr:SetFaceAnimIgnoreRest(EntityID, IsEmoFaceAnimPlaying)
 	end
 end
 
+-- 坐骑修改了外观，展示对应动作时，需同步给其他玩家
+---@param EmotionID 	播放的情感动作ID
+---@param EntityID		播放该动作的玩家EntityID
+---@param Target.ID		坐骑外观定制表ID（此ID和选中目标玩家的EntityID有冲突）
+---@param Target.IDType	此类型仅为展示坐骑特殊动作的类型
 function EmotionMgr:MountCustomEmoteNotify(EntityID, EmotionID, Target)
-	if EmotionID ~= 0 and Target and Target.IDType then
-		if Target.IDType == EmotionTargetType.EmotionTargetTypeMountFacade then
-			-- 坐骑外观
-			local EntityActor = ActorUtil.GetActorByEntityID(EntityID)
-			if Target.ID and EntityActor then
-				local MountResID = 1001
-				local CustomMadeID = 1
-				if Target.ID == 0 then
-					CustomMadeID = 1
-				else
-					CustomMadeID = Target.ID
-				end
-				MountMgr:SetCustomMadeID(EntityActor, MountResID, CustomMadeID)
+	if EmotionID == nil or EmotionID == 0 then return end
+	if Target == nil or Target.IDType == nil then return end
+	if Target.IDType == EmotionTargetType.EmotionTargetTypeMountFacade then
+		-- 坐骑外观
+		local EntityActor = ActorUtil.GetActorByEntityID(EntityID)
+		if Target.ID and EntityActor then
+			local MountResID = 1001
+			local EmotionData = EmotionCfg:FindCfgByKey(EmotionID)
+			if EmotionData and EmotionData.Mount then
+				MountResID = EmotionData.Mount
 			end
+			local CustomMadeID = Target.ID
+			if CustomMadeID == 0 then
+				if nil == MountCustomMadeVM then
+					MountCustomMadeVM = require("Game/Mount/VM/MountCustomMadeVM")
+				end
+				CustomMadeID = MountCustomMadeVM:GetDefaultCustomMadeID(MountResID)
+			end
+			MountMgr:SetCustomMadeID(EntityActor, MountResID, CustomMadeID)
 		end
 	end
 end
 
-function EmotionMgr:StopMountCustomEmotion()
+-- 若在播放展示坐骑动作时切换了坐骑外观，则停止该动作
+---@param MountResID 		坐骑表ID
+---@param CustomMadeID		坐骑定制外观表ID
+function EmotionMgr:StopMountCustomEmotion(MountResID, CustomMadeID)
 	local EntityID = MajorUtil.GetMajorEntityID()
-	if self.Tasks[EntityID] then
-		for k, v in pairs(self.Tasks[EntityID]) do
-			if v and v.EmotionID == self.MountEmotionID then
-				self:StopAllEmotions(EntityID, false, EmotionDefines.CancelReason.ChangeRole)
-				return
+	if not self.Tasks[EntityID] then return end
+	for _, v in pairs(self.Tasks[EntityID]) do
+		if not v then return end
+		if v.IDType == EmotionTargetType.EmotionTargetTypeMountFacade then
+			local EmotionData = EmotionCfg:FindCfgByKey(v.EmotionID)
+			if EmotionData and EmotionData.Mount then
+				if MountResID == EmotionData.Mount then
+					self:StopAllEmotions(EntityID, false, EmotionDefines.CancelReason.ChangeRole)
+					return
+				end
 			end
 		end
 	end
@@ -3502,7 +3703,7 @@ end
 ---@param Params.EmoActID 	可跳转到情感动作ID
 ---@param Params.QuestEmoID	跳转到任务动作
 function EmotionMgr:ShowEmotionMainPanel(Params)
-	-- CommSideBarUtil.ClearCurEasyUseLastType()
+	CommSideBarUtil.ClearCurEasyUseLastType()
 	self:ShowEasyMainPanel(Params)
 end
 
@@ -3511,7 +3712,7 @@ function EmotionMgr:ShowEasyMainPanel(Params)
 		UIViewMgr:HideView(UIViewID.CommEasytoUseView)
 		return
 	end
-	CommSideBarUtil.ShowSideBarByType(CommonSelectSidebarDefine.PanelType.EasyToUse, CommonSelectSidebarDefine.EasyToUseTabType.Emoji, Params)
+	CommSideBarUtil.ShowEasyToUseSideBarByType(CommonSelectSidebarDefine.EasyToUseTabType.Emoji, Params)
 end
 
 ---@param ID 		    Q情感动作表ID
@@ -3532,12 +3733,13 @@ function EmotionMgr:PlayEmotionID(ID, NeedShowHUD, EntityID, bSendChat)
 	self:OnPlayEmotion(Params)
 end
 
---- 传入ID, EntityID  直接播放情感动作
----@param ID 		    情感动作ID
----@param EntityID 		EntityID也支持NPC播放
----@param NeedShowHUD   是否显示头顶泡泡
----@param bSendChat 	是否向附近频道发送消息
-function EmotionMgr:PlayEmotionIDFromEntityID(ID, EntityID, NeedShowHUD, bSendChat)
+--- 传入ID, EntityID 直接播放情感动作
+---@param ID 		    	情感动作ID
+---@param EntityID 			传入EntityID也支持让NPC播放
+---@param NeedShowHUD   	是否显示头顶泡泡
+---@param bSendChat 		是否向附近频道发送消息
+---@param bLoadObjectSync 	同步加载时返回EmotionTask
+function EmotionMgr:PlayEmotionIDFromEntityID(ID, EntityID, NeedShowHUD, bSendChat, bLoadObjectSync)
 	if EntityID == nil or EntityID == 0 then
 		EntityID = MajorUtil.GetMajorEntityID()
 	end
@@ -3557,14 +3759,40 @@ function EmotionMgr:PlayEmotionIDFromEntityID(ID, EntityID, NeedShowHUD, bSendCh
 		ULongParam1 = EntityID,
 		BoolParam1 = false,
 		bSendChat = bSendChat == true,
+		bLoadObjectSync = bLoadObjectSync,
 	}
 	local EmotionTask = self:OnPlayEmotion(Params)
 	return EmotionTask
 end
 
+---获取已解锁的动作表中配置的动作（拍照专用）
+function EmotionMgr:PhotoGetEmotionTab(MotionType)
+	local AllFace = self:EmotionTab(MotionType)
+	if not AllFace then
+		return
+	end
+	for k, v in pairs(AllFace) do
+		if v.PhotoHide == 1 then
+			table.remove(AllFace, k)
+		end
+	end
+	return AllFace
+end
+
 ---播放情感动作表中配置的动作（拍照）
 function EmotionMgr:PhotoPlayEmotion(ID, EntityID)
-	local EmotionTask = self:PlayEmotionIDFromEntityID(ID, EntityID, false, false)
+	
+	if self.Tasks[EntityID] then
+		--bug=143972027 用完胜利欢呼的动作后，再使用其他动作拍照会保持手持武器的状态
+		for _, v in ipairs(self.Tasks[EntityID]) do
+			if v.IsBattleEmotion == 1 then
+				v:SendEventCancelEmotion()
+				break
+			end
+		end
+	end
+
+	local EmotionTask = self:PlayEmotionIDFromEntityID(ID, EntityID, false, false, true)
 	if EmotionTask and EmotionTask.MontageToPlay then
 		return EmotionTask.MontageToPlay
 	end
@@ -3585,7 +3813,7 @@ end
 --[[ 传入路径, 直接播放所有动作
 例如：
 Lua _G.EmotionMgr:PlayEmotionPath("AnimSequence'/Game/Assets/Character/Human/Animation/c0101/a0001/mt_m90007/A_c0101a0001_emot-cbem_zsmdhb.A_c0101a0001_emot-cbem_zsmdhb'")
-Lua _G.EmotionMgr:PlayEmotionPath("AnimSequence'/Game/Assets/Character/Monster/m90007/Animation/a0001/mount/A_m90007a0001_emot-cbem_zsmdhb.A_m90007a0001_emot-cbem_zsmdhb'")
+Lua _G.EmotionMgr:PlayEmotionPath("AnimComposite'/Game/Assets/Character/Human/Animation/c0101/a0001/emot/timeline/base/b0001/org_cbem_kzz.org_cbem_kzz'")
 ]]
 function EmotionMgr:PlayEmotionPath(Path)
 	if nil == MajorUtil then return end
@@ -3619,25 +3847,42 @@ end
 ---@param EmotionID 	情感动作ID
 ---@param EntityID 		玩家EntityID
 ---@param IgnoreActi	允许未解锁ID
+---@return boolean, number
 function EmotionMgr:IsEnableID(EmotionID, EntityID, IgnoreActi)
+	local TipsID = MsgTipsID.EmitionCannotUse
+	if EmotionID == nil or EmotionID == 0 then
+		print("[EmotionMgr]EmotionID is nil")
+		return false, TipsID
+	end
 	EntityID = EntityID or MajorUtil.GetMajorEntityID()
 	local Actor = ActorUtil.GetActorByEntityID(EntityID)
-	if not Actor then return end
+	if not Actor then
+		return false, TipsID
+	end
+	
 	local StateCom = ActorUtil.GetActorStateComponent(EntityID)
-	if StateCom == nil then return end
+	if StateCom == nil then
+		return false, TipsID
+	end
+	
 	local RideCom = Actor:GetRideComponent()
-	if RideCom == nil then return end
+	if RideCom == nil then
+		return false, TipsID
+	end
 	local AttributeComp = ActorUtil.GetActorAttributeComponent(EntityID)
-	if AttributeComp == nil then return end
-	local EmotionCfg = EmotionCfg:FindCfgByKey(EmotionID)
-	if not EmotionCfg then
+	if AttributeComp == nil then
+		return false, TipsID
+	end
+	local EmotionData = EmotionCfg:FindCfgByKey(EmotionID)
+	if not EmotionData then
 		self.CannotText[EmotionID] = EmotionDefines.ELog[9]
-		return false
+		print("[EmotionMgr]IsEnableID:EmotionData == nil ! ",EmotionID)
+		return false, TipsID
 	end
 	if true ~= IgnoreActi then
 		if not self:IsActivatedID(EmotionID) then
 			self.CannotText[EmotionID] = EmotionDefines.ELog[10]
-			return false
+			return false, TipsID
 		end
 	end
 
@@ -3656,54 +3901,63 @@ function EmotionMgr:IsEnableID(EmotionID, EntityID, IgnoreActi)
 		bIsEnable = false
 		self.CannotText[EmotionID] = string.format("%s %s %s %s %s",EmotionDefines.ELog[0],
 		tostring(bSkill),tostring(bIsStorage),tostring(bIsDead),tostring(bIsChange))
-	elseif not self:CanUseRideStart(bIsRiding, EmotionCfg, RideID) then   --坐骑状态
+	elseif not self:CanUseRideStart(bIsRiding, EmotionData, RideID) then   --坐骑状态
 		self.CannotText[EmotionID] = MsgTipsID.EmitionCannotUseR
+		TipsID = MsgTipsID.EmitionCannotUseR
 		bIsEnable = false
-	elseif not self:CanUseSwimming(bIsSwimming, EmotionCfg) then	 --游泳状态
+	elseif not self:CanUseSwimming(bIsSwimming, EmotionData) then	 --游泳状态
 		self.CannotText[EmotionID] = MsgTipsID.EmitionCannotUseS
+		TipsID = MsgTipsID.EmitionCannotUseS
 		bIsEnable = false
-	elseif not self:CanUseFish(bIsFish, EmotionCfg) then		 --钓鱼状态
+	elseif not self:CanUseFish(bIsFish, EmotionData) then		 --钓鱼状态
 		self.CannotText[EmotionID] = EmotionDefines.ELog[3]
 		bIsEnable = false
-	elseif EmotionCfg.IsBattleEmotion == 1 or self.IsHoldWeaponID(EmotionID) then  --生产职业不能使用战斗情感动作或收拔刀动作
+	elseif self:IsEmotionPlaying(EntityID, self.EXD_EMOTE_SLEEP) then
+		if EmotionID ~= self.EXD_EMOTE_NOD and EmotionID ~= self.EXD_EMOTE_WAKE then	--睡觉状态
+			self.CannotText[EmotionID] = EmotionDefines.ELog[15]
+			bIsEnable = false
+		end
+	elseif EmotionData.IsBattleEmotion == 1 or self.IsHoldWeaponID(EmotionID) then  --生产职业不能使用战斗情感动作或收拔刀动作
 		local ProfID = AttributeComp.ProfID
 		local Specialization = RoleInitCfg:FindProfSpecialization(ProfID)
-		local CanUse = nil
+		local CanUse = false
 		if EmotionMgr.IsHoldWeaponID(EmotionID) then
 			CanUse = true
-		elseif EmotionCfg.CanUse then
-			CanUse = EmotionCfg.CanUse[self.MajorCanUseType] == 1
+		elseif EmotionData.CanUse then
+			CanUse = EmotionData.CanUse[self.MajorCanUseType] == 1
 		end
 		bIsEnable = Specialization == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT and CanUse
-		if bIsEnable == false then
+		if not bIsEnable then
 			self.CannotText[EmotionID] = MsgTipsID.EmitionCombatUse
 		end
-	elseif EmotionCfg.MotionType == 3 then  	--持续动作
+	elseif EmotionData.MotionType == 3 then  	--持续动作
 		bIsEnable = true
 	elseif self:IsChangePoseEmotion(EmotionID) then  	--是否ID=90(改变姿势)
 		bIsEnable = true
 	elseif self:IsEmotionPlaying(EntityID, self.SitChairID) then
-		if EmotionCfg.CanUse and EmotionCfg.CanUse[3] == 0 then     --坐在椅子上
+		if EmotionData.CanUse and EmotionData.CanUse[3] == 0 then     --坐在椅子上
 			self.CannotText[EmotionID] = MsgTipsID.EmitionCannotUseC
+			TipsID = MsgTipsID.EmitionCannotUseC
 			bIsEnable = false
 		end
 	elseif self:IsEmotionPlaying(EntityID, self.SitGroundID) then
-		if EmotionCfg.CanUse and EmotionCfg.CanUse[2] == 0 then     --坐在地面上
+		if EmotionData.CanUse and EmotionData.CanUse[2] == 0 then     --坐在地面上
 			self.CannotText[EmotionID] = MsgTipsID.EmitionCannotUseG
+			TipsID = MsgTipsID.EmitionCannotUseG
 			bIsEnable = false
 		end
-	-- elseif EmotionCfg.CanUse and EmotionCfg.CanUse[self.MajorCanUseType] == 0 then
+	-- elseif EmotionData.CanUse and EmotionData.CanUse[self.MajorCanUseType] == 0 then
 	-- 	self.CannotText[EmotionID] = EmotionDefines.ELog[8]		--注意self.MajorCanUseType是给主角用的
 	-- 	bIsEnable = false
 	elseif self:IsEquipEmotion(EmotionID) and self:GetOwnedHead() then   --头部装备始终可用
 		bIsEnable = true
-	elseif string.isnilorempty(EmotionCfg.AnimPath) and string.isnilorempty(EmotionCfg.BeginAnimPath)
-		and string.isnilorempty(EmotionCfg.OnGroundAnimPath) and string.isnilorempty(EmotionCfg.OnChairAnimPath)
-		and string.isnilorempty(EmotionCfg.UpperBodyAnimPath) and string.isnilorempty(EmotionCfg.AdjustAnimPath) then
+	elseif string.isnilorempty(EmotionData.AnimPath) and string.isnilorempty(EmotionData.BeginAnimPath)
+		and string.isnilorempty(EmotionData.OnGroundAnimPath) and string.isnilorempty(EmotionData.OnChairAnimPath)
+		and string.isnilorempty(EmotionData.UpperBodyAnimPath) and string.isnilorempty(EmotionData.AdjustAnimPath) then
 		self.CannotText[EmotionID] = EmotionDefines.ELog[7]
 		bIsEnable = false	--最后再检查情感动作表是否填写有动作路径
 	end
-	return bIsEnable
+	return bIsEnable, TipsID
 end
 
 --- 在坐骑状态时，判断能否使用情感动作（对外接口）
@@ -3762,9 +4016,33 @@ function EmotionMgr:IsActivatedByItemID(ItemID)
 end
 
 --- 检测当前状态情感动作可用性（巡回乐团接口）
+---@return boolean, number
 function EmotionMgr:IsEnableAtIgnoreActivatedID(EmotionID, IgnoreActi)
 	local EntityID = MajorUtil.GetMajorEntityID()
 	return self:IsEnableID(EmotionID, EntityID, IgnoreActi)
+end
+
+function EmotionMgr:GetEmotionIDByItemID(ItemID)
+	if nil == ItemID then
+		return 0
+	end
+	local EmotionCfgData = EmotionCfg:FindAllCfg(string.format("Item == %d", ItemID))
+	if nil == EmotionCfgData then
+		return 0
+	end
+	return EmotionCfgData[1] and EmotionCfgData[1].ID or 0
+end
+
+-- 当前角色是否被禁用口型
+function EmotionMgr:GetNeedToPauseLips(EntityID)
+	if nil == EntityID then
+		EntityID = MajorUtil.GetMajorEntityID()
+	end
+
+	local BaseCharacter = ActorUtil.GetActorByEntityID(EntityID)
+	local EmojiAnimInst = BaseCharacter and BaseCharacter:GetEmojiAnimInst() or nil
+	local bPauseLips = EmojiAnimInst and EmojiAnimInst.bCpp_NeedToPauseLips or false
+	return bPauseLips
 end
 
 return EmotionMgr

@@ -122,27 +122,32 @@ function FriendScreenerWinView:GetProfData()
 	local Ret = {
 		{
 			Name = LSTR(30056), --"防护职业"
-			Icon = "PaperSprite'/Game/UI/Atlas/NewFriend/Frames/UI_Friend_Icon_Job_01_png.UI_Friend_Icon_Job_01_png'", 
+			Icon = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_Job_TitleBG_01.UI_Friend_Img_Job_TitleBG_01'", 
+			IconBg = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_JobBG_Figure01.UI_Friend_Img_JobBG_Figure01'",
 			CfgList = GetProfCfgListByClass(ProfClassType.CLASS_TYPE_TANK),
 		},
 		{
 			Name = LSTR(30057), --"治疗职业"
-			Icon = "PaperSprite'/Game/UI/Atlas/NewFriend/Frames/UI_Friend_Icon_Job_02_png.UI_Friend_Icon_Job_02_png'",
+			Icon = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_Job_TitleBG_02.UI_Friend_Img_Job_TitleBG_02'",
+			IconBg = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_JobBG_Figure02.UI_Friend_Img_JobBG_Figure02'",
 			CfgList = GetProfCfgListByClass(ProfClassType.CLASS_TYPE_HEALTH),
 		},
 		{
 			Name = LSTR(30058), --"进攻职业"
-			Icon = "PaperSprite'/Game/UI/Atlas/NewFriend/Frames/UI_Friend_Icon_Job_03_png.UI_Friend_Icon_Job_03_png'",
+			Icon = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_Job_TitleBG_03.UI_Friend_Img_Job_TitleBG_03'",
+			IconBg = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_JobBG_Figure03.UI_Friend_Img_JobBG_Figure03'",
 			CfgList = GetAttackCfgList(),
 		},
 		{
 			Name = LSTR(30059), --"能工巧匠"
-			Icon = "PaperSprite'/Game/UI/Atlas/NewFriend/Frames/UI_Friend_Icon_Job_04_png.UI_Friend_Icon_Job_04_png'",
+			Icon = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_Job_TitleBG_04.UI_Friend_Img_Job_TitleBG_04'",
+			IconBg = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_JobBG_Figure04.UI_Friend_Img_JobBG_Figure04'",
 			CfgList = GetProfCfgListByClass(ProfClassType.CLASS_TYPE_CARPENTER),
 		},
 		{
 			Name = LSTR(30060), --"大地使者"
-			Icon = "PaperSprite'/Game/UI/Atlas/NewFriend/Frames/UI_Friend_Icon_Job_05_png.UI_Friend_Icon_Job_05_png'",
+			Icon = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_Job_TitleBG_05.UI_Friend_Img_Job_TitleBG_05'",
+			IconBg = "Texture2D'/Game/UI/Texture/Friend/UI_Friend_Img_JobBG_Figure05.UI_Friend_Img_JobBG_Figure05'",
 			CfgList = GetProfCfgListByClass(ProfClassType.CLASS_TYPE_EARTHMESSENGER),
 		},
 	}

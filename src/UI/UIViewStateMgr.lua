@@ -199,7 +199,7 @@ function UIViewStateMgr:CheckFullscreen()
 
 	for i = 1, #ViewStates do
 		local v = ViewStates[i]
-		if v:GetVisible() and nil ~= v.View.GetIsFullScreen and v.View:GetIsFullScreen() then
+		if v:GetVisible() and v:GetIsFullScreen() then
 			return true
 		end
 	end
@@ -309,6 +309,7 @@ function UIViewStateMgr:UpdateVisibility()
 			local View = v.View
 			if View:IsValid() then
 				if bVisible ~= View:IsVisible() then
+					_G.EventMgr:PostEvent(_G.EventID.UIStateChange, {ViewID = View.ViewID, Visible = bVisible})
 					View:SetVisible(bVisible)
 					if bVisible then
 						--print("UIViewStateMgr:UpdateVisibility ActiveView", View.BPName)

@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local SkillUtil = require("Utils/SkillUtil")
 local EventID = require("Define/EventID")
 local SkillButtonStateMgr = require("Game/Skill/SkillButtonStateMgr")
+local CombatPanelBuffCfg = require("TableCfg/CombatPanelBuffCfg")
 local SkillMainCfg = require("TableCfg/SkillMainCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local MajorUtil = require("Utils/MajorUtil")
@@ -24,11 +25,16 @@ local SkillBtnState = SkillButtonStateMgr.SkillBtnState
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MsgTipsID = require("Define/MsgTipsID")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local MainControlPanelVM = require("Game/Main/VM/MainControlPanelVM")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
+local InputCallback = require("Game/Input/InputCallback")
 
 local ProfConfig = CrafterConfig.ProfConfig
 ---@class SkillGenAttackBtnView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn_Attack UFButton
+---@field HandleState SkillHandleStateLView
+---@field ImgBtnBase UImage
 ---@field Img_ProfSign UImage
 ---@field AnimClick UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -36,15 +42,18 @@ local SkillGenAttackBtnView = LuaClass(UIView, true)
 
 function SkillGenAttackBtnView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-    --self.Btn_Attack = nil
-    --self.Img_ProfSign = nil
-    --self.AnimClick = nil
-    --AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
+	--self.Btn_Attack = nil
+	--self.HandleState = nil
+	--self.ImgBtnBase = nil
+	--self.Img_ProfSign = nil
+	--self.AnimClick = nil
+	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function SkillGenAttackBtnView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-    --AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
+	self:AddSubView(self.HandleState)
+	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function SkillGenAttackBtnView:OnInit()
@@ -73,6 +82,7 @@ function SkillGenAttackBtnView:OnShow()
     self.BtnSkillID = 0 --相同SkillID的技能不会执行替换流程，因此这里将BtnSkillID设为0以确保替换流程顺利执行
     self.CanPress = true
     self:OnSkillReplace({SkillIndex = self.ButtonIndex, SkillID = SkillID})
+    self:OnGamePadUpdateCombatType()
 end
 
 function SkillGenAttackBtnView:OnHide()
@@ -95,11 +105,12 @@ end
 function SkillGenAttackBtnView:OnRegisterGameEvent()
     if self.bMajor then
         self:RegisterGameEvent(EventID.InputActionSkillPressed, self.OnPressedButtonSkill)
-        self:RegisterGameEvent(EventID.InputActionSkillReleased, self.OnReleasedButtonSkill)
+        self:RegisterGameEvent(EventID.InputActionSkillReleased, self.OnInputActionSkillReleased)
         self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnPWorldMapEnter)
         self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnEventMajorProfSwitch)
 		self:RegisterGameEvent(EventID.MajorSkillCastFailed, self.OnSkillCastFailed)
         self:RegisterGameEvent(EventID.UnSelectTarget, self.OnGameEventUnSelectTarget)
+        self:RegisterGameEvent(EventID.MajorUpdateBuff, self.OnMajorUpdateBuff)
 
         local IsInField = _G.PWorldMgr:CurrIsInField()
 	    --仅野外支持
@@ -111,10 +122,12 @@ function SkillGenAttackBtnView:OnRegisterGameEvent()
         self:OnEventMajorProfSwitch()   --处理MajorUseSkill事件
 
         self:RegisterGameEvent(EventID.SimulateMajorSkillCast, self.OnSimulateMajorSkillCast)
+        self:RegisterGameEvent(EventID.GamePadUpdateCombatType, self.OnGamePadUpdateCombatType)
     end
 end
 
 function SkillGenAttackBtnView:OnRegisterBinder()
+    
 end
 
 function SkillGenAttackBtnView:OnPWorldMapEnter(_)
@@ -123,10 +136,10 @@ function SkillGenAttackBtnView:OnPWorldMapEnter(_)
 end
 
 function SkillGenAttackBtnView:OnEventMajorProfSwitch()
-    self:UnRegisterGameEvent(EventID.MajorUseSkill, self.OnGameEventMajorUseSkill)
+    --self:UnRegisterGameEvent(EventID.MajorUseSkill, self.OnGameEventMajorUseSkill)
 
     if not MajorUtil.IsCrafterProf() then
-        self:RegisterGameEvent(EventID.MajorUseSkill, self.OnGameEventMajorUseSkill)
+        --self:RegisterGameEvent(EventID.MajorUseSkill, self.OnGameEventMajorUseSkill)
     else
         -- self:UnRegisterGameEvent(EventID.MajorUseSkill, self.OnGameEventMajorUseSkill)
     end
@@ -233,6 +246,8 @@ function SkillGenAttackBtnView:OnPressedButtonSkill(Params)
     LogicData:SetSkillPressFlag(self.ButtonIndex, true)
     self.PressSkill = self.BtnSkillID
     self:OnPrepareCastSkill()
+    local co = coroutine.create(self.OnGameEventMajorUseSkillAsync)
+    self.GameEventMajorUseSkillTaskID = _G.UIAsyncTaskMgr:RegisterTask(co, self)
 end
 
 function SkillGenAttackBtnView:OnPrepareCastSkill()
@@ -241,6 +256,13 @@ function SkillGenAttackBtnView:OnPrepareCastSkill()
     else
         SkillUtil.PlayerPrepareCastSkill(self.EntityID, 0, self.BtnSkillID)
     end
+end
+
+function SkillGenAttackBtnView:OnInputActionSkillReleased(Params)
+    if Params == 0 and InputCallback.InputActionSkillReleasedNum then
+        InputCallback.InputActionSkillReleasedNum = InputCallback.InputActionSkillReleasedNum + 1
+    end
+    self:OnReleasedButtonSkill(Params)
 end
 
 function SkillGenAttackBtnView:OnReleasedButtonSkill(Params)
@@ -271,115 +293,117 @@ function SkillGenAttackBtnView:OnReleasedButtonSkill(Params)
 end
 
 function SkillGenAttackBtnView:OnCastSkill()
-    _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, true,MajorUtil.IsCrafterProf())
-    if not self.CanPress then
-        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
-        return
-    end
-    local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
-    if LogicData == nil then
-        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
-        return
-    end
-    local bMajor = self.bMajor
-    if bMajor and not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_SKILL, true) then
-        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
-        return
-    end
+    local IsCastConBatSkill = SkillUtil.PostCastGenAttackSkillCondition(self.ButtonIndex, self.bMajor,
+    self.EntityID, self.BtnSkillID, self.CanPress, self)
+    -- _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, true,MajorUtil.IsCrafterProf())
+    -- if not self.CanPress then
+    --     _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+    --     return
+    -- end
 
-    if _G.GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith() then
-        MsgTipsUtil.ShowTipsByID(MsgTipsID.CannotFightSkillPanel)
-        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
-        return 
-    end
+    -- local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
+    -- if LogicData == nil then
+    --     _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+    --     return
+    -- end
+    -- local bMajor = self.bMajor
+    -- if bMajor and not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_SKILL, true) then
+    --     _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+    --     return
+    -- end
 
-    if bMajor and MajorUtil.IsCrafterProf() then
-        local IsAutoPathMovingState = _G.AutoPathMoveMgr:IsAutoPathMovingState()
-        if IsAutoPathMovingState then
-            _G.AutoPathMoveMgr:StopAutoPathMoving()
-        end 
-        AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
-        _G.UIViewMgr:ShowView(UIViewID.CraftingLog)
-        return
-    end
+    -- if _G.GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith() then
+    --     MsgTipsUtil.ShowTipsByID(MsgTipsID.CannotFightSkillPanel)
+    --     _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+    --     return 
+    -- end
 
-    if bMajor then
-        local IsGatherProf = MajorUtil.IsGatherProf()
-        if IsGatherProf then
-            AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
-            if _G.MainPanelVM.IsFightState then
-                _G.UIViewMgr:ShowView(UIViewID.GatheringLogMainPanelView)
-                return
-            end
-        end
+    -- if bMajor and MajorUtil.IsCrafterProf() then
+    --     local IsAutoPathMovingState = _G.AutoPathMoveMgr:IsAutoPathMovingState()
+    --     if IsAutoPathMovingState then
+    --         _G.AutoPathMoveMgr:StopAutoPathMoving()
+    --     end 
+    --     AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
+    --     _G.UIViewMgr:ShowView(UIViewID.CraftingLog)
+    --     return
+    -- end
 
-        local EventParams = {BtnIndex = self.ButtonIndex, SkillID = self.BtnSkillID, UIState = false}
-        _G.EventMgr:SendEvent(EventID.SkillBtnClick, EventParams)
-        if EventParams.UIState == false then
-            --制作职业直接打开 炼金的制作界面(目前是临时处理，将来要打开制作手册的)
-            if MajorUtil.IsCrafterProf() then
-                _G.CrafterMgr:StartMake(nil, false)
-            end
+    -- if bMajor then
+    --     local IsGatherProf = MajorUtil.IsGatherProf()
+    --     if IsGatherProf then
+    --         AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
+    --         if _G.MainPanelVM.IsFightState then
+    --             _G.UIViewMgr:ShowView(UIViewID.GatheringLogMainPanelView)
+    --             return
+    --         end
+    --     end
 
-            return
-        end
+    --     local EventParams = {BtnIndex = self.ButtonIndex, SkillID = self.BtnSkillID, UIState = false}
+    --     _G.EventMgr:SendEvent(EventID.SkillBtnClick, EventParams)
+    --     if EventParams.UIState == false then
+    --         --制作职业直接打开 炼金的制作界面(目前是临时处理，将来要打开制作手册的)
+    --         if MajorUtil.IsCrafterProf() then
+    --             _G.CrafterMgr:StartMake(nil, false)
+    --         end
 
-        if IsGatherProf and not _G.GatherMgr.IsGathering then
-            return
-        end
+    --         return
+    --     end
 
-        local SkillType =
-            SkillMainCfg:FindValue(self.BtnSkillID, "SkillFirstClass") == ProtoRes.skill_first_class.LIFE_SKILL
+    --     if IsGatherProf and not _G.GatherMgr.IsGathering then
+    --         return
+    --     end
 
-        if not LogicData:CanCastSkill(0, true, SkillBtnState.SkillWeight) then
-            if SkillType == true then
-            --MsgTipsUtil.ShowTips(LSTR("条件不满足"))
-            end
+    --     local SkillType =
+    --         SkillMainCfg:FindValue(self.BtnSkillID, "SkillFirstClass") == ProtoRes.skill_first_class.LIFE_SKILL
 
-            return
-        end
+    --     if not LogicData:CanCastSkill(0, true, SkillBtnState.SkillWeight) then
+    --         if SkillType == true then
+    --         --MsgTipsUtil.ShowTips(LSTR("条件不满足"))
+    --         end
 
-        if _G.SkillStorageMgr:GetSkillID() > 0 then
-            return
-        end
+    --         return
+    --     end
 
-        if SkillType == true then
-            SkillUtil.CastLifeSkill(self.ButtonIndex, self.BtnSkillID)
-            return
-        end
+    --     if _G.SkillStorageMgr:GetSkillID() > 0 then
+    --         return
+    --     end
+
+    --     if SkillType == true then
+    --         SkillUtil.CastLifeSkill(self.ButtonIndex, self.BtnSkillID)
+    --         return
+    --     end
         
-        local IsGenAttack = SkillMainCfg:FindValue(self.BtnSkillID, "Type") == ProtoRes.skill_type.SKILL_TYPE_NORMAL
-        if _G.SkillLogicMgr:CanAutoGenSkillAttack() and IsGenAttack then
-            FLOG_INFO("Enter AutoGenAttack")
-            self:StartLongPressTimer()
-        end
+    --     if _G.SkillLogicMgr.bAutoGenSkillAttack then
+    --         FLOG_INFO("Enter AutoGenAttack")
+    --         self:StartLongPressTimer()
+    --     end
 
-        SkillUtil.CastSkill(self.EntityID, 0, self.BtnSkillID)
-    else
-        local bJoyStick = SkillMainCfg:FindValue(self.BtnSkillID, "IsEnableSkillJoyStick")
-        SkillUtil.PlayerCastSkill(self.EntityID, 0, self.BtnSkillID, bJoyStick)
-    end
+    --     SkillUtil.CastSkill(self.EntityID, 0, self.BtnSkillID)
+    -- else
+    --     local bJoyStick = SkillMainCfg:FindValue(self.BtnSkillID, "IsEnableSkillJoyStick")
+    --     SkillUtil.PlayerCastSkill(self.EntityID, 0, self.BtnSkillID, bJoyStick)
+    -- end
 end
 
-function SkillGenAttackBtnView:OnGameEventMajorUseSkill(Params)
-    local BtnIndex = Params.ULongParam1
-    if BtnIndex ~= self.ButtonIndex or self.BtnSkillID == nil then
-        return false
-    end
+-- function SkillGenAttackBtnView:OnGameEventMajorUseSkill(Params)
+--     local BtnIndex = Params.ULongParam1
+--     if BtnIndex ~= self.ButtonIndex or self.BtnSkillID == nil then
+--         return false
+--     end
 
-    local co = coroutine.create(self.OnGameEventMajorUseSkillAsync)
-    self.GameEventMajorUseSkillTaskID = _G.UIAsyncTaskMgr:RegisterTask(co, self)
-end
+--     local co = coroutine.create(self.OnGameEventMajorUseSkillAsync)
+--     self.GameEventMajorUseSkillTaskID = _G.UIAsyncTaskMgr:RegisterTask(co, self)
+-- end
 
 function SkillGenAttackBtnView:OnGameEventMajorUseSkillAsync()
     if not MajorUtil.IsGatherProf() then
-        self:PlayAnimation(self.AnimClick)
+        self:PlayAnimationToEndTime(self.AnimClick)
     end
 end
 
 function SkillGenAttackBtnView:OnPlayerUseSkill(Params)
     if not MajorUtil.IsGatherProf() then
-        self:PlayAnimation(self.AnimClick)
+        self:PlayAnimationToEndTime(self.AnimClick)
     end
     
     local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
@@ -424,6 +448,22 @@ function SkillGenAttackBtnView:OnSkillReplaceAsync()
     end
 
     self.GameEventSkillReplaceTaskID = nil
+end
+
+function SkillGenAttackBtnView:OnGamePadUpdateCombatType()
+    local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+	if HandleButtonText then
+		self.HandleState:SetHandleButtonText(HandleButtonText)
+	end
+end
+
+function SkillGenAttackBtnView:OnMajorUpdateBuff(Params)
+    -- 存在buff停止自动普攻
+    local BuffID = Params.IntParam1
+    local Cfg = CombatPanelBuffCfg:FindCfgByKey(BuffID)
+    if Cfg and Cfg.bForbidGenAttack then
+        self:EndLongPressTimer()
+    end
 end
 
 return SkillGenAttackBtnView

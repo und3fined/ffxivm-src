@@ -11,6 +11,7 @@ local UIUtil = require("Utils/UIUtil")
 ---@class PersonInfoPlayerItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnPlayer UFButton
+---@field CommHead CommHeadView
 ---@field ImgBkg UFImage
 ---@field ImgFrame UFImage
 ---@field ImgPlayer UFImage
@@ -20,6 +21,7 @@ local PersonInfoPlayerItemView = LuaClass(UIView, true)
 function PersonInfoPlayerItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnPlayer = nil
+	--self.CommHead = nil
 	--self.ImgBkg = nil
 	--self.ImgFrame = nil
 	--self.ImgPlayer = nil
@@ -28,6 +30,7 @@ end
 
 function PersonInfoPlayerItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.CommHead)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

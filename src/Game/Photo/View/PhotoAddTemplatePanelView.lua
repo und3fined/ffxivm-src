@@ -7,38 +7,20 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-
 local PhotoDefine = require("Game/Photo/PhotoDefine")
+local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
+local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
+local SaveKey = require("Define/SaveKey")
+
+local LSTR = _G.LSTR
+local TimeUtil = _G.TimeUtil
 local PhotoMgr
-local FVector2D = _G.UE.FVector2D
-local PhotoVM
-local PhotoCamVM
-local PhotoFilterVM
-local PhotoDarkEdgeVM
-local PhotoRoleSettingVM
-local PhotoSceneVM
 local PhotoTemplateVM
 local PhotoActionVM
 local PhotoEmojiVM
 local PhotoRoleStatVM
-
-local UIBinderSetSlider = require("Binder/UIBinderSetSlider")
-local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
-local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
-local UIBinderSetProfName = require("Binder/UIBinderSetProfName")
-local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
-local UIBinderSetSelectedItem = require("Binder/UIBinderSetSelectedItem")
-local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
-local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
-local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
-local UIBinderSetRenderTransformAngle = require("Binder/UIBinderSetRenderTransformAngle")
-local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
-
-local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
 
 ---@class PhotoAddTemplatePanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -64,15 +46,16 @@ function PhotoAddTemplatePanelView:OnInit()
 
 	PhotoMgr = _G.PhotoMgr
 	PhotoTemplateVM = _G.PhotoTemplateVM
-	self.AdpTemplate 			= UIAdapterTableView.CreateAdapter(self, self.TableViewTemplate, self.OnAdpItemTemplate)
-
-	self.BinderTemplate = 
+	self.AdpTemplate = UIAdapterTableView.CreateAdapter(self, self.TableViewTemplate)--, self.OnAdpItemTemplate)
+	self.AdpTemplate:SetOnClickedCallback(self.OnActionItemClicked)
+	-- self.AdpTemplate:SetCanBeSelectedCallback(self.CanBeSelected)
+	self.BinderTemplate =
 	{
-		{ "BtnImage", 	   UIBinderSetBrushFromAssetPath.New(self, self.ImgAddTemplate) },
+		{ "BtnImage", UIBinderSetBrushFromAssetPath.New(self, self.ImgAddTemplate) },
 		{ "Templates", UIBinderUpdateBindableList.New(self, self.AdpTemplate) },
-		{ "CurItemVM",   	  UIBinderValueChangedCallback.New(self, nil, self.OnSelctChg) },
+		{ "CurItemVM", UIBinderValueChangedCallback.New(self, nil, self.OnSelctChg) },
 	}
-
+	PhotoTemplateVM:UpdTemplates()
 end
 
 function PhotoAddTemplatePanelView:OnSelctChg(Item)
@@ -86,6 +69,10 @@ function PhotoAddTemplatePanelView:OnDestroy()
 end
 
 function PhotoAddTemplatePanelView:OnShow()
+	if PhotoTemplateVM.CurItemIdx then
+		PhotoTemplateVM:UpdateSelItem(PhotoTemplateVM.CurItemIdx)
+		self.AdpTemplate:SetSelectedIndex(PhotoTemplateVM.CurItemIdx)
+	end
 end
 
 function PhotoAddTemplatePanelView:OnHide()
@@ -93,8 +80,7 @@ function PhotoAddTemplatePanelView:OnHide()
 end
 
 function PhotoAddTemplatePanelView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self,              self.BtnAdd,    			self.OnBtnAddTemplate)
-
+	UIUtil.AddOnClickedEvent(self, self.BtnAdd, self.OnBtnAddTemplate)
 end
 
 function PhotoAddTemplatePanelView:OnRegisterGameEvent()
@@ -102,15 +88,73 @@ function PhotoAddTemplatePanelView:OnRegisterGameEvent()
 end
 
 function PhotoAddTemplatePanelView:OnRegisterBinder()
-	self:RegisterBinders(PhotoTemplateVM, 		self.BinderTemplate)
+	self:RegisterBinders(PhotoTemplateVM, self.BinderTemplate)
 end
 
-function PhotoAddTemplatePanelView:OnAdpItemTemplate(Idx, ItemVM)
-	local Temp = PhotoMgr:GetTemplate(ItemVM.ID, ItemVM.IsCust)
+-- function PhotoAddTemplatePanelView:OnAdpItemTemplate(Idx, ItemVM)
+-- 	PhotoTemplateVM:UpdateSelItem(Idx)
+-- 	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(630062), _G.LSTR(630063),
+-- 		function()
+-- 			local Temp = PhotoMgr:GetTemplate(ItemVM.ID, ItemVM.IsCust)
+-- 			if Temp then
+-- 				PhotoMgr:TemplateApply(Temp)
+-- 			end
+-- 			PhotoTemplateVM.CurItemVM = ItemVM
+-- 			PhotoTemplateVM.CurItemIdx = Idx
+-- 		end,
+-- 		function()
+-- 			PhotoTemplateVM:UpdateSelItem(PhotoTemplateVM.CurItemIdx)
+-- 		end,  _G.LSTR(10003), _G.LSTR(10002), nil)
+-- end
+
+local function ConfirmCallback(self, ItemData, Idx)
+	if not self or not ItemData or not Idx then
+		return
+	end
+	_G.FLOG_INFO(string.format('[Photo][PhotoAddTemplatePanelView][ConfirmCallback]ID = %s, IsCust = %s',
+		tostring(ItemData.ID), tostring(ItemData.IsCust)
+	))
+	local Temp = PhotoMgr:GetTemplate(ItemData.ID, ItemData.IsCust)
 	if Temp then
 		PhotoMgr:TemplateApply(Temp)
 	end
-	PhotoTemplateVM.CurItemVM = ItemVM
+	PhotoTemplateVM.CurItemVM = ItemData
+	PhotoTemplateVM.CurItemIdx = Idx
+	self.AdpTemplate:SetSelectedIndex(Idx)
+end
+
+local function CancelCallback()
+	PhotoTemplateVM:UpdateSelItem(PhotoTemplateVM.CurItemIdx)
+end
+
+function PhotoAddTemplatePanelView:OnActionItemClicked(Idx, ItemData, ItemView)
+	if Idx == PhotoTemplateVM.CurItemIdx then
+		return
+	end
+	_G.FLOG_INFO("[Photo][PhotoAddTemplatePanelView][OnActionItemClicked]")
+
+	PhotoTemplateVM:UpdateSelItem(Idx)
+
+	local LastTimePopTime = _G.UE.USaveMgr.GetInt(SaveKey.PhotoTemplateTipTime, 0, true)
+	local IsNotPopTip = LastTimePopTime > 0 and TimeUtil:IsSameDay(LastTimePopTime, TimeUtil:GetLocalTime())
+	if IsNotPopTip then
+		ConfirmCallback(self, ItemData, Idx)
+		return
+	end
+
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(630062), LSTR(630063),
+		function(_, Params)
+			ConfirmCallback(self, ItemData, Idx)
+			if Params and Params.IsNeverAgain then
+				_G.UE.USaveMgr.SetInt(SaveKey.PhotoTemplateTipTime, TimeUtil:GetLocalTime(), true)
+			end
+		end, CancelCallback,  LSTR(10003), LSTR(10002),
+		{
+			CloseClickCB = CancelCallback,
+			bUseNever = true,
+			NeverMindText = LSTR(630066)
+		}
+	)
 end
 
 function PhotoAddTemplatePanelView:OnBtnAddTemplate()

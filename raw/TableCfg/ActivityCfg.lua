@@ -22,6 +22,9 @@ local ActivityCfg = {
             {
                 Name = 'Info',
             },
+            {
+                Name = 'SubPageName',
+            },
 		}
     },
     DefaultValues = nil,

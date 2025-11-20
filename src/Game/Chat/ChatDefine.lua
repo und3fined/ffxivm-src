@@ -49,6 +49,7 @@ local ChatMsgType = {
 	SystemBattle 	= 13, -- 系统战斗信息
 	SystemStory		= 14, -- 系统剧情信息
 	TextTipsCenter 	= 15, -- 文本提示中间
+	FishShare 		= 16, -- 鱼类分享
 }
 
 local ParseEmojisMsgTypeMap = {
@@ -89,14 +90,14 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.Recruit, Name = LSTR(50157), -- "招募"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 10000,
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_RecruitNormal_png.UI_Chat_Tab_Icon_RecruitNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_RecruitSelect_png.UI_Chat_Tab_Icon_RecruitSelect_png'",
 		Pos = 3,
 	},
 	{
 		Channel = ChatChannel.Newbie, Name = LSTR(50002), -- "新人"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 10000,
 		GoToIcon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Icon_TitleJoy_png.UI_Chat_Icon_TitleJoy_png'",
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_NewcomerNormal_png.UI_Chat_Tab_Icon_NewcomerNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_NewcomerSelect_png.UI_Chat_Tab_Icon_NewcomerSelect_png'",
@@ -104,7 +105,7 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.Army, Name = LSTR(50004), -- "部队"
-		MsgLength = 100, MsgCD = 1000, 
+		MsgLength = 100, MsgCD = 10000, 
 		GoToIcon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Icon_TitleArmy_png.UI_Chat_Icon_TitleArmy_png'",
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_ArmyNormal_png.UI_Chat_Tab_Icon_ArmyNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_ArmySelect_png.UI_Chat_Tab_Icon_ArmySelect_png'",
@@ -112,7 +113,7 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.Team, Name = LSTR(50005), -- "队伍"
-		MsgLength = 100, MsgCD = 1000, 
+		MsgLength = 100, MsgCD = 2000, 
 		GoToIcon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Icon_TitleTeam_png.UI_Chat_Icon_TitleTeam_png'",
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_TeamNormal_png.UI_Chat_Tab_Icon_TeamNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_TeamSelect_png.UI_Chat_Tab_Icon_TeamSelect_png'",
@@ -120,7 +121,7 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.SceneTeam, Name = LSTR(50005), -- "队伍"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 2000,
 		GoToIcon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Icon_TitleTeam_png.UI_Chat_Icon_TitleTeam_png'",
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_TeamNormal_png.UI_Chat_Tab_Icon_TeamNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_TeamSelect_png.UI_Chat_Tab_Icon_TeamSelect_png'",
@@ -134,21 +135,21 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.Nearby, Name = LSTR(50006), -- "附近"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 10000,
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_NearbyNormal_png.UI_Chat_Tab_Icon_NearbyNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_NearbySelect_png.UI_Chat_Tab_Icon_NearbySelect_png'",
 		Pos = 8,
 	},
 	{
 		Channel = ChatChannel.Area, Name = LSTR(50003), -- "区域"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 10000,
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_AreaNormal_png.UI_Chat_Tab_Icon_AreaNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_AreaSelect_png.UI_Chat_Tab_Icon_AreaSelect_png'",
 		Pos = 9,
 	},
 	{
 		Channel = ChatChannel.Group, Name = LSTR(50008), -- "通讯贝"
-		MsgLength = 100, MsgCD = 1000, 
+		MsgLength = 100, MsgCD = 2000, 
 		GoToIcon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Icon_TitleLinkshells_png.UI_Chat_Icon_TitleLinkshells_png'",
 		Icon = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_ShellNormal_png.UI_Chat_Tab_Icon_ShellNormal_png'",
 		IconSelect = "PaperSprite'/Game/UI/Atlas/ChatNew/Frames/UI_Chat_Tab_Icon_ShellSelect_png.UI_Chat_Tab_Icon_ShellSelect_png'",
@@ -156,7 +157,7 @@ local ChatChannelConfig = {
 	},
 	{
 		Channel = ChatChannel.Person, Name = LSTR(50009), -- "私聊"
-		MsgLength = 100, MsgCD = 1000,
+		MsgLength = 100, MsgCD = 2000,
 	},
 }
 
@@ -187,7 +188,7 @@ local SysMsgType = {
 
 local ChatDefaultSetting = {
 	ComprehensiveChannels = { ChatChannel.Pioneer, ChatChannel.Recruit, ChatChannel.Newbie, ChatChannel.Army, ChatChannel.Area, ChatChannel.Nearby, ChatChannel.Team, ChatChannel.System, ChatChannel.Group },
-	ComprehensiveChannelSysMsgTypes = {SysMsgType.Notice, SysMsgType.Story}, -- 综合频道显示的系统消息类型
+	ComprehensiveChannelSysMsgTypes = {SysMsgType.Notice}, -- 综合频道显示的系统消息类型
 	ChannelColorIndices = {
 		{ Channel = ChatChannel.Newbie, ColorIndex = 8 },
 		{ Channel = ChatChannel.Army, ColorIndex = 7 },
@@ -257,6 +258,7 @@ local HyperlinkLocationPattern = '<a [^>]+ linkid="[0-9]+" underline="false">{po
 
 local ChatMacros = {
 	TeamRecruit = "{pfinfer}", --队伍招募超链接
+	FishShare = "{fish}", --鱼类分享超链接
 }
 
 local MsgItemSortFunc = function(lhs, rhs)
@@ -354,6 +356,10 @@ local DefaultOpenSetting = {
 -- ID值取自于 "H红点表.xlsx|红点名字表"
 local SetTipsRedDotID = 92
 
+-- 聊天增加文本触发音效
+local BaseSeAudioPath = "AkAudioEvent'/Game/WwiseAudio/Events/sound/system/SE_UI/Play_SE_UI_SE_UI_tell_%02d.Play_SE_UI_SE_UI_tell_%02d'"
+local MaxSeAudioNum = 16
+
 local ChatDefine = {
 	ChatMsgEntryWidgetIndex = ChatMsgEntryWidgetIndex,
 	ChatCategory 			= ChatCategory,
@@ -403,6 +409,9 @@ local ChatDefine = {
 	DefaultPublicChannels = DefaultPublicChannels,
 	DefaultOpenSetting = DefaultOpenSetting,
 	SetTipsRedDotID = SetTipsRedDotID,
+
+	BaseSeAudioPath = BaseSeAudioPath,
+	MaxSeAudioNum = MaxSeAudioNum,
 }
 
 return ChatDefine

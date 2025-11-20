@@ -5,6 +5,8 @@ local CfgBase = require("TableCfg/CfgBase")
 local CS = {
     _2_1 = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_Inlet_Frame01.UI_PWorld_Img_Inlet_Frame01\'',
     _3_1 = 'Texture2D\'/Game/Assets/Icon/061000/UI_Icon_061802.UI_Icon_061802\'',
+    _5_1 = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_MateWin_Frame03.UI_PWorld_Img_MateWin_Frame03\'',
+    _5_2 = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_MateWin_Frame02.UI_PWorld_Img_MateWin_Frame02\'',
 }
 
 ---@class SceneEnterTypeCfg : CfgBase
@@ -24,8 +26,9 @@ local SceneEnterTypeCfg = {
         BG = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Entrance_Img_Pic03.UI_PWorld_Entrance_Img_Pic03\'',
         FrameImage = '',
         ID = 1,
-        Icon = '',
+        Icon = 'Texture2D\'/Game/Assets/Icon/061000/UI_Icon_061807.UI_Icon_061807\'',
         LockBG = '',
+        MatchFrameImage = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_MateWin_Frame01.UI_PWorld_Img_MateWin_Frame01\'',
         Type = 1,
     },
 	LuaData = {
@@ -64,6 +67,7 @@ local SceneEnterTypeCfg = {
             ID = 5,
             Icon = 'Texture2D\'/Game/Assets/Icon/900000/UI_Icon_900258.UI_Icon_900258\'',
             LockBG = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_Inlet_Lock_BG06.UI_PWorld_Img_Inlet_Lock_BG06\'',
+            MatchFrameImage = CS._5_2,
             Type = 5,
         },
         {
@@ -71,25 +75,30 @@ local SceneEnterTypeCfg = {
             ID = 6,
             Icon = 'Texture2D\'/Game/Assets/Icon/900000/UI_Icon_900257.UI_Icon_900257\'',
             LockBG = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_Inlet_Lock_BG05.UI_PWorld_Img_Inlet_Lock_BG05\'',
+            MatchFrameImage = CS._5_2,
             Type = 8,
         },
         {
             ID = 7,
+            Icon = '',
+            MatchFrameImage = '',
             Type = 7,
         },
         {
             BG = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_Inlet_BG07.UI_PWorld_Img_Inlet_BG07\'',
             ID = 9,
-            Icon = 'Texture2D\'/Game/Assets/Icon/061000/UI_Icon_061807.UI_Icon_061807\'',
             LockBG = 'Texture2D\'/Game/UI/Texture/PWorld/UI_PWorld_Img_Inlet_Lock_BG07.UI_PWorld_Img_Inlet_Lock_BG07\'',
+            MatchFrameImage = CS._5_1,
             Type = 9,
         },
         {
             ID = 10,
+            MatchFrameImage = CS._5_1,
             Type = 10,
         },
         {
             ID = 11,
+            MatchFrameImage = CS._5_1,
             Type = 11,
         },
         {

@@ -17,6 +17,7 @@ local ContentType = {
     CUSTOM_TALK = 1,
     NPC_DIALOG = 2,
     SEQUENCE_DIALOG = 3,
+    ACTIVITY = 4,
 }
 
 local SaveValueType = {
@@ -57,6 +58,8 @@ function FunctionCustomTalk:UpdateData()
         self.ContentType = ContentType.SEQUENCE_DIALOG
     elseif self.FuncParams.FuncValue >= 2000000 and self.FuncParams.FuncValue <= 2999999 then
         self.ContentType = ContentType.NPC_DIALOG
+    elseif self.FuncParams.FuncValue >= 1000 and self.FuncParams.FuncValue <= 10000 then
+        self.ContentType = ContentType.ACTIVITY
     end
 
     if self.ContentType == ContentType.CUSTOM_TALK then
@@ -84,7 +87,6 @@ function FunctionCustomTalk:UpdateData()
 end
 
 function FunctionCustomTalk:OnClick()
-    local NpcDialogMgr = require("Game/NPC/NpcDialogMgr")
     if self.ContentType == ContentType.CUSTOM_TALK or self.ContentType == ContentType.NPC_DIALOG then
         self:CheckAnswerIsCustom()
         self.OptionFunctionList = self:GenCustomTalkOptions(self.FuncParams.FuncValue)
@@ -154,6 +156,9 @@ function FunctionCustomTalk:OnClick()
     elseif self.ContentType == ContentType.SEQUENCE_DIALOG then
         _G.NpcDialogMgr:EndInteraction()
         _G.StoryMgr:PlayDialogueSequence(self.FuncParams.FuncValue)
+    elseif self.ContentType == ContentType.ACTIVITY then
+        _G.NpcDialogMgr:EndInteraction()
+        _G.ActivitySequenceMgr:PlaySeqByActivityNode(self.FuncParams.FuncValue)
     end
 end
 
@@ -252,10 +257,10 @@ function FunctionCustomTalk:GenFuncListByFuncID(FuncID)
     local FunctionList = {}
     if FuncID then
         local InteractFunctionUnit = FunctionItemFactory:CreateInteractiveDescFunc(
-            {FuncValue = FuncID, EntityID = self.FuncParams.EntityID, ResID = self.FuncParams.NpcResID, NeedStopDialog = true}, false, true)
+            {FuncValue = FuncID, EntityID = self.FuncParams.EntityID, ResID = self.FuncParams.NpcResID, NeedStopDialog = true, IsNpcFunc = true}, false, true)
         if InteractFunctionUnit then
             table.insert(FunctionList, InteractFunctionUnit)
-        end    
+        end
     end
     return FunctionList
 end

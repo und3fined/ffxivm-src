@@ -22,19 +22,19 @@ local StoreGiftstyleCfg = require("TableCfg/StoreGiftstyleCfg")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local ItemCfg = require("TableCfg/ItemCfg")
 local StoreCouponCfg = require("TableCfg/StoreCouponCfg")
-local MysteryboxCfg = require("TableCfg/MysteryboxCfg")
 local HairUnlockCfg = require("TableCfg/HairUnlockCfg")
 local CommercializationRandCfg = require("TableCfg/CommercializationRandCfg")
+local StoreUtil = require("Game/Store/StoreUtil")
 
 local UIDefine = require("Define/UIDefine")
 local StoreDefine = require("Game/Store/StoreDefine")
 local FriendDefine = require("Game/Social/Friend/FriendDefine")
 
 local StoreCfg = require("TableCfg/StoreCfg")
+local StoreRecommendCfg = require("TableCfg/StoreRecommendCfg")
 local StoreMountActionItemVM = require("Game/Store/VM/ItemVM/StoreMountActionItemVM")
 local StoreFilterVM = require("Game/Store/VM/ItemVM/StoreFilterVM")
 local StoreGoodVM = require("Game/Store/VM/ItemVM/StoreGoodVM")
-local StoreMysterBoxGoodsItemVM = require("Game/Store/VM/ItemVM/StoreMysterBoxGoodsItemVM")
 local StoreEquipPartVM = require("Game/Store/VM/ItemVM/StoreEquipPartVM")
 local StorePropsItemVM = require("Game/Store/VM/ItemVM/StorePropsItemVM")
 local StoreDyeFilterVM = require("Game/Store/VM/ItemVM/StoreDyeFilterVM")
@@ -47,7 +47,6 @@ local StoreNewCouponItemTittleVM = require("Game/Store/VM/ItemVM/StoreNewCouponI
 local ItemVM = require("Game/Item/ItemVM")
 local ItemTipsVM = require("Game/Item/ItemTipsVM")
 local FriendVM = require("Game/Social/Friend/FriendVM")
-local StoreNewBlindBoxDescItemVM = require("Game/Store/VM/ItemVM/StoreNewBlindBoxDescItemVM")
 
 local CommBtnColorType = UIDefine.CommBtnColorType
 local FLOG_ERROR = _G.FLOG_ERROR
@@ -72,13 +71,9 @@ local Store_CouponType = ProtoRes.Store_CouponType
 ---@field PropsSortList table @道具筛选列表
 ---@field CurrentStoreMode table @当前商城模式 购买/赠送
 ---@field CurrentSelectedItem table @当前选中ItemData
----@field MultiBuyBg string @批量购买界面商品背景
 ---@field MultiBuyDesc string @批量购买界面商品描述
----@field MultiDisPanelVisible string @批量购买界面折扣显隐
 ---@field MultiDisText string @批量购买界面折扣text
----@field MultiBuyIcon string @批量购买界面商品图标
 ---@field MultiBuyName string @批量购买界面商品名字
----@field bMultiBuyPanelHQVisible string @批量购买界面商品HQPanel显隐
 ---@field MultiBuySubName string @批量购买界面商品类别
 ---@field MultiBuyPrice string @批量购买界面商品价格
 ---@field MultiBuyPriceText string @批量购买界面商品格式化价格
@@ -156,11 +151,10 @@ function StoreMainVM:Ctor()
 	self.FriendItemVMList = UIBindableList.New(StoreGiftFriendItemVM)
 	self.StyleList = UIBindableList.New(StoreGiftMailStyleItemVM)
     self.ItemTipsVMData = ItemTipsVM.New()
-	self.MysteryBosItemVMList = UIBindableList.New(StoreNewBlindBoxDescItemVM)
 	
 	self.TittleText = LSTR(StoreDefine.LSTRTextKey.StoreTittleText)
 
-	self.PosterPanelVisible = false		--- 推荐页
+	self.PosterPanelVisible = true		--- 推荐页
     self.PanelGoodsVisible = true
     self.GoodsExpandPageVisible = false
     self.PanelPropsVisible = true
@@ -204,19 +198,16 @@ function StoreMainVM:Ctor()
 
 	self.CommTipsBtnVisible = false
 	self.CommTipsTextVisible = false
-    self.MultiBuyBg = ""
     self.MultiBuyDesc = ""
-	self.MultiDisPanelVisible = false
 	self.MultiDisText = ""
-    self.MultiBuyIcon = ""
     self.MultiBuyName = ""
-	self.bMultiBuyPanelHQVisible = false
     self.MultiBuySubName = ""
     self.MultiBuyPrice = ""
     self.MultiBuyPriceText = ""
     self.MultiBuyPriceType = ""
     self.MultiBuyPurchaseNumber = 1
     self.MultiBuyQuantity = ""
+	self.bHorizontalPriceVisible = true
 
 	self.bIsAllCameraState = true
 	self.bIsFullScreen = false
@@ -227,6 +218,10 @@ function StoreMainVM:Ctor()
 	self.bIsOnRide = true
 	self.bIsPlayMountBgm = true
 	self.DyeCommonInforID = -1
+	self.bIsFilter = false
+	self.bIsFilterListShow = false
+	self.bShowMainEmptyPanel = false
+	self.bShowSubEmptyPanel = false
 
     self.bBuyGoodBgVisible = false
     self.bBuyGoodIconVisible = false
@@ -252,6 +247,7 @@ function StoreMainVM:Ctor()
     self.FilterSelecteIndex = 0
     self.PropsSelecteIndex = 1
     self.MultiBuyLimitNum = 0
+	self.MultiBuyQualityBg = ""
 
 	self.MountActionListVisible = false
 
@@ -259,7 +255,11 @@ function StoreMainVM:Ctor()
 	self.CommTipsPanelVisible = false
 
 
-	self.ClothingPagePanelVisible = false
+	self.BtnSwitchVisible = false
+	self.BtnHatVisible = false
+	self.BtnOrganVisible = false
+	self.BtnEquipmentVisible = false
+	self.BtnSwitchPostureVisible = false
 	self.WeaponPagePanelVisible = false
 	self.MountPagePanelVisible = false
 	self.SheetMusicPagePanelVisible = false
@@ -268,7 +268,8 @@ function StoreMainVM:Ctor()
 	self.JumpToCategoryIndex = nil
 	self.JumpToItemID = 0
 	self.bPendingJumpToGoods = false
-	
+	self.bIsJumpMysteryBox = false
+
 	self.GoodsPanelVisible = false
 	self.PropsPanelVisible = false
 
@@ -294,6 +295,9 @@ function StoreMainVM:Ctor()
 
 	self.bIsOpenBuyWinPanel = true
 	self.SelectedGoods = {} -- 不同主分类下选中的商品ID
+
+	self.bIsPlayFlyState = true
+	self.BtnFlyVisible = false
 end
 
 function StoreMainVM:OnShutdown()
@@ -426,11 +430,9 @@ function StoreMainVM:UpdateTabList()
     local ProductCategory = StoreMgr:GetProductCategory()
 	for _, Category in ipairs(ProductCategory) do
 		local IsCanbeGift = false
-		--- 商城3.0特殊Tab 发型盲盒 不读商城表  / 推荐页不检查列表内是否有商品
-		-- Category.Type == StoreMall.STORE_MALL_MYSTERYBOX
 		local TempProductList = StoreMgr:GetProductDataByCategory(Category, self.CurrentStoreMode)
 		--- 主分类下没有商品时隐藏分类
-		if #TempProductList > 0 or Category.Type == StoreMall.STORE_MALL_RECOMMEND then
+		if not table.is_nil_empty(TempProductList) or Category.Type == StoreMall.STORE_MALL_RECOMMEND then
 			local Index = #TabListData + 1
 			local Children = {}
 			for index, value in ipairs(Category.SubCategory) do
@@ -540,6 +542,15 @@ function StoreMainVM:UpdateProductList()
     self:ChangeFilter()
 end
 
+-- UpdateProductList的简化版，刷新商品列表数据，不改变商品顺序，仅支持在商品列表已显示的情况下使用
+function StoreMainVM:RefreshProductsInfo()
+	if StoreMgr:CheckMallTypeByIndex(self.TabSelecteIndex, ProtoRes.StoreMall.STORE_MALL_PROPS) then
+        self:UpdatePropsList(self.GoodFilterDataList)
+    else
+        self:UpdateGoodList(self.GoodFilterDataList)
+    end
+end
+
 ---@type 切换购买模式
 ---@param Index number @购买模式索引
 function StoreMainVM:ChangePurchaseMethod(Index)
@@ -571,38 +582,42 @@ function StoreMainVM:ChangeTab(Index, SubIndex)
 	self.PanelGoodsVisible = not IsPropsPage and not IsPosterPage
 	self.GoodsExpandPageVisible = false
 	self.PanelBuyVisible = self.PanelGoodsVisible or self.PosterPanelVisible
-
-	local Children = self.TabList[Index].Children
-
-	local Category = StoreMgr:GetProductCategory(Index)
-	if Category == nil then
-		FLOG_ERROR("StoreMainVM:ChangeTab   Category is nil")
+	if nil == self.TabList[Index] then
+		FLOG_ERROR("[StoreMainVM:ChangeTab] No tab for index " .. tostring(Index))
 		return
 	end
-
-	if Category.SubCategory and next(Category.SubCategory) then
+	local Children = self.TabList[Index].Children
+	--SubKey取的是真实Key，只能在这里动筛选数据
+	local Category = StoreMgr:GetProductCategory(Index)
+	if Category and Category.SubCategory and next(Category.SubCategory) then
 		if Children ~= nil and next(Children) then
 			self.FilterDataList = Category.SubCategory
 		end
 	end
     self.FilterSelecteIndex = 1
 	self.TabSelecteIndex = Index
+	if Category == nil then
+		FLOG_ERROR("StoreMainVM:ChangeTab   Category is nil")
+		return
+	end
 	self.CurrentSelectedTabType = Category.Type
 	--- 切换标签页先隐藏各界面功能按钮Panel并初始化按钮state
 	--- 预览套装时隐藏武器
-	self.ClothingPagePanelVisible = Category.Type == StoreMall.STORE_MALL_CLOTHING
+	self:SetLeftButtonVisible(Category.Type)
 	self.WeaponPagePanelVisible = false		--- 3.0没有武器界面
 	self.MountPagePanelVisible = Category.Type == StoreMall.STORE_MALL_MOUNT
 	self.SheetMusicPagePanelVisible = Category.Type == StoreMall.STORE_MALL_MOUNT
 	self.EquipParVisible = Category.Type == StoreMall.STORE_MALL_CLOTHING
 	self.TabSelecteType = Category.Type
-	self.GoodList = UIBindableList.New(IsHairMysterybox and StoreMysterBoxGoodsItemVM or StoreGoodVM)
 
 	-- 二级页签处理
 	if nil ~= SubIndex then
 		self.FilterSelecteIndex = math.floor(SubIndex % 10)
 	end
-	self:UpdateProductList()
+	--- 盲盒的数据放在其他地方
+	if not IsHairMysterybox then
+		self:UpdateProductList()
+	end
 end
 
 ---@type 获取当前商店信息
@@ -615,6 +630,7 @@ end
 ---@param Flag boolean @是否二次筛选
 function StoreMainVM:SetFilterDataList(Index, Flag)
     self.GoodFilterDataList = {}
+	if not self.GoodDataList or not next(self.GoodDataList) then return end
     if Index == StoreDefine.DefaultFilterIndex then
         self.GoodFilterDataList = self.GoodDataList
     else
@@ -705,8 +721,9 @@ end
 ---@type 切换筛选的二级标签
 ---@param Index number @二级标签索引
 function StoreMainVM:ChangeFilter()
-    self:SetFilterDataList(self.FilterSelecteIndex, self.bSecondScreen)
-    if StoreMgr:CheckMallTypeByIndex(self.TabSelecteIndex, ProtoRes.StoreMall.STORE_MALL_PROPS) then
+	local bIsPropsTab = StoreMgr:CheckMallTypeByIndex(self.TabSelecteIndex, ProtoRes.StoreMall.STORE_MALL_PROPS)
+    self:SetFilterDataList(self.FilterSelecteIndex, self.bSecondScreen and not bIsPropsTab)
+    if bIsPropsTab then
         self:UpdatePropsList(self.GoodFilterDataList)
     else
         self:UpdateGoodList(self.GoodFilterDataList)
@@ -740,7 +757,13 @@ function StoreMainVM:UpdateGoodList(DataList)
     self.GoodList:UpdateByValues(RefreshData, nil)
     self.GoodSelecteIndex = 0
 	_G.EventMgr:SendEvent(_G.EventID.StoreRefreshGoodsSelected)
-	-- self:UpdateStyleList()
+	if self.GoodsExpandPageVisible then
+		self.bShowSubEmptyPanel = self.GoodList:Length() == 0
+		self.PanelBuyVisible = not self.bShowSubEmptyPanel
+	else
+		self.bShowMainEmptyPanel = self.GoodList:Length() == 0
+		self.PanelBuyVisible = not self.bShowMainEmptyPanel
+	end
 end
 
 ---@type 变更商品选中状态
@@ -774,15 +797,16 @@ end
 
 ---@type 刷新包含物品列表
 ---@param GoodData table @商品数据
-function StoreMainVM:UpdateEquipPartList(GoodData, BtnViewVisible)
+function StoreMainVM:UpdateEquipPartList(GoodData)
     local ItemList = GoodData.Items
 	
     local ItemData
     local RefreshData = {}
     for _, Item in ipairs(ItemList) do
-		if Item.ID ~= 0 then
-			ItemData = StoreMgr:GetItemCfg(Item.ID, BtnViewVisible) or StoreMgr:GetHairCfg(Item.ID, BtnViewVisible)
-			if ItemData then
+		if Item.ID ~= 0 and not Item.IsBundled then
+			ItemData = StoreMgr:GetItemCfg(Item.ID)
+			if nil ~= ItemData and (ItemData.EquipmentID > 0 or ItemData.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_COIFFURE)
+				then
 				RefreshData[#RefreshData + 1] = ItemData
 			end
 		end
@@ -793,6 +817,9 @@ end
 ---@type 变更包含物品列表选中状态
 ---@param Index number @包含物品索引
 function StoreMainVM:ChangeEquipPart(Index, IsSelect)
+	if table.is_nil_empty(self.EquipPartList.Items) then
+		return
+	end
 	if Index == nil then
 		for i = 1, self.EquipPartList:Length() do
 			self.EquipPartList.Items[i]:OnSelectedChange(IsSelect)
@@ -856,20 +883,15 @@ function StoreMainVM:UpdateGoodIcon()
 	end
 end
 ---@type 初始化多件购买界面
-function StoreMainVM:InitMultiBuyView(TempItemData)
-    local PropsData
-	if TempItemData == nil then
-		PropsData = self.GoodFilterDataList[self.PropsSelecteIndex]
-	else
-		PropsData = TempItemData
-	end
-	if PropsData == nil then
+function StoreMainVM:InitMultiBuyView(PropsData)
+	if nil == PropsData then
+		FLOG_WARNING("[StoreMainVM:InitMultiBuyView] PropsData is nil")
 		return
 	end
     local PropsCfgData = PropsData.Cfg
 	self.SkipTempData = PropsCfgData
-    if PropsCfgData == nil and TempItemData == nil then
-        FLOG_WARNING("StoreMainVM:InitMultiBuyView, GoodData is nil, TempItemData is nil")
+    if nil == PropsCfgData then
+		FLOG_WARNING("[StoreMainVM:InitMultiBuyView] PropsCfgData is nil")
         return
     end
     if PropsData == nil then
@@ -884,32 +906,25 @@ function StoreMainVM:InitMultiBuyView(TempItemData)
     local ScoreValue = ScoreMgr:GetScoreValueByID(PriceData.ID)
 
 	local ItemCfgData = ItemCfg:FindCfgByKey(PropsCfgData.Items[1].ID)
-    self.MultiBuyBg = PropsCfgData.PropQualityIconPath
-    self.MultiBuyDesc = PropsCfgData.Desc
-    self.MultiBuyIcon = StoreMgr.GetGoodIconPath(ItemCfgData and ItemCfgData.IconID or "")
-    self.MultiBuyName = PropsCfgData.Name
-    self.ProductName = PropsCfgData.Name
-	if nil ~= ItemCfgData then
-		self.bMultiBuyPanelHQVisible = ItemCfgData.IsHQ == 1
-	else
-		self.bMultiBuyPanelHQVisible = false
-	end
+    self.MultiBuyDesc = StoreUtil.GetGoodsDesc(PropsCfgData.ID)
+    self.MultiBuyName = StoreUtil.GetGoodsName(PropsCfgData.ID)
+    self.ProductName = StoreUtil.GetGoodsName(PropsCfgData.ID)
+	self.MultiBuyQualityBg = StoreDefine.BuyItemBgColor[ItemCfgData and ItemCfgData.ItemColor or 1]
+
     self.MultiBuySubName = PropsCfgData.LabelSub
     self.MultiBuyLimitNum = 0
 	self.bMultiBuyBuyForOther = PropsCfgData.BuyForOther == 1
-	self.MultiDisPanelVisible = false
 	local Discount = PropsCfgData.Discount
 	local IsOnTime = StoreMgr:IsDuringSaleTime(PropsCfgData)
 	if IsOnTime and Discount ~= StoreDefine.DiscountMinValue and Discount ~= StoreDefine.DiscountMaxValue then
 		if Discount > StoreDefine.DiscountMinValue and Discount < StoreDefine.DiscountMaxValue then
-			self.MultiDisPanelVisible = PropsCfgData.ShowDiscount == 1
 			self.MultiDisText = string.format(_G.LSTR(950042), Discount / 10)	--- "%d折"
 			self.DiscountText = self.MultiDisText
 			self.bMultiBuyPanelOriginalVisible = true
 			self.OriginalPanelVisible = true
 			self.OriginalPriceText = ScoreMgr.FormatScore(PropsCfgData.Price[1].Count)	--- 选择好友界面
 			self.DiscountPanelVisible = true
-			self.MultiBuyPrice = string.format("%d", math.floor(PropsCfgData.Price[1].Count * (Discount / StoreDefine.DiscountMaxValue)))
+			self.MultiBuyPrice = string.format("%d", StoreUtil.GetGoodsDiscountedPrice(PropsData.Cfg.ID))
 		end
 	else
 		self.MultiBuyPrice = PropsCfgData.Price[1].Count or 0
@@ -946,7 +961,7 @@ function StoreMainVM:InitMultiBuyView(TempItemData)
 
 	local ItemPrice = 0
 	if IsOnTime and PropsCfgData.Discount ~= StoreDefine.DiscountMinValue and PropsCfgData.Discount ~= StoreDefine.DiscountMaxValue then
-		ItemPrice = PriceData.Count * PropsCfgData.Discount / StoreDefine.DiscountMaxValue
+		ItemPrice = StoreUtil.GetGoodsDiscountedPrice(PropsCfgData.ID)
 	else
 		ItemPrice = PriceData.Count
 	end
@@ -1070,6 +1085,9 @@ end
 ---@type 拖动条改变购买数量
 ---@param Value number 当前购买数量
 function StoreMainVM:ChangeQuantityBySlider(Value)
+	if not self.GoodFilterDataList or not next(self.GoodFilterDataList) then
+		return
+	end
     local PropsData = self.GoodFilterDataList[self.PropsSelecteIndex]
 	if nil == PropsData or nil == PropsData.Cfg then
 		return
@@ -1086,7 +1104,7 @@ function StoreMainVM:ChangeQuantityBySlider(Value)
 	local IsOnTime = StoreMgr:IsDuringSaleTime(PropsData.Cfg)
 
 	if PriceData and PriceData.Count and PropsData.Cfg.Discount < StoreDefine.DiscountMaxValue and PropsData.Cfg.Discount > StoreDefine.DiscountMinValue and IsOnTime then
-		self.MultiBuyPrice = string.format("%d", PriceData.Count * PropsData.Cfg.Discount / StoreDefine.DiscountMaxValue * Value)
+		self.MultiBuyPrice = string.format("%d", StoreUtil.GetGoodsDiscountedPrice(PropsData.Cfg.ID) * Value)
 		self.bMultiBuyOriginalPriceText = tostring(PriceData.Count * Value)
 		self.OriginalPriceText = ScoreMgr.FormatScore(PriceData.Count * Value)
 	else
@@ -1138,7 +1156,7 @@ function StoreMainVM:SetMultiQuantity(Value)
 	local IsOnTime = StoreMgr:IsDuringSaleTime(PropsCfgData)
 	
     if PriceData and PriceData.Count and PropsCfgData.Discount < StoreDefine.DiscountMaxValue and PropsCfgData.Discount > StoreDefine.DiscountMinValue and IsOnTime then
-		self.MultiBuyPrice = string.format("%d", PriceData.Count * PropsCfgData.Discount / StoreDefine.DiscountMaxValue * Value)
+		self.MultiBuyPrice = string.format("%d", StoreUtil.GetGoodsDiscountedPrice(PropsCfgData.ID) * Value)
 		self.bMultiBuyOriginalPriceText = tostring(PriceData.Count * Value)
 		self.OriginalPriceText = ScoreMgr.FormatScore(PriceData.Count * Value)
 	else
@@ -1197,9 +1215,9 @@ function StoreMainVM:bAvailableBuyByMultiBuy(ItemData)
         MsgTipsUtil.ShowTipsByID(StoreDefine.BuyError)
         return false
     end
-	
-	local PropsCfgData = PropsData.Cfg
 
+	local PropsCfgData = PropsData.Cfg
+	
 	local IsOnTime = StoreMgr:IsDuringSaleTime(PropsCfgData)
 
     local PriceData = PropsCfgData.Price[StoreDefine.PriceDefaultIndex]
@@ -1207,7 +1225,7 @@ function StoreMainVM:bAvailableBuyByMultiBuy(ItemData)
 		local ItemName = ItemCfg:GetItemName(PriceData.ID) or ""
 		local ItemPrice = 0
 		if IsOnTime and PropsCfgData.Discount ~= StoreDefine.DiscountMinValue and PropsCfgData.Discount ~= StoreDefine.DiscountMaxValue then
-			ItemPrice = PriceData.Count * PropsCfgData.Discount / StoreDefine.DiscountMaxValue
+			ItemPrice = StoreUtil.GetGoodsDiscountedPrice(PropsData.Cfg.ID)
 		else
 			ItemPrice = PriceData.Count
 		end
@@ -1261,7 +1279,6 @@ function StoreMainVM:InitBuyView(TempItemData)
     end
 	GoodCfgData = GoodData.Cfg
 	if self.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
-		self:UpdateMysteryBoxData(GoodCfgData.Items, GoodCfgData.PrizePoolID)
 		local Items = {}
 		for i = 1, #GoodCfgData.Items do
 			local ID = GoodCfgData.Items[i].ID
@@ -1299,11 +1316,14 @@ function StoreMainVM:InitBuyView(TempItemData)
 		self:UpdateEquipPartList(GoodCfgData, not IsBox)
 	end
 	self.PropsPanelVisible = false
-	self.ProductName = GoodCfgData.Name
+	self.ProductName = StoreUtil.GetGoodsName(GoodCfgData.ID)
+	local RecommendGoodsCfgData = StoreMgr.GetRecommendGoodsCfgData(GoodCfgData)
+	self.UnavailableText = ""
 	--- 活动跳转类型商品，不计算价格等信息
-	if GoodCfgData.ProductType ~= nil and GoodCfgData.ProductType == ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_JUMP then
-		self.BuyBtnText = GoodCfgData.BtnText
-		self.JumpID = GoodCfgData.JumpID
+	if nil ~= RecommendGoodsCfgData and RecommendGoodsCfgData.ProductType ==
+		ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_JUMP then
+		self.BuyBtnText = RecommendGoodsCfgData.BtnText
+		self.JumpID = RecommendGoodsCfgData.JumpID
 		self.DyeTipsText = ""
 	elseif self.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
 		self.BuyBtnText = LSTR(StoreDefine.StoreModeText[1])
@@ -1318,7 +1338,7 @@ function StoreMainVM:InitBuyView(TempItemData)
 		self.JumpID = 0
 		self.BuyBtnText = LSTR(StoreDefine.StoreModeText[self.CurrentStoreMode])
 		local TempDyeTipsType = GoodCfgData.DyeTipsType
-		self.DyeTipsText = LSTR(StoreDefine.DyeTipsText[TempDyeTipsType])
+		self.DyeTipsText = TempDyeTipsType > 0 and LSTR(StoreDefine.DyeTipsText[TempDyeTipsType]) or ""
 		if TempDyeTipsType == ProtoRes.GoodsDyeType.GOODS_DYE_TYPE_Part then
 			self.DyeCommonInforBtnVisible = true
 			self.DyeCommonInforID = GoodCfgData.DyeInfoID
@@ -1336,9 +1356,9 @@ function StoreMainVM:InitBuyView(TempItemData)
 
 		local MainPriceVM = _G.StoreMgr:GetMainPriceVM()
 		local PriceGoodsCfgData = GoodCfgData
-		if GoodCfgData.LabelMain == ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND then
+		if nil ~= RecommendGoodsCfgData then
 			-- 推荐页商品实际价格以配置的第一商品为准
-			PriceGoodsCfgData = StoreCfg:FindCfgByKey(GoodCfgData.Items[1].ID) or PriceGoodsCfgData -- 待拆推荐表
+			PriceGoodsCfgData = StoreCfg:FindCfgByKey(RecommendGoodsCfgData.GoodsIDs[1]) or PriceGoodsCfgData
 		end
 		if nil ~= MainPriceVM then
 			MainPriceVM:UpdatePriceData(PriceGoodsCfgData, self.CurrentStoreMode == StoreDefine.StoreMode.Buy, true)
@@ -1353,45 +1373,6 @@ function StoreMainVM:InitBuyView(TempItemData)
 	self.bDyeInforPanelVisible = self.DyeCommonInforBtnVisible or self.DyeTipsText ~= ""
 end
 
---- 更新奇遇盲盒Tips列表
----@param Items table 包含物品
----@param PrizePoolID number 奖池ID  用来计算权重 概率
-function StoreMainVM:UpdateMysteryBoxData(Items, PrizePoolID)
-	if PrizePoolID == nil then
-		return
-	end
-	local ItemsData = {}
-	--- 权重List
-	local DropWeightList = {}
-	--- 拥有状态List
-	local bIsOwnedList = {}
-	--- 未拥有权重总和
-	local AllDropWeight = 0
-	local TempRandCfgList = CommercializationRandCfg:FindAllCfg(string.format("PrizePoolID=%d", PrizePoolID))
-	for _, value in ipairs(TempRandCfgList) do
-		if value.ProbMode == ProtoRes.PROBABILITY_TYPE.PROBABILITY_TYPE_WEIGHTED then
-			DropWeightList[value.DropID] = value.DropWeight
-			local MailID =  _G.MailMgr:GetGiftMailIDByGoodID(value.DropID)
-			local bIsOwned = _G.HaircutMgr.CheckHairUnlock(value.DropID) or _G.BagMgr:GetItemNum(value.DropID) > 0 or _G.DepotVM:GetDepotItemNum(value.DropID) > 0 or MailID ~= nil
-			if not bIsOwned then
-				AllDropWeight = AllDropWeight + value.DropWeight
-			end
-			bIsOwnedList[value.DropID] = bIsOwned
-		end
-	end
-	for index, value in ipairs(Items) do
-		local ItemID = value.ID
-		ItemsData[index] = {
-			ID = ItemID,
-			DropWeight = DropWeightList[ItemID],
-			bIsOwned = bIsOwnedList[ItemID],
-			AllDropWeight = AllDropWeight
-		}
-	end
-	table.sort(ItemsData, function(a, b) if a.bIsOwned == b.bIsOwned then return false end return not a.bIsOwned end)
-
-	self.MysteryBosItemVMList:UpdateByValues(ItemsData)
-end
 
 --- 旧蓝图代码，已弃用
 -- ---@type 设置单件购买面板物品信息
@@ -1443,11 +1424,7 @@ function StoreMainVM:BuyGood(GoodsCfgData)
 	end
     -- local GoodData = self.GoodFilterDataList[self.GoodSelecteIndex]
 	TempData = GoodsCfgData or TempData
-	if self.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
-		StoreMgr:SendMsgBuyMysterBox(TempData.ID)
-	else
-    	StoreMgr:SendMsgBuyGood(TempData.ID, StoreDefine.MinBuyQuantity, self.UseCouponGID)
-	end
+	StoreMgr:SendMsgBuyGood(TempData.ID, StoreDefine.MinBuyQuantity, self.UseCouponGID)
 end
 
 ---@type 初始化获取商品界面
@@ -1675,5 +1652,34 @@ function StoreMainVM:CacheSelectedGoodsForCategory(CategoryIndex, GoodsID)
 end
 
 --endregion
+
+function StoreMainVM:SetLeftButtonVisible(LabelType)
+	local Store_Label_Type = ProtoRes.Store_Label_Type
+	if LabelType == Store_Label_Type.STORE_LABEL_MAIN_FASHION then
+		self.BtnSwitchVisible = true
+		self.BtnHatVisible = true
+		self.BtnOrganVisible = true
+		self.BtnEquipmentVisible = true
+		self.BtnSwitchPostureVisible = true
+	elseif LabelType == Store_Label_Type.STORE_LABEL_MAIN_ACTINGTEXTBOOK then
+		self.BtnSwitchVisible = false
+		self.BtnHatVisible = true
+		self.BtnOrganVisible = false
+		self.BtnEquipmentVisible = false
+		self.BtnSwitchPostureVisible = false
+	elseif LabelType == Store_Label_Type.STORE_LABEL_MAIN_ORNAMENT then
+		self.BtnSwitchVisible = false
+		self.BtnHatVisible = true
+		self.BtnOrganVisible = true
+		self.BtnEquipmentVisible = false
+		self.BtnSwitchPostureVisible = false
+	else
+		self.BtnSwitchVisible = false
+		self.BtnHatVisible = false
+		self.BtnOrganVisible = false
+		self.BtnEquipmentVisible = false
+		self.BtnSwitchPostureVisible = false
+	end
+end
 
 return StoreMainVM

@@ -102,7 +102,8 @@ function MainEntranceItemView:UpdateEntranceTable()
 	end
 
 	-- 2. 理符。已解锁且未满级时显示
-	if (CurrLevel < LevelExpCfg:GetMaxLevel()) and _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLeveQuest) then
+	-- if (CurrLevel < LevelExpCfg:GetMaxLevel()) and _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLeveQuest) then
+	if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLeveQuest) then
 		table.insert(EntranceList, { Type = EntranceType.LeveQuest })
 	end
 

@@ -68,13 +68,11 @@ local PWorldEntDetailVM = nil
 ---@field BtnUp UFButton
 ---@field ChocoboAvatar ChocoboRaceAvatarItemView
 ---@field CommCloseMaskBtn UFButton
----@field CommInforBtn CommInforBtnView
 ---@field CommonTitle CommonTitleView
+---@field FHorizontalBox_2 UFHorizontalBox
 ---@field HorizontalExpected UFHorizontalBox
 ---@field HorizontalNoMentor UFHorizontalBox
----@field HorizontalTitle UFHorizontalBox
 ---@field HorizontalUnmet UFHorizontalBox
----@field IconTitle UFImage
 ---@field ImgBG UFImage
 ---@field ImgHighlyDifficultJob UFImage
 ---@field ImgJob UFImage
@@ -98,7 +96,6 @@ local PWorldEntDetailVM = nil
 ---@field PanelEquipmentClass_2 UFCanvasPanel
 ---@field PanelExtraDescription UFCanvasPanel
 ---@field PanelHighlyDifficult UFCanvasPanel
----@field PanelIcon UFCanvasPanel
 ---@field PanelJoin UFCanvasPanel
 ---@field PanelLevelRequire UFCanvasPanel
 ---@field PanelLimitTime UFCanvasPanel
@@ -110,7 +107,6 @@ local PWorldEntDetailVM = nil
 ---@field PanelTaskSet UFCanvasPanel
 ---@field PanelTaskSetUp UFCanvasPanel
 ---@field PanelTips UFCanvasPanel
----@field PanelTopBtn UFCanvasPanel
 ---@field RankTips SavageRankTipsView
 ---@field RichTextEquipmentClass URichTextBox
 ---@field RichTextEquipmentClass_2 URichTextBox
@@ -151,9 +147,7 @@ local PWorldEntDetailVM = nil
 ---@field TextNoMentor UFTextBlock
 ---@field TextPWorldName UFTextBlock
 ---@field TextPeopleAmount UFTextBlock
----@field TextSubtitle UFTextBlock
 ---@field TextTaskSetUp UFTextBlock
----@field TextTitle UFTextBlock
 ---@field TipsTaskCondition PWorldInforTipsView
 ---@field ToggleBtnArrow UToggleButton
 ---@field VerticalPWorld UFVerticalBox
@@ -194,13 +188,11 @@ function PWorldSelectSetPanelView:Ctor()
 	--self.BtnUp = nil
 	--self.ChocoboAvatar = nil
 	--self.CommCloseMaskBtn = nil
-	--self.CommInforBtn = nil
 	--self.CommonTitle = nil
+	--self.FHorizontalBox_2 = nil
 	--self.HorizontalExpected = nil
 	--self.HorizontalNoMentor = nil
-	--self.HorizontalTitle = nil
 	--self.HorizontalUnmet = nil
-	--self.IconTitle = nil
 	--self.ImgBG = nil
 	--self.ImgHighlyDifficultJob = nil
 	--self.ImgJob = nil
@@ -224,7 +216,6 @@ function PWorldSelectSetPanelView:Ctor()
 	--self.PanelEquipmentClass_2 = nil
 	--self.PanelExtraDescription = nil
 	--self.PanelHighlyDifficult = nil
-	--self.PanelIcon = nil
 	--self.PanelJoin = nil
 	--self.PanelLevelRequire = nil
 	--self.PanelLimitTime = nil
@@ -236,7 +227,6 @@ function PWorldSelectSetPanelView:Ctor()
 	--self.PanelTaskSet = nil
 	--self.PanelTaskSetUp = nil
 	--self.PanelTips = nil
-	--self.PanelTopBtn = nil
 	--self.RankTips = nil
 	--self.RichTextEquipmentClass = nil
 	--self.RichTextEquipmentClass_2 = nil
@@ -277,9 +267,7 @@ function PWorldSelectSetPanelView:Ctor()
 	--self.TextNoMentor = nil
 	--self.TextPWorldName = nil
 	--self.TextPeopleAmount = nil
-	--self.TextSubtitle = nil
 	--self.TextTaskSetUp = nil
-	--self.TextTitle = nil
 	--self.TipsTaskCondition = nil
 	--self.ToggleBtnArrow = nil
 	--self.VerticalPWorld = nil
@@ -308,7 +296,6 @@ function PWorldSelectSetPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnNavRecruit)
 	self:AddSubView(self.BtnNavTeam)
 	self:AddSubView(self.ChocoboAvatar)
-	self:AddSubView(self.CommInforBtn)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.RankTips)
 	self:AddSubView(self.TipsTaskCondition)
@@ -322,13 +309,20 @@ function PWorldSelectSetPanelView:OnPostInit()
 			self:PlayAnimation(self.AnimChangePWorld)
 		end
 		PWorldEntDetailVM:SeletectPWorldByIndex(Idx)
-		self:ShowRankTips()
+		local function DelayShow()
+			self:ShowRankTips()
+		end
+		self:RegisterTimer(DelayShow, 0.1, 0, 1)
 	end, true, false)
 
 	self.AdpTableViewRewards = UIAdapterTableView.CreateAdapter(self, self.TableViewRewards, function(_, Idx, ItemVM, ItemView)
 		PWorldEntDetailVM:SetSelectedRewardIdx(Idx)
 		self:ShowRewardsDetail(ItemView, ItemVM)
 	end, true, false)
+	self.AdpTableViewRewards:SetCallbackOnItemShow(function(_, __, ___, ItemView)
+		UIUtil.SetIsVisible(ItemView.BtnClick, false)
+		UIUtil.SetIsVisible(ItemView.RootCanvas, true, true)
+	end)
 
 	self.AdpTbVDifficulites = UIAdapterTableView.CreateAdapter(self, self.TableViewTasksetUp, function(_, _, VM)
 		if VM.Op ~= PWorldEntDetailVM.TaskOp then
@@ -345,20 +339,29 @@ function PWorldSelectSetPanelView:OnPostInit()
 
 	self.BinderShowNavTeam = UIBinderSetIsVisiblePred.NewByPred(function()
 		local TypeID = PWorldEntDetailVM.EntTy or 0
-		if TypeID > 0 and TypeID < 5 then
+		if TypeID > 0 and TypeID < 5 and PWorldEntDetailVM.bOnDirectorPannel ~= true then
 			return _G.TeamRecruitMgr:IsRecruiting() or not _G.TeamMgr:IsInTeam() or _G.TeamMgr:IsCaptain()
 		end
 	end, self, self.BtnNavTeam)
 
 	self.PWorldPreviewBinders = {
-		-- 副本入口类型
-		{ "EntTyName", 					UIBinderSetText.New(self, self.TextTitle) },
-		{ "bShowSubTitle", UIBinderSetIsVisible.New(self, self.TextSubtitle)},
-		{ "SubTitleText", UIBinderSetText.New(self, self.TextSubtitle)},
-		{ "EntTyIcon", 					UIBinderSetBrushFromAssetPath.New(self, self.ImgPWorldType) },
+		-- 副本入口
+		{ "EntTyName", 					UIBinderValueChangedCallback.New(self, nil, function(_, Text)
+			self.CommonTitle:SetTextTitleName(Text)
+		end) },
+		{ "bShowSubTitle", 				UIBinderValueChangedCallback.New(self, nil, function(_, bShow)
+			self.CommonTitle:SetSubTitleIsVisible(bShow)
+		end)},
+		{ "SubTitleText", 				UIBinderValueChangedCallback.New(self, nil, function(_, Text)
+			self.CommonTitle:SetTextSubtitle(Text)
+		end)},
+		{ "TitleIconPath", 					UIBinderValueChangedCallback.New(self, nil, function(_, IconPath)
+			self.CommonTitle:SetTitleIcon(IconPath)
+		end) },
 		{ "PWorldEntList",    			UIBinderUpdateBindableList.New(self, self.AdpTableViewPWorlds) },
         { "CurEntIdx", 					UIBinderSetSelectedIndex.New(self, self.AdpTableViewPWorlds)},
 		{ "EntTy", self.BinderShowNavTeam },
+		{ "bOnDirectorPannel", self.BinderShowNavTeam},
 
 		-- 选中副本
 		{ "PWorldName",      UIBinderSetText.New(self, self.TextPWorldName) },
@@ -393,7 +396,7 @@ function PWorldSelectSetPanelView:OnPostInit()
 		{"bPassEquipLv", UIBinderValueChangedCallback.New(self, nil, self.PlayAnimEffcetBtnLeveUP2)},
 
 		-- 木人相关
-		{"bMuren",		UIBinderSetIsVisible.New(self, self.CommInforBtn)},
+		{"bMuren",		UIBinderSetIsVisible.New(self, self.CommonTitle.CommInforBtn)},
 		{"bMuren",		UIBinderSetIsVisible.New(self, self.BtnClose02)},
 		{"bMuren",		UIBinderSetIsVisible.New(self, self.BtnClose, true)},
 		{"bMuren",			UIBinderSetIsVisible.New(self, self.ImgLock_5, true)},
@@ -414,6 +417,7 @@ function PWorldSelectSetPanelView:OnPostInit()
 			local Name = PWorldQuestUtil.GetSceneModeName(EntType) or ""
 			UIUtil.ImageSetBrushFromAssetPath(self.ImgSetUpIcon, Icon, false, false)
 			self.TextTaskSetUp:SetText(Name)
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgSetUpBG, PWorldQuestUtil.GetSceneModeIconBG(EntType))
 		end) },
 		{"DifficultyVMs", UIBinderUpdateBindableList.New(self, self.AdpTbVDifficulites)},
 
@@ -474,8 +478,10 @@ function PWorldSelectSetPanelView:OnPostInit()
 			self.BtnHelp.HelpInfoID = HelpInfoID
 			self.BtnHelp:OnShow()
 			if PWorldEntDetailVM.bMuren then
-				self.CommInforBtn.HelpInfoID = HelpInfoID
-				self.CommInforBtn:OnShow()
+				-- self.CommInforBtn.HelpInfoID = HelpInfoID
+				-- self.CommInforBtn:OnShow()
+				self.CommonTitle.CommInforBtn.HelpInfoID = HelpInfoID
+				self.CommonTitle.CommInforBtn:OnShow()
 			end
 		end)},
 		{ "bShowBtnHelp", UIBinderSetIsVisible.New(self, self.BtnHelp, false, true)},
@@ -494,9 +500,7 @@ function PWorldSelectSetPanelView:OnPostInit()
 		{ "ChocoboMatchRequirementDes",  			UIBinderSetText.New(self, self.RichTextEquipmentClass_2) },
 		{ "IsShowChocoboMatchRequirementPrompt", 	UIBinderSetIsVisible.New(self, self.ImgLock_6)},
 
-
 		{ "bShowBtnRank",                           UIBinderSetIsVisible.New(self, self.BtnNavRank, false, true)},
-		{ "TitleIconPath", 								UIBinderSetBrushFromAssetPath.New(self, self.IconTitle) },
 		
 
 		---稀缺职业
@@ -597,13 +601,12 @@ function PWorldSelectSetPanelView:OnShow()
 	self:InitConstInfo()
 	PWorldEntDetailVM:OnShowEntranceView(self.Params)
 
-	self.BtnNavRank:SetIcon("PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Btn_Details_Rank_png.UI_PWorld_Btn_Details_Rank_png'")
-	self.BtnNavExplore:SetIcon("PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Btn_Details_Introduction_png.UI_PWorld_Btn_Details_Introduction_png'")
-	self.BtnNavRecruit:SetIcon("PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Btn_Details_Recurit_png.UI_PWorld_Btn_Details_Recurit_png'")
-	self.BtnNavMuren:SetIcon("PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Btn_Details_ActivatingSleep_png.UI_PWorld_Btn_Details_ActivatingSleep_png'")
-	self.BtnNavEntourage:SetIcon("PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Btn_Details_Entourage_png.UI_PWorld_Btn_Details_Entourage_png'")
-
 	_G.PWorldMatchMgr:BatchQueryLackProf()
+
+	-- scroll to selected
+	if PWorldEntDetailVM.CurEntIdx then
+		self.TableViewPWorlds:ScrollToIndex(PWorldEntDetailVM.CurEntIdx - 1)
+	end
 end
 
 function PWorldSelectSetPanelView:InitConstInfo()
@@ -624,6 +627,14 @@ function PWorldSelectSetPanelView:OnHide()
 		self.RankTimeID = nil
 		UIUtil.SetIsVisible(self.RankTips, false)
 		_G.SavageRankMgr:SetTipsShowTime()
+	end
+	if self.TimerLeveUP then
+		self:UnRegisterTimer(self.TimerLeveUP)
+		self.TimerLeveUP = nil
+	end
+	if self.TimerEquipUP then
+		self:UnRegisterTimer(self.TimerEquipUP)
+		self.TimerEquipUP = nil
 	end
 end
 
@@ -857,7 +868,7 @@ function PWorldSelectSetPanelView:Join()
 	if PWorldEntUtil.IsCrystalline(PWorldEntDetailVM.SubType) then
 		local Policy = PWorldEntUtil.GetPol(nil, ProtoCommon.ScenePoolType.ScenePoolPVPCrystal)
 		if Policy then
-			if not Policy:CheckIsInEventTime() then
+			if not Policy:CheckIsInEventTime(PWorldEntDetailVM.CurEntID) then
 				MsgTipsUtil.ShowTipsByID(338045) -- 不在活动时间内无法匹配
 				return
 			end
@@ -887,7 +898,7 @@ function PWorldSelectSetPanelView:OnClickCancelMatch()
 
 	if PWorldEntDetailVM.IsMatching then
 		local EntID = PWorldEntDetailVM.CurEntID
-		local EntType = PWorldEntDetailVM.EntTy
+		local EntType = PWorldEntDetailVM.SubType
 		_G.PWorldMatchMgr:ReqCancelMatch(EntType, EntID)
 	end
 end
@@ -962,7 +973,11 @@ function PWorldSelectSetPanelView:FinalJoin(EntID, EntTy, Mode, SubType)
 		if IsMatchOK then
 			local IsChocoboRoom = Mode == PWorldQuestDefine.ClientSceneMode.SceneModeChocoboRoom
 			if IsChocoboRoom then
-				_G.PWorldVoteMgr:ReqStartVoteEnterChocoboRoom(EntID)
+				if SubType == ProtoCommon.ScenePoolType.ScenePoolChocoboRandomTrack then
+					_G.PWorldVoteMgr:ReqStartVoteEnterChocoboRoom(PWorldEntUtil.GetChocoboRaceRandomTrackEntID())
+				else
+					_G.PWorldVoteMgr:ReqStartVoteEnterChocoboRoom(EntID)
+				end
 			else
 				_G.PWorldMatchMgr:ReqStartMatch(EntTy, EntID, Mode, SubType)
 			end
@@ -1004,8 +1019,6 @@ function PWorldSelectSetPanelView:ShowRankTips()
 
 	local TipsList = _G.SavageRankMgr:GetSavageRankOverTime()
 	local TipsNum = #TipsList
-	local EndPosX, EndPosY = self:GetAdvtureGuideTipsPos()
-	self.RankTips:SetTipsPosition(_G.UE.FVector2D(EndPosX, EndPosY))
 	if TipsNum > 0 then
 		local Index = 1
 		local function ShowTips()
@@ -1026,6 +1039,8 @@ function PWorldSelectSetPanelView:ShowRankTips()
 			UIUtil.SetIsVisible(self.RankTips, true)
 			print(string.format("IsShowTips = true Text = %s", Text))
 			Index = Index + 1
+			local EndPosX, EndPosY = self:GetAdvtureGuideTipsPos()
+			self.RankTips:SetTipsPosition(_G.UE.FVector2D(EndPosX, EndPosY))
 		end
 
 		if not self.RankTimeID then
@@ -1035,13 +1050,11 @@ function PWorldSelectSetPanelView:ShowRankTips()
 end
 
 function PWorldSelectSetPanelView:GetAdvtureGuideTipsPos()
-	local ButtonRanks = self.BtnNavRank
-	local PanelBtnBar =  self.PanelTopBtn
-	local ParentPanelPos = UIUtil.CanvasSlotGetPosition(PanelBtnBar)
-	local ParentPanelSize = UIUtil.CanvasSlotGetSize(PanelBtnBar)
-
-	local EndPosX = ParentPanelPos.X - ParentPanelSize.X - 200
-	local EndPosY = ParentPanelSize.Y / 2 - ParentPanelPos.Y
+	local PanelBtnBarWidth =  self.FHorizontalBox_2:GetDesiredSize().X
+	local PanelBtnBarHight =  self.FHorizontalBox_2:GetDesiredSize().Y - 25
+	local TipsWidth = 800
+	local EndPosX = - (PanelBtnBarWidth + TipsWidth / 2)
+	local EndPosY = PanelBtnBarHight
 
 	return EndPosX, EndPosY
 end
@@ -1113,7 +1126,11 @@ end
 
 --播放动效-职业等级
 function PWorldSelectSetPanelView:PlayAnimEffcetBtnLeveUP1(bPassJoinLevel)
-	local PlayL = function()
+	if self.TimerLeveUP then
+		--VM存在先更新4次旧数据 然后再更新有效数据的情况 动效不能在这之前就触发
+		self:UnRegisterTimer(self.TimerLeveUP)
+	end
+	self.TimerLeveUP = self:RegisterTimer(function()
 		if bPassJoinLevel then return end
 		if not PWorldEntDetailVM then return end
 		local Lv = PWorldEntDetailVM.PWorldRequireLv
@@ -1129,18 +1146,15 @@ function PWorldSelectSetPanelView:PlayAnimEffcetBtnLeveUP1(bPassJoinLevel)
 		if self.AnimEffcetBtnLeveUP1 then
 			self:PlayAnimation(self.AnimEffcetBtnLeveUP1)
 		end
-	end
-	
-	if self.TimerLeveUP ~= 0 then
-		--VM存在先更新4次旧数据 然后再更新有效数据的情况 动效不能在这之前就触发
-		_G.TimerMgr:CancelTimer(self.TimerLeveUP)
-	end
-	self.TimerLeveUP = _G.TimerMgr:AddTimer(self, PlayL, 0.05, 0, 1)
+	end, 0.05)
 end
 
 --播放动效-装备等级
 function PWorldSelectSetPanelView:PlayAnimEffcetBtnLeveUP2(bPassEquipLv)
-	local PlayE = function()
+	if self.TimerEquipUP then
+		self:UnRegisterTimer(self.TimerEquipUP)
+	end
+	self.TimerEquipUP = self:RegisterTimer(function()
 		if bPassEquipLv then return end
 		if not PWorldEntDetailVM then return end
 		local EquipLv = PWorldEntDetailVM.PWorldRequireEquipLv
@@ -1155,12 +1169,7 @@ function PWorldSelectSetPanelView:PlayAnimEffcetBtnLeveUP2(bPassEquipLv)
 		if self.AnimEffcetBtnLeveUP2 then
 			self:PlayAnimation(self.AnimEffcetBtnLeveUP2)
 		end
-	end
-
-	if self.TimerEquipUP ~= 0 then
-		_G.TimerMgr:CancelTimer(self.TimerEquipUP)
-	end
-	self.TimerEquipUP = _G.TimerMgr:AddTimer(self, PlayE, 0.05, 0, 1)
+	end, 0.05)
 end
 
 ---@param VM ATeamVM

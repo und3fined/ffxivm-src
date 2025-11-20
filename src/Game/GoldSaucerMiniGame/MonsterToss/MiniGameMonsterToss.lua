@@ -1,13 +1,15 @@
 local LuaClass = require("Core/LuaClass")
 local MiniGameBase = require("Game/GoldSaucerMiniGame/MiniGameBase")
 local MajorUtil = require("Utils/MajorUtil")
-local MonsterBasketballParamCfg = require("TableCfg/MonsterBasketballParamCfg") -- 怪物投篮参数表
+local MonsterBasketballParamCfg = require("TableCfg/MonsterBasketballParamCfg") -- 怪物投篮关卡表
 local MonsterBasketballRewardCfg = require("TableCfg/MonsterBasketballRewardCfg") -- 怪物投篮奖励表 
 local MonsterBasketballDifficultyCfg = require("TableCfg/MonsterBasketballDifficultyCfg") -- 怪物投篮难度表
 local MonsterBasketballComboCfg = require("TableCfg/MonsterBasketballComboCfg") -- 怪物投篮连击表
-local MonsterBasketballGlobalCfg = require("TableCfg/MonsterBasketballGlobalCfg") -- 怪物投篮全局配置表
+local MonsterBasketballGlobalCfg = require("TableCfg/MonsterBasketballGlobalCfg") -- 怪物投篮参数表
 local BasketballBaseScoreCfg = require("TableCfg/BasketballBaseScoreCfg")
-local BasketballDifficultyRefreshCfg = require("TableCfg/BasketballDifficultyRefreshCfg")
+local MonsterBasketballBlessCfg = require("TableCfg/MonsterBasketballBlessCfg") 
+local MonsterBasketballScoreStageCfg = require("TableCfg/MonsterBasketballScoreStageCfg")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local ProtoCS = require("Protocol/ProtoCS")
 local UIViewID = require("Define/UIViewID")
@@ -19,9 +21,16 @@ local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
 local BasketballParamType = ProtoRes.Game.BasketballParamType
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local MiniGameRoundEndState = GoldSaucerMiniGameDefine.MiniGameRoundEndState
+local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local ExtraChanceResetPolicy = GoldSaucerMiniGameDefine.ExtraChanceResetPolicy
 local AnimTimeLineSourceKey = GoldSaucerMiniGameDefine.AnimTimeLineSourceKey
-local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
+local BigBlessSuccessIconPath = GoldSaucerMiniGameDefine.BigBlessSuccessIconPath
+local BigBlessFailIconPath = GoldSaucerMiniGameDefine.BigBlessFailIconPath
+local LittleBlessSuccessIconPath = GoldSaucerMiniGameDefine.LittleBlessSuccessIconPath
+local LittleBlessFailIconPath = GoldSaucerMiniGameDefine.LittleBlessFailIconPath
+local BlessSuccessItemBg = GoldSaucerMiniGameDefine.BlessSuccessItemBg
+local BlessFailItemBg = GoldSaucerMiniGameDefine.BlessFailItemBg
 local Anim = MiniGameClientConfig[MiniGameType.MonsterToss].Anim
 local ZOrderPriority = MiniGameClientConfig[MiniGameType.MonsterToss].ZOrder
 local StageCfg = MiniGameClientConfig[MiniGameType.MonsterToss].StageCfg
@@ -72,6 +81,7 @@ function MiniGameMonsterToss:Ctor()
     self.TextScore1Text = ""
     self.bTextScore1TipVisible = false 
     self.bTextScore2TipVisible = false
+    self.bBlessScoreTextVisible = false
     self.AllBallData = {}
     self.bShootTipVisible = false
     self.ShootResultData = {}
@@ -95,14 +105,17 @@ function MiniGameMonsterToss:Ctor()
 	local IconPath = _G.ScoreMgr:GetScoreIconName(CoinID)
     self.AwardIconPath = IconPath
     self.LastScoreMultAnim = nil
+    self.BlessInteractorNumGot = 0
 end
-
 
 --- 初始化游戏数据
 function MiniGameMonsterToss:LoadTableCfg()
     self.RewardData = MonsterBasketballRewardCfg:FindAllCfg()
     self.ComboScoreData = MonsterBasketballComboCfg:FindAllCfg()
     self.MaxCombo = #self.ComboScoreData
+    local AnimStageCfg = MonsterBasketballScoreStageCfg:FindAllCfg()
+    table.sort(AnimStageCfg, function(A, B) return A.Score < B.Score end)
+    self.AnimStageCfgOrdered = AnimStageCfg
 end
 
 --- 初始化游戏数据
@@ -168,13 +181,13 @@ function MiniGameMonsterToss:UpdateCurStageDiffParams(CurTime)
     end
     self.CurStage = NewStage
     print("NewStage is %s", NewStage)
-
     
     -- local RandNum = math.random(1, 6)
     -- local ZOrderData = GoldSaucerMiniGameDefine.GetZOrderDataByType(RandNum)
     -- self.CurZOrderData = ZOrderData
     local DiffLevelTable = self.DiffLevelTable
-    if #DiffLevelTable > 0 then
+    local TableLen = #DiffLevelTable
+    if TableLen > 0 then
         local DiffParamID = DiffLevelTable[self.CurStage]
         local DiffParamCfg = MonsterBasketballParamCfg:FindCfgByKey(DiffParamID)
         if DiffParamCfg ~= nil then
@@ -182,7 +195,7 @@ function MiniGameMonsterToss:UpdateCurStageDiffParams(CurTime)
             CachColorProportion.NormalProportion= DiffParamCfg.NormalProportion  -- 蓝色区域为普通球
             CachColorProportion.SuperProportion = DiffParamCfg.SuperProportion -- 紫色区域为高分球
             CachColorProportion.BangProportion = DiffParamCfg.BangProportion -- 红色区域为爆炸球
-
+            CachColorProportion.StarProportion = DiffParamCfg.StarProportion -- 赐福区域为赐福球
             local CurStageDiffParams = self.CurStageDiffParams
             CurStageDiffParams.ScoreMul = DiffParamCfg.ScoreMul
             CurStageDiffParams.RotateOnceTime = DiffParamCfg.RotateOnceTime
@@ -199,6 +212,17 @@ function MiniGameMonsterToss:UpdateCurStageDiffParams(CurTime)
             if NeedAnim ~= nil and (self.LastScoreMultAnim == nil or self.LastScoreMultAnim ~= NeedAnim) then
                 self.LastScoreMultAnim = NeedAnim
                 EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, NeedAnim)
+            end
+        end
+        local bBigBlessMode = self:IsBigBlessMode()
+        if bBigBlessMode then
+            local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(BLESSED_KIND.BLESSED_KIND_BIG)
+            if BlessCfg then
+                local BigBlessStartRoundID = BlessCfg.BigBlessLvID or 0
+                if BigBlessStartRoundID == DiffParamID then
+                    self:StopGameTimeLoop(true) -- 先暂停游戏，进行赐福时间表现
+                    EventMgr:SendEvent(EventID.MiniGameBigBlessStartTipsShow)
+                end
             end
         end
     end
@@ -225,8 +249,10 @@ function MiniGameMonsterToss:CaculateZOreder()
     CurStageDiffParams.BlueProportion= CachColorProportion.NormalProportion  -- 蓝色区域为普通球
     CurStageDiffParams.PurpleProportion = CachColorProportion.SuperProportion -- 紫色区域为高分球
     CurStageDiffParams.RedProportion = CachColorProportion.BangProportion -- 红色区域为爆炸球
+    CurStageDiffParams.StarProportion = CachColorProportion.StarProportion
 
-    local RandNum = math.random(1, 6)
+    local bBless = self:IsBless()
+    local RandNum = bBless and math.random(7, 12) or math.random(1, 6)
     local ZOrderData = GoldSaucerMiniGameDefine.GetZOrderDataByType(RandNum)
     self.CurZOrderData = ZOrderData
 
@@ -234,8 +260,10 @@ function MiniGameMonsterToss:CaculateZOreder()
     ZOrderCfg.BlueProportOrder = self:FindZOrderByColorType_Internal(ColorType.Blue, ZOrderData)
     ZOrderCfg.PurpleProportOrder = self:FindZOrderByColorType_Internal(ColorType.Purple, ZOrderData)
     ZOrderCfg.RedProportOrder = self:FindZOrderByColorType_Internal(ColorType.Red, ZOrderData)
+    ZOrderCfg.GreenProportOrder = self:FindZOrderByColorType_Internal(ColorType.Green, ZOrderData)
     self.CurStageDiffParams.ZOrderCfg = ZOrderCfg
-    self.CurStageDiffParams.ColorCfg = self:GetColorCfgByZOrderCfg(self.CurStageDiffParams, ZOrderData, ZOrderCfg)
+    self.CurStageDiffParams.ColorCfg = bBless and self:GetColorCfgByZOrderCfgInBless(CurStageDiffParams, ZOrderData) 
+    or self:GetColorCfgByZOrderCfg(CurStageDiffParams, ZOrderData)
 end
 
 
@@ -259,8 +287,50 @@ function MiniGameMonsterToss:GetCurStageDiffParams()
 end
 
 --- @type 得到配色的比例
-function MiniGameMonsterToss:GetColorCfgByZOrderCfg(DiffParamCfg, ZOrderData, ZOrderCfg)
+function MiniGameMonsterToss:GetColorCfgByZOrderCfgInBless(DiffParamCfg, ZOrderData)
     if DiffParamCfg == nil or ZOrderData == nil then
+        return
+    end
+    local ZOrderCfg = DiffParamCfg.ZOrderCfg
+    if not ZOrderCfg then
+        return
+    end
+
+    -- 排序后处理
+    table.sort(ZOrderData, function(A, B) 
+        return A.ZOrder > B.ZOrder
+    end)
+   
+    local ColorCfg = {}
+    local TotalPercent = 0
+    for _, v in pairs(ZOrderData) do
+        local ColorHalfCircleType = v.ColorType
+        if ColorHalfCircleType == ColorType.Blue then
+            TotalPercent = math.clamp(TotalPercent + DiffParamCfg.BlueProportion / 100 / 2, 0, 0.5) 
+            ColorCfg.BluePercent = TotalPercent
+        elseif ColorHalfCircleType == ColorType.Red then
+            TotalPercent = math.clamp(TotalPercent + DiffParamCfg.RedProportion / 100 / 2, 0, 0.5) 
+            ColorCfg.RedPercent = TotalPercent
+        elseif ColorHalfCircleType == ColorType.Purple then
+            TotalPercent = math.clamp(TotalPercent + DiffParamCfg.PurpleProportion / 100 / 2, 0, 0.5) 
+            ColorCfg.PurplePercent = TotalPercent
+        elseif ColorHalfCircleType == ColorType.Green then
+            TotalPercent = math.clamp(TotalPercent + DiffParamCfg.StarProportion / 100 / 2, 0, 0.5) 
+            ColorCfg.GreenPercent = TotalPercent
+        end
+    end
+
+    return ColorCfg
+end
+
+--- @type 得到配色的比例
+function MiniGameMonsterToss:GetColorCfgByZOrderCfg(DiffParamCfg, ZOrderData)
+    if DiffParamCfg == nil or ZOrderData == nil then
+        return
+    end
+
+    local ZOrderCfg = DiffParamCfg.ZOrderCfg
+    if not ZOrderCfg then
         return
     end
 
@@ -269,6 +339,7 @@ function MiniGameMonsterToss:GetColorCfgByZOrderCfg(DiffParamCfg, ZOrderData, ZO
         local Elem = v
         if Elem.ZOrder == ZOrderPriority.Max then
             MaxZOrderColorType = Elem.ColorType
+            break
         end
     end
 
@@ -280,7 +351,6 @@ function MiniGameMonsterToss:GetColorCfgByZOrderCfg(DiffParamCfg, ZOrderData, ZO
     elseif MaxZOrderColorType == ColorType.Purple then
         MaxZOrderColorPropor = DiffParamCfg.PurpleProportion
     end
-    -- print("MaxZOrderColorPropor: "..tostring(MaxZOrderColorPropor))
 
     local ColorCfg = {}
     ColorCfg.BluePercent = self:GetPercent(DiffParamCfg.BlueProportion, ZOrderCfg.BlueProportOrder, MaxZOrderColorPropor)
@@ -289,7 +359,7 @@ function MiniGameMonsterToss:GetColorCfgByZOrderCfg(DiffParamCfg, ZOrderData, ZO
     return ColorCfg
 end
 
---- @type 得到蓝色的比例
+--- @type 得到蓝色的比例 (非赐福模式仅有3个色块的情况)
 function MiniGameMonsterToss:GetPercent(Proportion, ZOrder, MaxZOrderColorPropor)
     local MaxZOrdImgPercent = MaxZOrderColorPropor / 100 / 2
     local Percent = Proportion / 100 / 2
@@ -304,21 +374,34 @@ end
 
 --- @type 根据当前时间得到当前的难度阶段
 function MiniGameMonsterToss:CalcuCurStage(CurTime)
+    local CurStage = 1
+    if not CurTime then
+        return CurStage
+    end
+    local StageTimeTab = self.StageTimeTab
+    if not StageTimeTab or not next(StageTimeTab) then
+        return CurStage
+    end
     -- local AllDiffStageData = BasketballDifficultyRefreshCfg:FindAllCfg()
     local StageTimeList = self.DefineCfg.StageTimeList
-    local StageTimeTab = self.StageTimeTab
-    local CurStage = 1
-    if CurTime > StageTimeTab[StageTimeList.EnterStage2Time] / 1000 then
+    local Stage1TimeLimit = StageTimeTab[StageTimeList.EnterStage1Time] or 0
+    local Stage2TimeLimit = StageTimeTab[StageTimeList.EnterStage2Time] or 0
+    local Stage3TimeLimit = StageTimeTab[StageTimeList.EnterStage3Time] or 0
+    local Stage4TimeLimit = StageTimeTab[StageTimeList.EnterStage4Time] or 0
+    local Stage5TimeLimit = StageTimeTab[StageTimeList.EnterStage5Time] or 0
+
+    if CurTime > Stage1TimeLimit / 1000 then
         CurStage = StageCfg.First
-    elseif CurTime > StageTimeTab[StageTimeList.EnterStage3Time] / 1000 then
+    elseif CurTime > Stage2TimeLimit / 1000 then
         CurStage = StageCfg.Second
-    elseif CurTime > StageTimeTab[StageTimeList.EnterStage4Time] / 1000 then
+    elseif CurTime > Stage3TimeLimit / 1000 then
         CurStage = StageCfg.Third
-    elseif CurTime > StageTimeTab[StageTimeList.EnterStage5Time] / 1000 then
+    elseif CurTime > Stage4TimeLimit / 1000 then
         CurStage = StageCfg.Fourth
-    elseif CurTime > 0 then
+    elseif CurTime > Stage5TimeLimit / 1000 then
         CurStage = StageCfg.Fifth
     end
+   
     return CurStage
 end
 
@@ -400,7 +483,7 @@ function MiniGameMonsterToss:SetMultiScoreByType(Type, bHit)
     if not bHit then
         return
     end
-    local NeedContent, bFiveVisible, bDoubleVisible
+    local NeedContent, bFiveVisible, bDoubleVisible, bBlessVisible
     local Cfg = BasketballBaseScoreCfg:FindCfgByKey(Type)
     if Cfg == nil then
         FLOG_ERROR("BasketballBaseScoreCfg is Nil Type = %s", Type)
@@ -410,19 +493,27 @@ function MiniGameMonsterToss:SetMultiScoreByType(Type, bHit)
         NeedContent = Cfg.Score
         bFiveVisible = true
         bDoubleVisible = false
+        bBlessVisible = false
     elseif Type == BasketballType.BasketballType_Normal then
         NeedContent = ""
         bFiveVisible = false
         bDoubleVisible = false
+        bBlessVisible = false
     elseif Type == BasketballType.BasketballType_Super then
         NeedContent = Cfg.Score
         bFiveVisible = false
         bDoubleVisible = true
+        bBlessVisible = false
+    elseif Type == BasketballType.BasketballType_Star then
+        NeedContent = Cfg.Score
+        bFiveVisible = false
+        bDoubleVisible = false
+        bBlessVisible = true
     end
     self.TextScore1Text = NeedContent
     self.bTextScore1TipVisible = bFiveVisible 
     self.bTextScore2TipVisible = bDoubleVisible 
-
+    self.bBlessScoreTextVisible = bBlessVisible
 end
 
 --- @type 设置是否显示结算结果界面
@@ -461,26 +552,14 @@ function MiniGameMonsterToss:AddComboNum()
     self.ComboNum = self.ComboNum + 1
     self:SetAddScoreText_Internal(self.ComboNum)
     self:SetAddScorePos_Internal(self.ComboNum)
-    local ComboNum = self.ComboNum
-    if ComboNum == 3 then
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits1)
-    elseif ComboNum == 5 then
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits2)
-    elseif ComboNum == 8 then
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits3)
-    end
+   
 end
 
 --- @type 设置最大得分
 function MiniGameMonsterToss:ResetComboNum()
-    local LastComboNum = self.ComboNum
-    if LastComboNum >= 3 then
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHitsStop)
-    end
     self.ComboNum = 0
     self:SetAddScoreText_Internal(self.ComboNum)
     self:SetAddScorePos_Internal(self.ComboNum)
-
 end
 
 --- @type 设置额外额外得分的位置
@@ -518,7 +597,7 @@ function MiniGameMonsterToss:SetAddScoreText_Internal(ComboNum)
         self.AddScoreText = string.format("+%d", ComboCfg.Score)
         self.bAddScoreTextVisible = ComboCfg.Score > 0
         local NeedColor, NeedOutLineColor
-        if ComboCfg.Score == 3 then
+        --[[if ComboCfg.Score == 3 then
             NeedColor = "FFA68BFF"
             NeedOutLineColor = "673E04FF"
         elseif ComboCfg.Score == 2 then
@@ -530,6 +609,17 @@ function MiniGameMonsterToss:SetAddScoreText_Internal(ComboNum)
         elseif ComboNum >= 1 then
             NeedColor = "FFEED97F"
             NeedOutLineColor = "8ESC13FF"
+        end--]]
+
+        if ComboCfg.Score == 3 then
+            NeedColor = "FFB29DFF"
+            NeedOutLineColor = "9C4900FF"
+        elseif ComboCfg.Score == 2 then
+            NeedColor = "FFEFA5FF"
+            NeedOutLineColor = "CC7800FF"
+        elseif ComboCfg.Score == 1 then
+            NeedColor = "FFFFFFFF"
+            NeedOutLineColor = "AA6F01FF"
         end
         self.AddScoreColor = NeedColor
         self.AddScoreOutLineColor = NeedOutLineColor
@@ -550,8 +640,12 @@ function MiniGameMonsterToss:InitAllBallData(Data)
 end
 
 --- @type 更新篮球数据
+---@return BallType @返回第一个球的种类
 function MiniGameMonsterToss:UpdateAllBallData(NewType)
     local AllBallData = self.AllBallData
+    if not AllBallData then
+        return
+    end
     local LastBallData = {}
     LastBallData.BallType = NewType
     -- LastBallData.bBallVisible = false
@@ -559,19 +653,49 @@ function MiniGameMonsterToss:UpdateAllBallData(NewType)
         AllBallData[i] = AllBallData[i + 1]
     end
     AllBallData[#AllBallData] = LastBallData
- 
+    return AllBallData[1].BallType
 end
 
 
 --- @type 更新当前得分以及获得的奖励
 function MiniGameMonsterToss:UpdateCurScoreAndGotReward(CurScore)
     self.CurScore = CurScore
+    -- 赐福模式下更新挑战成功结果
+    if self:IsBless() then
+        local BlessKind = self.BlessKind
+        local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            if CurScore >= BlessCfg.StrengthValue then
+                self:SetIsBlessChallengeSuccess(true)
+            end
+        end
+    else
+        local AnimStageCfgOrdered = self.AnimStageCfgOrdered
+        local Stage = 0
+        if AnimStageCfgOrdered then
+            for _, Cfg in ipairs(AnimStageCfgOrdered) do
+                local Score = Cfg.Score or 0
+                if CurScore <= Score then
+                    Stage = Cfg.AnimStage or 0
+                    break
+                end
+            end
+        end
+        if Stage == 1 then
+            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits1)
+        elseif Stage == 2 then
+            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits2)
+        elseif Stage == 3 then
+            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimConsecutiveHits3)
+        end
+    end
     self.RewardGot = self:GetRewardNumByScore(CurScore)
 end
 
 function MiniGameMonsterToss:MultiRewardGot()
     if self.EndReward ~= nil then
         self.RewardGot = self.EndReward
+        FLOG_INFO("CriticalRewardError MiniGameMonsterToss:MultiRewardGot %s", self.EndReward)
     end
 end
 
@@ -613,20 +737,41 @@ end
 
 --- @type 构造游戏结果数据
 function MiniGameMonsterToss:ConstructAllResultData(CurScore, HitCount, EndReward)
-    local RealScore = CurScore ~= 0 and CurScore or self.CurScore
+    local RealScore = (type(CurScore) == "number" and CurScore > 0) and CurScore or self.CurScore
     local AllResultData = {}
-    local bSuccess, bFail, ResultListData, RewardGot, AwardIconPath
-    if RealScore >= self.RewardData[1].Score then
-        bSuccess = true
-        bFail = false
-        ResultListData = self:GetSuccessData(CurScore, HitCount)
+    local bSuccess, bFail, ResultListData, RewardGot, AwardIconPath, bRecordListPanelShow, bRecordFailPanelShow, bRltFailPanelShow
+    local bBless = self:IsBless()
+    if not bBless then
+        if RealScore >= self.RewardData[1].Score then
+            bSuccess = true
+            bFail = false
+            ResultListData = self:GetSResultListData(CurScore, HitCount, bBless)
+        else
+            bSuccess = false
+            bFail = true
+        end
+        bRecordFailPanelShow = false
+        bRecordListPanelShow = bSuccess
+        bRltFailPanelShow = bFail
     else
-        bSuccess = false
-        bFail = true
+        bRecordListPanelShow = true
+        bRltFailPanelShow = false
+        local BlessSuccess = self:IsBlessChallengeSuccess()
+        if BlessSuccess then
+            bSuccess = true
+            bFail = false
+            ResultListData = self:GetSResultListData(CurScore, HitCount, bBless, BlessSuccess)
+        else
+            bSuccess = false
+            bFail = true
+            ResultListData = self:GetSResultListData(CurScore, HitCount, bBless, BlessSuccess)
+        end
+        bRecordFailPanelShow = not BlessSuccess
     end
+
     if EndReward ~= nil and self.bCriticalVisible then
         self.EndReward = EndReward
-        RewardGot = self.RewardGot
+        RewardGot = self:GetRewardGot()
     elseif EndReward ~= nil and not self.bCriticalVisible then
         RewardGot = EndReward
     end
@@ -634,12 +779,41 @@ function MiniGameMonsterToss:ConstructAllResultData(CurScore, HitCount, EndRewar
     AwardIconPath = self.AwardIconPath
     AllResultData.bSuccess = bSuccess
     AllResultData.bFail = bFail
+    AllResultData.bRecordListPanelShow = bRecordListPanelShow
+    AllResultData.bRecordFailPanelShow = bRecordFailPanelShow
+    AllResultData.bRltFailPanelShow = bRltFailPanelShow
     -- AllResultData.ResultText = ResultText
     AllResultData.ResultListData = ResultListData
-    AllResultData.RewardGot = RewardGot ~= nil and RewardGot or self.RewardGot
+    AllResultData.RewardGot = RewardGot ~= nil and RewardGot or self:GetRewardGot()
     AllResultData.AwardIconPath = AwardIconPath
     self.AllResultData = AllResultData
     self:UpdateResultCoinState()
+    return bSuccess
+end
+
+function MiniGameMonsterToss:GetMainPanelRewardGot()
+    if self:IsBless() then
+        if not self:IsBlessChallengeSuccess() then
+            return self:GetInteractRewarNum() or 0
+        else
+            local PreviewReward = self:GetInteractRewarNum() or 0
+            local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(self.BlessKind)
+            if BlessCfg then
+                PreviewReward = PreviewReward + BlessCfg.Reward or 0
+            end
+            return PreviewReward
+        end
+     end
+    return self.RewardGot
+end
+
+--- @type 获得当前获得金碟币的数量
+function MiniGameMonsterToss:GetRewardGot()
+    if self:IsBless() and not self:IsBlessChallengeSuccess() then
+        return 0
+    else
+        return self.RewardGot
+    end
 end
 
 --- @type 获得当前得分
@@ -665,8 +839,8 @@ function MiniGameMonsterToss:UpdateResultCoinState()
 
 end
 
---- @type 获取胜利结果数据
-function MiniGameMonsterToss:GetSuccessData(CurScore, HitCount)
+--- @type 获取结果列表数据
+function MiniGameMonsterToss:GetSResultListData(CurScore, HitCount, bBless, BlessSuccess)
     local Data = {}
     local Temp1 = {}
     Temp1.VarName = LSTR(270005) -- 命中
@@ -681,6 +855,78 @@ function MiniGameMonsterToss:GetSuccessData(CurScore, HitCount)
     Temp2.bIsNewRecord = CurScore ~= 0
     Temp2.bIsPerfectChallenge = CurScore ~= 0
     table.insert(Data, Temp2)
+    
+    -- 赐福模式条目
+    if bBless then
+        local BlessKind = self.BlessKind
+        local function GetTheBlessChallengeTarget()
+            local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.MonsterToss)
+            if not TargetCfg then
+                return
+            end
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                return TargetCfg.BChallengeTarget
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                return TargetCfg.LChallengeTarget
+            end
+        end
+        if BlessSuccess then
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessSuccessIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessSuccessIconPath
+            end
+    
+            local ChallengeRewardScoreNum = ""
+            local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(BlessKind)
+            if BlessCfg then
+                ChallengeRewardScoreNum = string.formatint(BlessCfg.Reward)
+            end
+           
+            local BlessInteractorRlt = {}
+            BlessInteractorRlt.bBless = true
+            BlessInteractorRlt.BlessTitle = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG and LSTR(1660008) or LSTR(1660009)
+            BlessInteractorRlt.BlessTitleIcon = TitleIcon
+            BlessInteractorRlt.BlessBg = BlessSuccessItemBg
+            BlessInteractorRlt.bShowNumOrCheckIcon = true
+            BlessInteractorRlt.GetRewardNumText = string.format("x%s", tostring(self:GetStarInteractorGotNum())) 
+            BlessInteractorRlt.ScoreGotNumText = string.formatint(self:GetInteractRewarNum())
+            BlessInteractorRlt.bPlayBlessSuccessAnim = true
+            BlessInteractorRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            table.insert(Data, BlessInteractorRlt)
+    
+            local BlessChallengeRlt = {}
+            BlessChallengeRlt.bBless = true
+            BlessChallengeRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessChallengeRlt.BlessTitleIcon = TitleIcon
+            BlessChallengeRlt.BlessBg = BlessSuccessItemBg
+            BlessChallengeRlt.bShowNumOrCheckIcon = false
+            BlessChallengeRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_Check.UI_GoldSaucerGame_Img_ResultList_Check'"
+            BlessChallengeRlt.ScoreGotNumText = ChallengeRewardScoreNum
+            BlessChallengeRlt.bPlayBlessSuccessAnim = true
+            BlessChallengeRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            table.insert(Data, BlessChallengeRlt)
+        else
+            -- 设定titleIcon
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessFailIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessFailIconPath
+            end
+            local BlessFailRlt = {}
+            BlessFailRlt.bBless = true
+            BlessFailRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessFailRlt.BlessTitleIcon = TitleIcon
+            BlessFailRlt.BlessBg = BlessFailItemBg
+            BlessFailRlt.bShowNumOrCheckIcon = false
+            BlessFailRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_UnCheck.UI_GoldSaucerGame_Img_ResultList_UnCheck'"
+            BlessFailRlt.ScoreGotNumText = "0"
+            BlessFailRlt.bBigBless = false
+            table.insert(Data, BlessFailRlt)
+        end
+    end
     return Data
 end
 
@@ -857,6 +1103,7 @@ function MiniGameMonsterToss:Reset()
     self.AddScoreOutLineColor = "8E5C137F"
     self.bTextScore1TipVisible = false 
     self.bTextScore2TipVisible = false
+    self.bBlessScoreTextVisible = false
     self.AllBallData = {}
     self.bShootTipVisible = false
     self.ShootResultData = {}
@@ -881,7 +1128,27 @@ function MiniGameMonsterToss:Reset()
 	local IconPath = _G.ScoreMgr:GetScoreIconName(CoinID)
     self.AwardIconPath = IconPath
     self.LastScoreMultAnim = nil
+    self.BlessInteractorNumGot = 0
 
+    self.bResultPanelShow = false
+end
+
+function MiniGameMonsterToss:GetStarInteractorGotNum()
+    return self.BlessInteractorNumGot
+end
+
+--- @type 获取交互获得的额外金碟币奖励
+function MiniGameMonsterToss:GetInteractRewarNum()
+    local BlessInteractorNumGot = self.BlessInteractorNumGot or 0
+    local BaseBallCfg = BasketballBaseScoreCfg:FindCfgByKey(BasketballType.BasketballType_Star)
+    local SingleBallReward = BaseBallCfg.RewardNum or 0
+    return BlessInteractorNumGot * SingleBallReward
+end
+
+--- 增加赐福交互物成功数量
+function MiniGameMonsterToss:AddBlessInteractorNum()
+    local OldNum = self.BlessInteractorNumGot or 0
+    self.BlessInteractorNumGot = OldNum + 1
 end
 
 --- 是否结束游戏
@@ -910,14 +1177,17 @@ end
 
 --- 获取游戏翻倍挑战重置时间和次数
 function MiniGameMonsterToss:GetRestartTime()
-	-- local Time = 0
-	-- local DCfg = self.DefineCfg
-    -- if DCfg then
-    --     Time = DCfg.TimeLimit or 0
-    -- end
-	return math.floor(self.GlobalParams[BasketballParamType.BasketballParamTypeTime].Value / 1000)
-
-    
+	local bBless = self:IsBless()
+    if not bBless then
+        return math.floor(self.GlobalParams[BasketballParamType.BasketballParamTypeTime].Value / 1000)
+    else
+        local BlessKind = self.BlessKind
+        local BlessCfg = MonsterBasketballBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            return BlessCfg.OverrideTime
+        end
+    end
+	
 end
 
 --- 获取当前轮能够获得的奖励

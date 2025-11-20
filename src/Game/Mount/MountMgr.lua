@@ -67,10 +67,12 @@ MountMgr.AllowFlyReason = {
 
 MountMgr.AllowRideReason = {
     MapConfig = 0,
+    Debug = 1,
 }
 
 function MountMgr:OnInit()
     self.MountSpeedCfg = {}
+    self.MountSpeedItemRes = {}
     self.ForbidFlyAreaID = 0
 	self:LoadMountSpeedCfg()
 end
@@ -88,7 +90,6 @@ function MountMgr:OnBegin()
     self.CurrentSidebarInviter = nil
     self.bIsRequestingMount = false
     self.bIsAutoPathMoving = false
-    self.bIsChocobo = false
     self.AllowRideFlags = 0 --所有位都为0时表示允许骑乘，否则不允许
     self.AllowFlyFlags = 0 --所有位都为0时表示允许飞行，否则不允许
     self.AssembleID = 0
@@ -98,6 +99,7 @@ function MountMgr:OnBegin()
     self.InviteTransWorldEnterCallback = nil
     self.FuncSendMountCallTimer = nil
     self.bIsDisableOtherSkill = false
+    self.RideCfgCache = {}
 
     --self.LocalRedTable = {}
     -- 快捷使用系统接入
@@ -124,6 +126,7 @@ end
 
 function MountMgr:OnShutdown()
 	self.MountSpeedCfg = nil
+    self.MountSpeedItemRes = nil
 end
 
 function MountMgr:OnRegisterNetMsg()
@@ -134,6 +137,7 @@ function MountMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdUnlock, self.OnMountUnlock)                       --坐骑解锁
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdPreCallOut, self.OnMountPrecall)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdSpeedPromote, self.OnMountSpeedPromote)           --坐骑速度解锁
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdSpeedItemNotify, self.OnMountCmdSpeedItemNotify)  --道具领取信息
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdInviteTrans, self.OnMountInviteTrans)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdFacade, self.OnReceiveCustomMadeChange)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MOUNT, MOUNT_SUB_ID.MountCmdFacadeUnlock, self.OnReceiveFacadeUnlock)
@@ -183,6 +187,7 @@ function MountMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventRoleLoginRes)		-- 角色登录成功
     self:RegisterGameEvent(EventID.EnterWater, self.OnEnterWater)
     self:RegisterGameEvent(EventID.MajorPassengerIdle, self.OnMajorPassengerIdle)
+    self:RegisterGameEvent(EventID.VisionShowMesh, self.OnGameEventVisionShowMesh)
     self:RegisterGameEvent(EventID.VisionReleaseMesh, self.OnGameEventVisionReleaseMesh)
     self:RegisterGameEvent(EventID.ChocoboTransportBegin, self.OnGameEventChocoboTransportBegin)
     self:RegisterGameEvent(EventID.ChocoboTransportFinish, self.OnGameEventChocoboTransportFinish)
@@ -201,7 +206,7 @@ function MountMgr:OnMountCall(Params)
 
     local Actor = ActorUtil.GetActorByEntityID(Params.EntityID)
     if Actor == nil then return end
-    local Cfg = RideCfg:FindCfgByKey(Params.MountResID)
+    local Cfg = _G.MountMgr:GetRideCfg(Params.MountResID)
     if Cfg == nil then return end
 
     --self:RegisterGameEvent(EventID.SkillCast, self.OnGameEventSkillCast)
@@ -275,7 +280,7 @@ end
 function MountMgr:OnMountPrecall(Params)
     if not Params.PreCall then return end
     local EntityID = Params.PreCall.EntityID
-    if EntityID ~= MajorUtil.GetMajorEntityID() then
+    if EntityID ~= nil and EntityID ~= MajorUtil.GetMajorEntityID() then
         self.PrecallMap[EntityID] = { ResID = Params.PreCall.ResID }
         self:PlayMountSingAnimation(EntityID)
     end
@@ -296,7 +301,7 @@ function MountMgr:OnMountBack(Params)
         self.MountBGMID = nil
     end
 
-    local Cfg = RideCfg:FindCfgByKey(Params.MountResID)
+    local Cfg = _G.MountMgr:GetRideCfg(Params.MountResID)
     if Cfg == nil then return end
     local Sound = Cfg.MountExitse
     _G.UE.UAudioMgr:Get():LoadAndPostEvent(Sound, Actor, true)
@@ -306,7 +311,6 @@ end
 
 function MountMgr:OnWorldPostLoad(Params)
     MountVM:SetRideState()
-    self:PlayMountBGM()
 end
 
 function MountMgr:PlayMountBGM()
@@ -345,7 +349,7 @@ end
 function MountMgr:OnMountUnlock(Params)
     if Params.Unlock == nil or Params.Unlock.Unlock == nil then return end
     local ResID = Params.Unlock.Unlock.ResID
-    local Cfg = RideCfg:FindCfgByKey(ResID)
+    local Cfg = _G.MountMgr:GetRideCfg(ResID)
     if Cfg == nil then return end
 
     local Name = Cfg.Name
@@ -414,11 +418,13 @@ function MountMgr:OnMountSpeedPromote(Params)
     local CurMapId = _G.PWorldMgr:GetCurrMapResID()
     local SpeedLevel = 0
     local MapNameList = {}
+    local RegionId = 0
+    local MapId = 0
     if MountVM.MountSpeedLevelMap == nil then
         MountVM.MountSpeedLevelMap = {}
     end
     for _, v in ipairs(MapSpeedList) do
-        local MapId = v.MapID
+        MapId = v.MapID
         SpeedLevel = v.SpeedLevel
         MountVM.MountSpeedLevelMap[MapId] = SpeedLevel
         if MapId == CurMapId then
@@ -429,18 +435,30 @@ function MountMgr:OnMountSpeedPromote(Params)
         table.insert(MapNameList, MapName)
     end
 
+    -- 1,2档情况下只会有一个地图信息，第三档MapID不同但是RegionID相同
+    if MapId > 0 then 
+        RegionId = MapUtil.GetMapRegionID(MapId)
+    end
+
     if IsCurMapPromote then
         local RideComp = MajorUtil.GetMajorRideComponent()
         --在自己的坐骑上
         if RideComp ~= nil and RideComp:IsInRide() and not RideComp:IsInOtherRide() then
             local Speed = SceneEnterGlobalCfg:FindCfgByKey(ProtoRes.SceneGlobalCfgID.SGCMountSpeedPromote).Value[SpeedLevel]
-            RideComp:SetSpeedPromote(Speed)
+            local SpeedFly = 0
+            if SpeedLevel == 3 then
+                SpeedFly = SceneEnterGlobalCfg:FindCfgByKey(ProtoRes.SceneGlobalCfgID.SGCMountSpeedPromote).Value[SpeedLevel + 1]
+            end
+            RideComp:SetSpeedPromote(Speed, SpeedFly)
         end
     end
 
     local function ShowTip()
         UIViewMgr:ShowView(UIViewID.MountSpeedWinPanel,
         {
+            MapID = (SpeedLevel == 3) and 0 or MapId,
+            ShowMapID = MapId,
+            RegionID = RegionId,
             SpeedLevel = SpeedLevel,
             TextCityList = MapNameList
         })
@@ -448,14 +466,17 @@ function MountMgr:OnMountSpeedPromote(Params)
         AudioUtil.LoadAndPlayUISound(SoundPath)
     end
 
-    --速度提升弹窗
-    local ShowDelayTime = 0
-    if SpeedLevel == 1 then
-        ShowDelayTime = 3
-    end
     if not _G.UpgradeMgr.IsOnDirectUpState then
-        self:RegisterTimer(ShowTip, ShowDelayTime)
+        ShowTip()
     end
+end
+
+function MountMgr:OnMountCmdSpeedItemNotify(Params)
+    if Params.SpeedItemNotify == nil or Params.SpeedItemNotify.SpeedItem == nil then
+        return
+    end
+    local SpeedItem = Params.SpeedItemNotify.SpeedItem
+    MountVM.MountSpeedItemMap[SpeedItem.Item] = SpeedItem.Prof
 end
 
 -----------------------------------------------Rsp start-----------------------------------------------
@@ -561,8 +582,7 @@ function MountMgr:OpenApplyNotifySidebar(StartTime, CountDown, RoleID, Type)
     local PlayerName = ActorUtil.GetActorName(EntityID)
     local Params = {}
     Params.Title = LSTR(1090004)
-    Params.Desc1 = string.format(LSTR(1090005), PlayerName)
-    Params.Desc2 = LSTR(1090006)
+    Params.Desc1 = string.format(LSTR(1090005), PlayerName) -- "玩家 <span color="#8FBDD5FF">%s</>邀请你共同骑乘"
     Params.StartTime = StartTime
     Params.CountDown = CountDown
     Params.CBFuncRight = self.InviteAgreeCallBack
@@ -570,7 +590,8 @@ function MountMgr:OpenApplyNotifySidebar(StartTime, CountDown, RoleID, Type)
     Params.CBFuncObj = self
     Params.Type = Type
     Params.TransData = { RoleID = RoleID }
-    UIViewMgr:ShowView(_G.UIViewID.SidebarCommon, Params)
+
+    _G.SidebarMgr:ShowCommonSidebarWin(Params)
 end
 
 function MountMgr:OnGameEventSidebarItemTimeOut( Type, TransData )
@@ -614,7 +635,7 @@ function MountMgr:OnMountCmdQuery(MsgBody)
 	local MountQueryRsp = MsgBody.Query
     for _,v in ipairs(MountQueryRsp.Mounts) do
         if MountVM.MountMap ~= nil and MountVM.MountMap[v.ResID] == nil then
-            MountVM:AddNew(v.ResID)
+            MountVM:AddNew(v)
         end
     end
     local CustomUnlockList = {}
@@ -638,13 +659,13 @@ function MountMgr:OnMountCmdQuery(MsgBody)
                 CustomUnlockList[DefaultCustomMadeID] = { Flag = 0, Unlocked = true}
             end
 
-            if Actor ~= nil then
+            if Actor ~= nil and 0 ~= v.Facade then
                 self:SetCustomMadeID(Actor, v.ResID, v.Facade)
             end
         end
     end
     MountVM.MountList = NewMountList
-
+    _G.EventMgr:SendEvent(EventID.MountRefreshList)
     FLOG_INFO("[mount] UpdateFacadeUnlockList %s", table.tostring(MountQueryRsp.Facades))
 
     MountCustomMadeVM.UnlockList = CustomUnlockList
@@ -657,10 +678,14 @@ function MountMgr:OnMountCmdQuery(MsgBody)
     for _,v in ipairs(MountQueryRsp.MapSpeeds) do
         MountVM.MountSpeedLevelMap[v.MapID] = v.SpeedLevel
     end
+    MountVM.MountSpeedItemMap = {}
+    for _, v in ipairs(MountQueryRsp.SpeedItems) do
+        MountVM.MountSpeedItemMap[v.Item] = v.Prof
+    end
     local RideComp = MajorUtil.GetMajorRideComponent()
     if RideComp ~= nil and RideComp:IsInRide() and not RideComp:IsInOtherRide() then
-        local SpeedPromote = self:GetSpeedPromoteByMapId(RideComp:GetRideResID())
-        RideComp:SetSpeedPromote(SpeedPromote)
+        local SpeedPromote, SpeedPromoteFly = self:GetSpeedPromoteByMapId(RideComp:GetRideResID())
+        RideComp:SetSpeedPromote(SpeedPromote,SpeedPromoteFly)
     end
 end
 
@@ -692,9 +717,22 @@ function MountMgr:OnMountCallRsp(MsgBody)
 end
 
 function MountMgr:OnPWorldRespEnter(MsgBody)
-    if MsgBody.Enter == nil or MsgBody.Enter.Externals == nil or MsgBody.Enter.Externals[1] == nil then return end
+    if MsgBody.Enter == nil or MsgBody.Enter.Externals == nil or MsgBody.Enter.Externals[1] == nil or MsgBody.Enter.Externals[1].Mount == nil then
+        -- 进入地图，且没有坐骑
+        self:StopMountBGM()
+        local MajorRideComp = MajorUtil.GetMajorRideComponent()
+        if MajorRideComp and MajorRideComp:IsInRide() then
+            if MajorRideComp:IsInOtherRide() then
+                MajorRideComp:UnuseOtherRide()
+            else
+                MajorRideComp:UnUseRide()
+            end
+        end
+    
+        return
+    end
+    self:UpdateMountBGMValume()
     local MsgMount = MsgBody.Enter.Externals[1].Mount
-    if MsgMount == nil then return end
 
     -- -- 多人坐骑传送，WorldEnter不处理，等后续的BindChg
     -- if MsgMount.Seat > 0 then return end
@@ -777,7 +815,7 @@ function MountMgr:HandleBind(Bind)
                 ActorRideComp:CancelWaitHost()
             end
         end
-    else
+    elseif Bind.Host ~= 0 then
         --有2个id，多人坐骑
 
         local HostActor = ActorUtil.GetActorByEntityID(Bind.Host)
@@ -799,8 +837,9 @@ function MountMgr:HandleBind(Bind)
                 self:CacheBind(Bind, Bind.Host)
                 local ActorRideComp = Actor:GetRideComponent()
                 if ActorRideComp ~= nil then
-                    FLOG_INFO("[mount] wait host %s", Bind.EntityID)
+                    FLOG_INFO("[mount] wait host and pull %s", Bind.EntityID)
                     ActorRideComp:WaitHost()
+                    Actor:K2_SetActorLocation(HostActor:FGetActorLocation())
                 end
             end
         end
@@ -819,7 +858,7 @@ end
 
 function MountMgr:ClearCachedBind(EntityID)
     for KeyEntityID, Binds in pairs(self.VisionBindCache) do
-        if Binds ~= nil then
+        if Binds ~= nil and nil ~= Binds[EntityID] then
             Binds[EntityID] = nil
         end
     end
@@ -877,12 +916,16 @@ function MountMgr:HandleRideByResID(Actor, InResID, ActorLocation, bIsEnteringWo
         --确保打断交互吟唱效果在骑乘之前，否则交互结束动作和坐的动作会冲突
         SingBarMgr:BreakCurSingDisplay(AttrComp.EntityID)
 
+        if CustomMadeID == 0 then
+            CustomMadeID = MountCustomMadeVM:GetDefaultCustomMadeID(InResID)
+        end
+        self:SetCustomMadeID(Actor, InResID, CustomMadeID)
+
         -- 获取当前地图坐骑提升速度
-        local SpeedPromote = self:GetSpeedPromoteByMapId(InResID)
+        local SpeedPromote, SpeedPromoteFly = self:GetSpeedPromoteByMapId(InResID)
         if InResID == 1 then
             local ChocoboArmor = self.ChocoboArmor[AttrComp.EntityID == MajorUtil.GetMajorEntityID() and 1 or AttrComp.EntityID]
             local StainID = self.ChocoboColor[AttrComp.EntityID == MajorUtil.GetMajorEntityID() and 1 or AttrComp.EntityID]
-            self.bIsChocobo = true
             if StainID == nil then
                 StainID = 0
             end
@@ -893,21 +936,16 @@ function MountMgr:HandleRideByResID(Actor, InResID, ActorLocation, bIsEnteringWo
                 local FeetString = FeetChocoboEquipCfg and FeetChocoboEquipCfg.ModelString or ""
                 local BodyChocoboEquipCfg = BuddyEquipCfg:FindCfgByKey(ChocoboArmor.Body)
                 local BodyString = BodyChocoboEquipCfg and BodyChocoboEquipCfg.ModelString or ""
-                RideComp:UseRide(InResID, SpeedPromote,StainID, HeadString, BodyString, "", FeetString)
+                RideComp:UseRide(InResID, SpeedPromote,SpeedPromoteFly,StainID, HeadString, BodyString, "", FeetString)
                 --FLOG_INFO("[mount] UseRide ChocoboArmor")
             else
-                RideComp:UseRide(InResID, SpeedPromote,StainID)
+                RideComp:UseRide(InResID, SpeedPromote,SpeedPromoteFly,StainID)
                 --FLOG_INFO("[mount] UseRide not ChocoboArmor")
             end
         else
-            self.bIsChocobo = false
-            RideComp:UseRide(InResID, SpeedPromote)
+            RideComp:UseRide(InResID, SpeedPromote,SpeedPromoteFly)
             --FLOG_INFO("[mount] UseRide InResID != 1")
         end
-        if CustomMadeID == 0 then
-            CustomMadeID = MountCustomMadeVM:GetDefaultCustomMadeID(InResID)
-        end
-        self:SetCustomMadeID(Actor, InResID, CustomMadeID)
 
         if MajorUtil.IsMajor(AttrComp.EntityID) then
             RideComp:SetAllowFlying(MountVM.AllowFlyRide)
@@ -921,7 +959,7 @@ function MountMgr:HandleRideByResID(Actor, InResID, ActorLocation, bIsEnteringWo
     end
 
     local ActorEntityID = Actor:GetAttributeComponent() and Actor:GetAttributeComponent().EntityID or nil
-    local Cfg = RideCfg:FindCfgByKey(InResID)
+    local Cfg = _G.MountMgr:GetRideCfg(InResID)
 
     if self.PrecallMap[ActorEntityID] ~= nil and self.PrecallMap[ActorEntityID].TimerHandle ~= nil then
         _G.TimerMgr:CancelTimer(self.PrecallMap[ActorEntityID].TimerHandle)
@@ -1027,12 +1065,6 @@ function MountMgr:SendMountCall(InResID, bImmidiate)
         return false
     end
 
-    -- 寻宝挖掘中不让召唤
-    if _G.TreasureHuntMgr:GetEntityIsDigging(EntityID) then
-        MsgTipsUtil.ShowTipsByID(40157)
-        return false
-    end
-
     if not MountVM.AllowFlyRide and MajorActor:IsSwimming() then
         MsgTipsUtil.ShowTips(LSTR(1090017))
         return false
@@ -1120,7 +1152,13 @@ function MountMgr:SendMountCancelCall(MountCancelCallback, bToGround)
     end
 
     local MajorRideComp = MajorUtil.GetMajorRideComponent()
-    if not MajorRideComp or MajorRideComp:IsAssembling() then
+    if not MajorRideComp then
+        FLOG_INFO("SendMountCancelCall MajorRideComp is invalid")
+        return
+    end
+
+    if MajorRideComp:IsInOtherRide() and MountVM.FlyHigh then
+        MsgTipsUtil.ShowTipsByID(153019)
         return
     end
 
@@ -1139,6 +1177,7 @@ function MountMgr:SendMountCancelCall(MountCancelCallback, bToGround)
 end
 
 function MountMgr:ForceSendMountCancelCall(MountCancelCallback)
+    MsgTipsUtil.ShowTips(LSTR(1090080))
     self:SendEquipCommon(MOUNT_SUB_ID.MountCmdCallBack, nil, nil)
     if MountCancelCallback ~= nil then
         self.MountCancelCallback = MountCancelCallback
@@ -1240,8 +1279,21 @@ function MountMgr:SendMountApplyOn(InRoleID)
 		return false
 	end
 
+    _G.EmotionMgr:SendStopEmotionAll()
+    local AvatarCom = MajorUtil.GetMajor():GetAvatarComponent()
+    if AvatarCom then
+        -- 立刻收刀
+        AvatarCom:TempSetAvatarBack(1)
+        -- AvatarCom:SetMasterHandWeaponState(1, false, _G.UE.EAttachmentTransformType.ALL, false)
+		-- AvatarCom:SetSlaveHandWeaponState(1, false, _G.UE.EAttachmentTransformType.ALL, false)
+    end
+
+    if MountVM.IsInRide then
+        MsgTipsUtil.ShowTips(LSTR(1090079))
+    end
     local MountApplyOnReq = {RoleID = InRoleID}
     self:SendEquipCommon(MOUNT_SUB_ID.MountCmdApplyOn, "ApplyOn", MountApplyOnReq)
+
     return true
 end
 
@@ -1269,11 +1321,11 @@ function MountMgr:SendMountReplyOn(InRoleID, InReply)
     --     return false
     -- end
 
-    -- local OtherOnlineStatus = _G.OnlineStatusMgr:GetStatusByRoleID(InRoleID);
-    -- if OtherOnlineStatus ~= nil and OnlineStatusUtil.CheckBit(OtherOnlineStatus, ProtoRes.OnlineStatus.OnlineStatusView) then
-    --     MsgTipsUtil.ShowTips(LSTR(1090071))
-    --     return false
-    -- end
+    local OtherOnlineStatus = _G.OnlineStatusMgr:GetStatusByRoleID(InRoleID);
+    if OtherOnlineStatus ~= nil and OnlineStatusUtil.CheckBit(OtherOnlineStatus, ProtoRes.OnlineStatus.OnlineStatusView) then
+        MsgTipsUtil.ShowTips(LSTR(1090071))
+        return false
+    end
 
     --回想状态先退出回想
     if _G.MusicPlayerMgr:CheckCurRecallState() then
@@ -1295,6 +1347,16 @@ function MountMgr:SendMountReplyOn(InRoleID, InReply)
     --     MsgTipsUtil.ShowTips(LSTR(1090070))
     --     return false
     -- end
+
+    if _G.PhotoMgr.IsOnPhoto then
+        MsgTipsUtil.ShowTips(LSTR(1090070))
+        return false
+    end
+
+    if _G.MusicPerformanceMgr:IsMajorPerformanceSystem() then
+        MsgTipsUtil.ShowTips(LSTR(1090070))
+        return false
+    end
 
     local AnimComp = MajorUtil.GetMajorAnimationComponent()
     if AnimComp == nil then
@@ -1330,8 +1392,15 @@ function MountMgr:OnGameEventPWorldMapEnter(Params)
     self:SetAllowFly(self.ForbidFlyAreaID == 0, self.AllowFlyReason.AreaConfig)
     MountVM.bFlyLimitedByMap = MapCfg.AllowFlyRide == 0
 
-    if self:IsMajorAssembling() then
-        self:ReleaseRideComponentAssembleState()
+    if MapCfg.PhaseMapChange == 1 and not MountVM.AllowRide then
+        local MajorRideComp = MajorUtil.GetMajorRideComponent()
+        if MajorRideComp ~= nil then
+            if MajorRideComp:IsInOtherRide() then
+                MajorRideComp:UnUseOtherRide()
+            else
+                MajorRideComp:UnUseRide()
+            end
+        end
     end
 
     if self.InviteTransWorldEnterCallback ~= nil then
@@ -1345,6 +1414,14 @@ end
 function MountMgr:OnGameEventPWorldExit(Params)
     self.ForbidFlyAreaID = 0
     _G.TimerMgr:CancelTimer(self.FuncSendMountCallTimer)
+    self:UpdateMountBGMValume()
+
+    local MajorRideComp = MajorUtil.GetMajorRideComponent()
+    if MajorRideComp ~= nil then
+        if MajorRideComp:IsInOtherRide() then
+            MajorRideComp.bPendingUpdateOtherRideAttachment = true
+        end
+    end
 end
 
 function MountMgr:OnGameEventWorldPreLoad(Params)
@@ -1359,7 +1436,7 @@ function MountMgr:GetMountType(InResID)
     if InResID == nil then
         return ProtoCS.MountAbility.MountAbilityNone
     end
-    local c_ride_cfg = RideCfg:FindCfgByKey(InResID)
+    local c_ride_cfg = _G.MountMgr:GetRideCfg(InResID)
     if c_ride_cfg == nil then
         return ProtoCS.MountAbility.MountAbilityNone
     end
@@ -1383,7 +1460,7 @@ end
 ---@return ProtoRes.EnumRidePurposeType
 function MountMgr:GetPurposeType(RideResID)
     if RideResID then
-        local RideCfgItem = RideCfg:FindCfgByKey(RideResID)
+        local RideCfgItem = _G.MountMgr:GetRideCfg(RideResID)
         if RideCfgItem then
             return RideCfgItem.PurposeType or ProtoRes.EnumRidePurposeType.Call
         end
@@ -1453,15 +1530,21 @@ function MountMgr:OnGameEventPlayerCreate(Params)
     self:HandleCachedBinds(Params.ULongParam1)
 end
 
+function MountMgr:OnGameEventVisionShowMesh(Params)
+    self:HandleCachedBinds(Params.ULongParam1)
+end
+
 function MountMgr:OnGameEventMountAssembleAllEnd(Params)
     local EntityID = Params.ULongParam1
-    --FLOG_INFO("[mount] Mount assemble all end: EntityID=%s", tostring(EntityID))
+    self:HandleCachedBinds(EntityID)
+
     local Major = MajorUtil.GetMajor()
     if Major == nil then return false end
     local AvatarComponent = Major:GetAvatarComponent()
     if AvatarComponent then
         AvatarComponent:WaitForTextureMips()
-     end
+    end
+
     self:HandleCachedBinds(EntityID)
     -- 屏蔽技能
     if MajorUtil.IsMajor(EntityID) then
@@ -1469,7 +1552,7 @@ function MountMgr:OnGameEventMountAssembleAllEnd(Params)
         -- 在自己的坐骑上
         if RideComp and RideComp:IsInRide() and not RideComp:IsInOtherRide() then 
             local ResID = RideComp:GetRideResID()
-            local Cfg = RideCfg:FindCfgByKey(ResID)
+            local Cfg = _G.MountMgr:GetRideCfg(ResID)
             if Cfg and Cfg.DisableSkill == 1 then
                 self.bIsDisableOtherSkill = true
                 EventMgr:SendEvent(EventID.SwitchPeacePanel, 0)
@@ -1614,16 +1697,16 @@ function MountMgr:PlayMountSingEndAnimation(EntityID, bInterrupt)
     local Actor = ActorUtil.GetActorByEntityID(EntityID)
     if Actor == nil or Actor:GetAnimationComponent() == nil then return end
     _G.AnimMgr:StopAnimationMulti(EntityID, self.PrecallMap[EntityID].QueueID)
-    Actor:GetAnimationComponent():PlayAnimationAsync("/Game/Assets/Character/Action/org/cbnp_u_mt_start.cbnp_u_mt_start", nil, 1, 0.25, 0.25)
 
     _G.TimerMgr:CancelTimer(PrecallInfo.TimerHandle)
 
-    local Cfg = RideCfg:FindCfgByKey(self.PrecallMap[EntityID].ResID)
+    local Cfg = _G.MountMgr:GetRideCfg(self.PrecallMap[EntityID].ResID)
     if Cfg ~= nil then
         if bInterrupt then
             -- local FailSound = Cfg.MountCallFailse
             -- _G.UE.UAudioMgr:Get():LoadAndPostEvent(FailSound, Actor, true)
         else
+            Actor:GetAnimationComponent():PlayAnimationAsync("/Game/Assets/Character/Action/org/cbnp_u_mt_start.cbnp_u_mt_start", nil, 1, 0.25, 0.25)
             local SuccessSound = Cfg.MountCallse
             _G.UE.UAudioMgr:Get():LoadAndPostEvent(SuccessSound, Actor, true)
         end
@@ -1696,40 +1779,32 @@ function MountMgr:OnGameEventCharacterLanded(Params)
     end
 end
 
-function MountMgr:ReleaseRideComponentAssembleState()
-    local Actor = MajorUtil:GetMajor()
-    if Actor ~= nil and Actor:GetAvatarComponent() ~= nil and Actor:GetRideComponent() ~= nil then
-        local RideComp = Actor:GetRideComponent()
-        local AvatarComp = Actor:GetAvatarComponent()
-        if RideComp:IsAssembling() then
-            AvatarComp:UpdateCurRoleAvatar()
-            local Camera = Actor:GetCameraControllComponent()
-            if Camera ~= nil then
-                Camera:ResetSpringArmToDefault()
-            end
-        end
-    end
-end
-
 function MountMgr:UpdateMountBGMValume()
-    if not MountVM.IsInRide then return end
-    if MajorUtil.GetMajor() == nil then
-        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 0.5)
+    -- if not MountVM.IsInRide then return end
+    local Major = MajorUtil.GetMajor()
+    if Major == nil or not Major:IsActive() then
+        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 1)
         return
     end
     local MoveComp = MajorUtil.GetMajor():GetMovementComponent()
     if MoveComp == nil then return end
     if MoveComp.Velocity:SizeSquared2D() > 100 then
-        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 1)
+        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 1.5)
     else
-        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 0.5)
+        _G.UE.UBGMMgr:Get():SetAudioVolumeScaleAtChannel(_G.UE.EBGMChannel.Mount, 1)
     end
 end
 
 function MountMgr:MajorFall()
-    if MajorUtil.GetMajor() == nil then return end
+    if MajorUtil.GetMajor() == nil then
+        FLOG_WARNING("MountMgr:MajorFall MajorUtil.GetMajor() == nil")
+        return
+    end
     local MoveComp = MajorUtil.GetMajor():GetMovementComponent()
-    if MoveComp == nil then return end
+    if MoveComp == nil then
+        FLOG_WARNING("MountMgr:MajorFall MoveComp == nil")
+        return
+    end
 
 	if not MountVM.IsOnGround and MoveComp.Velocity:Size() == 0 then
         local MajorController = MajorUtil.GetMajorController()
@@ -1739,23 +1814,34 @@ function MountMgr:MajorFall()
             MsgTipsUtil.ShowTips(LSTR(1090016))
         end
 		MajorController:MountFall()
+    else
+        if MoveComp.Velocity:Size() == 0 then
+            MsgTipsUtil.ShowTips(LSTR(1090077))
+        else
+            MsgTipsUtil.ShowTips(LSTR(1090078))
+        end
 	end
 end
 
 function MountMgr:GetDownMount(AllowMajorFall, Callback)
 	if self:GetPurposeType(MountVM.CurRideResID) == EnumRidePurposeType.Call then
 		if not MountVM.IsMajorInFly then
+            FLOG_INFO("MountMgr:GetDownMount not MountVM.IsMajorInFly, SendMountCancelCall")
 			self:SendMountCancelCall(Callback)
 		else
 			if MountVM.FlyHigh then
                 if AllowMajorFall then
 				    self:MajorFall()
+                else
+                    MsgTipsUtil.ShowTipsByID(153019)
                 end
 			else
+                FLOG_INFO("MountMgr:GetDownMount MountVM.IsMajorInFly, SendMountCancelCall")
 				self:SendMountCancelCall(Callback)
 			end
 		end
 	else
+        FLOG_INFO("MountMgr:GetDownMount ChocoboTransportMgr:CancelTrasport")
 		_G.ChocoboTransportMgr:CancelTrasport()
 	end
 end
@@ -1809,12 +1895,15 @@ end
 
 function MountMgr:UpdateMountLikeList()
     self.LikeList = {}
-    for _,v in ipairs(MountVM.MountList) do
-        local IsLike = MountVM:IsFlagSet(v.Flag, ProtoCS.MountFlagBitmap.MountFlagLike)
-        if IsLike then
-            table.insert(self.LikeList, v)
+    if nil ~= MountVM.MountList then
+        for _,v in ipairs(MountVM.MountList) do
+            local IsLike = MountVM:IsFlagSet(v.Flag, ProtoCS.MountFlagBitmap.MountFlagLike)
+            if IsLike then
+                table.insert(self.LikeList, v)
+            end
         end
     end
+    
 end
 
 
@@ -1908,7 +1997,7 @@ function MountMgr:OnChocoboChg(MsgBody)
     local FeetString = FeetChocoboEquipCfg and FeetChocoboEquipCfg.ModelString or ""
     local BodyChocoboEquipCfg = BuddyEquipCfg:FindCfgByKey(Armor.Body)
     local BodyString = BodyChocoboEquipCfg and BodyChocoboEquipCfg.ModelString or ""
-    if self.bIsChocobo then
+    if RideComp.RideResID == 1 then
         RideComp:ChangeStainID(StainID)
     end
     RideComp:ChangeMountPartByString(HeadString, BodyString, "", FeetString)
@@ -2050,18 +2139,22 @@ end
 
 function MountMgr:GetSpeedPromoteByMapId(RideResID)
     local Speed = 0
+    local SpeedFly = 0
     if self:GetPurposeType(RideResID) == ProtoRes.EnumRidePurposeType.Transport then
-        return Speed
+        return Speed,SpeedFly
     end
     local CurMapId = _G.PWorldMgr:GetCurrMapResID()
     if not CurMapId or MountVM.MountSpeedLevelMap == nil then
-        return Speed
+        return Speed,SpeedFly
     end
     local SpeedLevel = MountVM.MountSpeedLevelMap[CurMapId]
     if SpeedLevel ~= nil and SpeedLevel > 0 then
         Speed = SceneEnterGlobalCfg:FindCfgByKey(ProtoRes.SceneGlobalCfgID.SGCMountSpeedPromote).Value[SpeedLevel]
+        if SpeedLevel == 3 then
+            SpeedFly = SceneEnterGlobalCfg:FindCfgByKey(ProtoRes.SceneGlobalCfgID.SGCMountSpeedPromote).Value[SpeedLevel + 1]
+        end
     end
-    return Speed
+    return Speed, SpeedFly
 end
 
 --临时红点储存
@@ -2082,7 +2175,7 @@ end
 --- 获取坐骑速度数据
 function MountMgr:LoadMountSpeedCfg()
     local RideSpeedCfgs = RideSpeedCfg:FindAllCfg()
-    if RideSpeedCfg == nil then
+    if RideSpeedCfgs == nil then
         FLOG_ERROR("RideSpeedCfg is nil")
         return
     end
@@ -2096,18 +2189,35 @@ function MountMgr:LoadMountSpeedCfg()
                 local RideSpeedData = {}
                 RideSpeedData.MapID = Value.ID
                 RideSpeedData.MapName = MapUtil.GetMapName(UIMapID) or LSTR(200012)
+                RideSpeedData.MaxSpeedLevel = Value.MaxSpeedLevel
                 RideSpeedData.QuestID = Value.Quest
-                RideSpeedData.ItemID = Value.ItemID
-                RideSpeedData.Content = Value.Content
+                RideSpeedData.Unlock = {}
+                for index = 1, RideSpeedData.MaxSpeedLevel do
+                    local Unlock = {}
+                    Unlock.ItemID = Value["ItemID"..index]
+                    Unlock.Content = Value["Content"..index]
+                    table.insert(RideSpeedData.Unlock, Unlock)
+                    if self.MountSpeedItemRes[Unlock.ItemID] ~= nil then
+                        local MapIDList = self.MountSpeedItemRes[Unlock.ItemID].MapIDList
+                        table.insert(MapIDList,RideSpeedData.MapID)
+                    else
+                        local ItemData = {}
+                        ItemData.MapIDList = {} 
+                        table.insert(ItemData.MapIDList, RideSpeedData.MapID)
+                        ItemData.SpeedLevel = index
+                        self.MountSpeedItemRes[Unlock.ItemID] = ItemData
+                    end
+                end
                 table.insert(RegionInfo, RideSpeedData)
                 self.MountSpeedCfg[RegionID] = RegionInfo
             end
         end
     end
+    --FLOG_INFO("MountMgr:LoadMountSpeedCfg MountSpeedCfgNum = %d", #self.MountSpeedCfg)
 end
 
 function MountMgr:JumpToMountPanel(SelectedResID)
-    CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Mount, {SelectedResID = SelectedResID})
+    CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Mount, {SelectedResID = SelectedResID})
 end
 
 function MountMgr:JumpToCustomMadePanel(MountResID)
@@ -2137,7 +2247,7 @@ function MountMgr:OnReceiveCustomMadeChange(Msg)
 
     local Actor = MajorUtil.GetMajor()
     if Actor == nil then return end
-    _G.EmotionMgr:StopMountCustomEmotion()
+    _G.EmotionMgr:StopMountCustomEmotion(MountResID, CustomMadeID)
     self:SetCustomMadeID(Actor, MountResID, CustomMadeID)
     MountVM:SetCustomMadeID(MountResID, CustomMadeID)
     --MountCustomMadeVM:SetCustomMadeID(MountResID, CustomMadeID)
@@ -2155,14 +2265,15 @@ function MountMgr:SetCustomMadeID(Actor, MountResID, CustomMadeID)
     local CustomCfg = MountCustomCfg:FindCfgByKey(CustomMadeID)
     if CustomCfg == nil then return end
 
-    RideComp:SetImeChanID(MountResID, CustomCfg.ImeChanID)
-
+    RideComp:SetImeChanID(MountResID, CustomCfg.ImeChanID, CustomCfg.PatternID)
+    MountVM:SetRideState()
 end
 
 function MountMgr:OnReceiveFacadeUnlock(Msg)
     FLOG_INFO("OnReceiveFacadeUnlock, %s", table.tostring(Msg))
     if Msg.FacadeUnlock == nil or Msg.FacadeUnlock.Facade == nil then return end
     local FacadeMsg = Msg.FacadeUnlock.Facade
+    if nil == MountCustomMadeVM or nil == FacadeMsg.Facade then return end
     MountCustomMadeVM.UnlockList[FacadeMsg.Facade] = { Flag = FacadeMsg.Flag, Unlocked = true }
 	MountCustomMadeVM:UpdateCustomList()
 end
@@ -2252,12 +2363,18 @@ function MountMgr:OnGameEventRoleLoginRes(Params)
     local MountID = 2006         --试骑坐骑id
     local ActivityID = 25012101  --坐骑试骑活动id
 	local RideComp = MajorUtil.GetMajorRideComponent()
-    if RideComp and RideComp:IsInRide() then
+    if not RideComp then
+        print("[MountMgr]RideComp is nil" )
+        return
+    end
+    if RideComp:IsInRide() then
+        print("[MountMgr]MountVM.CurRideResID:%d" ,MountVM.CurRideResID)
         if MountVM.CurRideResID == MountID then
             local Cfg = ActivityCfg:FindCfgByKey(ActivityID)
             if Cfg ~= nil and Cfg.ChinaActivityTime.RemoveTime then
                 local ServerTime = TimeUtil.GetServerTime()
                 local OnTimeCfg = TimeUtil.GetTimeFromString(Cfg.ChinaActivityTime.RemoveTime)
+                print("[MountMgr]Time",Cfg.ChinaActivityTime.RemoveTime,ServerTime)
                 if OnTimeCfg > ServerTime then
                     self:GetDownMount(true)
                     print("[MountMgr]RoleLoginRes ActivityID:%d,DownMountID:%d",ActivityID,MountID)
@@ -2266,5 +2383,121 @@ function MountMgr:OnGameEventRoleLoginRes(Params)
         end
     end
 end
+
+
+function MountMgr:InitMajorMountSkills()
+    if MountVM.CurRideResID ~= 0 and not MountVM.IsInOtherRide and #MountVM.PlayActionList > 0  then
+        local LogicData = _G.SkillLogicMgr:GetMajorSkillLogicData()
+        if LogicData ~= nil then
+            local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
+            local Index = SkillCommonDefine.SkillButtonIndexRange.Mount_Start
+            for i = 1, #MountVM.PlayActionList do
+                local ActionStringSplit = string.split(MountVM.PlayActionList[i], ",")
+				local Action = tonumber(ActionStringSplit[1])
+                if Action ~= nil then
+                    LogicData:InitSkillMap(Index, Action)
+                    Index = Index + 1
+                end
+            end
+        end
+    end
+end
+
+--- 组合：坐骑表的表演技能 + 坐骑定制外观表的表演技能
+function MountMgr:GetPlayActionList(RideResID, CustomMadeID)
+    local List = {}
+    local Cfg = _G.MountMgr:GetRideCfg(RideResID)
+    if Cfg ~= nil then
+        List = table.shallowcopy(Cfg.PlayAction)
+        local MountCustomMadeVM = require("Game/Mount/VM/MountCustomMadeVM")
+        local CustomActionList = MountCustomMadeVM:GetActionList(CustomMadeID)
+        print("[mount]"..table.tostring(CustomActionList))
+        if CustomActionList ~= nil then
+            for i = 1, #CustomActionList do
+                table.insert(List, CustomActionList[i])
+            end
+        end
+    else
+        List = nil
+    end
+    return List
+end
+
+--职业是否已领取
+function MountMgr:CheckIsExistProf(ProfID)
+    if MountVM.MountSpeedItemMap then
+        for _, v in pairs(MountVM.MountSpeedItemMap) do
+            if v == ProfID then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+--道具是否已领取
+function MountMgr:CheckIsExistItem(ItemID)
+    if MountVM.MountSpeedItemMap and MountVM.MountSpeedItemMap[ItemID] ~= nil then
+       return true
+    end
+    return false
+end
+
+--已领取的职业
+function MountMgr:GetProfIDList()
+    if MountVM.MountSpeedItemMap then
+        local ProfList = {}
+        for _, v in pairs(MountVM.MountSpeedItemMap) do
+            table.insert(ProfList, v)
+        end
+        return ProfList
+    end
+    return {}
+end
+
+function MountMgr:GetRideCfg(ResID)
+    local ret = nil
+    if self.RideCfgCache[ResID] ~= nil then
+        ret = self.RideCfgCache[ResID]
+    else
+        ret = RideCfg:FindCfgByKey(ResID)
+        self.RideCfgCache[ResID] = ret
+    end
+    return ret
+end
+
+function MountMgr:IsMountSpeedItem(ItemResID)
+    return self.MountSpeedItemRes[ItemResID] ~= nil
+end
+
+function MountMgr:IsCanShowEasyUse(ItemResID)
+    if MountVM.MountSpeedLevelMap and self.MountSpeedItemRes[ItemResID] then
+        -- 判断当前是否可以使用
+        local MapList = self.MountSpeedItemRes[ItemResID].MapIDList
+        local SpeedLevel = self.MountSpeedItemRes[ItemResID].SpeedLevel
+        -- 只有3档道具会对应多个地图，需要判断所有地图均已解锁2级
+        for index = 1, #MapList do
+            local MapID = MapList[index]
+            local MapSpeedLevel = MountVM.MountSpeedLevelMap[MapID]
+            if MapSpeedLevel ~= nil and MapSpeedLevel ~= SpeedLevel - 1 then
+                return false
+            elseif MapSpeedLevel == nil then
+                return SpeedLevel == 1
+            end
+        end
+        return true
+    end
+    return false
+end
+
+function MountMgr:GetMaxGroundMaxSpeed()
+    local CurMapId = _G.PWorldMgr:GetCurrMapResID()
+    local Cfg = RideSpeedCfg:FindCfgByKey(CurMapId)
+    if Cfg then
+        return Cfg.MapMaxSpeed
+    end
+    return 0
+end
+
 
 return MountMgr

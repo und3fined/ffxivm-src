@@ -29,6 +29,7 @@ local CommBtnColorType = UIDefine.CommBtnColorType
 ---@field BtnPgUp CommBtnLView
 ---@field CommTabsModule CommVerIconTabsView
 ---@field CommonBkg CommonBkg01View
+---@field CommonTitle CommonTitleView
 ---@field Details UFCanvasPanel
 ---@field DetailsPanel UFCanvasPanel
 ---@field FTreeViewSearch UFTreeView
@@ -58,6 +59,7 @@ function TutorialGuidePanelView:Ctor()
 	--self.BtnPgUp = nil
 	--self.CommTabsModule = nil
 	--self.CommonBkg = nil
+	--self.CommonTitle = nil
 	--self.Details = nil
 	--self.DetailsPanel = nil
 	--self.FTreeViewSearch = nil
@@ -87,6 +89,7 @@ function TutorialGuidePanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnPgUp)
 	self:AddSubView(self.CommTabsModule)
 	self:AddSubView(self.CommonBkg)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.NotNoviceGuide)
 	self:AddSubView(self.NotSearched)
 	self:AddSubView(self.SearchBar)
@@ -116,10 +119,11 @@ function TutorialGuidePanelView:OnShow()
 	self.SearchingGuideContentIndex = 1 --搜索页面内容Index
 
 	UIUtil.SetIsVisible(self.NotNoviceGuide.PanelBtn, false)
+	self.CommonTitle:SetCommInforBtnIsVisible(false)
 	self.NotNoviceGuide:SetTipsContent(_G.LSTR(890001))
 	self.NotSearched.Text_SearchAgain:SetText(_G.LSTR(890002))
 	self.SearchBar:SetHintText(_G.LSTR(890003))
-	self.TextTitleName:SetText(_G.LSTR(890007))
+	self.CommonTitle:SetTextTitleName(_G.LSTR(890007))
 	self.BtnPgUp:SetText(_G.LSTR(890008))
 	self.BtnPgDn:SetText(_G.LSTR(890009))
 	self:InitTab()
@@ -224,37 +228,38 @@ function TutorialGuidePanelView:OnGroupTableSelectedChanged(Index, ItemData, Ite
 end
 
 -- 点击分类栏
-function TutorialGuidePanelView:OnSelectionChangedTabs(TabIndex)
+function TutorialGuidePanelView:OnSelectionChangedTabs(TabIndex, ItemData, ItemView,  bByclick)
 	self.GuideIndex = 1
 	self.ContentIndex = 1
 	self.SecondTabIndex = TabIndex
-	self.TextModuleName:SetText(self.SecondTabListData[TabIndex].GuideName)
-
-	-- if self.TutorialGuidePanelVM.IsSearching then
-	self.TutorialGuidePanelVM.IsSearching = false
-	-- 	return
-	-- end
-
-	self.TutorialGuidePanelVM:UpdateTabGroup(self.SecondTabListData[TabIndex].GuideTypeID)
-	self.TutorialGuidePanelVM:UpdateGroupVisible()
-
-	self.GuideID = self.TutorialGuidePanelVM:GetGuideID(self.GuideIndex)
-	if self.TutorialGuidePanelVM.SearchGuideID ~= nil then
-		local ScrollIndex = self.TutorialGuidePanelVM:GetItemRealIndex(self.TutorialGuidePanelVM.SearchGuideID)
-		if ScrollIndex ~= nil then
-			self.GuideID = self.TutorialGuidePanelVM.SearchGuideID
-			self.GuideIndex = self.TutorialGuidePanelVM:GetGuideIndex(self.GuideID)
-		end
+	self.CommonTitle:SetTextSubtitle(self.SecondTabListData[TabIndex].GuideName)
+	if bByclick ~= nil then
+		self.TutorialGuidePanelVM.IsSearching = false
 	end
 
-	-- 数据可能没刷新，用的老数据
-	self:RegisterTimer(function () 
-		local ScrollIndex = self.TutorialGuidePanelVM:GetItemRealIndex(self.GuideID)
-		self.GroupTableListAdapter:CancelSelected()
-		self.GroupTableListAdapter:SetSelectedKey(self.GuideID)
-		self.GroupTableListAdapter:ScrollToIndex(ScrollIndex)
-	end, 0.03)
-
+	if not self.TutorialGuidePanelVM.IsSearching then
+		self.TutorialGuidePanelVM.IsSearching = false
+		self.TutorialGuidePanelVM:UpdateTabGroup(self.SecondTabListData[TabIndex].GuideTypeID)
+		self.TutorialGuidePanelVM:UpdateGroupVisible()
+	
+		self.GuideID = self.TutorialGuidePanelVM:GetGuideID(self.GuideIndex)
+		if self.TutorialGuidePanelVM.SearchGuideID ~= nil then
+			local ScrollIndex = self.TutorialGuidePanelVM:GetItemRealIndex(self.TutorialGuidePanelVM.SearchGuideID)
+			if ScrollIndex ~= nil then
+				self.GuideID = self.TutorialGuidePanelVM.SearchGuideID
+				self.GuideIndex = self.TutorialGuidePanelVM:GetGuideIndex(self.GuideID)
+			end
+		end
+	
+		-- 数据可能没刷新，用的老数据
+		-- self:RegisterTimer(function () 
+			local ScrollIndex = self.TutorialGuidePanelVM:GetItemRealIndex(self.GuideID)
+			self.GroupTableListAdapter:CancelSelected()
+			self.GroupTableListAdapter:SetSelectedKey(self.GuideID)
+			self.GroupTableListAdapter:ScrollToIndex(ScrollIndex)
+		-- end, 0.03)
+	
+	end
 
 end
 
@@ -371,7 +376,6 @@ function TutorialGuidePanelView:OnClickedNextPage()
 	if ContentIndex == ContentTabLen then
 		ContentIndex = 1
 		local NextGuideIndex = GuideIndex + 1
-		-- local NextGuideID = self.TutorialGuidePanelVM:GetSearchingGuideID(NextGuideIndex)
 		self.TreeViewSearchAdapter:SetSelectedIndex(NextGuideIndex)
 		self.TreeViewSearchAdapter:ScrollToIndex(NextGuideIndex)
 	else
@@ -396,18 +400,14 @@ function TutorialGuidePanelView:OnPaUpAndDnState(GuideIndex, ContentIndex)
 	local ContentTabLen = self.TableViewDropAdapter:GetNum()
 
 	if GuideIndex <= 1 and ContentIndex <= 1 then
-		-- self.BtnPgUp:UpdateImage(CommBtnColorType.Normal)
 		self.BtnPgUp:SetIsDisabledState(true, true)
 	else
-		-- self.BtnPgUp:UpdateImage(CommBtnColorType.Recommend)
 		self.BtnPgUp:SetIsNormalState(true)
 	end
 
 	if GuideIndex >= SecondTabLen and ContentIndex >= ContentTabLen then
-		--self.BtnPgDn:UpdateImage(CommBtnColorType.Normal)
 		self.BtnPgDn:SetIsDisabledState(true, true)
 	else
-		-- self.BtnPgDn:UpdateImage(CommBtnColorType.Recommend)
 		self.BtnPgDn:SetIsNormalState(true)
 	end
 end
@@ -420,18 +420,14 @@ function TutorialGuidePanelView:OnSearchingPaUpAndDnState(GuideIndex, ContentInd
 	local ContentTabLen = self.TableViewDropAdapter:GetNum()
 
 	if GuideIndex <= 1 and ContentIndex <= 1 then
-		-- self.BtnPgUp:UpdateImage(CommBtnColorType.Normal)
 		self.BtnPgUp:SetIsDisabledState(true, true)
 	else
-		-- self.BtnPgUp:UpdateImage(CommBtnColorType.Recommend)
 		self.BtnPgUp:SetIsNormalState(true)
 	end
 
 	if GuideIndex >= SecondTabLen and ContentIndex >= ContentTabLen then
-		-- self.BtnPgDn:UpdateImage(CommBtnColorType.Normal)
 		self.BtnPgDn:SetIsDisabledState(true, true)
 	else
-		-- self.BtnPgDn:UpdateImage(CommBtnColorType.Recommend)
 		self.BtnPgDn:SetIsNormalState(true)
 	end
 end
@@ -440,8 +436,7 @@ function TutorialGuidePanelView:OnSearchTextChange(SearchText, Length)
 	self.TutorialGuidePanelVM.IsSearching = true
 	self.TutorialGuidePanelVM:Search(SearchText, Length)
 	self.TreeViewSearchAdapter:SetSelectedIndex(1)
-
-	if  Length > 0 then
+	if Length > 0 then
 		self.TutorialGuidePanelVM.TabSelectIndex = 1
 		self.CommTabsModule:SetSelectedIndex(self.TutorialGuidePanelVM.TabSelectIndex)
 	end

@@ -112,10 +112,13 @@ function CuffBlowItemBase:OnBaseUpdateCallBack()
 	self:RegisterTimer(self.ArrivalShrinkTime, DelayShrinkTime + DelayShowTime, 0, 1, self)
 
 	local function OnHideCallBack()
+		local GameInst = _G.GoldSaucerMiniGameMgr:GetTheCurMiniGameInst()
+		if GameInst ~= nil then
+			GameInst:ResetComboNum()
+		end
 		GameInst:CheckIsFinishRoundAndSend()
 		UIUtil.SetIsVisible(self.FCanvasPanel_26, false, false)
 		self:UnRegisterAllTimer()
-		FLOG_INFO("CuffAlwaysFail: Reason: Item Auto Hide Fail")
 	end
 	local DelayTime = GoldSaucerMiniGameDefine.DelayTime
 	local HideTime = DelayTime.BlowAutoHide / self.ShrinkSp + DelayShowTime + DelayShrinkTime
@@ -148,10 +151,10 @@ function CuffBlowItemBase:OnBaseBtnClick(bRed)
 	local HitResult = MiniGameInst:CheckHitResult(Type, PauseTime)
 	local InteractResult = GoldSaucerMiniGameDefine.InteractResult
 	FLOG_INFO("CuffAlwaysFail: HitResult: ItemType:%s, Rlt:%s, PauseTime:%s", Type, HitResult, PauseTime)
-	if HitResult ~= InteractResult.Fail then
+	if HitResult ~= InteractResult.Fail and HitResult ~= InteractResult.Error then
 		self:PlayAnimation(self.AnimBurst)
 	else
-		FLOG_INFO("CuffAlwaysFail: Reason: Click Judge Fail")
+		FLOG_INFO("CuffAlwaysFail: Reason: Click Judge Fail or Error")
 	end
 	MiniGameInst:PlayAudioByHitResult(HitResult, bRed)
 	ViewModel:UpdateBlowResultVisible(true)
@@ -167,22 +170,26 @@ function CuffBlowItemBase:OnBaseBtnClick(bRed)
 		MiniGameInst:MultiplyStrengthValue(InteractionCfg, HitResult)
 		MiniGameInst:EnterSlowAnimMode()
 	end
-	MiniGameInst:AddRewardNum(Type, HitResult)
-	MiniGameInst:SetRewardGot()
-
+	
 	self:RegisterTimer(function() 
 		ViewModel:UpdateBlowResultVisible(false)
 		UIUtil.SetIsVisible(self.FCanvasPanel_26, false, false)
 		MiniGameInst:CheckIsFinishRoundAndSend()
 	end, MiniGameInst.BlowAnimTime)
 
-	local ResultData = MiniGameInst:ConstructResultData(ViewModel.Pos, HitResult)
-	self:UpdateResult(ResultData)
-	local CuffVM = MiniGameInst:GetViewModel()
-	CuffVM:UpdateData(not bEndPush) -- 刷新主界面数据
+	local ResultData = MiniGameInst:ConstructResultData(ViewModel.Pos, HitResult, Type)
+	if ResultData then
+		self:UpdateResult(ResultData)
+	end
 
 	local ComboNum = MiniGameInst:GetComboNum()
 	self:PlayResultAnimByHitResult(HitResult, ComboNum)
+	MiniGameInst:AddRewardNum(Type, HitResult)
+	MiniGameInst:SetRewardGot()
+	local CuffVM = MiniGameInst:GetViewModel()
+	if CuffVM then
+		CuffVM:UpdateData(not bEndPush) -- 刷新主界面数据
+	end
 end
 
 return CuffBlowItemBase

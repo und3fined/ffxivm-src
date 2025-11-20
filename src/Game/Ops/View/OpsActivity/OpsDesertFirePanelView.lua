@@ -133,8 +133,8 @@ function OpsDesertFirePanelView:OnShow()
 	self.UMGVideoPlayer:SetVideoPath(self.ViewModel.VideoPlayerPath)
 	self.UMGVideoPlayer:SetPlayMovieEndCallBack(self, self.PlayMovieEnd)
 	self.UMGVideoPlayer:SetVolume(self.ViewModel:BSoundChecked())
-	UIUtil.SetIsVisible(self.UMGVideoPlayer.CloseButton, false)
 	UIUtil.SetIsVisible(self.UMGVideoPlayer, true)
+	UIUtil.SetIsVisible(self.UMGVideoPlayer.CloseButton, false)
 	self.UMGVideoPlayer:OnRewind()
 
 	--[[local OpsDesertFirePrompt = _G.UE.USaveMgr.GetInt(SaveKey.OpsDesertFirePrompt, 0, true) or 0
@@ -285,14 +285,14 @@ function OpsDesertFirePanelView:OnClickedBuy()
 	end
 	local Status = self.ViewModel.ShareBuyData.Status
 	if Status == ProtoCS.Game.Activity.enStatus.None then
-		_G.StoreMgr:OpenExternalPurchaseInterface(self.ViewModel.ShareBuyNodeCfg.Params[4], {BuyPrice = self.ViewModel.ShareBuyNodeCfg.Params[1], 
+		_G.StoreMgr:OpenExternalPurchaseInterfaceByNewUIBP(self.ViewModel.ShareBuyNodeCfg.Params[4], {BuyPrice = self.ViewModel.ShareBuyNodeCfg.Params[1], 
 		ScoreID = SCORE_TYPE.SCORE_TYPE_STAMPS,
 		ClickedBuyCallBack = function()
 			self:BuyShopItem()
 			            end})
 	elseif Status == ProtoCS.Game.Activity.enStatus.CodeInputed then
-		local CouponCodeRitchText = RichTextUtil.GetText(string.format("%s", self.ViewModel.ShareBuyData.CouponCode or ""), "d1ba81", 0, nil)
-		_G.StoreMgr:OpenExternalPurchaseInterface(self.ViewModel.ShareBuyNodeCfg.Params[4], {BuyPrice = self.ViewModel.ShareBuyNodeCfg.Params[2], 
+		local CouponCodeRitchText = RichTextUtil.GetText(string.format("%s", self.ViewModel.ShareBuyData.CouponCode or ""), "d1ba81")
+		_G.StoreMgr:OpenExternalPurchaseInterfaceByNewUIBP(self.ViewModel.ShareBuyNodeCfg.Params[4], {BuyPrice = self.ViewModel.ShareBuyNodeCfg.Params[2], 
 		ScoreID = SCORE_TYPE.SCORE_TYPE_STAMPS,
 		OriginalPrice = self.ViewModel.ShareBuyNodeCfg.Params[1],
 		ShopDesc = string.format("%s%s\n%s", _G.LSTR(1470023), CouponCodeRitchText, _G.LSTR(1470024)),

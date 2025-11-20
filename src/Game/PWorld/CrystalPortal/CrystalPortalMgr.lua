@@ -10,6 +10,7 @@ local ProtoCS = require("Protocol/ProtoCS")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local EffectUtil = require("Utils/EffectUtil")
+local MapUtil = require("Game/Map/MapUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local ActorUtil = require("Utils/ActorUtil")
 local EventID = require("Define/EventID")
@@ -21,6 +22,7 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 local CommonVfxCfg = require("TableCfg/CommonVfxCfg")
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local LSTR = _G.LSTR
 local FLOG_ERROR = _G.FLOG_ERROR
 local FLOG_INFO = _G.FLOG_INFO
@@ -109,7 +111,7 @@ function CrystalPortalMgr:RegisterGameNetMsg(PWorldMgr)
         function(_, MsgBody) self:OnNetMsgTransferNtf(MsgBody) end)
     PWorldMgr:RegisterGameNetMsg(CS_CMD_INTERAVIVE, CsInteractionCMDSpellChg,
         function(_, MsgBody) self:OnNetMsgInteractive(MsgBody) end)
-        PWorldMgr:RegisterGameNetMsg(CS_TELEPORT_CRYSTAL_CMD, CS_TELEPORT_CRYSTAL_SUBMSG.CROSS_WORLD_TRANSFER,
+    PWorldMgr:RegisterGameNetMsg(CS_TELEPORT_CRYSTAL_CMD, CS_TELEPORT_CRYSTAL_SUBMSG.CROSS_WORLD_TRANSFER,
         function(_, MsgBody) self:OnNetMsgCrossWorld(MsgBody) end)
 end
 
@@ -170,9 +172,10 @@ function CrystalPortalMgr:OnMapLoaded(MapResID)
         Crystal.Pos = _G.UE.FVector(c.X, c.Y, c.Z)
 
         --[sammrli] 相同地图，才创建触发器
-        if c.MapID == MapResID and (c.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP or c.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP) then
+        if c.MapID == MapResID and (c.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP or c.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP or
+            c.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN) then
             -- add trigger
-            Crystal.TriggerActor = _G.CommonUtil.SpawnActor(_G.UE.ATriggerSphere.StaticClass(), Crystal.Pos)
+            Crystal.TriggerActor = CommonUtil.SpawnActor(_G.UE.ATriggerSphere.StaticClass(), Crystal.Pos)
             if Crystal.TriggerActor then
                 local CollisionComponent = Crystal.TriggerActor:GetComponentByClass(_G.UE.USphereComponent)
                 if CollisionComponent then
@@ -208,7 +211,9 @@ function CrystalPortalMgr:OnMapLoaded(MapResID)
     -- Sync crystal activated info
     if self.ActivatedList then
         for _, c in ipairs(self.CrystalList) do
-            c.IsActivated = self.ActivatedList[c.EntityID] or false
+            local Activite = self.ActivatedList[c.EntityID]
+            local DefaultOpen = self:GetCrystalType(c) == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN
+            c.IsActivated = Activite or DefaultOpen
         end
     end
 
@@ -225,6 +230,17 @@ function CrystalPortalMgr:OnMapLoaded(MapResID)
             end
         end
     end
+end
+
+---@param Crystal CrystalPortalInfo
+function CrystalPortalMgr:GetCrystalType(Crystal)
+    if Crystal then
+        local DBConfig = Crystal.DBConfig
+        if DBConfig then
+            return DBConfig.Type
+        end
+    end
+    return nil
 end
 
 function CrystalPortalMgr:ResetMap()
@@ -251,6 +267,10 @@ function CrystalPortalMgr:InitCfg()
 end
 
 function CrystalPortalMgr:TransferFadeIn(EntityID, IsPlayEffectAndSound)
+    if self.FadeTimerID then
+        _G.TimerMgr:CancelTimer(self.FadeTimerID)
+        self.FadeTimerID = nil
+    end
     local Actor = ActorUtil.GetActorByEntityID(EntityID)
     if Actor then
         Actor:StartFadeIn(0.5, true)
@@ -382,8 +402,17 @@ end
 ---@param EntityID 实体ID
 ---@return boolean
 function CrystalPortalMgr:IsExistActiveCrystal(EntityID)
-    if self.ActivatedList then
-         return self.ActivatedList[EntityID] ~= nil
+    local ActivatedList = self.ActivatedList
+    if ActivatedList then
+         if ActivatedList[EntityID] then
+            return true
+         end
+    end
+    local CrystalPortalCfgItem = CrystalPortalCfg:FindCfgByKey(EntityID)
+    if CrystalPortalCfgItem then
+        if CrystalPortalCfgItem.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN then
+            return true
+        end
     end
     return false
 end
@@ -500,7 +529,14 @@ function CrystalPortalMgr:OnActorVelocityUpdate(Params)
 end
 
 function CrystalPortalMgr:PlayTransferInEffect(EntityID)
-    self:TransferFadeIn(EntityID, true)
+    if self.TransferInTimerID then
+         _G.TimerMgr:CancelTimer(self.TransferInTimerID)
+         self.TransferInTimerID = nil
+    end
+    self.TransferInTimerID = _G.TimerMgr:AddTimer(self, function()
+        self:TransferFadeIn(EntityID, true)
+        self.TransferInTimerID = nil
+    end, 0.5)
 end
 
 --- 由交互界面触发的同地图传送
@@ -550,6 +586,7 @@ function CrystalPortalMgr:TransferByMap(ToEntityID)
             if self:SendTransferReq(FromCrystalID, ToEntityID) then
                 _G.EventMgr:SendEvent(EventID.CrystalTransferReq)
             end
+            return true
         end
     end
     return false
@@ -575,6 +612,9 @@ function CrystalPortalMgr:OnInteractiveBegin(MajorActor, Crystal)
 	Params.ULongParam1 = Crystal.EntityID
     _G.EventMgr:SendEvent(_G.EventID.EnterInteractionRange, Params)
     self.EnterCrystalList[Crystal.EntityID] = true
+    if not CommonUtil.IsShipping() then
+        FLOG_INFO("[Crystal] Begin Overlap %s", tostring(Crystal.EntityID))
+    end
 end
 
 function CrystalPortalMgr:OnInteractiveEnd(MajorActor, Crystal)
@@ -583,6 +623,9 @@ function CrystalPortalMgr:OnInteractiveEnd(MajorActor, Crystal)
 	Params.ULongParam1 = Crystal.EntityID
     _G.EventMgr:SendEvent(_G.EventID.LeaveInteractionRange, Params)
     self.EnterCrystalList[Crystal.EntityID] = nil
+    if not CommonUtil.IsShipping() then
+        FLOG_INFO("[Crystal] End Overlap %s", tostring(Crystal.EntityID))
+    end
 end
 
 function CrystalPortalMgr:OnMajorSingBarOver(EntityID, IsBreak, SingStateID)
@@ -666,11 +709,16 @@ function CrystalPortalMgr:OnRelayConnected()
     if self.IsMajorFadeOut then
         self.IsCurrentTransfer = false
         self.IsMajorFadeOut = false
-        local Params = {}
-        Params.FadeColorType = 1
-        Params.Duration = 1
-        Params.bAutoHide = true
-        _G.UIViewMgr:ShowView(UIViewID.CommonFadePanel, Params)
+        local EntityID = MajorUtil.GetMajorEntityID()
+        self:TransferFadeIn(EntityID, false)
+
+        if _G.UIViewMgr:IsViewVisible(UIViewID.CommonFadePanel) then
+            local Params = {}
+            Params.FadeColorType = 1
+            Params.Duration = 1
+            Params.bAutoHide = true
+            _G.UIViewMgr:ShowView(UIViewID.CommonFadePanel, Params)
+        end
     end
 end
 
@@ -748,7 +796,21 @@ function CrystalPortalMgr:SendTransferReq(From, To)
 
         self.IsTransferring = true
 
+        -- 房屋地图数据： 住宅区ID，小区ID
+	    local UIMapID = _G.WorldMapMgr:GetUIMapID()
+        if MapUtil.IsHouseUIMap(UIMapID) then
+            local CurMapData = _G.HouseLandMgr.CurMapData
+            if CurMapData then
+                MsgBody.Transfer.ExParams = {}
+                table.insert(MsgBody.Transfer.ExParams, CurMapData.ResidenceNumber)
+                table.insert(MsgBody.Transfer.ExParams, CurMapData.AreaNumber)
+            end
+        end
+        
         _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+
+        -- 除了主界面之外都隐藏, 统一在水晶传送请求处处理
+        _G.UIViewMgr:HideAllUIByLayer()
     end
 
     if _G.RollMgr.IsTreasureHuntRoll and _G.TeamRollItemVM.IsAllOperated ~= true then
@@ -826,7 +888,9 @@ function CrystalPortalMgr:UpdateCrystalDynData()
     local CurrMapID = _G.PWorldMgr:GetCurrMapResID()
     if self.CrystalList and self.ActivatedList then
         for _, c in ipairs(self.CrystalList) do
-            local IsActivated = self.ActivatedList[c.EntityID] or false
+            local Activite = self.ActivatedList[c.EntityID]
+            local DefaultOpen =self:GetCrystalType(c) == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN
+            local IsActivated = Activite or DefaultOpen
             -- set status
             if c.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP and c.DBConfig.MapID == CurrMapID then
                 if c.DBConfig.EObjID and c.DBConfig.EObjID > 0 then
@@ -889,7 +953,9 @@ function CrystalPortalMgr:OnNetMsgActivateNtf(MsgBody)
         -- Sync crystal activated info
         if self.CrystalList then
             for _, c in ipairs(self.CrystalList) do
-                c.IsActivated = self.ActivatedList[c.EntityID] or false
+                local Activite = self.ActivatedList[c.EntityID]
+                local DefaultOpen = self:GetCrystalType(c) == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN
+                c.IsActivated = Activite or DefaultOpen
             end
            -- FLOG_INFO("CrystalPortalMgr:OnNetMsgActivateNtf, SortInteractorParamsList")
             _G.InteractiveMgr:UpdateInteractorItems(_G.LuaEntranceType.CRYSTAL)
@@ -961,11 +1027,14 @@ function CrystalPortalMgr:OnNetMsgInteractive(MsgBody)
     if not SpellChgRsp then
         return
     end
+    local Major = MajorUtil.GetMajor()
+    if not Major then
+        return
+    end
     if SpellChgRsp.Result == ProtoCS.SpellResult.SpellResultFirst and (SpellChgRsp.SpellID == 3 or SpellChgRsp.SpellID == 4) then
         local DBConfig = self.CurrentActivateCrystal.DBConfig
         if DBConfig then
             local PointVec = _G.UE.FVector(DBConfig.X, DBConfig.Y, DBConfig.Z)
-            local Major = MajorUtil.GetMajor()
             local MajorPos = Major:FGetActorLocation()
             local Dis = PointVec:Dist2D(MajorPos)
             local LimitDistance = DBConfig.Distance + 50 --因为主角有个1米的包围盒，允许距离超出半米

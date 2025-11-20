@@ -39,7 +39,9 @@ local OneRowDelayTime = 1.5
 ---@field IconShareSizeBox USizeBox
 ---@field ImgBG UFImage
 ---@field ImgMoney1 UFImage
----@field PanelBtn UFCanvasPanel
+---@field PanelBtn UFHorizontalBox
+---@field PanelBtnCheck UFCanvasPanel
+---@field PanelBtnClose UFCanvasPanel
 ---@field PanelGoldSauserDeco UFCanvasPanel
 ---@field PanelMoney UFCanvasPanel
 ---@field Panshare UFCanvasPanel
@@ -73,6 +75,8 @@ function CommRewardPanelView:Ctor()
 	--self.ImgBG = nil
 	--self.ImgMoney1 = nil
 	--self.PanelBtn = nil
+	--self.PanelBtnCheck = nil
+	--self.PanelBtnClose = nil
 	--self.PanelGoldSauserDeco = nil
 	--self.PanelMoney = nil
 	--self.Panshare = nil
@@ -104,18 +108,18 @@ function CommRewardPanelView:OnInit()
         ItemVM,
         {
             Source = ItemDefine.ItemSource.MatchReward,
-            IsCanBeSelected = true,
+            IsCanBeSelected = false,
             IsShowNum = true,
             IsDaily = false,
             IsShowSelectStatus = false,
         }
     )
     self.TableViewAdapter =
-        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList, self.OnSelectChanged, true, false)
+        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList, nil, true, false)
     self.TableViewAdapter2 =
-        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList2, self.OnSelectChanged, true, false)
+        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList2, nil, true, false)
     self.TableViewAdapter3 =
-        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList3, self.OnSelectChanged, true, false)
+        UIAdapterTableView.CreateAdapter(self, self.TableViewRewardList3, nil, true, false)
 
     self.CommonPopUpBG:SetHideOnClick(true)
     self.BtnLeft = self.BtnClose
@@ -126,10 +130,10 @@ function CommRewardPanelView:OnDestroy()
 end
 
 function CommRewardPanelView:OnShow()
-    self.TextHint:SetText(LSTR(100032))
-    self.TextReward:SetText(LSTR(100033))
-    self.TextCloseTips:SetText(LSTR(100034))
-    self.CommCheckBox:SetText(LSTR(100014))
+    self.TextHint:SetText(LSTR(100032))       -- "已获得全部奖励"
+    self.TextReward:SetText(LSTR(100033))     -- "获得物品"
+    self.TextCloseTips:SetText(LSTR(100034))  -- "点击空白处关闭"
+    self.CommCheckBox:SetText(LSTR(100014))   -- "跳过动画"
     self:ClearDraw()
     _G.SidePopUpMgr:Pause(SidePopUpDefine.Pause_Type.CommRewardPanel, true)
     local Params = self.Params 
@@ -162,14 +166,18 @@ function CommRewardPanelView:OnShow()
         self:UpdateLotteryAwardView(Params)
     end
 
-    UIUtil.SetIsVisible(self.PanelBtn, Params.ShowBtn == true )
-    UIUtil.SetIsVisible(self.BtnLeft, Params.ShowBtnLeft == true )
-    UIUtil.SetIsVisible(self.BtnRight, Params.ShowBtnRight == true )
+    local ShowBtn = Params.ShowBtn == true
+    UIUtil.SetIsVisible(self.PanelBtn, ShowBtn )
+    UIUtil.SetIsVisible(self.TextCloseTips, not ShowBtn )
+    UIUtil.SetIsVisible(self.PanelBtnClose, Params.ShowBtnLeft == true )
+    UIUtil.SetIsVisible(self.PanelBtnCheck, Params.ShowBtnRight == true )
     UIUtil.SetIsVisible(self.PanelGoldSauserDeco, Params.ShowPanelGoldSauser == true )
     self.BtnLeft:SetText(Params.BtnLeftText or "")
     self.BtnRight:SetText(Params.BtnRightText or "")
     self.BtnRightCB = Params.BtnRightCB
     self.BtnLeftCB = Params.BtnLeftCB
+    -- 是否隐藏背景板的关闭界面回调 HideBGCloseBC true:隐藏
+    self.CommonPopUpBG:SetHideOnClick(not (Params.HideBGCloseBC == true))
     AudioUtil.LoadAndPlayUISound(SoundPath)
 end
 
@@ -191,7 +199,7 @@ function CommRewardPanelView:OnHide()
 
     _G.SidePopUpMgr:Pause(SidePopUpDefine.Pause_Type.CommRewardPanel, false)
 
-	if self.Params and self.Params.IsByMasterBoxReset then
+	if self.Params and self.Params.IsByMasteryBoxReset then
     	self.CommonPopUpBG:SetHideOnClick(true)
     end
 
@@ -217,14 +225,6 @@ function CommRewardPanelView:OnRegisterGameEvent()
 end
 
 function CommRewardPanelView:OnRegisterBinder()
-end
-
-function CommRewardPanelView:OnSelectChanged(Index, ItemData, ItemView)
-    if self.HideClickItem then 
-        return
-    end
-
-    ItemTipsUtil.ShowTipsByResID(ItemData.ResID, ItemView)
 end
 
 function CommRewardPanelView:OnClickLeftBtnOp()
@@ -401,6 +401,7 @@ function CommRewardPanelView:UpdateLotteryAwardView(Params)
     else
         UIUtil.SetIsVisible(self.PanelMoney,true)
         UIUtil.SetIsVisible(self.TextCloseTips,false)
+        UIUtil.SetIsVisible(self.TextHint,false)
         self.TextCurrentPrice1:SetText(Params.ConsumePropNum)
         local LotteryPropNum = _G.BagMgr:GetItemNum(Params.PropItemID)
         if LotteryPropNum ~= nil and Params.ConsumePropNum ~= nil then
@@ -412,7 +413,7 @@ function CommRewardPanelView:UpdateLotteryAwardView(Params)
         end
         UIUtil.ImageSetBrushFromAssetPath(self.ImgMoney1, UIUtil.GetIconPath(ItemUtil.GetItemIcon(Params.PropItemID)))
         UIUtil.SetIsVisible(self.CommCheckBox,true)
-        self.CommCheckBox:SetChecked(USaveMgr.GetInt(SaveKey.OpsSkipAnimation, 0, true) == Params.ActivityID)
+        self.CommCheckBox:SetChecked(_G.OpsActivityMgr:GetSkipAnimationState(Params.ActivityID) == 1)
         self.CommonPopUpBG:SetHideOnClick(false)
     end
 end

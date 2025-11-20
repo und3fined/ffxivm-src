@@ -29,7 +29,7 @@ function MiniGameTheFinerMiner:Ctor()
 	self.MiniGameType = Type
     self.Name = MiniGameClientConfig[Type].Name
     self.UIViewMainID = UIViewID.TheFinerMinerMainPanel
-    self.DoubleWinViewID = UIViewID.OutOnALimbDoubleWin
+    self.DoubleWinViewID = UIViewID.MooglePawDoubleWin
     self.SettlementViewID = UIViewID.TheFinerMinerSettlementPanel
     self.IdleStateKey = AnimTimeLineSourceKey.MiningIdle
     local DefineCfg = MiniGameClientConfig[Type]
@@ -145,8 +145,11 @@ function MiniGameTheFinerMiner:OnCreateRestartContentParams()
         GameType = self.MiniGameType,
         RemainTime = self.RemainSeconds,
         RemainChances = self.MaxRound - RoundIndex - 1,
+        NextRound = RoundIndex + 2,
+        TotalRound = self.MaxRound,
+        BaseReward = self:GetTheRewardGotInTheRoundInternal(0),
         CurReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex),
-        NewReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex + 1),
+        NextReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex + 1),
     }
 end
 

@@ -70,4 +70,9 @@ function WorldExploraSelectionPanelView:SetDefaultSelectedIndex()
 	self.TableAdapterTab:SetSelectedIndex(DefaultIndex)
 end
 
+--外部调用
+function WorldExploraSelectionPanelView:SetSelectedIndex(Index)
+	self.TableAdapterTab:SetSelectedIndex(Index)
+end
+
 return WorldExploraSelectionPanelView

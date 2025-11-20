@@ -6,6 +6,8 @@
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
+local UIUtil = require("Utils/UIUtil")
+local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
@@ -17,7 +19,6 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field EffectEventBg UFImage
 ---@field ImgCommandBg UFImage
----@field ImgCryatal3 UFImage
 ---@field ImgCryatal4 UFImage
 ---@field ImgEventBg UFImage
 ---@field ImgEventIcon UFImage
@@ -31,16 +32,14 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---@field ImgJobBg4 UFImage
 ---@field ImgKill1 UFImage
 ---@field ImgKill2 UFImage
----@field ImgKill3 UFImage
----@field ImgKill4 UFImage
 ---@field PanelCommand UFCanvasPanel
 ---@field PanelEvent UFCanvasPanel
 ---@field PanelKO UFCanvasPanel
 ---@field PanelRoot UFCanvasPanel
 ---@field RichTextContent URichTextBox
+---@field TextCommand UFTextBlock
 ---@field TextName UFTextBlock
 ---@field TextNum UFTextBlock
----@field TextNum4 UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -50,7 +49,6 @@ function PVPColosseumBattleLogItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.EffectEventBg = nil
 	--self.ImgCommandBg = nil
-	--self.ImgCryatal3 = nil
 	--self.ImgCryatal4 = nil
 	--self.ImgEventBg = nil
 	--self.ImgEventIcon = nil
@@ -64,16 +62,14 @@ function PVPColosseumBattleLogItemView:Ctor()
 	--self.ImgJobBg4 = nil
 	--self.ImgKill1 = nil
 	--self.ImgKill2 = nil
-	--self.ImgKill3 = nil
-	--self.ImgKill4 = nil
 	--self.PanelCommand = nil
 	--self.PanelEvent = nil
 	--self.PanelKO = nil
 	--self.PanelRoot = nil
 	--self.RichTextContent = nil
+	--self.TextCommand = nil
 	--self.TextName = nil
 	--self.TextNum = nil
-	--self.TextNum4 = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -97,13 +93,21 @@ function PVPColosseumBattleLogItemView:OnInit()
 		{ "Event_Bg", UIBinderSetBrushFromAssetPath.New(self, self.ImgEventBg) },
 		{ "Event_BgEffect", UIBinderSetIsVisible.New(self, self.EffectEventBg) },
 
+		--[[
 		{ "KO_Name", UIBinderSetText.New(self, self.TextName) },
 		{ "KO_Count", UIBinderSetText.New(self, self.TextNum) },
 		{ "KO_ProfBg1", UIBinderSetBrushFromAssetPath.New(self, self.ImgJobBg1) },
 		{ "KO_ProfBg2", UIBinderSetBrushFromAssetPath.New(self, self.ImgJobBg2) },
 		{ "KO_ProfID1", UIBinderSetProfIconSimple2nd.New(self, self.ImgJob1) },
 		{ "KO_ProfID2", UIBinderSetProfIconSimple2nd.New(self, self.ImgJob2) },
+		--]]
 
+		{ "CO_Tips", UIBinderSetText.New(self, self.TextCommand) },
+		{ "CO_Send_ProfBg", UIBinderSetBrushFromAssetPath.New(self, self.ImgJobBg3) },
+		{ "CO_Send_ProfID", UIBinderSetProfIconSimple2nd.New(self, self.ImgJob3) },
+		{ "CO_TargetCrystal", UIBinderSetIsVisible.New(self, self.ImgCryatal4) },
+		{ "CO_TargetPlayer", UIBinderValueChangedCallback.New(self, nil, self.OnValueChanged_CO_TargetPlayer) },
+		{ "CO_Target_ProfID", UIBinderValueChangedCallback.New(self, nil, self.OnValueChanged_CO_Target_ProfID) },
 		{ "LogID", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedLogID) },
 	}
 end
@@ -149,6 +153,20 @@ function PVPColosseumBattleLogItemView:OnValueChangedLogID(Value)
 		end
 	else
 		self:PlayAnimation(self.AnimOut)
+	end
+end
+
+function PVPColosseumBattleLogItemView:OnValueChanged_CO_TargetPlayer(Value)
+	UIUtil.SetIsVisible(self.ImgJobBg4, Value)
+	UIUtil.SetIsVisible(self.ImgJob4, Value)
+end
+
+function PVPColosseumBattleLogItemView:OnValueChanged_CO_Target_ProfID(ProfID)
+	local BattleLogVM = self.ViewModel ---@type BattleLogVM
+	UIUtil.ImageSetBrushFromAssetPath(self.ImgJobBg4, BattleLogVM.CO_Target_ProfBg)
+	local ProfIcon = RoleInitCfg:FindRoleInitProfIconSimple2nd(ProfID)
+	if not string.isnilorempty(ProfIcon) then
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgJob4, ProfIcon)
 	end
 end
 

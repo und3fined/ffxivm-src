@@ -37,6 +37,9 @@ local PWorldEntDetailVM = _G.PWorldEntDetailVM
 ---@field BtnExplan UFButton
 ---@field BtnJoin CommBtnLView
 ---@field BtnUp UFButton
+---@field CommonBkg02_UIBP CommonBkg02View
+---@field CommonBkgMask_UIBP CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field ImgWarning UFImage
 ---@field PanelLong UFCanvasPanel
 ---@field PanelShort UFCanvasPanel
@@ -52,7 +55,7 @@ local PWorldEntDetailVM = _G.PWorldEntDetailVM
 ---@field TextReward UFTextBlock
 ---@field TextShort UFTextBlock
 ---@field TextTime UFTextBlock
----@field TextTitle UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PWorldCardsMatchPanelView = LuaClass(UIView, true)
 
@@ -63,6 +66,9 @@ function PWorldCardsMatchPanelView:Ctor()
 	--self.BtnExplan = nil
 	--self.BtnJoin = nil
 	--self.BtnUp = nil
+	--self.CommonBkg02_UIBP = nil
+	--self.CommonBkgMask_UIBP = nil
+	--self.CommonTitle = nil
 	--self.ImgWarning = nil
 	--self.PanelLong = nil
 	--self.PanelShort = nil
@@ -78,7 +84,7 @@ function PWorldCardsMatchPanelView:Ctor()
 	--self.TextReward = nil
 	--self.TextShort = nil
 	--self.TextTime = nil
-	--self.TextTitle = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -86,6 +92,9 @@ function PWorldCardsMatchPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnJoin)
+	self:AddSubView(self.CommonBkg02_UIBP)
+	self:AddSubView(self.CommonBkgMask_UIBP)
+	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -118,7 +127,9 @@ function PWorldCardsMatchPanelView:OnDestroy()
 end
 
 function PWorldCardsMatchPanelView:SetLSTR()
-    self.TextTitle:SetText(_G.LSTR(1150026))--("幻卡对局室")
+	self.CommonTitle:SetCommInforBtnIsVisible(false)
+	self.CommonTitle:SetSubTitleIsVisible(false)
+	self.CommonTitle:SetTextTitleName(_G.LSTR(1150026))--("幻卡对局室")
 	self.TextCardsBattle:SetText(_G.LSTR(1150026))--("幻卡对局室")
 	self.TextCardsMatch:SetText(_G.LSTR(1150025))--("幻卡大赛")
 	self.TextLimitTime:SetText(_G.LSTR(1150071))--("限制时间")
@@ -263,7 +274,7 @@ function PWorldCardsMatchPanelView:JoinInner()
 	-- end
 
 	if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.PWorldEnterConfirm) or _G.UIViewMgr:FindVisibleView(_G.UIViewID.PWorldConfirm) ~= nil then
-		_G.MsgTipsUtil.ShowTips(LSTR("进本准备中，无法进行匹配"))
+		_G.MsgTipsUtil.ShowTipsByID(146061)
 		return
 	end
 

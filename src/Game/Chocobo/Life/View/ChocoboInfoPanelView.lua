@@ -45,6 +45,7 @@ local LSTR = _G.LSTR
 ---@field PanelAction UFCanvasPanel
 ---@field PanelTips UFCanvasPanel
 ---@field ProgBarExp UProgressBar
+---@field RedDot CommonRedDotView
 ---@field RichTextExp URichTextBox
 ---@field ScreenBtn UFButton
 ---@field TableViewSkill UTableView
@@ -88,6 +89,7 @@ function ChocoboInfoPanelView:Ctor()
 	--self.PanelAction = nil
 	--self.PanelTips = nil
 	--self.ProgBarExp = nil
+	--self.RedDot = nil
 	--self.RichTextExp = nil
 	--self.ScreenBtn = nil
 	--self.TableViewSkill = nil
@@ -118,6 +120,7 @@ function ChocoboInfoPanelView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CommGesture_UIBP)
 	self:AddSubView(self.FeatherStage)
+	self:AddSubView(self.RedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -145,7 +148,10 @@ function ChocoboInfoPanelView:OnShow()
     self.ToggleButtonSwitch:SetChecked(ChocoboMainVM.IsShowAttrInfo)
     UIUtil.SetIsVisible(self.TableViewSwitchInfo, ChocoboMainVM.IsShowAttrInfo)
     UIUtil.SetIsVisible(self.TableViewSwitchStar, not ChocoboMainVM.IsShowAttrInfo)
-
+    
+    local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title'
+    self.RedDot:SetRedDotNameByString(RedDotName)
+    
     self:ShowChocoboModelActor()
 end
 
@@ -335,7 +341,7 @@ function ChocoboInfoPanelView:OnActiveSkillVMAdapterChange(Index, ItemData, Item
     if ItemData.SkillID == 0 then
         UIViewMgr:ShowView(UIViewID.ChocoboSkillSideWinView, { ChocoboID = ChocoboMainVM.CurRaceEntryID })
     else
-        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView)
+        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView, (self.ViewModel or {}).SkillLevel)
         if self.SkillTipsHandleID then
             UIUtil.SetIsVisible(self.ScreenBtn, true, true)
         end
@@ -347,7 +353,7 @@ function ChocoboInfoPanelView:OnPassiveSkillVMAdapterChange(Index, ItemData, Ite
     if ItemData.SkillID == 0 then
         UIViewMgr:ShowView(UIViewID.ChocoboSkillSideWinView, { ChocoboID = ChocoboMainVM.CurRaceEntryID })
     else
-        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView)
+        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView, (self.ViewModel or {}).SkillLevel)
         if self.SkillTipsHandleID then
             UIUtil.SetIsVisible(self.ScreenBtn, true, true)
         end

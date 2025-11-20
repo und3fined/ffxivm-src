@@ -19,6 +19,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---@class MainLimitedTimeInfoItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnFold UToggleButton
+---@field CommInforBtn CommInforBtnView
 ---@field ImgDown UFImage
 ---@field ImgPlayStyleType UFImage
 ---@field ImgTime UFImage
@@ -43,6 +44,7 @@ local MainLimitedTimeInfoItemView = LuaClass(UIView, true)
 function MainLimitedTimeInfoItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnFold = nil
+	--self.CommInforBtn = nil
 	--self.ImgDown = nil
 	--self.ImgPlayStyleType = nil
 	--self.ImgTime = nil
@@ -66,6 +68,7 @@ end
 
 function MainLimitedTimeInfoItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.CommInforBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

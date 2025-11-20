@@ -191,7 +191,7 @@ function LoginCreateCustomizeVM:DealTypeFunc()
     if SubType == LoginAvatarMgr.CustomizeSubType.Ear or SubType == LoginAvatarMgr.CustomizeSubType.Tail then
         self.bShowShortSwitch = true
     end
-    if self.MainType == LoginAvatarMgr.CustomizeMainMenu.Eye then
+    if self.MainType == LoginAvatarMgr.CustomizeMainMenu.Eye or SubType == LoginAvatarMgr.CustomizeSubType.Stripe then
         self:SelectFacialFeature()
         return
     end
@@ -548,8 +548,13 @@ function LoginCreateCustomizeVM:SelectFacePart()
     local ListSlotVMp = {}
     for Index, Value in ipairs(TypeList) do
         local SlotItemVM = LoginCreateSlotItemVM.New()
-        local FaceBase = LoginAvatarMgr:GetFaceBaseFromName(Value.ModelName)
-        local SlotData = {IsSingSelect = true, bShowBlank = false, DataValue = FaceBase, ImgIcon = Value.IconPath}
+        local FaceBase = nil
+        local SlotData = nil
+        if Value then
+            FaceBase = LoginAvatarMgr:GetFaceBaseFromName(Value.ModelName)
+            SlotData = {IsSingSelect = true, bShowBlank = false, DataValue = FaceBase, ImgIcon = Value.IconPath}
+        end
+
         SlotItemVM:UpdateData(SlotData)
         ListSlotVMp[#ListSlotVMp + 1] = SlotItemVM
         --StateMap[FaceBase] = Index

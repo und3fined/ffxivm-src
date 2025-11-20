@@ -167,7 +167,7 @@ function LinkShellPanelView:OnEventCreateLSSuc()
     UIViewMgr:HideView(UIViewID.LinkShellCreateWin)
 end
 
-function LinkShellPanelView:OnEventLSListRefresh( ItemData )
+function LinkShellPanelView:OnEventLSListRefresh()
 	if LinkShellVM.IsShowJoinedEmptyTips then
 		return
 	end
@@ -182,12 +182,12 @@ function LinkShellPanelView:OnEventLSListRefresh( ItemData )
 		self.DefaultSelLinkShellID = nil
 	end
 
-	if type(ItemData) == "table" then
-		self.TableAdapterList:SetSelectedItem(ItemData)
-
-	else
-		self.TableAdapterList:SetSelectedIndex(1)
+	LinkShellID = LinkShellVM.CurLinkShellID
+	if LinkShellID and self.TableAdapterList:SetSelectedByPredicate(function(Item) return Item.ID == LinkShellID end) then
+		return
 	end
+
+	self.TableAdapterList:SetSelectedIndex(1)
 end
 
 return LinkShellPanelView

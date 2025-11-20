@@ -75,7 +75,7 @@ function MonthCardMainPanelVM:UpdateBaseData()
 	local CfgReward = MonthcardGlobalCfg:FindCfgByKey(ProtoRes.MonthCardGlobalParamType.MonthCardGlobalExtendReward)
 	local CfgVaildTime = MonthcardGlobalCfg:FindCfgByKey(ProtoRes.MonthCardGlobalParamType.MonthCardGlobalValidTime)
 	
-	local VaildDay = CfgVaildTime.Value[1] or 30
+	local VaildDay = CfgVaildTime.Value[1]
 	local AccumulateMaxDay = CfgMaxDay.Value[1]
 	local GainCrystalNum = CfgReward.Value[2]
 	local CrystalID =  CfgReward.Value[1]
@@ -121,7 +121,7 @@ function MonthCardMainPanelVM:UpdateBaseData()
 			TempStr = string.format("%s%s×%s +", TempStr, RichTextUtil.GetTexture(UIUtil.GetIconPath(ItemUtil.GetItemIcon(v.ID)), 40, 40, -10), string.formatint(Num * VaildDay))
 		end
 	end
-	self.TotalTips = string.format(LSTR(840005), TempStr or "",  tostring(VaildDay) or "")
+	self.TotalTips = string.format(LSTR(840005), TempStr, tostring(VaildDay))
 	
 	--  购买立得
 	self.MonthCardAwardNum = string.format("x%s", string.formatint(GainCrystalNum))

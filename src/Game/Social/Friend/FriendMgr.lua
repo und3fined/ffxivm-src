@@ -63,9 +63,9 @@ function FriendMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_EDITGROUP, self.OnNetMsgFriendsEditGroup)          --编辑分组
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_CONSORTLIST, self.OnNetMsgFriendsApplyList)        --获取好友申请列表
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_CONFIRMADD, self.OnNetMsgFriendsConfirmAdd)        --同意/拒绝好友申请
-    self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_FRIENDSETREMARD, self.OnNetMsgSetRemark)           --设置好友备注
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_SAVE_SETTING, self.OnNetMsgSaveSetting)            --拉取好友设置
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_PULL_SETTING, self.OnNetMsgPullSetting)            --拉取好友设置
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_SET_NICKNAME, self.OnNetMsgSetNickname)            --设置好友昵称
 
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_CONSORT_NTF, self.OnConsortNotify)       --收到好友申请的推送
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FRIENDS, SUB_MSG_ID.CS_SUB_CMD_FRIENDS_CONFIRMADD_NTF, self.OnConfirmAddNotify) --确认好友结果通知
@@ -270,13 +270,6 @@ function FriendMgr:OnNetMsgFriendsFind(MsgBody)
     FriendVM:UpdateFindFriendList((MsgBody.Find or {}).RoleIDs or {})
 end
 
---- 设置玩家属性的返回
----@param MsgBody any
-function FriendMgr:OnNetMsgSetRemark(MsgBody)
-    local RemarkRsp = MsgBody.SetFriendRemark
-    FriendVM:UpdateFriendRemark(RemarkRsp.Friend, RemarkRsp.NewRemark)
-end
-
 --- 玩家保存设置
 function FriendMgr:OnNetMsgSaveSetting(MsgBody)
     if nil == MsgBody then
@@ -313,6 +306,19 @@ function FriendMgr:OnNetMsgPullSetting(MsgBody)
             FriendVM:SetRejectFriendRequest(v.Value ~= 0)
         end
     end
+end
+
+--- 设置好友昵称
+function FriendMgr:OnNetMsgSetNickname(MsgBody)
+    local SetNickname = MsgBody.SetNickname
+    if nil == SetNickname then
+        return
+    end
+
+    FriendVM:UpdateFriendNickname(SetNickname.RoleID, SetNickname.Nickname)
+    UIViewMgr:HideView(UIViewID.CommonPopupInput)
+
+    MsgTipsUtil.ShowTips(LSTR(30082)) --"修改成功"
 end
 
 --- 收到好友请求的推送
@@ -652,24 +658,6 @@ function FriendMgr:SendFindFirnds_RoleName(RoleName)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
---- 请求修改好友备注
----@param FriendRoleID any
----@param NewRemark any
-function FriendMgr:SendSetFriendRemark(FriendRoleID, NewRemark)
-    local MsgID = CS_CMD.CS_CMD_FRIENDS
-    local SubMsgID = SUB_MSG_ID.CS_SUB_CMD_FRIENDS_FRIENDSETREMARD
-
-    local MsgBody = {
-        SubCmd = SubMsgID,
-        SetFriendRemark = {
-            Friend = FriendRoleID,
-            NewRemark = NewRemark
-        }
-    }
-
-    GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-end
-
 -- 获取玩家设置(好友)
 function FriendMgr:SendGetSettings()
     local MsgID = CS_CMD.CS_CMD_FRIENDS
@@ -691,6 +679,21 @@ function FriendMgr:SendSetRejectFriendRequest(IsReject)
     local MsgBody = {
         SubCmd = SubMsgID,
         SaveSetting = {settings = { {Typ = FriendSettingType.FriendSettingType_BlockStranger, Value = IsReject and 1 or 0} }}
+    }
+
+    GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+--- 设置好友昵称
+---@param RoleID number @角色ID 
+---@param Nickname string @昵称
+function FriendMgr:SendSetFriendNickname(RoleID, Nickname)
+    local MsgID = CS_CMD.CS_CMD_FRIENDS
+    local SubMsgID = SUB_MSG_ID.CS_SUB_CMD_FRIENDS_SET_NICKNAME
+
+    local MsgBody = {
+        SubCmd = SubMsgID,
+        SetNickname = { RoleID = RoleID, Nickname = Nickname }
     }
 
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
@@ -869,7 +872,7 @@ function FriendMgr:AddBlackList( RoleID, RoleName, SureCallBack)
 
     --'是否将<span color="#6fb1e9ff">%s</>加入黑名单？加入后玩家的聊天信息将会不可见，此外组队信息、部队邀请等各项功能将受到限制'
     local Content = string.format(LSTR(30030), RoleName or "")
-    MsgBoxUtil.ShowMsgBoxTwoOp(
+    MsgBoxUtil.ShowMsgBoxMTwoOp(
         nil, 
         LSTR(10004), --"提 示"
         Content,
@@ -944,6 +947,42 @@ function FriendMgr:IsRejectFriendRequest()
     return FriendVM.RejectFriendRequest
 end
 
+--- 获取好友昵称
+---@param RoleID number @角色ID
+--- @return string @好友昵称
+function FriendMgr:GetFriendNickname(RoleID)
+    local EntryVM = FriendVM:GetFriendEntryVM(RoleID)
+    if EntryVM then
+        return EntryVM.Nickname
+    end
+end
+
+--- 设置好友昵称
+---@param RoleID number @角色ID
+function FriendMgr:SetFriendNickname(RoleID)
+    if nil == RoleID then
+        return
+    end
+
+    local Params = {
+        Title = LSTR(30078), --"好友昵称备注"
+        Desc = LSTR(30079), --"昵称备注"
+        HintText = LSTR(30080), --"请输入备注昵称"
+        MaxTextLength = FriendsDefineCfg:GetMaxLengthNickname(),
+        IsNoHideByClickSureBtn = true,
+        SureCallback = function(Text)
+            if string.isnilorempty(Text) then
+                MsgTipsUtil.ShowTips(LSTR(30081)) --"请先输入备注昵称"
+                return
+            end
+
+            self:SendSetFriendNickname(RoleID, Text)
+        end
+    }
+
+    UIViewMgr:ShowView(UIViewID.CommonPopupInput, Params)
+end
+
 -------------------------------------------------------------------------------------------------------
 ---主界面侧标拦（好友申请）
 
@@ -976,8 +1015,7 @@ function FriendMgr:OpenFriendRequestSidebar(StartTime, CountDown, Type)
 
     local Params = {
         Title       = LSTR(30033), --"好友邀请"
-        Desc1       = string.format('%s<span color="#8FBDD5FF">%s</>', LSTR(10005), Info.Name or ""), --"玩家"
-        Desc2       = LSTR(30034), --"请求添加你为好友"
+        Desc1       = string.format('%s<span color="#6FB1E9FF">%s</>%s', LSTR(10005), Info.Name or "", LSTR(30034)), --"玩家"、"请求添加你为好友"
         StartTime   = StartTime,
         CountDown   = CountDown,
         CBFuncLeft  = RefuseCallBack,
@@ -988,7 +1026,7 @@ function FriendMgr:OpenFriendRequestSidebar(StartTime, CountDown, Type)
         TransData = Info.RoleID,
     }
 
-    _G.UIViewMgr:ShowView(_G.UIViewID.SidebarCommon, Params)
+    SidebarMgr:ShowCommonSidebarWin(Params)
 end
 
 -------------------------------------------------------------------------------------------------------

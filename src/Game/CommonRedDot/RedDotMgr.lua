@@ -7,6 +7,8 @@ local ReddotCfg = require("TableCfg/ReddotCfg")
 local ReddotNameCfg = require("TableCfg/ReddotNameCfg")
 local SaveKey = require("Define/SaveKey")
 local RedDotDefine = require("Game/CommonRedDot/RedDotDefine")
+local UIUtil = require("Utils/UIUtil")
+local CommonBorderRedDotPanelVM
 
 local USaveMgr
 
@@ -26,7 +28,10 @@ function RedDotMgr:OnInit()
     USaveMgr = _G.UE.USaveMgr
     self.SaveDelNodeNameList = nil
     self.DetryDirtyNodeNameList = {}
+    self.DetryDirtyListKeyList = {}
     self.ItemVMMap = {}
+    ---用于检索更新边界红点
+    self.ListRedDotKeysMap = {}
     self:ReadSaveKeyData()
     self:InitRedDotTree()
 end
@@ -37,7 +42,7 @@ function RedDotMgr:InitRedDotTree()
         RedDotName = "Root",
         IsClientNode = false,
         IsLeafNode = false,
-        NodeValue = 0,
+        NodeValue = 0, --子节点数量，用于控制显隐
         SubRedDotList = {},
     }
     local Cfg = ReddotCfg:FindAllCfg()
@@ -216,7 +221,7 @@ function RedDotMgr:AddSubNode(InsertParentNode, RedDotName, NodeValue, IsClientN
             IsLeafNode = false,
             IsClientNode = false,
             NodeValue = 0,
-            TotalNum = 0,
+            TotalNum = 0, --数字红点显示值，为子节点显示值总和
         }
         if nil == ParentNode.SubRedDotList then
             _G.FLOG_WARNING("RedDotMgr 尝试向叶子节点插入")
@@ -255,8 +260,13 @@ end
 --- @param RedDotID number 节点ID
 --- @param NodeValue number 节点值
 --- @param IsClientNode boolean 是否是客户端保存节点
-function RedDotMgr:AddRedDotByID(RedDotID, NodeValue, IsClientNode)
+function RedDotMgr:AddRedDotByID(RedDotID, NodeValue, IsClientNode, CheckID)
     local RedDotName = self:GetRedDotNameByID(RedDotID)
+    ---CheckID检查，非本系统调用提示/暂时只检查ID,自己组装的没办法获取CheckID，且组装路径存在误调用概率要小一些
+    local CfgCheckID =  self:GetRedDotCheckIDByID(RedDotID)
+    if CfgCheckID ~= 0 and CfgCheckID ~= nil and CheckID ~= CfgCheckID then
+        _G.FLOG_WARNING(string.format("红点跨系统调用 调用CheckID为 %s 配置CheckID为 %s \n %s", tostring(CheckID), tostring(CfgCheckID), debug.traceback()))
+    end
     self:AddRedDotByName(RedDotName, NodeValue, IsClientNode)
 end
 
@@ -265,8 +275,13 @@ end
 --- @param ParentRedDotID number 父节点ID
 --- @param NodeValue number 节点值
 --- @param IsClientNode boolean 是否是客户端保存节点
-function RedDotMgr:AddRedDotByParentRedDotID(ParentRedDotID, NodeValue, IsClientNode)
+function RedDotMgr:AddRedDotByParentRedDotID(ParentRedDotID, NodeValue, IsClientNode, CheckID)
     local RedDotName = self:GetRedDotNameByID(ParentRedDotID)
+    ---CheckID检查，非本系统调用提示/暂时只检查ID,自己组装的没办法获取CheckID，且组装路径存在误调用概率要小一些
+    local CfgCheckID =  self:GetRedDotCheckIDByID(ParentRedDotID)
+    if CfgCheckID ~= 0 and CfgCheckID ~= nil and CheckID ~= CfgCheckID then
+        _G.FLOG_WARNING(string.format("红点跨系统调用 调用CheckID为 %s 配置CheckID为 %s \n %s", tostring(CheckID), tostring(CfgCheckID), debug.traceback()))
+    end
     return self:AddRedDotByParentRedDotName(RedDotName, NodeValue, IsClientNode)
 end
 
@@ -359,8 +374,13 @@ end
 
 --- 叶子节点不会因为值被清空而被移除，需要手动移除
 ---@param RedDotID number 节点名
-function RedDotMgr:DelRedDotByID(RedDotID)
+function RedDotMgr:DelRedDotByID(RedDotID, CheckID)
     local RedDotName = self:GetRedDotNameByID(RedDotID)
+        ---CheckID检查，非本系统调用提示/暂时只检查ID,自己组装的没办法获取CheckID，且组装路径存在误调用概率要小一些
+        local CfgCheckID =  self:GetRedDotCheckIDByID(RedDotID)
+        if CfgCheckID ~= 0 and CfgCheckID ~= nil and CheckID ~= CfgCheckID then
+            _G.FLOG_WARNING(string.format("红点跨系统调用 调用CheckID为 %s 配置CheckID为 %s \n %s", tostring(CheckID), tostring(CfgCheckID), debug.traceback()))
+        end
     return self:DelRedDotByName(RedDotName)
 end
 
@@ -541,7 +561,7 @@ end
 --- 获取节点值
 function RedDotMgr:GetNodeValueByID(RedDotID)
     local RedDotName = self:GetRedDotNameByID(RedDotID)
-    self:GetNodeValueByName(RedDotName)
+    return self:GetNodeValueByName(RedDotName)
 end
 
 --- 获取节点父节点
@@ -555,6 +575,14 @@ function RedDotMgr:GetRedDotNameByID(RedDotID)
     local RedDotCfg = ReddotNameCfg:FindCfgByKey(RedDotID)
     if RedDotCfg then
         return RedDotCfg.RedDotName
+    end
+end
+
+--- 通过ID获取节点CheckID,查表获取
+function RedDotMgr:GetRedDotCheckIDByID(RedDotID)
+    local RedDotCfg = ReddotNameCfg:FindCfgByKey(RedDotID)
+    if RedDotCfg then
+        return RedDotCfg.CheckID
     end
 end
 
@@ -578,12 +606,34 @@ function RedDotMgr:GetRedDotNameByParentID(ParentRedDotID, SubName)
     return Ret
 end
 
+--- 获取父节点名
+function RedDotMgr:GetParentRedDotNameByName(RedDotName)
+    local ParentRedDotName = ""
+    if RedDotName then
+        local SubNamelist =  string.split(RedDotName, "/")
+        local Length = #SubNamelist
+        ParentRedDotName = SubNamelist[1]
+        if Length >= 3 then
+            for i = 2, Length - 1 do
+                ParentRedDotName = string.format("%s/%s",ParentRedDotName, SubNamelist[i])
+            end
+        end
+    end
+    return ParentRedDotName
+end
+
 ---------------------------------------- 查end ----------------------------------------
 
 ---------------------------------------- 更新start ----------------------------------------
 --- 设置脏节点，一帧内统一刷新，防止频繁刷新的性能问题
 function RedDotMgr:SetDirtyNode(RedDotNode)
-    --local IsExist = true
+    local ListKeys = self.ListRedDotKeysMap[RedDotNode.RedDotName]
+    if ListKeys and #ListKeys > 0 then
+        ---添加一下需要更新的列表红点/todo 可能存在不在父节点下面，但是在列表里的，需要处理
+        for _, ListKey in ipairs(ListKeys) do
+            self:SetDirtyListKey(ListKey)
+        end
+    end
     for _, SubName in pairs(self.DetryDirtyNodeNameList) do
         if RedDotNode.RedDotName == SubName then
             return
@@ -595,24 +645,24 @@ function RedDotMgr:SetDirtyNode(RedDotNode)
 end
 
 ---延迟一帧发送事件，一帧内不再执行
-function RedDotMgr:SendRedUpdateEvent()
-    if not self.IsUpdateNextFrame then
-        if self.UpdateNextTimer then
-            self:UnRegisterTimer(self.UpdateNextTimer)
-        end
-        self.IsUpdateNextFrame = true
-        self.UpdateNextTimer = self:RegisterTimer(function ()
-             --- 考虑到事件发送有延迟，保护处理
-            local EventParams = {}
-            for _, SubName in pairs(self.DetryDirtyNodeNameList) do
-                table.insert(EventParams, SubName)
-            end
-            self.DetryDirtyNodeNameList = {}
-            EventMgr:SendEvent(EventID.RedDotUpdate, EventParams)
-            self.IsUpdateNextFrame = false
-        end, 0.02)
-    end
-end
+-- function RedDotMgr:SendRedUpdateEvent()
+--     if not self.IsUpdateNextFrame then
+--         if self.UpdateNextTimer then
+--             self:UnRegisterTimer(self.UpdateNextTimer)
+--         end
+--         self.IsUpdateNextFrame = true
+--         self.UpdateNextTimer = self:RegisterTimer(function ()
+--              --- 考虑到事件发送有延迟，保护处理
+--             local EventParams = {}
+--             for _, SubName in pairs(self.DetryDirtyNodeNameList) do
+--                 table.insert(EventParams, SubName)
+--             end
+--             self.DetryDirtyNodeNameList = {}
+--             EventMgr:SendEvent(EventID.RedDotUpdate, EventParams)
+--             self.IsUpdateNextFrame = false
+--         end, 0.02)
+--     end
+-- end
 
 ---延迟一帧更新数据，一帧内不再执行
 function RedDotMgr:RedDotDataUpdate()
@@ -672,7 +722,7 @@ function RedDotMgr:PrintAllSubRedDot(RedDotNode)
     local SubNodeList = RedDotNode.SubRedDotList
     if SubNodeList and #SubNodeList > 0 then
         for _, SubNode in pairs(SubNodeList) do
-            print("AllRedDotPrint:"..SubNode.RedDotName)
+            print(string.format("AllRedDotPrint:%s NodeValue:%s TotalNum:%s", SubNode.RedDotName, tostring(SubNode.NodeValue), tostring(SubNode.TotalNum)))
             self:PrintAllSubRedDot(SubNode)
         end
     end
@@ -839,4 +889,440 @@ function RedDotMgr:UpdateItemVMData(DetryDirtyNodeNameList)
 
 end
 ----------------------------------------ItemVM数据更新end --------------------------------------
+----------------------------------------列表红点 start --------------------------------------
+----------------------------------------Add/Create start --------------------------------------
+-- ---动态创建对应列表的所有边界红点
+-- function RedDotMgr:CreateAllListReddotByListKey(ListKey, View, Panel, TriggerWidget, ShowType, Offset)
+--     local ListReddots = {}
+--     local ListRedDotShowType = RedDotDefine.ListRedDotPosMap[ShowType]
+--     for _, PosType in pairs(ListRedDotShowType) do
+--         local BorderRedDotView = self:CreateListReddotByListKey(ListKey, View, Panel, TriggerWidget, PosType, Offset)
+--         ListReddots[PosType] = BorderRedDotView
+--     end
+--     return ListReddots
+-- end
+
+-- ---动态创建列表红点
+-- function RedDotMgr:CreateListReddotByListKey(ListKey, View, Panel, TriggerWidget, PosType, Offset)
+--     ---显示处理
+--     local PanelWidget = Panel
+--     local BorderRedDotPath = RedDotDefine.BorderRedDotPath
+--     local BorderRedDotView = _G.UIViewMgr:CreateViewByName(BorderRedDotPath, nil, View, true, true)
+--     PanelWidget:AddChildToCanvas(BorderRedDotView)
+--     UIUtil.CanvasSlotSetSize(BorderRedDotView, _G.UE.FVector2D(0, 0))
+--     --BorderRedDotView:SetPos(TriggerWidget, Offset, PosType)
+--     self:RegisterTimer(function() 
+--         BorderRedDotView:SetPos(TriggerWidget, Offset, PosType)
+--     end, 0, 1, 1)
+--     BorderRedDotView:SetListKey(ListKey)
+--     --UIUtil.CanvasSlotSetZOrder(BorderRedDotView, 1)
+--     return BorderRedDotView
+-- end
+
+---在红点节点上添加列表ID并返回，用于初始化数据
+function RedDotMgr:AddNewListKeyByID(ParentNodeID, ShowType)
+    local Name = self:GetRedDotNameByID(ParentNodeID)
+    if Name then
+        return self:AddNewListKeyByName(Name, ShowType)
+    end
+end
+
+---在红点节点上添加列表ID并返回，用于初始化数据
+function RedDotMgr:AddNewListKeyByName(ParentNodeName, ShowType)
+    if ParentNodeName then
+        local Type = ShowType or RedDotDefine.ListRedDotStyleType.TopAndBottom
+        local ListKey = self:GetNewListKeyByName(ParentNodeName)
+        self:AddListKeyToMapByName(ParentNodeName, ListKey)
+        self:AddListRedDotBaseDataByKey(ListKey, RedDotDefine.ListRedDotPosMap[Type], ParentNodeName)
+        return ListKey
+    end
+end
+
+---存储红点的列表位置数据
+function RedDotMgr:AddListRedDotIndexData(ListKey, RedDotName, Pos)
+    self:CheckandCreateListDataByListKey(ListKey)
+    if self.ListRedDotDataMap[ListKey].PosData == nil then
+        self.ListRedDotDataMap[ListKey].PosData = {}
+    end
+    self.ListRedDotDataMap[ListKey].PosData[RedDotName] = Pos
+    self:CheckIshaveNoSubNodeAndAddListKey(ListKey, RedDotName)
+end
+
+---批量存储红点的列表位置数据
+---@param PosData table {RedDotName = Pos}
+function RedDotMgr:AddBatchListRedDotIndexData(ListKey, PosData)
+    self:CheckandCreateListDataByListKey(ListKey)
+    self.ListRedDotDataMap[ListKey].PosData = PosData
+    self:BatchCheckIshaveNoSubNodeAndAddListKey(ListKey)
+end
+
+---存储列表红点类型
+function RedDotMgr:AddListRedDotTypeByKey(ListKey, Type)
+    self:CheckandCreateListDataByListKey(ListKey)
+    self.ListRedDotDataMap[ListKey].ListRedDotType = Type
+end
+
+---存储列表红点偏移
+function RedDotMgr:AddListRedDotOffsetByKey(ListKey, Offset)
+    self:CheckandCreateListDataByListKey(ListKey)
+    self.ListRedDotDataMap[ListKey].Offset = Offset
+end
+
+---存储列表红点基础数据
+function RedDotMgr:AddListRedDotBaseDataByKey(ListKey, Type, ParentNodeName)
+    self:CheckandCreateListDataByListKey(ListKey)
+    self.ListRedDotDataMap[ListKey].ListRedDotType = Type
+    self.ListRedDotDataMap[ListKey].ParentNodeName = ParentNodeName
+end
+
+---存储列表红点全量数据
+function RedDotMgr:AddListRedDotAllDataByKey(ListKey, Type, ParentNodeName, Offset, PosData)
+    self:CheckandCreateListDataByListKey(ListKey)
+    self.ListRedDotDataMap[ListKey].ListRedDotType = Type
+    self.ListRedDotDataMap[ListKey].ParentNodeName = ParentNodeName
+    self.ListRedDotDataMap[ListKey].Offset = Offset
+    self.ListRedDotDataMap[ListKey].PosData = PosData
+    self:BatchCheckIshaveNoSubNodeAndAddListKey(ListKey)
+end
+
+---在列表红点更新map上添加列表红点Key，用于更新
+function RedDotMgr:AddListKeyToMapByName(NodeName, ListKey)
+    if self.ListRedDotKeysMap == nil then
+        self.ListRedDotKeysMap = {}
+    end
+    if self.ListRedDotKeysMap[NodeName] == nil then
+        self.ListRedDotKeysMap[NodeName] = {}
+    end
+    local Ishave = table.find_by_predicate(self.ListRedDotKeysMap[NodeName], function(A)
+        return A == ListKey
+    end)
+    if not Ishave then
+        table.insert(self.ListRedDotKeysMap[NodeName], ListKey)
+    end
+end
+
+-- ---添加触发的列表view,使用记得判断是否有效
+-- function RedDotMgr:AddListRedDotTriggerViewByKey(ListKey, TriggerView,  TriggerWidget)
+--     self:CheckandCreateListDataByListKey(ListKey)
+--     if TriggerView and TriggerView.Object:IsValid() then
+--         self.ListRedDotDataMap[ListKey].TriggerView = TriggerView
+--         self.ListRedDotDataMap[ListKey].TriggerWidget = TriggerWidget
+--     end
+-- end
+
+---检查对应列表红点数据，没有就创建空表
+function RedDotMgr:CheckandCreateListDataByListKey(ListKey)
+    if self.ListRedDotDataMap == nil then
+        self.ListRedDotDataMap = {}
+    end
+    if self.ListRedDotDataMap[ListKey] == nil then
+        self.ListRedDotDataMap[ListKey] = {}
+    end
+end
+
+---批量检查对应列表红点数据，如果有非当前父节点的列表子红点，添加进更新表
+function RedDotMgr:BatchCheckIshaveNoSubNodeAndAddListKey(ListKey)
+    if self.ListRedDotDataMap == nil then
+        self.ListRedDotDataMap = {}
+    end
+    if self.ListRedDotDataMap[ListKey] == nil then
+        self.ListRedDotDataMap[ListKey] = {}
+    end
+    if self.ListRedDotDataMap[ListKey].PosData then
+        for Name, _ in pairs(self.ListRedDotDataMap[ListKey].PosData) do
+            self:CheckIshaveNoSubNodeAndAddListKey(ListKey, Name)
+        end
+    end
+end
+
+--检查是否是非当前父节点的列表子红点，如果是，添加进更新表
+function RedDotMgr:CheckIshaveNoSubNodeAndAddListKey(ListKey, RedDotName)
+    local ParentNodeName = self.ListRedDotDataMap[ListKey].ParentNodeName
+    if ParentNodeName then
+        local IsCurSubNode = self:GetParentRedDotNameByName(RedDotName) == ParentNodeName
+        if IsCurSubNode then
+            self:AddListKeyToMapByName(RedDotName, ListKey)
+        end
+    end
+end
+
+----------------------------------------Add/Create end --------------------------------------
+----------------------------------------Del/Remove start --------------------------------------
+
+---清理对应列表位置数据
+function RedDotMgr:ClearListIndexData(ListKey)
+    if self.ListRedDotDataMap == nil then
+        return
+    end
+    self.ListRedDotDataMap[ListKey] = nil
+end
+
+---在列表红点key表上删除列表ID/低频操作，目前想不到会有红点突然不是列表父红点了
+function RedDotMgr:DelListKeyToNode(ParentNode, ListKey)
+    if self.ListRedDotKeysMap == nil then
+        return
+    end
+    if self.ListRedDotKeysMap[ParentNode.RedDotName] == nil then
+        return
+    end
+    local Ishave, Index = table.find_by_predicate(self.ListRedDotKeysMap[ParentNode.RedDotName], function(A)
+        return A == ListKey
+    end)
+    if Ishave then
+        table.remove(self.ListRedDotKeysMap[ParentNode.RedDotName], Index)
+    end
+end
+
+----------------------------------------Del/Remove end--------------------------------------
+-------------------------------------Find/Get start --------------------------------------
+---获取一个新的listid，并创建空表
+function RedDotMgr:GetNewListKeyByName(Name)
+    if self.ListRedDotDataMap == nil then
+        self.ListRedDotDataMap = {}
+        self.ListRedDotDataMap[Name] = {}
+        return Name
+    end
+    if self.ListRedDotDataMap[Name] == nil then
+        self.ListRedDotDataMap[Name] = {}
+        return Name
+    else
+        return self:GetNewListIDByOldKey(Name, 1)
+    end
+end
+
+---获取一个新的listid
+function RedDotMgr:GetNewListIDByOldKey(OldKey, Count)
+    local Key = string.format("%s%s", OldKey, tostring(Count))
+    if self.ListRedDotDataMap[Key] == nil then
+        self.ListRedDotDataMap[Key] = {}
+        return Key
+    else
+        return self:GetNewListIDByOldKey(Key, Count + 1)
+    end
+end
+
+---获取对应列表红点数据
+function RedDotMgr:GetListRedDotDataByListKey(ListKey)
+    if self.ListRedDotDataMap == nil then
+        return nil
+    end
+    if self.ListRedDotDataMap[ListKey] == nil then
+        return nil
+    else
+        return self.ListRedDotDataMap[ListKey]
+    end
+end
+
+-------------------------------------Find/Get end --------------------------------------
+-------------------------------------Updata Start --------------------------------------
+--- 设置脏节点，一帧内统一刷新，防止频繁刷新的性能问题/考虑到滑动时，更新操作可能频繁，后续有性能问题考虑延长更新间隔
+function RedDotMgr:SetDirtyListKey(ListKey)
+    for _, DirtyListKey in pairs(self.DetryDirtyListKeyList) do
+        if ListKey == DirtyListKey then
+            return
+        end
+    end
+    table.insert(self.DetryDirtyListKeyList, ListKey)
+    self:ListRedDotDataUpdate()
+end
+
+---延迟一帧发送事件，一帧内不再执行
+function RedDotMgr:ListRedDotDataUpdate()
+    if not self.IsUpdateListRedDotDNextFrame then
+        if self.UpdateListRedDotNextTimer then
+            self:UnRegisterTimer(self.UpdateListRedDotNextTimer)
+        end
+        self.IsUpdateListRedDotDNextFrame = true
+        self.UpdateListRedDotextTimer = self:RegisterTimer(function ()
+            self:UpdateListRedDotData(self.DetryDirtyListKeyList)
+            self.DetryDirtyListKeyList = {}
+            self.IsUpdateListRedDotDNextFrame = false
+        end, 0.02)
+    end
+end
+
+function RedDotMgr:UpdataListRedDotByListKey(ListKey)
+    local MiniShowIndex
+    local MiniHideIndex
+    local MaxShowIndex
+    local MaxHideIndex
+    if self.ListRedDotDataMap and self.ListRedDotDataMap[ListKey] and self.ListRedDotDataMap[ListKey].PosData then
+        local PosData = self.ListRedDotDataMap[ListKey].PosData
+        local ParentNodeName = self.ListRedDotDataMap[ListKey].ParentNodeName
+        local ParentNode = self:FindRedDotNodeByName(ParentNodeName)
+        local SubNodeList
+        ---可能存在列表中的红点的父节点不是同一个的情况，不能用父节点做显隐判断
+        if ParentNode then
+            SubNodeList = ParentNode.SubRedDotList
+        end
+        for Name, Pos in pairs(PosData) do
+            local ItemVMArray = self.ItemVMMap[Name]
+            local IsShow = false
+            if ItemVMArray then
+                for _, ReddotItemVM in ipairs(ItemVMArray) do
+                    local ItemVMListKey = ReddotItemVM:GetListKey()
+                    if ItemVMListKey == ListKey then
+                        ---列表中可能存在无红点名的红点view，不能依靠itemvm遍历来确定显示区域
+                        IsShow = true
+                        break
+                    end
+                end
+            end
+            ---未显示节点，判断红点是否是激活但是被隐藏
+            if not IsShow then
+                ---是子节点用子节点列表查，特殊情况直接去红点树查
+                local IsCurSubNode = self:GetParentRedDotNameByName(Name) == ParentNodeName
+                local SubNode
+                if IsCurSubNode and SubNodeList then
+                    SubNode = table.find_by_predicate(SubNodeList, function(Node)
+                        return Node.RedDotName == Name
+                    end)
+                else
+                    SubNode = self:FindRedDotNodeByName(Name)
+                end
+                if SubNode then
+                    --table.insert()
+                    ---遍历出最小未显示激活红点
+                    if MiniHideIndex then
+                        MiniHideIndex = MiniHideIndex < Pos and MiniHideIndex or Pos
+                    else
+                        MiniHideIndex = Pos
+                    end
+                    ---遍历出最大未显示激活红点
+                    if MaxHideIndex then
+                        MaxHideIndex = MaxHideIndex > Pos and MaxHideIndex or Pos
+                    else
+                        MaxHideIndex = Pos
+                    end
+                end
+            end
+        end
+        ---存在被隐藏的激活红点
+        if MaxHideIndex or MiniHideIndex then
+            MiniShowIndex = self.ListRedDotDataMap[ListKey].MiniShowIndex
+            MaxShowIndex = self.ListRedDotDataMap[ListKey].MaxShowIndex
+            if not MiniShowIndex or not MaxShowIndex then
+                return
+            end
+            ---判断显示情况
+            if MaxHideIndex < MiniShowIndex then
+                ---只显示小于侧编辑红点 Top/Left
+                self.ListRedDotDataMap[ListKey].MiniShow = true
+                self.ListRedDotDataMap[ListKey].MaxShow = false
+            elseif MiniHideIndex > MaxShowIndex then
+                ---只显示大于侧编辑红点 Bottom/Right
+                self.ListRedDotDataMap[ListKey].MiniShow = false
+                self.ListRedDotDataMap[ListKey].MaxShow = true
+            else
+                ---两侧都有
+                self.ListRedDotDataMap[ListKey].MiniShow = true
+                self.ListRedDotDataMap[ListKey].MaxShow = true
+            end
+    
+        else
+            self.ListRedDotDataMap[ListKey].MiniShow = false
+            self.ListRedDotDataMap[ListKey].MaxShow = false
+
+        end
+        if self.BorderRedDotViewMap and self.BorderRedDotViewMap[ListKey] then
+            for _, View in pairs(self.BorderRedDotViewMap[ListKey]) do
+                if View.Object:IsValid() then
+                    View:UpdataIsShowByListKey(ListKey)
+                end
+            end
+        end
+    end
+end
+
+function RedDotMgr:UpdateListRedDotData(DetryDirtyListKeyList)
+    for _, ListKey in ipairs(DetryDirtyListKeyList) do
+        self:UpdataListRedDotByListKey(ListKey)
+    end
+end
+
+----更新列表的显示范围 --todo 优化 一帧执行一次/需要保证在列表红点更新前
+function RedDotMgr:UpdateShowIndexByOnShow(ListKey, Index)
+    self:CheckandCreateListDataByListKey(ListKey)
+    if self.ListRedDotDataMap[ListKey].ShowIndexList == nil then
+        self.ListRedDotDataMap[ListKey].ShowIndexList = {}
+    end
+    local IsHave = self.ListRedDotDataMap[ListKey].ShowIndexList[Index]
+    self.ListRedDotDataMap[ListKey].ShowIndexList[Index] = true
+    if not IsHave then
+        local MiniShowIndex =  self.ListRedDotDataMap[ListKey].MiniShowIndex
+        if  MiniShowIndex then
+            self.ListRedDotDataMap[ListKey].MiniShowIndex = MiniShowIndex < Index and MiniShowIndex or Index
+        else
+            self.ListRedDotDataMap[ListKey].MiniShowIndex = Index
+        end
+        local MaxShowIndex =  self.ListRedDotDataMap[ListKey].MaxShowIndex
+        if  MaxShowIndex then
+            self.ListRedDotDataMap[ListKey].MaxShowIndex = MaxShowIndex > Index and MaxShowIndex or Index
+        else
+            self.ListRedDotDataMap[ListKey].MaxShowIndex = Index
+        end
+    end
+end
+
+----更新列表的显示范围 --todo 优化 一帧执行一次/需要保证在列表红点更新前
+function RedDotMgr:UpdateShowIndexByOnHide(ListKey, Index)
+    self:CheckandCreateListDataByListKey(ListKey)
+    if self.ListRedDotDataMap[ListKey].ShowIndexList == nil then
+        self.ListRedDotDataMap[ListKey].ShowIndexList = {}
+        self.ListRedDotDataMap[ListKey].MiniShowIndex = nil
+        self.ListRedDotDataMap[ListKey].MaxShowIndex = nil
+        return
+    end
+    local IsHave = self.ListRedDotDataMap[ListKey].ShowIndexList[Index]
+    self.ListRedDotDataMap[ListKey].ShowIndexList[Index] = false
+    if IsHave then
+        local MiniShowIndex =  self.ListRedDotDataMap[ListKey].MiniShowIndex
+        local MaxShowIndex =  self.ListRedDotDataMap[ListKey].MaxShowIndex
+        if  MiniShowIndex and MiniShowIndex <= Index and MaxShowIndex and Index <= MaxShowIndex then
+            ---如果hide的是在显示范围内的item，做一次显示范围的更新
+            MiniShowIndex = nil
+            MaxShowIndex = nil
+            for ShowIndex, IsShow in pairs( self.ListRedDotDataMap[ListKey].ShowIndexList) do
+                if IsShow then
+                    if  MiniShowIndex then
+                        MiniShowIndex = MiniShowIndex < ShowIndex and MiniShowIndex or ShowIndex
+                    else
+                        MiniShowIndex = ShowIndex
+                    end
+                    if  MaxShowIndex then
+                        MaxShowIndex = MaxShowIndex > ShowIndex and MaxShowIndex or ShowIndex
+                    else
+                        MaxShowIndex = ShowIndex
+                    end
+                end
+            end
+            self.ListRedDotDataMap[ListKey].MiniShowIndex = MiniShowIndex
+            self.ListRedDotDataMap[ListKey].MaxShowIndex = MaxShowIndex
+        end
+    end
+end
+
+function RedDotMgr:CollectBorderRedDotViewByShow(View)
+    if self.BorderRedDotViewMap == nil then
+        self.BorderRedDotViewMap = {}
+    end
+    local ListKey = View.ListKey
+    local Type = View.Type
+    if ListKey and View.Object:IsValid() and Type then
+        if self.BorderRedDotViewMap[ListKey] == nil then
+            self.BorderRedDotViewMap[ListKey] = {}
+        end
+        self.BorderRedDotViewMap[ListKey][Type] = View
+    end
+end
+
+function RedDotMgr:RemoveBorderRedDotViewByHide(ListKey)
+    if self.BorderRedDotViewMap == nil then
+        return
+    end
+    self.BorderRedDotViewMap[ListKey] = nil
+end
+-------------------------------------Updata End ----------------------------------------
+
+----------------------------------------列表红点 end --------------------------------------
 return RedDotMgr

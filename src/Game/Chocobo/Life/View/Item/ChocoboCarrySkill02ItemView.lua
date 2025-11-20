@@ -54,7 +54,10 @@ function ChocoboCarrySkill02ItemView:OnShow()
 end
 
 function ChocoboCarrySkill02ItemView:OnHide()
-
+    if self.SkillTipsHandle then
+        _G.SkillTipsMgr:HideTipsByHandleID(self.SkillTipsHandle)
+        self.SkillTipsHandle = nil
+    end
 end
 
 function ChocoboCarrySkill02ItemView:OnRegisterUIEvent()
@@ -118,56 +121,6 @@ function ChocoboCarrySkill02ItemView:OnLongClickReleased()
         _G.SkillTipsMgr:HideTipsByHandleID(self.SkillTipsHandle)
         self.SkillTipsHandle = nil
     end
-end
-
-function ChocoboCarrySkill02ItemView:StartLongClickTimer()
-    local LongClickTimerID = rawget(self, "LongClickTimerID")
-    if LongClickTimerID then
-        self:UnRegisterTimer(LongClickTimerID)
-    end
-
-    self.StartLongClickTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
-    LongClickTimerID = self:RegisterTimer(self.OnLongClick, SkillCommonDefine.SkillTipsClickTime, 1, 1)
-    rawset(self, "LongClickTimerID", LongClickTimerID)
-end
-
-function ChocoboCarrySkill02ItemView:StopLongClickTimer()
-    local LongClickTimerID = rawget(self, "LongClickTimerID")
-    if LongClickTimerID then
-        self:OnLongClickReleased()
-        self:UnRegisterTimer(LongClickTimerID)
-        rawset(self, "LongClickTimerID", nil)
-    end
-end
-
-function ChocoboCarrySkill02ItemView:OnPressed()
-    if not self.SkillVM then
-        return
-    end
-
-    local SkillID = self.SkillVM.SkillID
-    if SkillID <= 0 then
-        return
-    end
-
-    if self.SkillVM.bAllowLongClickTips then
-        self:StartLongClickTimer()
-    end
-end
-
-function ChocoboCarrySkill02ItemView:OnReleased()
-    if rawget(self, "LongClickTimerID") then
-        local CurTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
-        if CurTime - self.StartLongClickTime > SkillCommonDefine.SkillTipsClickTime * 1000 then
-            self:StopLongClickTimer()
-            self:OnLongClickReleased()
-            return
-        else
-            self:StopLongClickTimer()
-        end
-    end
-
-    self:OnClickButtonItem()
 end
 
 function ChocoboCarrySkill02ItemView:OnClicked()

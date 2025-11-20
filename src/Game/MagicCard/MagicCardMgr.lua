@@ -10,6 +10,7 @@ local EventID = require("Define/EventID")
 local GameRuleService = require("Game/MagicCard/Module/GameRuleService")
 local ActorAnimService = require("Game/MagicCard/Module/ActorAnimService")
 local MagicCardLocalDef = require("Game/MagicCard/MagicCardLocalDef")
+local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local PWorldMgr = require("Game/PWorld/PWorldMgr")
 local ActorUtil = require("Utils/ActorUtil")
 local AudioUtil = require("Utils/AudioUtil")
@@ -23,6 +24,7 @@ local CardCfg = require("TableCfg/FantasyCardCfg")
 local Json = require("Core/Json")
 local SettingsMgr = require("Game/Settings/SettingsMgr")
 local EffectUtil = require("Utils/EffectUtil")
+local EquipmentMainVM = require("Game/Equipment/VM/EquipmentMainVM")
 local FantasyCardNpcCfg = require("TableCfg/FantasyCardNpcCfg")
 local MagicCardTourneyMgr = require("Game/MagicCardTourney/MagicCardTourneyMgr")
 local MagicCardTourneyVMUtils = require("Game/MagicCardTourney/MagicCardTourneyVMUtils")
@@ -74,17 +76,20 @@ function MagicCardMgr:ResetData()
     self.IsOutSide = false
     self.PVEOpponentInfo = {}
     self.PVPRobotOpponentInfo = {}
+    self.PVPOpponentEntityID = nil
     self.OpponentEmoList = {}
     self.PVPRoleID = 0
+    self.IsPVP = false
     self.OpponentRoleSimple = {}
-    self.OwnedCardList = {}
     self.InteractWithNPC = false
     self.CardGameId = 0
     self.PrepareSecond = 0
     self.DelayShowRewardItemList = {}
     self.IsGameBegin = false
+    self.IsReqEndGame = false
     self.IsGameEnd = true
-    
+    self.ReadyGame = false
+    self.IsExitPWorld = true -- 是否传送离开场景，用于禁止幻卡相关界面的显示条件（离开当前场景不显示）
     self.PlayMode = EPlayMode.None
     self.IsTournament = false
     self.IsNeedReqRecover = false
@@ -94,9 +99,25 @@ function MagicCardMgr:ResetData()
     self.IsFinishedRecover = false
 end
 
+---@type 恢复对局前相关表现
+function MagicCardMgr:OnRestoreBeforeGame()
+    self:OnEnterCardState(false)
+    FLOG_INFO("OnRestoreBeforeGame 恢复 玩家位置镜头等")
+    self:ReSetMajorAndNpcLocalTrans()
+    self:HandleOthersVisiblle(true) -- 恢复显示所有玩家
+    PWorldMgr:RestoreBGMusic()
+    LuaCameraMgr:ResumeCamera(true)
+    self.HideReadinessViewRelativeUI()
+    -- 有可能打开了单独的规则界面，这里去尝试关闭一下
+    UIViewMgr:HideView(UIViewID.MagicCardRulePanelView)
+    UIViewMgr:HideView(UIViewID.MagicCardMainPanel)
+    UIViewMgr:HideView(UIViewID.MagicCardRulePanelView)
+end
+
 function MagicCardMgr:OnInit()
     UActorManager = _G.UE.UActorManager.Get()
     AudioMgr = _G.UE.UAudioMgr.Get()
+    self.TutorialQuestID = 171101 -- 与幻卡大师对局任务，任务待提交状态时进入新手引导对局
     self.QuestNeedFinished = 171102 -- 完成了该任务才可以触发幻卡对局相关
     UIViewID = _G.UIViewID
     UIViewMgr = _G.UIViewMgr
@@ -105,6 +126,7 @@ function MagicCardMgr:OnInit()
     ErrorCodeList[1] = 109001
     ErrorCodeList[2] = 109002
     ErrorCodeList[3] = 109003
+    self.OwnedCardList = {}
     self:ResetData()
     self.NpcHudIconMap = {}
     self.NpcResIdHudIconMap = {} -- 保存的是NPC的ResID，因为有可能NPC还没有创建出来没有ENTITYID
@@ -134,6 +156,7 @@ function MagicCardMgr:OnInit()
     self.DefaultCameraMoveParam.FOV = 0
 
     self.ReadyGame = false
+    self.bIsPauseGame = true
 end
 
 function MagicCardMgr:OnBegin()
@@ -230,9 +253,9 @@ function MagicCardMgr:OnNetMsgError()
     -- 这里要注意一下，如果是在局内才这么做，如果是局外的，那么不管
     if (not self.IsOutSide) then
         self.HideReadinessViewRelativeUI()
-        self:ResetDataAfterQuit()
+        self:OnRestoreBeforeGame()
+        self:ResetData()
         UIViewMgr:HideView(UIViewID.MagicCardMainPanel)
-        self:HandleOthersVisiblle(true)
     end
 end
 
@@ -268,7 +291,21 @@ function MagicCardMgr:OnWaitingGameToStart(RemainTime)
         self:SendConfirmEnterGame(false)
     end
 
-    UIViewMgr:ShowView(UIViewID.MagicCardMainPanel, {RemainTime = RemainTime, IsOpponentPVP = self.IsPVP}, OnConfirmEnterGame)
+    local function OnConfirmEnterGameSimulate()
+        local MsgBody = {EnterRsp = MagicCardVMUtils.GetTutorialEnterViewData()}
+        self:OnNetMsgFantasyCardEnterRsp(MsgBody) -- 新手引导本地对局
+    end
+
+    local CallBack = OnConfirmEnterGame
+    if self:IsTutorialGame() then
+        CallBack = OnConfirmEnterGameSimulate
+    end
+    
+    if self.IsExitPWorld == true then
+        return
+    end
+
+    UIViewMgr:ShowView(UIViewID.MagicCardMainPanel, {RemainTime = RemainTime, IsOpponentPVP = self.IsPVP}, CallBack)
 end
 
 ---@type 进入对局前处理
@@ -412,20 +449,19 @@ function MagicCardMgr:SetMajorToGameTransform(MajorLoc, OpponentEntityID, StoolL
         local StoolHigh = 47 --凳子高度
         NewMajorLoc = _G.UE.FVector(NewStoolLoc.X, NewStoolLoc.Y, NewStoolLoc.Z + StoolHigh + MajorHalfHeight) --角色放凳子上方
         -- 取消碰撞，防止与桌子碰撞导致悬空站在凳子上
-        local CollisionComponent = Major:GetComponentByClass(_G.UE.UCapsuleComponent)
-        if (CollisionComponent) then
-            local CapsuleComponent = CollisionComponent:Cast(_G.UE.UCapsuleComponent)
-            if (CapsuleComponent) then
-                CapsuleComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.NoCollision)
-            end
-        end
+        -- local CollisionComponent = Major:GetComponentByClass(_G.UE.UCapsuleComponent)
+        -- if (CollisionComponent) then
+        --     local CapsuleComponent = CollisionComponent:Cast(_G.UE.UCapsuleComponent)
+        --     if (CapsuleComponent) then
+        --         CapsuleComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.NoCollision)
+        --     end
+        -- end
     else
         NewMajorLoc = _G.UE.FVector(MajorLoc.X, MajorLoc.Y, MajorLoc.Z + MajorHalfHeight * 1.02) -- 升高一点，防止在地下
     end
     
     if NewMajorLoc then
         Major:K2_SetActorLocation(NewMajorLoc, false, nil, false)
-        self.IsFinishedRecover = true
     end
     MajorUtil.LookAtActor(OpponentEntityID)
 end
@@ -460,20 +496,19 @@ end
 
 ---@type 恢复玩家和NPC位置
 function MagicCardMgr:ReSetMajorAndNpcLocalTrans()
-    self.IsFinishedRecover = false
     local Major = MajorUtil.GetMajor()
     if self.CurMajorLoc and self.CurMajorRotation then
         if Major then
-            local SafeLoc = _G.UE.FVector(self.CurMajorLoc.X, self.CurMajorLoc.Y, self.CurMajorLoc.Z + 20) -- 设置时，防止掉落地板下，加高点
+            local SafeLoc = _G.UE.FVector(self.CurMajorLoc.X, self.CurMajorLoc.Y, self.CurMajorLoc.Z + 0.5) -- 设置时，防止掉落地板下，加高点
             Major:K2_SetActorLocation(SafeLoc, false, nil, false)
             Major:FSetRotationForServer(self.CurMajorRotation)
-            local CollisionComponent = Major:GetComponentByClass(_G.UE.UCapsuleComponent)
-            if (CollisionComponent) then
-                local CapsuleComponent = CollisionComponent:Cast(_G.UE.UCapsuleComponent)
-                if (CapsuleComponent) then
-                    CapsuleComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.QueryAndPhysics)
-                end
-            end
+            -- local CollisionComponent = Major:GetComponentByClass(_G.UE.UCapsuleComponent)
+            -- if (CollisionComponent) then
+            --     local CapsuleComponent = CollisionComponent:Cast(_G.UE.UCapsuleComponent)
+            --     if (CapsuleComponent) then
+            --         CapsuleComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.QueryAndPhysics)
+            --     end
+            -- end
         end
         self.CurMajorLoc = nil
         self.CurMajorRotation = nil
@@ -587,6 +622,7 @@ function MagicCardMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.NetworkReconnected, self.OnRelayConnected)
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
     self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldEnter)
+    self:RegisterGameEvent(EventID.PWorldExit, self.OnPWorldExit)
     self:RegisterGameEvent(EventID.MagicCardPlayCardClickSound, self.OnGameEventPlayClickSound)
     self:RegisterGameEvent(EventID.ClientSetupPost, self.OnEventClientSetupPost)
     self:RegisterGameEvent(EventID.ActorDestroyed, self.OnEventActorDestroy)
@@ -597,7 +633,6 @@ function MagicCardMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
     self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
     self:RegisterGameEvent(EventID.NPCCreate, self.OnNPCCreate)
-    self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnGameEventStartFadeIn)
 end
 
 function MagicCardMgr:OnGameEventPlayerCreate(Params)
@@ -622,36 +657,10 @@ function MagicCardMgr:OnNPCCreate(Params)
     local ResID = ActorUtil.GetActorResID(EntityID)
     local IsCardNPC = MagicCardVMUtils.IsMagicCardNPC(ResID)
     if IsCardNPC then
-        self:OnGameEventNeedReqRecover() -- 靠近幻卡NPC时，标记下，用于重登需要重连的情况
-        self:UpdateMajorAndNPCTransform()
         local CurNPCID = self:GetPVENPCID()
         local IsInCardGame = CurNPCID == ResID
         if IsInCardGame then
-            -- 针对断线重连后，对手播放待机动作
-            ActorAnimService:PlayNpcIdleAnim()
-        end
-    end
-end
-
-function MagicCardMgr:OnGameEventStartFadeIn(Params)
-    local EntityID = Params.ULongParam1
-    if EntityID == nil or EntityID == 0 then
-        return
-    end
-    local ResID = ActorUtil.GetActorResID(EntityID)
-    local IsCardNPC = MagicCardVMUtils.IsMagicCardNPC(ResID)
-    local CurNPCID = self:GetPVENPCID()
-    local IsInCardGame = CurNPCID == ResID
-    -- 杀端重连
-    --local IsInCardGame= MagicCardMgr:IsInMagicCardGame(EntityID)
-    if IsCardNPC then
-        if IsInCardGame then
-            if not self.IsFinishedRecover then
-                self:UpdateMajorAndNPCTransform()
-            end
-            -- 针对杀端重连后，对手播放待机动作
-            ActorAnimService:PlayNpcIdleAnim()
-            self:TurnCamera(nil, 1, nil)
+            self:OnGameEventNeedReqRecover() -- 靠近幻卡NPC时，标记下，用于重登需要重连的情况
         end
     end
 end
@@ -690,6 +699,7 @@ function MagicCardMgr:OnGameEventVisionEnter(Params)
     local IsCardNPC = MagicCardVMUtils.IsMagicCardNPC(ResID)
     -- 杀端重连
     if IsCardNPC and not self.bReconnect then
+        self:OnGameEventNeedReqRecover()
         self:UpdateMajorAndNPCTransform()
         self.bReconnect = false
     end
@@ -737,6 +747,8 @@ function MagicCardMgr:OnRelayConnected(Params)
     -- 闪断后关闭对局界面
 	UIViewMgr:HideView(UIViewID.MagicCardMainPanel)
     if not self.IsGameEnd then
+        self.IsFinishedRecover = false
+        self:OnRestoreBeforeGame()
         self:SendFantasyCardRecoverReq()
     end
 end
@@ -744,34 +756,32 @@ end
 function MagicCardMgr:OnGameEventLoginRes(Param)
     self.bReconnect = Param and Param.bReconnect
     if (self.bReconnect) then
-        if self.ReadyGame then
-            self:OnEnterCardState(false)
-            self:HandleOthersVisiblle(true)
-            self:ResetDataAfterQuit()
-        end
-
-        if CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatFantasyCard) then
-            self:OnUserQuitGame()
-        end
-
+        self:OnRestoreBeforeGame()
         self.IsFinishedRecover = false
     end
-    self:ResetData()
     self:SendCollectionUpdateReq()
-
 end
 
 function MagicCardMgr:OnGameEventAppEnterBackground()
-    --self.IsEnterBackground = true
+    self.IsEnterBackground = true
+    if not self.IsGameEnd then
+        self:OnRestoreBeforeGame()
+    end
 end
 
 function MagicCardMgr:OnGameEventAppEnterForeground()
-    -- if self.IsEnterBackground then
-    --     self:SendFantasyCardRecoverReq()
-    -- end
+    if self.IsEnterBackground and not self.IsGameEnd then
+        self.IsEnterBackground = false
+        self.IsFinishedRecover = false
+        self:SendFantasyCardRecoverReq()
+    end
 end
 
 function MagicCardMgr:SendFantasyCardRecoverReq()
+    if self.IsFinishedRecover == true then
+        FLOG_ERROR("已经发送重连请求，不再请求！")
+        return
+    end
     local MsgID = CS_CMD.CS_CMD_FANTASYCARD
     local SubMsgID = ProtoCS.FANTASY_CARD_OP.FANTASY_CARD_OP_RECOVER
 
@@ -780,7 +790,7 @@ function MagicCardMgr:SendFantasyCardRecoverReq()
     MsgBody.RecoverReq = {
         CardGameID = self.CardGameId
     }
-
+    self.IsFinishedRecover = true
     _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
@@ -827,29 +837,47 @@ function MagicCardMgr:OnGameEventPWorldEnter(Params)
     self.NpcResIdHudIconMap = {}
     self:SendNPCUpdateReq(Params.CurrMapResID)
     self.MapResID = Params.CurrMapResID
+    self.HideReadinessViewRelativeUI()
+end
+
+function MagicCardMgr:OnPWorldExit()
+    if not self.IsGameEnd then
+        self:OnUserQuitGame() -- 离开地图视为主动退出对局
+    end
+    self.IsExitPWorld = true
 end
 
 function MagicCardMgr:OnMagicCardGameStartReq(Info)
     if Info == nil then
         return
     end
-    self.PVEOpponentInfo.NPCID = Info.NPCID
-    self.PVEOpponentInfo.NPCEntityID = Info.NPCEntityID
-    self.IsTournament = Info.IsTournament
+    
     -- 匹配中或者匹配确认中不能开新局
     if MagicCardTourneyMgr:GetIsInMatching() then
         _G.MsgTipsUtil.ShowTips(_G.LSTR(MagicCardLocalDef.UKeyConfig.WithNewGameOnMatchingTips))
         return
     end
-
+    
     -- 战斗
     if MajorUtil.IsMajorCombat() then
         _G.MsgTipsUtil.ShowTipsByID(MagicCardLocalDef.CombatTipsID)
         return
     end
 
-    self:SendOpenGameStartReq(self.IsTournament)
+    -- 副本中
+    if _G.PWorldMgr:CurrIsInDungeon() then
+        return
+    end
+    
+    self.PVEOpponentInfo.NPCID = Info.NPCID
+    self.PVEOpponentInfo.NPCEntityID = Info.NPCEntityID
+    self.IsTournament = Info.IsTournament
 
+    if self:IsTutorialGame(Info.NPCEntityID) then
+        self:OnViewGroupRspSimulateLocal()
+        return
+    end
+    self:SendOpenGameStartReq(self.IsTournament)
 end
 
 function MagicCardMgr:GetPVENPCID()
@@ -978,6 +1006,12 @@ function MagicCardMgr:OnEnterCardState(IsEnter)
     CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommStatFantasyCard, IsEnter)
 end
 
+---@type 新手引导准备界面数据模拟
+function MagicCardMgr:OnViewGroupRspSimulateLocal()
+    local MsgBody = {GroupViewRsp = MagicCardVMUtils.GetTutorialGroupViewData()}
+    self:OnNetMsgViewGroupRsp(MsgBody)
+end
+
 ---@type 幻卡准备
 function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
     if MsgBody and MsgBody.ErrorCode then
@@ -992,6 +1026,7 @@ function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
     end
 
     self:OnEnterCardState(true)
+    self.IsExitPWorld = false
     self.ReadyGame = true
     self.NpcGameInfo = ViewGroupRsp
     self.CardGameId = ViewGroupRsp.BattleID or 0
@@ -1003,6 +1038,10 @@ function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
     ActorAnimService:Reset()
     -- 显示准备界面
     local function ShowReadyView()
+        if self.IsExitPWorld == true then
+            return
+        end
+        MagicCardTourneyMgr:OnMagicCardStart(self:IsPVPMode())
         ActorAnimService:Reset()
         self:TurnCamera(nil, LocalDef.CameraTurnTime, nil)
         self:SetMajorCanMove(false)
@@ -1013,6 +1052,8 @@ function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
 
     -- 局内和NPC交互打开的
     if self.PlayMode == EPlayMode.PVE then
+        self.IsReqEndGame = false
+        self.IsGameEnd = false
         self.IsOutSide = false
         if self.SkipDialogByRestart then
             self.SkipDialogByRestart = nil
@@ -1030,6 +1071,7 @@ function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
     local InteractWithPVP = self:IsPVPMode()
     if InteractWithPVP then
         self:UpdateOpponentRoleSimple(ShowReadyView) -- 查询完对手信息后显示准备界面
+        self.IsReqEndGame = false
         self.IsGameEnd = false
         self.IsOutSide = false
         return
@@ -1039,6 +1081,7 @@ function MagicCardMgr:OnNetMsgViewGroupRsp(MsgBody)
     if self.PlayMode == EPlayMode.None then
         self.IsOutSide = true
         self.IsGameEnd = false
+        self.IsReqEndGame = false
         -- 局外直接打开，没有NPC相关
         GameRuleService:SetGameRules(self.NpcGameInfo.PlayRules)
         UIViewMgr:ShowView(
@@ -1065,7 +1108,7 @@ function MagicCardMgr:PlayDefaultDialog(InNpcResId, InEntityId, FinishCallback)
     else
         local Cfg = NpcCfg:FindCfgByKey(InNpcResId)
         if Cfg.SwitchTalkID and Cfg.SwitchTalkID > 0 then
-            DefaultDialogID = Cfg.SwitchTalkID
+            NpcDialogLibID = Cfg.SwitchTalkID
         end
         if (NpcDialogLibID == nil or NpcDialogLibID == 0) then
             _G.FLOG_ERROR("NPC：%d ，没有配置解锁幻卡功能前的对话，请检查NPC表是否配置自定义对话!", InNpcResId)
@@ -1146,19 +1189,23 @@ function MagicCardMgr:OnNetMsgFantasyCardEnterRsp(MsgBody)
     end
     
     self:OnEnterCardState(true)
+    self.IsExitPWorld = false
     self.IsGameBegin = true
+    self.IsReqEndGame = false
     self.IsGameEnd = false
     self.ReadyGame = false
     self.CardGameId = FantasyCardEnterRsp.CardGameID
     self:UpdateOpponentInfo(FantasyCardEnterRsp.OpponentInfo)
     FLOG_INFO(string.format("OnNetMsgFantasyCardEnterRsp 设置 CardGameId 为 [%s]", FantasyCardEnterRsp.CardGameID))
+    self:UpdateOpponentEmo(FantasyCardEnterRsp.OpponentEmoSetup)
     ActorAnimService:Reset()
+    
     if self.PlayMode == EPlayMode.None then
         _G.FLOG_ERROR("下发的数据有问题，没有可用的对手信息，请检查！")
         return
     end
-    self:UpdateOpponentEmo(FantasyCardEnterRsp.OpponentEmoSetup)
-    
+    MagicCardTourneyMgr:OnMagicCardStart(self:IsPVPMode())
+
     if (self.NpcGameInfo == nil) then
         self.NpcGameInfo = {}
     end
@@ -1200,6 +1247,7 @@ function MagicCardMgr:OnRecoverGamingView(FantasyCardEnterRsp)
 
     if InteractWithPVP then
         self:UpdateOpponentRoleSimple(OnOpponentInit) -- 更新完对手后，设置镜头
+        self.IsReqEndGame = false
         self.IsGameEnd = false
         self.IsOutSide = false
     else
@@ -1208,6 +1256,10 @@ function MagicCardMgr:OnRecoverGamingView(FantasyCardEnterRsp)
 
     local function OnShowMagicCardMainView(MainView)
         MainView:OnRecoverGame(FantasyCardEnterRsp) -- 界面牌局
+    end
+
+    if self.IsExitPWorld == true then
+        return
     end
     UIViewMgr:ShowView(UIViewID.MagicCardMainPanel, {RemainTime = 0, IsOpponentPVP = self.IsPVP}, OnShowMagicCardMainView)
 end
@@ -1269,27 +1321,36 @@ function MagicCardMgr:UpdateOpponentEmo(EmoStr)
     self.OpponentEmoList = Json.decode(EmoStr)
 end
 
+---@type 新手引导模拟出牌
+function MagicCardMgr:OnFantasyCardNewMoveRspSimulateLocal(Round, IsPlayerMove)
+    local MoveRsp = {}
+    MoveRsp.NewMoveRsp = MagicCardVMUtils.GetTutorialMoveDataByRound(Round, IsPlayerMove)
+    self:OnNetMsgFantasyCardNewMoveRsp(MoveRsp)
+end
+
 function MagicCardMgr:OnNetMsgFantasyCardNewMoveRsp(MsgBody)
     local MsoveRsp = MsgBody and MsgBody.NewMoveRsp
     EventMgr:SendEvent(EventID.MagicCardNewMove, MsoveRsp)
 end
 
-function MagicCardMgr:OnNetMsgFantasyCardFinishRsp(MsgBody)
+function MagicCardMgr:OnNetMsgFantasyCardFinishRsp(MsgBody, IsForceEnd)
     local FantasyCardFinishRsp = MsgBody and MsgBody.FinishRsp
     local TargetView = UIViewMgr:FindVisibleView(UIViewID.MagicCardMainPanel)
     if (TargetView == nil) then
         -- 这里是还没有进入正式游戏，可能是对面结束了
-        local BattleResult = FantasyCardFinishRsp.Result
         self:EndGame(FantasyCardFinishRsp)
-        -- if (BattleResult == ProtoCS.BATTLE_RESULT.BATTLE_RESULT_WIN) then
-        -- end
     end
     EventMgr:SendEvent(EventID.MagicCardGameFinish, FantasyCardFinishRsp)
+
     self.IsGameBegin = false
-    self.IsGameEnd = true
     self.ReadyGame = false
     self:HideReadinessViewRelativeUI()
-    --self:EndGame(FantasyCardFinishRsp)
+    if self:IsTutorialGame() and not IsForceEnd then
+        local Params = {
+            GameID = ProtoRes.Game.GameID.GameIDFantasyCard,
+        }
+        EventMgr:SendEvent(EventID.QuestFinishGameplay, Params)
+    end
 end
 
 -- 从表格中加载数据
@@ -1353,6 +1414,79 @@ function MagicCardMgr:OnNetMsgUpdateCollectionRsp(MsgBody)
     -- 这里排序一下 星级从低到高，然后按照id从低到高
     table.sort(self.OwnedCardList, SortForCard)
 end
+
+---@type 是否新手引导对局
+function MagicCardMgr:IsTutorialGame(InEntityID)
+    local ResID = 0
+    if InEntityID then
+        ResID = ActorUtil.GetActorResID(InEntityID)
+    else
+        ResID = self:GetPVENPCID()
+    end
+    local IsTutorialNPC = ResID == MagicCardLocalDef.TutorialNPCID
+    local QuestStatus = _G.QuestMgr:GetQuestChapterStatus(self.TutorialQuestID)
+    local QuestDefine = require("Game/Quest/QuestDefine")
+    local CHAPTER_STATUS =  QuestDefine.CHAPTER_STATUS
+    return IsTutorialNPC and QuestStatus == CHAPTER_STATUS.CAN_SUBMIT
+end
+
+---@type 新手对局过程引导
+function MagicCardMgr:OnCheckGameTutorial(Round)
+    if not self:IsTutorialGame() then
+        return
+    end
+
+    if Round == 8 then
+        -- 玩家出牌回合,显示出牌提示，出牌后，再显示翻牌说明
+        self:OnFantasyCardNewMoveRspSimulateLocal(Round, true)
+    else
+        -- NPC出牌回合
+        self:OnFantasyCardNewMoveRspSimulateLocal(Round, false)
+    end
+end
+
+---@type 新手引导
+function MagicCardMgr:CheckTutorial(GamePlayStage)
+    local function ShowEditCheckRecptTutorial(Params)
+        local EventParams = _G.EventMgr:GetEventParams()
+        EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
+        EventParams.Param1 = TutorialDefine.GameplayType.FantasyCard
+        EventParams.Param2 = Params.PlayStage -- 节点类型
+        _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+    end
+    local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowEditCheckRecptTutorial, Params = {PlayStage = GamePlayStage}}
+    _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig) --玩法节点
+end
+
+---@type 引导 是否暂停游戏
+function MagicCardMgr:IsPauseGame()
+    return self.bIsPauseGame
+end
+
+---@type 引导 设置暂停游戏
+function MagicCardMgr:PauseGame()
+    self.bIsPauseGame = true
+end
+
+---@type 引导 继续游戏
+function MagicCardMgr:ResumeGame()
+    self.bIsPauseGame = false
+end
+
+function MagicCardMgr:OnTutorialSelectBtnClicked(TutorialID, MouseEvent, IsClickFocusBtn)
+    local Widget = MagicCardVMUtils:GetTutorialWidget(TutorialID)
+    if IsClickFocusBtn then
+        MagicCardVMUtils:HandleClickGuideWidget(TutorialID, Widget, MouseEvent)
+    end
+
+    -- 拖拽卡牌需要放到棋盘上才算完成引导
+    if TutorialID ~= LocalDef.TutorialID_PlayerTurn then
+        _G.EventMgr:SendEvent(_G.EventID.MagicCardTutorialEnd, TutorialID)
+    end
+end
+----------------------Test-----------------------------------
+
+----------------------TestEnd-----------------------------------
 
 function MagicCardMgr:HasFinishPreQuestByEntityID(InEntityID)
     local ResID = ActorUtil.GetActorResID(InEntityID)
@@ -1439,9 +1573,13 @@ function MagicCardMgr:OnNetMsgSelectGroupRsp(MsgBody)
 end
 
 --test
--- function MagicCardMgr:SendAppEnterBackground()
---     self.IsEnterBackground = true
---     self:SendFantasyCardRecoverReq()
+-- function MagicCardMgr:SendAppEnterBackground(value)
+--     if value == 1 then
+--         self:OnGameEventAppEnterBackground()
+--     else
+--         self.IsEnterBackground = true
+--         self:OnGameEventAppEnterForeground()
+--     end
 -- end
 
 function MagicCardMgr:LowerBGMVolume()
@@ -1480,7 +1618,19 @@ end
 function MagicCardMgr:EndGame(GameFinishRsp)
     UIViewMgr:HideView(UIViewID.MagicCardMainPanel)
     self:StopCardBGM()
+    if self.IsGameEnd == true then
+        return
+    end
+
+    if not GameFinishRsp.ShouldRestart then
+        self.IsGameEnd = true
+    end
+
     if _G.PWorldMgr:CurrIsInDungeon() then
+        return
+    end
+    
+    if self.IsExitPWorld == true then
         return
     end
     UIViewMgr:ShowView(
@@ -1507,6 +1657,15 @@ function MagicCardMgr:SendOpenGameStartReq(InIsTournament)
 end
 
 function MagicCardMgr:SendNewMoveReq(ChosedCardIndex, ChosedBoardCardLoc, IsAutoPlay, Round)
+    if self.IsReqEndGame or self.IsGameEnd then
+        return
+    end
+
+    if self:IsTutorialGame() then
+        self:OnCheckGameTutorial(Round)
+        return
+    end
+
     local MsgID = CS_CMD.CS_CMD_FANTASYCARD
     local SubMsgID = ProtoCS.FANTASY_CARD_OP.FANTASY_CARD_OP_NEW_MOVE
     local MsgBody = {}
@@ -1541,7 +1700,16 @@ function MagicCardMgr:SendNewMoveReq(ChosedCardIndex, ChosedBoardCardLoc, IsAuto
 end
 
 function MagicCardMgr:SendFinishFantasyCard(bForceLeave)
+    self.IsReqEndGame = true
     if self.IsGameEnd then
+        return
+    end
+
+    if self:IsTutorialGame() then
+        local FinishData = MagicCardLocalDef.TutorialFinishedData
+        FinishData.Result = bForceLeave and 1 or 0 -- 主动退出对局视为失败
+        local MsgBody = {FinishRsp = FinishData}
+        self:OnNetMsgFantasyCardFinishRsp(MsgBody, bForceLeave)
         return
     end
 
@@ -1572,6 +1740,11 @@ function MagicCardMgr:SendConfirmEnterGame(IsRestarEnter)
         end
     end
 
+    if self.IsGameEnd == true then
+        Log.I("游戏已经结束或退出, 不发送进入游戏请求")
+        return
+    end
+
     local MsgID = CS_CMD.CS_CMD_FANTASYCARD
     local SubMsgID = ProtoCS.FANTASY_CARD_OP.FANTASY_CARD_OP_ENTER
 
@@ -1583,11 +1756,18 @@ function MagicCardMgr:SendConfirmEnterGame(IsRestarEnter)
             CardGameID = self.CardGameId
         }
     else
-        MsgBody.EnterReq = {
-            NPCID = self:GetPVENPCID(),
-            CardGameID = self.CardGameId,
-            IsTournament = MagicCardTourneyMgr:GetIsInTourney()
-        }
+        -- NPC对局不传GameID
+        if self:GetPVENPCID() > 0 then
+            MsgBody.EnterReq = {
+                NPCID = self:GetPVENPCID(),
+                IsTournament = MagicCardTourneyMgr:GetIsInTourney()
+            }
+        else
+            MsgBody.EnterReq = {
+                CardGameID = self.CardGameId,
+                IsTournament = MagicCardTourneyMgr:GetIsInTourney()
+            }
+        end
     end
 
     _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
@@ -1637,6 +1817,10 @@ function MagicCardMgr:SendGroupAutoEditReq(SvrCardGroupId)
 end
 
 function MagicCardMgr:SendSelectGroupAsDefaultReq(SvrCardGroupId)
+    if self:IsTutorialGame() then
+        return
+    end
+    
     local MsgID = CS_CMD.CS_CMD_FANTASYCARD
     local SubMsgID = ProtoCS.FANTASY_CARD_OP.FANTASY_CARD_OP_SELECT
 
@@ -1677,21 +1861,15 @@ end
 -- endregion handle net msg
 
 function MagicCardMgr:OnUserQuitGame()
-	self:OnEnterCardState(false)
-    
-    -- 恢复显示所有玩家
-    self:HandleOthersVisiblle(true)
-    
     self:SendFinishFantasyCard(true)
-    self:ResetDataAfterQuit()
+    self:OnRestoreBeforeGame()
+    self:ResetData()
     EventMgr:SendEvent(EventID.MagicCardBattleQuit)
 end
 
 -- 掉线后对局界面关闭后处理
 function MagicCardMgr:OnUserQuitGameWithDisConnect()
-	self:OnEnterCardState(false)
-    self:ResetDataAfterQuit()
-    self:HandleOthersVisiblle(true)
+    self:OnRestoreBeforeGame()
     self:StopCardBGM()
 end
 
@@ -1715,22 +1893,27 @@ function MagicCardMgr:HandleOthersVisiblle(IsVisible)
     local Major = MajorUtil.GetMajor()
     local NPCEntityID = self:GetPVENPCEntityID()
     if IsVisible then
+        if self.HandleOthersVisiblleTimer then
+            self:UnRegisterTimer(self.HandleOthersVisiblleTimer)
+            self.HandleOthersVisiblleTimer = nil
+        end
         -- 正在对局中的其它玩家不恢复显示
         local ExcludeArray = _G.UE.TArray(_G.UE.uint64)
-        local InGamePlayers MagicCardTourneyMgr:GetInGamePlayerEntityIDMap()
+        local InGamePlayers = MagicCardTourneyMgr:GetInGamePlayerEntityIDMap()
         if InGamePlayers then
             for _, EntityID in pairs(InGamePlayers) do
                 ExcludeArray:Add(EntityID)
             end
         end
         UActorManager:HideAllActors(false, ExcludeArray,  _G.UE.TArray(_G.UE.uint8))
+        _G.UE.UVisionMgr.Get():ResumeActorEnterShow()
         HUDMgr:ShowAllActors()
         HUDMgr:UpdateActorVisibility(NPCEntityID, true, true)
         HUDMgr:ShowAllNpc()
         self:SetMajorCanMove(true)
         AudioMgr:SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, SettingsMgr:GetValueBySaveKey("MainPlayerVol")) 	-- 特效
 
-        if Major then 
+        if Major and EquipmentMainVM.bIsShowWeapon then
             Major:HideMasterHand(false)
             Major:HideSlaveHand(false)
         end
@@ -1743,15 +1926,24 @@ function MagicCardMgr:HandleOthersVisiblle(IsVisible)
         end
         ExcludeArray:Add(MajorUtil.GetMajorEntityID())
         UActorManager:HideAllActors(true, ExcludeArray,  _G.UE.TArray(_G.UE.uint8))
+        _G.UE.UVisionMgr.Get():PauseActorEnterShow()
         HUDMgr:HideAllActors()
         HUDMgr:ShowTargetNpcOnly(OpponentEntityID)
         HUDMgr:UpdateActorVisibility(OpponentEntityID, false, true)
         AudioMgr:SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, 0) 	-- 特效
 
-        if Major then 
-            Major:HideMasterHand(true)
-            Major:HideSlaveHand(true)
+        -- 做完冲刺动作后，武器总是会显示出来，这里处理这类难题
+        local function HandleTick()
+            if Major then 
+                Major:HideMasterHand(true)
+                Major:HideSlaveHand(true)
+            end
         end
+        if self.HandleOthersVisiblleTimer then
+            self:UnRegisterTimer(self.HandleOthersVisiblleTimer)
+            self.HandleOthersVisiblleTimer = nil
+        end
+        self.HandleOthersVisiblleTimer = self:RegisterTimer(HandleTick, 0, 1, 0)
     end
     _G.UE.UCameraMgr:Get():SwitchVirtual(IsVisible)
 end
@@ -1762,35 +1954,11 @@ function MagicCardMgr:QuitBeforeEnterGame()
     if self:IsPVPMode() then
         self:SendFinishFantasyCard(true) -- PVP 退出时需要下发
     else
-        self:HandleOthersVisiblle(true)
         self:HideReadinessViewRelativeUI()
-        self:ResetDataAfterQuit()
+        self:OnRestoreBeforeGame()
+        self:ResetData()
     end
     --EventMgr:SendEvent(EventID.MagicCardBeforeEnterQuit)
-end
-
-function MagicCardMgr:ResetDataAfterQuit()
-    self:ReSetMajorAndNpcLocalTrans()
-    self.PVPRoleID = 0
-    self.PVEOpponentInfo = {}
-    self.PVPRobotOpponentInfo = {}
-    self.PVPOpponentEntityID = nil
-    self.OpponentEmoList = {}
-    self.PVPRoleID = 0
-    self.IsPVP = false
-    self.IsGameEnd = true
-    self.ReadyGame = false
-    self.CardGameId = 0
-    FLOG_INFO("ResetDataAfterQuit 设置 CardGameId 为 0")
-    self.DelayShowRewardItemList = {}
-    self.PlayMode = EPlayMode.None
-
-    --self:RestoreBGMVolume()
-    PWorldMgr:RestoreBGMusic()
-
-    LuaCameraMgr:ResumeCamera(true)
-    -- 有可能打开了单独的规则界面，这里去尝试关闭一下
-    UIViewMgr:HideView(UIViewID.MagicCardRulePanelView)
 end
 
 ---@return GameRuleService
@@ -1930,8 +2098,8 @@ function MagicCardMgr:GetUseCardSuccStr()
 	if string.isnilorempty(GoodsDesc) then
 		return
 	end
-    local GetRitchText = RichTextUtil.GetText(string.format("%s",LSTR(LocalDef.UKeyConfig.CardUsedInChatText1)), "d1ba8e", 0, nil)
-    local GetRitchText1 = RichTextUtil.GetText(string.format("%s",LSTR(LocalDef.UKeyConfig.CardUsedInChatText2)), "d1ba8e", 0, nil)
+    local GetRitchText = RichTextUtil.GetText(string.format("%s",LSTR(LocalDef.UKeyConfig.CardUsedInChatText1)), "d1ba8e")
+    local GetRitchText1 = RichTextUtil.GetText(string.format("%s",LSTR(LocalDef.UKeyConfig.CardUsedInChatText2)), "d1ba8e")
 	local SuccStr = string.format("%s%s%s", GetRitchText, GoodsDesc, GetRitchText1)
     return SuccStr
 end

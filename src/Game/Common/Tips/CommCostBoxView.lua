@@ -232,10 +232,14 @@ function CommCostBoxView:OnBtnClick(BtnType)
 	if self.Params and self.Params.BtnInfo and self.Params.BtnInfo.Callback then
 		local Callback = self.Params.BtnInfo.Callback[BtnType]
 		if nil ~= Callback then
-			Callback(self.Params.UIView, {
-				IsCheckedInstead = self.IsCheckedInstead,
-				IsCheckedSpent = self.IsCheckedSpent,
-			})
+			----view存在且失效时会返回false
+			local IsViewValid = self:CheckViewValid()
+			if IsViewValid then
+				Callback(self.Params.UIView, {
+					IsCheckedInstead = self.IsCheckedInstead,
+					IsCheckedSpent = self.IsCheckedSpent,
+				})
+			end
 		end
 	end
 
@@ -252,6 +256,16 @@ end
 function CommCostBoxView:OnCheckBoxSpent(_, Stat)
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
 	self.IsCheckedSpent = IsChecked
+end
+
+----检查View是否失效
+function CommCostBoxView:CheckViewValid()
+	----当view失效时，不触发回调函数/有部分调用传入的不是view,只对有IsValid函数的类做判断/View可能为nil，为nil的情况也返回true
+	local IsViewValid = true
+	if self.Params.UIView and self.Params.UIView.IsValid and not self.Params.UIView:IsValid() then
+		IsViewValid = false
+	end
+	return IsViewValid
 end
 
 return CommCostBoxView

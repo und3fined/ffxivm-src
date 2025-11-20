@@ -14,10 +14,7 @@ local FootMarkRecordCfg = {
                 Name = 'ShowText',
             },
             {
-                Name = 'CompText',
-            },
-            {
-                Name = 'CountName',
+                Name = 'DetailText',
             },
 		}
     },

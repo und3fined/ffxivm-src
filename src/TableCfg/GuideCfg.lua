@@ -47,9 +47,8 @@ function GuideCfg:FindCfgByID(ID)
 			return v
 		end
 	end
-
-	local SearchConditions = string.format("GuideID = %d", ID)
-	return self:FindCfg(SearchConditions)
+    
+	return self:FindCfgByKey(ID)
 end
 
 function GuideCfg:FindCfgByGuideID(GuideID)

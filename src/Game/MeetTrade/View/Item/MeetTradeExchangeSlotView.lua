@@ -11,6 +11,7 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetOpacity = require("Binder/UIBinderSetOpacity")
 local UIUtil = require("Utils/UIUtil")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local UIViewID = require("Define/UIViewID")
@@ -52,8 +53,10 @@ function MeetTradeExchangeSlotView:OnInit()
 		{ "IsChosen", UIBinderSetIsVisible.New(self, self.Comm96Slot.IconChoose) },
 		{ "LevelVisible", UIBinderSetIsVisible.New(self, self.Comm96Slot.RichTextLevel) },
 		{ "ImgAddOpacity", UIBinderSetOpacity.New(self, self.BtnAdd) },
+		{ "ImgAdd", UIBinderSetBrushFromAssetPath.New(self, self.ImgAdd) },
 		{ "BtnAddVisible", UIBinderSetIsVisible.New(self, self.BtnAdd, false, true) },
 		{ "OtherInfomation", UIBinderSetIsVisible.New(self, self.Comm96Slot.Btn, false, true) },
+		{ "PlayAnim", 		UIBinderValueChangedCallback.New(self, nil, self.PlayAnim) },
 	}
 end
 
@@ -87,7 +90,6 @@ function MeetTradeExchangeSlotView:OnRegisterBinder()
 	if nil == ViewModel then
 		return
 	end
-
 	self:RegisterBinders(ViewModel, self.Binders)
 end
 
@@ -118,6 +120,9 @@ function MeetTradeExchangeSlotView:OnClickButtonAdd()
 end
 
 function MeetTradeExchangeSlotView:OnClickBtn()
+	if _G.MeetTradeVM.IsClickLock then
+		return
+	end
 	local Params = self.Params
 	if nil == Params then
 		return
@@ -131,5 +136,21 @@ function MeetTradeExchangeSlotView:OnClickBtn()
 	if ViewModel.ResID ~= nil then
 		ItemTipsUtil.ShowTipsByResID(ViewModel.ResID, self)
 	end
+end
+function MeetTradeExchangeSlotView:PlayAnim(NewValue)
+	if NewValue then
+		self:PlayAnimation(self.AnimOpticalFeedback)
+	end
+	local Params = self.Params
+	if nil == Params then
+		return
+	end
+
+	local ViewModel = self.Params.Data
+	if nil == ViewModel then
+		return
+	end
+
+	ViewModel.PlayAnim = false
 end
 return MeetTradeExchangeSlotView

@@ -15,6 +15,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Comm126Slot CommBackpack126SlotView
 ---@field IconCollect UFImage
+---@field ImgUpIcon UFImage
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local FashionDecoSlotItemView = LuaClass(UIView, true)
 
@@ -22,6 +23,7 @@ function FashionDecoSlotItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Comm126Slot = nil
 	--self.IconCollect = nil
+	--self.ImgUpIcon = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -59,38 +61,20 @@ function FashionDecoSlotItemView:OnRegisterBinder()
 	if nil == self.Params or  nil == self.Params.Data then
 		return
 	end
+	--FashionDecoSlotItemVM
 	local ViewModel = self.Params.Data
 	self.ViewModel = ViewModel
 
 	self.Binders = {
 		{"AppearanceIcon", UIBinderSetBrushFromAssetPath.New(self, self.Comm126Slot.Icon,nil,nil,true)},
-		{
-			"ItemLevelVisible",
-			UIBinderSetIsVisible.New(self, self.Comm126Slot.RichTextLevel)
-		},
-		{
-			"NumVisible",
-			UIBinderSetIsVisible.New(self, self.Comm126Slot.RichTextQuantity)
-		},
-		{
-			"Equip",
-			UIBinderSetIsVisible.New(self, self.Comm126Slot.IconChoose)
-		},
-		{
-			"RedDot2Visible", UIBinderValueChangedCallback.New(self, nil, self.OnRedDot2VisibleChanged)
-		},
-		{
-			"IconCollectVisible",
-			UIBinderSetIsVisible.New(self, self.IconCollect)
-		},
-		{
-			"IsSelect",
-			UIBinderSetIsVisible.New(self, self.Comm126Slot.ImgSelect)
-		},
-		{
-            "ShowImgEmpty",
-            UIBinderValueChangedCallback.New(self, nil, self.OnImgEmptyVisibleChanged)
-        }
+		{"ItemLevelVisible", UIBinderSetIsVisible.New(self, self.Comm126Slot.RichTextLevel)},
+		{"NumVisible", UIBinderSetIsVisible.New(self, self.Comm126Slot.RichTextQuantity)},
+		{"Equip", UIBinderSetIsVisible.New(self, self.Comm126Slot.IconChoose)},
+		{"RedDot2Visible", UIBinderValueChangedCallback.New(self, nil, self.OnRedDot2VisibleChanged)},
+		{"IconCollectVisible", UIBinderSetIsVisible.New(self, self.IconCollect)},
+		{"IsSelect", UIBinderSetIsVisible.New(self, self.Comm126Slot.ImgSelect)},
+		{"ShowImgEmpty", UIBinderValueChangedCallback.New(self, nil, self.OnImgEmptyVisibleChanged)},
+		{"IsAmeliorateUp", UIBinderSetIsVisible.New(self, self.ImgUpIcon)},
 	}
 	UIUtil.SetIsVisible(self.Comm126Slot.ImgSelect, false)
 	self:RegisterBinders(self.ViewModel, self.Binders)

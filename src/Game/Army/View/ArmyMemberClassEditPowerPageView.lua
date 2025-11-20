@@ -32,29 +32,36 @@ local ArmyDefine = require("Game/Army/ArmyDefine")
 local ArmyTextColor = ArmyDefine.ArmyTextColor
 local ProtoCS = require("Protocol/ProtoCS")
 local GroupPermissionType = ProtoCS.GroupPermissionType
+local CommonUtil = require("Utils/CommonUtil")
 local ArmyMgr
 
 ---@class ArmyMemberClassEditPowerPageView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnDelete CommBtnLView
 ---@field BtnDown UFButton
----@field BtnHelp CommInforBtnView
 ---@field BtnSaveBack CommBtnLView
 ---@field BtnSwitch UFButton
 ---@field BtnUp UFButton
 ---@field CommBackBtn_UIBP CommBackBtnView
+---@field CommonTitle CommonTitleView
 ---@field FTextBlock UFTextBlock
 ---@field FTextBlock_1 UFTextBlock
 ---@field FTextBlock_2 UFTextBlock
 ---@field FTextBlock_3 UFTextBlock
 ---@field FTextBlock_4 UFTextBlock
+---@field FTextBlock_5 UFTextBlock
+---@field FTextBlock_6 UFTextBlock
 ---@field FTextBlock_66 UFTextBlock
 ---@field ImgBG UFImage
 ---@field ImgIcon UFImage
 ---@field ImgIcon02 UFImage
 ---@field ImgIcon03 UFImage
+---@field ImgIcon04 UFImage
+---@field ImgIcon05 UFImage
 ---@field ImgMask UFImage
 ---@field InputBoxName CommInputBoxView
+---@field Panel04 UFCanvasPanel
+---@field Panel05 UFCanvasPanel
 ---@field PanelEmpty UFCanvasPanel
 ---@field PanelTop UFCanvasPanel
 ---@field Panelcontent UFCanvasPanel
@@ -64,6 +71,8 @@ local ArmyMgr
 ---@field TableView01 UTableView
 ---@field TableView02 UTableView
 ---@field TableView03 UTableView
+---@field TableView04 UTableView
+---@field TableView05 UTableView
 ---@field TableViewBatchList UTableView
 ---@field TableViewIcon UTableView
 ---@field TableViewPower UTableView
@@ -71,7 +80,6 @@ local ArmyMgr
 ---@field TextBatch UFTextBlock
 ---@field TextDown UFTextBlock
 ---@field TextEmptyTip UFTextBlock
----@field TextTitle UFTextBlock
 ---@field TextUp UFTextBlock
 ---@field ToggleTabs CommHorTabsView
 ---@field AnimBGID1 UWidgetAnimation
@@ -81,7 +89,6 @@ local ArmyMgr
 ---@field AnimChangePower UWidgetAnimation
 ---@field AnimChangeTab UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
----@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ArmyMemberClassEditPowerPageView = LuaClass(UIView, true)
 
@@ -99,23 +106,29 @@ function ArmyMemberClassEditPowerPageView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnDelete = nil
 	--self.BtnDown = nil
-	--self.BtnHelp = nil
 	--self.BtnSaveBack = nil
 	--self.BtnSwitch = nil
 	--self.BtnUp = nil
 	--self.CommBackBtn_UIBP = nil
+	--self.CommonTitle = nil
 	--self.FTextBlock = nil
 	--self.FTextBlock_1 = nil
 	--self.FTextBlock_2 = nil
 	--self.FTextBlock_3 = nil
 	--self.FTextBlock_4 = nil
+	--self.FTextBlock_5 = nil
+	--self.FTextBlock_6 = nil
 	--self.FTextBlock_66 = nil
 	--self.ImgBG = nil
 	--self.ImgIcon = nil
 	--self.ImgIcon02 = nil
 	--self.ImgIcon03 = nil
+	--self.ImgIcon04 = nil
+	--self.ImgIcon05 = nil
 	--self.ImgMask = nil
 	--self.InputBoxName = nil
+	--self.Panel04 = nil
+	--self.Panel05 = nil
 	--self.PanelEmpty = nil
 	--self.PanelTop = nil
 	--self.Panelcontent = nil
@@ -125,6 +138,8 @@ function ArmyMemberClassEditPowerPageView:Ctor()
 	--self.TableView01 = nil
 	--self.TableView02 = nil
 	--self.TableView03 = nil
+	--self.TableView04 = nil
+	--self.TableView05 = nil
 	--self.TableViewBatchList = nil
 	--self.TableViewIcon = nil
 	--self.TableViewPower = nil
@@ -132,7 +147,6 @@ function ArmyMemberClassEditPowerPageView:Ctor()
 	--self.TextBatch = nil
 	--self.TextDown = nil
 	--self.TextEmptyTip = nil
-	--self.TextTitle = nil
 	--self.TextUp = nil
 	--self.ToggleTabs = nil
 	--self.AnimBGID1 = nil
@@ -142,16 +156,15 @@ function ArmyMemberClassEditPowerPageView:Ctor()
 	--self.AnimChangePower = nil
 	--self.AnimChangeTab = nil
 	--self.AnimIn = nil
-	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function ArmyMemberClassEditPowerPageView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnDelete)
-	self:AddSubView(self.BtnHelp)
 	self:AddSubView(self.BtnSaveBack)
 	self:AddSubView(self.CommBackBtn_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.InputBoxName)
 	self:AddSubView(self.SingleBoxAll)
 	self:AddSubView(self.ToggleTabs)
@@ -169,17 +182,22 @@ function ArmyMemberClassEditPowerPageView:OnInit()
 	self.TableViewCategoryIconAdapter =
 	UIAdapterTableView.CreateAdapter(self, self.TableViewIcon, self.OnCategoryIconSelectChanged, true)
 	--- 权限列表
+	--信息编辑
 	self.TableViewInfoEditPermisstionAdapter =
 	UIAdapterTableView.CreateAdapter(self, self.TableView01)
 	self.TableViewInfoEditPermisstionAdapter:SetOnClickedCallback(self.OnClickedPermisstionItem)
-
+	--仓库权限
 	self.TableViewStorePermisstionAdapter =
 	UIAdapterTableView.CreateAdapter(self, self.TableView02)
 	self.TableViewStorePermisstionAdapter:SetOnClickedCallback(self.OnClickedPermisstionItem)
-
+	--成员管理
 	self.TableViewMemberEditPermisstionAdapter =
 	UIAdapterTableView.CreateAdapter(self, self.TableView03)
 	self.TableViewMemberEditPermisstionAdapter:SetOnClickedCallback(self.OnClickedPermisstionItem)
+	--房屋权限
+	self.TableViewHousePermisstionAdapter =
+	UIAdapterTableView.CreateAdapter(self, self.TableView04)
+	self.TableViewHousePermisstionAdapter:SetOnClickedCallback(self.OnClickedPermisstionItem)
 
 	--- 成员列表
 	self.TableViewMemberEditCategoryAdapter =
@@ -199,6 +217,7 @@ function ArmyMemberClassEditPowerPageView:OnInit()
         {"InfoEditPermisstionList", UIBinderUpdateBindableList.New(self, self.TableViewInfoEditPermisstionAdapter)},
         {"StorePermisstionList", UIBinderUpdateBindableList.New(self, self.TableViewStorePermisstionAdapter)},
         {"MemberPermisstionList", UIBinderUpdateBindableList.New(self, self.TableViewMemberEditPermisstionAdapter)},
+        {"HousePermisstionList", UIBinderUpdateBindableList.New(self, self.TableViewHousePermisstionAdapter)},
 		{"MemberEditCategoryList", UIBinderUpdateBindableList.New(self, self.TableViewMemberEditCategoryAdapter)},
 		{"BatchStr", UIBinderSetText.New(self, self.TextBatch)},
 		{"BatchBtnEnable", UIBinderSetIsEnabled.New(self, self.BtnSwitch)},
@@ -209,6 +228,8 @@ function ArmyMemberClassEditPowerPageView:OnInit()
 		{"BGMaskColor", UIBinderSetColorAndOpacityHex.New(self, self.ImgMask) },
 		{"IsNoMember", UIBinderSetIsVisible.New(self, self.PanelEmpty) },
 		{"IsNoMember", UIBinderSetIsVisible.New(self, self.PanelTop, true) },
+		{"IsShowHousePermisstionList", UIBinderSetIsVisible.New(self, self.Panel04)},
+		{"IsShowHousePermisstionList", UIBinderSetIsVisible.New(self, self.Panel05)}
     }
 	ArmyMemberPanelVM = ArmyMainVM:GetMemberPanelVM()
     ArmyMemberPageVM = ArmyMemberPanelVM:GetArmyMemberPageVM()
@@ -220,6 +241,8 @@ function ArmyMemberClassEditPowerPageView:OnInit()
 	self.CommBackBtn_UIBP:AddBackClick(self, self.OnClickedBtnBack)
 	self.IsInput = false
 	self.IsWaitCheck = false
+
+    self.CommonTitle:SetSubTitleIsVisible(false)
 end
 
 function ArmyMemberClassEditPowerPageView:OnDestroy()
@@ -230,13 +253,17 @@ function ArmyMemberClassEditPowerPageView:OnShow()
 	---排查ios界面显示失败bug
 	_G.FLOG_INFO("ArmyMemberClassEditPowerPageView:OnShow()")
 	-- LSTR string:部队分组编辑
-	self.TextTitle:SetText(LSTR(910310))
+	self.CommonTitle:SetTextTitleName(LSTR(910310))
 	-- LSTR string:信息编辑权限
 	self.FTextBlock_1:SetText(LSTR(910311))
 	-- LSTR string:成员管理权限
 	self.FTextBlock_4:SetText(LSTR(910130))
 	-- LSTR string:储物柜使用权限
 	self.FTextBlock_3:SetText(LSTR(910312))
+	-- LSTR string:房屋权限
+	self.FTextBlock_5:SetText(LSTR(910443))
+	-- LSTR string 房屋维护权限
+	self.FTextBlock_6:SetText(LSTR(910444))
 	-- LSTR string:全选
 	self.TextAll:SetText(LSTR(910333))
 	-- LSTR string:分组名称
@@ -435,10 +462,16 @@ function ArmyMemberClassEditPowerPageView:OnCategoryNameTextCommitted(Text, Comm
 			Categories[SelectedIndex].Name = Text
 			ArmyMemEditPowerPageVM:SetIsNameChange(true)
 			ArmyMemEditPowerPageVM:UpdateCategoryList()
-			self.TableViewCategoryAdapter:SetSelectedIndex(SelectedIndex)
+			if CommonUtil.IsObjectValid(self) then
+				self.TableViewCategoryAdapter:SetSelectedIndex(SelectedIndex)
+			end
 		else
 			-- LSTR string:当前文本不可使用，请重新输入
 			MsgTipsUtil.ShowErrorTips(LSTR(10057))
+			if CommonUtil.IsObjectValid(self) then
+				---敏感词校验协议配置了bWaitForRes，不会弱网下未回包切页签，直接设置当前输入框
+				self.InputBoxName:SetText(Categories[SelectedIndex].Name or "")
+			end
 		end
 	end)
 end
@@ -457,8 +490,21 @@ end
 
 ---分组切换响应
 function ArmyMemberClassEditPowerPageView:OnCategorySelectChanged(Index, ItemData, ItemView)
+	if ItemData == nil then
+		return
+	end
 	if ItemData.ID == -1 then
 		---新增分组
+		---权限判断
+		local IsCanEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+		if not IsCanEdit then
+			-- LSTR string:没有分组编辑权限
+			MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.NoEditCategoryPermisstion)
+			---选中设置重置
+			local SelectedIndex = ArmyMemEditPowerPageVM:GetSelectedCategoryIndex()
+			self.TableViewCategoryAdapter:SetSelectedIndex(SelectedIndex)
+			return
+		end
 		ArmyMemEditPowerPageVM:AddCategory()
 		local SelectedIndex = ArmyMemEditPowerPageVM:GetSelectedCategoryIndex()
 		self.TableViewCategoryAdapter:SetSelectedIndex(SelectedIndex)
@@ -556,8 +602,8 @@ function ArmyMemberClassEditPowerPageView:OnClickedSave()
 			LSTR(910187),
 			self.SaveAndSendData,
 			nil,
-			-- LSTR string:取消
-			LSTR(910083),
+			-- LSTR string:取 消
+			LSTR(910081),
 			-- LSTR string:确定
 			LSTR(910182)
 		)
@@ -576,6 +622,12 @@ end
 
 ---删除分组
 function ArmyMemberClassEditPowerPageView:OnClickedDel()
+	local IsCanEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+	if not IsCanEdit then
+		-- LSTR string:没有分组编辑权限
+		MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.NoEditCategoryPermisstion)
+		return
+	end
 	local Categories = ArmyMemEditPowerPageVM:GetCurCategories()
 	if Categories == nil then
 		return
@@ -630,6 +682,13 @@ function ArmyMemberClassEditPowerPageView:OnClickedDel()
 end
 
 function ArmyMemberClassEditPowerPageView:DelCurCategory()
+	---权限判断
+	local IsCanEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+	if not IsCanEdit then
+		-- LSTR string:没有分组编辑权限
+		MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.NoEditCategoryPermisstion)
+		return
+	end
 	ArmyMemEditPowerPageVM:DelCurCategory()
 	local SelectedIndex = ArmyMemEditPowerPageVM:GetSelectedCategoryIndex()
 	self.TableViewCategoryAdapter:SetSelectedIndex(SelectedIndex)

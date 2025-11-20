@@ -48,25 +48,30 @@ function Class:GetItemLength()
     return self.SidebarItemVMList:Length()
 end
 
-function Class:AddItem( Type, StartTime, CountDown, TransData, Tips, LoopAnimName )
+---@return SidebarItemVM | nil
+function Class:AddItem( Type, StartTime, CountDown, TransData, Tips, LoopAnimName, Desc )
     if nil == Type then
         return
     end
 
+    ---@class SidebarItemParam
+    ---@field bTimeoutAutoRemove boolean
     local Value = {
         Type        = Type,
         StartTime   = StartTime,
         CountDown   = CountDown,
         TransData   = TransData,
         Tips        = Tips,
-
+        Desc        = Desc,
         LoopAnimName = LoopAnimName,
     }
 
-    self.SidebarItemVMList:AddByValue(Value)
+    local Item = self.SidebarItemVMList:AddByValue(Value)
     self.SidebarItemVMList:Sort(SidebarItemSortFunc)
     self.ItemNum = self:GetItemLength()
     self.FirstItemVM = self:GetFirstItem()
+
+    return Item
 end
 
 function Class:RemoveItem( Type )

@@ -29,7 +29,7 @@ local UnitOutOffset = 70
 local DefaultShowTime = 3
 
 local ShowTimeLimit = 60
-local ShowQueueLimit = 80
+local ShowQueueLimit = 40
 
 ---@class ActiveSysteamErrorTipsView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -472,7 +472,6 @@ function ActiveSysteamErrorTipsView:RefreshDisplayNumOrMoveSpacing(DisplayNum, M
 		UnitMoveOffset = MoveSpacing
 	end
 end
-
 
 -------------- Log
 function ActiveSysteamErrorTipsView:PrintQueueCountLog()

@@ -49,9 +49,10 @@ function BattlePassAdvanceListItemVM:UpdateVM(Value)
     self.IsPreview =  Value.JumpID ~= nil or ItemUtil.IsCanPreviewByResID(Value.ResID)
     local ItemVM = {}
     ItemVM.ResID = Value.ResID
-    ItemVM.IsShowLevel = Value.IsShowLevel
+    ItemVM.IsShowLevel = Value.IsShowLevel and Value.Level ~= nil and Value.Level ~= 0
     ItemVM.Num = Value.Num
     ItemVM.Lv = Value.Level
+    
     -- ItemVM.IsGot = false
     self.ItemVM:UpdateVM(ItemVM)
     -- self.GetLevel = string.format(_G.LSTR(850006), Value.Level)

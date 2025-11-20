@@ -26,6 +26,7 @@ local EmotionDefines = {
 		SIT_GROUND = 3,		-- 坐在地上待机类型
 		SLEEP = 4,			-- 睡觉待机类型
 		SIT_CHAIR = 5,		-- 坐在椅子上待机类型
+		BATTLE = 6,		-- 坐在椅子上待机类型
 	},
 	AnimType = {
 		EMOT = "emot",
@@ -45,11 +46,12 @@ local EmotionDefines = {
 }
 
 EmotionDefines.IdlePoseDefault = {
-	[EmotionDefines.IdlePoseType.IDLE_TO_REST_TIME] = 30,   --空闲到休息时间
+	[EmotionDefines.IdlePoseType.IDLE_TO_REST_TIME] = 5,   --空闲到休息时间
 	[EmotionDefines.IdlePoseType.NORMAL] = 0,				--默认使用第0个pose
 	[EmotionDefines.IdlePoseType.SIT_GROUND] = 0,
 	[EmotionDefines.IdlePoseType.SLEEP] = 0,
 	[EmotionDefines.IdlePoseType.SIT_CHAIR] = 0,
+	[EmotionDefines.IdlePoseType.BATTLE] = 0,
 }
 
 EmotionDefines.IdlePoseMax = {
@@ -59,6 +61,7 @@ EmotionDefines.IdlePoseMax = {
 	[EmotionDefines.IdlePoseType.SIT_GROUND] = 3,
 	[EmotionDefines.IdlePoseType.SLEEP] = 2,
 	[EmotionDefines.IdlePoseType.SIT_CHAIR] = 4,		--（2）
+	[EmotionDefines.IdlePoseType.BATTLE] = 1,		--（2）
 }
 
 EmotionDefines.IdlePropertyNames = {
@@ -67,6 +70,7 @@ EmotionDefines.IdlePropertyNames = {
 	[EmotionDefines.IdlePoseType.SIT_GROUND] = "SitGroundIdleType",
 	[EmotionDefines.IdlePoseType.SLEEP] = "SleepIdleType",
 	[EmotionDefines.IdlePoseType.SIT_CHAIR] = "SitChairIdleType",
+	[EmotionDefines.IdlePoseType.BATTLE] = "BattleIdleType",
 }
 
 --- 对应情感动作表的 CanUse[0]等
@@ -165,6 +169,7 @@ EmotionDefines.ELog = {
 	[12] = "蓄力中不可用",
 	[13] = "死亡中不可用",
 	[14] = "变身中不可用",
+	[15] = "睡觉中不可用",
 }
 
 return EmotionDefines

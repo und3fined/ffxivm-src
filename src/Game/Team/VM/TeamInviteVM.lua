@@ -52,7 +52,6 @@ end
 function TeamInviteVM:Reset( IsInit )
 	self.IsEmptyMember = true 
 	self.FilterKeyword = ""
-	self.IsQuering = false
 	self.CurInvitedRoleIDs = {} 
 	self.CurInvitedRoleNum = 0
 
@@ -72,14 +71,29 @@ function TeamInviteVM:QueryRoleInviteStatusTimed()
 end
 
 function TeamInviteVM:RefreshInviteMemberData(PreviewIndex, Type)
-	if self.IsQuering then
-		_G.FLOG_WARNING("TeamInviteVM:RefreshInviteMemberData querying while try to set %s, now is %s", PreviewIndex, self.PreviewIndex)
-		return
+	PreviewIndex = PreviewIndex or 1
+	_G.FLOG_INFO("TeamInviteVM:RefreshInviteMemberData index:%s, type: %s", PreviewIndex, Type)
+
+	local RoleIDList = {}
+	if PreviewIndex == 1 then
+		RoleIDList = self:GetNearbyMemberRoleIDList()
+	elseif self.CachePlayerData then
+		RoleIDList = self.CachePlayerData[PreviewIndex + 1]
 	end
+	UpdatePlayerVMList(self.PlayerItemVMList, RoleIDList, Type)
 
-	self.PreviewIndex = PreviewIndex or 1
+	if self:HasFilterKeyword() then
+		self:FilterParentItemByKeyword(self.FilterKeyword, Type)
+	else
+		self.ViewingPlayerItemVMList = self.PlayerItemVMList
+	end
+	self:UpdateEmptyMark()
+end
 
-	self.IsQuering = true 
+local function RefreshQueryCallback()
+end
+
+function TeamInviteVM:RefreshAll()
 	local TempData = {}
 
 	--好友
@@ -95,21 +109,11 @@ function TeamInviteVM:RefreshInviteMemberData(PreviewIndex, Type)
 	for RoleID in pairs(table.makeset(TempData[InviteItemType.Friend], TempData[InviteItemType.Nearby], TempData[InviteItemType.Tribe])) do
 		table.insert(self.CurRefreshRoles, RoleID)
 	end
-	self:QueryRoleInviteStatusTimed()
 
-	local QueryCallback = function( )
-		self.IsQuering = false
-		UpdatePlayerVMList(self.PlayerItemVMList, TempData[self.PreviewIndex + 1], Type)
-		if self.FilterKeyword and self.FilterKeyword ~= "" then
-			self:FilterParentItemByKeyword(self.FilterKeyword, Type)
-		else
-			self.ViewingPlayerItemVMList = self.PlayerItemVMList
-		end
-
-		self:UpdateEmptyMark()
+	if #self.CurRefreshRoles > 0 then
+		self:QueryRoleInviteStatusTimed()
+		_G.RoleInfoMgr:QueryRoleSimples(self.CurRefreshRoles, RefreshQueryCallback, nil, false)
 	end
-
-	_G.RoleInfoMgr:QueryRoleSimples(self.CurRefreshRoles, QueryCallback, nil, false)
 end
 
 function TeamInviteVM:GetFriendMemberRoleIDList()
@@ -207,7 +211,6 @@ function TeamInviteVM:ClearFilterData()
 end
 
 function TeamInviteVM:Clear()
-	self.IsQuering = false
 	self.PlayerItemVMList:Clear()
 	self:ClearFilterData()
 	self:ClearInvitedRoleInfo()
@@ -308,6 +311,10 @@ function TeamInviteVM:InitTabVMOnce()
 		end
 		self.TabVMList:Add(VM)
 	end
+end
+
+function TeamInviteVM:HasFilterKeyword()
+	return self.FilterKeyword and self.FilterKeyword ~= ""
 end
 
 return TeamInviteVM

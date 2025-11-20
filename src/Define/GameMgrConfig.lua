@@ -56,7 +56,7 @@ GameMgrConfig = GameMgrConfig or {
     "PWorldEntourageTeamMgr",        "Role",         2000,       "Game/PWorld/Team/PWorldEntourageTeamMgr",                  false,
     "MapAreaMgr",        	  "Game",         2000,       "Game/PWorld/MapAreaMgr",                        		false,
     "MapAreaImageMgr",      "Game",         2000,       "Game/PWorld/MapAreaImageMgr",                        	false,
-    "MapEditDataMgr",       "Game",         2000,       "Game/PWorld/MapEditDataMgr",                        	false,
+    "MapEditDataMgr",       "Role",         2000,       "Game/PWorld/MapEditDataMgr",                        	false,
     "MapGimmickFishAreaMgr",  "Game",       2000,       "Game/PWorld/MapGimmickFishAreaMgr",                    false,
     "PWorldStageMgr",       "Game",         2000,       "Game/PWorld/Stage/PWorldStageMgr",                     false,
     "PWorldVoteMgr",        "Role",         2000,       "Game/PWorld/Vote/PWorldVoteMgr",                       			false,
@@ -114,6 +114,7 @@ GameMgrConfig = GameMgrConfig or {
     "LinkShellMgr",         "Role",         2000,       "Game/Social/LinkShell/LinkShellMgr",                               false,
     "SummonMgr",            "Game",         2000,       "Game/Summon/SummonMgr",                                false,
     "AdventureMgr",        "Game",          2000,       "Game/Adventure/AdventureMgr",                         false,
+    "AdventureFateRecommendMgr",        "Game",          2000,       "Game/Adventure/AdventureFateRecommendMgr",                         false,
     "FateMgr",              "Role",         2000,        "Game/Fate/FateMgr",                                    false,
     "LuaCameraMgr",         "Game",         2000,       "Game/Camera/LuaCameraMgr",                             false,
     "LegendaryWeaponMgr",   "Game",         2000,       "Game/LegendaryWeapon/LegendaryWeaponMgr",              false,
@@ -212,6 +213,8 @@ GameMgrConfig = GameMgrConfig or {
     "CollectablesMgr",     "Role",         2000,       "Game/Collectables/CollectablesMgr",                     false,
     "ArmyMgr",     "Role",           2000,       "Game/Army/ArmyMgr",                         false,
     "OpsNewbieStrategyMgr",          "Role",         2000,         "Game/Ops/OpsNewbieStrategy/OpsNewbieStrategyMgr",                           false,
+    "OpsTeamUpMgr",          "Role",         2000,         "Game/Ops/OpsTeamUp/OpsTeamUpMgr",                           false,
+
 
     "GoldSauserMainPanelMgr",     "Role",           2000,       "Game/GoldSauserMainPanel/GoldSauserMainPanelMgr",                         false,
 
@@ -268,6 +271,8 @@ GameMgrConfig = GameMgrConfig or {
     "BandTimelineMgr",            "Role",           2000,       "Game/TouringBand/BandTimelineExtension/BandTimelineMgr",   true,
     --Hotel
     "HotelMgr",                 "Game",         2000,       "Game/Hotel/HotelMgr",                          false,
+    "ActivitySequenceMgr",                 "Game",         2000,       "Game/ActivitySequence/ActivitySequenceMgr",  false,
+    "UIShadowMgr",                 "Game",         2000,       "Game/UIShadow/UIShadowMgr",                          false,
     "AnnouncementMgr",            "Role",         2000,       "Game/Announcement/AnnouncementMgr",                   false,
     "MURSurveyMgr",       "Role",         2000,       "Game/MURSurvey/MURSurveyMgr",                		false,
     "UILevelMgr",       "Game",         2000,       "Game/Common/Render2D/Level/UILevelMgr",                		false,
@@ -291,9 +296,21 @@ GameMgrConfig = GameMgrConfig or {
     "DeepLinkMgr",       "Game",         2000,       "Game/DeepLink/DeepLinkMgr",   false,
     "UpgradeMgr",       "Role",         2000,       "Game/Upgrade/UpgradeMgr",   false,
     "GroupMgr",       "Game",         2000,       "Game/Group/GroupMgr",   false,
-    "IOS26ResDownloadMgr",       "Game",         2000,       "Game/LoginNew/Mgr/IOS26ResDownloadMgr",                     false,
+    "HousingMgr",     "Game",         2000,       "Game/House/HousingMgr",   false,
+    "HouseLandMgr",         "Game",         2000,       "Game/House/HouseLandMgr",                              false,
+    "OpsGameplayMgr",       "Game",         2000,       "Game/OpsGameplay/OpsGameplayMgr",                      false,
     "PowerSavingMgr",       "Role",         2000,       "Game/Settings/PowerSavingMgr",                         false,
-    "OpsGameplayMgr",     "Game",         2000,       "Game/OpsGameplay/OpsGameplayMgr",   false,
+    "HouseInfoMgr",         "Game",         2000,       "Game/House/HouseInfoMgr",                              false,
+    "OpsReturnMgr",         "Game",         2000,       "Game/Ops/OpsReturn/OpsReturnMgr",                              false,
+    "RhythmGameMgr",        "Game",         2000,       "Game/StarlightCelebration/RhythmGame/RhythmGameMgr",   true,
+    "StoreMysteryBoxMgr",               "Role",         2000,       "Game/Store/StoreMysteryBoxMgr",                                    false,
+    "FurnitureInteractionMgr",  "Game",     2000,       "Game/House/FurnitureInteractionMgr",                   false,
+    "ToyMgr",         "Role",         2000,       "Game/Toy/ToyMgr",                              false,
+    "SkillHandleMgr",   "Role",         2000,       "Game/MainSkillHandle/SkillHandleMgr",   false,
+    "SettingsHandleMgr",   "Game",         2000,       "Game/Settings/SettingsHandleMgr",   false,
+    "OpsMoggleCollectMgr", "Game",    2000, "Game/Ops/OpsMoggleCollectMgr", false,
+    "GMCharacterEditorMgr",   "Game",         2000,       "Game/GM/CharacterEditor/GMCharacterEditorMgr",   false,
+    "StarLightNewYearActivityMgr", "Game",    2000, "Game/StarlightCelebration/StarLightNewYearActivityMgr", false,
 }
 
 return #GameMgrConfig, GameMgrConfig

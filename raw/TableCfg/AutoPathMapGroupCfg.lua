@@ -117,7 +117,7 @@ local AutoPathMapGroupCfg = {
         {
             GroupID = 21,
             GroupName = '库尔札斯中央高地',
-            _MapList = '[15003]',
+            _MapList = '[15003,7018,7019]',
         },
         {
             GroupID = 22,

@@ -333,7 +333,7 @@ function NetworkRTTMgr:Start()
 	self.TimeOutCount = 0
 	self.bWaitingForRes = false
 
-	self.TimerID = self:RegisterTimer(self.OnTimer, 0, TIMER_INTERVAL, 0)
+	self.TimerID = self:RegisterTimer(self.OnTimer, 1, TIMER_INTERVAL, 0)
 end
 
 function NetworkRTTMgr:Stop()

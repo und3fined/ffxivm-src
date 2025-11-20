@@ -48,7 +48,7 @@ function UIBinderSetTextFormatForNeedNum:GetText(NewValue)
 		return string.format("%d/%d", NewValue, self.TotalNum )
 	end
 
-	local curNumRichText = RichTextUtil.GetText(string.format("%d", NewValue), "dc5868", 0, nil)
+	local curNumRichText = RichTextUtil.GetText(string.format("%d", NewValue), "dc5868")
     return string.format("%s/%d", curNumRichText, self.TotalNum)
 
 end

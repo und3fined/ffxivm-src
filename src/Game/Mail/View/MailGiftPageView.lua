@@ -17,11 +17,13 @@ local LSTR = _G.LSTR
 ---@field BtnCheck CommBtnMView
 ---@field BtnDeleteMail CommBtnMView
 ---@field BtnOpen CommBtnLView
+---@field CommTabs_UIBP CommTabsView
+---@field CommonBkgMask CommonBkgMaskView
 ---@field EFF UFCanvasPanel
 ---@field ImgBGItem01 UFImage
 ---@field ImgBGItem03 UFImage
----@field ImgGiveSelect UFImage
----@field ImgReceiveSelect UFImage
+---@field PanelBGCover UFCanvasPanel
+---@field PanelBGItem UFCanvasPanel
 ---@field PanelContent UFCanvasPanel
 ---@field PanelGift UFCanvasPanel
 ---@field PanelGiftMail UFCanvasPanel
@@ -33,16 +35,10 @@ local LSTR = _G.LSTR
 ---@field RichTextMailContent URichTextBox
 ---@field RichTextToName URichTextBox
 ---@field Spine_Store_Mail USpineWidget
----@field Spine_Store_Mail_flower USpineWidget
 ---@field TableViewGift UTableView
 ---@field TableViewMailList UTableView
 ---@field TextFromName UFTextBlock
----@field TextGive UFTextBlock
----@field TextReceive UFTextBlock
 ---@field TextTitle UFTextBlock
----@field ToggleBtnGive UToggleButton
----@field ToggleBtnReceive UToggleButton
----@field ToggleGroupSwitch UToggleGroup
 ---@field AnimBGItem0 UWidgetAnimation
 ---@field AnimBGItem1 UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
@@ -64,11 +60,13 @@ function MailGiftPageView:Ctor()
 	--self.BtnCheck = nil
 	--self.BtnDeleteMail = nil
 	--self.BtnOpen = nil
+	--self.CommTabs_UIBP = nil
+	--self.CommonBkgMask = nil
 	--self.EFF = nil
 	--self.ImgBGItem01 = nil
 	--self.ImgBGItem03 = nil
-	--self.ImgGiveSelect = nil
-	--self.ImgReceiveSelect = nil
+	--self.PanelBGCover = nil
+	--self.PanelBGItem = nil
 	--self.PanelContent = nil
 	--self.PanelGift = nil
 	--self.PanelGiftMail = nil
@@ -80,16 +78,10 @@ function MailGiftPageView:Ctor()
 	--self.RichTextMailContent = nil
 	--self.RichTextToName = nil
 	--self.Spine_Store_Mail = nil
-	--self.Spine_Store_Mail_flower = nil
 	--self.TableViewGift = nil
 	--self.TableViewMailList = nil
 	--self.TextFromName = nil
-	--self.TextGive = nil
-	--self.TextReceive = nil
 	--self.TextTitle = nil
-	--self.ToggleBtnGive = nil
-	--self.ToggleBtnReceive = nil
-	--self.ToggleGroupSwitch = nil
 	--self.AnimBGItem0 = nil
 	--self.AnimBGItem1 = nil
 	--self.AnimIn = nil
@@ -111,6 +103,8 @@ function MailGiftPageView:OnRegisterSubView()
 	self:AddSubView(self.BtnCheck)
 	self:AddSubView(self.BtnDeleteMail)
 	self:AddSubView(self.BtnOpen)
+	self:AddSubView(self.CommTabs_UIBP)
+	self:AddSubView(self.CommonBkgMask)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -132,6 +126,8 @@ function MailGiftPageView:OnInit()
 		{ "PanelGiftMailContentVisible", UIBinderSetIsVisible.New(self, self.PanelGiftMailContent) },
 		{ "PanelEmptyVisible", UIBinderValueChangedCallback.New(self, nil, self.PanelEmptyVisibleChange) },
 	}
+
+	self.CommTabs_UIBP:SetCallBack(self, self.OnToggleGroupSwitchChanged)
 end
 
 function MailGiftPageView:OnDestroy()
@@ -141,25 +137,21 @@ end
 function MailGiftPageView:TranslatedText()
 	self.BtnDeleteMail:SetText(LSTR(10024))
 	self.BtnCheck:SetText(LSTR(10025))
-	self.BtnOpen:SetText(LSTR(740021))
-	self.TextTitle:SetText(LSTR(740018))
-	self.TextReceive:SetText(LSTR(740019))
-	self.TextGive:SetText(LSTR(740020))
+	self.BtnOpen:SetText(LSTR(740021))       --打开礼物
+	self.TextTitle:SetText(LSTR(740018))     --赠礼
 end
 
 function MailGiftPageView:OnShow()
 	self:TranslatedText()
-	self.ToggleGroupSwitch:SetCheckedIndex(0)
+	self.CommTabs_UIBP:SetSelectedIndex(1, true)
 	self:PlayAnimShow(MailMainVM.PanelEmptyVisible, MailMainVM.PanelGiftMailContentVisible)
 end
 
 function MailGiftPageView:OnHide()
-	self.ToggleGroupSwitch:ClearCheckIndex()
 	MailMainVM:SetGiftPageVisible(false)
 end
 
 function MailGiftPageView:OnRegisterUIEvent()
-	UIUtil.AddOnStateChangedEvent(self, self.ToggleGroupSwitch, self.OnToggleGroupSwitchChanged)
 	UIUtil.AddOnClickedEvent(self, self.BtnOpen, self.OnBtnOpenClick)
 	UIUtil.AddOnClickedEvent(self, self.BtnDeleteMail, self.OnBtnDeleteMailClick)
 	UIUtil.AddOnClickedEvent(self, self.BtnCheck, self.OnBtnCheckClick)
@@ -171,14 +163,14 @@ end
 
 function MailGiftPageView:OnRegisterBinder()
 	self:RegisterBinders(MailMainVM, self.Binders)
+	local TabList = {{Name = LSTR(740019)},{Name = LSTR(740020)} }  --收到礼物  --赠礼记录
+	self.CommTabs_UIBP:UpdateItems(TabList, 1)
 end
 
-function MailGiftPageView:OnToggleGroupSwitchChanged(ToggleGroup, ToggleButton, Index, State)
+function MailGiftPageView:OnToggleGroupSwitchChanged( Index )
 	MailMainVM:SetGiftToggleGroupIndex(Index)
 	self.AdapterMailList:CancelSelected()
-	UIUtil.SetColorAndOpacityHex(self.TextReceive, Index == 0 and "F1EAB6" or "AFAFAF" )
-	UIUtil.SetColorAndOpacityHex(self.TextGive, Index == 1 and "F1EAB6" or "AFAFAF" )
-	
+
 	if MailMainVM.GiftPageVisible then
 		self:PlayAnimation(self.AnimToggleSwitch)
 	end
@@ -198,10 +190,21 @@ function MailGiftPageView:OnToggleGroupSwitchChanged(ToggleGroup, ToggleButton, 
 end
 
 function MailGiftPageView:OnSelectChangedAdapterMailList(Index, ItemData, ItemView)
+	self.BtnOpen:SetText(ItemData.IsGreetingCard and LSTR(740026) or LSTR(740021)) --“打开贺卡” “打开礼物”
+	self.TextTitle:SetText(ItemData.IsGreetingCard and LSTR(740024) or LSTR(740018))     --“贺卡”  “赠礼”
+
 	MailMainVM:SetMailListLastSelectIndex(Index)
 	MailMainVM:SelectMail(ItemData.ID)
+
 	if MailMainVM.GiftPageVisible then
 		self:PlayAnimSwitch(MailMainVM.PanelEmptyVisible, MailMainVM.PanelGiftMailContentVisible)
+	end
+	local MailData = _G.MailMgr:GetMailData(MailMainVM.CurrentMailID, MailMainVM.CurrentMailType, MailMainVM.CurrentMailBoxType)
+	local CardStyle = (MailData.GreetingCardData or {}).StyleID or 0
+	if ItemData.IsGreetingCard and CardStyle == 1 then
+		self.Spine_Store_Mail:SetSkin("Holiday")
+	else
+		self.Spine_Store_Mail:SetSkin("Store")
 	end
 end
 
@@ -210,7 +213,7 @@ function MailGiftPageView:OnSelectChangedTableViewGift(Index, ItemData, ItemView
 end
 
 function MailGiftPageView:OnBtnOpenClick()
-	MailMainVM:ShowStoreGiftMailView()
+	MailMainVM:ShowStoreGiftMailExpandedView(true)
 end
 
 function MailGiftPageView:OnBtnDeleteMailClick()
@@ -219,7 +222,7 @@ function MailGiftPageView:OnBtnDeleteMailClick()
 end
 
 function MailGiftPageView:OnBtnCheckClick()
-	MailMainVM:ShowStoreGiftMailView()
+	MailMainVM:ShowStoreGiftMailExpandedView()
 end
 
 function MailGiftPageView:OnMailListDelChanged(NewValue, OldValue)

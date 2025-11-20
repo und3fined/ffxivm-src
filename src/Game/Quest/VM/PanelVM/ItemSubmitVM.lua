@@ -149,6 +149,42 @@ function ItemSubmitVM:GetSubmitItemInfo()
     return HQSubmitNQList, CollectItem
 end
 
+function ItemSubmitVM:GetSubmitItemMagicsparInfo()
+	local MagicsparSubmitList = {}
+	local CollectItem = {}
+	for _, Info in pairs(self.ItemToSubmit) do
+		for GID, Num in pairs(Info.SubmitGIDMap) do
+			CollectItem[GID] = Num
+
+			local ItemData = _G.BagMgr:GetItemDataByGID(GID)
+			if ItemData then
+				local Attr = ItemData.Attr
+				if Attr then
+					local Equip = Attr.Equip
+					if Equip then
+						local GemInfo = Equip.GemInfo
+						if GemInfo then
+							local CarryList = GemInfo.CarryList
+							if CarryList then
+								for _, OwnedMagicspar in pairs(CarryList) do
+									if OwnedMagicspar ~= 0 then
+										table.insert(MagicsparSubmitList, ItemData.ResID)
+										break
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	if next(CollectItem) == nil then
+		CollectItem = nil
+	end
+    return MagicsparSubmitList, CollectItem
+end
+
 ---由业务实现
 ---@param CollectItem table
 function ItemSubmitVM:SubmitItem(CollectItem)

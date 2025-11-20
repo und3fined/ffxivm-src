@@ -30,6 +30,7 @@ local LSTR = _G.LSTR
 ---@field Params.SureCallback(FText) function @点击确认按钮的回调函数
 ---@field Params.IsShowAnonymous bool @是否显示匿名勾选框
 ---@field Params.GetAnonymousCallback(IsChecked) function @点击匿名勾选框的回调函数
+---@field Params.IsNoHideByClickSureBtn boolean @点击确认按钮是否不隐藏弹框
 local CommPopupMultiLineInputBoxView = LuaClass(UIView, true)
 
 function CommPopupMultiLineInputBoxView:Ctor()
@@ -94,6 +95,8 @@ function CommPopupMultiLineInputBoxView:OnShow()
 	else
 		UIUtil.SetIsVisible(self.Anonymous, false)
 	end
+
+	self.IsNoHideByClickSureBtn = self.Params.IsNoHideByClickSureBtn == true
 end
 
 function CommPopupMultiLineInputBoxView:OnHide()
@@ -122,7 +125,7 @@ function CommPopupMultiLineInputBoxView:OnSingleBoxClick(ToggleButton, ButtonSta
 end
 
 function CommPopupMultiLineInputBoxView:OnCancelBtnClick()
-	UIViewMgr:HideView(UIViewID.CommonPopupMultiLineInput)
+	self:Hide()
 end
 
 function CommPopupMultiLineInputBoxView:OnSureBtnClick()
@@ -130,7 +133,10 @@ function CommPopupMultiLineInputBoxView:OnSureBtnClick()
 	if self.Params.SureCallback ~= nil then
 		self.Params.SureCallback(InputText)
 	end
-	UIViewMgr:HideView(UIViewID.CommonPopupMultiLineInput)
+
+	if self.IsNoHideByClickSureBtn ~= true then
+		self:Hide()
+	end
 end
 
 return CommPopupMultiLineInputBoxView

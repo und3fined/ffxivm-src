@@ -80,7 +80,7 @@ function GoldSaucerMainPanelChallengeNotesSlotItemView:OnRegisterBinder()
 		{"NumText", UIBinderSetText.New(self, self.Comm96Slot.RichTextQuantity)},
 		{"IconPath", UIBinderSetImageBrush.New(self, self.Comm96Slot.Icon)},
 		{"IsMaskVisible", UIBinderSetIsVisible.New(self, self.Comm96Slot.ImgMask)},
-		{"IsReceived", UIBinderSetIsVisible.New(self, self.Comm96Slot.IconReceived)},
+		{"IsMaskVisible", UIBinderSetIsVisible.New(self, self.Comm96Slot.IconReceived)},
 		{"TextLevelVisible", UIBinderSetIsVisible.New(self, self.Comm96Slot.RichTextLevel)},
 		{"QualityPath", UIBinderSetImageBrush.New(self, self.Comm96Slot.ImgQuanlity)},
 	}

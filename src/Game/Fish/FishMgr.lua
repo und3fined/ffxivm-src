@@ -79,6 +79,7 @@ local FishBuffCode = FishDefine.FishBuffCode
 local ViewDisSettingID = FishDefine.ViewDisSettingID
 local MinCameraDis = FishDefine.MinCameraDis
 local FishActionID = FishDefine.FishActionID
+local DefaultLineTraceOffset = FishDefine.DefaultLineTraceOffset
 
 --TODO[chaooren] 剩余未做的事
 --1、切图后钓鱼流程应重置避免错误流程和表现
@@ -290,10 +291,14 @@ function FishMgr:OnCastLifeSkill(Params)
 
         -- 抛竿射线检测
         local USkillMgr = _G.UE.USkillMgr
-        local RawRotation = Major:GetActorForwardVector() 
-        local bNewTrace = USkillMgr.FishSkillNewLineTrace(MajorPos,RawRotation)
+        local RawRotation = Major:GetActorForwardVector()
+        local OffsetX = FishLocationCfg:FindValue(self.AreaID,"FishLineTraceOffsetX")
+        local OffsetZ = FishLocationCfg:FindValue(self.AreaID,"FishLineTraceOffsetZ")
+        OffsetX = OffsetX == 0 and DefaultLineTraceOffset or OffsetX
+        OffsetZ = OffsetZ == 0 and DefaultLineTraceOffset or OffsetZ
+        local bNewTrace = USkillMgr.FishSkillNewLineTrace(MajorPos,RawRotation,OffsetX,OffsetZ)
         if self.bShowLineTrace then
-            USkillMgr.FishSkillLineTraceDebug(MajorPos,RawRotation)
+            USkillMgr.FishSkillLineTraceDebug(MajorPos,RawRotation,OffsetX,OffsetZ)
         end
         if bNewTrace == false then
             MsgTipsUtil.ShowTipsByID(FishErrorCode[ClientFishReason.LineTraceFail])
@@ -340,10 +345,6 @@ function FishMgr:OnCastLifeSkill(Params)
         self:SetFishStatus(FishStatus.FISHER_DROPCAST)
         self:OnEnterFishingState()
         self:RefreshFishSkill()
-        -- 隐藏寻路引导线
-        NaviDecalMgr:SetNavPathHiddenInGame(true)
-        NaviDecalMgr:DisableTick(true)
-        BuoyMgr:ShowAllBuoys(false)
     -- 提竿技能
     elseif ActionType == LifeSkillActionType.LIFESKILL_ACTION_TYPE_FISH_LIFT then
         if self.CurFishState ~= FishStatus.FISHER_LIFT_WINDOW then
@@ -401,6 +402,7 @@ function FishMgr:OnInit()
     self.bSitCorrect = false -- 部分情况下为了匹配动作，需要临时调整站坐状态，在此进行标记
     self.bFishGM = false -- 使用GM指令快速钓鱼，需要特殊处理逻辑
     self.bGameEventDynRegister = false -- 部分事件需要动态注册，在此标记，防止断线重连时重复注册
+    self.FishDropNum = 0 -- 抛竿次数，目前仅用于判断首次抛竿隐藏引路UI
 end
 
 function FishMgr:OnBegin()
@@ -768,60 +770,63 @@ end
 --服务器下发抛竿协议
 function FishMgr:OnSkillFishDrop(Params)
 
-    if Params ~= nil and not MajorUtil.IsMajor(Params.ObjID) then
-        FishPlayerUnit.Get(Params.ObjID):OnSkillFishDrop(Params)
-        if Params ~= nil then
-            local EntityID = Params.ObjID
-            if  EntityID ~= nil then
-                EventMgr:SendEvent(EventID.FisherManFishing, EntityID)
+    if Params ~= nil then
+        if not MajorUtil.IsMajor(Params.ObjID) then
+            FishPlayerUnit.Get(Params.ObjID):OnSkillFishDrop(Params)
+            if Params ~= nil then
+                local EntityID = Params.ObjID
+                if  EntityID ~= nil then
+                    EventMgr:SendEvent(EventID.FisherManFishing, EntityID)
+                end
             end
+            return
         end
-        return
+
+        _G.UIViewMgr:ShowView(_G.UIViewID.GatherDrugSkillPanel)
+
+        --res: 等待时间
+        if self.CurFishState ~= FishStatus.FISHER_DROPCAST and self.CurFishState ~= FishStatus.FISHER_WAIT then
+            FLOG_WARNING("[Fish]Case OnSkillFishDrop but CurState not FishDropCast or FishDrop")
+            return
+        end
+
+        if self.FishLiftTimer ~= 0 then
+            TimerMgr:CancelTimer(self.FishLiftTimer)
+            self.FishLiftTimer = 0
+        end
+
+        local FishID = Params.FishDrop.FishResID
+        local AreaID = Params.FishDrop.LocationID
+        print("客户端与服务器渔场ID是否匹配: " .. tostring(AreaID == self.AreaID))
+
+        local Stamp = Params.FishDrop.HookedTimestampMS
+        local WaitTime = SkillUtil.StampToTime(Stamp)
+        if FishID == 0 then
+            --钓鱼失败时客户端模拟一个30s的时长`
+            WaitTime = 30
+        end
+        if WaitTime <= 0 then
+            --网络延迟导致等待时间不大于0，将直接进入钓鱼结束状态，避免卡流程
+            --超过3s的延迟，毁灭吧赶紧的
+            local Time = (TimeUtil.GetLocalTimeMS() - TimeUtil.GetServerTimeMS()) / 1000
+            FLOG_ERROR("[Fish]网络延迟过高无法执行正常钓鱼流程，请验证本地时间与服务器时间是否一致，延迟：".. Time .. "s")
+            self:OnFishFaild()
+            return
+        end
+
+        self:ClearData()
+        self.CurFishID = FishID
+        print("[Fish]抛竿成功")
+        EventMgr:SendEvent(EventID.FishDrop, {BiteTime = WaitTime})
+        if FishID <= 0 then
+            --等3s播收杆动作
+            self.FishDropTimer = self:RegisterTimer(self.PostFishActionEndMsg, 3, 1, 1, EndTypeEnum.Wait)
+            return
+        end
+
+        self.FishDropTimer = self:RegisterTimer(self.OnFishBite, WaitTime, 1, 1)
     end
 
-    _G.UIViewMgr:ShowView(_G.UIViewID.GatherDrugSkillPanel)
-
-    --res: 等待时间
-    if self.CurFishState ~= FishStatus.FISHER_DROPCAST and self.CurFishState ~= FishStatus.FISHER_WAIT then
-        FLOG_WARNING("[Fish]Case OnSkillFishDrop but CurState not FishDropCast or FishDrop")
-        return
-    end
-
-    if self.FishLiftTimer ~= 0 then
-        TimerMgr:CancelTimer(self.FishLiftTimer)
-        self.FishLiftTimer = 0
-    end
-
-    local FishID = Params.FishDrop.FishResID
-    local AreaID = Params.FishDrop.LocationID
-    print("客户端与服务器渔场ID是否匹配: " .. tostring(AreaID == self.AreaID))
-
-    local Stamp = Params.FishDrop.HookedTimestampMS
-    local WaitTime = SkillUtil.StampToTime(Stamp)
-    if FishID == 0 then
-        --钓鱼失败时客户端模拟一个30s的时长`
-        WaitTime = 30
-    end
-    if WaitTime <= 0 then
-        --网络延迟导致等待时间不大于0，将直接进入钓鱼结束状态，避免卡流程
-        --超过3s的延迟，毁灭吧赶紧的
-        local Time = (TimeUtil.GetLocalTimeMS() - TimeUtil.GetServerTimeMS()) / 1000
-        FLOG_ERROR("[Fish]网络延迟过高无法执行正常钓鱼流程，请验证本地时间与服务器时间是否一致，延迟：".. Time .."s")
-        self:OnFishFaild()
-        return
-    end
-
-    self:ClearData()
-    self.CurFishID = FishID
-    print("[Fish]抛竿成功")
-    EventMgr:SendEvent(EventID.FishDrop, {BiteTime = WaitTime})
-    if FishID <= 0 then
-        --等3s播收杆动作
-        self.FishDropTimer = self:RegisterTimer(self.PostFishActionEndMsg, 3, 1, 1, EndTypeEnum.Wait)
-        return
-    end
-
-    self.FishDropTimer = self:RegisterTimer(self.OnFishBite, WaitTime, 1, 1)
 end
 
 --鱼咬钩
@@ -1073,10 +1078,6 @@ function FishMgr:OnFishEnd()
     self:StartMoveAndTurnChange(EndActionTime, false)
     ChangeCalculateVelocityRange(false)
     ChangeVelocityRangeCheck()
-    -- 重新显示寻路引导线
-    NaviDecalMgr:SetNavPathHiddenInGame(false)
-    NaviDecalMgr:DisableTick(false)
-    BuoyMgr:ShowAllBuoys(true)
 end
 
 -- 提竿结束，动画状态机设置防止因状态不对导致动画重复播放
@@ -1390,6 +1391,14 @@ function FishMgr:OnEnterFishingState()
     if self.FishEffectVfxID == 0 then
         self.FishEffectVfxID = self:ShowIsFishingEffect()
     end
+
+    -- 隐藏寻路引导线
+    if self.FishDropNum == 0 then
+        NaviDecalMgr:SetNavPathHiddenInGame(true)
+        NaviDecalMgr:DisableTick(true)
+        BuoyMgr:ShowAllBuoys(false)
+    end
+    self.FishDropNum = self.FishDropNum + 1
 end
 
 -- 退出钓鱼状态(移动触发)
@@ -1413,6 +1422,14 @@ function FishMgr:OnExitFishingState()
     if self.FishEffectVfxID ~= 0 then
         self:StopFishingEffect()
     end
+
+    -- 重新显示寻路引导线
+    if self.FishDropNum ~= 0 then
+        NaviDecalMgr:SetNavPathHiddenInGame(false)
+        NaviDecalMgr:DisableTick(false)
+        BuoyMgr:ShowAllBuoys(true)
+    end
+    self.FishDropNum = 0
 end
 
 ---------------------钓鱼状态改变/技能替换END-----------------
@@ -1511,7 +1528,12 @@ end
 --捕鱼专属技能捕鱼坐按钮显隐
 function FishMgr:ShowFishBtnSit(bShow)
     if UIViewMgr:IsViewVisible(FishMainPanelViewID) == true then
-        UIViewMgr:FindView(FishMainPanelViewID):ChangeBtnSitShowState(bShow)
+         _G.SkillHandleMgr:ChangeHandleSpeedSkillFunc(bShow)
+        --手柄模式下不显示
+	    if _G.SettingsHandleMgr:IsGameHandleMode() and bShow then
+            bShow = false
+	    end
+        UIViewMgr:FindVisibleView(FishMainPanelViewID):ChangeBtnSitShowState(bShow)
     end
 end
 
@@ -1569,8 +1591,7 @@ function FishMgr:OnNetworkReconnected(Params)
         -- 触发断线重连后退出钓鱼状态
         self:ExitFishState()
     end
-    -- 触发断线重连后退出钓鱼状态
-    self:ShowFishMainPanel()
+    self:RegisterGameEvent(EventID.EnterMapFinish, self.OnEnterWorld)
 end
 
 -- 主角移除buff通知，现在前后台BUFF移除是分开计算的，因此客户端单独计算
@@ -1716,6 +1737,35 @@ function FishMgr:OnNetMsgGetStatStatus(MsgBody)
     end
 
     self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, ProtoCS.CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+end
+
+-- 根据当前位置手动更新当前渔场信息
+function FishMgr:UpdateFishArea()
+    local Major = MajorUtil.GetMajor()
+    if nil == Major then
+        return
+    end
+
+    local MajorPos = Major:FGetLocation(_G.UE.EXLocationType.ActorLoc)
+    local AreaID, GimmickID = _G.MapGimmickFishAreaMgr:GetGimmickIDByPos(MajorPos)
+    local bInFishArea = AreaID == 0 and false or true
+    local CurAreaID = AreaID
+    local CurGimmickID = GimmickID and GimmickID or self.GimmickAreaID
+    return bInFishArea, CurAreaID, CurGimmickID
+end
+
+function FishMgr:OnEnterWorld()
+    -- 断线重连后更新一次渔场位置，防止断线时位置变化导致渔场变化
+    self:UnRegisterGameEvent(EventID.EnterMapFinish, self.OnEnterWorld)
+    local bInFishIArea, CurAreaID, CurGimmickID = self:UpdateFishArea()
+    if bInFishIArea then
+        self:OnEnterFishArea(CurAreaID, CurGimmickID)
+    else
+        self:OnExitFishArea(CurGimmickID, true)
+    end
+    if UIViewMgr:IsViewVisible(FishMainPanelViewID) == true then
+        UIViewMgr:FindVisibleView(FishMainPanelViewID):OnNetworkReconnected()
+    end
 end
 
 -- function FishMgr:DisConnect()

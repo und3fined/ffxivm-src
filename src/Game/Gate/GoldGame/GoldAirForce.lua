@@ -81,4 +81,10 @@ function GoldAirForce:AfterGateOpportunityRewardAnimEnd(Params)
     _G.LootMgr:SetDealyState(false)
 end
 
+function GoldAirForce:ShowInfoAfterSignup(InGameMgr)
+     if InGameMgr.HasPlaySignUp == false and InGameMgr.bHasPlayerSignUp == true then
+        InGameMgr.HasPlaySignUp = true
+     end
+end
+
 return GoldAirForce

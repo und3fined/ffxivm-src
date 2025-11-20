@@ -218,16 +218,18 @@ function AttributeMainPageView:UpdateSummaries()
 end
 
 function AttributeMainPageView:OnExpProgressChanged(NewExpProgress)
-	self:PlayAnimation(self.AnimExpLight, self.AnimExpLight:GetEndTime() * NewExpProgress, 1, nil, 0.0, false)
+	if self.AnimExpLight and self.AnimExpLight:IsValid() then
+		self:PlayAnimation(self.AnimExpLight, self.AnimExpLight:GetEndTime() * NewExpProgress, 1, nil, 0.0, false)
+	end
 end
 
 function AttributeMainPageView:OnButtonInfoClick()
 	local ViewID = UIViewID.CommHelpInfoTipsView
 	local Params = {}
 	local Content = _G.LSTR(1050223)
-	local BtnSize = UIUtil.GetLocalSize(self.BtnInfo2)
+	local BtnSize =  UIUtil.GetWidgetSize(self.BtnInfo2.Imgnfor)
 	Params.Data = table.is_nil_empty(Content) and {{Title = "", Content = {Content}}} or Content
-	Params.Offset = _G.UE.FVector2D(-20, BtnSize.Y - 20)
+	Params.Offset = _G.UE.FVector2D(-20, BtnSize.Y - 10)
 	Params.Alignment = _G.UE.FVector2D(1, 0)
 	Params.InTargetWidget = self.BtnInfo2
 	Params.HidePopUpBG = false

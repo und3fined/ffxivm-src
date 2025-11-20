@@ -19,6 +19,9 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnTeach UFButton
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonBkg02 CommonBkg02View
+---@field CommonBkgMask CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field EntranceChocobo PWorldEntranceChocoboItemView
 ---@field EntranceMagicCard PWorldEntranceMagicCardItemView
 ---@field MatchSelection PWorldMatchSelectionPanelView
@@ -31,7 +34,6 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 ---@field TableViewEntrance UTableView
 ---@field TableViewPVP UTableView
 ---@field TextTeach UFTextBlock
----@field TextTitle UFTextBlock
 ---@field AnimEntranceIn UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimLoop UWidgetAnimation
@@ -42,6 +44,9 @@ function PWorldEntrancePanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnTeach = nil
 	--self.CloseBtn = nil
+	--self.CommonBkg02 = nil
+	--self.CommonBkgMask = nil
+	--self.CommonTitle = nil
 	--self.EntranceChocobo = nil
 	--self.EntranceMagicCard = nil
 	--self.MatchSelection = nil
@@ -54,7 +59,6 @@ function PWorldEntrancePanelView:Ctor()
 	--self.TableViewEntrance = nil
 	--self.TableViewPVP = nil
 	--self.TextTeach = nil
-	--self.TextTitle = nil
 	--self.AnimEntranceIn = nil
 	--self.AnimIn = nil
 	--self.AnimLoop = nil
@@ -64,6 +68,9 @@ end
 function PWorldEntrancePanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CloseBtn)
+	self:AddSubView(self.CommonBkg02)
+	self:AddSubView(self.CommonBkgMask)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.EntranceChocobo)
 	self:AddSubView(self.EntranceMagicCard)
 	self:AddSubView(self.MatchSelection)
@@ -94,7 +101,7 @@ end
 
 function PWorldEntrancePanelView:OnShow()
 	require("Game/PWorld/Entrance/PWorldEntVM"):UpdPWorldTypes()
-	self.TextTitle:SetText(_G.LSTR(130066)) -- 玩法
+	self.CommonTitle:SetTextTitleName(_G.LSTR(130066)) -- 玩法
 	---- 跳转选中其他页签
 	self.PWorldEntIndex = 1
 	if self.Params and self.Params.JumpData and next(self.Params.JumpData) then
@@ -120,6 +127,7 @@ end
 
 function PWorldEntrancePanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.PWorldEntSwitch, self.OnPWorldEntSwitch)
+	self:RegisterGameEvent(_G.EventID.PWorldMapEnter, self.OnPWorldMapEnter)
 end
 
 function PWorldEntrancePanelView:OnRegisterBinder()
@@ -149,6 +157,10 @@ function PWorldEntrancePanelView:OnTableViewPVPSelectChange(Index, VM)
 	if not VM then return end
 	
 	PWorldEntUtil.ShowPWorldEntView(VM.TypeID)
+end
+
+function PWorldEntrancePanelView:OnPWorldMapEnter()
+	self:Hide()
 end
 
 return PWorldEntrancePanelView

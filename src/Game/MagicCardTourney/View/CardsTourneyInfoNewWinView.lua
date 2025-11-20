@@ -210,8 +210,8 @@ function CardsTourneyInfoNewWinView:OnInit()
 
 	self.SelfRewardWidgetRef = 
 	{
-		[1] = self.SelfRewardNew02,
-		[2] = self.SelfRewardNew01,
+		[1] = self.SelfRewardNew01,
+		[2] = self.SelfRewardNew02,
 	}
 end
 
@@ -267,7 +267,8 @@ function CardsTourneyInfoNewWinView:OnShow()
 				local Cfg = ItemCfg:FindCfgByKey(NodeAward.ResID or 0 )
 				local ImgPath = Cfg and ItemCfg.GetIconPath(Cfg.IconID or 0) or ""
 				AwardWidget:SetIconImg(ImgPath)
-				AwardWidget:SetNum(NodeAward.Num)
+				local NumText = _G.ScoreMgr.FormatScore(NodeAward.Num)
+				AwardWidget:SetNum(NumText)
 				AwardWidget:SetIconChooseVisible(false)
 				AwardWidget:SetClickButtonCallback(self, self.OnNodeRewardClicked)
 			end
@@ -297,6 +298,7 @@ function CardsTourneyInfoNewWinView:OnShow()
 	-- 动态设置进度动效位置
 	local EffectNode = self.FCanvasEffect
 	local Percent = PlayerScore/TourneyDefine.MaxScore
+	Percent = math.clamp(Percent, 0, 1)
 	UIUtil.SetIsVisible(self.FCanvasEffect, Percent > 0)
 	if EffectNode then
 		local Size = UIUtil.GetWidgetSize(self.Probar)
@@ -352,6 +354,9 @@ function CardsTourneyInfoNewWinView:OnPlayerRankChanged(Rank)
 		UIUtil.SetIsVisible(self.ImgRankIcon, false)
 		return
 	end
+	local CupIcon = MagicCardVMUtils.GetRankIcon(Rank)
+	UIUtil.ImageSetBrushFromAssetPath(self.ImgRankIcon, CupIcon)
+
 	
 	for index, RankAward in ipairs(self.RankAwardList) do
 		local SelfRewardWidget = self.SelfRewardWidgetRef[index]
@@ -366,8 +371,14 @@ function CardsTourneyInfoNewWinView:OnPlayerRankChanged(Rank)
 			SelfRewardWidget:SetIconImg(ImgPath)
 			local RewardNum = RankAward.Num
 			if RewardNum > 1 then
+				local NumText = RewardNum
+				local ProtoCommon = require("Protocol/ProtoCommon")
+				local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
+				if Cfg.ItemType == ITEM_TYPE_DETAIL.MISCELLANY_CURRENCY then
+					NumText = _G.ScoreMgr.FormatScore(RewardNum)
+				end
 				SelfRewardWidget:SetNumVisible(true)
-				SelfRewardWidget:SetNum(RewardNum)
+				SelfRewardWidget:SetNum(NumText)
 			else
 				SelfRewardWidget:SetNumVisible(false)
 			end

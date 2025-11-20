@@ -10,10 +10,14 @@ local UIUtil = require("Utils/UIUtil")
 local GoldSauserDefine = require("Game/Gate/GoldSauserDefine")
 local ProtoRes = require("Protocol/ProtoRes")
 local ItemUtil = require("Utils/ItemUtil")
+local BuffUtil = require("Utils/BuffUtil")
+local ItemSimpleVM = require("Game/Item/ItemSimpleVM")
+local LSTR = _G.LSTR
 
 ---@class GateLeapOfFaithResultPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnExit CommBtnLView
+---@field CommRewardItem_UIBP CommRewardItemView
 ---@field CommSlot CommBackpack96SlotView
 ---@field GateLeapOfFaithResultItem_Bronze GateLeapOfFaithResultItemView
 ---@field GateLeapOfFaithResultItem_Gold GateLeapOfFaithResultItemView
@@ -33,33 +37,35 @@ local GateLeapOfFaithResultPanelView = LuaClass(UIView, true)
 
 function GateLeapOfFaithResultPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-    --self.BtnExit = nil
-    --self.CommSlot = nil
-    --self.GateLeapOfFaithResultItem_Bronze = nil
-    --self.GateLeapOfFaithResultItem_Gold = nil
-    --self.GateLeapOfFaithResultItem_Result = nil
-    --self.GateLeapOfFaithResultItem_Silver = nil
-    --self.PanelFail = nil
-    --self.PanelSuccess = nil
-    --self.TextCoin = nil
-    --self.TextFail = nil
-    --self.TextProgress = nil
-    --self.TextReward = nil
-    --self.TextSuccess = nil
-    --self.TextTarget = nil
-    --self.AnimIn = nil
-    --AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
+	--self.BtnExit = nil
+	--self.CommRewardItem_UIBP = nil
+	--self.CommSlot = nil
+	--self.GateLeapOfFaithResultItem_Bronze = nil
+	--self.GateLeapOfFaithResultItem_Gold = nil
+	--self.GateLeapOfFaithResultItem_Result = nil
+	--self.GateLeapOfFaithResultItem_Silver = nil
+	--self.PanelFail = nil
+	--self.PanelSuccess = nil
+	--self.TextCoin = nil
+	--self.TextFail = nil
+	--self.TextProgress = nil
+	--self.TextReward = nil
+	--self.TextSuccess = nil
+	--self.TextTarget = nil
+	--self.AnimIn = nil
+	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function GateLeapOfFaithResultPanelView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-    self:AddSubView(self.BtnExit)
-    self:AddSubView(self.CommSlot)
-    self:AddSubView(self.GateLeapOfFaithResultItem_Bronze)
-    self:AddSubView(self.GateLeapOfFaithResultItem_Gold)
-    self:AddSubView(self.GateLeapOfFaithResultItem_Result)
-    self:AddSubView(self.GateLeapOfFaithResultItem_Silver)
-    --AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
+	self:AddSubView(self.BtnExit)
+	self:AddSubView(self.CommRewardItem_UIBP)
+	self:AddSubView(self.CommSlot)
+	self:AddSubView(self.GateLeapOfFaithResultItem_Bronze)
+	self:AddSubView(self.GateLeapOfFaithResultItem_Gold)
+	self:AddSubView(self.GateLeapOfFaithResultItem_Result)
+	self:AddSubView(self.GateLeapOfFaithResultItem_Silver)
+	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function GateLeapOfFaithResultPanelView:OnInit()
@@ -79,49 +85,74 @@ function GateLeapOfFaithResultPanelView:OnShow()
 
     local Params = self.Params
     local LeapOfFaithMgr = _G.GoldSauserLeapOfFaithMgr
-    local GoldSauserMgr = _G.GoldSauserMgr
     local bwin = Params.Type == GoldSauserDefine.PopType.Win
     if (bwin) then
         -- 赢了
         UIUtil.SetIsVisible(self.PanelSuccess, true)
         UIUtil.SetIsVisible(self.PanelFail, false)
 
-        self.GateLeapOfFaithResultItem_Result:UpdateInfo(1, 0, 0, LeapOfFaithMgr.ReachEndRewardCoin)
+        self.GateLeapOfFaithResultItem_Result:UpdateInfo(1, 0, 0, ItemUtil.GetItemNumText(LeapOfFaithMgr.ReachEndRewardCoin))
     else
         -- 输了
         UIUtil.SetIsVisible(self.PanelSuccess, false)
         UIUtil.SetIsVisible(self.PanelFail, true)
-        self.GateLeapOfFaithResultItem_Result:UpdateInfo(2, 0, 0, LeapOfFaithMgr.NoReachEndRewardCoin)
+        self.GateLeapOfFaithResultItem_Result:UpdateInfo(2, 0, 0, ItemUtil.GetItemNumText(LeapOfFaithMgr.NoReachEndRewardCoin))
     end
 
     local IconID = ItemUtil.GetItemIcon(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)
     local ItemCfg = require("TableCfg/ItemCfg")
     UIUtil.SetIsVisible(self.CommSlot.RichTextLevel, false)
     UIUtil.SetIsVisible(self.CommSlot.IconChoose, false)
-
-    self.CommSlot:SetIconImg(ItemCfg.GetIconPath(IconID))
+    local IconPath = ItemCfg.GetIconPath(IconID)
+    self.CommSlot:SetIconImg(IconPath)
     self.CommSlot:SetNumVisible(true)
-    self.CommSlot:SetNum(Params.AwardCoins)
+    self.CommSlot:SetNum(ItemUtil.GetItemNumText(Params.AwardCoins))
     self.AwardCoins = LeapOfFaithMgr:GetTotalCoin(true)
     local CactusType = ProtoRes.Game.LeapOfFaithCactusType
     self.GateLeapOfFaithResultItem_Gold:UpdateInfo(
         3,
         CactusType.LeapOfFaithCactusTypeGold,
         LeapOfFaithMgr:GetGoldCount(),
-        LeapOfFaithMgr:GetGoldCoin()
+        ItemUtil.GetItemNumText(LeapOfFaithMgr:GetGoldCoin())
     )
     self.GateLeapOfFaithResultItem_Silver:UpdateInfo(
         3,
         CactusType.LeapOfFaithCactusTypeSilver,
         LeapOfFaithMgr:GetSilverCount(),
-        LeapOfFaithMgr:GetSilverCoin()
+        ItemUtil.GetItemNumText(LeapOfFaithMgr:GetSilverCoin())
     )
     self.GateLeapOfFaithResultItem_Bronze:UpdateInfo(
         3,
         CactusType.LeapOfFaithCactusTypeBronze,
         LeapOfFaithMgr:GetBronzeCount(),
-        LeapOfFaithMgr:GetBronzeCoin()
+        ItemUtil.GetItemNumText(LeapOfFaithMgr:GetBronzeCoin())
     )
+
+    self.Params.Data = ItemSimpleVM.New()
+    local TempData = self.Params.Data
+    TempData.ItemNameVisible = false
+    TempData.Num = ItemUtil.GetItemNumText(self.Params.AwardCoins)
+    TempData.Icon = IconPath
+    TempData.ItemLevelVisible = false
+    TempData.ResID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE
+    TempData.BtnCheckVisible = false
+    TempData.IconChoose = false
+
+    local Table = BuffUtil.GetBuffBonusStateValueByScoreID(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)
+    if (Table ~= nil) then
+        local PercentValue = Table[ProtoRes.BonusStateEffectSubType.STATE_EFFECT_SUB_TYPE_WAN_RATE]
+        if (PercentValue ~= nil and PercentValue > 0) then
+            PercentValue = 1 + PercentValue * 0.0001
+            TempData.OriginalNum = math.ceil(TempData.Num / PercentValue)
+            TempData.IncrementedNum = TempData.Num
+            if (TempData.IncrementedNum < 0) then
+                TempData.IncrementedNum = 0
+            end
+            TempData.PlayAddEffect = true
+        end
+    end
+	TempData.RewardItemPlayAnimIn = true
+	TempData.ForcePlayAnim = true
 end
 
 function GateLeapOfFaithResultPanelView:OnHide()
@@ -151,7 +182,7 @@ function GateLeapOfFaithResultPanelView:OnBtnExitClicked()
 
     local Title = LSTR(1270005)
     local CloseCallback = function()
-        TimerMgr:AddTimer(
+        _G.TimerMgr:AddTimer(
             nil,
             function()
                 _G.GoldSauserLeapOfFaithMgr:LeaveWorld()
@@ -162,12 +193,6 @@ function GateLeapOfFaithResultPanelView:OnBtnExitClicked()
         )
     end
     _G.GoldSauserMgr:ShowCommRewardPanel(RewardItemListVM, Title, CloseCallback)
-end
-
-function GateLeapOfFaithResultPanelView:OnRegisterGameEvent()
-end
-
-function GateLeapOfFaithResultPanelView:OnRegisterBinder()
 end
 
 return GateLeapOfFaithResultPanelView

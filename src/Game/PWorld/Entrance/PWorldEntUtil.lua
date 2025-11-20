@@ -257,9 +257,21 @@ function PWorldEntUtil.IsChocoboRandomTrack(TypeID)
     return TypeID == ScenePoolType.ScenePoolChocoboRandomTrack
 end
 
+--- 是否PVP，透过副本ID判断
+function PWorldEntUtil.IsPVPByPWorldID(PWorldID)
+    local Cfg = SceneEnterCfg:FindCfgByKey(PWorldID)
+    return PWorldEntUtil.IsPVP(Cfg and Cfg.TypeID)
+end
+
 --是否PVP
 function PWorldEntUtil.IsPVP(TypeID)
     return PWorldEntUtil.IsCrystalline(TypeID) or PWorldEntUtil.IsFrontline(TypeID)
+end
+
+--- 是否水晶冲突，透过副本ID判断
+function PWorldEntUtil.IsCrystallineByPWorldID(PWorldID)
+    local Cfg = SceneEnterCfg:FindCfgByKey(PWorldID)
+    return PWorldEntUtil.IsCrystalline(Cfg and Cfg.TypeID)
 end
 
 --是否水晶冲突
@@ -280,6 +292,12 @@ end
 --是否水晶冲突自定赛
 function PWorldEntUtil.IsCrystallineCustom(TypeID)
     return TypeID == ScenePoolType.ScenePoolPVPCrystalCustom
+end
+
+--- 是否纷争前线，透过副本ID判断
+function PWorldEntUtil.IsFrontlineByPWorldID(PWorldID)
+    local Cfg = SceneEnterCfg:FindCfgByKey(PWorldID)
+    return PWorldEntUtil.IsFrontline(Cfg and Cfg.TypeID)
 end
 
 -- 是否纷争前线
@@ -393,18 +411,7 @@ function PWorldEntUtil.MatchCheck()
 
     local IsPVP = PWorldEntUtil.IsPVP(EntType)
     if IsPVP then
-        local NoMatch = MatchCnt == 0
-        local NoChoco = PWorldMatchMgr:GetMatchChocoboEntID() == -1
-        if NoMatch and NoChoco then
-            local PVPMatchCnt = PWorldMatchMgr:GetCrystallineItemCnt() + PWorldMatchMgr:GetFrontlineItemCnt()
-            if PVPMatchCnt < PWorldEntDefine.PVPMatchMaxCnt then
-                return true
-            else
-                return false, MatchTestRlt.PVPMatchOverflow
-            end
-        else
-            return false, MatchTestRlt.PoolTypePVPMutex
-        end
+        return PWorldEntUtil.PVPMatchCheck()
     elseif EntType == ProtoCommon.ScenePoolType.ScenePoolChocobo then
         local ret = MatchCnt == 0 and PWorldMatchMgr:GetMatchChocoboEntID() == -1
         return ret, MatchTestRlt.ChocoboMatchOverflow
@@ -444,22 +451,25 @@ end
 
 function PWorldEntUtil.PVPMatchCheck(EntType)
     local PWorldMatchMgr = _G.PWorldMatchMgr
-    local MatchCnt = PWorldMatchMgr:GetMatchItemCnt()
-
-    local IsPVP = PWorldEntUtil.IsPVP(EntType)
-    if IsPVP then
-        local NoMatch = MatchCnt == 0
-        local NoChoco = PWorldMatchMgr:GetMatchChocoboEntID() == -1
-        if NoMatch and NoChoco then
-            local PVPMatchCnt = PWorldMatchMgr:GetCrystallineItemCnt() + PWorldMatchMgr:GetFrontlineItemCnt()
-            if PVPMatchCnt < PWorldEntDefine.PVPMatchMaxCnt then
-                return true
-            else
-                return false, MatchTestRlt.PVPMatchOverflow
+    local NoMatch = PWorldMatchMgr:GetMatchItemCnt() == 0
+    local NoChoco = PWorldMatchMgr:GetMatchChocoboEntID() == -1
+    if NoMatch and NoChoco then
+        EntType = EntType or _G.PWorldEntDetailVM.SubType
+        local IsMatchCrystalline = PWorldEntUtil.IsCrystalline(EntType)
+        if IsMatchCrystalline then
+            if PWorldMatchMgr:GetCrystallineItemCnt() > 0 then
+                return false, MatchTestRlt.PVPMatchRankMutex
             end
-        else
-            return false, MatchTestRlt.PoolTypePVPMutex
         end
+
+        local PVPMatchCnt = PWorldMatchMgr:GetPVPItemCnt()
+        if PVPMatchCnt < PWorldEntDefine.PVPMatchMaxCnt then
+            return true
+        else
+            return false, MatchTestRlt.PVPMatchOverflow
+        end
+    else
+        return false, MatchTestRlt.PoolTypePVPMutex
     end
 end
 
@@ -526,6 +536,12 @@ end
 ---@param Ent any
 function PWorldEntUtil.IsPrettyHardPWorld(Ent)
     return GetPrettyHardPriority(PWorldEntUtil.GetCfg(Ent, SceneEnterCfg)) > 0
+end
+
+--- 是否为激斗本
+function PWorldEntUtil.IsBattlePWorld(Ent)
+    local Cfg = PWorldEntUtil.GetCfg(Ent, SceneEnterCfg)
+    return Cfg and (Cfg.bBattlePWorld == 1 or Cfg.bBattlePWorld == true)
 end
 
 function PWorldEntUtil.IsPrettyHardEntranceJoinable(EntID)
@@ -653,5 +669,27 @@ function PWorldEntUtil.GoToPWorldEntranceUI(Params)
     _G.UIViewMgr:ShowView(_G.UIViewID.PWorldEntrancePanel, Params)
     return true
 end
+
+function PWorldEntUtil.GetChocoboRaceRandomTrackEntID()
+    local All = SceneEnterCfg:FindAllCfg()
+    local TrackIDs = {}
+
+    for _, V in ipairs(All) do
+        local Type = V[TypeKey]
+        if Type == ProtoCommon.ScenePoolType.ScenePoolChocobo then
+            table.insert(TrackIDs, V.ID)
+        end
+    end
+
+    -- 随机选择一个赛道ID
+    if #TrackIDs > 0 then
+        local Index = math.random(1, #TrackIDs)
+        return TrackIDs[Index]
+    end
+
+    return 0
+end
+
+
 
 return PWorldEntUtil

@@ -201,8 +201,15 @@ function SkillAbleBtnView:OnInit()
 
 	self.IsForceImmediatelyHide = true
 
+	local Parent = rawget(self, "ParentView")
+	if Parent then
+		self.SkillMultiChoiceDisplay = Parent.MultiChoiceDisplay
+	end
+
 	self.SecondCancelParams = {OnMoveCallbackPtr = self, OnMoveCallback = self.OnMultiChoiceCancelJSMoveCB, bInvalidateWhenEnter = true}
 	self.DragSecondCancelParams = {OnMoveCallbackPtr = self.SecondJoyStick, OnMoveCallback = self.SecondJoyStick.OnCancelJSMoveCB, bInvalidateWhenEnter = true}
+	
+	self.IsDragStart = false
 end
 
 function SkillAbleBtnView:OnDestroy()
@@ -284,6 +291,7 @@ function SkillAbleBtnView:OnRegisterGameEvent()
 		RegisterGameEventFunc(self, EventID.PlaySkillUnLockEffect, self.OnPlaySkillUnLockEffect)
 		RegisterGameEventFunc(self, EventID.SkillAssetAttrUpdate, self.OnSkillAssetAttrUpdate)
 		RegisterGameEventFunc(self, EventID.MajorDead, self.OnGameEventMajorDead)
+		RegisterGameEventFunc(self, EventID.SkillLongClickTips, self.OnSkillLongClickTips)
 	end
 
 	if not self:CanParentPanelRouteEvent() then
@@ -306,7 +314,9 @@ end
 
 function SkillAbleBtnView:CancelPressStatus()
 	if self.CanPressSelectSkill then
-		self.SkillMultiChoiceDisplay:ViewHide()
+		if nil ~= self.SkillMultiChoiceDisplay then
+			self.SkillMultiChoiceDisplay:ViewHide()
+		end
 		self.MultiChoicePanel:OnMultiChoiceFinish()
 		self.CanPressSelectSkill = false
 	else
@@ -328,7 +338,8 @@ function SkillAbleBtnView:OnSkillMedicineCDUpdate(EndFreezeTime, FreezeCD)
 	if self.bCurSelectSkill and self.MultiChoicePanel then
 		for index, value in ipairs(self.SelectIdList) do
 			if value.ID == MedicineSkill then
-				self.MultiChoicePanel:OnUpdateSelectCD(index, EndFreezeTime / FreezeCD)
+				--这里的FreezeCD可能为空(BagMgr处理有问题？)
+				self.MultiChoicePanel:OnUpdateSelectCD(index, EndFreezeTime / (FreezeCD or 1))
 			end
 		end
 	end
@@ -456,11 +467,14 @@ function SkillAbleBtnView:MainSkillButtonDown(MyGeometry, MouseEvent)
 	if LogicData == nil or not LogicData:CanCastSkill(self.ButtonIndex, true) then
 		return WBL.ReleaseMouseCapture(Handled)
 	end
+	if LogicData:IsSkillPress(self.ButtonIndex) then
+		return
+	end
 	LogicData:SetSkillPressFlag(self.ButtonIndex, true)
 	local SelectIdList = self.SelectIdList
 	self.CanPressSelectSkill = true
 
-	if self.CanPressSelectSkill then
+	if self.CanPressSelectSkill and nil ~= self.SkillMultiChoiceDisplay then
 		self.SkillMultiChoiceDisplay:ViewShow({SelectIdList = SelectIdList, BaseSkillIndex = self.ButtonIndex, MultiChoiceCount = self.MultiChoiceCount})
 
 		self.SkillCancelJoyStickTask = _G.UIAsyncTaskMgr:ShowViewAsync(UIViewID.SkillCancelJoyStick, self.SecondCancelParams)
@@ -478,7 +492,9 @@ function SkillAbleBtnView:MainSkillButtonDown(MyGeometry, MouseEvent)
 	end
 	return WBL.CaptureMouse(Handled, self)
 end
-
+function SkillAbleBtnView:GetVisibleAllSize()
+	return UIUtil.CanvasSlotGetSize(self.FCanvasPanel_59)
+end
 function SkillAbleBtnView:MainSkillButtonMouseMove(MyGeometry, MouseEvent)
 	if self.CanPressSelectSkill then
 		local MousePosition = KIL.PointerEvent_GetScreenSpacePosition(MouseEvent)
@@ -609,6 +625,10 @@ end
 
 function SkillAbleBtnView:DoDragSkillStart(_, MouseEvent)
 	local _ <close> = CommonUtil.MakeProfileTag("SkillAbleBtnView:DoDragSkillStart")
+	if self.IsDragStart then
+		return
+	end
+	self.IsDragStart = true
 	local SubSkillID = SkillUtil.MainSkill2SubSkill(self.BtnSkillID)
 	self.DragStartPos = KIL.PointerEvent_GetScreenSpacePosition(MouseEvent)
 	UIUtil.SetIsVisible(self.SecondJoyStick, true)
@@ -665,6 +685,7 @@ function SkillAbleBtnView:DoDragSkillEnd()
 	if self.IsLimitSkill then
 		_G.EventMgr:SendEvent(EventID.DragSkillEnd)
 	end
+	self.IsDragStart = false
 end
 --------------------------------蓄力表现------------------------------------------
 function SkillAbleBtnView:bSupportStorageSkill()
@@ -1068,6 +1089,12 @@ end
 function SkillAbleBtnView:OnGameEventMajorDead()
 	if self.MouseDown then
 		self:CancelPressStatus()
+	end
+end
+
+function MainSkillBaseView:OnSkillLongClickTips(SkillID)
+	if SkillID == self.BtnSkillID then
+		self:StartLongClickTimer()
 	end
 end
 

@@ -13,11 +13,13 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 ---@class GoldSaucerMonsterTossMultiplePointsItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field TextMagnification1 UFTextBlock
+---@field TextMagnification1_1 UFTextBlock
 ---@field TextMagnification2 UFTextBlock
 ---@field TextScore1 UFTextBlock
+---@field TextScore1_1 UFTextBlock
 ---@field TextScore2 UFTextBlock
+---@field AnimScoreBenediction UWidgetAnimation
 ---@field AnimScoreMultiple2 UWidgetAnimation
----@field AnimScoreMultiple3 UWidgetAnimation
 ---@field AnimScoreMultiple5 UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerMonsterTossMultiplePointsItemView = LuaClass(UIView, true)
@@ -25,11 +27,13 @@ local GoldSaucerMonsterTossMultiplePointsItemView = LuaClass(UIView, true)
 function GoldSaucerMonsterTossMultiplePointsItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.TextMagnification1 = nil
+	--self.TextMagnification1_1 = nil
 	--self.TextMagnification2 = nil
 	--self.TextScore1 = nil
+	--self.TextScore1_1 = nil
 	--self.TextScore2 = nil
+	--self.AnimScoreBenediction = nil
 	--self.AnimScoreMultiple2 = nil
-	--self.AnimScoreMultiple3 = nil
 	--self.AnimScoreMultiple5 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -49,6 +53,9 @@ function GoldSaucerMonsterTossMultiplePointsItemView:OnInit()
 		
 		{"bTextScore2TipVisible", UIBinderSetIsVisible.New(self, self.TextScore2)},
 		{"bTextScore2TipVisible", UIBinderSetIsVisible.New(self, self.TextMagnification2)},
+
+		{"bBlessScoreTextVisible", UIBinderSetIsVisible.New(self, self.TextMagnification1_1)},
+		{"bBlessScoreTextVisible", UIBinderSetIsVisible.New(self, self.TextScore1_1)},
 	}
 end
 

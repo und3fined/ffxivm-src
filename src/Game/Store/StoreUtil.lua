@@ -1,4 +1,7 @@
 local DataReportUtil = require("Utils/DataReportUtil")
+local ItemCfg = require("TableCfg/ItemCfg")
+local ShopDefine = require("Game/Shop/ShopDefine")
+local StoreCfg = require("TableCfg/StoreCfg")
 local StoreDefine = require("Game/Store/StoreDefine")
 
 local LSTR = _G.LSTR
@@ -78,6 +81,87 @@ function StoreUtil.GetTipsByCannotBuyReason(CannotBuyReason)
 	return Tips
 end
 
+--endregion
+
+-- 获取商品所包含的排序过的道具列表
+function StoreUtil.GetSortedItems(Items)
+	if table.is_nil_empty(Items) then
+		return {}
+	end
+	local SortedItems = {}
+	local BundleCurrentIndex = 1
+	for _, Item in ipairs(Items) do
+		local Index = Item.IsBundled and BundleCurrentIndex or (#SortedItems + 1) -- 捆绑销售的商品放前面
+		table.insert(SortedItems, Index, Item)
+		if Item.IsBundled then
+			BundleCurrentIndex = BundleCurrentIndex + 1
+		end
+	end
+	return SortedItems
+end
+
+--region 商品信息查询
+function StoreUtil.GetGoodsName(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData then
+		return ""
+	end
+	local DescItemID = StoreUtil.GetDescItemID(GoodsCfgData)
+	if DescItemID > 0 then
+		return ItemCfg:GetItemName(DescItemID)
+	end
+	return GoodsCfgData.Name
+end
+
+function StoreUtil.GetGoodsDesc(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData then
+		return ""
+	end
+	local DescItemID = StoreUtil.GetDescItemID(GoodsCfgData)
+	if DescItemID > 0 then
+		return ItemCfg:GetItemDesc(DescItemID)
+	end
+	return GoodsCfgData.Desc
+end
+
+function StoreUtil.GetDescItemID(GoodsCfgData)
+	if nil == GoodsCfgData or GoodsCfgData.DescID == 0 then
+		return 0
+	end
+	local Item = GoodsCfgData.Items[GoodsCfgData.DescID]
+	return Item and Item.ID or 0
+end
+
+---@param GoodsID number
+---@return number @ITEM_COLOR_TYPE
+function StoreUtil.GetGoodsQualityColor(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData or nil == GoodsCfgData.Items[1] then
+		return 0
+	end
+	local ItemCfgData = ItemCfg:FindCfgByKey(GoodsCfgData.Items[1].ID)
+	return ItemCfgData and ItemCfgData.ItemColor or 0
+end
+
+function StoreUtil.GetGoodsQualityImagePath(GoodsID)
+	local Color = StoreUtil.GetGoodsQualityColor(GoodsID)
+	return ShopDefine.ItemColor[Color] or ""
+end
+
+function StoreUtil.GetGoodsDiscountedPrice(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData or nil == GoodsCfgData.Items[1] then
+		return 0
+	end
+	local Price = 0
+	if GoodsCfgData.DisCountedPrice > 0 then
+		Price = GoodsCfgData.DisCountedPrice
+	else
+		Price = math.floor(GoodsCfgData.Price[StoreDefine.PriceDefaultIndex].Count * GoodsCfgData.Discount * 0.01)
+	end
+	return Price
+end
 --endregion
 
 return StoreUtil

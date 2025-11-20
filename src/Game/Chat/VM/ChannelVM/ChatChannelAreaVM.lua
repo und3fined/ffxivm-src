@@ -16,7 +16,7 @@ end
 
 ---GetChannelID
 function ChatChannelAreaVM:GetChannelID()
-	return _G.PWorldMgr.BaseInfo.CurrPWorldInstID
+	return self.AreaChannelID
 end
 
 function ChatChannelAreaVM:IsNeedActive()
@@ -29,6 +29,10 @@ end
 
 function ChatChannelAreaVM:CheckIsInChannel()
 	return true
+end
+
+function ChatChannelAreaVM:SetAreaChannelID(ChannelID)
+	self.AreaChannelID = ChannelID
 end
 
 return ChatChannelAreaVM

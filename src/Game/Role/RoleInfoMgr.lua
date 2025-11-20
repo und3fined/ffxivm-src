@@ -20,7 +20,7 @@ local CS_CMD = ProtoCS.CS_CMD
 local QueryRoleItemType = ItemDefine.QueryRoleItemType
 
 -- 日志堆栈打印开关
--- local ENABLE_PRINT_TRACEBACK = false 
+local ENABLE_PRINT_TRACEBACK = false 
 
 -- 角色信息缓存时间 单位：秒
 local RoleInfoCacheTime = 10 * 60
@@ -174,7 +174,9 @@ function RoleInfoMgr:SetActorHudNameByEntityID(EntityID, Name)
 			local CompanionAttrComp = TargetCompanion:GetAttributeComponent()
 			if CompanionAttrComp then
 				local ActorVM = _G.HUDMgr:GetActorVM(CompanionAttrComp.EntityID)
-				ActorVM:UpdateTitleInfo()
+				if ActorVM then
+					ActorVM:UpdateTitleInfo()
+				end
 			end
 		end
 	end
@@ -288,17 +290,19 @@ function RoleInfoMgr:OnNetMsgQueryRoleSimpleByRoleIDs(MsgBody)
 
 	for _, v in ipairs(RoleList) do
 		local RoleID = v.RoleID
-		self.QueryPendingInfo[RoleID] = nil
+		if RoleID ~= nil then
+			self.QueryPendingInfo[RoleID] = nil
 
-		local ViewModel = self:FindRoleVMInternal(RoleID)
-		if nil == ViewModel then
-			_G.FLOG_ERROR("RoleInfoMgr:OnNetMsgQueryRoleSimpleByRoleIDListRes ViewModel is nil, RoleID=%d", RoleID)
+			local ViewModel = self:FindRoleVMInternal(RoleID)
+			if nil == ViewModel then
+				_G.FLOG_ERROR("RoleInfoMgr:OnNetMsgQueryRoleSimpleByRoleIDListRes ViewModel is nil, RoleID=%d", RoleID)
 
-		else
-			ViewModel:UpdateVM(v)
+			else
+				ViewModel:UpdateVM(v)
+			end
+
+			self:ProcessQueryCallback(RoleID)
 		end
-
-		self:ProcessQueryCallback(RoleID)
 	end
 end
 
@@ -509,24 +513,24 @@ end
 ---@return RoleVM @如果没有缓存也会返回一个数据为默认值的RoleVM
 function RoleInfoMgr:FindRoleVM(RoleID, IsUseCache)
 	if nil == RoleID or RoleID <= 0 then
-        -- FLOG_WARNING(string.format("[RoleInfoMgr] FindRoleVM: failed to find data, RoleID=%s", tostring(RoleID)))
+        FLOG_WARNING(string.format("[RoleInfoMgr] FindRoleVM: failed to find data, RoleID=%s", tostring(RoleID)))
 
-		-- if ENABLE_PRINT_TRACEBACK then
-		-- 	local CommonUtil = require("Utils/CommonUtil")
-		-- 	FLOG_WARNING(CommonUtil.GetLuaTraceback())
-		-- end
+		if ENABLE_PRINT_TRACEBACK then
+			local CommonUtil = require("Utils/CommonUtil")
+			FLOG_WARNING(CommonUtil.GetLuaTraceback())
+		end
 
 		return
 	end
 
-	-- local Digits = #tostring(RoleID) 
-	-- if Digits < 10 then
-	-- 	-- TODO 临时定位bug 后面要删掉
-	-- 	local Msg = string.format("[RoleInfoMgr] FindRoleVM: RoleID is Invalid, RoleID=%s", RoleID)
-	-- 	FLOG_WARNING(Msg)
-	-- 	local CommonUtil = require("Utils/CommonUtil")
-	-- 	CommonUtil.ReportCustomError(Msg, debug.traceback(), debug.traceback(), true)
-	-- end
+	local Digits = #tostring(RoleID) 
+	if Digits < 10 then
+		-- TODO 临时定位bug 后面要删掉
+		local Msg = string.format("[RoleInfoMgr] FindRoleVM: RoleID is Invalid, RoleID=%s", RoleID)
+		FLOG_WARNING(Msg)
+		local CommonUtil = require("Utils/CommonUtil")
+		CommonUtil.ReportCustomError(Msg, debug.traceback(), debug.traceback(), true)
+	end
 
 	local ViewModel = self:FindRoleVMInternal(RoleID)
 	if nil == ViewModel then
@@ -612,6 +616,16 @@ function RoleInfoMgr:GetOnlineRolesAndUpdate(RoleIDs, bUpdate, Callback)
 	end
 
 	return RetRoleIDs
+end
+
+function RoleInfoMgr:RemoveCallbackInfoByPredicate(Callback)
+	if self.QueryCallbackInfo == nil  or Callback == nil then
+		return
+	end
+
+	table.array_remove_item_pred(self.QueryCallbackInfo, function(e)
+		return e.CallBack == Callback 
+	end)
 end
 
 return RoleInfoMgr

@@ -172,7 +172,17 @@ function UIView:ShowView(Params)
 		self:ShowSubView()
 	end
 
-	self:PlayAnimIn()
+	local IsNeedPlayAnimIn = true
+
+	if nil ~= Params and type(Params) == "table" and nil ~= Params.EnablePlayAnimIn and Params.EnablePlayAnimIn == false then
+		IsNeedPlayAnimIn = false
+	end
+
+	--_G.FLOG_INFO("UIView:ShowView %s, IsNeedPlayAnimIn=%s", ObjectName, tostring(IsNeedPlayAnimIn))
+	if IsNeedPlayAnimIn then
+		self:PlayAnimIn()
+	end
+
 	self:PlayAnimLoop()
 	self:SetFontForAllTextWidgetInLua()
 	self:PostShowView()
@@ -217,7 +227,7 @@ function UIView:HideView(Params, bImmediatelyHide)
 	if not rawget(self, "IsShowView") then
 		return
 	end
-
+	local bValid = self:IsValid()
 	local ObjectName = self:GetClassName()
 
 	local _ <close> = CommonUtil.MakeProfileTag(string.format("UIView:HideView_%s", ObjectName))
@@ -239,15 +249,15 @@ function UIView:HideView(Params, bImmediatelyHide)
 
 	do
 		local _ <close> = CommonUtil.MakeProfileTag(string.format("UIView:HideView_OnHide_%s", ObjectName))
-		self:OnHide(Params)
+		CommonUtil.XPCall(self, self.OnHide, Params)
 	end
 
 	local _ <close> = CommonUtil.MakeProfileTag(string.format("UIView:HideView_Anim_%s", ObjectName))
-	if nil ~= self.PlayAllAnimationsToEnd then
+	if bValid and nil ~= self.PlayAllAnimationsToEnd then
 		self:PlayAllAnimationsToEnd()
 	end
 
-	if not bImmediatelyHide then
+	if not bImmediatelyHide and bValid then
 		self:PlayAnimOut()
 	end
 
@@ -368,13 +378,6 @@ function UIView:RemoveFromParentView()
 	self.ParentView = nil
 end
 
----IsValid 判断View是否有效
----@return boolean
-function UIView:IsValid()
-	local Object = rawget(self, "Object")
-	return nil ~= Object and CommonUtil.IsObjectValid(Object)
-end
-
 ---AddSubView
 ---@param View UIView
 function UIView:AddSubView(View)
@@ -387,18 +390,13 @@ function UIView:AddSubView(View)
 		return
 	end
 
-	if not View:IsValid() then
-		--FLOG_WARNING("UIView:AddSubView View is not valid, traceback=%s", debug.traceback())
-		return
+	if nil ~= View.SetParentView then
+		View:SetParentView(self)
 	end
 
-	View:SetParentView(self)
-
-	if nil == self.SubViews then
-		return
+	if nil ~= self.SubViews then
+		table.insert(self.SubViews, View)
 	end
-	
-	table.insert(self.SubViews, View)
 end
 
 ---RemoveSubView
@@ -455,12 +453,14 @@ function UIView:DestroySubView(Params)
 
 	for i = 1, #SubViews do
 		local v = SubViews[i]
-		local Fun = v.DestroyView
-		if nil == Fun then
-			FLOG_ERROR("UIView:DestroySubView DestroyView is nil, SubViews=%s", tostring(v))
-			FLOG_WARNING(debug.traceback())
-		else
-			Fun(v, Params)
+		if nil ~= v then
+			local Fun = v.DestroyView
+			if nil == Fun then
+				FLOG_ERROR("UIView:DestroySubView DestroyView is nil, SubViews=%s", tostring(v))
+				FLOG_WARNING(debug.traceback())
+			else
+				Fun(v, Params)
+			end
 		end
 	end
 end
@@ -606,6 +606,10 @@ function UIView:SetVisibility(Visibility)
 	--	FLOG_WARNING("UIView:SetVisibility Visibility Error")
 	--	return
 	--end
+
+	if not self:IsValid() then
+		return
+	end
 
 	local bVisible = UIUtil.CheckVisible(Visibility)
 
@@ -929,6 +933,8 @@ function UIView:OnRegisterBinder()
 end
 
 function UIView:PlayAnimIn()
+	--_G.FLOG_WARNING("UIView:PlayAnimIn %s, %s", self:GetClassName(), debug.traceback())
+	--_G.FLOG_INFO("UIView:PlayAnimIn %s", self:GetClassName())
 	local _ <close> = CommonUtil.MakeProfileTag(string.format("PlayAnimIn_%s", self:GetClassName()))
 
 	do
@@ -982,9 +988,18 @@ function UIView:PlayAnimToEnd(Animation)
     self:PlayAnimationTimeRangeToEndTime(Animation, EndTime)
 end
 
-function UIView:CheckPlayAnimIn()
+function UIView:CheckPlayAnimIn(EnablePlayAnimIn)
+	--_G.FLOG_INFO("UIView:CheckPlayAnimIn %s, IsExcutePlayAnimIn=%s", self:GetClassName(), tostring(self.IsExcutePlayAnimIn))
 	if not self.IsExcutePlayAnimIn then
-		self:PlayAnimIn()
+		local IsEnablePlayAnimIn = true
+		if nil ~= EnablePlayAnimIn then
+			--_G.FLOG_INFO("UIView:CheckPlayAnimIn")
+			IsEnablePlayAnimIn = EnablePlayAnimIn
+		end
+		--_G.FLOG_INFO("UIView:CheckPlayAnimIn %s, IsEnablePlayAnimIn=%s", self:GetClassName(), tostring(IsEnablePlayAnimIn))
+		if IsEnablePlayAnimIn then
+			self:PlayAnimIn()
+		end
 	end
 	if not self.IsExcutePlayAnimLoop then
 		self:PlayAnimLoop()
@@ -1351,6 +1366,15 @@ function UIView:GetViewListToSetInvisible()
 	return Config.ListToSetInvisible
 end
 
+function UIView:GetConfigDontHideWhenLoadMap()
+	local Config = self:GetConfig()
+	if nil == Config then
+		return false
+	end
+
+	return Config.DontHideWhenLoadMap
+end
+
 --[[
 ---ReRegisterUIEvent 新版UnLua切图后 自动反注册了UI事件后续可能会修改 这里先重新注册
 ---@deprecated 废弃
@@ -1400,7 +1424,7 @@ function UIView:GetClassName()
 		return Object:GetClass():GetName()
 	end
 
-	return "Unknown"
+	return "Unknown-" .. rawget(self, "ViewID")
 end
 --ShowView在结尾没有发现类似收尾触发一些特殊业务逻辑的函数，故增加此函数
 function UIView:PostShowView()
@@ -1434,6 +1458,14 @@ function UIView:SetFontForAllTextWidgetInLua()
 	end
 	---Font'/Game/UI/Fonts/Main_Font.Main_Font'
 end
+
+---IsValid 判断View是否有效
+---@return boolean
+function UIView:IsValid()
+	local Object = rawget(self, "Object")
+	return nil ~= Object and Object:IsValid()
+end
+
 --[[
 ---ReleaseView @临时调用释放UE对象 解决内存泄露问题 等新版UnLua再修改
 function UIView:Release()

@@ -32,6 +32,8 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBindableList = require("UI/UIBindableList")
 local ArmyEditInfoHeadSlotVM = require("Game/Army/ItemVM/ArmyEditInfoHeadSlotVM")
 local InviteSignSideDefine = require("Game/Common/InviteSignSideWin/InviteSignSideDefine")
+local RechargingMgr = require("Game/Recharging/RechargingMgr")
+local ProtoRes = require("Protocol/ProtoRes")
 
 local ArmyMgr = nil
 
@@ -210,21 +212,23 @@ function ArmyEditInfoPageView:CheckNameRule(TextType, Min, Max, Text, CallBack, 
     --     --end
     -- else
         ArmyMgr:CheckSensitiveText(Text, function( IsLegal )
-            self.IsWaitCheck = false
-            if IsLegal then
-                if TextType == ArmyDefine.ArmyEditTextType.ArmyName then
-                    bNormArmyName = true
-                elseif TextType == ArmyDefine.ArmyEditTextType.ShortName then
-                    bNormShortName = true
-                elseif TextType == ArmyEditTextType.RecruitSlogan then
-                    bNormSlogin = true
+            if self:IsValid() then
+                self.IsWaitCheck = false
+                if IsLegal then
+                    if TextType == ArmyDefine.ArmyEditTextType.ArmyName then
+                        bNormArmyName = true
+                    elseif TextType == ArmyDefine.ArmyEditTextType.ShortName then
+                        bNormShortName = true
+                    elseif TextType == ArmyEditTextType.RecruitSlogan then
+                        bNormSlogin = true
+                    end
+                    self:CheckedCreateBtnState()
+                    CallBack()
+                else
+                    --输入的内容包含敏感词汇
+                    self:SetErrorTip(TextType)
+                    self:CheckedCreateInfoError(not IsShowTips)
                 end
-                self:CheckedCreateBtnState()
-                CallBack()
-            else
-                --输入的内容包含敏感词汇
-                self:SetErrorTip(TextType)
-                self:CheckedCreateInfoError(not IsShowTips)
             end
         end)
     --end
@@ -651,6 +655,10 @@ function ArmyEditInfoPageView:OnClickedEditBadge()
 end
 
 function ArmyEditInfoPageView:OnSelectedBadgeCommited(BadgeData)
+    ---外网会出现旗帜编辑界面按钮触发时，编辑主界面被释放失效的情况，先添加有效性判断
+    if not self:IsValid() then
+        return
+    end
     self.BadgeData = BadgeData
     bSelectedBadge = true
     self.ImgBadge:SetBadgeData(BadgeData)
@@ -680,7 +688,25 @@ function ArmyEditInfoPageView:OnClickedCreate()
     if not self:CheckedCreateInfoEmpty() and not self:CheckedCreateInfoError() then
         if not self.bEnoughScore and IsGivePeition then
             -- LSTR string:您的货币不足
-            MsgTipsUtil.ShowTips(LSTR(910125))
+            --MsgTipsUtil.ShowTips(LSTR(910125))
+            --策划需求改成弹跳转弹窗
+            local ScoreType = GroupGlobalCfg:GetValueByType(GlobalCfgType.CreateArmyScoreType)
+			local ScroeName = ScoreMgr:GetScoreNameText(ScoreType)
+            _G.MsgBoxUtil.ShowMsgBoxTwoOp(
+				self,
+				LSTR(910441),	--- "代币不足"
+				string.format(LSTR(910442), ScroeName),	--- "%s不足，是否前往充值？"
+				function()
+					if _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_REBATE, true) then
+						-- 打开充值界面
+						RechargingMgr:ShowMainPanel()
+						RechargingMgr:OnChangedMainPanelCloseBtnToBack(true)
+					end
+				end,
+				nil,
+				LSTR(910081),	--- "取  消"
+				LSTR(910181)	--- "确  认"
+			)
             return
         end
     else
@@ -713,7 +739,7 @@ function ArmyEditInfoPageView:OnClickedCreate()
         ContentStr = string.format(LSTR(910344))
     end
 	-- LSTR string:提示
-	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910338), ContentStr, Callback, nil, LSTR(910083), LSTR(910185))
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910338), ContentStr, Callback, nil, LSTR(910081), LSTR(910181))
 end
 
 --- 返回
@@ -978,8 +1004,8 @@ function ArmyEditInfoPageView:OnClickedCancelCreate()
         ArmyMgr:SendCancelCreate()
 	end
 
-	-- LSTR string:部队组建
-	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910338), LSTR(910345), Callback, nil, LSTR(910083), LSTR(910185))
+	-- LSTR string:部队组建 /在部队组建成功之前，部队名字可能会被其他部队占用，是否确认领取部队组建书？
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910338), LSTR(910345), Callback, nil, LSTR(910081), LSTR(910181))
 end
 
 ---署名人数变化时，请求一下数据来刷新

@@ -9,8 +9,10 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local ItemUtil = require("Utils/ItemUtil")
 local ProtoRes = require("Protocol/ProtoRes")
+local MajorUtil = require("Utils/MajorUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
+local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
@@ -18,7 +20,6 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local FashionEvaluationVM = require("Game/FashionEvaluation/VM/FashionEvaluationVM")
 local UIBinderValueChangedCallback =  require("Binder/UIBinderValueChangedCallback")
 local FashionEvaluationMgr = require("Game/FashionEvaluation/FashionEvaluationMgr")
-local SystemEntranceMgr = require("Game/Common/Tips/SystemEntranceMgr")
 
 ---@class FashionEvaluationFittingRoomWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -109,6 +110,8 @@ function FashionEvaluationFittingRoomWinView:OnShow()
 	UIUtil.SetIsVisible(self.PanelBtn, false)
 	UIUtil.SetIsVisible(self.PanelTips, false)
 	self.TrackAppAdapterTableView:SetSelectedIndex(1) -- 默认第一个外观
+	local ProfID = MajorUtil.GetMajorProfID()
+	self.Specialization = RoleInitCfg:FindProfSpecialization(ProfID)
 end
 
 function FashionEvaluationFittingRoomWinView:OnHide()
@@ -123,6 +126,7 @@ end
 
 function FashionEvaluationFittingRoomWinView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.OnFashionEvaluationTrackUpdate, self.UpdateUnlockBtn)
+	self:RegisterGameEvent(_G.EventID.MajorProfSwitch, self.OnProfSwitch)
 end
 
 function FashionEvaluationFittingRoomWinView:OnRegisterBinder()
@@ -192,7 +196,25 @@ function FashionEvaluationFittingRoomWinView:OnEquipModelGetWaySelected(Index, I
 
 	local ItemUtil = require("Utils/ItemUtil")
 	ItemUtil.JumpGetWayByItemData(ItemData)
+end
 
+function FashionEvaluationFittingRoomWinView:OnProfSwitch(Param)
+	-- 非时尚品鉴界面打开的当前界面，不处理
+	if not _G.UIViewMgr:IsViewVisible(_G.UIViewID.FashionEvaluationMainPanel) then
+		return
+	end
+
+	if Param == nil then
+		return
+	end
+
+	local ProfID = Param.ProfID
+	local NewSpecialization = RoleInitCfg:FindProfSpecialization(ProfID)
+	-- 生活职业和战斗职业切换时，玩家会重新显示出来，所以这里隐藏
+	if NewSpecialization ~= self.Specialization then
+		local IsHideUICharacter = FashionEvaluationMgr.UICharacterIsHide
+		FashionEvaluationMgr:HideUICharacter(IsHideUICharacter)
+	end
 end
 
 return FashionEvaluationFittingRoomWinView

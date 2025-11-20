@@ -11,7 +11,13 @@ local RideSpeedCfg = {
 	Localization = {
         Config = {
             {
-                Name = 'Content',
+                Name = 'Content1',
+            },
+            {
+                Name = 'Content2',
+            },
+            {
+                Name = 'Content3',
             },
 		}
     },

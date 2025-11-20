@@ -25,9 +25,12 @@ local BasketballType = ProtoCS.BasketballType
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field ImgBall UFImage
 ---@field P_DX_GoldSaucerGame_MonsterToss_3 UUIParticleEmitter
+---@field PanelBenediction UFCanvasPanel
+---@field AnimBenedictionLoop UWidgetAnimation
+---@field AnimBenedictionToCurrentBall UWidgetAnimation
+---@field AnimBombLoop UWidgetAnimation
 ---@field AnimBombReady UWidgetAnimation
----@field AnimIn UWidgetAnimation
----@field AnimLoop UWidgetAnimation
+---@field AnimNormalLoop UWidgetAnimation
 ---@field AnimResume UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerMonsterTossBallItemView = LuaClass(UIView, true)
@@ -36,9 +39,12 @@ function GoldSaucerMonsterTossBallItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgBall = nil
 	--self.P_DX_GoldSaucerGame_MonsterToss_3 = nil
+	--self.PanelBenediction = nil
+	--self.AnimBenedictionLoop = nil
+	--self.AnimBenedictionToCurrentBall = nil
+	--self.AnimBombLoop = nil
 	--self.AnimBombReady = nil
-	--self.AnimIn = nil
-	--self.AnimLoop = nil
+	--self.AnimNormalLoop = nil
 	--self.AnimResume = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -53,7 +59,9 @@ function GoldSaucerMonsterTossBallItemView:OnInit()
 	self.Binders = {
 		{"ImgPath", UIBinderSetBrushFromAssetPath.New(self, self.ImgBall)},
 		-- {"bBallVisible", UIBinderSetIsVisible.New(self, self.ImgBall)},
-
+		{"BallType", UIBinderValueChangedCallback.New(self, nil, self.OnPlayTypeAnim)},
+		--{"bBlessBall", UIBinderSetIsVisible.New(self, self.PanelBenediction)},
+		--{"bBlessBall", UIBinderSetIsVisible.New(self, self.ImgBall, true)},
 	}
 end
 
@@ -89,6 +97,19 @@ function GoldSaucerMonsterTossBallItemView:OnRegisterBinder()
 	self:RegisterBinders(ViewModel, self.Binders)
 end
 
+function GoldSaucerMonsterTossBallItemView:OnPlayTypeAnim(BallType)
+	self:StopAnimation(self.AnimBombLoop)
+	self:StopAnimation(self.AnimNormalLoop)
+	self:StopAnimation(self.AnimBenedictionLoop)
+	if BallType == BasketballType.BasketballType_Bang then
+		self:PlayAnimation(self.AnimBombLoop, 0, 0)
+	elseif BallType == BasketballType.BasketballType_Normal or BallType == BasketballType.BasketballType_Super then
+		self:PlayAnimation(self.AnimNormalLoop, 0, 0)
+	elseif BallType == BasketballType.BasketballType_Star then
+		self:PlayAnimation(self.AnimBenedictionLoop, 0, 0)
+	end
+end
+
 function GoldSaucerMonsterTossBallItemView:GetViewModel()
 	local Params = self.Params
 	if Params == nil then
@@ -120,6 +141,14 @@ function GoldSaucerMonsterTossBallItemView:ResetParticle()
 	end
 	self.P_DX_GoldSaucerGame_MonsterToss_3:ResetParticle()
 	_G.ObjectMgr:CollectGarbage(false)
+end
+
+function GoldSaucerMonsterTossBallItemView:GetWidgetBallType()
+	local VM = self:GetViewModel()
+	if not VM then
+		return
+	end
+	return VM.BallType
 end
 
 return GoldSaucerMonsterTossBallItemView

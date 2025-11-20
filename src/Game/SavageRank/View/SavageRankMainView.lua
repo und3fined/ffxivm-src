@@ -31,12 +31,11 @@ local LSTR = _G.LSTR
 ---@field BtnSelf UButton
 ---@field CommDropDownList CommDropDownListView
 ---@field CommEmpty CommEmptyView
----@field CommInforBtn CommInforBtnView
----@field HorizontalTitle UFHorizontalBox
+---@field CommEmptyNew CommBackpackEmptyView
+---@field CommonTitle CommonTitleView
 ---@field ImgBG UFImage
 ---@field ImgBadge UFImage
 ---@field ImgNormal UFImage
----@field ImgSelfBG UFImage
 ---@field PanelChangeList UFCanvasPanel
 ---@field PanelEmpty UFCanvasPanel
 ---@field PanelSelf UFCanvasPanel
@@ -52,7 +51,6 @@ local LSTR = _G.LSTR
 ---@field TextTeammate UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTime_1 UFTextBlock
----@field TextTitle UFTextBlock
 ---@field VerticalList UFVerticalBox
 ---@field AnimChangeSelfRank UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
@@ -67,12 +65,11 @@ function SavageRankMainView:Ctor()
 	--self.BtnSelf = nil
 	--self.CommDropDownList = nil
 	--self.CommEmpty = nil
-	--self.CommInforBtn = nil
-	--self.HorizontalTitle = nil
+	--self.CommEmptyNew = nil
+	--self.CommonTitle = nil
 	--self.ImgBG = nil
 	--self.ImgBadge = nil
 	--self.ImgNormal = nil
-	--self.ImgSelfBG = nil
 	--self.PanelChangeList = nil
 	--self.PanelEmpty = nil
 	--self.PanelSelf = nil
@@ -88,7 +85,6 @@ function SavageRankMainView:Ctor()
 	--self.TextTeammate = nil
 	--self.TextTime = nil
 	--self.TextTime_1 = nil
-	--self.TextTitle = nil
 	--self.VerticalList = nil
 	--self.AnimChangeSelfRank = nil
 	--self.AnimIn = nil
@@ -101,7 +97,8 @@ function SavageRankMainView:OnRegisterSubView()
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommDropDownList)
 	self:AddSubView(self.CommEmpty)
-	self:AddSubView(self.CommInforBtn)
+	self:AddSubView(self.CommEmptyNew)
+	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -170,7 +167,7 @@ function SavageRankMainView:OnRegisterBinder()
 end
 
 function SavageRankMainView:SetTitleText()
-	self.TextTitle:SetText(LSTR(1450001))--零式排行榜
+	self.CommonTitle:SetTextTitleName(LSTR(1450001))--零式排行榜
 	self.RichTextTips:SetText(LSTR(1450002))--开启倒计时
 	self.TextNumber:SetText(LSTR(1450003))--排名
 	self.TextTeammate:SetText(LSTR(1450004))--参与队员

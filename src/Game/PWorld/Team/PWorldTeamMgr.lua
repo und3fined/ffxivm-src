@@ -14,8 +14,6 @@ local ATeamMgr = require("Game/Team/Abs/ATeamMgr")
 
 local SidebarDefine = require("Game/Sidebar/SidebarDefine")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local PWorldHelper = require("Game/PWorld/PWorldHelper")
-local MemStateType = ProtoCommon.MemStateType
 
 local CS_CMD_PWORLD = ProtoCS.CS_CMD.CS_CMD_PWORLD
 local SUB_PWORLD_CMD = ProtoCS.CS_PWORLD_CMD
@@ -30,6 +28,7 @@ local OpDef = PWorldQuestDefine.OpDef
 local ChatDefine = require("Game/Chat/ChatDefine")
 local SceneEnterCfg = require("TableCfg/SceneEnterCfg")
 local TeamHelper = require("Game/Team/TeamHelper")
+local TeamHelperMgr = require("Game/Team/Abs/TeamHelperMgr")
 
 local SceneVoteTypeDef = ProtoCommon.SceneVoteType
 
@@ -113,7 +112,7 @@ function PWorldTeamMgr:OnRegisterGameEvent()
     self.Super.OnRegisterGameEvent(self)
 
     self:RegisterGameEvent(EventID.PWorldBegin, self.OnPWorldBegin)
-
+    self:RegisterGameEvent(EventID.PWorldEnterNotify, self.PWorldEnter)
     self:RegisterGameEvent(EventID.TeamIDUpdate, self.OnTeamIDChanged)
 end
 
@@ -136,6 +135,10 @@ function PWorldTeamMgr:Reset()
     self:SetCaptainByRoleID(nil)
     self:SetVotedMVP(false)
     self.bReconnPWorld = false
+
+    -- clear vote give up
+    self:SetViewVisibleVoteGiveUp(false)
+    self:ClearVoteTimeoutTimer(SceneVoteTypeDef.SceneVoteGiveup)
 end
 
 function PWorldTeamMgr:PWorldEnter()
@@ -155,6 +158,8 @@ function PWorldTeamMgr:PWorldEnter()
     _G.UIViewMgr:HideView(_G.UIViewID.PWorldMainlinePanel)
 
     _G.TeamRecruitMgr:Clear(true)
+
+    self:UpdateRemainTimeTimers()
 end
 
 function PWorldTeamMgr:OnGameEventPWorldMapEnter()
@@ -194,22 +199,24 @@ function PWorldTeamMgr:OnPWorldBegin()
             if PInstID and TipsID ~= nil and (TeamTipsRecs[PInstID] == nil or TeamTipsRecs[PInstID][TipsID] == nil) then
                 TeamTipsRecs[PInstID] = TeamTipsRecs[PInstID] or {}
                 TeamTipsRecs[PInstID][TipsID] = true
-                MsgTipsUtil.ShowTipsByID(TipsID) 
+                _G.MsgTipsUtil.ShowTipsByID(TipsID) 
             end
-        end
-    end
 
-    self:ClearRemainTimeTips()
-    if (SceneEnterCfg:FindCfgByKey(_G.PWorldMgr:GetCurrPWorldResID()) or {}).TypeID ~= ProtoCommon.ScenePoolType.ScenePoolMuRen then
-        self.RemainTimeTipTimers = {}
-        local RemainTime = _G.PWorldMgr.BaseInfo.EndTime - _G.TimeUtil.GetServerTime()
-        for _, m in ipairs({10, 5, 1}) do
-            local t = RemainTime - m * 60
-            if t > 0 then
-               table.insert(self.RemainTimeTipTimers, self:RegisterTimer(function (_, m)
-                    MsgTipsUtil.ShowTips(PWorldHelper.pformat("HINT_PWORLD_REMAIN_TIME", m), nil, nil)
-               end, t, 0, 1, m)) 
+            if self.TimerIDCheckVoiceOn then
+                self:UnRegisterTimer(self.TimerIDCheckVoiceOn)
             end
+            self.TimerIDCheckVoiceOn = self:RegisterTimer(function(_, Param)
+                local Mgr = TeamHelper.GetTeamMgr()
+                if Param ~= Mgr or not _G.PWorldMgr:CurrIsInDungeon() then
+                    return
+                end
+                for _, VM in ipairs(Mgr.TeamVM:GetTeamMemberVMs()) do
+                    if VM:IsSyncMicOn() then
+                        _G.EventMgr:SendEvent(_G.EventID.TeamMemberMicSyncStateChanged, VM, VM.RoleID, VM.MicSyncState)
+                        break
+                    end
+                end
+            end, 10, nil, nil, TeamHelper.GetTeamMgr())
         end
     end
 end
@@ -218,16 +225,42 @@ end
 function PWorldTeamMgr:OnGameEventPWorldExit()
     self.Super.OnGameEventPWorldExit(self)
 
-    self:Reset()
-    self:ClearRemainTimeTips()
+    if not _G.PWorldMgr:CurrIsInDungeon() then
+        self:LogInfo("PWorldTeamMgr:OnGameEventPWorldExit reset when not in pworld!")
+        self:Reset()
+    end
+
+    self:UpdateRemainTimeTimers()
 end
 
 ---@private
-function PWorldTeamMgr:ClearRemainTimeTips()
-    for _, v in ipairs(self.RemainTimeTipTimers or {}) do
-        self:UnRegisterTimer(v)
+function PWorldTeamMgr:UpdateRemainTimeTimers()
+    self:LogInfo("PWorldTeamMgr:UpdateRemainTimeTimers")
+    if self.RemainTimeTipTimers then
+        for _, v in ipairs(self.RemainTimeTipTimers) do
+            self:UnRegisterTimer(v)
+        end
+        self.RemainTimeTipTimers = nil
     end
-    self.RemainTimeTipTimers = nil
+
+    if not _G.PWorldMgr:CurrIsInDungeon() then
+        self:LogInfo("PWorldTeamMgr:UpdateRemainTimeTimers clear all remain time tip timers since not in pworld!")
+        return
+    end
+
+    if (SceneEnterCfg:FindCfgByKey(_G.PWorldMgr:GetCurrPWorldResID()) or {}).TypeID ~= ProtoCommon.ScenePoolType.ScenePoolMuRen then
+        self.RemainTimeTipTimers = {}
+        local RemainTime = _G.PWorldMgr.BaseInfo.EndTime - _G.TimeUtil.GetServerTime()
+        for _, m in ipairs({10, 5, 1}) do
+            local t = RemainTime - m * 60
+            if t > 0 then
+                self:LogInfo("PWorldTeamMgr:UpdateRemainTimeTimers add remain time tip timer, after %s sec(s)", t)
+               table.insert(self.RemainTimeTipTimers, self:RegisterTimer(function (_, m)
+                    _G.MsgTipsUtil.ShowTips(string.sformat(_G.LSTR(1320055), m), nil, nil)
+               end, t, 0, 1, m)) 
+            end
+        end
+    end
 end
 
 function PWorldTeamMgr:OnTeamIDChanged(mgr)
@@ -275,6 +308,15 @@ function PWorldTeamMgr:OnMsgVoteReloginRecover(MsgBody)
 
     local PWorldAddMember = ReloginRecover.PWorldAddMember
     self:SetSupplement(PWorldAddMember ~= nil)
+
+    local PWorldReady = ReloginRecover.PWorldReady
+    if PWorldReady then
+        if _G.PWorldMgr:CurrIsInDungeon() then
+            TeamHelperMgr:HandleTeamReadyConfirm(PWorldReady.RoleID, PWorldReady, TeamHelper:GetTeamMgr())
+        else
+            self:LogWarn("PWorldTeamMgr:OnMsgVoteReloginRecover resv vote ready while not in pworld!")
+        end
+    end
 end
 
 function PWorldTeamMgr:OnMsgQuerySceneTeamMembers(MsgBody)
@@ -312,6 +354,7 @@ function PWorldTeamMgr:OnUpdateSceneTeamData()
         self:SetCaptainByRoleID(CaptainID, true)
         if self:IsInTeam() then
            self:ReqQueryVote() 
+           self:UpdateTeamMemberPosition()
         end
     end
 
@@ -397,6 +440,7 @@ function PWorldTeamMgr:OnResvTeamMemberStatus(MsgBody)
         _G.EventMgr:SendEvent(EventID.OnRescureInfo, table.makeconst({
             RoleID = RoleID,
             RescueDeadline = Data.Rescued.EndTime,
+            Reason = Data.Rescued.Reason,
         }))
     end
 
@@ -753,10 +797,25 @@ function PWorldTeamMgr:SetVoteMvpInfo(MemVoteEnbaleDict)
         return
     end
 
+    local RoleIDs = {}
+    local MajorRoleID = MajorUtil.GetMajorRoleID()
+    for _, RoleID in self:IterTeamMembers() do
+        if RoleID and RoleID ~= 0 and RoleID ~= MajorRoleID and not _G.TeamMgr:IsTeamMemberByRoleID(RoleID) then
+            table.insert(RoleIDs, RoleID)
+        end
+    end
+
+    local PWorldInstID = _G.PWorldMgr:GetCurrPWorldInstID()
+    if PWorldInstID ~= self.CachedPWorldInstID then
+        self.CachedPWorldInstID = PWorldInstID
+        local ProfUtil = require("Game/Profession/ProfUtil")
+        PWorldTeamVM.VoteBestMems:UpdateByValues(RoleIDs, ProfUtil.SortByProfID)
+    end
+
     self.MemVoteEnbaleDict = MemVoteEnbaleDict
     PWorldTeamVM:UpdVoteMVPEnbale()
 
-    if not self.IsDuringVoteMVP and self:HasMatchMembers() then
+    if not self.IsDuringVoteMVP and #RoleIDs > 0 then
         self:SetViewVisibleVoteMVP(true)
         self.IsDuringVoteMVP = true
     end
@@ -766,6 +825,7 @@ end
 function PWorldTeamMgr:ResetVoteMvpInfo()
     self.IsDuringVoteMVP = nil
     self.MemVoteEnbaleDict = nil
+    PWorldTeamVM.VoteBestMems:UpdateByValues({})
     PWorldTeamVM:UpdVoteMVPEnbale()
     self:SetViewVisible(_G.UIViewID.PWorldVoteBest, false)
     _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.PWorldQuestMVP)
@@ -876,10 +936,8 @@ end
 -- Member property
 -- MVP候选人是不是已经离开 候选人状态: 0-可推荐（在线） 1-不可推荐（下线）
 function PWorldTeamMgr:HasVoteMvpMemGone(RoleID)
-    if self.IsDuringVoteMVP == true then
-        if self.MemVoteEnbaleDict then
-            return self.MemVoteEnbaleDict[RoleID] == 1
-        end
+    if self.IsDuringVoteMVP and  self.MemVoteEnbaleDict then
+        return self.MemVoteEnbaleDict[RoleID] == 1 or not self:IsTeamMemberByRoleID(RoleID)
     end
 
     return false
@@ -1008,11 +1066,16 @@ end
 function PWorldTeamMgr:ShowExileVoteRltView(Succ, Param)
     local AcceptCnt = self:GetMemVoteExileAcceptCnt()
     local AgainstCnt = self:GetMemVoteExileRejectCnt()
+
+    local RoleVM = _G.RoleInfoMgr:FindRoleVM(Param, true)
+    local Name = RoleVM and RoleVM.Name or ""
     local Params = {
 		AcceptCnt = AcceptCnt,
 		AgainstCnt = AgainstCnt,
 		Succ = Succ,
 		Param1 = Param,
+        Title = _G.LSTR(1320255),
+        Content = string.sformat(_G.LSTR(Succ and 1320263 or 1320264), Name),
 	}
 
     _G.UIViewMgr:ShowView(_G.UIViewID.PWorldVoteExpelResult, Params)
@@ -1027,6 +1090,8 @@ function PWorldTeamMgr:ShowGiveUpVoteRltView(Succ)
 		AgainstCnt = AgainstCnt,
 		-- MajorAccept = MajorAccept,
 		Succ = Succ,
+        Title = _G.LSTR(1320266),
+        Content = Succ and _G.LSTR(1320261) or _G.LSTR(1320262),
 	}
     _G.UIViewMgr:ShowView(_G.UIViewID.PWorldVoteExpelResult, Params)
 end
@@ -1079,11 +1144,11 @@ function PWorldTeamMgr:GetVoteRemainTime(VoteType)
 end
 
 function PWorldTeamMgr:GetVoteExpelRemainTime()
-    return self:GetVoteRemainTime(require("Protocol/ProtoCommon").SceneVoteType.SceneVoteKick)
+    return self:GetVoteRemainTime(ProtoCommon.SceneVoteType.SceneVoteKick)
 end
 
 function PWorldTeamMgr:GetVoteGiveupRemainTime()
-    return self:GetVoteRemainTime(require("Protocol/ProtoCommon").SceneVoteType.SceneVoteGiveup)     
+    return self:GetVoteRemainTime(ProtoCommon.SceneVoteType.SceneVoteGiveup)     
 end
 
 function PWorldTeamMgr:HasMatchMembers()
@@ -1204,6 +1269,10 @@ function PWorldTeamMgr:GetTeamMemberLevel(RoleID)
             return v.Info and v.Info.Level or 0
         end
     end
+end
+
+function PWorldTeamMgr:UpdateTeamMemberPosition()
+    self:ForceUpdatePWorldLocation()
 end
 
 return PWorldTeamMgr

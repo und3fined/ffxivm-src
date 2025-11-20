@@ -70,7 +70,7 @@ function LoginNewSeverPanelView:OnInit()
 
 	self.StateTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewState)
 	self.TypeTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewPreviewMenu, self.OnTypeTabItemSelectChanged, true)
-	self.RecommendMyTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSever)
+	self.RecommendMyTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSever, nil, nil, nil, true)
 	self.GroupTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewPreviewMenuALL, self.OnGroupItemSelectChanged, true)
 	self.NodeTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSeverAll)
 	self.FriendTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewFriendsSever)
@@ -103,10 +103,13 @@ function LoginNewSeverPanelView:OnShow()
 	self.LoginMapleVM:InitFriendServerData()
 
 	local CurWorldID = LoginNewVM.WorldID
+
+	-- 查找推荐服务器索引
 	for Idx, ServerListItem in ipairs(self.LoginMapleVM.RecommendListData) do
 		if ServerListItem.WorldID == CurWorldID then
 			self.LoginMapleVM.RecommendIndex = Idx
-			--FLOG_INFO("LoginNewSeverPanelView:OnShow RecommendIndex:%d", Idx)
+			self.LoginMapleVM.RecommendWorldID = ServerListItem.WorldID
+			FLOG_INFO("LoginNewSeverPanelView:OnShow RecommendIndex:%d, WorldID:%d", Idx, ServerListItem.WorldID)
 			break
 		end
 	end
@@ -115,7 +118,14 @@ function LoginNewSeverPanelView:OnShow()
 		local IsFind = false
 		---@type ServerTreeItem
 		local ServerTree = self.LoginMapleVM.ServerTree[Group.GroupID] or {}
-		for _, Server in ipairs(ServerTree.ServerList) do
+		local ServerList = ServerTree.ServerList or {}  -- 添加空表判断
+
+		-- 跳过空服务器列表
+		if #ServerList == 0 then
+			goto continue
+		end
+
+		for _, Server in ipairs(ServerList) do
 			if Server.WorldID == CurWorldID then
 				IsFind = true
 				self.LoginMapleVM.GroupIndex = GroupIndex
@@ -127,6 +137,8 @@ function LoginNewSeverPanelView:OnShow()
 		if IsFind then
 			break
 		end
+
+		::continue::
 	end
 
 	self.LoginRoleBackPage.TextTitle:SetText(LSTR(LoginStrID.SelectServer))

@@ -96,6 +96,7 @@ local WeatherCfg = {
         },
         {
             ID = 20,
+            Icon = 'Texture2D\'/Game/Assets/Icon/Weather/NewWeather/UI_Icon_Weather_060255.UI_Icon_Weather_060255\'',
         },
         {
             ID = 21,
@@ -141,6 +142,7 @@ local WeatherCfg = {
         },
         {
             ID = 35,
+            Icon = 'Texture2D\'/Game/Assets/Icon/Weather/NewWeather/UI_Icon_Weather_060260.UI_Icon_Weather_060260\'',
         },
         {
             ID = 36,

@@ -41,6 +41,10 @@ local LanguagesDesc = {
 	"Français",
 	"Deutsch",
 }
+-- 语言只显示中文
+local LanguagesNameDesc = {
+	"中文",
+}
 
 --正在使用的各个语言的翻译
 local UsingDesc = {
@@ -60,7 +64,8 @@ local SettingsDefine = {
 	ItemDisplayStyle 	= ItemDisplayStyle,
 	LanguageType 		= LanguageType,
 	LanguagesDesc 		= LanguagesDesc,
-	UsingDesc 		= UsingDesc,
+	LanguagesNameDesc 	= LanguagesNameDesc,
+	UsingDesc 			= UsingDesc,
 	LanguageSetCategory = LanguageSetCategory,
 	LanguageSubCategory = LanguageSubCategory,
 }

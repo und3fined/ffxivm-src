@@ -39,6 +39,9 @@ function TouringBandContentItemVM:Reset()
     self.IsExteriorLock = false
     self.IsPetLock = false
     self.IsActionLock = false
+    self.TextExteriorColor = "6c6964FF"
+    self.TextEPetColor = "6c6964FF"
+    self.TextActionColor = "6c6964FF"
 end
 
 function TouringBandContentItemVM:UpdateContent(BandID)

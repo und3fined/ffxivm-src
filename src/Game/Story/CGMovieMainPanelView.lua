@@ -9,6 +9,7 @@ local LuaClass = require("Core/LuaClass")
 local CommonUtil = require("Utils/CommonUtil")
 local MovieUtil = require("Utils/MovieUtil")
 local UIUtil = require("Utils/UIUtil")
+local ProtoRes = require("Protocol/ProtoRes")
 
 ---@class CGMovieMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -145,6 +146,8 @@ function CGMovieMainPanelView:InitializeAllInOnePlayer()
 		if not bRet then
 			-- CG动画不一定带字幕
 			FLOG_ERROR("[CGMovieMainPanelView] Play CGMovie without subtitle ...")
+			-- TODO, 临时处理一下, 保证至少有字幕被加载
+			self.PlayerActor:LoadSubtitleData(ProtoRes.MOVIE_TYPE.MOVIE_TYPE_VOYAGE, self.SubtitleCultureType)
 		end
 		bRet = self.PlayerActor:PlayCGAudio(self.MovieBGM, StartTime)
 		if not bRet then
@@ -210,6 +213,10 @@ function CGMovieMainPanelView:OnGameEventBeginMovieSubtitle(Params)
 		return
 	end
 	local SubtitleIndex = Params.IntParam1 + self.SubtitleOffset
+	if SubtitleIndex > self.MaxSubtitleID then
+		-- 无效的字幕ID直接跳过
+		return
+	end
 	-- Play animation blend in.
 	self:SetSubtitleImage(SubtitleIndex, self.bUseImage1 and self.FImage1 or self.FImage2)
 	self:PlayAnimation(self.bUseImage1 and self.AnimBlendIn1 or self.AnimBlendIn2)
@@ -219,6 +226,11 @@ end
 
 function CGMovieMainPanelView:OnGameEventEndMovieSubtitle(Params)
 	if not self.MovieType or not self.SubtitleCultureType then
+		return
+	end
+	local SubtitleIndex = Params.IntParam1 + self.SubtitleOffset
+	if SubtitleIndex > self.MaxSubtitleID then
+		-- 无效的字幕ID直接跳过
 		return
 	end
 	-- Play animation blend out.

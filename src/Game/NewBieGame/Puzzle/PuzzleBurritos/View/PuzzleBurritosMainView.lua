@@ -541,10 +541,15 @@ end
 
 --- @type 时间结束
 function PuzzleBurritosMainView:OnTimeOut()
-	--- 时间结束自动拼完
-	self:AutoPuzzleAllItem()
-
-	self:RegisterTimer(self.OnFinish, 3, 0, 1, true)
+	--- 时间结束自动拼完(2025.6.30 for脚本 不做自动成功设计)
+	--[[self:AutoPuzzleAllItem()
+	local DelayForMatchView = 2
+	self:RegisterTimer(function()
+		AudioUtil.LoadAndPlayUISound(PuzzleDefine.BurritoAudioPath.AutoFinish)
+	end, DelayForMatchView)--]]
+	
+	local FinishDelayTime = 1
+	self:RegisterTimer(self.OnFinish, FinishDelayTime, 0, 1, true)
 end
 
 --- @type 自动拼装所有碎片
@@ -582,23 +587,22 @@ function PuzzleBurritosMainView:OnFinish(bTimeOut)
 	
 	if bTimeOut then
 		-- 自动完成
-		TipStr = LSTR(280003) -- 拼图结束
+		TipStr = LSTR(280009) --LSTR(280003) -- 拼图结束
 		DelayHide = 2
 		MsgTipsUtil.ShowTips(TipStr, nil, 1)
-
 		UIUtil.SetIsVisible(self.TextAutoMove, false)
 		UIUtil.SetIsVisible(self.CloseBtn, PuzzleMgr.bIsDebug)
 		-- MsgTipsUtil.ShowTips(TipStr)
 	
 		local function GameEnd()
-			local Params = {
+			--[[local Params = {
 				PuzzleGameID = PuzzleMgr.CurGameID,
 				bTimeOut = bTimeOut
 			}
 			_G.EventMgr:SendEvent(EventID.PuzzleFinishNotify, Params)
-			FLOG_INFO("_G.EventMgr:SendEvent(EventID.PuzzleFinishNotify) ID = %d", EventID.PuzzleFinishNotify)
+			FLOG_INFO("_G.EventMgr:SendEvent(EventID.PuzzleFinishNotify) ID = %d", EventID.PuzzleFinishNotify)--]]
 			PuzzleMgr:GameEnd(PuzzleDefine.EndType.TimeOutEnd)
-			self:PlayAnimation(self.AnimAutoFinish)
+			--self:PlayAnimation(self.AnimAutoFinish)
 			self:CheckHideHelpTip()
 
 			self:RegisterTimer(function() self:Hide() end, self.AnimAutoFinish:GetEndTime())

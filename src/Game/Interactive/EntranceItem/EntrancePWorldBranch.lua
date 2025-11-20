@@ -18,7 +18,7 @@ function EntrancePWorldBranch:OnUpdateDistance()
     self.Distance = 1
 end
 
-function EntrancePWorldBranch:CheckInterative(EnableCheckLog)
+function EntrancePWorldBranch:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     return true
 end
 

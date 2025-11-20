@@ -33,7 +33,7 @@ function TeamRecruitProfVM:UpdateVM(Value)
     self.Loc    = Value.Loc or 0
     self.Profs  = table.clone(Value.Prof or {})
     self.RoleID = Value.RoleID
-
+    self.ProfID = Value.ProfID
     self.HasRole = self.RoleID ~= nil and self.RoleID ~= 0
 
     self:UpdateFunctionInfo()
@@ -111,24 +111,9 @@ function TeamRecruitProfVM:ClearProfs(bNotUpdate)
 end
 
 function TeamRecruitProfVM:UpdateFunctionInfo()
-    self.MemIconID = TeamRecruitUtil.EncodeRecruitMemIconID(self.HasRole, self.RoleID, self.Profs)
+    self.MemIconID = TeamRecruitUtil.GetRecruitProfHash(self.HasRole and {self.ProfID} or self.Profs, self.HasRole)
     self.Icon = TeamRecruitUtil.GetRecruitMemIcon(self.MemIconID)
     self.RecruitFuncType = TeamRecruitUtil.GetRecruitFunctionType(self.Profs)
-
-    -- if self.HasRole then
-    --     local RoleVM = _G.RoleInfoMgr:FindRoleVM(self.RoleID)
-    --     if RoleVM then
-    --         self.Icon = RoleInitCfg:FindRoleInitProfIcon(RoleVM.Prof)
-    --     end
-
-    -- else
-    --     if table.length(self.Profs) == 1 then
-    --         self.Icon = RoleInitCfg:FindRoleInitProfIcon(self.Profs[1])
-
-    --     else
-    --         self.Icon = TeamRecruitDefine.FuncTypeIconConfig[self.RecruitFuncType]
-    --     end
-    -- end
 end
 
 return TeamRecruitProfVM

@@ -54,7 +54,8 @@ function MeetTradeBagItemVM:UpdateVM(Value, Param)
     self.IsShowOtherInfo = false
     self.IsShowDeletButton = Value and Value.IsShowDeletButton or false
 	if not IsValid then
-		self.ResID = nil 
+		self.ResID = nil
+		self.GID = nil
 		self.Num = nil
 		return
 	end

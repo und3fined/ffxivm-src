@@ -176,10 +176,10 @@ local ProtoEnumAliasConfig = {
 		[10] = "ProtoCommon.tribe_type.TRIBE_TYPE_REDFIRE",
 		[11] = "ProtoCommon.tribe_type.TRIBE_TYPE_DAWN",
 		[12] = "ProtoCommon.tribe_type.TRIBE_TYPE_TWILIGHT",
-		[13] = "ProtoCommon.tribe_type.TRIBE_TYPE_WOODS",
-		[14] = "ProtoCommon.tribe_type.TRIBE_TYPE_MOUNTAIN",
-		[15] = "ProtoCommon.tribe_type.TRIBE_TYPE_PLUNDERSUN",
-		[16] = "ProtoCommon.tribe_type.TRIBE_TYPE_STRAY",
+		[13] = "ProtoCommon.tribe_type.TRIBE_TYPE_PLUNDERSUN",
+		[14] = "ProtoCommon.tribe_type.TRIBE_TYPE_STRAY",
+		[15] = "ProtoCommon.tribe_type.TRIBE_TYPE_WOODS",
+		[16] = "ProtoCommon.tribe_type.TRIBE_TYPE_MOUNTAIN",
 	},
 
 	[ProtoCommon.twelve_god_type] = {
@@ -436,6 +436,9 @@ local ProtoEnumAliasConfig = {
 		[24] = "ProtoCommon.CommStatID.CommStatRecall",
 		[25] = "ProtoCommon.CommStatID.CommStatFacade",
 		[26] = "ProtoCommon.CommStatID.CommStatMatch",
+		[27] = "ProtoCommon.CommStatID.CommGoldSauser",
+		[28] = "ProtoCommon.CommStatID.CommStatCarry",
+		[29] = "ProtoCommon.CommStatID.CommStatFall",
 	},
 
 	[ProtoCommon.CommBehaviorID] = {
@@ -472,6 +475,8 @@ local ProtoEnumAliasConfig = {
 		[31] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_COLLECT_EXCHANGE",
 		[32] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_LEVE_SUBMIT",
 		[33] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_MUSIC_RECALL",
+		[34] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_INTERACTOR_MANUAL_SELECT",
+		[35] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_AETHERCURRENT_SEARCHMACHINE",
 		[999999] = "ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_REVIVE",
 	},
 
@@ -527,6 +532,8 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoCommon.ItemMainType.ItemMaterial",
 		[8] = "ProtoCommon.ItemMainType.ItemHousing",
 		[9] = "ProtoCommon.ItemMainType.ItemMiscellany",
+		[10] = "ProtoCommon.ItemMainType.ItemHouse_Furniture",
+		[11] = "ProtoCommon.ItemMainType.ItemHouse_DoUp",
 	},
 
 	[ProtoCommon.ITEM_TYPE_DETAIL] = {
@@ -601,6 +608,8 @@ local ProtoEnumAliasConfig = {
 		[107] = "ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_ACCESSORY",
 		[108] = "ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_BUDDYEQUIT",
 		[109] = "ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FASHION",
+		[110] = "ProtoCommon.ITEM_TYPE_DETAIL.CHOCOBO_TRAINING_MANUAL",
+		[111] = "ProtoCommon.ITEM_TYPE_DETAIL.ITEM_TYPE_TOY",
 		[200] = "ProtoCommon.ITEM_TYPE_DETAIL.MATERIAL_FOODSTUFF",
 		[201] = "ProtoCommon.ITEM_TYPE_DETAIL.MATERIAL_STONE",
 		[202] = "ProtoCommon.ITEM_TYPE_DETAIL.MATERIAL_METAL",
@@ -990,9 +999,24 @@ local ProtoEnumAliasConfig = {
 		[177] = "ProtoCommon.ModuleID.ModuleIDGuardSky2028",
 		[178] = "ProtoCommon.ModuleID.ModuleIDGuardSky2029",
 		[179] = "ProtoCommon.ModuleID.ModuleIDNews",
+		[180] = "ProtoCommon.ModuleID.ModuleIDMonsterHunt",
+		[181] = "ProtoCommon.ModuleID.ModuleIDLostPenguinFight",
+		[182] = "ProtoCommon.ModuleID.ModuleIDCrossTimeCelebration",
 		[183] = "ProtoCommon.ModuleID.ModuleIDMarketTrade",
 		[184] = "ProtoCommon.ModuleID.ModuleIDMeetTrade",
 		[185] = "ProtoCommon.ModuleID.ModuleIDGroupBag",
+		[186] = "ProtoCommon.ModuleID.ModuleIDStarLightFestival2025",
+		[187] = "ProtoCommon.ModuleID.ModuleIDStarLightFestival2026",
+		[188] = "ProtoCommon.ModuleID.ModuleIDStarLightFestival2027",
+		[189] = "ProtoCommon.ModuleID.ModuleIDGodArrival2025",
+		[190] = "ProtoCommon.ModuleID.ModuleIDGodArrival2026",
+		[191] = "ProtoCommon.ModuleID.ModuleIDGodArrival2027",
+		[192] = "ProtoCommon.ModuleID.ModuleIDHuntEggFestival2025",
+		[193] = "ProtoCommon.ModuleID.ModuleIDHuntEggFestival2026",
+		[194] = "ProtoCommon.ModuleID.ModuleIDHuntEggFestival2027",
+		[195] = "ProtoCommon.ModuleID.ModuleIDToy",
+		[196] = "ProtoCommon.ModuleID.ModuleIDTianshu",
+		[197] = "ProtoCommon.ModuleID.ModuleIDFashionDecorationImprove",
 		[200] = "ProtoCommon.ModuleID.ModuleIDNote",
 	},
 
@@ -1023,6 +1047,10 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_GATHER_NEED_UPDATE",
 		[8] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_SENIOR_NEED_UPDATE",
 		[9] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_RED_FLOWER",
+		[10] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER",
+		[11] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER_NEED_UPDATE",
+		[12] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_BATTLE",
+		[13] = "ProtoCommon.GUIDE_TYPE.GUIDE_TYPE_BATTLE_NEED_UPDATE",
 	},
 
 	[ProtoCommon.PersonalPortraitUnlockType] = {
@@ -1128,6 +1156,7 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.trigger_entity_type.TRIGGER_ENTITY_TYPE_TRIGGER",
 		[5] = "ProtoRes.trigger_entity_type.TRIGGER_ENTITY_TYPE_EOBJ",
 		[6] = "ProtoRes.trigger_entity_type.TRIGGER_ENTITY_TYPE_FAITH",
+		[7] = "ProtoRes.trigger_entity_type.TRIGGER_ENTITY_TYPE_TARGET_FILTER",
 	},
 
 	[ProtoRes.trigger_camp_type] = {
@@ -1200,6 +1229,13 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.trigger_snapshot_type.TRIGGER_SNAPSHOT_TYPE_SAVE",
 		[2] = "ProtoRes.trigger_snapshot_type.TRIGGER_SNAPSHOT_TYPE_BACK",
 		[3] = "ProtoRes.trigger_snapshot_type.TRIGGER_SNAPSHOT_TYPE_CLEAR",
+	},
+
+	[ProtoRes.trigger_major_type] = {
+		[1] = "ProtoRes.trigger_major_type.TRIGGER_MAJOR_TYPE_PLAYER",
+		[2] = "ProtoRes.trigger_major_type.TRIGGER_MAJOR_TYPE_BNPCLIST",
+		[3] = "ProtoRes.trigger_major_type.TRIGGER_MAJOR_TYPE_BNPCTABLE",
+		[4] = "ProtoRes.trigger_major_type.TRIGGER_MAJOR_TYPE_FAITH",
 	},
 
 	[ProtoRes.condition_run_state_type] = {
@@ -1818,24 +1854,10 @@ local ProtoEnumAliasConfig = {
 		[106] = "ProtoRes.global_cfg_id.GLOBAL_CFG_GAME_VERSION",
 		[112] = "ProtoRes.global_cfg_id.GlobalCfgClosetAppearanceHighLightNum",
 		[113] = "ProtoRes.global_cfg_id.GlobalCfgTreasureMapCounter",
-		[114] = "ProtoRes.global_cfg_id.GlobalCfgChocoboRentLimit",
-		[115] = "ProtoRes.global_cfg_id.GlobalCfgChocoboMatingLevel",
-		[116] = "ProtoRes.global_cfg_id.GlobalCfgChocoboMatingTime",
-		[117] = "ProtoRes.global_cfg_id.GlobalCfgChocoboMaxLevel",
-		[118] = "ProtoRes.global_cfg_id.GlobalCfgChocoboPerGenLimit",
-		[119] = "ProtoRes.global_cfg_id.GlobalCfgChocoboInitAttr",
-		[120] = "ProtoRes.global_cfg_id.GlobalCfgChocoboNewbieQuest",
-		[121] = "ProtoRes.global_cfg_id.GlobalCfgChocoboInitialSkill",
-		[122] = "ProtoRes.global_cfg_id.GlobalCfgChocoboActiveSkillLimit",
-		[123] = "ProtoRes.global_cfg_id.GlobalCfgChocoboPassiveSkillLimit",
-		[124] = "ProtoRes.global_cfg_id.GlobalCfgChocoboGeneStarMax",
-		[125] = "ProtoRes.global_cfg_id.GlobalCfgChocoboSuitModuleOpenID",
 		[126] = "ProtoRes.global_cfg_id.GlobalCfgClosetSpecialUnlockAppear",
 		[127] = "ProtoRes.global_cfg_id.GlobalCfgClosetAddCharm",
 		[128] = "ProtoRes.global_cfg_id.GlobalCfgCrossDayOffset",
 		[129] = "ProtoRes.global_cfg_id.GlobalCfgNewbieSceneID",
-		[130] = "ProtoRes.global_cfg_id.GlobalCfgChocoboAdoptCost",
-		[131] = "ProtoRes.global_cfg_id.GlobalCfgChocoboRenameCost",
 		[132] = "ProtoRes.global_cfg_id.GlobalCfgVanGuardChannelSpeakLevel",
 	},
 
@@ -1978,6 +2000,7 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.promote_type.PROMOTE_TYPE_COMBAT",
 		[2] = "ProtoRes.promote_type.PROMOTE_TYPE_PRODUCTION",
 		[3] = "ProtoRes.promote_type.PROMOTE_TYPE_EQUIP",
+		[4] = "ProtoRes.promote_type.PROMOTE_TYPE_ABILITY",
 	},
 
 	[ProtoRes.instrument_type] = {
@@ -2039,6 +2062,7 @@ local ProtoEnumAliasConfig = {
 		[21] = "ProtoRes.sysnotice_show_type.SYSNOTICE_SHOWTYPE_PVPCOLOSSEUM_TEAM_NOTICE",
 		[22] = "ProtoRes.sysnotice_show_type.SYSNOTICE_SHOWTYPE_PVPCOLOSSEUM_COMMAND",
 		[23] = "ProtoRes.sysnotice_show_type.SYSNOTICE_SHOWTYPE_PWORLD_ENTER",
+		[24] = "ProtoRes.sysnotice_show_type.SYSNOTICE_SHOWTYPE_CHATCHANNEL_TEAM",
 	},
 
 	[ProtoRes.EquipmentExistTag] = {
@@ -2138,6 +2162,13 @@ local ProtoEnumAliasConfig = {
 		[0] = "ProtoRes.pworld_ui_type.PWORLD_UI_NONE",
 		[1] = "ProtoRes.pworld_ui_type.PWORLD_UI_TEACH",
 		[2] = "ProtoRes.pworld_ui_type.PWORLD_UI_GUIDE",
+	},
+
+	[ProtoRes.HOUSE_MAPPING_TABLE_ID] = {
+		[0] = "ProtoRes.HOUSE_MAPPING_TABLE_ID.HOUSE_INDORR_TERRITORY",
+		[1] = "ProtoRes.HOUSE_MAPPING_TABLE_ID.HOUSE_TERRITORY",
+		[2] = "ProtoRes.HOUSE_MAPPING_TABLE_ID.HOUSE_FURNITURE",
+		[3] = "ProtoRes.HOUSE_MAPPING_TABLE_ID.HOUSE_YARD",
 	},
 
 	[ProtoRes.ItemAccessFunType] = {
@@ -2266,6 +2297,23 @@ local ProtoEnumAliasConfig = {
 		[65] = "ProtoRes.interact_func_type.INTERACT_FUNC_DIALOG_AND_OPENUI",
 		[66] = "ProtoRes.interact_func_type.INTERACT_FUNC_TREASUREHUNT_PWORLD_GATE",
 		[67] = "ProtoRes.interact_func_type.INTERACT_START_MATCH",
+		[68] = "ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_BOX",
+		[69] = "ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_DROP",
+		[70] = "ProtoRes.interact_func_type.INTERACT_FUNC_GET_DETAIL_MAP",
+		[71] = "ProtoRes.interact_func_type.INTERACT_FUNC_STARLIGHT_RHYTHM_GAME",
+		[72] = "ProtoRes.interact_func_type.INTERACT_FUNC_HOUSING_TRANS",
+		[73] = "ProtoRes.interact_func_type.INTERACT_FUNC_HOUSING_FURNITURE_UI",
+		[74] = "ProtoRes.interact_func_type.INTERACT_FUNC_INVITE_RIDE",
+		[75] = "ProtoRes.interact_func_type.INTERACT_FUNC_APPLY_RIDE",
+		[76] = "ProtoRes.interact_func_type.INTERACT_FUNC_GOARMY_SELFROOM",
+		[77] = "ProtoRes.interact_func_type.INTERACT_FUNC_SEE_ALL_ARMYROOM",
+		[78] = "ProtoRes.interact_func_type.INTERACT_FUNC_ENTER_HOUSE",
+		[79] = "ProtoRes.interact_func_type.INTERACT_FUNC_LEAVE_HOUSE",
+		[80] = "ProtoRes.interact_func_type.INTERACT_FUNC_SHOW_GUIDE_PANEL",
+		[81] = "ProtoRes.interact_func_type.INTERACT_FUNC_CRYSTALLINE_RANKING_REWARD",
+		[82] = "ProtoRes.interact_func_type.INTERACT_FUNC_CRYSTALLINE_RANK_REWARD",
+		[83] = "ProtoRes.interact_func_type.INTERACT_FUNC_HOUSING_FURNITURE_INTERACTION",
+		[84] = "ProtoRes.interact_func_type.INTERACT_FUNC_ROULETTE_PASS_BOX",
 		[999] = "ProtoRes.interact_func_type.INTERACT_FUNC_CLIENT_MAX",
 		[1000] = "ProtoRes.interact_func_type.INTERACT_FUNC_SERVER_MIN",
 		[1001] = "ProtoRes.interact_func_type.INTERACT_FUNC_ENTER_SCENE_S",
@@ -2359,6 +2407,7 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.side_popup_type.SIDE_POPUP_EASY_USE",
 		[2] = "ProtoRes.side_popup_type.SIDE_POPUP_CLICK_WEAR",
 		[3] = "ProtoRes.side_popup_type.SIDE_POPUP_UNLOCK_MOUNT",
+		[4] = "ProtoRes.side_popup_type.SIDE_POPUP_UNLOCK_FASHION",
 	},
 
 	[ProtoRes.transition_type] = {
@@ -2394,11 +2443,7 @@ local ProtoEnumAliasConfig = {
 		[11] = "ProtoRes.StoreMall.STORE_MALL_PERSONALITY",
 		[12] = "ProtoRes.StoreMall.STORE_MALL_RECOMMEND",
 		[13] = "ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX",
-	},
-
-	[ProtoRes.Store_TipsBtnType] = {
-		[1] = "ProtoRes.Store_TipsBtnType.STORE_TIPSBTNTYPE_COMMON",
-		[2] = "ProtoRes.Store_TipsBtnType.STORE_TIPSBTNTYPE_SPECIAL",
+		[14] = "ProtoRes.StoreMall.STORE_MALL_ORNAMENT",
 	},
 
 	[ProtoRes.GoodsShowConditionType] = {
@@ -2803,6 +2848,7 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoRes.RED_POINT_TYPE.MONTHCARD_PROMPT",
 		[8] = "ProtoRes.RED_POINT_TYPE.LOTTERY_PROMPT",
 		[9] = "ProtoRes.RED_POINT_TYPE.PANDORA_PROMPT",
+		[10] = "ProtoRes.RED_POINT_TYPE.RETURNING_PROMPT",
 	},
 
 	[ProtoRes.CommercialPrizeType] = {
@@ -2899,6 +2945,13 @@ local ProtoEnumAliasConfig = {
 		[25] = "ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_OTHER_EQUIP",
 		[26] = "ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_PERSON_INFO",
 		[27] = "ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_MATERIAL",
+	},
+
+	[ProtoRes.HOUSE_SIZE] = {
+		[0] = "ProtoRes.HOUSE_SIZE.HOUSE_SIZE_ID_SAMLL",
+		[1] = "ProtoRes.HOUSE_SIZE.HOUSE_SIZE_ID_MIDDLE",
+		[2] = "ProtoRes.HOUSE_SIZE.HOUSE_SIZE_ID_BIG",
+		[100] = "ProtoRes.HOUSE_SIZE.HOUSE_SIZE_ID_INVALID",
 	},
 
 	[ProtoRes.OPS_GAMEPLAY_TYPE] = {
@@ -3002,6 +3055,11 @@ local ProtoEnumAliasConfig = {
 		[50] = "ProtoRes.TutorialStartHandleType.TreasureNBSP",
 		[51] = "ProtoRes.TutorialStartHandleType.PVPMap",
 		[52] = "ProtoRes.TutorialStartHandleType.OpenRecruitView",
+		[53] = "ProtoRes.TutorialStartHandleType.EnterMazeMainPanel",
+		[54] = "ProtoRes.TutorialStartHandleType.CraftingLogEsoterica",
+		[55] = "ProtoRes.TutorialStartHandleType.GatheringLogInherit",
+		[56] = "ProtoRes.TutorialStartHandleType.UnlockTreasureMap",
+		[57] = "ProtoRes.TutorialStartHandleType.TreasureTemplateTeleporter",
 	},
 
 	[ProtoRes.TutoriaEndHandleType] = {
@@ -3158,8 +3216,14 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.ExchangeGroup.Exchang_Group_GRAND",
 	},
 
+	[ProtoRes.MysteryBoxBuyCondType] = {
+		[1] = "ProtoRes.MysteryBoxBuyCondType.MYSTERYBOX_BUYCONDTYPE_CONDCFG",
+	},
+
 	[ProtoRes.SpecialMysteryBoxTypes] = {
 		[1] = "ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_HAIRSTYLE",
+		[2] = "ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_MOUNT_SKIN",
+		[3] = "ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_CLOTHING",
 	},
 
 	[ProtoRes.MallTypeInfo] = {
@@ -3201,9 +3265,18 @@ local ProtoEnumAliasConfig = {
 		[501] = "ProtoRes.GoldSauserGameClientType.GoldSauserGameTypeFairyColor",
 	},
 
+	[ProtoRes.GoldSauserDataItemFormatType] = {
+		[1] = "ProtoRes.GoldSauserDataItemFormatType.TypeKingDee",
+		[2] = "ProtoRes.GoldSauserDataItemFormatType.TypeFairyColorTicket",
+		[3] = "ProtoRes.GoldSauserDataItemFormatType.TypeTimes",
+		[4] = "ProtoRes.GoldSauserDataItemFormatType.TypePercentage",
+		[5] = "ProtoRes.GoldSauserDataItemFormatType.TypeItemNum",
+	},
+
 	[ProtoRes.GoldSauserAwardSourceType] = {
 		[1] = "ProtoRes.GoldSauserAwardSourceType.AwardSourceTypeShop",
 		[2] = "ProtoRes.GoldSauserAwardSourceType.AwardSourceTypeAchievement",
+		[3] = "ProtoRes.GoldSauserAwardSourceType.AwardSourceTypeOther",
 	},
 
 	[ProtoRes.GoldSauserAwardBelongType] = {
@@ -3215,14 +3288,6 @@ local ProtoEnumAliasConfig = {
 		[6] = "ProtoRes.GoldSauserAwardBelongType.AwardBelongTypeHonor",
 		[7] = "ProtoRes.GoldSauserAwardBelongType.AwardBelongTypeFashion",
 		[8] = "ProtoRes.GoldSauserAwardBelongType.AwardBelongTypeBirdEquip",
-	},
-
-	[ProtoRes.GoldSauserDataItemFormatType] = {
-		[1] = "ProtoRes.GoldSauserDataItemFormatType.TypeKingDee",
-		[2] = "ProtoRes.GoldSauserDataItemFormatType.TypeFairyColorTicket",
-		[3] = "ProtoRes.GoldSauserDataItemFormatType.TypeTimes",
-		[4] = "ProtoRes.GoldSauserDataItemFormatType.TypePercentage",
-		[5] = "ProtoRes.GoldSauserDataItemFormatType.TypeItemNum",
 	},
 
 	[ProtoRes.StoreViewType] = {
@@ -3248,6 +3313,8 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_PROP",
 		[5] = "ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_PET",
 		[6] = "ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND",
+		[7] = "ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_ACTINGTEXTBOOK",
+		[8] = "ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_ORNAMENT",
 	},
 
 	[ProtoRes.select_circle_type] = {
@@ -3267,6 +3334,7 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.NPC_TYPE.INTERACTOBJ",
 		[2] = "ProtoRes.NPC_TYPE.WILDBOX",
 		[3] = "ProtoRes.NPC_TYPE.ARMY",
+		[4] = "ProtoRes.NPC_TYPE.HOUSING",
 	},
 
 	[ProtoRes.bubble_type] = {
@@ -3388,6 +3456,7 @@ local ProtoEnumAliasConfig = {
 		[43] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_STORNGEST_EQUIPMENT",
 		[44] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_TOUCH_WAIT_TIME",
 		[45] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_QUEST_FOLLOW_NPC_DISTANCE_LIMIT",
+		[46] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_AUTO_SKIP_WHITELIST",
 		[101] = "ProtoRes.client_global_cfg_id.GLOBAL_SHOP_DOUBLE_COLOR_SHOP",
 		[102] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_ADVENTURE_REWARD_STAGE",
 		[111] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_HOTEL_CUT_ZERO",
@@ -3404,6 +3473,7 @@ local ProtoEnumAliasConfig = {
 		[206] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_CHOCOBO_TRANSPORT_QTE_NPCID",
 		[220] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_MOUNT_FLY_LONG_CLICK_TIME",
 		[221] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_MOUNT_PASSENGER_IDLE_NOTIFY_TIME",
+		[222] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_MOUNT_HOST_WAIT_TIMEOUT_TIME",
 		[230] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_LEFT_SIDE_BAR_STAY_TIME",
 		[240] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_CHOCOBO_RACE_MATCH_ISUNLOCK",
 		[241] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_CHOCOBO_RACE_MATCH_MOVE_SIDE_ANGLE_SPEED",
@@ -3419,12 +3489,20 @@ local ProtoEnumAliasConfig = {
 		[270] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_FASHIONDECO_MAXEMPTYITEMS",
 		[271] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_FASHIONDECO_MAXCOLLECTNUM",
 		[272] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_NOT_SHOW_MAP_NPCBASE_ID",
-		[280] = "ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY",
-		[281] = "ProtoRes.client_global_cfg_id.GLOBAL_CRAFTER_PROF_MAGICSPAR_GETWAY",
-		[282] = "ProtoRes.client_global_cfg_id.GLOBAL_GATHER_PROF_MAGICSPAR_GETWAY",
 		[283] = "ProtoRes.client_global_cfg_id.GLOBAL_FINAL_DUNGEON_COUNT_ID",
+		[290] = "ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY",
+		[291] = "ProtoRes.client_global_cfg_id.GLOBAL_CRAFTER_PROF_MAGICSPAR_GETWAY",
+		[292] = "ProtoRes.client_global_cfg_id.GLOBAL_GATHER_PROF_MAGICSPAR_GETWAY",
+		[293] = "ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_BANMAGICSPAR_GETWAY",
 		[300] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_ITEM_MAGIC_CARD_PACK_ID_TABLE",
 		[401] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_FATE_LOST_LADY_GUIDE_DIS",
+		[451] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_EASY_AUDIENCE_SATISFACTION",
+		[452] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_HARD_AUDIENCE_SATISFACTION",
+		[453] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_JUDGE_PERFECT_SCORE",
+		[454] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_JUDGE_GREAT_SCORE",
+		[455] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_JUDGE_GOOD_SCORE",
+		[456] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_RHYTHM_JUDGE_MISS_SCORE",
+		[501] = "ProtoRes.client_global_cfg_id.GLOBAL_CFG_ADVENTURE_FATE_REWARD",
 	},
 
 	[ProtoRes.CombatStatCategory] = {
@@ -3644,6 +3722,7 @@ local ProtoEnumAliasConfig = {
 		[56] = "ProtoRes.behavior_condition.BEHAVIOR_CONDITION_ENPC_N_MAGICCARD_END",
 		[57] = "ProtoRes.behavior_condition.BEHAVIOR_CONDITION_HAS_TRACKING_QUEST_CURRENT_MAP",
 		[101] = "ProtoRes.behavior_condition.BEHAVIOR_CONDITION_TREASURE_OPEN",
+		[102] = "ProtoRes.behavior_condition.BEHAVIOR_CONDITION_MYSTER_MERCHANT_ACTIVE",
 		[200] = "ProtoRes.behavior_condition.BEHAVIOR_CONDITION_MAX",
 	},
 
@@ -3804,45 +3883,15 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_SPRINT_TRAIL",
 		[2] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_SPRINT_FOOTPRINT",
 		[3] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_RANDOM_VARIANT",
+		[4] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_FISHING_CHAIR",
+		[5] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_TELEPORT_EFFECT",
+		[6] = "ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_RANDOM_EFFECT",
 	},
 
 	[ProtoRes.MOVIE_TYPE] = {
 		[1] = "ProtoRes.MOVIE_TYPE.MOVIE_TYPE_OPENING",
 		[2] = "ProtoRes.MOVIE_TYPE.MOVIE_TYPE_VOYAGE",
 		[3] = "ProtoRes.MOVIE_TYPE.MOVIE_TYPE_VER500",
-	},
-
-	[ProtoRes.HOUSING_ITEM_CATEGORY_TYPE] = {
-		[1] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF",
-		[2] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WALL",
-		[3] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WINDOW",
-		[4] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_DOOR",
-		[5] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF_OPTION",
-		[6] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WALL_OPTION",
-		[7] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_SIGN",
-		[8] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_FENCE",
-		[9] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_WALL",
-		[10] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_FLOOR",
-		[11] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_LIGHT",
-		[12] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_SINGLE",
-		[13] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_BASE",
-		[14] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_DESKTOP",
-		[15] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_WALLHUNG",
-		[16] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_CARPET",
-		[17] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_YARD",
-	},
-
-	[ProtoRes.HOUSING_SIZE_TYPE] = {
-		[0] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_S",
-		[1] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_M",
-		[2] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_L",
-		[3] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_SS",
-		[4] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_WORKSHOP",
-		[5] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MANSIONROOM",
-		[6] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MINIONAIRE",
-		[254] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_ALL",
-		[255] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_INVALID",
-		[256] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MAX",
 	},
 
 	[ProtoRes.skill_first_class] = {
@@ -3913,6 +3962,7 @@ local ProtoEnumAliasConfig = {
 		[31] = "ProtoRes.skill_condition_type.SKILL_CONDITION_MAIN_CFG_SKILL_TYPE",
 		[32] = "ProtoRes.skill_condition_type.SKILL_CONDITION_MAIN_CFG_SKILL_CLASS",
 		[33] = "ProtoRes.skill_condition_type.SKILL_CONDITION_ATTACK_HP_WAN_RATE",
+		[34] = "ProtoRes.skill_condition_type.SKILL_CONDITION_CASTER_AND_TARGET_RELATION",
 	},
 
 	[ProtoRes.condition_sign] = {
@@ -4077,6 +4127,9 @@ local ProtoEnumAliasConfig = {
 		[63] = "ProtoRes.skill_effect_type.SKILL_EFFECT_FLOAT_AIR",
 		[64] = "ProtoRes.skill_effect_type.SKILL_EFFECT_SET_COMM_STAT",
 		[65] = "ProtoRes.skill_effect_type.SKILL_EFFECT_CLEAR_COMM_STAT",
+		[66] = "ProtoRes.skill_effect_type.SKILL_EFFECT_MARK_BACK_POINT",
+		[67] = "ProtoRes.skill_effect_type.SKILL_EFFECT_TRANSMIT_TO_BACK_POINT",
+		[68] = "ProtoRes.skill_effect_type.SKILL_EFFECT_REPLACE_SKILL_GROUP",
 	},
 
 	[ProtoRes.skill_effect_tag] = {
@@ -4177,6 +4230,14 @@ local ProtoEnumAliasConfig = {
 		[6] = "ProtoRes.Game.ActivityType.ActivityTypeLightStart",
 		[7] = "ProtoRes.Game.ActivityType.ActivityTypePandora",
 		[8] = "ProtoRes.Game.ActivityType.ActivityTypePureBackEnd",
+		[9] = "ProtoRes.Game.ActivityType.ActivityTypeMoguCollectRegular",
+		[10] = "ProtoRes.Game.ActivityType.ActivityTypeMoguCollectWeek",
+		[11] = "ProtoRes.Game.ActivityType.ActivityTypeMoguCollectBattle",
+		[12] = "ProtoRes.Game.ActivityType.ActivityTypeDaughterDay",
+	},
+
+	[ProtoRes.Game.LayerCondType] = {
+		[1] = "ProtoRes.Game.LayerCondType.LayerCondTypeDaughterDay",
 	},
 
 	[ProtoRes.Game.RelationType] = {
@@ -4191,8 +4252,10 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.Game.ActivityCondType.ActivityCondAccountBattleLv",
 		[5] = "ProtoRes.Game.ActivityCondType.ActivityCondModuleOpenID",
 		[6] = "ProtoRes.Game.ActivityCondType.ActivityCondQuest",
+		[7] = "ProtoRes.Game.ActivityCondType.ActivityCondReturnDays",
 		[8] = "ProtoRes.Game.ActivityCondType.ActivityCondDeviceType",
 		[9] = "ProtoRes.Game.ActivityCondType.ActivityCondAccountType",
+		[10] = "ProtoRes.Game.ActivityCondType.ActivityCondAfterReturnDays",
 	},
 
 	[ProtoRes.Game.ActivityNodeType] = {
@@ -4219,6 +4282,25 @@ local ProtoEnumAliasConfig = {
 		[24] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeCounter",
 		[25] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeMailSend",
 		[26] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeFinishScene",
+		[27] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestCommit",
+		[28] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestVote",
+		[29] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestShow",
+		[30] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestRank",
+		[31] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestJudge",
+		[32] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestHistory",
+		[33] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeTeam",
+		[34] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDesignContestAccVote",
+		[35] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypePureShow",
+		[36] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDaughterDayUpdateProgress",
+		[37] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeDaughterDayGetAward",
+		[38] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeFinishLottery",
+		[39] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeBackFlowFlag",
+		[40] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeStarDayPutGift",
+		[41] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeStarDayGetGift",
+		[42] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeCommClientReport",
+		[43] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeAccChildNodeProgress",
+		[44] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeStarDaySendGreetingCard",
+		[45] = "ProtoRes.Game.ActivityNodeType.ActivityNodeTypeStarDayMusicGame",
 	},
 
 	[ProtoRes.Game.ActivityNodeRewardCollectType] = {
@@ -4254,6 +4336,14 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.Game.OPS_JUMP_TYPE.MINPROGRAM_JUMP",
 	},
 
+	[ProtoRes.Game.DesignType] = {
+		[1] = "ProtoRes.Game.DesignType.DesignType_Avatar",
+	},
+
+	[ProtoRes.Game.ActivityGlobalCfgId] = {
+		[1] = "ProtoRes.Game.ActivityGlobalCfgId.ActivityGlobalCfg_LOTTERYDRAW_BAGFULL_MAILID",
+	},
+
 	[ProtoRes.ChannelType] = {
 		[1] = "ProtoRes.ChannelType.ChannelTypeNewbie",
 		[2] = "ProtoRes.ChannelType.ChannelTypeArmy",
@@ -4264,11 +4354,16 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoRes.ChannelType.ChannelTypeGroup",
 		[8] = "ProtoRes.ChannelType.ChannelTypeSystem",
 		[9] = "ProtoRes.ChannelType.ChannelTypeSceneTeam",
+		[10] = "ProtoRes.ChannelType.ChannelTypeSquad",
 	},
 
 	[ProtoRes.ChatGlobalCfgID] = {
 		[1] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDVanGuardOpenDays",
 		[2] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDVanGuardSpeakLevel",
+		[3] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDQuickSpeakPlanRow",
+		[4] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDQuickSpeakTitleSize",
+		[5] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDQuickSpeakContentRow",
+		[6] = "ProtoRes.ChatGlobalCfgID.ChatGlobalCfgIDQuickSpeakContentSize",
 	},
 
 	[ProtoRes.cfg_unit_type] = {
@@ -4304,6 +4399,7 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.pworld_type.PWORLD_CATEGORY_DUNGEON",
 		[14] = "ProtoRes.pworld_type.PWORLD_CATEGORY_PRIVATE",
 		[17] = "ProtoRes.pworld_type.PWORLD_CATEGORY_DEMO",
+		[18] = "ProtoRes.pworld_type.PWORLD_CATEGORY_HOUSE",
 	},
 
 	[ProtoRes.pworld_sub_type] = {
@@ -4319,6 +4415,8 @@ local ProtoEnumAliasConfig = {
 		[10] = "ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_COLOSSEUM",
 		[11] = "ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_ACTIVITY",
 		[12] = "ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_MERCHANT",
+		[13] = "ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_HOUSE_PUBLIC",
+		[14] = "ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_HOUSE_ROOM",
 	},
 
 	[ProtoRes.SCORE_TYPE] = {
@@ -4397,6 +4495,7 @@ local ProtoEnumAliasConfig = {
 		[5] = "ProtoRes.friend_global_cfg_id.FRIEND_CFG_MAX_FRIEND_REMARK_MESSAGE",
 		[6] = "ProtoRes.friend_global_cfg_id.FRIEND_CFG_MAX_BlackListGroupMemberNum",
 		[7] = "ProtoRes.friend_global_cfg_id.FRIEND_CFG_MAX_FriendsApplyRetentionTime",
+		[8] = "ProtoRes.friend_global_cfg_id.FRIEND_CFG_MAX_NICKNAME_LEN",
 	},
 
 	[ProtoRes.Game.GameID] = {
@@ -4423,6 +4522,7 @@ local ProtoEnumAliasConfig = {
 		[21] = "ProtoRes.Game.GameID.GameIDCatchBall",
 		[22] = "ProtoRes.Game.GameID.GameIDAloneTree",
 		[43] = "ProtoRes.Game.GameID.GameIDOreSearch",
+		[46] = "ProtoRes.Game.GameID.GameIDFairyBlessed",
 		[23] = "ProtoRes.Game.GameID.GameIDMysteryMerchant",
 		[24] = "ProtoRes.Game.GameID.GameIDMatch",
 		[25] = "ProtoRes.Game.GameID.GameIDPvpcolosseumCrystal",
@@ -4438,11 +4538,12 @@ local ProtoEnumAliasConfig = {
 		[35] = "ProtoRes.Game.GameID.GameIDLeapOfFaithB",
 		[36] = "ProtoRes.Game.GameID.GameIDLotteryDraw",
 		[37] = "ProtoRes.Game.GameID.GameIDChooseTreasureChest",
-		[38] = "ProtoRes.Game.GameID.GameIDMonstorHuntA",
-		[39] = "ProtoRes.Game.GameID.GameIDMonstorHuntB",
+		[38] = "ProtoRes.Game.GameID.GameIDMonsterHunt",
 		[40] = "ProtoRes.Game.GameID.GameIDBlindBox",
 		[41] = "ProtoRes.Game.GameID.GameIDZeroSceneRank",
 		[42] = "ProtoRes.Game.GameID.GameIDTreasuryRoulette",
+		[44] = "ProtoRes.Game.GameID.GameIDStarlight",
+		[45] = "ProtoRes.Game.GameID.GameIDTianshu",
 	},
 
 	[ProtoRes.Game.game_global_cfg_id] = {
@@ -4606,21 +4707,13 @@ local ProtoEnumAliasConfig = {
 		[1178] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_BAND_CHEER_DROP_ID",
 		[1179] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_BAND_STATE_IDS",
 		[1180] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_BAND_NON_COMBAT_SYS_ID",
-		[1181] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_MAILIDA",
-		[1182] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_MAILIDB",
 		[1183] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MERCHANT_INVEST_TURN",
 		[1184] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MERCHANT_INTERACTIVE_BUFF",
 		[1185] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MERCHANT_HELP_DISTANCE",
 		[1186] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_DANCE_HYUR_CFG",
 		[1187] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_DANCE_LALAFELL_CFG",
 		[1188] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_DANCE_ROEGADYN_CFG",
-		[1189] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_LIMITB",
-		[1190] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_DAILY_LIMITB",
-		[1191] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_MONSTOR_COUNT_B",
-		[1192] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_MONSTOR_AWARD_DELAY_B",
-		[1193] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_B",
-		[1194] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_MAILID_B",
-		[1195] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTORHUNT_AWARD_DAILY_LIMITA",
+		[1191] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTERHUNT_MONSTER_COUNT_B",
 		[1196] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_CELEBRATE_MAIL_REWARD_ID",
 		[1197] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_CELEBRATE_NOTIFY_CFG",
 		[1198] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_ROULETTE_RING_SPIN_TIME",
@@ -4646,6 +4739,30 @@ local ProtoEnumAliasConfig = {
 		[1282] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_LEAP_OF_FAITH",
 		[1283] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_DANCE_NOTIFY_CFG",
 		[1284] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MERCHANT_SCENE_BLOCK_MS",
+		[1285] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_SNOWBALL_CFG",
+		[1286] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_SHARED_MERCHANT_INTERACTION_ID",
+		[1287] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_SHARED_MERCHANT_DISPLAY_EVENT_ID",
+		[1288] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_SHARED_MERCHANT_HIDE_EVENT_ID",
+		[1289] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_ROLE_TRIGGER_INTERVAL",
+		[1290] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_HUNT_EGG_CFG",
+		[1291] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_CHOCOBO_RACE_MAX_ACC_LIMIT",
+		[1292] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_FATE_HEAVENSTURN_CFG",
+		[1293] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_NORMAL_REWARD_CFG",
+		[1294] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_HARD_REWARD_CFG",
+		[1295] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_SATISFACTION_CFG",
+		[1296] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_SCORE_CFG",
+		[1297] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTERHUNT_CLUE",
+		[1298] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_TIME_LIMIT",
+		[1299] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_NOTE_TIME_CFG",
+		[1300] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_STAR_LIGHT_MUSIC_NOTE_RANGE_CFG",
+		[1301] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_MONSTERHUNT_WEEK_AWARD",
+		[1302] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_REWARD_MAIN_QUESTID",
+		[1303] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_BOOK_ITEMID",
+		[1304] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_STRANGE_ITEMID",
+		[1305] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_ONE_LINE_RATE",
+		[1306] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_TWO_LINE_RATE",
+		[1307] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_TIANSHU_THREE_LINE_RATE",
+		[1308] = "ProtoRes.Game.game_global_cfg_id.GAME_CFG_OPEN_SERVER_FATE_ID",
 	},
 
 	[ProtoRes.Game.GameSceneType] = {
@@ -4654,6 +4771,7 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.Game.GameSceneType.GameSceneTypeDungeon",
 		[14] = "ProtoRes.Game.GameSceneType.GameSceneTypePrivate",
 		[17] = "ProtoRes.Game.GameSceneType.GameSceneTypeDemo",
+		[18] = "ProtoRes.Game.GameSceneType.GameSceneTypeHouse",
 	},
 
 	[ProtoRes.Game.card_race_type] = {
@@ -4964,6 +5082,15 @@ local ProtoEnumAliasConfig = {
 		[6] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_JZSB",
 		[7] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_ZZCC",
 		[8] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_GLWY",
+		[9] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_JH",
+		[10] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_CB",
+		[11] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_PZ",
+		[12] = "ProtoRes.Game.FATE_HIGH_RISK_TYPE.FATE_HIGH_RISK_TYPE_JJ",
+	},
+
+	[ProtoRes.Game.FATE_RUNE_BUFF_TARGET] = {
+		[1] = "ProtoRes.Game.FATE_RUNE_BUFF_TARGET.FATE_RUNE_BUFF_TARGET_ROLE",
+		[2] = "ProtoRes.Game.FATE_RUNE_BUFF_TARGET.FATE_RUNE_BUFF_TARGET_BUDDY",
 	},
 
 	[ProtoRes.Game.FATE_TYPE] = {
@@ -4974,6 +5101,7 @@ local ProtoEnumAliasConfig = {
 		[5] = "ProtoRes.Game.FATE_TYPE.FATE_TYPE_DEFENCE",
 		[6] = "ProtoRes.Game.FATE_TYPE.FATE_TYPE_DANCE",
 		[7] = "ProtoRes.Game.FATE_TYPE.FATE_TYPE_PUZZLE",
+		[8] = "ProtoRes.Game.FATE_TYPE.FATE_TYPE_BUFF",
 	},
 
 	[ProtoRes.Game.FATE_EVENT_CONDITION_TYPE] = {
@@ -4995,6 +5123,8 @@ local ProtoEnumAliasConfig = {
 		[18] = "ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_DANCE",
 		[19] = "ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_PUZZLE",
 		[20] = "ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_END",
+		[21] = "ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_INTERACT_WITH_BUFF",
+		[22] = "ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_REACH_SCORE",
 	},
 
 	[ProtoRes.Game.FATE_EVENT_ACTION_TYPE] = {
@@ -5018,6 +5148,11 @@ local ProtoEnumAliasConfig = {
 		[18] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_CREATE_PUZZLE_NPC",
 		[19] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_TRIGGER_SCENE_EVENT",
 		[20] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_RANGE_NOTIFY",
+		[21] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_RANDOM_ADD_BUFF",
+		[22] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_STOP_REFRESH_MONSTER",
+		[23] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_CONTINUE_REFRESH_MONSTER",
+		[24] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_MONSTER_RETREAT",
+		[25] = "ProtoRes.Game.FATE_EVENT_ACTION_TYPE.FATE_EVENT_ACTION_SHOW_EBOJ",
 	},
 
 	[ProtoRes.Game.FATE_ACHIEVEMENT_TYPE] = {
@@ -5089,6 +5224,11 @@ local ProtoEnumAliasConfig = {
 		[219] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_ROLE_HAS_BUFF_AND_DAMAGE_MONSTER",
 		[220] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_FINISH_HIGH_RISK_COUNT",
 		[221] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_FINISH_IN_HIGH_RISK",
+		[222] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_FINISH_USE_DIFF_PROF",
+		[223] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_SERIAL_GOLD_REWARD",
+		[224] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_GUARD_KILL_IN_TIME",
+		[225] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_USE_SPECIAL_SKILL",
+		[226] = "ProtoRes.Game.FATE_ACHIEVEMENT_TYPE.FATE_ACHIEVEMENT_TYPE_KILL_IN_TIME_AFTER_CREATE",
 	},
 
 	[ProtoRes.Game.FATE_ACHIEVEMENT_INGAME_OPTION] = {
@@ -5259,6 +5399,33 @@ local ProtoEnumAliasConfig = {
 		[1084] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_BTLLOSSRATE",
 		[1085] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_MATCH_CRYSTAL_WAITING_TIME",
 		[1086] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_MATCH_CRYSTAL_PROF_RATIO",
+		[1087] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_STARROADSIGNS",
+		[1088] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_ROLEEXP_RATE_WIN",
+		[1089] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_ROLEEXP_RATE_FAIL",
+		[1090] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_SERIALEXP_WIN",
+		[1091] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_SERIALEXP_FAIL",
+		[1092] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_POEM_WIN",
+		[1093] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_POEM_FAIL",
+		[1094] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_GOLD_WIN",
+		[1095] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_GOLD_FAIL",
+		[1096] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_WINSTAR_LIMIT",
+		[1097] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_NEED_CONTINUEWIN_NUM",
+		[1098] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_CONTINUEWIN_ADDSTAR",
+		[1099] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_CRYSTAL_RANGE",
+		[1100] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_SEASON_RESULT_MAIL_RANK",
+		[1101] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_SEASON_RESULT_MAIL_SEG",
+		[1102] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_SEASON_RESULT_RANK1",
+		[1103] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_SEASON_RESULT_RANK2",
+		[1104] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_SEASON_RESULT_RANK3",
+		[1105] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_UPDATE_TIME",
+		[1107] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_SHOWTIME",
+		[1108] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_DELAY_SHOW",
+		[1109] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_NEEDBTLNUM",
+		[1110] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_ACT_BEGINTIME",
+		[1111] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_ACT_ENDTIME",
+		[1112] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_SWITCH",
+		[1113] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_EXCERSIZE_SWITCH",
+		[1114] = "ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_RANK_SCORE_BAN_MATCH",
 	},
 
 	[ProtoRes.Game.game_pvpcolosseum_baseexptype] = {
@@ -5292,6 +5459,20 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoRes.Game.pvp_starroadsigns_type.SRSType_AssistWinNumOne",
 		[8] = "ProtoRes.Game.pvp_starroadsigns_type.SRSType_EscortTime",
 		[9] = "ProtoRes.Game.pvp_starroadsigns_type.SRSType_MaxValue",
+	},
+
+	[ProtoRes.Game.pvp_rank_type] = {
+		[1] = "ProtoRes.Game.pvp_rank_type.RT_BRONZE",
+		[2] = "ProtoRes.Game.pvp_rank_type.RT_SILVER",
+		[3] = "ProtoRes.Game.pvp_rank_type.RT_GOLD",
+		[4] = "ProtoRes.Game.pvp_rank_type.RT_BIRKIN",
+		[5] = "ProtoRes.Game.pvp_rank_type.RT_DIAMOND",
+		[6] = "ProtoRes.Game.pvp_rank_type.RT_CRYSTALE",
+	},
+
+	[ProtoRes.Game.pvp_rank_result_mode] = {
+		[1] = "ProtoRes.Game.pvp_rank_result_mode.RRM_WINSTAR",
+		[2] = "ProtoRes.Game.pvp_rank_result_mode.RRM_CRYSTALSCORE",
 	},
 
 	[ProtoRes.Game.MysteryMerchantType] = {
@@ -5454,10 +5635,6 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.Game.GameRaceSkillType.RaceSkillTypePassive",
 	},
 
-	[ProtoRes.Game.ActivityGlobalCfgId] = {
-		[1] = "ProtoRes.Game.ActivityGlobalCfgId.ActivityGlobalCfg_LOTTERYDRAW_BAGFULL_MAILID",
-	},
-
 	[ProtoRes.Game.BandType] = {
 		[1] = "ProtoRes.Game.BandType.BandTypeTouring",
 		[2] = "ProtoRes.Game.BandType.BandTypePermanent",
@@ -5481,6 +5658,15 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.Game.AreaMonsterType.AreaMonsterTypeElite",
 		[3] = "ProtoRes.Game.AreaMonsterType.AreaMonsterTypeObject",
 		[4] = "ProtoRes.Game.AreaMonsterType.AreaMonsterTypeBoss",
+	},
+
+	[ProtoRes.Game.CellContent] = {
+		[1] = "ProtoRes.Game.CellContent.DirectionUp",
+		[2] = "ProtoRes.Game.CellContent.DirectionDown",
+		[3] = "ProtoRes.Game.CellContent.DirectionLeft",
+		[4] = "ProtoRes.Game.CellContent.DirectionRight",
+		[5] = "ProtoRes.Game.CellContent.BallTypeNormal",
+		[6] = "ProtoRes.Game.CellContent.BallTypeSuper",
 	},
 
 	[ProtoRes.Game.GameSceneGlobalCfgID] = {
@@ -5511,6 +5697,7 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.Game.FairyBlessedParamType.FairyBlessedParamTypeIntervalTop",
 		[3] = "ProtoRes.Game.FairyBlessedParamType.FairyBlessedParamTypeStrongWeight",
 		[4] = "ProtoRes.Game.FairyBlessedParamType.FairyBlessedParamTypeWeakWeight",
+		[5] = "ProtoRes.Game.FairyBlessedParamType.FairyBlessedParamTypeRadiusCheck",
 	},
 
 	[ProtoRes.Game.LotteryDrawPoolType] = {
@@ -5543,26 +5730,38 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.Game.TriggerType.TriggerTypeSceneEvent",
 	},
 
-	[ProtoRes.Game.MonstorHuntMonstorCate] = {
-		[0] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateNone",
-		[1] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateB",
-		[2] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateA",
-		[3] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateARet",
-		[4] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateS",
-		[5] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateSRet",
-		[6] = "ProtoRes.Game.MonstorHuntMonstorCate.MonstorHuntMonstorCateSp",
+	[ProtoRes.Game.Category] = {
+		[0] = "ProtoRes.Game.Category.CategoryNone",
+		[1] = "ProtoRes.Game.Category.CategoryB",
+		[2] = "ProtoRes.Game.Category.CategoryA",
+		[3] = "ProtoRes.Game.Category.CategoryS",
+		[4] = "ProtoRes.Game.Category.CategorySp",
 	},
 
-	[ProtoRes.Game.MonstorHuntAwardTarget] = {
-		[0] = "ProtoRes.Game.MonstorHuntAwardTarget.MonstorHuntAwardTargetNone",
-		[1] = "ProtoRes.Game.MonstorHuntAwardTarget.MonstorHuntAwardTargetKiller",
-		[2] = "ProtoRes.Game.MonstorHuntAwardTarget.MonstorHuntAwardTargetHater",
+	[ProtoRes.Game.EType] = {
+		[1] = "ProtoRes.Game.EType.ETypeWeatherIn",
+		[2] = "ProtoRes.Game.EType.ETypeWeatherNotIn",
+		[3] = "ProtoRes.Game.EType.ETypeGather",
+		[4] = "ProtoRes.Game.EType.ETypeEnterArea",
+		[5] = "ProtoRes.Game.EType.ETypePlayerDie",
+		[6] = "ProtoRes.Game.EType.ETypeFish",
+		[7] = "ProtoRes.Game.EType.ETypeFateNoFail",
+		[8] = "ProtoRes.Game.EType.ETypeMonsterDie",
+		[9] = "ProtoRes.Game.EType.ETypeFall",
+		[10] = "ProtoRes.Game.EType.ETypeOpenTreasure",
+		[11] = "ProtoRes.Game.EType.ETypeUseItem",
+		[12] = "ProtoRes.Game.EType.ETypeFateFinished",
 	},
 
-	[ProtoRes.Game.MonstorHuntRefreshCond] = {
-		[0] = "ProtoRes.Game.MonstorHuntRefreshCond.MonstorHuntRefreshCondNone",
-		[1] = "ProtoRes.Game.MonstorHuntRefreshCond.MonstorHuntRefreshCondDie",
-		[2] = "ProtoRes.Game.MonstorHuntRefreshCond.MonstorHuntRefreshCondTime",
+	[ProtoRes.Game.EType] = {
+		[0] = "ProtoRes.Game.EType.ETypeFate",
+		[1] = "ProtoRes.Game.EType.ETypeItem",
+		[2] = "ProtoRes.Game.EType.ETypeHunt",
+	},
+
+	[ProtoRes.Game.BlindBoxBuyCondType] = {
+		[0] = "ProtoRes.Game.BlindBoxBuyCondType.BlindBoxBuyCondTypeNone",
+		[1] = "ProtoRes.Game.BlindBoxBuyCondType.BlindBoxBuyCondTypeCondCfg",
 	},
 
 	[ProtoRes.Game.zerorank_paramvalue] = {
@@ -5580,6 +5779,19 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.Game.TeamStatus.TeamStatusFull",
 	},
 
+	[ProtoRes.Game.SceneType] = {
+		[0] = "ProtoRes.Game.SceneType.SceneTypeAny",
+		[1] = "ProtoRes.Game.SceneType.SceneTypeSpecific",
+		[2] = "ProtoRes.Game.SceneType.SceneWanfa",
+	},
+
+	[ProtoRes.Game.LootType] = {
+		[1] = "ProtoRes.Game.LootType.LootTypeNineFlower",
+		[2] = "ProtoRes.Game.LootType.LootTypeLine1",
+		[3] = "ProtoRes.Game.LootType.LootTypeLine2",
+		[4] = "ProtoRes.Game.LootType.LootTypeLine3",
+	},
+
 	[ProtoRes.grand_company_type] = {
 		[1] = "ProtoRes.grand_company_type.GRAND_COMPANY_TYPE_Maelstrom",
 		[2] = "ProtoRes.grand_company_type.GRAND_COMPANY_TYPE_OrderOfTheTwinAdder",
@@ -5590,6 +5802,8 @@ local ProtoEnumAliasConfig = {
 		[1] = "ProtoRes.GroupPermissionClass.GRAND_PERMISSION_CLASS_InfoEdit",
 		[2] = "ProtoRes.GroupPermissionClass.GRAND_PERMISSION_CLASS_STORE",
 		[3] = "ProtoRes.GroupPermissionClass.GRAND_PERMISSION_CLASS_MemberManage",
+		[4] = "ProtoRes.GroupPermissionClass.GRAND_PERMISSION_CLASS_House",
+		[5] = "ProtoRes.GroupPermissionClass.GRAND_PERMISSION_CLASS_HouseMaintenance",
 	},
 
 	[ProtoRes.GroupPermissionType] = {
@@ -5613,6 +5827,12 @@ local ProtoEnumAliasConfig = {
 		[108] = "ProtoRes.GroupPermissionType.GPT_STORE_8_USE",
 		[109] = "ProtoRes.GroupPermissionType.GPT_STORE_9_USE",
 		[110] = "ProtoRes.GroupPermissionType.GPT_STORE_10_USE",
+		[201] = "ProtoRes.GroupPermissionType.PermissionTypeEstateEditNameAndGreeting",
+		[202] = "ProtoRes.GroupPermissionType.PermissionTypeEstateGuestAccessAndTagSettings",
+		[203] = "ProtoRes.GroupPermissionType.PermissionTypeEstateSetDisplayPicture",
+		[204] = "ProtoRes.GroupPermissionType.PermissionTypeEstatePurchaseLandAndBuild",
+		[205] = "ProtoRes.GroupPermissionType.PermissionTypeEstateFixtures",
+		[206] = "ProtoRes.GroupPermissionType.PermissionTypeEstateOrchestrionOperation",
 	},
 
 	[ProtoRes.GroupScoreSpecialTaskID] = {
@@ -5638,6 +5858,114 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.GroupChatGlobalCfgID.GroupChatGlobalCfgCreateCool",
 	},
 
+	[ProtoRes.HouseGlobalCfgID] = {
+		[1] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDHouseNameWidth",
+		[2] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDMusicListLen",
+		[3] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDHouseRoommateLimit",
+		[4] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDBeInviteNumLimit",
+		[5] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDBeInviteLevelLimit",
+		[6] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDHouseGreetingWidth",
+		[7] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDGroupMemberRoomResID",
+		[8] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDGroupMemberRoomMoneyType",
+		[9] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDGroupMemberRoomMoneyNum",
+		[10] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDBagFullSendMail",
+		[11] = "ProtoRes.HouseGlobalCfgID.HouseGlobalCfgIDHouseItemReturnMailID",
+	},
+
+	[ProtoRes.HouseRegionType] = {
+		[1] = "ProtoRes.HouseRegionType.HouseRegionType_Room",
+		[2] = "ProtoRes.HouseRegionType.HouseRegionType_Yard",
+	},
+
+	[ProtoRes.HouseFurnitureFunction] = {
+		[1] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_SysEntry",
+		[2] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Emotion",
+		[3] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Musical",
+		[4] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Food",
+		[5] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Effects",
+		[6] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Status",
+		[7] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Door",
+		[8] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_WoodenMan",
+		[9] = "ProtoRes.HouseFurnitureFunction.HouseFurnitureFunction_Ether",
+	},
+
+	[ProtoRes.HouseFurnitureInteractionPrivilege] = {
+		[0] = "ProtoRes.HouseFurnitureInteractionPrivilege.HouseFurnitureInteractionPrivilege_None",
+		[1] = "ProtoRes.HouseFurnitureInteractionPrivilege.HouseFurnitureInteractionPrivilege_ALL",
+		[2] = "ProtoRes.HouseFurnitureInteractionPrivilege.HouseFurnitureInteractionPrivilege_Private",
+	},
+
+	[ProtoRes.HOUSING_ITEM_CATEGORY_TYPE] = {
+		[1] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF",
+		[2] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WALL",
+		[3] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WINDOW",
+		[4] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_DOOR",
+		[5] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF_OPTION",
+		[6] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_WALL_OPTION",
+		[7] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_SIGN",
+		[8] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_EXTERIOR_FENCE",
+		[9] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_WALL",
+		[10] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_FLOOR",
+		[11] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_INTERIOR_LIGHT",
+		[12] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_SINGLE",
+		[13] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_BASE",
+		[14] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_DESKTOP",
+		[15] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_WALLHUNG",
+		[16] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_CARPET",
+		[17] = "ProtoRes.HOUSING_ITEM_CATEGORY_TYPE.HOUSING_ITEM_CATEGORY_FURNITURE_YARD",
+	},
+
+	[ProtoRes.HOUSING_SIZE_TYPE] = {
+		[0] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_S",
+		[1] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_M",
+		[2] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_L",
+		[3] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_SS",
+		[4] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_WORKSHOP",
+		[5] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MANSIONROOM",
+		[6] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MINIONAIRE",
+		[254] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_ALL",
+		[255] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_INVALID",
+		[256] = "ProtoRes.HOUSING_SIZE_TYPE.HOUSING_SIZE_MAX",
+	},
+
+	[ProtoRes.HouseDoUpPos] = {
+		[1] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_RoomWall",
+		[2] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_RoomFloor",
+		[3] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_RoomRoof",
+		[4] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_RoomCenterLight",
+		[11] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardWall",
+		[12] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardRoof",
+		[13] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardWindow",
+		[14] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardDoor",
+		[21] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardWallDecoration",
+		[22] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardRoofDecoration",
+		[23] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardDoorplateDecoration",
+		[24] = "ProtoRes.HouseDoUpPos.HouseDoUpPos_YardFenceDecoration",
+	},
+
+	[ProtoRes.ResidenceNumberType] = {
+		[1] = "ProtoRes.ResidenceNumberType.ResidenceNumber_1",
+		[2] = "ProtoRes.ResidenceNumberType.ResidenceNumber_2",
+		[3] = "ProtoRes.ResidenceNumberType.ResidenceNumber_3",
+	},
+
+	[ProtoRes.LandSizeType] = {
+		[1] = "ProtoRes.LandSizeType.LandSizeType_Small",
+		[2] = "ProtoRes.LandSizeType.LandSizeType_Medium",
+		[3] = "ProtoRes.LandSizeType.LandSizeType_Large",
+	},
+
+	[ProtoRes.LandBuyType] = {
+		[1] = "ProtoRes.LandBuyType.LandBuyType_Personal",
+		[2] = "ProtoRes.LandBuyType.LandBuyType_Team",
+		[3] = "ProtoRes.LandBuyType.LandBuyType_All",
+	},
+
+	[ProtoRes.SubAreaType] = {
+		[1] = "ProtoRes.SubAreaType.SubAreaType_Init",
+		[2] = "ProtoRes.SubAreaType.SubAreaType_Expand",
+	},
+
 	[ProtoRes.LogsStatistic.SceneTag] = {
 		[1] = "ProtoRes.LogsStatistic.SceneTag.Mazechallenge",
 		[2] = "ProtoRes.LogsStatistic.SceneTag.Warofannihilation1",
@@ -5650,6 +5978,7 @@ local ProtoEnumAliasConfig = {
 		[0] = "ProtoRes.QUEST_TYPE.QUEST_TYPE_MAIN",
 		[1] = "ProtoRes.QUEST_TYPE.QUEST_TYPE_IMPORTANT",
 		[2] = "ProtoRes.QUEST_TYPE.QUEST_TYPE_BRANCH",
+		[3] = "ProtoRes.QUEST_TYPE.QUEST_TYPE_REPEAT",
 	},
 
 	[ProtoRes.QUEST_ACCEPT_TYPE] = {
@@ -5690,6 +6019,7 @@ local ProtoEnumAliasConfig = {
 		[44] = "ProtoRes.QUEST_TARGET_TYPE.QUEST_TARGET_TYPE_CUTOUT",
 		[45] = "ProtoRes.QUEST_TARGET_TYPE.QUEST_TARGET_TYPE_CHOCOBO_QTE",
 		[46] = "ProtoRes.QUEST_TARGET_TYPE.QUEST_TARGET_TYPE_FINISH_FATE",
+		[47] = "ProtoRes.QUEST_TARGET_TYPE.QUEST_TARGET_TYPE_CLIENT_FINISH_GAME",
 	},
 
 	[ProtoRes.QUEST_SERVER_TYPE] = {
@@ -5750,6 +6080,14 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoRes.FISH_LOCATION_TYPE.FISH_LOCATION_TYPE_MAGIC_FOUNTAIN",
 		[8] = "ProtoRes.FISH_LOCATION_TYPE.FISH_LOCATION_TYPE_SALT_LAKE",
 		[9] = "ProtoRes.FISH_LOCATION_TYPE.FISH_LOCATION_TYPE_UNIVERSE",
+	},
+
+	[ProtoRes.FISH_SIZE_LIMIT_TYPE] = {
+		[1] = "ProtoRes.FISH_SIZE_LIMIT_TYPE.FISH_SIZE_LIMIT_TYPE_TEN_THOUSAND",
+		[2] = "ProtoRes.FISH_SIZE_LIMIT_TYPE.FISH_SIZE_LIMIT_TYPE_ONE_HUNDRED_THOUSAND",
+		[3] = "ProtoRes.FISH_SIZE_LIMIT_TYPE.FISH_SIZE_LIMIT_TYPE_MILLION",
+		[4] = "ProtoRes.FISH_SIZE_LIMIT_TYPE.FISH_SIZE_LIMIT_TYPE_TEN_MILLION",
+		[5] = "ProtoRes.FISH_SIZE_LIMIT_TYPE.FISH_SIZE_LIMIT_TYPE_ONE_HUNDRED_MILLION",
 	},
 
 	[ProtoRes.FISH_LIFT_TYPE] = {
@@ -5980,6 +6318,8 @@ local ProtoEnumAliasConfig = {
 
 	[ProtoRes.BonusStateGlobalCfgID] = {
 		[1] = "ProtoRes.BonusStateGlobalCfgID.BonusStateGlobalCfgIDArmouryStateID",
+		[2] = "ProtoRes.BonusStateGlobalCfgID.BonusStateGlobalCfgIDWeChatStates",
+		[3] = "ProtoRes.BonusStateGlobalCfgID.BonusStateGlobalCfgIDQQStates",
 	},
 
 	[ProtoRes.GrandCompanyGlobalParamType] = {
@@ -6107,6 +6447,12 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatGetGatherGuide",
 		[13] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatPlayTimeLess",
 		[14] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatNotFinishMainQuests",
+		[15] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatStatisticsValueReach",
+		[16] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatCounterValueReach",
+		[17] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatCounterValueLess",
+		[18] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatJobFinishTask",
+		[19] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatJobLevelReach",
+		[20] = "ProtoRes.STAT_CONDITION_STAT_TYPE.ConditionStatAccumulativeFinish",
 	},
 
 	[ProtoRes.STAT_CONDITION_MULTIPLE_OPT] = {
@@ -6148,6 +6494,8 @@ local ProtoEnumAliasConfig = {
 		[31] = "ProtoRes.GuideGlobalParam.GuideRedFlowerGuideIdentifyNoticeMailID",
 		[32] = "ProtoRes.GuideGlobalParam.GuideGameAllTimeCounterID",
 		[33] = "ProtoRes.GuideGlobalParam.GuideInvitationRetainTime",
+		[34] = "ProtoRes.GuideGlobalParam.GuideGoldSauserNoticeMailID",
+		[35] = "ProtoRes.GuideGlobalParam.GuideGoldSauserAttestationTimeAfterResign",
 	},
 
 	[ProtoRes.BattlePassGlobalParamType] = {
@@ -6179,6 +6527,7 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.ClosetParamCfgID.ClosetRefreshRandomPatternID",
 		[5] = "ProtoRes.ClosetParamCfgID.ClosetDynamicsObjectID",
 		[6] = "ProtoRes.ClosetParamCfgID.ClosetUnlockLimit",
+		[7] = "ProtoRes.ClosetParamCfgID.ClosetRegionNameLengthLimit",
 	},
 
 	[ProtoRes.NotPassedType] = {
@@ -6248,6 +6597,7 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.BuddyGlobalCfgID.BuddyGlobalCfgIDVegetable",
 		[3] = "ProtoRes.BuddyGlobalCfgID.BuddyGlobalCfgIDBreakThrough",
 		[4] = "ProtoRes.BuddyGlobalCfgID.BuddyGlobalCfgIDOutTimeLimit",
+		[5] = "ProtoRes.BuddyGlobalCfgID.BuddyGlobalCfgResetColorFruit",
 	},
 
 	[ProtoRes.StatisticsSubType] = {
@@ -6399,7 +6749,20 @@ local ProtoEnumAliasConfig = {
 		[398] = "ProtoRes.StatisticsSubType.STATISTICS_PROF_TOTAL_LEVEL",
 		[399] = "ProtoRes.StatisticsSubType.STATISTICS_GATHER_COLLECT",
 		[400] = "ProtoRes.StatisticsSubType.STATISTICS_FOOT_MARK_REGION_ACHIEVED",
+		[401] = "ProtoRes.StatisticsSubType.STATISTICS_MOUNT_TAKE_PHOTO",
+		[402] = "ProtoRes.StatisticsSubType.STATISTICS_MYSTERY_MERCHABT_INVEST",
+		[403] = "ProtoRes.StatisticsSubType.STATISTICS_JOIN_GAME_BLESS",
+		[404] = "ProtoRes.StatisticsSubType.STATISTICS_MEET_TRADE",
+		[405] = "ProtoRes.StatisticsSubType.STATISTICS_MYSTERY_MERCHABT_INVEST_COIN",
+		[406] = "ProtoRes.StatisticsSubType.STATISTICS_MYSTERY_MERCHABT_INVEST_MUTIPLE",
+		[407] = "ProtoRes.StatisticsSubType.STATISTICS_ACTIVATE_CLOSET_STAIN",
+		[408] = "ProtoRes.StatisticsSubType.STATISTICS_PVP_KILL",
+		[409] = "ProtoRes.StatisticsSubType.STATISTICS_PVP_LIKE",
+		[410] = "ProtoRes.StatisticsSubType.STATISTICS_PVP_SEASON_RANK_ID",
+		[411] = "ProtoRes.StatisticsSubType.STATISTICS_PVP_SEASON_RANKING",
+		[412] = "ProtoRes.StatisticsSubType.STATISTICS_PVP_STAR_LEVEL",
 		[413] = "ProtoRes.StatisticsSubType.STATISTICS_SCENE_COMPELETED_FIX",
+		[414] = "ProtoRes.StatisticsSubType.STATISTICS_SMALL_GAME_AWARD_COIN_BLESS",
 	},
 
 	[ProtoRes.DevicePlatform] = {
@@ -6424,6 +6787,25 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.ProcessType.ProcessTypePart",
 	},
 
+	[ProtoRes.ChocoboGlobalCfgID] = {
+		[1] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDRentLimit",
+		[2] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMatingLevel",
+		[3] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMatingTime",
+		[4] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMaxLevel",
+		[5] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDPerGenLimit",
+		[6] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDInitAttr",
+		[7] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDNewbieQuest",
+		[8] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDInitialSkill",
+		[9] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDActiveSkillLimit",
+		[10] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDPassiveSkillLimit",
+		[11] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDGeneStarMax",
+		[12] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDSuitModuleOpenID",
+		[13] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDAdoptCost",
+		[14] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDRenameCost",
+		[15] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMatingCount",
+		[16] = "ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDRentMatingCount",
+	},
+
 	[ProtoRes.FootMarkType] = {
 		[1] = "ProtoRes.FootMarkType.FootMarkType_Normal",
 		[2] = "ProtoRes.FootMarkType.FootMarkType_Move",
@@ -6437,6 +6819,8 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.PortraitUnlockType.PortraitUnlockTypeTask",
 		[3] = "ProtoRes.PortraitUnlockType.PortraitUnlockTypeItem",
 		[4] = "ProtoRes.PortraitUnlockType.PortraitUnlockTypeBattlePass",
+		[5] = "ProtoRes.PortraitUnlockType.PortraitUnlockTypeCrystalConflict",
+		[6] = "ProtoRes.PortraitUnlockType.PortraitUnlockTypeSeasonRank",
 	},
 
 	[ProtoRes.MonthCardGlobalParamType] = {
@@ -6554,6 +6938,19 @@ local ProtoEnumAliasConfig = {
 		[23] = "ProtoRes.module_type.MODULE_MOUNT_PREVIEW",
 	},
 
+	[ProtoRes.ToyType] = {
+		[1] = "ProtoRes.ToyType.ToyTypeCosplay",
+		[2] = "ProtoRes.ToyType.ToyTypeCosObj",
+		[3] = "ProtoRes.ToyType.ToyTypeRandTrans",
+		[4] = "ProtoRes.ToyType.ToyTypeGroupTrans",
+		[5] = "ProtoRes.ToyType.ToyTypeGoldTrans",
+		[6] = "ProtoRes.ToyType.ToyTypeSceneObj",
+		[7] = "ProtoRes.ToyType.ToyTypeSwinging",
+		[8] = "ProtoRes.ToyType.ToyTypeStage",
+		[9] = "ProtoRes.ToyType.ToyTypeMonsterEye",
+		[10] = "ProtoRes.ToyType.ToyTypePetZoomIn",
+	},
+
 	[ProtoRes.start_end_init_type] = {
 		[1] = "ProtoRes.start_end_init_type.SCHEDULE_START_END_ABSOLUTE",
 		[2] = "ProtoRes.start_end_init_type.SCHEDULE_START_END_SVROPEN_N_DAY",
@@ -6661,9 +7058,11 @@ local ProtoEnumAliasConfig = {
 		[56] = "ProtoRes.FuncType.UnlockTitle",
 		[57] = "ProtoRes.FuncType.RecycleInteractObj",
 		[58] = "ProtoRes.FuncType.WindPulseMapActive",
-		[59] = "ProtoRes.FuncType.UseAdventureRocord",
+		[59] = "ProtoRes.FuncType.UseAdventureRecord",
 		[62] = "ProtoRes.FuncType.UnlockModule",
+		[63] = "ProtoRes.FuncType.AwardItem",
 		[64] = "ProtoRes.FuncType.BattlePassGradeImprove",
+		[65] = "ProtoRes.FuncType.UnlockToy",
 	},
 
 	[ProtoRes.CondFuncRelate] = {
@@ -6729,6 +7128,11 @@ local ProtoEnumAliasConfig = {
 		[50] = "ProtoRes.CondType.GuessCardPlayerLimit",
 		[51] = "ProtoRes.CondType.TreasureHuntPWorldGateLimit",
 		[52] = "ProtoRes.CondType.PointlessTeleportationLimit",
+		[53] = "ProtoRes.CondType.TreasureHuntBoxPlayerLimit",
+		[54] = "ProtoRes.CondType.OwnPersonalHouse",
+		[55] = "ProtoRes.CondType.OwnGroupHouse",
+		[56] = "ProtoRes.CondType.ActivityStageLimit",
+		[57] = "ProtoRes.CondType.SelfHaveRoomInVisitGroup",
 	},
 
 	[ProtoRes.LIFESKILL_BUFF_COST_RULE] = {
@@ -6737,6 +7141,7 @@ local ProtoEnumAliasConfig = {
 		[3] = "ProtoRes.LIFESKILL_BUFF_COST_RULE.COST_RULE_COLLECTION",
 		[4] = "ProtoRes.LIFESKILL_BUFF_COST_RULE.COST_RULE_NO_COLLECTION",
 		[5] = "ProtoRes.LIFESKILL_BUFF_COST_RULE.COST_RULE_MAKE_STEP",
+		[6] = "ProtoRes.LIFESKILL_BUFF_COST_RULE.COST_RULE_FISH_DROP_SUCCESS",
 	},
 
 	[ProtoRes.LIFESKILL_EFFECT_TYPE] = {
@@ -7054,6 +7459,7 @@ local ProtoEnumAliasConfig = {
 		[32] = "ProtoRes.OnlineStatus.OnlineStatusBandListen",
 		[33] = "ProtoRes.OnlineStatus.OnlineStatusRecollect",
 		[34] = "ProtoRes.OnlineStatus.OnlineStatusBandListenFans",
+		[35] = "ProtoRes.OnlineStatus.OnlineStatusGoldSauserMentor",
 	},
 
 	[ProtoRes.OnlineStatusIdentify] = {
@@ -7068,6 +7474,7 @@ local ProtoEnumAliasConfig = {
 		[8] = "ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyUnverifiedMakeMentor",
 		[9] = "ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyReturner",
 		[10] = "ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyRedFlowerMentor",
+		[11] = "ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyGoldSauserMentor",
 	},
 
 	[ProtoRes.RoleAttachmentType] = {
@@ -7096,6 +7503,11 @@ local ProtoEnumAliasConfig = {
 		[2] = "ProtoRes.StoreType.STORE_TYPE_NONE_SLIVERCODE",
 		[3] = "ProtoRes.StoreType.STORE_TYPE_GOLDCODE",
 		[4] = "ProtoRes.StoreType.STORE_TYPE_NONE_GOLDCODE",
+	},
+
+	[ProtoRes.StoreRandType] = {
+		[1] = "ProtoRes.StoreRandType.StoreRandType_Absolute",
+		[2] = "ProtoRes.StoreRandType.StoreRandType_Relative",
 	},
 
 	[ProtoRes.Module_Type] = {
@@ -7166,6 +7578,11 @@ local ProtoEnumAliasConfig = {
 		[5] = "ProtoRes.NoteParamCfgID.NoteFishClockMaxNum",
 	},
 
+	[ProtoRes.PhotoGlobalCfgID] = {
+		[1] = "ProtoRes.PhotoGlobalCfgID.PhotoTemplateLimit",
+		[2] = "ProtoRes.PhotoGlobalCfgID.PhotoDefaultLensRange",
+	},
+
 	[ProtoRes.SceneGlobalCfgID] = {
 		[1] = "ProtoRes.SceneGlobalCfgID.SceneGlobalIDCfgFirstPassEquipMailID",
 		[2] = "ProtoRes.SceneGlobalCfgID.SceneGlobalIDCfgMVPCounterTimes",
@@ -7187,6 +7604,10 @@ local ProtoEnumAliasConfig = {
 	[ProtoRes.InteractionParamCfgID] = {
 		[1] = "ProtoRes.InteractionParamCfgID.InteractionParamCfgIDInteractionEndEarly",
 		[2] = "ProtoRes.InteractionParamCfgID.InteractionParamCfgIDInteractionDistance",
+	},
+
+	[ProtoRes.FashionDecorateCfgID] = {
+		[1] = "ProtoRes.FashionDecorateCfgID.FashionDecorateImproveAchieveID",
 	},
 
 	[ProtoRes.TribeID] = {
@@ -7220,6 +7641,7 @@ local ProtoEnumAliasConfig = {
 		[4] = "ProtoRes.AdventureRecordType.AdventureRecordTypeMail",
 		[5] = "ProtoRes.AdventureRecordType.AdventureRecordTypeFinishMainQuestNoReward",
 		[6] = "ProtoRes.AdventureRecordType.AdventureRecordTypeFinishProfQuestNoReward",
+		[7] = "ProtoRes.AdventureRecordType.AdventureRecordTypeActiveCrystalBefVersion",
 	},
 
 	[ProtoRes.LightJourneyGameID] = {
@@ -7238,6 +7660,7 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.Scene.SceneType.SceneTypeDungeon",
 		[14] = "ProtoRes.Scene.SceneType.SceneTypePrivate",
 		[17] = "ProtoRes.Scene.SceneType.SceneTypeDemo",
+		[18] = "ProtoRes.Scene.SceneType.SceneTypeHouse",
 	},
 
 	[ProtoRes.Scene.SceneSubType] = {
@@ -7253,6 +7676,8 @@ local ProtoEnumAliasConfig = {
 		[10] = "ProtoRes.Scene.SceneSubType.SceneSubColosseum",
 		[11] = "ProtoRes.Scene.SceneSubType.SceneSubActivity",
 		[12] = "ProtoRes.Scene.SceneSubType.SceneSubMerchant",
+		[13] = "ProtoRes.Scene.SceneSubType.SceneTypeHousePublic",
+		[14] = "ProtoRes.Scene.SceneSubType.SceneTypeHouseRoom",
 	},
 
 	[ProtoRes.Scene.SceneVoteType] = {
@@ -7313,6 +7738,7 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.Scene.CollisionCfgKey.MinJumpPressDuration",
 		[13] = "ProtoRes.Scene.CollisionCfgKey.MaxJumpPressDuration",
 		[14] = "ProtoRes.Scene.CollisionCfgKey.ReadyToJumpAnimDuration",
+		[15] = "ProtoRes.Scene.CollisionCfgKey.SpecialJumpMaxSpeed",
 	},
 
 	[ProtoRes.Scene.MoveCfgKey] = {
@@ -7480,6 +7906,7 @@ local ProtoEnumAliasConfig = {
 	[ProtoRes.Scene.buff_storage_type] = {
 		[1] = "ProtoRes.Scene.buff_storage_type.BUFF_STORAGE_HURT",
 		[2] = "ProtoRes.Scene.buff_storage_type.BUFF_STORAGE_HEAL",
+		[3] = "ProtoRes.Scene.buff_storage_type.BUFF_STORAGE_CASTER_HURT",
 	},
 
 	[ProtoRes.Scene.buff_combin_type] = {
@@ -7679,6 +8106,7 @@ local ProtoEnumAliasConfig = {
 		[7] = "ProtoRes.Scene.ParameterID.ParameterIDElectrocardiogramTime",
 		[8] = "ProtoRes.Scene.ParameterID.ParameterIDElectrocardiogramTimeInPublic",
 		[14] = "ProtoRes.Scene.ParameterID.ParameterIDRoleKickVoteCD",
+		[15] = "ProtoRes.Scene.ParameterID.ParameterIDTeamReadyTimeout",
 	},
 
 	[ProtoRes.Scene.TrackingType] = {
@@ -7705,6 +8133,7 @@ local ProtoEnumAliasConfig = {
 		[12] = "ProtoRes.SceneMGr.SceneType.SceneTypeDungeon",
 		[14] = "ProtoRes.SceneMGr.SceneType.SceneTypePrivate",
 		[17] = "ProtoRes.SceneMGr.SceneType.SceneTypeDemo",
+		[18] = "ProtoRes.SceneMGr.SceneType.SceneTypeHouse",
 	},
 
 	[ProtoRes.SceneMGr.AffinityTag] = {
@@ -7725,6 +8154,8 @@ local ProtoEnumAliasConfig = {
 		[10] = "ProtoRes.team_global_cfg_id.TEAM_CFG_RECRUIT_MSG_MAX",
 		[11] = "ProtoRes.team_global_cfg_id.TEAM_CFG_RECRUIT_REFRESH_RATE",
 		[12] = "ProtoRes.team_global_cfg_id.TEAM_CFG_RECRUIT_EDIT_EQUIP_MAX_LEVEL",
+		[13] = "ProtoRes.team_global_cfg_id.TEAM_CFG_RECRUIT_QUERY_CACHE_TIMEOUT",
+		[14] = "ProtoRes.team_global_cfg_id.TEAM_CFG_READY_TIMEOUT",
 	},
 
 	[ProtoRes.trade_market_param_cfg_id] = {
@@ -7755,6 +8186,9 @@ local ProtoEnumAliasConfig = {
 		[8] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_ProduceMailID",
 		[9] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_RollbackMailID",
 		[10] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_EnableSceneIDs",
+		[11] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_LockDelayTime",
+		[12] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_FinalDelayTime",
+		[13] = "ProtoRes.MeetTradeParamsID.MeetTradeParamsID_TradeLastTime",
 	},
 
 	[ProtoRes.WORLD_COUNTER_TYPE] = {

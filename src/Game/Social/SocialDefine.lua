@@ -17,6 +17,7 @@ local TabType = {
     InvitedLinkShell = 50,
 }
 
+
 -- ID值取自于 "H红点表.xlsx|红点名字表"
 local RedDotID = {
     Social = 20,

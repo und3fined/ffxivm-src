@@ -349,22 +349,14 @@ function QuestTrackVM:PushTrackQuest()
 				if self.CurrTrackNearestItem then
 					-- 开启自动寻路
 					if self.CurrTrackNearestItem.MapID and self.CurrTrackNearestItem.Pos then
-						local TargetPos = self.CurrTrackNearestItem.Pos
-						local IsDstPosRejust = true
-						if self.CurrTrackNearestItem.NaviType == QuestDefine.NaviType.NpcResID then
-							local OffsetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(self.CurrTrackNearestItem.MapID, self.CurrTrackNearestItem.NaviObjID)
-							if OffsetPos then
-								TargetPos = OffsetPos
-							end
-							IsDstPosRejust = false
-						end
+						local TargetPos, IsDstPosRejust = _G.QuestTrackMgr:GetQuestAutoPathPos(self.CurrTrackNearestItem)
 						_G.QuestTrackMgr.AutoPathTrackChapterID = CurrTrackQuestVM.ChapterID
 						_G.WorldMapMgr:StartMapAutoPathMove(self.CurrTrackNearestItem.MapID, TargetPos, AutoMoveTargetType.Task, IsDstPosRejust)
 					end
 				else
 					if _G.AutoPathMoveMgr:IsAutoPathMoveOpen() then
 						if next(_G.QuestTrackMgr.NaviItemList) then --存在导航点
-							_G.MsgTipsUtil.ShowTipsByID(40195) --提示无法寻路
+							_G.MsgTipsUtil.ShowTipsByID(40191) --提示无法寻路
 						end
 					end
 				end
@@ -455,15 +447,7 @@ function QuestTrackVM:StartCanAcceptQuestAutoPathMove(ChapterID)
 	local QuestParamList = _G.QuestTrackMgr:GetMapQuestParam(ChapterCfgItem.MapID, ChapterCfgItem.StartQuest)
 	if QuestParamList and #QuestParamList > 0 then
 		local QuestParam = QuestParamList[1]
-		local TargetPos = QuestParam.Pos
-		local IsDstPosRejust = true
-		if QuestParam.NaviType == QuestDefine.NaviType.NpcResID then
-			local OffsetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(QuestParam.MapID, QuestParam.NaviObjID)
-			if OffsetPos then
-				TargetPos = OffsetPos
-			end
-			IsDstPosRejust = false
-		end
+		local TargetPos, IsDstPosRejust = _G.QuestTrackMgr:GetQuestAutoPathPos(QuestParam)
 		_G.QuestTrackMgr.AutoPathTrackChapterID = ChapterID
 		_G.WorldMapMgr:StartMapAutoPathMove(QuestParam.MapID, TargetPos, AutoMoveTargetType.Task, IsDstPosRejust)
 	end

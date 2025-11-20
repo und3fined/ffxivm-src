@@ -27,19 +27,8 @@ function MainChatMsgItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
-function MainChatMsgItemView:OnInit()
-
-end
-
-function MainChatMsgItemView:OnDestroy()
-
-end
-
 function MainChatMsgItemView:OnShow()
 	self:UpdateMsg()
-end
-
-function MainChatMsgItemView:OnHide()
 end
 
 function MainChatMsgItemView:OnRegisterUIEvent()
@@ -48,10 +37,8 @@ end
 
 function MainChatMsgItemView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.ChatUpdateColor, self.OnGameEventUpdateColor)
-end
-
-function MainChatMsgItemView:OnRegisterBinder()
-
+	self:RegisterGameEvent(_G.EventID.FriendSetNicknameSuc, self.OnGameEventFriendSetNickName)
+	self:RegisterGameEvent(_G.EventID.FriendRemoved, self.OnGameEventFriendRemoved)
 end
 
 function MainChatMsgItemView:OnHyperlinkClicked()
@@ -64,6 +51,18 @@ end
 
 function MainChatMsgItemView:OnGameEventUpdateColor()
 	self:UpdateMsg()
+end
+
+function MainChatMsgItemView:OnGameEventFriendSetNickName(RoleID)
+	if RoleID == self:GetChatSender() then
+		self:UpdateMsg()
+	end
+end
+
+function MainChatMsgItemView:OnGameEventFriendRemoved(RoleIDs)
+	if table.find_item(RoleIDs, self:GetChatSender()) then
+		self:UpdateMsg()
+	end
 end
 
 function MainChatMsgItemView:UpdateMsg()
@@ -82,6 +81,12 @@ function MainChatMsgItemView:UpdateMsg()
 
 	local Text = ChatUtil.GetChatSimpleDesc(ViewModel) or ""
 	self.RichTextMsg:SetText(Text)
+end
+
+function MainChatMsgItemView:GetChatSender()
+	if self.Params and self.Params.Data then
+		return self.Params.Data.Sender
+	end
 end
 
 return MainChatMsgItemView

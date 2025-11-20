@@ -74,8 +74,7 @@ function PWorldMatchMgr:OnInit()
     self.Matches = {}
     self.MatchRanks = {}
     self.MatchChocobos = {}
-    self.MatchCrystallines = {}
-    self.MatchFrontlines = {}
+    self.MatchPVPs = {}
     self.ServerMactchEstTimeData = {}
     self.LackProfListeners = {}
     self.LackProfFuncInfo = {}
@@ -102,8 +101,6 @@ function PWorldMatchMgr:OnEnd()
     self.Matches = {}
     self.MatchRanks = {}
     self.MatchChocobos = {}
-    self.MatchCrystallines = {}
-    self.MatchFrontlines = {}
     self.LackProfListeners = {}
     self.LackProfFuncInfo = {}
     self.InValidMatchSet = {}
@@ -196,8 +193,8 @@ function PWorldMatchMgr:UpdateMatchTimeData()
             end
         end
 
-        if self:GetCrystallineItemCnt() > 0 then
-            Update(self.MatchCrystallines)
+        if self:GetPVPItemCnt() > 0 then
+            Update(self.MatchPVPs)
         else
             Update(self.Matches)
             if Data == nil then
@@ -244,7 +241,7 @@ function PWorldMatchMgr:GetMatchEstimateWaitTime(EntID)
         end
     end
 
-    for _, v in pairs(self.MatchCrystallines or {}) do
+    for _, v in pairs(self.MatchPVPs or {}) do
         if v.EntID == EntID then
             return v.WaitTime
         end
@@ -281,11 +278,9 @@ end
 function PWorldMatchMgr:GetCrystallineWaitTimeDesc(WaitTime)
     if WaitTime == nil then return LSTR(1320250) end
 
-    if WaitTime < 120 then
+    if WaitTime < 180 then
         local Minute = math.ceil((WaitTime / 60))
         return string.format(LSTR(1320249), Minute)
-    elseif WaitTime < 180 then
-        return LSTR(1320250)
     elseif WaitTime < 300 then
         return LSTR(1320251)
     else
@@ -303,28 +298,27 @@ function PWorldMatchMgr:CheckCrystallineMap()
 
     local EntPolPVP = PWorldEntUtil.GetPol(nil, ProtoCommon.ScenePoolType.ScenePoolPVPCrystal)
     if EntPolPVP then
-        local IsInEventTime, _, CurIntervalData, _ = EntPolPVP:CheckIsInEventTime()
-        if IsInEventTime then
-            if CurIntervalData.Interval ~= self.CurCrystallineInterval then
-                MsgTipsUtil.ShowTips(string.format(LSTR(1320208), CurIntervalData.MapName))
-                self.CurCrystallineInterval = CurIntervalData.Interval
-                return
-            end
-        else
-            local ShowTips = false
-            for _, Match in pairs(self.MatchCrystallines or {}) do
-                local EntCfg = SceneEnterCfg:FindCfgByKey(Match.EntID)
-                if EntCfg then
-                    self:ReqCancelMatch(EntCfg.TypeID)
+        for _, Match in pairs(self.MatchPVPs) do
+            local EntID = Match.EntID
+            local Cfg = SceneEnterCfg:FindCfgByKey(EntID)
+            if Cfg then
+                if PWorldEntUtil.IsCrystallineExercise(Cfg.TypeID) or PWorldEntUtil.IsCrystallineRank(Cfg.TypeID) then
+                    local IsInEventTime, _, CurIntervalData, _ = EntPolPVP:CheckIsInEventTime(EntID)
+                    if IsInEventTime then
+                        if CurIntervalData.Interval ~= self.CurCrystallineInterval then
+                            MsgTipsUtil.ShowTips(string.format(LSTR(1320208), CurIntervalData.MapName))
+                            PWorldEntDetailVM:UpdateJoinRelatedInfo() -- 刷新UI显示
+                            self.CurCrystallineInterval = CurIntervalData.Interval
+                        end
+                    else
+                        self:ReqCancelMatch(Cfg.TypeID)
+                        MsgTipsUtil.ShowTipsByID(338043)  -- 活动时间结束终止匹配
+                        PWorldEntDetailVM:UpdateJoinRelatedInfo() -- 刷新UI显示
+                        self.CurCrystallineInterval = 0
+                    end
+                    break
                 end
-
-                if not ShowTips then
-                    MsgTipsUtil.ShowTipsByID(338043)  -- 活动时间结束终止匹配
-                    ShowTips = true
-                end
             end
-            PWorldEntDetailVM:UpdateJoinRelatedInfo() -- 刷新UI显示
-            self.CurCrystallineInterval = 0
         end
     end
 end
@@ -333,15 +327,28 @@ end
 ---@see EventHandles
 function PWorldMatchMgr:OnLogin(Params)
     self.bReconnect = Params and Params.bReconnect
-    self.TipPunishCount = 0
-    self.DutyMatchCount = 0
-    self.PVPMatchCount = 0
-    self.LastRankQueryUpdateTime = os.time()
     self.PVPMatchAgainParam = nil
     self:ReqQueryMatch()
     self:ReqPunish()
-end
 
+    if self.bReconnect and not _G.TeamMgr:IsInTeam() then
+        local Matches = self.Matches or {}
+        if #Matches > 0 then
+            self:LogInfo("try reinit match guide while reconnect")
+            local PWorldMatchItemVM = require("Game/PWorld/Match/PWorldMatchItemVM")
+            for _, Match in ipairs(Matches) do
+                local OK = true
+                local EntID = Match.EntID
+                if self.IsRobotMatchNeed(EntID) then
+                    OK = PWorldMatchItemVM.IsRobotNavChecked(EntID)
+                end
+                if OK then
+                   self:InnerRegisterMatchGuide(EntID)
+                end
+            end
+        end
+    end
+end
 function PWorldMatchMgr:OnQuestUpdate(Params)
 end
 
@@ -400,6 +407,8 @@ function PWorldMatchMgr:OnMsgCancelMatch(MsgBody)
             _G.MsgTipsUtil.ShowTipsByID(103106)
         elseif Reason == ProtoCS.CancelReason.SceneMatchTimeout then
             _G.MsgTipsUtil.ShowTipsByID(146075)
+        elseif Reason == ProtoCS.CancelReason.LoseFightGuideIdentity then
+            _G.MsgTipsUtil.ShowTipsByID(115050)
         end
     end
 
@@ -418,7 +427,7 @@ function PWorldMatchMgr:OnMsgCancelMatch(MsgBody)
 
     local Crystal = Msg.Crystal
     if Crystal then
-        self:CleanCrystalMatchAndUpdateInfo()
+        self:OnCancelPVPMatch(Crystal.Datas or {})
         local Reason = Msg.Reason
         if Reason == ProtoCS.CancelReason.CancelBySelf then
             _G.MsgTipsUtil.ShowTips(LSTR(1320014))
@@ -472,11 +481,38 @@ local function TryPopStartMatchTips(EntID, IsRandom, Reason)
     end
 end
 
+local function MakePVPMatchItem(Data)
+    local ID = 0
+    local CacheItem = nil
+    if Data.GameType == ProtoCS.PvPColosseumGameType.Crystal then
+        if Data.Mode == ProtoCS.PvPColosseumMode.Exercise then
+            ID = 1218010
+        elseif Data.Mode == ProtoCS.PvPColosseumMode.Rank then
+            ID = 1218020
+        end
+    elseif Data.GameType == ProtoCS.PvPColosseumGameType.FrontLine then
+        
+    end
+
+    if ID ~= 0 then
+        CacheItem = {
+            EntID = ID,
+            GameType = Data.GameType,
+            Mode = Data.Mode,
+            Prof = Data.ProfID,
+            Level = Data.Level,
+            BeginTime = Data.BeginTime,
+            WaitTime = 0,
+        }
+    end
+    return CacheItem
+end
+
 function PWorldMatchMgr:OnMsgQueryMatch(MsgBody)
     local FieldQuery = MsgBody.Query
     local Reason = (FieldQuery or {}).Reason
     local Convert = {}
-    local CrystallineMatch = {}
+    local PVPMatches = {}
     local Chocobos = {}
 
     for _, Info in pairs(((FieldQuery or {}).Datas or {}).Infos or {}) do
@@ -526,37 +562,34 @@ function PWorldMatchMgr:OnMsgQueryMatch(MsgBody)
 
         local Crystal = Info.Crystal
         if Crystal then
-            local ID = 0
-            local EntPolPVP = nil
-            if Crystal.Mode == ProtoCS.PvPColosseumMode.Exercise then
-                ID = 1218010
-                EntPolPVP = PWorldEntUtil.GetPol(ID, ProtoCommon.ScenePoolType.ScenePoolPVPCrystal)
-            elseif Crystal.Mode == ProtoCS.PvPColosseumMode.Rank then
-                ID = 1218020
-                EntPolPVP = PWorldEntUtil.GetPol(ID, ProtoCommon.ScenePoolType.ScenePoolPVPCrystalRank)
-            end
-            if EntPolPVP then
-                local _, _, CurIntervalData, _ = EntPolPVP:CheckIsInEventTime(ID)
-                if CurIntervalData then
-                    self.CurCrystallineInterval = CurIntervalData.Interval
+            local Datas = Crystal.Datas or {}
+            local CrystallineItem = nil
+            for _, Data in ipairs(Datas) do
+                local CacheItem = MakePVPMatchItem(Data)
+                if CacheItem then
+                    table.insert(PVPMatches, CacheItem)
+
+                    if CacheItem.GameType == ProtoCS.PvPColosseumGameType.Crystal then
+                        CrystallineItem = CacheItem
+                    end
                 end
             end
-            local CacheItem = {
-                EntID = ID,
-                Mode = Crystal.Mode,
-                Prof = Crystal.ProfID,
-                Level = Crystal.Level,
-                BeginTime = Crystal.BeginTime,
-                WaitTime = Crystal.WaitTime,
-            }
-            table.insert(CrystallineMatch, CacheItem)
+
+            if CrystallineItem then
+                local EntPolPVP = PWorldEntUtil.GetPol(nil, ProtoCommon.ScenePoolType.ScenePoolPVPCrystal)
+                if EntPolPVP then
+                    local IsInEventTime, _, CurIntervalData, _ = EntPolPVP:CheckIsInEventTime(CrystallineItem.EntID)
+                    if IsInEventTime then
+                        self.CurCrystallineInterval = CurIntervalData.Interval
+                    end
+                end
+            end
         end
     end
 
     self.MatchChocobos = Chocobos
-    -- 断线重连Query如果没有数据，没法清空水晶冲突匹配数据，所以用一个默认为空的表清理数据
-    self.MatchCrystallines = CrystallineMatch
-
+    -- 断线重连Query如果没有数据，没法清空PVP匹配数据，所以用一个默认为空的表清理数据
+    self:SetPVPMatches(PVPMatches)
     self:SetMatchInfo(Convert)
     self.bInStartQueryMatch = nil
     self:EndStartMatchTimeoutTimer()
@@ -573,10 +606,15 @@ function PWorldMatchMgr:OnMsgPunish(MsgBody)
 
     local RefuseTimes = tonumber(Msg.RefuseTimes)
     if RefuseTimes and (RefuseTimes > 0) then
-        self.TipPunishCount = (self.TipPunishCount or 0) + 1
-        if (self.bReconnect and self.TipPunishCount == 1)  or _G.PWorldMgr:CurrIsInDungeon() or ((self.DutyMatchCount or 0) == 0 and (self.PVPMatchCount or 0) == 0) then
+        if  _G.PWorldMgr:CurrIsInDungeon() or _G.PWorldVoteMgr.LastRefuseVoteTime == nil then
            return
         end
+
+        if  (os.time() - _G.PWorldVoteMgr.LastRefuseVoteTime) >= 5 then
+            return
+        end
+        _G.PWorldVoteMgr.LastRefuseVoteTime = nil
+
         if RefuseTimes == 1 then
             _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.PWorldMatchCancelPunish_1, nil)
         elseif RefuseTimes == 2 then
@@ -615,25 +653,44 @@ function PWorldMatchMgr:ReqStartMatch(Type, EntID, Mode, SubType)
 
     local Params = {}
     if Type == ProtoCommon.ScenePoolType.ScenePoolChocobo then
-        Params.Match = {
-            Chocobo = {ID = EntID, IsRandom = SubType == ProtoCommon.ScenePoolType.ScenePoolChocoboRandomTrack}
-        }
+        if SubType == ProtoCommon.ScenePoolType.ScenePoolChocoboRandomTrack then
+            Params.Match = {}
+            Params.Match.Chocobo = {}
+            Params.Match.Chocobo.ID = PWorldEntUtil.GetChocoboRaceRandomTrackEntID()
+            Params.Match.Chocobo.IsRandom = true
+        else
+            Params.Match = {}
+            Params.Match.Chocobo = {}
+            Params.Match.Chocobo.ID = EntID
+            Params.Match.Chocobo.IsRandom = false
+        end
         Params.mType = MatchType.ChocoboMatch
-    elseif PWorldEntUtil.IsCrystalline(Type) then
-        local Mode = nil
-        if PWorldEntUtil.IsCrystallineExercise(Type) then
-            Mode = ProtoCS.PvPColosseumMode.Exercise
-        elseif PWorldEntUtil.IsCrystallineRank(Type) then
-            Mode = ProtoCS.PvPColosseumMode.Rank
+    elseif PWorldEntUtil.IsPVP(SubType) then
+        local GameType = nil
+        local GameMode = nil
+        if PWorldEntUtil.IsCrystalline(SubType) then
+            GameType = ProtoCS.PvPColosseumGameType.Crystal
+            if PWorldEntUtil.IsCrystallineExercise(SubType) then
+                GameMode = ProtoCS.PvPColosseumMode.Exercise
+            elseif PWorldEntUtil.IsCrystallineRank(SubType) then
+                GameMode = ProtoCS.PvPColosseumMode.Rank
+            end
         end
 
-        Params.Match = {
-            Crystal = {
-                Mode = Mode,
-                BeginTime = TimeUtil.GetServerTime(),
+        if GameType and GameMode then
+            Params.Match = {
+                Crystal = {
+                    Datas = {
+                        [1] = {
+                            GameType = GameType,
+                            Mode = GameMode,
+                            BeginTime = TimeUtil.GetServerLogicTime(),
+                        }
+                    }
+                }
             }
-        }
-        Params.mType = MatchType.CrystalConflict
+            Params.mType = MatchType.CrystalConflict
+        end
     else
         Params.Match = {
             Duty = MakeDuty(Type, EntID, Mode)
@@ -643,12 +700,6 @@ function PWorldMatchMgr:ReqStartMatch(Type, EntID, Mode, SubType)
 
     Params.SubCmd = SUB_MSG_ID.CSSubMsgIDMatch_Match
 	GameNetworkMgr:SendMsg(CS_CMD_MATCH, SUB_MSG_ID.CSSubMsgIDMatch_Match, Params)
-
-    if Params.mType == MatchType.MatchDuty then
-        self.DutyMatchCount = (self.DutyMatchCount or 0) + 1
-    elseif Params.mType == MatchType.CrystalConflict then
-        self.PVPMatchCount = (self.PVPMatchCount or 0) + 1
-    end
 
     self.bInStartQueryMatch = true
     self:EndStartMatchTimeoutTimer()
@@ -671,20 +722,31 @@ function PWorldMatchMgr:ReqCancelMatch(Type, EntID, Mode)
             Chocobo = {ID = EntID, IsRandom = Mode ~= SceneMode.SceneModeNormal}
         }
         Params.mType = MatchType.ChocoboMatch
-    elseif PWorldEntUtil.IsCrystalline(Type) then
+    elseif PWorldEntUtil.IsPVP(Type) then
+        local GameType = nil
         local GameMode = nil
-        if PWorldEntUtil.IsCrystallineExercise(Type) then
-            GameMode = ProtoCS.PvPColosseumMode.Exercise
-        elseif PWorldEntUtil.IsCrystallineRank(Type) then
-            GameMode = ProtoCS.PvPColosseumMode.Rank
+        if PWorldEntUtil.IsCrystalline(Type) then
+            GameType = ProtoCS.PvPColosseumGameType.Crystal
+            if PWorldEntUtil.IsCrystallineExercise(Type) then
+                GameMode = ProtoCS.PvPColosseumMode.Exercise
+            elseif PWorldEntUtil.IsCrystallineRank(Type) then
+                GameMode = ProtoCS.PvPColosseumMode.Rank
+            end
         end
 
-        Params.Cancel = {
-            Crystal = {
-                Mode = GameMode,
+        if GameType and GameMode then
+            Params.Cancel = {
+                Crystal = {
+                    Datas = {
+                        [1] = {
+                            GameType = GameType,
+                            Mode = GameMode,
+                        }
+                    }
+                }
             }
-        }
-        Params.mType = MatchType.CrystalConflict
+            Params.mType = MatchType.CrystalConflict
+        end
     else
         self:SetInValidMatchSet(EntID, true)
 
@@ -859,23 +921,51 @@ function PWorldMatchMgr:CleanMatchChocoboAndUpdateInfo()
     self:UpdateMatchInfo()
 end
 
-function PWorldMatchMgr:CleanCrystalMatchAndUpdateInfo()
-    self.MatchCrystallines = {}
+function PWorldMatchMgr:OnCancelPVPMatch(Datas)
+    for _, Data in ipairs(Datas) do
+        local GameType = Data.GameType
+        local Mode = Data.Mode
+        table.array_remove_item_pred(self.MatchPVPs, function(Item)
+            return Item.GameType == GameType and Item.Mode == Mode
+        end)
+    end
     self:UpdateMatchInfo()
 end
 
-function PWorldMatchMgr:SetMatchInfo(V)
+function PWorldMatchMgr:SetPVPMatches(PVPMatches)
+    self.MatchPVPs = PVPMatches
+    self:UpdateMatchInfo()
+end
+
+function PWorldMatchMgr:SetMatchInfo(NewMatches)
     local OldMatches = table.clone(self.Matches or {})
-    self.Matches = V
+    self.Matches = NewMatches
+
+    local NewlyAddedMatches = {}
+    if NewMatches ~= nil then
+        for _, v in ipairs(NewMatches) do
+            if not table.find_item(OldMatches, v.EntID, "EntID")  then
+                table.insert(NewlyAddedMatches, v)
+            end
+        end
+    end
+
+    local PWorldMatchItemVM = require("Game/PWorld/Match/PWorldMatchItemVM")
+    for _, v in ipairs(NewlyAddedMatches) do
+        if self.IsRobotMatchNeed(v.EntID) then
+            PWorldMatchItemVM.MarkRobotNavChecked(v.EntID, true)
+        end
+    end
+
     self:UpdateMatchInfo()
     self:OnTimer(true)
     -- UPDATE RANK
     self:ReqQueryRankMatch()
 
-    if self.MatchTimeoutNavData and self.Matches then
+    if self.MatchTimeoutNavData and NewMatches then
         local InvalidMatches = {}
         for EntID in pairs(self.MatchTimeoutNavData) do
-            if not table.find_item(self.Matches, EntID, "EntID") then
+            if not table.find_item(NewMatches, EntID, "EntID") then
                table.insert(InvalidMatches, EntID)
             end
         end
@@ -884,10 +974,8 @@ function PWorldMatchMgr:SetMatchInfo(V)
         end
     end
 
-    for _, v in ipairs(self.Matches or {}) do
-        if not table.find_item(OldMatches, v.EntID, "EntID") then
-            self:InnerRegisterMatchGuide(v.EntID)
-        end
+    for _, v in ipairs(NewlyAddedMatches) do
+        self:InnerRegisterMatchGuide(v.EntID)
     end
 end
 
@@ -1039,11 +1127,27 @@ end
 function PWorldMatchMgr:GetCrystallineItems()
     local Ret = {}
 
-    for _, Match in pairs(self.MatchCrystallines or {}) do
+    for _, Match in pairs(self.MatchPVPs or {}) do
+        if Match.GameType == ProtoCS.PvPColosseumGameType.Crystal then
+            table.insert(Ret, Match.EntID)
+        end
+    end
+
+    return Ret
+end
+
+function PWorldMatchMgr:GetPVPItems()
+    local Ret = {}
+
+    for _, Match in pairs(self.MatchPVPs or {}) do
         table.insert(Ret, Match.EntID)
     end
 
     return Ret
+end
+
+function PWorldMatchMgr:GetPVPItemCnt()
+    return #(self:GetPVPItems() or {})
 end
 
 function PWorldMatchMgr:GetCrystallineItemCnt()
@@ -1053,8 +1157,10 @@ end
 function PWorldMatchMgr:GetFrontlineItems()
     local Ret = {}
 
-    for _, Match in pairs(self.MatchFrontlines or {}) do
-        table.insert(Ret, Match.Mode)
+    for _, Match in pairs(self.MatchPVPs or {}) do
+        if Match.GameType == ProtoCS.PvPColosseumGameType.FrontLine then
+            table.insert(Ret, Match.EntID)
+        end
     end
 
     return Ret
@@ -1066,8 +1172,8 @@ end
 
 function PWorldMatchMgr:IsPWorldMatching(EntID, TypeID)
     local Info = nil
-    if PWorldEntUtil.IsCrystalline(TypeID) then
-        Info = table.find_item(self.MatchCrystallines, EntID, "EntID")
+    if PWorldEntUtil.IsPVP(TypeID) then
+        Info = table.find_item(self.MatchPVPs, EntID, "EntID")
     elseif TypeID == ProtoCommon.ScenePoolType.ScenePoolChocobo then
         Info = table.find_item(self.MatchChocobos, EntID, "EntID")
         if Info ~= nil and Info.IsRandom ~= nil and Info.IsRandom == false then
@@ -1105,10 +1211,10 @@ function PWorldMatchMgr:GetMatchChocoboItem(EntID, Ref)
     return table.deepcopy(Item)
 end
 
-function PWorldMatchMgr:GetCrystallineItem(EntID)
+function PWorldMatchMgr:GetPVPItem(EntID)
     local Item = nil
     if EntID then
-        Item= table.find_item(self.MatchCrystallines or {}, EntID, "EntID")
+        Item = table.find_item(self.MatchPVPs or {}, EntID, "EntID")
     end
 
     return table.deepcopy(Item)
@@ -1200,7 +1306,7 @@ function PWorldMatchMgr:IsDailyRandomStat()
 end
 
 function PWorldMatchMgr:IsMatching()
-    return self:GetMatchItemCnt() > 0 or self:GetMatchChocoboItemCnt() > 0 or self:GetCrystallineItemCnt() > 0
+    return self:GetMatchItemCnt() > 0 or self:GetMatchChocoboItemCnt() > 0 or self:GetPVPItemCnt() > 0
 end
 
 function PWorldMatchMgr:IsEntMatching(EntID, EntType)
@@ -1251,7 +1357,7 @@ function PWorldMatchMgr:GetMatchWaitTime(_, EntID)
         end
     end
 
-    for _, v in pairs(self.MatchCrystallines) do
+    for _, v in pairs(self.MatchPVPs) do
         if v.EntID == EntID then
             return v.BeginTime
         end
@@ -1468,16 +1574,15 @@ function PWorldMatchMgr:CancelAllMatch()
     self.MatchTimeoutNavData = {}
 end
 
-function PWorldMatchMgr:CancelAllCrystallineMatches()
-    if self.MatchCrystallines and #self.MatchCrystallines > 0 then
-        for _, v in ipairs(self.MatchCrystallines) do
-            local EntID = v.EntID
-            local TypeID = ProtoCommon.ScenePoolType.ScenePoolPVPCrystal
-            local Cfg = SceneEnterCfg:FindCfgByKey(EntID)
-            if Cfg then
-                TypeID = Cfg.TypeID
+function PWorldMatchMgr:CancelAllPVPMatch()
+    if self.MatchPVPs then
+        for _, v in ipairs(self.MatchPVPs) do
+            local Cfg = SceneEnterCfg:FindCfgByKey(v.EntID)
+            local TypeID = Cfg and Cfg.TypeID
+
+            if TypeID then
+                self:ReqCancelMatch(TypeID)
             end
-            self:ReqCancelMatch(TypeID, EntID)
         end
     end
 end
@@ -1563,7 +1668,7 @@ function PWorldMatchMgr:ReqStartPVPMatch(Type)
 
 		local CanMatch, ErrorCode = PWorldEntUtil.PVPMatchCheck(Type)
         if CanMatch then
-            self:ReqStartMatch(Type)
+            self:ReqStartMatch(nil, nil, nil, Type)
         else
 			MsgTipsUtil.ShowTipsByID(ErrorCode)
         end

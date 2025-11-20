@@ -41,7 +41,7 @@ function MagicCardTourneyVMUtils.IsCanGetAwardByRank(Rank)
 end
 
 ---@type 获取排名显示文本
----@param Rank number
+---@param InRank number
 function MagicCardTourneyVMUtils.GetRankText(InRank)
     local Type = ProtoRes.Game.fantasy_tournament_award_type.FANTASY_TOURNAMENT_AWARD_TYPE_RANK
     local SearchConditions = string.format("Type=%d and Arg=%d", Type, InRank)
@@ -52,6 +52,16 @@ function MagicCardTourneyVMUtils.GetRankText(InRank)
     end
     
     return Rank
+end
+
+---@type 获取排名奖杯图标
+---@param InRank number
+function MagicCardTourneyVMUtils.GetRankIcon(InRank)
+    local CupIcon = TourneyDefine.CupIconPath[4]
+    if InRank <=3 then
+        CupIcon = TourneyDefine.CupIconPath[InRank] or CupIcon
+    end
+    return CupIcon
 end
 
 ---@type 积分是否可领奖励

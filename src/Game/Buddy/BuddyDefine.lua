@@ -90,10 +90,10 @@ local SurfaceArmorMenu = {
         IconPath = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Mate_Normal.UI_Icon_Tab_Partner_Mate_Normal'",
         SelectIcon = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Mate_Select.UI_Icon_Tab_Partner_Mate_Select'",
     },
-   -- {
-        --IconPath = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Stain_Normal.UI_Icon_Tab_Partner_Stain_Normal'",
-        --SelectIcon = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Stain_Select.UI_Icon_Tab_Partner_Stain_Select'",
-  -- },
+    {
+        IconPath = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Stain_Normal.UI_Icon_Tab_Partner_Stain_Normal'",
+        SelectIcon = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Partner_Stain_Select.UI_Icon_Tab_Partner_Stain_Select'",
+    },
 }
 
 local ErrorTipsId_NotCallBuddy = 308001

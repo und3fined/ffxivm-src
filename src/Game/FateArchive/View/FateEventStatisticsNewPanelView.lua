@@ -28,7 +28,11 @@ local LeftTabType = {
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
 ---@field BtnChange UFButton
+---@field CommonTitle CommonTitleView
+---@field IconBlank USpacer
+---@field IconTitle UFImage
 ---@field PanelEvent UFCanvasPanel
+---@field PanelIcon UFCanvasPanel
 ---@field PanelMap UFCanvasPanel
 ---@field PanelMonster UFCanvasPanel
 ---@field PanelMyEvent UFCanvasPanel
@@ -65,7 +69,11 @@ function FateEventStatisticsNewPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
 	--self.BtnChange = nil
+	--self.CommonTitle = nil
+	--self.IconBlank = nil
+	--self.IconTitle = nil
 	--self.PanelEvent = nil
+	--self.PanelIcon = nil
 	--self.PanelMap = nil
 	--self.PanelMonster = nil
 	--self.PanelMyEvent = nil
@@ -101,6 +109,7 @@ end
 function FateEventStatisticsNewPanelView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.SingleBoxNotOwn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -109,7 +118,7 @@ function FateEventStatisticsNewPanelView:OnInit()
     self.TextRarity:SetText(LSTR(190039))
     self.TextFinish:SetText(LSTR(190038))
     self.TextChange:SetText(LSTR(190092))
-    self.TextBigTitle:SetText(LSTR(190036))
+    self.CommonTitle:SetTextTitleName(LSTR(190036))
     self.TextNotOwn:SetText(LSTR(190043))
     self.TextTopMonsterTitle:SetText(LSTR(190034))
     self.TextTopEventTitle:SetText(LSTR(190035))
@@ -146,6 +155,9 @@ function FateEventStatisticsNewPanelView:OnDestroy()
 end
 
 function FateEventStatisticsNewPanelView:OnShow()
+    UIUtil.SetIsVisible(self.CommonTitle, true)
+    UIUtil.SetIsVisible(self.TextBigTitle, false)
+    UIUtil.SetIsVisible(self.TextSubTitle, false)
     self.IsFirstUpdate = true
     self.ViewModel:OnShow()
     self:OnToggleBtnWorldEvent(self.ToggleBtnWorldEvent, _G.UE.EToggleButtonState.Checked)
@@ -225,7 +237,7 @@ function FateEventStatisticsNewPanelView:OnToggleBtnWorldEvent(ToggleButton, Sta
     end
     _G.ObjectMgr:CollectGarbage(false)
     if UIUtil.IsToggleButtonChecked(State) then
-        self.TextSubTitle:SetText(LSTR(190094))
+        self.CommonTitle:SetTextSubtitle(LSTR(190094))
         self.CurLeftTablType = LeftTabType.WorldEvent
         self:PlayAnimation(self.AnimToggleBtnWorldEventChecked)
         self:PlayAnimation(self.AnimToggleBtnMyEventUnChecked)
@@ -244,7 +256,7 @@ function FateEventStatisticsNewPanelView:OnToggleBtnMyEvent(ToggleButton, State)
     end
     _G.ObjectMgr:CollectGarbage(false)
     if UIUtil.IsToggleButtonChecked(State) then
-        self.TextSubTitle:SetText(LSTR(190095))
+        self.CommonTitle:SetTextSubtitle(LSTR(190095))
         self.CurLeftTablType = LeftTabType.MyEvent
         self:PlayAnimation(self.AnimToggleBtnWorldEventUnChecked)
         self:PlayAnimation(self.AnimToggleBtnMyEventChecked)

@@ -4,7 +4,6 @@ local TimeUtil = require("Utils/TimeUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
 local DialogueUtil = require("Utils/DialogueUtil")
 local LocalizationUtil = require("Utils/LocalizationUtil")
-local MajorUtil = require("Utils/MajorUtil")
 local MailUtil = require("Game/Mail/MailUtil")
 local UIBindableList = require("UI/UIBindableList")
 local MailDefine = require("Game/Mail/MailDefine")
@@ -12,6 +11,7 @@ local MailSlotItemViewVM = require("Game/Mail/View/Item/MailSlotItemViewVM")
 local MailListItemViewVM = require("Game/Mail/View/Item/MailListItemViewVM")
 local StoreDefine = require("Game/Store/StoreDefine")
 local StoreUtil = require("Game/Store/StoreUtil")
+local UIViewID = require("Define/UIViewID")
 
 local MailTypeInfo = MailDefine.MailTypeInfo
 --local MailType = MailDefine.MailType
@@ -112,21 +112,21 @@ end
 function MailMainVM:SetGiftToggleGroupIndex(Index)
 	if self.GiftToggleGroupIndex == Index then return end
 	self.GiftToggleGroupIndex = Index
-	if Index == 0 then
+	if Index == 1 then
 		self.CurrentMailBoxType = MailDefine.MailBoxType.InBox
 		self:SelectMailTab( MailDefine.MailType.Gift, true)
-	elseif Index == 1 then
+	elseif Index == 2 then
 		self.CurrentMailBoxType = MailDefine.MailBoxType.OutBox
 		self:SelectMailTab( MailDefine.MailType.Gift, true)
 	end
 
 	-- 商城TLOG上报
-	local MailTabType = Index == 0 and StoreDefine.MailTabType.GiftInbox or StoreDefine.MailTabType.GiftRecord
+	local MailTabType = Index == 1 and StoreDefine.MailTabType.GiftInbox or StoreDefine.MailTabType.GiftRecord
 	StoreUtil.ReportMailFlow(MailTabType)
 end
 
 function MailMainVM:SetHaveMails(HaveMails, MailListData)
-	local IsGiftMail = MailMainVM.CurrentMailType == MailDefine.MailType.Gift     --赠礼邮件
+	local IsGiftMail = self.CurrentMailType == MailDefine.MailType.Gift     --赠礼邮件
 	local IsInBox = self.CurrentMailBoxType == MailDefine.MailBoxType.InBox       --收件箱
 	local IsOutBox = not IsInBox												  --发件箱
 
@@ -180,9 +180,9 @@ function MailMainVM:SelectMailTab(MailType, IsSort)
 		self.TextTItleTipsVisible = true
 	else
 		self.TextTItleTipsVisible = false
-		CurrentCountText = RichTextUtil.GetText(tostring(CurrentMailCount), "FFFFFF" )
+		CurrentCountText = RichTextUtil.GetText(tostring(CurrentMailCount), "d5d5d5" )
 	end
-	local CountText = CurrentCountText .. "/" .. RichTextUtil.GetText(tostring(MailTotalNum), "FFFFFF" )
+	local CountText = CurrentCountText .. "/" .. RichTextUtil.GetText(tostring(MailTotalNum), "d5d5d5" )
 	self.TextSubtitle = MailTypeInfo[MailType].NameText .. CountText
 end
 
@@ -207,7 +207,11 @@ function MailMainVM:RefreshCurrentMailList(ReadMailID)
 			self:NoFindMailData()
 			return 
 		else
-			self:DetailPanelMaturityDay(MailData)
+			if MailData.GreetingCardData ~= nil then
+				self:RefreshAfterReceivedAttachment({ReadMailID})
+			else
+				self:DetailPanelMaturityDay(MailData)
+			end
 		end
 	end
 end
@@ -230,7 +234,7 @@ function MailMainVM:RefreshAfterReceivedAttachment(MailIDList)
 			self:NoFindMailData()
 			return 
 		else
-			if MailMainVM.CurrentMailType == MailDefine.MailType.Gift then
+			if self.CurrentMailType == MailDefine.MailType.Gift then
 				self.PanelGiftMailContentVisible = true
 				self.GiftMailEnvelopeVisible = false
 				self.GiftTextFromName = ""
@@ -306,7 +310,7 @@ function MailMainVM:ShowMailDetail(MailID)
 
 	self.MailTitle = MailDate.Title or ""
 
-	if MailMainVM.CurrentMailType == MailDefine.MailType.Gift then
+	if self.CurrentMailType == MailDefine.MailType.Gift then
 		self.ReceiverName = MailUtil.GetMailSenderName(MailDate.ReceiverID) or ""
 	end
 
@@ -348,24 +352,29 @@ function MailMainVM:SelectMail(MailID)
 		self:NoFindMailData()
 		return
 	end
-	if MailMainVM.CurrentMailType == MailDefine.MailType.Gift then
-		if MailDate.Attach then
+	if self.CurrentMailType == MailDefine.MailType.Gift then
+		local IsUnreadGreetingCard = MailDate.GreetingCardData ~= nil and MailDate.Readed == false
+		if MailDate.Attach  or IsUnreadGreetingCard then
 			self.PanelGiftMailContentVisible = false
 			self.GiftMailEnvelopeVisible = true
-			self.GiftTextFromName = string.format(LSTR(740012), MailUtil.GetMailSenderName(MailDate.SenderID))
+			if IsUnreadGreetingCard then
+				self.GiftTextFromName = string.format(LSTR(740025), MailUtil.GetMailSenderName(MailDate.SenderID)) --来自%s的贺卡
+			else
+				self.GiftTextFromName = string.format(LSTR(740012), MailUtil.GetMailSenderName(MailDate.SenderID)) --来自%s的礼物
+			end
 			IsShowMailDetail = false
 		else
 			self.PanelGiftMailContentVisible = true
 			self.GiftMailEnvelopeVisible = false
 			self.GiftTextFromName = ""
-			self.GiftMailBtnCheckVisible = self.CurrentMailBoxType == MailDefine.MailBoxType.InBox
+			self.GiftMailBtnCheckVisible = (self.CurrentMailBoxType == MailDefine.MailBoxType.InBox) or MailDate.GreetingCardData ~= nil
 		end
 	end
 
 	if IsShowMailDetail then
 		MailMainVM:ShowMailDetail(MailID)
 	end
-	if MailDate.Readed == false then
+	if MailDate.Readed == false and MailDate.GreetingCardData == nil then
 		MailMgr:ReadMail(MailID, self.CurrentMailType)
 	end
 end
@@ -375,22 +384,32 @@ function MailMainVM:NoFindMailData()
 	self:RefreshAfterDeleteMail()
 end
 
--- 开启商城赠礼邮件界面
-function MailMainVM:ShowStoreGiftMailView()
+-- 开启商城赠礼邮件扩展视图
+function MailMainVM:ShowStoreGiftMailExpandedView(FirstOpen)
 	local MailData = _G.MailMgr:GetMailData(self.CurrentMailID, self.CurrentMailType, self.CurrentMailBoxType)
-	if MailData ~= nil then
-		local Params = { }
-		Params.AlreadyReceived = not MailData.Attach
-		Params.MailID = MailMainVM.CurrentMailID
-		Params.FriendID = tonumber(MailData.SenderID)
-		Params.GoodID = MailData.GiftData.GoodID or 0
-		Params.GiftMessage = MailData.GiftData.GiftMessage or ""
-		Params.GiftNum = MailData.GiftData.GiftNum or 0
-		Params.Style = MailData.GiftData.DecorativeStyle or 0
-		Params.GiftTime = MailData.SendTime or 0
-
-		_G.StoreMainVM:OnShowGiftMailPanel(true, Params)
+	if MailData ~= nil and self.CurrentMailType == MailDefine.MailType.Gift then
+		if MailData.GreetingCardData ~= nil then
+			self:ShowGreetingCardView(MailData, FirstOpen)
+		else
+			self:ShowStoreGiftMailView(MailData)
+		end
 	end
+end
+
+-- 开启商城赠礼邮件界面
+function MailMainVM:ShowStoreGiftMailView(MailData)
+	local Params = { }
+	local GiftData = MailData.GiftData or {}
+	Params.AlreadyReceived = not MailData.Attach
+	Params.MailID = self.CurrentMailID
+	Params.FriendID = tonumber(MailData.SenderID)
+	Params.GoodID = GiftData.GoodID or 0
+	Params.GiftMessage = GiftData.GiftMessage or ""
+	Params.GiftNum = GiftData.GiftNum or 0
+	Params.Style = GiftData.DecorativeStyle or 0
+	Params.GiftTime = MailData.SendTime or 0
+
+	_G.StoreMainVM:OnShowGiftMailPanel(true, Params)
 end
 
 -- 领取好友赠礼邮件
@@ -399,7 +418,29 @@ function MailMainVM:ReceiveGiftEmailAttachment()
 	MailMgr:GetMailAttch(AttachList, self.CurrentMailType)
 end
 
---
+-- 开启贺卡界面
+function MailMainVM:ShowGreetingCardView(MailData, FirstOpen)
+	local Params = { }
+	Params.MailID = self.CurrentMailID
+	Params.SenderID = tonumber(MailData.SenderID)
+	Params.ReceiverID = tonumber(MailData.ReceiverID)
+	Params.GiftMessage = MailData.Text or ""
+	Params.StyleID = (MailData.GreetingCardData or {}).StyleID or 0
+	Params.URL = (MailData.GreetingCardData or {}).URl or 0
+	Params.GiftTime = MailData.SendTime or 0
+	Params.Readed = MailData.Readed
+	Params.FirstOpen = FirstOpen
+
+	_G.GreetingCardWinVM:OpenBrowsingCardPanel(Params)
+end
+
+-- 收下贺卡
+function MailMainVM:ReceiveGreetingCard()
+	if _G.UIViewMgr:FindView(UIViewID.MailMainView) then
+		MailMgr:ReadMail(self.CurrentMailID, self.CurrentMailType)
+	end
+end
+
 function MailMainVM:StoreMapHyperLink(MapLinkData)
 	table.insert(self.MapHyperLink, MapLinkData)
 end
@@ -415,7 +456,7 @@ end
 
 -- 信笺装饰
 function MailMainVM:MailPaperEmbellish(MailDate)
-	if MailMainVM.CurrentMailType ~= MailDefine.MailType.System then
+	if self.CurrentMailType ~= MailDefine.MailType.System then
 		return
 	end
 

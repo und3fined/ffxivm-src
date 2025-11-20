@@ -87,7 +87,6 @@ local FTAIAuthUtil = _G.UE.FTAIAuthUtil
 ---@field InputBox CommInputBoxView
 ---@field LoginLogoPage LoginLogoPageView
 ---@field LoginMovieImage UFImage
----@field LoginNewProBar LoginNewProBarItemView
 ---@field LoginNewSeverState LoginNewSeverItemView
 ---@field PanelBubble UFCanvasPanel
 ---@field PanelCheck UFCanvasPanel
@@ -97,7 +96,6 @@ local FTAIAuthUtil = _G.UE.FTAIAuthUtil
 ---@field PanelLogin UFCanvasPanel
 ---@field PanelLogout UFCanvasPanel
 ---@field PanelMain UFCanvasPanel
----@field PanelProBar UFCanvasPanel
 ---@field PanelScan UFCanvasPanel
 ---@field PanelScanLogin UFCanvasPanel
 ---@field PanelSever UFCanvasPanel
@@ -117,7 +115,6 @@ local FTAIAuthUtil = _G.UE.FTAIAuthUtil
 ---@field TextNum1 UFTextBlock
 ---@field TextNum2 UFTextBlock
 ---@field TextNum3 UFTextBlock
----@field TextPrepare UFTextBlock
 ---@field TextQQ UFTextBlock
 ---@field TextQQ2 UFTextBlock
 ---@field TextResearch UFTextBlock
@@ -181,7 +178,6 @@ function LoginNewMainPanelView:Ctor()
 	--self.InputBox = nil
 	--self.LoginLogoPage = nil
 	--self.LoginMovieImage = nil
-	--self.LoginNewProBar = nil
 	--self.LoginNewSeverState = nil
 	--self.PanelBubble = nil
 	--self.PanelCheck = nil
@@ -191,7 +187,6 @@ function LoginNewMainPanelView:Ctor()
 	--self.PanelLogin = nil
 	--self.PanelLogout = nil
 	--self.PanelMain = nil
-	--self.PanelProBar = nil
 	--self.PanelScan = nil
 	--self.PanelScanLogin = nil
 	--self.PanelSever = nil
@@ -211,7 +206,6 @@ function LoginNewMainPanelView:Ctor()
 	--self.TextNum1 = nil
 	--self.TextNum2 = nil
 	--self.TextNum3 = nil
-	--self.TextPrepare = nil
 	--self.TextQQ = nil
 	--self.TextQQ2 = nil
 	--self.TextResearch = nil
@@ -235,7 +229,6 @@ function LoginNewMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnDownload)
 	self:AddSubView(self.InputBox)
 	self:AddSubView(self.LoginLogoPage)
-	self:AddSubView(self.LoginNewProBar)
 	self:AddSubView(self.LoginNewSeverState)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -256,7 +249,6 @@ function LoginNewMainPanelView:OnInit()
 	self.TextQQ:SetText(LSTR(LoginStrID.QQLogin))
 	self.TextQQ2:SetText(LSTR(LoginStrID.QQLogin))
 	self.TextScan:SetText(LSTR(LoginStrID.ScanLogin))
-	self.TextPrepare:SetText(LSTR(LoginStrID.Prepare))
 	self.TextFriends:SetText(LSTR(LoginStrID.Friend))
 	self.TextCopyright1:SetText(LSTR(LoginStrID.Copyright1))
 	self.TextCopyright2:SetText(LSTR(LoginStrID.Copyright2))
@@ -301,9 +293,10 @@ function LoginNewMainPanelView:OnShow()
 
 	local IsChinese = CommonUtil.IsCurCultureChinese()
 	UIUtil.SetIsVisible(self.PanelTextNotice, IsChinese)
-	UIUtil.SetIsVisible(self.TextHealthy, IsChinese)
-	UIUtil.SetIsVisible(self.TextNum1, IsChinese)
-	UIUtil.SetIsVisible(self.TextNum2, IsChinese)
+	UIUtil.SetIsVisible(self.PanelText, IsChinese)
+	--UIUtil.SetIsVisible(self.TextHealthy, IsChinese)
+	--UIUtil.SetIsVisible(self.TextNum1, IsChinese)
+	--UIUtil.SetIsVisible(self.TextNum2, IsChinese)
 
 	local IsUserAgreementChecked = USaveMgr.GetInt(SaveKey.UserAgreementChecked, 0, false) == 1
 	LoginNewVM:SetAgreeProtocolNoSave(IsUserAgreementChecked and true or false)
@@ -320,7 +313,7 @@ function LoginNewMainPanelView:OnShow()
 	self.bNeedShowIntegration = _G.UE.UIntegrationMgr.Get():IsNeedShowIntegration();
 	if self.bNeedShowIntegration then
 		local OpeningTimestamp = _G.UE.UIntegrationMgr.Get():GetOpeningTimestamp();
-		self.OpeningTimestamp = OpeningTimestamp - 28800;
+		self.OpeningTimestamp = OpeningTimestamp; --  -28800
 		FLOG_INFO("[LoginNewMainPanelView:OnShow] OpeningTimestamp: %d", self.OpeningTimestamp)
 		if self.OpeningTimestamp > 0 then
 			self:CheckIntegration();
@@ -376,8 +369,6 @@ end
 
 function LoginNewMainPanelView:InitBinders()
 	local Binders = {
-		--更新进度条
-		{ "ShowUpdating", UIBinderSetIsVisible.New(self, self.PanelProBar) },
 		-- 同玩好友列表
 		{ "ShowFriendList", UIBinderSetIsVisible.New(self, self.PanelFriends) },
 		{ "FriendList", UIBinderUpdateBindableList.New(self, self.FriendsTableViewAdapter) },
@@ -505,7 +496,10 @@ function LoginNewMainPanelView:OnClickBtnStart()
 		FLOG_INFO("[LoginNewMainPanelView:OnClickBtnStart] IsStartGame ")
 		return
 	end
-	self:OnStartGame()
+    if _G.LevelRecordMgr ~= nil and _G.LevelRecordMgr.bIsInReplaying then
+        return
+    end
+    self:OnStartGame()
 end
 
 function LoginNewMainPanelView:OnClickBtnAgeTips()

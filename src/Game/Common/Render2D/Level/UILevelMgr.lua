@@ -4,37 +4,41 @@
 --- Description: UI关卡管理
 ---
 
+local EventID = require("Define/EventID")
 local LuaClass = require("Core/LuaClass")
+local MajorUtil = require("Utils/MajorUtil")
 local MgrBase = require("Common/MgrBase")
 
 local UE = _G.UE
+local FLOG_ERROR = _G.FLOG_ERROR
 local FLOG_INFO = _G.FLOG_INFO
+local FLOG_WARNING = _G.FLOG_WARNING
 
 ---@class UILevelMgr : MgrBase
 local UILevelMgr = LuaClass(MgrBase)
 
 function UILevelMgr:OnInit()
-	self.HoldLevelStreamingCount = 0
 end
 
--- 开关关卡流送，计数值更新前/后为0时才会关闭/开启流送，务必成对调用
-function UILevelMgr:SwitchLevelStreaming(bOn)
-	if nil == self.HoldLevelStreamingCount then
-		self.HoldLevelStreamingCount = 0
+function UILevelMgr:OnRegisterGameEvent()
+	self:RegisterGameEvent(EventID.CameraSwitch, self.OnGameEventCameraSwitch)
+end
+
+function UILevelMgr:OnGameEventCameraSwitch()
+	local WorldMgr = UE.UWorldMgr.Get()
+	local CameraMgr = UE.UCameraMgr.Get()
+	if nil == WorldMgr and nil == CameraMgr then
+		FLOG_ERROR("[UILevelMgr:OnGameEventCameraSwitch] WorldMgr or CameraMgr is nil")
+		return
 	end
-	if bOn then
-		self.HoldLevelStreamingCount = math.max(self.HoldLevelStreamingCount - 1, 0)
-		if self.HoldLevelStreamingCount == 0 then
-			UE.UWorldMgr.Get():SwitchLevelStreaming(bOn)
-		end
-	else
-		if self.HoldLevelStreamingCount == 0 then
-			UE.UWorldMgr.Get():SwitchLevelStreaming(bOn)
-		end
-		self.HoldLevelStreamingCount = self.HoldLevelStreamingCount + 1
+	local ViewTarget = CameraMgr:GetCurrentCameraOwner()
+	if nil == ViewTarget or nil == ViewTarget:Get() then
+		FLOG_WARNING("[UILevelMgr:OnGameEventCameraSwitch] View target is nil")
+		return
 	end
-	FLOG_INFO(string.format("UILevelMgr: Switch %s level streaming. Current hold count is %d",
-		bOn and "on" or "off", self.HoldLevelStreamingCount))
+	local bIsViewingMajor = ViewTarget:Get() == MajorUtil.GetMajor()
+	FLOG_INFO("[UILevelMgr:OnGameEventCameraSwitch] Switch " .. (bIsViewingMajor and "on" or "off") .. " level streaming ")
+	WorldMgr:SwitchLevelStreaming(bIsViewingMajor)
 end
 
 return UILevelMgr

@@ -103,7 +103,10 @@ function MarketPurchaseWindowItemView:OnClickedHandle()
 	if nil == ViewModel then return end
 
 	if ViewModel.ResID and ViewModel.ResID > 0 then
-		ItemTipsUtil.ShowTipsByResID(ViewModel.ResID, self.ImgBG)
+		local ItemUtil = require("Utils/ItemUtil")
+		local Item = ItemUtil.CreateItem(ViewModel.ResID, 0)
+		Item.Maker = ViewModel.Maker
+		ItemTipsUtil.ShowTipsByItem(Item, self.ImgBG)
 	end
 end
 

@@ -193,14 +193,18 @@ function CompanySealMgr:SendMsgExchange()
 	GameNetworkMgr:SendMsg(MsgID, ExchangeMsgID, MsgBody) 
 end
 
-function CompanySealMgr:SendMsgExchangeCompanySeal()
+function CompanySealMgr:SendMsgExchangeCompanySeal(RecordRare)
     local MsgID = CS_CMD.CS_CMD_GRAND_COMPANY
     local SubMsgID = SUB_MSG_ID.GrandCompanyCmdExchangeCompanySeal
 
 	local MsgBody = {}
     MsgBody.Cmd = SubMsgID
     MsgBody.ExchangeCompanySeal  = {}
-    MsgBody.ExchangeCompanySeal.ItemID = self.RecordRareChoesd
+    if RecordRare then
+        MsgBody.ExchangeCompanySeal.ItemID = RecordRare
+    else
+        MsgBody.ExchangeCompanySeal.ItemID = self.RecordRareChoesd
+    end
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody) 
 end
 
@@ -416,17 +420,23 @@ function CompanySealMgr:ClearRareTaskList()
 end
 
 function CompanySealMgr:SetFinishTaskState(TaskID)
-    local TaskList = self.AllTaskList[self.CurChosedTabIndex].TaskList
-    for i = 1, #TaskList do
-        if TaskList[i].ID == TaskID then
-            TaskList[i].State = SortRuler[6]
-            TaskList[i].IsHQ = self.IsHQ
-            break
+    local TaskList = self.AllTaskList and self.AllTaskList[self.CurChosedTabIndex] and self.AllTaskList[self.CurChosedTabIndex].TaskList
+    if TaskList then
+        for i = 1, #TaskList do
+            if TaskList[i].ID == TaskID then
+                TaskList[i].State = SortRuler[6]
+                TaskList[i].IsHQ = self.IsHQ
+                break
+            end
         end
+    
+        table.sort(TaskList, self.SortTaskList)
+        EventMgr:SendEvent(EventID.CompanySealUpdateTaskInfo, TaskList)
+    else
+        FLOG_ERROR("SetFinishTaskState TaskList Error")
+        print(TaskID)
     end
 
-    table.sort(TaskList, self.SortTaskList)
-    EventMgr:SendEvent(EventID.CompanySealUpdateTaskInfo, TaskList)
 end
 
 function CompanySealMgr:SetAllTaskInfo(MsgBody)
@@ -769,6 +779,7 @@ function CompanySealMgr:OpenPromotionView(bIgSetVis)
         self:IsEndInteraction()
         return
     end
+    
     local IsOpen, TaskName = self:CheckCurPromotionTask()
     if IsOpen then
         UIViewMgr:ShowView(UIViewID.CompanySealPromotionWinView)
@@ -902,6 +913,23 @@ function CompanySealMgr:IsOpenCompany()
     local CompoanySealInfo = self:GetCompanySealInfo()
 
     return CompoanySealInfo.GrandCompanyID ~= 0 
+end
+
+--- 跳转至军票商店
+function CompanySealMgr:JumpToCompanyShop()
+    local ShopID = 0
+    local CompoanySealInfo = self:GetCompanySealInfo()
+    if CompoanySealInfo.GrandCompanyID ~= 0  then
+        if CompoanySealInfo.GrandCompanyID == 1 then
+            ShopID = 2003
+        elseif CompoanySealInfo.GrandCompanyID  == 2 then
+            ShopID = 2004
+        else
+            ShopID = 2005
+        end
+
+        _G.ShopMgr:OpenShop(ShopID)
+    end
 end
 
 --- 是否是军队军票
@@ -1185,7 +1213,6 @@ function CompanySealMgr:GetRareTaskList()
     return List
 end
 
-
 function CompanySealMgr:GetLogoPath(GrandCompanyID)
     return LogoIcon[GrandCompanyID]
 end
@@ -1194,7 +1221,6 @@ function CompanySealMgr:GetBgPath(GrandCompanyID)
     return BGIcon[GrandCompanyID]
 end
 
-
 function CompanySealMgr:IsEndInteraction()
     local PersonInfoMainPanel = _G.UIViewMgr:FindView(UIViewID.PersonInfoMainPanel)
     if not PersonInfoMainPanel or _G.NpcDialogMgr:IsDialogPanelVisible() or _G.InteractiveMgr.bLockTimer then
@@ -1202,5 +1228,9 @@ function CompanySealMgr:IsEndInteraction()
     end
 end
 
+
+function CompanySealMgr:ClearTransferTime()
+    self.TransferTime = 0
+end
 
 return CompanySealMgr

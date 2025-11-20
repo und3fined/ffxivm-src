@@ -14,10 +14,12 @@ local EventMgr = require("Event/EventMgr")
 local EventID = require("Define/EventID")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local LinkShellVM = require("Game/Social/LinkShell/LinkShellVM")
+local UIDefine = require("Define/UIDefine")
 
 local LSTR = _G.LSTR
 local ChatChannel = ChatDefine.ChatChannel
 local SysMsgType = ChatDefine.SysMsgType
+local CheckBoxStyle = UIDefine.SearchBtnColorType.Dark
 
 ---@class ChatSettingComprehensiveChannelPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -35,22 +37,8 @@ local SysMsgType = ChatDefine.SysMsgType
 ---@field CheckBoxSystem CommSingleBoxView
 ---@field CheckBoxTeam CommSingleBoxView
 ---@field CommInforBtn CommInforBtnView
----@field FTextArea UFTextBlock
----@field FTextArmy UFTextBlock
 ---@field FTextCompDesc UFTextBlock
----@field FTextGroupChannel UFTextBlock
----@field FTextNearby UFTextBlock
----@field FTextNewbie UFTextBlock
 ---@field FTextNormalChannel UFTextBlock
----@field FTextPioneer UFTextBlock
----@field FTextRecruit UFTextBlock
----@field FTextSysBattle UFTextBlock
----@field FTextSysNotice UFTextBlock
----@field FTextSysStory UFTextBlock
----@field FTextSystemChannel UFTextBlock
----@field FTextTeam UFTextBlock
----@field ImgGroupMask UFImage
----@field ImgSystemMask UFImage
 ---@field PioneerPanel UFCanvasPanel
 ---@field TableViewGroup UTableView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -72,22 +60,8 @@ function ChatSettingComprehensiveChannelPanelView:Ctor()
 	--self.CheckBoxSystem = nil
 	--self.CheckBoxTeam = nil
 	--self.CommInforBtn = nil
-	--self.FTextArea = nil
-	--self.FTextArmy = nil
 	--self.FTextCompDesc = nil
-	--self.FTextGroupChannel = nil
-	--self.FTextNearby = nil
-	--self.FTextNewbie = nil
 	--self.FTextNormalChannel = nil
-	--self.FTextPioneer = nil
-	--self.FTextRecruit = nil
-	--self.FTextSysBattle = nil
-	--self.FTextSysNotice = nil
-	--self.FTextSysStory = nil
-	--self.FTextSystemChannel = nil
-	--self.FTextTeam = nil
-	--self.ImgGroupMask = nil
-	--self.ImgSystemMask = nil
 	--self.PioneerPanel = nil
 	--self.TableViewGroup = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -213,27 +187,36 @@ function ChatSettingComprehensiveChannelPanelView:InitConstInfo()
 
 	self.FTextCompDesc:SetText(LSTR(50108)) 		-- "综合频道将显示以下内容"
 	self.FTextNormalChannel:SetText(LSTR(50109)) 	-- "常规频道"
-	self.FTextSystemChannel:SetText(LSTR(50110)) 	-- "系统频道"
-	self.FTextGroupChannel:SetText(LSTR(50111)) 	-- "通讯贝"
+	self.CheckBoxSystem:SetText(LSTR(50110)) 		-- "系统频道"
+	self.CheckBoxGroup:SetText(LSTR(50111)) 		-- "通讯贝"
 
-	self.FTextArmy:SetText(LSTR(50113))		-- "部队频道"
-	self.FTextTeam:SetText(LSTR(50114))		-- "队伍频道"
-	self.FTextNewbie:SetText(LSTR(50115))	-- "新人频道"
-	self.FTextNearby:SetText(LSTR(50116))	-- "附近频道"
-	self.FTextArea:SetText(LSTR(50117))		-- "区域频道"
-	self.FTextPioneer:SetText(LSTR(50099))	-- "先锋频道"
-	self.FTextRecruit:SetText(LSTR(50100))	-- "招募频道"
+	self.CheckBoxRecruit:SetText(LSTR(50100))	-- "招募频道"
+	self.CheckBoxArmy:SetText(LSTR(50113))		-- "部队频道"
+	self.CheckBoxTeam:SetText(LSTR(50114))		-- "队伍频道"
+	self.CheckBoxNewbie:SetText(LSTR(50115))	-- "新人频道"
+	self.CheckBoxNearby:SetText(LSTR(50116))	-- "附近频道"
+	self.CheckBoxArea:SetText(LSTR(50117))		-- "区域频道"
+	self.CheckBoxPioneer:SetText(LSTR(50099))	-- "先锋频道"
 
-	self.FTextSysBattle:SetText(LSTR(50118)) -- "战斗信息"
-	self.FTextSysNotice:SetText(LSTR(50119)) -- "通知信息"
-	self.FTextSysStory:SetText(LSTR(50120))	 -- "剧情信息"
+	self.CheckBoxSysBattle:SetText(LSTR(50118)) -- "战斗信息"
+	self.CheckBoxSysNotice:SetText(LSTR(50119)) -- "通知信息"
+	self.CheckBoxSysStory:SetText(LSTR(50120))	-- "剧情信息"
+end
+
+function ChatSettingComprehensiveChannelPanelView:SetCheckBoxIsEnabled(CheckBox, IsGrey)
+	CheckBox:SetColorType(CheckBoxStyle, IsGrey)
+	CheckBox:SetIsEnabled(not IsGrey)
 end
 
 function ChatSettingComprehensiveChannelPanelView:UpdateMaskVisible(Channel, IsChecked)
 	if Channel == ChatChannel.System then 
-		UIUtil.SetIsVisible(self.ImgSystemMask, not IsChecked, true)
+		local IsGrey = not IsChecked
+		self:SetCheckBoxIsEnabled(self.CheckBoxSysBattle, IsGrey)
+		self:SetCheckBoxIsEnabled(self.CheckBoxSysNotice, IsGrey)
+		self:SetCheckBoxIsEnabled(self.CheckBoxSysStory, IsGrey)
+
 	elseif Channel == ChatChannel.Group then
-		UIUtil.SetIsVisible(self.ImgGroupMask, not IsChecked, true)
+		ChatVM.IsSettingGroupChecked = IsChecked
 	end
 end
 

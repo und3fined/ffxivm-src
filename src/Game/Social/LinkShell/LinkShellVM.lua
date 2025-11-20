@@ -310,9 +310,11 @@ function LinkShellVM:SetLinkShellStick(LinkShellID)
     self.LinkShellItemVMList:Sort(ItemListSortFunc)
 end
 
----创建通讯贝成功，增加新的通讯贝信息
----@param CreateRsp cslinkshells.CreateLinkShellRsp @通讯贝详情
-function LinkShellVM:AddLinkShellList(CreateRsp)
+function LinkShellVM:AddLinkShellList(Info, IsCreateRsp)
+    if nil == Info then
+        return
+    end
+
     local VMList = self.LinkShellItemVMList
     if nil == VMList then
         return
@@ -324,9 +326,17 @@ function LinkShellVM:AddLinkShellList(CreateRsp)
         VMList:Add(LinkShellItemVM.New())
     end
 
-    local ItemVM = LinkShellItemVM.New()
-    ItemVM:UpdateByCreateRsp(CreateRsp)
-    VMList:Add(ItemVM)
+    local ItemVM = self:QueryLinkShell(Info.ID)
+    if nil == ItemVM then 
+        ItemVM = LinkShellItemVM.New()
+        VMList:Add(ItemVM)
+    end
+
+    if IsCreateRsp then
+        ItemVM:UpdateByCreateRsp(Info)
+    else
+        ItemVM:UpdateByLinkShellsList(Info)
+    end
 
     -- 达到上限后，删除空Item (“创建通讯贝”)
     local JoinedItems = VMList:FindAll(function(e) return e:IsJoined() end)
@@ -337,7 +347,19 @@ function LinkShellVM:AddLinkShellList(CreateRsp)
     VMList:Sort(ItemListSortFunc)
     self:RefreshJoinedEmptyTipsFlag()
 
-    EventMgr:SendEvent(EventID.LinkShellListUpdate, ItemVM)
+    EventMgr:SendEvent(EventID.LinkShellListUpdate)
+end
+
+---创建通讯贝成功，增加新的通讯贝信息
+---@param CreateRsp cslinkshells.CreateLinkShellRsp @通讯贝详情
+function LinkShellVM:AddLinkShellListByCreate(CreateRsp)
+    self:AddLinkShellList(CreateRsp, true)
+end
+
+---增加新的通讯贝列表信息
+---@param Info cslinkshells.LinkShellsList @通讯贝列表信息
+function LinkShellVM:AddLinkShellListByNtf(Info)
+    self:AddLinkShellList(Info)
 end
 
 ---销毁通讯贝
@@ -640,7 +662,8 @@ end
 --- 更新通讯贝申请列表
 ---@param LinkShellID number @通讯贝ID
 ---@param ReqList table @申请列表, { cslinkshells.ReqJoin, ... }
-function LinkShellVM:UpdateLinkShellApplyList(LinkShellID, ReqList)
+---@param IsAddApplyNum boolean @是否增加申请人数
+function LinkShellVM:UpdateLinkShellApplyList(LinkShellID, ReqList, IsAddApplyNum)
     if nil == LinkShellID or table.is_nil_empty(ReqList) then
         return
     end
@@ -648,7 +671,10 @@ function LinkShellVM:UpdateLinkShellApplyList(LinkShellID, ReqList)
     if LinkShellID == self.CurLinkShellID then
         local ReqRoleIDS = {}
         local ApplyVMList = self.LinkShellApplyVMList
-        ApplyVMList:Clear()
+
+        if nil == IsAddApplyNum then
+            ApplyVMList:Clear()
+        end
 
         for _, v in ipairs(ReqList) do
             local LinkShellMem = LinkShellMemVM.New()
@@ -674,7 +700,8 @@ function LinkShellVM:UpdateLinkShellApplyList(LinkShellID, ReqList)
     -- 更新具体通讯贝信息（申请人数）
     local ItemVM = self:QueryLinkShell(LinkShellID)
     if ItemVM then
-        ItemVM:UpdateApplyNum(#ReqList)
+        local Num = #ReqList 
+        ItemVM:UpdateApplyNum(IsAddApplyNum and ((ItemVM.ApplyNum or 0) + Num) or Num)
     end
 end
 

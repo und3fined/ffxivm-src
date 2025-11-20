@@ -71,6 +71,7 @@ local FailedAudioPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/QuestGam
 
 ---@class ChocoboFeeDingMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field BtnSkip UFButton
 ---@field ChallengeBegins GoldSaucerCuffchallengeBeginsItemView
 ---@field EFF_Smell UFCanvasPanel
 ---@field EFF_Smell1 UFCanvasPanel
@@ -84,11 +85,13 @@ local FailedAudioPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/QuestGam
 ---@field ImgVegetableLight UFImage
 ---@field ModelToImage CommonModelToImageView
 ---@field PanelMain UFCanvasPanel
+---@field PanelSkip UFCanvasPanel
 ---@field PanelSmellTarget UFCanvasPanel
 ---@field PanelTime UFHorizontalBox
 ---@field PanelVegetable UFCanvasPanel
 ---@field TextBirdName UFTextBlock
 ---@field TextHint UFTextBlock
+---@field TextSkip UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTitle UFTextBlock
 ---@field VegetableEndPos UFCanvasPanel
@@ -96,6 +99,8 @@ local FailedAudioPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/QuestGam
 ---@field AnimEat UWidgetAnimation
 ---@field AnimFeedingReady UWidgetAnimation
 ---@field AnimHint UWidgetAnimation
+---@field AnimHintHide UWidgetAnimation
+---@field AnimHintShow UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimItemLoop UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -106,6 +111,7 @@ local ChocoboFeeDingMainPanelView = LuaClass(UIView, true)
 
 function ChocoboFeeDingMainPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.BtnSkip = nil
 	--self.ChallengeBegins = nil
 	--self.EFF_Smell = nil
 	--self.EFF_Smell1 = nil
@@ -119,11 +125,13 @@ function ChocoboFeeDingMainPanelView:Ctor()
 	--self.ImgVegetableLight = nil
 	--self.ModelToImage = nil
 	--self.PanelMain = nil
+	--self.PanelSkip = nil
 	--self.PanelSmellTarget = nil
 	--self.PanelTime = nil
 	--self.PanelVegetable = nil
 	--self.TextBirdName = nil
 	--self.TextHint = nil
+	--self.TextSkip = nil
 	--self.TextTime = nil
 	--self.TextTitle = nil
 	--self.VegetableEndPos = nil
@@ -131,6 +139,8 @@ function ChocoboFeeDingMainPanelView:Ctor()
 	--self.AnimEat = nil
 	--self.AnimFeedingReady = nil
 	--self.AnimHint = nil
+	--self.AnimHintHide = nil
+	--self.AnimHintShow = nil
 	--self.AnimIn = nil
 	--self.AnimItemLoop = nil
 	--self.AnimOut = nil
@@ -163,6 +173,9 @@ function ChocoboFeeDingMainPanelView:OnShow()
     self:InitConstInfo()
     UIUtil.SetIsVisible(self.ModelToImage, false)
     UIUtil.SetIsVisible(self.EFF_Smell, false)
+    UIUtil.SetIsVisible(self.PanelSkip, true)
+    -- 从动画蓝图中挪出来，AnimIn的持续时间内都会设置为0，假如加载完成了，需要显示了，但是AnimIn的持续时间没有结束，又会设置为0
+    UIUtil.SetRenderOpacity(self.PanelVegetable, 0)
 
     GameID = 1
     if self.Params ~= nil and self.Params.GameID ~= nil then
@@ -186,9 +199,16 @@ function ChocoboFeeDingMainPanelView:InitConstInfo()
     self.TextTitle:SetText(_G.LSTR(440002))
     -- LSTR string: 陆行鸟张嘴时投喂，有额外效果哦！
     self.TextHint:SetText(_G.LSTR(440003))
+    self.TextSkip:SetText(_G.LSTR(440009))
+
+    -- LSTR string: 获得加速效果
+    self.FeeDingTips.TextSucces:SetText(_G.LSTR(440004)) -- 获得加速效果
+    -- LSTR string: 未获得加速效果
+    self.FeeDingTips.TextFail:SetText(_G.LSTR(440005))  -- 未获得加速效果
 end
 
 function ChocoboFeeDingMainPanelView:OnHide()
+    self.FeeDingAperture:PlayAnimOut()
     -- 意外结束的情况
     if self.GameState < EGAME_STATE.OVER then
         _G.EventMgr:SendEvent(EventID.ChocoboFeedingQteRevert, { GameID = GameID, })
@@ -204,6 +224,7 @@ end
 
 function ChocoboFeeDingMainPanelView:OnRegisterUIEvent()
     UIUtil.AddOnClickedEvent(self, self.FButton_102, self.OnBeginMoveClick)
+    UIUtil.AddOnClickedEvent(self, self.BtnSkip, self.OnBtnSkiplick)
 end
 
 ---流水上报
@@ -234,6 +255,16 @@ function ChocoboFeeDingMainPanelView:OnBeginMoveClick()
 
     self.FeedTimes = self.FeedTimes + 1
     ReportChocoboQTEFlow(2, 1)
+end
+
+function ChocoboFeeDingMainPanelView:OnBtnSkiplick()
+    _G.EventMgr:SendEvent(EventID.ChocoboFeedingQteFinishNotify, {
+        GameID = GameID,
+        GameResult = ChocoboDefine.CHOCOBO_FEE_QTE_RESULT.FAIL
+    })
+
+    ReportChocoboQTEFlow(1, 2, 0, 0)
+    self:Hide()
 end
 
 function ChocoboFeeDingMainPanelView:OnRegisterGameEvent()
@@ -605,6 +636,9 @@ function ChocoboFeeDingMainPanelView:GameOver(IsSuc)
         self:PlayHappyEffect()
     else
         if self.IsPlayingSadEffect == nil or self.IsPlayingSadEffect == false then
+            if self:IsAnimationPlaying(self.AnimVegetableShow) then
+                self:PlayAnimToEnd(self.AnimVegetableShow)
+            end
             self:PlayAnimation(self.AnimVegetableDrop)
             self:PlaySadEffect()
         end

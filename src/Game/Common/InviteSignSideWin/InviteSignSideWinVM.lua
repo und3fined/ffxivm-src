@@ -86,6 +86,7 @@ function InviteSignSideWinVM:Reset()
 	self.ViewingPlayerItemVMList = self.PlayerItemVMList --玩家列表（显示用）
 	self.FilterPlayerItemVMList = self:ResetBindableList(self.FilterPlayerItemVMList, InviteListItemVM) --玩家列表（搜索用）
     self.MenuCurSelectItem = nil
+	self:ClearTimer()
 end
 
 function InviteSignSideWinVM:RefreshInviteMemberDataByMenuID(MenuID)
@@ -96,7 +97,7 @@ function InviteSignSideWinVM:RefreshInviteMemberDataByMenuID(MenuID)
 	end
 
 	self.IsQuering = true 
-
+	self:ClearTimer()
 	--- 根据类型获取角色id列表
 	local RoleIDList
 	if MenuID == InviteMenu.Nearby then
@@ -120,11 +121,15 @@ function InviteSignSideWinVM:RefreshInviteMemberDataByMenuID(MenuID)
 	end
 	local QueryCallback = function( )
 		self.IsQuering = false
+		self:ClearTimer()
 		UpdatePlayerVMList(self.PlayerItemVMList, RoleIDList, self.ItemType, self.FilterKeyword)
 		self.ViewingPlayerItemVMList = self.PlayerItemVMList
 		self:UpdateEmptyMark()
 	end
-
+	---2s后清理查询阻塞状态，防止弱网丢包阻塞
+	self.ClearQueringTimer = _G.TimerMgr:AddTimer(nil, function()
+		self.IsQuering = false
+	end, 2, 0, 1)
 	_G.RoleInfoMgr:QueryRoleSimples(RoleIDList, QueryCallback, nil, false)
 end
 
@@ -294,5 +299,17 @@ end
 function InviteSignSideWinVM:SetItemType(ItemType)
     self.ItemType = ItemType
 end
+
+function InviteSignSideWinVM:SetIsQuering(IsQuering)
+	self.IsQuering = IsQuering
+end
+
+function InviteSignSideWinVM:ClearTimer()
+	if self.ClearQueringTimer then
+		_G.TimerMgr:CancelTimer(self.ClearQueringTimer)
+		self.ClearQueringTimer = nil
+	end
+end
+
 
 return InviteSignSideWinVM

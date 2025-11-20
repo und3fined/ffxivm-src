@@ -149,7 +149,7 @@ function AdventureJobPanelView:OnClickOpenMap()
 		_G.UIViewMgr:ShowView(_G.UIViewID.QuestLogMainPanel)
 		return
 	end
-	
+
 	_G.WorldMapMgr:ShowWorldMapQuest(StartQuestCfg.AcceptMapID, StartQuestCfg.AcceptUIMapID, StartQuestCfg.StartQuestID)
 
 	if self.MapAnimationTimer and self.MapAnimationTimer ~= 0 then

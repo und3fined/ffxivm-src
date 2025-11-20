@@ -143,7 +143,7 @@ function FishIngholePanelView:OnInit()
 	self.ClockEmpty:SetTipsContent(LSTR(FishNotesDefine.ClockEmptyTipsText))
 	self.ClockEmpty:SetBtnText(LSTR(180083)) --前往设置
 	--列表
-	self.LocationTreeAdapter = UIAdapterTreeView.CreateAdapter(self, self.FTreeViewPlace, self.OnLocationSelectChanged)
+	self.LocationTreeAdapter = UIAdapterTreeView.CreateAdapter(self, self.FTreeViewPlace, self.OnLocationSelectChanged, true) 
 	self.LocationFishListAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewLocationFish, self.OnLocationFishSelectChanged, true, false)
 	self.ClockListAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewClockFish, self.OnClockFishSelectChanged, false, false)
 	self.Binders = {
@@ -157,6 +157,7 @@ function FishIngholePanelView:OnInit()
 		{"bClockFishListVisible", UIBinderSetIsVisible.New(self, self.SearchPlace, true)}, --钓场列表
 		{"bClockFishListVisible", UIBinderSetIsVisible.New(self, self.PanelClockWin)}, --闹钟列表
 		{"bClockFishListVisible", UIBinderSetIsVisible.New(self, self.ClockPanelTab)}, --闹钟页签
+		{"bFishClockNumVisible", UIBinderSetIsVisible.New(self, self.FishClockNum)}, --闹钟页签
 		{"bPanelMapVisible", UIBinderSetIsVisible.New(self, self.PanelMap)},--地图(在搜索列表/闹钟列表空时不显示，鱼类详情信息显示时也不显示)
 		{"bPanelMapVisible", UIBinderSetIsVisible.New(self, self.TextPlace)},--地图下方钓场名
 		{"bFishDetailsVisible", UIBinderSetIsVisible.New(self, self.FishDetails)},--鱼类详情信息
@@ -205,7 +206,7 @@ function FishIngholePanelView:OnHide(Params)
 		local CrystalPortalCfgItem = CrystalPortalCfg:FindCfgByKey(Params.CrystalID)
 		DataReportUtil.ReportSystemFlowData("FishingNotesInfo", 4, CrystalPortalCfgItem.MapID)
 	end
-	if FishIngholeVM.SearchState then
+	if FishIngholeVM.bSearch then
 		--未点击关闭选搜索之前的
 		FishIngholeVM.SearchHoleData = nil
 		self:OnClickCancelSearchBar()
@@ -267,7 +268,7 @@ end
 
 ---@type 切换钓场和闹钟列表
 function FishIngholePanelView:OnClickSwitch()
-	if FishIngholeVM.SearchState then
+	if FishIngholeVM.bSearch then
 		self:CancelSearchBar()
 	end
     FishIngholeVM:OnClickSwitch(nil, self.BeforSearchSelectData)
@@ -281,7 +282,7 @@ function FishIngholePanelView:OnTabSelectChanged(Index, ItemData, ItemView)
 		self:OnClockTabSelectChanged(Index)
 		return
 	end
-	if FishIngholeVM.SearchState then
+	if FishIngholeVM.bSearch then
 		self:CancelSearchBar()
 	end
 	if FishIngholeVM.SearchHoleData == nil then
@@ -319,9 +320,11 @@ function FishIngholePanelView:OnClockTabSelectChanged(Index, ItemData, ItemView)
 	if Index == 1 then
 		self.ClockEmpty:SetTipsContent(LSTR(FishNotesDefine.ClockEmptyTipsText))
 		self.ClockEmpty:SetBtnText(LSTR(180083)) --前往设置
+		self.ClockEmpty:ShowPanelBtn(true)
 	else
-		self.ClockEmpty:SetTipsContent(LSTR("已解锁钓场中暂无活跃中鱼类"))--FishNotesDefine.ClockActiveEmptyTipsText
-		self.ClockEmpty:SetBtnText(LSTR("前往解锁")) --180104前往解锁
+		self.ClockEmpty:SetTipsContent(LSTR(180103))--"已解锁钓场中暂无活跃中鱼类"
+		--self.ClockEmpty:SetBtnText(LSTR(180104)) --180104前往解锁
+		self.ClockEmpty:ShowPanelBtn(false)
 	end
 end
 
@@ -414,13 +417,13 @@ function FishIngholePanelView:OnSearchTextCommitted(SearchText, Type)
 	if string.isnilorempty(SearchText) or self.LastSearchText == SearchText then
 		return
 	end
-	FishIngholeVM.SearchState = true
 	self.LastSearchText = SearchText
 
 	self.BeforSearchSelectData = {
 		FactionIndex = FishIngholeVM.SelectFactionIndex,
 		AreaIndex = FishIngholeVM.SelectAreaIndex,
-		LocationIndex = FishIngholeVM.SelectAreasChildIndex[FishIngholeVM.SelectAreaIndex]}
+		LocationIndex = FishIngholeVM.SelectAreasChildIndex and FishIngholeVM.SelectAreasChildIndex[FishIngholeVM.SelectAreaIndex] or 1
+	}
 	self.VerIconTabs.AdapterTabs:CancelSelected()
 	self.LocationFishListAdapter:CancelSelected()
 
@@ -459,13 +462,13 @@ end
 
 ---@type 清空搜索框
 function FishIngholePanelView:CancelSearchBar()
-	FishIngholeVM.SearchState = false
 	FishIngholeVM.SearchFishContent = nil
 	UIUtil.SetIsVisible(self.AreaTitle,true)
 	--UIUtil.SetIsVisible(self.TextTitleName.TextSubtitle,true)
 	self.LastSearchText = nil
 	self.SearchBar:SetText('')
 	FishIngholeVM:FishIngholeSearch("", 0)
+	self.BeforSearchSelectData = nil
 end
 
 function FishIngholePanelView:OnFishSearchFinished()
@@ -477,7 +480,7 @@ function FishIngholePanelView:OnFishSearchFinished()
 			if #IDs > 0 then
 				FishID = IDs[1]
 			end
-			
+
 			FishIngholeVM:SelectedLocation(1, 1, FishID)
 		end
 		self.SearchFishID = nil

@@ -6,27 +6,17 @@ Description: 金蝶庆典相关
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
-local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
 local GameNetworkMgr = require("Network/GameNetworkMgr")
 local TimeUtil = require("Utils/TimeUtil")
-local FairyBlessedTimeCfg = require("TableCfg/FairyBlessedTimeCfg")
 local CS_CMD = ProtoCS.CS_CMD
-local EffectUtil = require("Utils/EffectUtil")
-local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local GoldSauserMainPanelMainVM = require("Game/GoldSauserMainPanel/VM/GoldSauserMainPanelMainVM")
 local ActivityCfg = require("TableCfg/ActivityCfg")
 local GoldsauserCeremonyCfg = require("TableCfg/GoldsauserCeremonyCfg")
 local LocalizationUtil = require("Utils/LocalizationUtil")
-local EBlessingState = GoldSaucerBlessingDefine.EBlessingState
-local PWorldMgr = _G.PWorldMgr
 local EventID = _G.EventID
 local LSTR = _G.LSTR
 local MapDynType = ProtoCommon.MapDynType
-local EffectType = MapDynType.MAP_DYNAMIC_DATA_TYPE_DYN_INSTANCE
-local SecDef = 60
-
 local ModuleOpenMgr
 
 ---@class GoldSauserCeremonyMgr : MgrBase
@@ -34,7 +24,6 @@ local GoldSauserCeremonyMgr = LuaClass(MgrBase)
 
 function GoldSauserCeremonyMgr:OnInit()
     ModuleOpenMgr = _G.ModuleOpenMgr
-    self.JDMapID = 12060
     self.CereKey = 0 -- 当前生效的活动配置Key
     self:SetTheLatestActivityID()
 end
@@ -217,6 +206,9 @@ end
 --- 获取金碟庆典是否处于准备阶段（开始前24小时）
 function GoldSauserCeremonyMgr:IsCeremonyInPrepare()
     local SecToCeremonyStart = self:GetReaminSecToCeremony()
+    if not SecToCeremonyStart then
+        return false
+    end
     return SecToCeremonyStart > 0 and SecToCeremonyStart <= 3600 * 24
 end
 

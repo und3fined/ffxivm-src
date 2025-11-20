@@ -76,7 +76,7 @@ function OpsHalloweenGamePanelVM:Update(Params)
                         self.MagicBoxLockText = self:GetActivityStartTimeText(ChildrenActivity)
                         self.MagicBoxBtnState = EToggleButtonState.Unchecked
                     else
-                        self.FindCookiesLockText = ""
+                        self.MagicBoxLockText = ""
                         self.MagicBoxBtnState = EToggleButtonState.Checked
                     end
                     self.MagicBoxCompleteVisible = Finished

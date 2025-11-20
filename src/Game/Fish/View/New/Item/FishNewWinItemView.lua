@@ -26,6 +26,7 @@ local ItemUtil = require("Utils/ItemUtil")
 local SystemEntranceMgr = require("Game/Common/Tips/SystemEntranceMgr")
 local CommBtnLView = require("Game/Common/Btn/CommBtnLView")
 local FishDefine = require("Game/Fish/FishDefine")
+local CommonUtil = require("Utils/CommonUtil")
 local ProfFisher = ProtoCommon.prof_type.PROF_TYPE_FISHER
 
 local DefaultBaitID = 1
@@ -124,6 +125,10 @@ function FishNewWinItemView:OnShow()
 			self:OnUpdateBtnText(false)
 		end
 	end
+
+	--禁止移动控制(虚拟摇杆)
+	CommonUtil.DisableShowJoyStick(true)
+	CommonUtil.HideJoyStick()
 end
 
 function FishNewWinItemView:OnHide()
@@ -135,6 +140,10 @@ function FishNewWinItemView:OnHide()
 	self.SelectBaitID = 0
 	self.SelectIndex = 0
 	self.InUseBaitID = 0
+
+	--启用移动控制(虚拟摇杆)
+	CommonUtil.DisableShowJoyStick(false)
+	CommonUtil.ShowJoyStick()
 end
 
 function FishNewWinItemView:OnRegisterUIEvent()
@@ -220,6 +229,11 @@ function FishNewWinItemView:OnBtnBuy(SelectID)
 	local TransferData = {}
 	local Cfg = FishBaitCfg:FindCfgByKey(SelectID)
 	local ItemID = Cfg.ItemID
+
+	if nil == GetWayItem then
+		FLOG_INFO("[FishNewWinItemView]:OnBtnBuy: GetWayItem nil BaitID = "..SelectID.." ItemID = "..ItemID)
+		return
+	end
 
 	-- 判定商店未解锁则不进行跳转
 	if not GetWayItem.IsUnLock then

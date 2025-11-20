@@ -16,4 +16,8 @@ function M.GetSceneModeName(Mode)
     return PWorldQuestDefine.SceneModeNameDef[Mode] or ""
 end
 
+function M.GetSceneModeIconBG(Mode)
+    return PWorldQuestDefine.SceneModeIconBG[Mode] or ""
+end
+
 return M

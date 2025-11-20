@@ -58,6 +58,7 @@ local UIViewID = nil
 ---@field ProBarPhysical UProgressBar
 ---@field RaceSkill ChocoboRaceSkillPanelView
 ---@field TableViewPlayer UTableView
+---@field TestRTT UFTextBlock
 ---@field TestSpeed UFTextBlock
 ---@field TextExcited UFTextBlock
 ---@field TextHigh UFTextBlock
@@ -114,6 +115,7 @@ function ChocoboRaceMainView:Ctor()
 	--self.ProBarPhysical = nil
 	--self.RaceSkill = nil
 	--self.TableViewPlayer = nil
+	--self.TestRTT = nil
 	--self.TestSpeed = nil
 	--self.TextExcited = nil
 	--self.TextHigh = nil
@@ -177,13 +179,18 @@ function ChocoboRaceMainView:OnShow()
     self.TextLow:SetText(_G.LSTR(430020))
     self.TextExcited:SetText(_G.LSTR(430021))
     self.TextTired:SetText(_G.LSTR(430022))
+    UIUtil.SetIsVisible(self.BtnQuit, false)
     
     if _G.LoginMgr:IsModuleSwitchOn(ProtoRes.module_type.MODULE_GM) then
         UIUtil.SetIsVisible(self.ButtonGM, true, true)
         UIUtil.SetIsVisible(self.TestSpeed, true)
+        UIUtil.SetIsVisible(self.TestRTT, true)
+        self.ShowRTT = true
     else
         UIUtil.SetIsVisible(self.ButtonGM, false)
         UIUtil.SetIsVisible(self.TestSpeed, false)
+        UIUtil.SetIsVisible(self.TestRTT, false)
+        self.ShowRTT = false
     end
     
     CommonUtil.DisableShowJoyStick(true)
@@ -205,6 +212,7 @@ function ChocoboRaceMainView:OnRegisterUIEvent()
 end
 
 function ChocoboRaceMainView:OnRegisterGameEvent()
+    self:RegisterGameEvent(EventID.GMShowRTT,self.OnGameEventShowRTT)
     self:RegisterGameEvent(EventID.ChocoboRaceGameReady, self.OnGameEventRaceGameReady)
     self:RegisterGameEvent(EventID.ChocoboRaceGameQuerySuc, self.OnGameEventRaceGameQuerySuc)
 end
@@ -329,6 +337,20 @@ function ChocoboRaceMainView:IndexChange(NewValue, OldValue)
 end
 
 function ChocoboRaceMainView:OnGameEventRaceGameReady()
+    local VMList = ChocoboRaceMainVM:GetChocoboRaceVMList()
+    for __, ItemVM in ipairs(VMList) do
+        local ItemView = self[string.format("Number0%d", ItemVM.Index)]
+        if ItemView ~= nil then
+            if ItemVM.IsMajor then
+                UIUtil.CanvasSlotSetZOrder(ItemView, ChocoboRaceMgr.MaxRacerNum)
+                ItemView:ShowImgArrow(true)
+            else
+                UIUtil.CanvasSlotSetZOrder(ItemView, ChocoboRaceMgr.MaxRacerNum - ItemVM.Rank)
+                ItemView:ShowImgArrow(false)
+            end
+        end
+    end
+    
     self:PlayAnimation(self.AnimBegin)
     self:PlayAnimation(self.AnimMiniMapIn)
     self:PlayAnimation(self.AnimLoop, 0, 0)
@@ -386,6 +408,10 @@ function ChocoboRaceMainView:OnRegisterTimer()
 end
 
 function ChocoboRaceMainView:OnTimer()
+    if self.ShowRTT == true then
+        self:UpdateRTT()
+    end
+    
     if ChocoboRaceMgr.GoTime <= 0 then
         return
     end
@@ -406,7 +432,7 @@ function ChocoboRaceMainView:OnTimer()
     local VMList = ChocoboRaceMainVM:GetChocoboRaceVMList()
     for __, ItemVM in ipairs(VMList) do
         local ItemView = self[string.format("Number0%d", ItemVM.Index)]
-        if ItemView ~= nil then
+        if ItemView ~= nil and ItemVM.IsPlayProgressEndAnim == false then
             if ItemVM.IsMajor then
                 UIUtil.CanvasSlotSetZOrder(ItemView, ChocoboRaceMgr.MaxRacerNum)
                 ItemView:ShowImgArrow(true)
@@ -416,14 +442,33 @@ function ChocoboRaceMainView:OnTimer()
             end
 
             if ItemVM.Progress >= 100 then
+                UIUtil.CanvasSlotSetPosition(ItemView, FVector2D(self.MaxMovePositionX, 0))
                 ItemView:PlayAnimReach()
+                ItemVM.IsPlayProgressEndAnim = true
             else
                 UIUtil.CanvasSlotSetPosition(ItemView, FVector2D(ItemVM.Progress / 100 * self.MaxMovePositionX, 0))
             end
-        else
-            _G.FLOG_ERROR("ChocoboRaceMainView:GetChocoboRaceVMList ItemView is nil Index  = %d", ItemVM.Index)
         end
     end
+end
+
+function ChocoboRaceMainView:OnGameEventShowRTT(Param)
+    self.ShowRTT = Param
+    UIUtil.SetIsVisible(self.TestRTT, Param)
+end
+
+function ChocoboRaceMainView:UpdateRTT()
+    local Value = _G.NetworkRTTMgr:GetSRTT()
+    if Value <= 100 then
+        UIUtil.TextBlockSetColorAndOpacityHex(self.TestRTT, "#89bd88ff")
+    elseif Value <= 200 then
+        UIUtil.TextBlockSetColorAndOpacityHex(self.TestRTT, "#d1906dff")
+    else
+        UIUtil.TextBlockSetColorAndOpacityHex(self.TestRTT, "#dc5868ff")
+    end
+
+    local Text = string.format("延迟:%d", Value);
+    self.TestRTT:SetText(Text)
 end
 
 return ChocoboRaceMainView

@@ -27,6 +27,7 @@ function ShareRewardItemVM:UpdateVM(Value)
     self.NumVisible = self.Num > 0
     self.IconChooseVisible = Value.IconChooseVisible or false
     self.bSyncIcon = Value.bSyncIcon or false
+    self.ItemQualityIcon = Value.IconQuality
 end
 
 

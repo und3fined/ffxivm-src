@@ -85,12 +85,59 @@ function MapMarkerProviderWorldMapLocation:GetLocation(MapID, MarkerID, Location
 		Location = MapUtil.GetMapNpcPosByResID(MapID, MarkerID)
 	elseif LocationType == MapDefine.MapLocationType.EObj then
 		Location = MapUtil.GetMapEObjPosByResID(MapID, MarkerID)
+	elseif LocationType == MapDefine.MapLocationType.Point then
+		Location = MapUtil.GetMapPointPosByID(MapID, MarkerID)
 	end
 
 	return Location
 end
 
 function MapMarkerProviderWorldMapLocation:GetFollowMarker()
+	local FollowInfo = _G.WorldMapMgr:GetMapFollowInfo()
+	local Params = self:GetFollowMarkerCreateParams(FollowInfo)
+	if Params == nil then
+		return
+	end
+	local Marker = self:OnCreateMarker(Params)
+	return Marker
+end
+
+function MapMarkerProviderWorldMapLocation:FindMarker(Params)
+	local MarkerID = Params.ID
+	local LocationType = Params.SubType
+	local Marker = table.find_by_predicate(self.MapMarkers, function(Marker)
+		return Marker:GetSubType() == LocationType and Marker:GetID() == MarkerID
+	end)
+	return Marker
+end
+
+function MapMarkerProviderWorldMapLocation:UpdateFollowMarker(FollowInfo)
+	if FollowInfo == nil then
+		return
+	end
+
+	if MapUtil.IsAreaMap(self.UIMapID) then
+		local Params = { ID = FollowInfo.FollowID, SubType = FollowInfo.FollowSubType}
+		local Marker = self:FindMarker(Params)
+		if Marker then
+			if not FollowInfo.IsFollow then
+				self:RemoveMarker(Params)
+				return
+			end
+			Marker:UpdateFollow()
+			self:SendUpdateMarkerEvent(Marker)
+		elseif FollowInfo.FollowID > 0 then
+			local NewParams = self:GetFollowMarkerCreateParams(FollowInfo)
+			if NewParams then
+				self:AddMarker(NewParams)
+			end
+		end
+	else
+		_G.EventMgr:SendEvent(_G.EventID.WorldMapUpdateAllMarker)
+	end
+end
+
+function MapMarkerProviderWorldMapLocation:GetFollowMarkerCreateParams(FollowInfo)
 	local FollowInfo = _G.WorldMapMgr:GetMapFollowInfo()
 	if FollowInfo == nil  then
 		return
@@ -112,35 +159,7 @@ function MapMarkerProviderWorldMapLocation:GetFollowMarker()
 	end
 
 	local Params = { MarkerID = FollowMarkerID, LocationType = FollowSubType, Location = Location }
-	local Marker = self:OnCreateMarker(Params)
-	return Marker
-end
-
-function MapMarkerProviderWorldMapLocation:FindMarker(Params)
-	local MarkerID = Params.ID
-	local LocationType = Params.SubType
-
-	local Marker = table.find_by_predicate(self.MapMarkers, function(Marker)
-		return Marker:GetSubType() == LocationType and Marker:GetID() == MarkerID
-	end)
-	return Marker
-end
-
-function MapMarkerProviderWorldMapLocation:UpdateFollowMarker(FollowInfo)
-	if FollowInfo == nil then
-		return
-	end
-
-	if MapUtil.IsAreaMap(self.UIMapID) then
-		local Params = { ID = FollowInfo.FollowID, SubType = FollowInfo.FollowSubType }
-		local Marker = self:FindMarker(Params)
-		if Marker then
-			Marker:UpdateFollow()
-			self:SendUpdateMarkerEvent(Marker)
-		end
-	else
-		_G.EventMgr:SendEvent(_G.EventID.WorldMapUpdateAllMarker)
-	end
+	return Params
 end
 
 

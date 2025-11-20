@@ -13,19 +13,23 @@ local PreviewRoleAppearanceVM = require("Game/Preview/VM/PreviewRoleAppearanceVM
 local MajorUtil = require("Utils/MajorUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local StoreMgr = require("Game/Store/StoreMgr")
 local ActorUtil = require("Utils/ActorUtil")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local CameraFocusCfgMap = require("Game/Equipment/VM/CameraFocusCfgMap")
+local EquipmentCfg = require("TableCfg/EquipmentCfg")
+local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+local ItemCfg = require("TableCfg/ItemCfg")
 
--- local SCS_FinalColorLDRHasAlpha = _G.UE.ESceneCaptureSource.SCS_FinalColorLDRHasAlpha or 3
 local StoreMall = ProtoRes.StoreMall
 local avatar_personal = ProtoCommon.avatar_personal
+local ItemMainType = ProtoCommon.ItemMainType
+local EquipmentType = ProtoRes.EquipmentType
 
 ---@class PreviewRoleAppearanceView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -37,11 +41,12 @@ local avatar_personal = ProtoCommon.avatar_personal
 ---@field BtnSwitch UToggleButton
 ---@field CloseBtn CommonCloseBtnView
 ---@field CommonTitle CommonTitleView
+---@field ImgDisable3 UFImage
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelRoleBtn UFVerticalBox
 ---@field StoreRender2D StoreRender2DView
 ---@field TableViewSlot UTableView
 ---@field TextName UFTextBlock
----@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PreviewRoleAppearanceView = LuaClass(UIView, true)
@@ -56,11 +61,12 @@ function PreviewRoleAppearanceView:Ctor()
 	--self.BtnSwitch = nil
 	--self.CloseBtn = nil
 	--self.CommonTitle = nil
+	--self.ImgDisable3 = nil
+	--self.PanelMask3 = nil
 	--self.PanelRoleBtn = nil
 	--self.StoreRender2D = nil
 	--self.TableViewSlot = nil
 	--self.TextName = nil
-	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -74,17 +80,21 @@ function PreviewRoleAppearanceView:OnRegisterSubView()
 end
 
 function PreviewRoleAppearanceView:OnInit()
+	self:InitPanelStaticText()
+	self.DefaultModelGender = nil
+	self.CurrentModelGender = nil
 	self.CommRender2D = self.StoreRender2D:GetCommonRender2D()
 	self.CameraFocusCfgMap = CameraFocusCfgMap.New()
 	local AvatarComp = MajorUtil.GetMajorAvatarComponent()
     if nil ~= AvatarComp then
         self.AttachType = AvatarComp:GetAttachTypeIgnoreChangeRole()
 		self.NPCEntityID = nil
-		-- if self.AttachType ~= nil then
-		-- 	self.NPCEntityID = StoreMgr:CreatNPCAndGetNPCModelEntityID(self.AttachType) --异性角色模型ID
-		-- end
     end
 	self.EquipTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSlot, self.OnEquipPartSelectChanged, true, false)
+end
+
+function PreviewRoleAppearanceView:InitPanelStaticText()
+	self.CommonTitle:SetTextTitleName(LSTR(950051))
 end
 
 function PreviewRoleAppearanceView:OnDestroy()
@@ -103,15 +113,21 @@ function PreviewRoleAppearanceView:OnShow()
 	self:OnInitBtnState()
 
 	-- 设置角色原始外观数据
+	self.DefaultModelGender = MajorUtil.GetMajorGender()
+	self.CurrentModelGender = self.DefaultModelGender
 	local RoleSimple = MajorUtil.GetMajorRoleSimple()
 	if nil ~= RoleSimple then
 		self.StoreRender2D:SetRawAvatar(RoleSimple.Avatar)
 	end
 
-	local EntityID = PreviewRoleAppearanceVM.IsMajorSameGender and MajorUtil.GetMajorEntityID() or self.NPCEntityID
-	self:CreateRenderActor(EntityID)
+	-- 设置当前预览的外观染色数据
+	self.StoreRender2D:SetAppearRegionDyesInfo(PreviewRoleAppearanceVM.RegionDyesList)
+
+	local EntityID = MajorUtil.GetMajorEntityID()
+	self:CreateRenderActor(EntityID, true)
 
 	-- 右边预览装备列表
+	self:CheckGenderModel(PreviewRoleAppearanceVM.GenderLimit)
 	self:WearSuit()
 
 	--检查是否要显示头盔机关按钮
@@ -120,7 +136,12 @@ end
 
 function PreviewRoleAppearanceView:OnInitBtnState()
 	self.PreviewEquipIndex = 1 
+	self.PreviewEquipementData = nil
+	self.bIsShowPreviewEquip = true -- 预览的装备显隐状态
 
+	--下面这块逻辑其实目前和VM初始化数据一样，所以不会触发后面的change逻辑
+	--1、初始化左侧按钮状态
+	--2、模型部件的显隐(此时模型没加载，但StoreRender2D里面会记录部件显隐状态，模型加载完StoreRender2D会根据记录的状态处理部件显隐)
 	PreviewRoleAppearanceVM.bIsAllCameraState = true
 	PreviewRoleAppearanceVM.bIsShowWeapon = true
 	PreviewRoleAppearanceVM.bIsHoldWeapon = false
@@ -132,6 +153,7 @@ end
 function PreviewRoleAppearanceView:OnHide()
 	--重置选中的图标状态
 	PreviewRoleAppearanceVM:ChangeEquipPart(nil, false)
+	PreviewRoleAppearanceVM:ResetInitState()
 
 	self.CommRender2D:SwitchOtherLights(true)
 	_G.LightMgr:DisableUIWeather()
@@ -156,7 +178,6 @@ end
 function PreviewRoleAppearanceView:OnRegisterBinder()
 	self.Binders = {
 		{ "EquipPartList", 				UIBinderUpdateBindableList.New(self, self.EquipTableViewAdapter) },
-		{ "TitleText", 				UIBinderSetText.New(self, self.TextTitle) },
 		{ "ProductName", 				UIBinderSetText.New(self, self.TextName) },
 
 		{ "bIsAllCameraState", 			UIBinderSetIsChecked.New(self, self.BtnSwitch) },
@@ -165,6 +186,10 @@ function PreviewRoleAppearanceView:OnRegisterBinder()
 		{ "bIsShowHat", 				UIBinderSetIsChecked.New(self, self.BtnHat) },
 		{ "bIsShowHatOrgan", 			UIBinderSetIsChecked.New(self, self.BtnOrgan) },
 		{ "bIsShowRawAvatar", 			UIBinderSetIsChecked.New(self, self.BtnEquipment) },
+
+		{ "bIsShowHat",                 UIBinderValueChangedCallback.New(self, nil, self.OnIsShowHatChanged) },
+		{ "bIsShowHatOrgan",            UIBinderValueChangedCallback.New(self, nil, self.OnIsShowHatOrganChanged) },
+		{ "bIsShowRawAvatar",            UIBinderValueChangedCallback.New(self, nil, self.OnbIsShowRawAvatarChanged) },
 	}
 	self:RegisterBinders(PreviewRoleAppearanceVM, self.Binders)
 end
@@ -191,10 +216,40 @@ function PreviewRoleAppearanceView:OnAssembleAllEnd(Params)
 			end
 			self.IsFirstShowView = false
 		end
+		self:UpdateWeaponPose()
 		self:UpdateWeaponHideState()
 		--更新灯光预设
 		self.CommRender2D:UpdateAllLights()
 	end
+end
+
+--- 切换角色外观pose
+function PreviewRoleAppearanceView:UpdateWeaponPose()
+	if self.PreviewEquipementData == nil then
+		return
+	end
+	local PreviewEqtCfg = EquipmentCfg:FindCfgByKey(self.PreviewEquipementData.EquipmentID)
+	if PreviewEqtCfg == nil then
+		return
+	end
+	if not (PreviewEqtCfg.ItemMainType == ItemMainType.ItemArm or PreviewEqtCfg.ItemMainType == ItemMainType.ItemTool) then
+		return
+	end
+
+	local EyeBtnState = PreviewRoleAppearanceVM:GetEquipPartEyeBtnState(self.PreviewEquipIndex)
+	local ProfID = MajorUtil.GetMajorProfID()
+	if EyeBtnState then
+		ProfID = self:GetWeaponProfID(PreviewEqtCfg.AppearanceID)
+	end
+	--武器、工具装备默认拔出
+	PreviewRoleAppearanceVM.bIsHoldWeapon = true
+	self.CommRender2D:HoldOnWeapon(PreviewRoleAppearanceVM.bIsHoldWeapon)
+	self.CommRender2D:OnProfSwitch({ProfID = ProfID})
+end
+
+function PreviewRoleAppearanceView:GetWeaponProfID(AppID)
+    local TempItemCfg = ItemCfg:FindCfgByKey(WardrobeUtil.GetWeaponEquipIDByAppearanceID(AppID))
+    return TempItemCfg and TempItemCfg.ProfLimit[1] or MajorUtil.GetMajorProfID()
 end
 
 --- 预览发型
@@ -205,13 +260,40 @@ function PreviewRoleAppearanceView:OnPreViewHair(HairID)
 	end
 end
 
+
+function PreviewRoleAppearanceView:CheckGenderModel(GenderLimit)
+	if nil == GenderLimit or GenderLimit == 0 or GenderLimit == self.DefaultModelGender then
+		self:ResetToDefaultGenderModel()
+	else
+		self:SwitchToOppositeGenderModel()
+	end
+end
+
+function PreviewRoleAppearanceView:SwitchToOppositeGenderModel()
+	if self.CurrentModelGender ~= self.DefaultModelGender then
+		return
+	end 
+	self.CurrentModelGender = self.DefaultModelGender == ProtoCommon.role_gender.GENDER_MALE and ProtoCommon.role_gender.GENDER_FEMALE or
+		ProtoCommon.role_gender.GENDER_MALE
+	self.StoreRender2D:SwitchToPresetModel(MajorUtil.GetMajorRaceID(), self.CurrentModelGender)
+end
+
+function PreviewRoleAppearanceView:ResetToDefaultGenderModel()
+	if self.CurrentModelGender == self.DefaultModelGender then
+		return
+	end
+	local RoleSimple = MajorUtil.GetMajorRoleSimple()
+	self.StoreRender2D:ResetToDefaultModel(RoleSimple)
+	self.CurrentModelGender = self.DefaultModelGender
+end
+
 --- 预览装备列表
 function PreviewRoleAppearanceView:WearSuit()
 	-- if self.IsHidePlayer then 
 	-- 	return
 	-- end
 	local EquipPartList = PreviewRoleAppearanceVM.EquipPartList.Items
-	local Gender = MajorUtil.GetMajorGender()
+	local Gender = self.CurrentModelGender
 	local IsMale = Gender == ProtoCommon.role_gender.GENDER_MALE
 
 	local SuitData = {}
@@ -286,9 +368,12 @@ end
 -----------------------------------------右边装备列表 start-------------------------------------------------------------------
 --- 点击装备部位
 function PreviewRoleAppearanceView:OnEquipPartSelectChanged(Index, ItemData, ItemView)
+	self.PreviewEquipIndex = Index
+	self.PreviewEquipementData = ItemData
 	if ItemView ~= nil and ItemView.IsClickBtnView then
 		if not ItemData.SelectBtnState then
 			self.StoreRender2D:TakeOffAppear(ItemData.Part, true)
+			self.bIsShowPreviewEquip = false
 		else
 			--- 预览时隐藏其他相同部位装备
 			local EquipPartList = PreviewRoleAppearanceVM.EquipPartList.Items
@@ -298,12 +383,23 @@ function PreviewRoleAppearanceView:OnEquipPartSelectChanged(Index, ItemData, Ite
 					value.IsMask = true
 				end
 			end
-			self.StoreRender2D:WearAppearance(ItemData)
+			self.StoreRender2D:WearAppearance(ItemData, true)
+			self.bIsShowPreviewEquip = true
 		end
 		ItemData.SelectBtnState = not ItemData.SelectBtnState
 		ItemData.IsMask = ItemData.SelectBtnState or ItemData.bOwned
 		ItemView.IsClickBtnView = false
 	else
+		local PreviewEqtCfg = EquipmentCfg:FindCfgByKey(self.PreviewEquipementData.EquipmentID)
+		--检查是否武器
+		--武器特殊处理：1、镜头注视点检测范围变大(动作幅度大，镜头跟不上骨骼速度，永远达不到注视目标范围的0.1)   2、默认显示素体
+		if PreviewEqtCfg ~= nil then
+			if PreviewEqtCfg.ItemMainType == ItemMainType.ItemArm or PreviewEqtCfg.ItemMainType == ItemMainType.ItemTool then
+				self.CommRender2D.TargetPositionOffsetRange = 2.0
+				PreviewRoleAppearanceVM.bIsShowRawAvatar = true
+			end
+		end
+
 		--- 切换部位镜头
 		self:FocusView(ItemData.Part)
 		if ItemData.Part == ProtoCommon.equip_part.EQUIP_PART_BODY_HAIR then
@@ -311,13 +407,8 @@ function PreviewRoleAppearanceView:OnEquipPartSelectChanged(Index, ItemData, Ite
 				self.TextName:SetText(ItemData.Name .. "\n" .. PreviewRoleAppearanceVM.ProductName)
 			end
 		end
-		--武器部件默认拔出
-		if ItemData.Part == ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND or ItemData.Part == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND then
-			self:OnChangedBtnPose(nil, _G.UE.EToggleButtonState.Checked, nil)
-		end
-
-		self.StoreRender2D:WearAppearance(ItemData)
-		self.PreviewEquipIndex = Index
+		self.StoreRender2D:WearAppearance(ItemData, true)
+		
 		PreviewRoleAppearanceVM.bIsAllCameraState = false
 		ItemData.IsMask = ItemData.bOwned
 		if ItemData.SelectBtnState then
@@ -334,6 +425,7 @@ function PreviewRoleAppearanceView:OnEquipPartSelectChanged(Index, ItemData, Ite
 		ItemData.IsMask = false
 		PreviewRoleAppearanceVM:ChangeEquipPart(nil, false)
 		PreviewRoleAppearanceVM:ChangeEquipPart(Index, true)
+		self.bIsShowPreviewEquip = true
 	end
 end
 -----------------------------------------右边装备列表 end---------------------------------------------------------------------
@@ -355,14 +447,14 @@ function PreviewRoleAppearanceView:OnChangedToggleBtnSwitch(ToggleGroup, ToggleB
 	-- self.CommRender2D:EnableZoom(false)
 end
 
--- 手上武器，套件默认隐藏，散件默认显示
+-- 手上武器，套件默认隐藏，散件默认显示(拔刀状态时，武器强制显示)
 function PreviewRoleAppearanceView:OnChangedBtnHand(ToggleGroup, ToggleButton, BtnState)
 	PreviewRoleAppearanceVM.bIsShowWeapon = ToggleButton == _G.UE.EToggleButtonState.Checked 
 	-- self.CommRender2D:HideWeapon(not PreviewRoleAppearanceVM.bIsShowWeapon)
 	self:UpdateWeaponHideState()
 end
 
---- 武器拔出/收起状态，套件默认收起，散件默认拔出
+--- 武器拔出/收起状态，套件默认收起，散件默认拔出(拔刀状态时，武器强制显示)
 function PreviewRoleAppearanceView:OnChangedBtnPose(ToggleGroup, ToggleButton, BtnState)
 	PreviewRoleAppearanceVM.bIsHoldWeapon = ToggleButton == _G.UE.EToggleButtonState.Checked
 	self.CommRender2D:HoldOnWeapon(PreviewRoleAppearanceVM.bIsHoldWeapon)
@@ -372,27 +464,26 @@ end
 --- 头部装备显隐，默认显示
 function PreviewRoleAppearanceView:OnChangedToggleBtnHat(ToggleGroup, ToggleButton, BtnState)
 	PreviewRoleAppearanceVM.bIsShowHat = ToggleButton == _G.UE.EToggleButtonState.Checked
-	self.CommRender2D:HideHead(not PreviewRoleAppearanceVM.bIsShowHat)
-	if PreviewRoleAppearanceVM.bIsShowHat then
-		self:UpdateSwitchHelmet(PreviewRoleAppearanceVM.bIsShowHatOrgan, false)
+end
+
+function PreviewRoleAppearanceView:OnIsShowHatChanged(bIsShowHat)
+	self.StoreRender2D:HideHelmet(not bIsShowHat)
+	if bIsShowHat then
+		self.StoreRender2D:SwitchHelmet(PreviewRoleAppearanceVM.bIsShowHatOrgan)
 	end
 end
 
 --- 头部装备机关，默认关
 function PreviewRoleAppearanceView:OnChangedToggleBtnOrgan(ToggleGroup, ToggleButton, BtnState)
-	local IsCheck = ToggleButton == _G.UE.EToggleButtonState.Checked
-	self:UpdateSwitchHelmet(IsCheck, true)
-end
-
-function PreviewRoleAppearanceView:UpdateSwitchHelmet(IsCheck, IsShowTips)
 	if not PreviewRoleAppearanceVM.bEnableHatOrganBtn then
-		if IsShowTips then
-			_G.MsgTipsUtil.ShowTips(_G.LSTR(1050226))
-		end
+		_G.MsgTipsUtil.ShowTips(_G.LSTR(1050226))
 		return
 	end
-	PreviewRoleAppearanceVM.bIsShowHatOrgan = IsCheck
-	self.CommRender2D:SwitchHelmet(PreviewRoleAppearanceVM.bIsShowHatOrgan)
+	PreviewRoleAppearanceVM.bIsShowHatOrgan = ToggleButton == _G.UE.EToggleButtonState.Checked
+end
+
+function PreviewRoleAppearanceView:OnIsShowHatOrganChanged(bIsShowHatOrgan)
+	self.StoreRender2D:SwitchHelmet(bIsShowHatOrgan)
 end
 
 -- 头部装备机关的按钮状态
@@ -404,8 +495,18 @@ end
 
 --- 素体，开-显示原有装备/关-隐藏原有装备
 function PreviewRoleAppearanceView:OnChangedToggleBtnEquipment(ToggleGroup, ToggleButton, BtnState)
+	if self.DefaultModelGender ~= self.CurrentModelGender then
+		-- 异性角色禁止原装备显示
+		_G.MsgTipsUtil.ShowTipsByID(138007)
+		PreviewRoleAppearanceVM.bIsShowRawAvatar = false
+		self.BtnEquipment:SetChecked(false) -- UToggleButton::SlateOnToggleButtonClicked会默认切换按钮状态，这里强制给他切走
+		return
+	end
 	PreviewRoleAppearanceVM.bIsShowRawAvatar = ToggleButton == _G.UE.EToggleButtonState.Checked
-	self.StoreRender2D:SetRawEquipsVisible(PreviewRoleAppearanceVM.bIsShowRawAvatar)
+end
+
+function PreviewRoleAppearanceView:OnbIsShowRawAvatarChanged(bIsShowRawAvatar)
+	self.StoreRender2D:SetRawEquipsVisible(bIsShowRawAvatar)
 end
 -----------------------------------------左边按钮列表事件 end----------------------------------------------------------------------
 
@@ -415,8 +516,11 @@ end
 function PreviewRoleAppearanceView:IsHideMasterHand()
 	local bIsHideWeapon = not (PreviewRoleAppearanceVM.bIsShowWeapon or PreviewRoleAppearanceVM.bIsHoldWeapon)
 	local bIsProductProf = RoleInitCfg:FindProfSpecialization(MajorUtil.GetMajorProfID()) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
-	local bIsPreviewSlaveHand = self.SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
-	return bIsHideWeapon or (bIsProductProf and bIsPreviewSlaveHand)
+	local SelectSlotPart = self.PreviewEquipementData and self.PreviewEquipementData.Part or 0
+	local bIsPreviewSlaveHand = SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
+
+	local TempHideMasterHand, TempHideSlaveHand = self:GetTwoHandWeaponHideState()
+	return bIsHideWeapon or (bIsProductProf and bIsPreviewSlaveHand) or TempHideMasterHand
 end
 
 -- 判断是否隐藏副手武器，拔刀必定显示武器
@@ -424,8 +528,11 @@ end
 function PreviewRoleAppearanceView:IsHideSlaveHand()
 	local bIsHideWeapon = not (PreviewRoleAppearanceVM.bIsShowWeapon or PreviewRoleAppearanceVM.bIsHoldWeapon)
 	local bIsProductProf = RoleInitCfg:FindProfSpecialization(MajorUtil.GetMajorProfID()) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
-	local bIsPreviewSlaveHand = self.SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
-	return bIsHideWeapon or (bIsProductProf and not bIsPreviewSlaveHand)
+	local SelectSlotPart = self.PreviewEquipementData and self.PreviewEquipementData.Part or 0
+	local bIsPreviewSlaveHand = SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
+
+	local TempHideMasterHand, TempHideSlaveHand = self:GetTwoHandWeaponHideState()
+	return bIsHideWeapon or (bIsProductProf and not bIsPreviewSlaveHand) or TempHideSlaveHand
 end
 
 -- 判断是否隐藏主手武器挂件，继承主手武器隐藏状态，但只有拔刀时才显示
@@ -438,15 +545,73 @@ function PreviewRoleAppearanceView:IsHideAttachSlaveHand()
 	return self:IsHideSlaveHand() or not PreviewRoleAppearanceVM.bIsHoldWeapon
 end
 
+-- 预览武器时，原始武器是剑+盾双手组合时，处理主副手武器的隐藏规则
+function PreviewRoleAppearanceView:GetTwoHandWeaponHideState()
+	if self.PreviewEquipementData == nil then
+		return
+	end
+	local PreviewEqtCfg = EquipmentCfg:FindCfgByKey(self.PreviewEquipementData.EquipmentID)
+	if PreviewEqtCfg == nil then
+		return
+	end
+
+	--显示原始装备时，主副手都要显示武器
+	if not self.bIsShowPreviewEquip then
+		return false, false
+	end
+
+	--当前角色的原始主、副武器
+	local MasterHandEquipData = nil
+	local SlaveHandEquipData = nil
+	if self.StoreRender2D.RawEquips[ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND] ~= nil then
+		MasterHandEquipData = EquipmentCfg:FindCfgByKey(self.StoreRender2D.RawEquips[ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND].EquipID)
+	end
+	if self.StoreRender2D.RawEquips[ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND] ~= nil then
+		SlaveHandEquipData = EquipmentCfg:FindCfgByKey(self.StoreRender2D.RawEquips[ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND].EquipID)
+	end
+
+	if PreviewEqtCfg.Part == ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND then
+		--预览的是主手武器时，处理副手武器要不要隐藏
+		--主手剑+副手盾可组合，副手武器不是盾，则要隐藏副手武器
+		if SlaveHandEquipData ~= nil then
+			if PreviewEqtCfg.EquipmentType ~= EquipmentType.ONE_HAND_SWORD or 
+			(PreviewEqtCfg.EquipmentType == EquipmentType.ONE_HAND_SWORD and SlaveHandEquipData.EquipmentType ~= EquipmentType.ONE_HAND_SHIELD) then
+				return false, true
+		end
+	end
+	elseif PreviewEqtCfg.Part == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND then
+		--预览的是副手武器，处理主手武器要不要隐藏
+		--主手剑+副手盾可组合，主手不是剑，则把主手武器隐藏掉
+		if MasterHandEquipData ~= nil then
+			if PreviewEqtCfg.EquipmentType ~= EquipmentType.ONE_HAND_SHIELD or 
+			(PreviewEqtCfg.EquipmentType == EquipmentType.ONE_HAND_SHIELD and MasterHandEquipData.EquipmentType ~= EquipmentType.ONE_HAND_SWORD) then
+				return true, false
+			end
+		end
+	end
+	return false, false
+end
+
 function PreviewRoleAppearanceView:UpdateWeaponHideState()
 	local bHideMasterHand = self:IsHideMasterHand()
 	local bHideSlaveHand = self:IsHideSlaveHand()
 	self.CommRender2D:HideMasterHand(bHideMasterHand)
 	self.CommRender2D:HideSlaveHand(bHideSlaveHand)
 
-	self.CommRender2D:HideAttachMasterHand(self:IsHideAttachMasterHand())
-	self.CommRender2D:HideAttachSlaveHand(self:IsHideAttachSlaveHand())
+	local PreviewEqtCfg = nil
+	if self.PreviewEquipementData ~= nil then
+		PreviewEqtCfg = EquipmentCfg:FindCfgByKey(self.PreviewEquipementData.EquipmentID)
+	end
+	--生产工具的主武器，默认隐藏主\副挂件
+	if PreviewEqtCfg and PreviewEqtCfg.ItemMainType == ItemMainType.ItemTool then
+		self.CommRender2D:HideAttachMasterHand(true)
+		self.CommRender2D:HideAttachSlaveHand(true)
+	-- else
+	-- 	self.CommRender2D:HideAttachMasterHand(self:IsHideAttachMasterHand())
+	-- 	self.CommRender2D:HideAttachSlaveHand(self:IsHideAttachSlaveHand())
+	end
 end
+
 ---------------------------------------------------武器显隐--------------------------------------------------------------------
 
 return PreviewRoleAppearanceView

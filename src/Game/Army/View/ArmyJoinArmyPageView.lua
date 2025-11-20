@@ -24,6 +24,8 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local GroupGlobalCfg = require("TableCfg/GroupGlobalCfg")
 local ArmyDefine = require("Game/Army/ArmyDefine")
 local GlobalCfgType = ArmyDefine.GlobalCfgType
+---region 分页
+local PageType = ArmyDefine.PageType
 
 ---@class ArmyJoinArmyPageView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -190,10 +192,6 @@ function ArmyJoinArmyPageView:OnShow()
 		self.SearchInput:SetText(tostring(ArmyMgr.QuerySimpleID))
 	end
 	ArmyMgr:SetSearchArmyListIsEnd(false)
-	local ItemData = ArmyJoinArmyPageVM:GetCurSelectedItemData()
-	if ItemData then
-		ArmyMainVM:SetBGIcon(ItemData.GrandCompanyType)
-	end
 	--- 需求变更，默认显示搜索
 	UIUtil.SetIsVisible(self.SingleBoxShowFull, true, true)
 	UIUtil.SetIsVisible(self.SearchInput, true)
@@ -311,6 +309,8 @@ function ArmyJoinArmyPageView:OnToggleStateChanged(ToggleButton, State)
 		ArmyJoinArmyPageVM:SetIsSearchFullList(UIUtil.IsToggleButtonChecked(State))
 	else
 		ArmyMgr:ClearLastSearchArmyInput()
+		ArmyMgr:ResetPageData(PageType.AllArmy)
+		ArmyMgr:ClearSearchArmyTab() --- 清理缓存，缓存会干扰拉取判断,导致切换后不拉取
 		if UIUtil.IsToggleButtonChecked(State) then
 			ArmyMgr:SendArmySearchMsg(ArmyMgr:GetPageDataByType(1), true)
 			ArmyJoinArmyPageVM:SetIsFull(true)

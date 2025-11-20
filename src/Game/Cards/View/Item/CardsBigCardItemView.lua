@@ -165,6 +165,10 @@ function CardsBigCardItemView:OnInit()
             "Active",
             UIBinderSetIsVisible.New(self, self)
         },
+        {
+            "CardNumHighLightDir",
+            UIBinderValueChangedCallback.New(self, nil, self.OnCardNumHighLightDirChanged)
+        },
     }
     self.Binders = Binders
     
@@ -543,7 +547,7 @@ function CardsBigCardItemView:OnRegisterUIEvent()
 end
 
 function CardsBigCardItemView:OnRegisterGameEvent()
-    
+    self:RegisterGameEvent(_G.EventID.PlayMagicCardTutorial, self.OnPlayMagicCardTutorial)
 end
 
 function CardsBigCardItemView:OnRegisterBinder()
@@ -694,6 +698,32 @@ end
 
 function CardsBigCardItemView:PlayEffectForSpecialRule()
     self:PlayAnimation(self.AnimExpandLight)
+end
+
+function CardsBigCardItemView:OnCardNumHighLightDirChanged(Direct)
+    if Direct > 0 then
+        self.CardsNumber:ShowHightlightNumberText(Direct)
+    else
+        self.CardsNumber:HideHightlightNumberText()
+    end
+end
+
+function CardsBigCardItemView:OnPlayMagicCardTutorial(TutorialID, Round)
+    if Round == nil then
+        return
+    end
+
+    local ItemData = self.ViewModel
+    if not ItemData then
+        return
+    end
+    local CurCardID = ItemData.CardId
+    if TutorialID == LocalDef.TutorialID_PlayerTurn then
+        local MoveData = LocalDef.TutorialMoveDatas[Round]
+        if MoveData and MoveData.Card and MoveData.Card.CardID ~= CurCardID then
+            self:SetVisible(true, false)
+        end
+    end
 end
 
 return CardsBigCardItemView

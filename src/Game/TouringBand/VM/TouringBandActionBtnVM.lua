@@ -50,6 +50,7 @@ function TouringBandActionBtnVM:UpdateBandID(ID)
 end
 
 function TouringBandActionBtnVM:UpdateBandNum(Num)
+    Num = Num or 0
     local Max = _G.TouringBandMgr:GetCheeringMaxNum()
     self.CurActionNum = Num
     local Index = math.min(Num, #ProgressPoint)

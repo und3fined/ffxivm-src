@@ -103,6 +103,8 @@ function ArmyInvitePanelView:OnShow()
 			self.InviteSignSideWinVM:SetTabVMByTabValues(MenusData)
 			local ItemType = Params.ItemType or InviteItemType.ArmySignInvite
 			self.InviteSignSideWinVM:SetItemType(ItemType)
+			---清理数据查询阻塞状态，重新显示就重新查询
+			self.InviteSignSideWinVM:SetIsQuering(false)
 			---设置默认选中第一个
 			self.MenuAdapterTable:SetSelectedIndex(1)
 		end
@@ -139,6 +141,8 @@ end
 
 function ArmyInvitePanelView:OnClickedButtonRefresh()
 	local Index = self.MenuAdapterTable:GetSelectedIndex()
+	---按策划需求退出时关闭搜索
+	self:OnClickCancelSearchBar()
 	self.InviteSignSideWinVM:RefreshInviteMemberDataByMenuIndex(Index)
 end
 

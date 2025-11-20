@@ -39,6 +39,7 @@ local ShopkeeperRestTime = 60 -- 待机状态休闲动作时间间隔
 ---@field BtnGiftEntry1 UFButton
 ---@field BtnHelp CommInforBtnView
 ---@field ButtonClose CommonCloseBtnView
+---@field CommonTitleNew CommonTitleView
 ---@field CrystalSlot CommMoneySlotView
 ---@field DebugPoint UFButton
 ---@field FCanvasPanel UFCanvasPanel
@@ -51,6 +52,7 @@ local ShopkeeperRestTime = 60 -- 待机状态休闲动作时间间隔
 ---@field PanelRechargeGift UFCanvasPanel
 ---@field PanelRechargeGift1 UFCanvasPanel
 ---@field PanelTataru UFCanvasPanel
+---@field PanelTitleIcon UFCanvasPanel
 ---@field RichTextMessage URichTextBox
 ---@field TableViewList UTableView
 ---@field TextGiftEntry UFTextBlock
@@ -75,6 +77,7 @@ function RechargingMainPanelView:Ctor()
 	--self.BtnGiftEntry1 = nil
 	--self.BtnHelp = nil
 	--self.ButtonClose = nil
+	--self.CommonTitleNew = nil
 	--self.CrystalSlot = nil
 	--self.DebugPoint = nil
 	--self.FCanvasPanel = nil
@@ -87,6 +90,7 @@ function RechargingMainPanelView:Ctor()
 	--self.PanelRechargeGift = nil
 	--self.PanelRechargeGift1 = nil
 	--self.PanelTataru = nil
+	--self.PanelTitleIcon = nil
 	--self.RichTextMessage = nil
 	--self.TableViewList = nil
 	--self.TextGiftEntry = nil
@@ -108,6 +112,7 @@ function RechargingMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnHelp)
 	self:AddSubView(self.ButtonClose)
+	self:AddSubView(self.CommonTitleNew)
 	self:AddSubView(self.CrystalSlot)
 	self:AddSubView(self.ModelToImage)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -131,8 +136,8 @@ function RechargingMainPanelView:OnInit()
 		{ "bShowRewardPage", UIBinderValueChangedCallback.New(self, nil, self.OnShowRewardPageChanged) },
 		{ "RewardTips", UIBinderSetText.New(self, self.RichTextMessage) },
 		{ "RechargedStall", UIBinderValueChangedCallback.New(self, nil, self.OnStallRecharged) },
-		{ "TextTitle", UIBinderSetText.New(self, self.TextTitle) },
-		{ "TextSubtitle", UIBinderSetText.New(self, self.TextSubtitle) },
+		--{ "TextTitle", UIBinderSetText.New(self, self.TextTitle) },
+		--{ "TextSubtitle", UIBinderSetText.New(self, self.TextSubtitle) },
 		{ "TextGiftEntry", UIBinderSetText.New(self, self.TextGiftEntry) },
 		{ "TextGiftEntry", UIBinderSetText.New(self, self.TextGiftEntry1) },
 	}
@@ -143,6 +148,11 @@ function RechargingMainPanelView:OnDestroy()
 end
 
 function RechargingMainPanelView:OnShow()
+	UIUtil.SetIsVisible(self.PanelTitleIcon, false)
+	UIUtil.SetIsVisible(self.HorizontalTitle, false)
+	self.CommonTitleNew:SetTextTitleName(_G.LSTR(940017))
+	self.CommonTitleNew:SetTextSubtitle(_G.LSTR(940018))
+	UIUtil.SetIsVisible(self.CommonTitleNew, true)
 	if not _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_REBATE, true) then
 		UIUtil.SetIsVisible(self.FCanvasPanel, false)
 		_G.FLOG_ERROR("Recharging system is not opened yet.")
@@ -154,7 +164,7 @@ function RechargingMainPanelView:OnShow()
 	-- 是否显示帮助
 	if not self.HasHelp then
 		-- UIUtil.SetIsVisible(self.BorderHelpTips, false, false, false)
-		UIUtil.SetIsVisible(self.BtnHelp, false, false, false)
+		UIUtil.SetIsVisible(self.CommonTitleNew.CommInforBtn, false, false, false)
 	end
 
 	-- 是否显示看板娘
@@ -212,7 +222,8 @@ function RechargingMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnGiftEntry1, self.OnGiftEntryClicked)
 	UIUtil.AddOnClickedEvent(self, self.BtnConsult, self.OnServiceClicked)
 	if self.HasHelp then
-		UIUtil.AddOnClickedEvent(self, self.BtnHelp.BtnInfor, self.OnHelpClicked)
+		--UIUtil.AddOnClickedEvent(self, self.CommonTitleNew.CommInforBtn.BtnInfor, self.OnHelpClicked)
+		self.CommonTitleNew.CommInforBtn:SetCallback(self, self.OnHelpClicked)
 	end
 	self.ButtonClose:SetCallback(self, self.OnCloseClicked)
 end

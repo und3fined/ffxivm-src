@@ -199,7 +199,10 @@ function CommonRender2DToImageView:SetRenderToImageMode(IsShowImage)
 			CaptureComp2D.TextureTarget = self.RenderTexture
 			CaptureComp2D.bCaptureEveryFrame = true
 
-			self.RawRTGamma =  self.RenderTexture.TargetGamma
+			local RT = self.RenderTexture 
+			if RT and RT:IsValid() then
+				self.RawRTGamma = RT.TargetGamma
+			end 
 
 			CaptureComp2D:SetVisibility(true)
             CaptureComp2D:ClearShowOnlyComponents()
@@ -1034,6 +1037,37 @@ function CommonRender2DToImageView:SetBlockActionLookAtModeNotice(bIgnore)
 	if Character then
 		Character:SetIgnoreLookAtMode(bIgnore == true)
 	end
+end
+
+--- 开启自阴影效果
+function CommonRender2DToImageView:OpenSelfShadowing()
+	local CaptureComp2D = self.Common_Render2D_UIBP.RenderActor.SceneCaptureComponent2D
+	if nil == CaptureComp2D then
+		return
+	end
+
+	CaptureComp2D.ShowFlagSettings:Clear()
+
+	local FlagsSetting = _G.UE.FEngineShowFlagsSetting()
+	FlagsSetting.Enabled = true
+
+	FlagsSetting.ShowFlagName = "Bloom"
+	CaptureComp2D.ShowFlagSettings:Add(FlagsSetting)
+
+	FlagsSetting.ShowFlagName = "DynamicShadows"
+	CaptureComp2D.ShowFlagSettings:Add(FlagsSetting)
+
+	FlagsSetting.ShowFlagName = "EyeAdaptation"
+	CaptureComp2D.ShowFlagSettings:Add(FlagsSetting)
+
+	FlagsSetting.ShowFlagName = "Tonemapper"
+	CaptureComp2D.ShowFlagSettings:Add(FlagsSetting)
+
+	CaptureComp2D:UpdateShowFlags()
+end
+
+function CommonRender2DToImageView:EnableViewDistPostProcess(bOn)
+	self.Common_Render2D_UIBP:EnableViewDistPostProcess(bOn)
 end
 
 return CommonRender2DToImageView

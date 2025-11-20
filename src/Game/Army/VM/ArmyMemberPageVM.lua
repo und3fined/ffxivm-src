@@ -229,6 +229,8 @@ function ArmyMemberPageVM:SetPageIndex(Index)
     end
     self.bApplyPanel = self.PageIndex == ArmyMemberPageType.ApplyJoinPage
     if self.bApplyPanel then
+        ---页签切换时刷新页面，重置为第一页数据
+        ArmyMgr:ResetPageData(ArmyDefine.PageType.JoinApply)
         ArmyMgr:SendGetArmyQueryApplyListMsg()
         self.SelectedClassItemIndex = nil
         self.CategoryIndex = nil
@@ -298,11 +300,18 @@ function ArmyMemberPageVM:SelectedCategoryPermissionsInfo(Index, ItemData)
         --self:UpdateInfoDec(ItemData.PermisstionTypes)
         self:SetPermissionsPageIndex(self.PermissionsPageIndex)
         self.IsIntern = false
+        local IsShowHousePermisstionList = ArmyMgr:GetArmyPerermissionData(ArmyDefine.ArmyUpLevelPerermissionType.ArmyHouseLevel)
         local PermissionsItemDatas = {}
         for _, PermissionsClass in pairs(GroupPermissionClass) do
             if PermissionsClass ~= 0 then
-                local PermissionsItemData = self:CreatePermissionsItemData(PermissionsClass, ItemData.PermisstionTypes)
-                table.insert(PermissionsItemDatas, PermissionsItemData)
+                local IsShow = true
+                if PermissionsClass == GroupPermissionClass.GRAND_PERMISSION_CLASS_House or PermissionsClass == GroupPermissionClass.GRAND_PERMISSION_CLASS_HouseMaintenance then
+                    IsShow = IsShowHousePermisstionList
+                end
+                if IsShow then
+                    local PermissionsItemData = self:CreatePermissionsItemData(PermissionsClass, ItemData.PermisstionTypes)
+                    table.insert(PermissionsItemDatas, PermissionsItemData)
+                end
             end
         end
         table.sort(PermissionsItemDatas, function(A, B) 
@@ -516,6 +525,10 @@ end
 
 function ArmyMemberPageVM:UpdateMemberCategoryTreeList()
     local Categories = ArmyMgr:GetArmyCategories()
+    if Categories == nil then
+        _G.FLOG_WARNING("ArmyMemberPageVM:UpdateMemberCategoryTreeList Categories is nil")
+        return
+    end
     --self.ArmyMemEditSortPageVM:UpdateCategoryList(Categories)
     ---分组编辑界面打开时再更新数据
     --self.ArmyMemEditPowerPageVM:UpdateCategoryList(Categories)
@@ -579,12 +592,14 @@ function ArmyMemberPageVM:UpdatePermissionsState()
     self.bKickMember = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_KickMember)
     self.PermissionsEditIsEnable = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_SetMemberCategory)
     self.MemberEditIsEnable = self.PermissionsEditIsEnable
-    self.CategoryEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+    self.CategoryEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory) or ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_SetMemberCategory)
+    local IsHaveInvitePermissions = ArmyMgr:GetSelfIsHavePermisstion(ProtoRes.GroupPermissionType.GROUP_PERMISSION_TYPE_SendInvite)
+    self.IsShowInviteBtn = IsHaveInvitePermissions
 end
 
 --- 更新分组相关权限数据
 function ArmyMemberPageVM:UpdateCategoryPermissionsState()
-    self.CategoryEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+    self.CategoryEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory) or ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_SetMemberCategory)
 end
 
 --- 更新申请相关权限数据
@@ -617,7 +632,11 @@ function ArmyMemberPageVM:UpdateMemberList()
         return 
     end
     -- 由于其他管理移除或添加成员，导致成员列表发生变化，需要重新刷新（或者判断不同，移除不存在的Item）
-    self.MemberList:Clear()
+    if self.MemberList then
+        self.MemberList:Clear()
+    else
+        self.MemberList = UIBindableList.New(ArmyMemListItemVM)
+    end
     bLoadingRoleInfo = true
     ---计时2s后清理，防止bLoadingRoleInfo阻碍逻辑
     if self.LoadingRoleInfoTimer then
@@ -667,6 +686,9 @@ function ArmyMemberPageVM:AddMemberItem(RoleData)
 end
 
 function ArmyMemberPageVM:AddMemVMByMemberData(RoleID, RoleVM)
+    if self.MemberList == nil then
+        self.MemberList = UIBindableList.New(ArmyMemListItemVM)
+    end
     local MemberVM = self.MemberList:Find(function(Element)
         return Element.RoleID == RoleID
     end)
@@ -681,6 +703,9 @@ function ArmyMemberPageVM:AddMemVMByMemberData(RoleID, RoleVM)
 end
 
 function ArmyMemberPageVM:AddMemVMByMemberDatas(RoleIDs)
+    if self.MemberList == nil then
+        self.MemberList = UIBindableList.New(ArmyMemListItemVM)
+    end
     for _, RoleID in ipairs(RoleIDs) do
         local Role = RoleInfoMgr:FindRoleVM(RoleID, true)
         -- 特殊处理，屏蔽掉无效玩家
@@ -755,7 +780,7 @@ end
 
 function ArmyMemberPageVM:RemoveMemberItem(RoleID)
     local MemberVM = self:FindMemberItem(RoleID)
-    if MemberVM ~= nil then
+    if MemberVM ~= nil and self.MemberList then
         self.MemberList:Remove(MemberVM)
         self.TotalMemNum = self.TotalMemNum - 1
         if MemberVM.bOnline then
@@ -768,9 +793,12 @@ function ArmyMemberPageVM:RemoveMemberItem(RoleID)
 end
 
 function ArmyMemberPageVM:FindMemberItem(RoleID)
-    local MemberVM = self.MemberList:Find(function(Element)
-        return Element.RoleID == RoleID
-    end)
+    local MemberVM 
+    if self.MemberList then
+        MemberVM = self.MemberList:Find(function(Element)
+            return Element.RoleID == RoleID
+        end)
+    end
     return MemberVM
 end
 
@@ -801,12 +829,14 @@ end
 ---@param RoleIDs Array @成员ID
 ---@param TClassID number @目标分组ID
 function ArmyMemberPageVM:EditMemClassNameByRoleIDs(RoleIDs, TClassID)
-    for _, RoleID in ipairs(RoleIDs) do
-        local MemberVM = self.MemberList:Find(function(Element)
-            return Element.RoleID == RoleID
-        end)
-        if MemberVM ~= nil then
-            MemberVM:UpdateCategoryID(TClassID)
+    if self.MemberList then
+        for _, RoleID in ipairs(RoleIDs) do
+            local MemberVM = self.MemberList:Find(function(Element)
+                return Element.RoleID == RoleID
+            end)
+            if MemberVM ~= nil then
+                MemberVM:UpdateCategoryID(TClassID)
+            end
         end
     end
 end
@@ -815,29 +845,33 @@ end
 ---@param CategoryID number @分组ID
 ---@param Name string @修改后名称
 function ArmyMemberPageVM:UpdateMemberCategoryName(CategoryID, Name)
-    local Result = self.MemberList:FindAll(function(Element)
-        return Element.CategoryID == CategoryID
-    end)
-    for _, MemberVM in pairs(Result) do
-        MemberVM.CategoryName = Name
+    if self.MemberList then
+        local Result = self.MemberList:FindAll(function(Element)
+            return Element.CategoryID == CategoryID
+        end)
+        for _, MemberVM in pairs(Result) do
+            MemberVM.CategoryName = Name
+        end
+        local MemberCategoryVM = self.CategoryList:Find(function(Element)
+            return Element.ID == CategoryID
+        end)
+        if MemberCategoryVM then
+            MemberCategoryVM.Name = Name
+        end
+        self:UpdateCateGoryName(CategoryID, Name)
     end
-    local MemberCategoryVM = self.CategoryList:Find(function(Element)
-        return Element.ID == CategoryID
-    end)
-    if MemberCategoryVM then
-        MemberCategoryVM.Name = Name
-    end
-    self:UpdateCateGoryName(CategoryID, Name)
-
     --self.ArmyMemEditSortPageVM:UpdateCategoryName(CategoryID, Name)
 end
 
 --- 调整成员分组
 function ArmyMemberPageVM:UpdateMemberCategory(RoleID, CategoryID)
     local CategoryList = self.CategoryList
-    local MemberVM = self.MemberList:Find(function(Element)
-        return Element.RoleID == RoleID
-    end)
+    local MemberVM
+    if self.MemberList then
+        MemberVM = self.MemberList:Find(function(Element)
+            return Element.RoleID == RoleID
+        end)
+    end
     if nil == MemberVM then
         return
     end
@@ -898,9 +932,12 @@ function ArmyMemberPageVM:UpdateCategoryIcon(CategoryData)
     local CategoryIconID = CategoryData.IconID
     -- 更新分组成员列表Icon
     --self.ArmyMemEditPartPageVM:UpdateClassIconByID(CategoryID, CategoryIconID)
-    local MemberVMs = self.MemberList:FindAll(function(Element)
-        return Element.CategoryID == CategoryID
-    end)
+    local MemberVMs
+    if self.MemberList then
+        MemberVMs = self.MemberList:FindAll(function(Element)
+            return Element.CategoryID == CategoryID
+        end)
+    end
     for _, VM in ipairs(MemberVMs or {}) do
         VM:UpdateCategoryID(CategoryID)
     end
@@ -975,6 +1012,13 @@ end
 
 --- 添加入队申请记录
 function ArmyMemberPageVM:AddApplyRoleJoinItem(Role)
+    ---重复校验
+    local Items = self.JoinApplyList:GetItems()
+    for _, Item in ipairs(Items) do
+       if Role.RoleID == Item.RoleID then
+            return
+       end
+    end
     RoleInfoMgr:QueryRoleSimple(
         Role.RoleID,
         function(_, RoleVM)
@@ -1057,6 +1101,7 @@ function ArmyMemberPageVM:AcceptRoleJoinForRoleData(RoleData)
     --self.ArmyMemEditPartPageVM:UpdateCategoryList(self.MyArmyInfo.Categories)
     --- 判断是否有同意申请权限
     self:RemoveApplyRoleJoinItem(RoleData.Simple.RoleID)
+    self:CheckApplyRoleNum()
 end
 
 --- 拒绝入队申请处理
@@ -1064,6 +1109,7 @@ function ArmyMemberPageVM:RefuseRoleJoinForRoleIds(RoleIds)
     for _, RoleID in ipairs(RoleIds) do
         self:RemoveApplyRoleJoinItem(RoleID)
     end
+    self:CheckApplyRoleNum()
 end
 
 --- 修改分组权限
@@ -1137,23 +1183,23 @@ end
 --- 转移部队长
 function ArmyMemberPageVM:RefreshTransferLeaderData(NewLeaderData, OldLeaderData)
     local MemberList = self.MemberList
-    local NewLeaderMemberVM = MemberList:Find(function(Element)
-        return Element.RoleID == NewLeaderData.RoleID
-    end)
-    if NewLeaderMemberVM then
-        NewLeaderMemberVM:UpdateCategoryID(NewLeaderData.CategotyID)
+    if NewLeaderData and MemberList then
+        local NewLeaderMemberVM = MemberList:Find(function(Element)
+            return Element.RoleID == NewLeaderData.Simple.RoleID
+        end)
+        if NewLeaderMemberVM then
+            NewLeaderMemberVM:UpdateCategoryID(NewLeaderData.Simple.CategoryID)
+        end
     end
     if OldLeaderData then
         local OldLeaderMemberVM = MemberList:Find(function(Element)
-            return Element.RoleID == OldLeaderData.RoleID
+            return Element.RoleID == OldLeaderData.Simple.RoleID
         end)
         if OldLeaderMemberVM then
-            OldLeaderMemberVM:UpdateCategoryID(OldLeaderData.CategotyID)
+            OldLeaderMemberVM:UpdateCategoryID(OldLeaderData.Simple.CategoryID)
         end
     end
     self:UpdateSetIsLeader(NewLeaderData.RoleID == MajorUtil.GetMajorRoleID())
-
-
     self:UpdateSelfData()
 end
 
@@ -1178,7 +1224,9 @@ function ArmyMemberPageVM:MembersCategorySort()
     --     end
     -- end
     local SortFunc = self:GetSortFunc(self.bSortMode)
-    self.MemberList:Sort(SortFunc)
+    if self.MemberList then
+        self.MemberList:Sort(SortFunc)
+    end
     if self.IsPriorityHighCategory then
         -- LSTR string:已切换分组高到低排序
         MsgTipsUtil.ShowTips(LSTR(910104))
@@ -1208,7 +1256,9 @@ function ArmyMemberPageVM:MembersLevelSort()
     --     end
     -- end
     local SortFunc = self:GetSortFunc(self.bSortMode)
-    self.MemberList:Sort(SortFunc)
+    if self.MemberList then
+        self.MemberList:Sort(SortFunc)
+    end
     if self.IsPriorityHighLevel then
         -- LSTR string:已切换等级高到低排序
         MsgTipsUtil.ShowTips(LSTR(910106))
@@ -1267,9 +1317,12 @@ function ArmyMemberPageVM:UpdataMemberListByViewSwitch(Members)
     self.Members = Members
     for _, Member in ipairs(Members) do
         local RoleID = Member.Simple.RoleID
-        local MemberVM = self.MemberList:Find(function(Element)
-            return Element.RoleID == RoleID
-        end)
+        local MemberVM
+        if self.MemberList then
+            MemberVM = self.MemberList:Find(function(Element)
+                return Element.RoleID == RoleID
+            end)
+        end
         if MemberVM and MemberVM:GetCategoryID() ~= Member.CategoryID then
             MemberVM:UpdateCategoryID()
         end
@@ -1287,15 +1340,20 @@ function ArmyMemberPageVM:GetSortFunc(CurSortMode, IsHighToLow)
         end
         SortFunc = function(A, B)
             if A.bOnline == B.bOnline then
-                if A.JobName == B.JobName then
-                    return A.CategoryShowIndex < B.CategoryShowIndex
-                else
-                    if bNegation then
-                        return A.JobName > B.JobName
+                if A.JobName and B.JobName then
+                    if A.JobName == B.JobName then
+                        return A.CategoryShowIndex < B.CategoryShowIndex
                     else
-                        return A.JobName < B.JobName
+                        if bNegation then
+                            return A.JobName > B.JobName
+                        else
+                            return A.JobName < B.JobName
+                        end
                     end
+                else
+                    return A.JobName
                 end
+                
             else
                 return A.bOnline
             end
@@ -1307,7 +1365,11 @@ function ArmyMemberPageVM:GetSortFunc(CurSortMode, IsHighToLow)
         SortFunc = function(A, B)
             if A.bOnline == B.bOnline then
                 if A.CategoryShowIndex == B.CategoryShowIndex then
-                    return A.JobName > B.JobName
+                    if A.JobName and B.JobName then
+                        return A.JobName > B.JobName
+                    else
+                        return A.JobName
+                    end
                 else
                     if bNegation then
                         return A.CategoryShowIndex < B.CategoryShowIndex
@@ -1339,6 +1401,18 @@ end
 function ArmyMemberPageVM:SetGroupBtnText(TextStr)
     _G.FLOG_INFO("[ArmyMemberPageVM:SetGroupBtnText] %s", TextStr)
     self.GroupBtnText = TextStr or ""
+end
+
+--- 校验数量，如果同意/删除后，数量小于对应值，就重新请求数据
+function ArmyMemberPageVM:CheckApplyRoleNum()
+    if self.JoinApplyList then
+        local Items = self.JoinApplyList:GetItems()
+        if #Items < ArmyDefine.MiniApplyNum then
+            ---红点刷新需要从零位开始拉取，防止拉到空数据
+            ArmyMgr:ResetPageData(ArmyDefine.PageType.JoinApply)
+            ArmyMgr:SendGetArmyQueryApplyListMsg()
+        end
+    end
 end
 
 return ArmyMemberPageVM

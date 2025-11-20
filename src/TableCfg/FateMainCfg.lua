@@ -5,7 +5,7 @@ local CfgBase = require("TableCfg/CfgBase")
 ---@class FateMainCfg : CfgBase
 local FateMainCfg = {
 	TableName = "c_fate_main_cfg",
-    LruKeyType = nil,
+    LruKeyType = "integer",
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {

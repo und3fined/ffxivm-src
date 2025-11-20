@@ -64,7 +64,7 @@ function CraftingLogShopWinVM:SetCostNum()
     local Items = self.ShoppingList:GetItems()
     for _, value in pairs(Items) do
         CostNum = CostNum + value.CostNum
-        GoodsBuyNum = GoodsBuyNum + 1
+        GoodsBuyNum = GoodsBuyNum + (value.BuyNum >= 1 and 1 or 0)
     end
     self.CostNum = CostNum
     self.GoodsBuyNum = GoodsBuyNum

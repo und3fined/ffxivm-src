@@ -10,6 +10,8 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local EventID = require("Define/EventID")
+local UIUtil = require("Utils/UIUtil")
+
 
 
 
@@ -64,6 +66,7 @@ function MusicAtlasMainItemView:OnInit()
 		{ "GreySlect", UIBinderSetIsVisible.New(self, self.ImgGreySlect) },
 		{ "NormalSelect", UIBinderSetIsVisible.New(self, self.ImgNormalSelect) },
 		{ "GreySlect2", UIBinderSetIsVisible.New(self, self.ImgGreySlect2) },
+		{ "ImgNormalVisible", UIBinderSetIsVisible.New(self, self.ImgNormal) },
 		{ "NormalSelect2", UIBinderSetIsVisible.New(self, self.ImgNormalSelect2) },
 		{ "ImgGreyType", UIBinderSetBrushFromAssetPath.New(self, self.ImgGrey) },
 		{ "ImgGreySeleceType", UIBinderSetBrushFromAssetPath.New(self, self.ImgGreySlect) },
@@ -83,8 +86,11 @@ function MusicAtlasMainItemView:OnShow()
 	--红点
 	self.MusicID = self.ViewModel.MusicID
 	if table.contain(_G.MusicPlayerMgr.RedDotList, self.MusicID) then
+		UIUtil.SetIsVisible(self.RedDot, true)
 		self.RedDotName = _G.MusicPlayerMgr.RedDotName.. "/".. self.MusicID
 		self.RedDot:SetRedDotNameByString(self.RedDotName)
+	else
+		UIUtil.SetIsVisible(self.RedDot, false)
 	end
 end
 

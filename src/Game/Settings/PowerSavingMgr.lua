@@ -16,6 +16,8 @@ local PowerSavingState_MaxFPS = 15              --帧率调
 local PowerSavingState_ScreenPercentage = 10    --场景分辨率
 local PowerSavingState_Brightness = 0.05         --屏幕亮度
 
+local IE_Pressed = _G.UE.EInputEvent.IE_Pressed
+
 local PowerSavingMgr = LuaClass(MgrBase)
 
 function PowerSavingMgr:OnInit()
@@ -66,6 +68,7 @@ function PowerSavingMgr:SetEnable(EnterTime)
         self.LastInputTime = _G.TimeUtil.GetServerTime()
         self:RegisterGameEvent(EventID.PreprocessedMouseButtonDown, self.OnPreprocessedMouseButtonDown)
         self:RegisterGameEvent(EventID.PreprocessedMouseButtonUp, self.OnPreprocessedMouseButtonUp)
+        --self:RegisterGameEvent(EventID.GamePadKeyPressedOrReleased, self.OnGamePadKeyPressedOrReleased)
         self:RegisterGameEvent(EventID.EndPlaySequence, self.OnEndPlaySequence)
         -- self:RegisterGameEvent(EventID.PreprocessedMouseMove, self.OnPreprocessedMouseMove)
         self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
@@ -81,6 +84,7 @@ function PowerSavingMgr:SetEnable(EnterTime)
         self.LastInputTime = 0
         self:UnRegisterGameEvent(EventID.PreprocessedMouseButtonDown, self.OnPreprocessedMouseButtonDown)
         self:UnRegisterGameEvent(EventID.PreprocessedMouseButtonUp, self.OnPreprocessedMouseButtonUp)
+       -- self:UnRegisterGameEvent(EventID.GamePadKeyPressedOrReleased, self.OnGamePadKeyPressedOrReleased)
         self:UnRegisterGameEvent(EventID.EndPlaySequence, self.OnEndPlaySequence)
         -- self:UnRegisterGameEvent(EventID.PreprocessedMouseMove, self.OnPreprocessedMouseMove)
         self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
@@ -226,6 +230,11 @@ function PowerSavingMgr:OnGameEventAppEnterForeground()
     FLOG_INFO("PowerSavingMgr:OnGameEventAppEnterForeground")
     self.LastInputTime = _G.TimeUtil.GetServerTime()
     self.IsPreMouseDown = false
+end
+
+function PowerSavingMgr:OnGamePadKeyPressedOrReleased(Param)
+    self.LastInputTime = _G.TimeUtil.GetServerTime()
+    self.IsPreMouseDown = IE_Pressed == Param
 end
 
 function PowerSavingMgr:OnGameEventLoginRes(Param)

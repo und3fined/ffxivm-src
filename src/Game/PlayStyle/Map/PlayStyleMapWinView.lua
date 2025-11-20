@@ -33,7 +33,7 @@ local DelayHideTimeByAutoMove = 2 -- 暂定的由于自动寻路功能延时关�
 ---@field BtnClose UFButton
 ---@field ImgFrame UImage
 ---@field ImgFrameBG UImage
----@field ScaleBox_0 UScaleBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TextContent URichTextBox
 ---@field TextContent_1 URichTextBox
 ---@field mapContent AetherCurrentMapPanelView
@@ -47,7 +47,7 @@ function PlayStyleMapWinView:Ctor()
 	--self.BtnClose = nil
 	--self.ImgFrame = nil
 	--self.ImgFrameBG = nil
-	--self.ScaleBox_0 = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextContent = nil
 	--self.TextContent_1 = nil
 	--self.mapContent = nil
@@ -58,6 +58,7 @@ end
 
 function PlayStyleMapWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.SkillHandleCloseBtn)
 	self:AddSubView(self.mapContent)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end

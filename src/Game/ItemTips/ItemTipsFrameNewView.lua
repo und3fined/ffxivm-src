@@ -215,11 +215,13 @@ function ItemTipsFrameNewView:OnShow()
 	self.HideCallback = Params.HideCallback
 	self.OnClickedToGetBtnCallback = Params.OnClickedToGetBtnCallback
 	local ItemView = Params.ItemView
-	if nil ~= ItemView then
-		ItemTipsUtil.AdjustTipsPosition(self.PanelTips, ItemView, Params.Offset, Params.CustomBottomMargin)
-	else
-		if nil ~= Params.Offset then
-			ItemTipsUtil.AdjustTipsPositionByPos(self.PanelTips, Params.Offset, Params.CustomBottomMargin)
+	if self.ViewID == UIViewID.ItemTips then
+		if nil ~= ItemView then
+			ItemTipsUtil.AdjustTipsPosition(self.PanelTips, ItemView, Params.Offset, Params.CustomBottomMargin)
+		else
+			if nil ~= Params.Offset then
+				ItemTipsUtil.AdjustTipsPositionByPos(self.PanelTips, Params.Offset, Params.CustomBottomMargin)
+			end
 		end
 	end
 

@@ -18,6 +18,8 @@ function PersonPortraitHeadEditVM:Ctor( )
 end
 
 function PersonPortraitHeadEditVM:Reset()
+    self.MoveResetBtnVisible = false
+
     self.bIsShowWeapon = true
     self.bIsHoldWeapon = false
     self.bIsShowHead = false
@@ -130,6 +132,9 @@ end
 
 ---@param Value table @服务器保存的模型编辑数据
 function PersonPortraitHeadEditVM:UpdateVM(Value)
+    --只在重进界面和重置后隐藏重置位置按钮，刷新数据的时候不隐藏，删除头像会刷新数据，但不会重置位置
+    --self.MoveResetBtnVisible = false
+
     self.IsFace      = Value.IsFace or PersonPortraitHeadUtil.GetDefaultIsFace() 
     self.IsLook      = Value.IsLook or PersonPortraitHeadUtil.GetDefaultIsLook() 
     self.Distance    = Value.Distance or PersonPortraitHeadUtil.GetDefaultDistance()
@@ -246,5 +251,10 @@ function PersonPortraitHeadEditVM:SetDirectLightDir(X, Y)
         self.DirectLightDir = {X, Y}
     end
 end
+
+function PersonPortraitHeadEditVM:SetMoveResetBtnVisible(b)
+    self.MoveResetBtnVisible = b 
+end
+
 
 return PersonPortraitHeadEditVM

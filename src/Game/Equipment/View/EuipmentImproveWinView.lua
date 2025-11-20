@@ -148,7 +148,7 @@ function EuipmentImproveWinView:UpdateView()
 	local NeedNum = Cfg and Cfg.Num or 1
 	local HasNum = _G.BagMgr:GetItemNum(tonumber(MaterialID))
 	local ColorStr = HasNum < NeedNum and "<span color=\"#d05758\">" or "<span color=\"#d5d5d5\">"
-	self.ItemVM2.Num = string.format("%s%d</>/%d", ColorStr, HasNum, Cfg.Num or 1)
+	self.ItemVM2.Num = string.format("%s%d</>/%d", ColorStr, HasNum, Cfg and Cfg.Num or 1)
 	self.ItemVM2.HideItemLevel = true
 	self.ItemVM2.NumVisible = true
 	self.Comm96Slot:SetParams({ Data = self.ItemVM2 })
@@ -236,7 +236,7 @@ end
 function EuipmentImproveWinView:OpenExchangeView()
 	local IsInVersion = EquipImproveMaterialCfg:CheckIsInVersion(self.MaterialID)
 	if IsInVersion then
-		_G.UIViewMgr:ShowView(_G.UIViewID.EquipmentExchangeWinView,{ItemID = self.MaterialID})
+		_G.UIViewMgr:ShowView(_G.UIViewID.EquipmentExchangeWinView,{ItemID = self.MaterialID, IgnoreGID = self.Params.GID})
 	else
 		_G.MsgTipsUtil.ShowTips(_G.LSTR(1050130))
 	end

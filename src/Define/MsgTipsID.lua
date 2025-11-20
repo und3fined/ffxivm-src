@@ -48,7 +48,8 @@ local MsgTipsID = {
 	PWorldMatchPoolTypePVPMutex = 146085,	-- PVE/陆行鸟匹配中，无法发起PVP匹配
 	PWorldPVPMatchOverflow = 146086,	-- PVP副本匹配上限
 	PWorldCrystallineInTeamBan = 338044,	-- 组队中不能匹配水晶冲突练习赛段位赛
-
+	PWorldPVPMatchRankMutex = 338047,	-- 水晶冲突段位赛和别的PVP匹配互斥
+	
 	GatherPerceptionNotEnough = 109122,	--鉴别力不足
 	GatheringNotEnough = 109123,		--获得力不足
 	GatherStoneNoSlaveTool = 109129,	--没有配置副手武器的提示
@@ -183,6 +184,7 @@ local MsgTipsID = {
 	FirstCraft = 305010,
 	CrafterCastCatalystFailed = 305100, --催化剂失败
 	CrafterCannotReEnter = 305129,	--不能重复禁止制作状态的提示
+	CallMounting = 153009,	--玩家已在乘骑状态
 
 	-- 锻铁匠
 	BlacksmithHotForgePhase = 305124,

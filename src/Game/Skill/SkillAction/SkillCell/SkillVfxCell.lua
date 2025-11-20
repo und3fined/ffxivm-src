@@ -22,7 +22,7 @@ local SkillSubCfg = require("TableCfg/SkillSubCfg")
 local ProtoCS = require("Protocol/ProtoCS")
 local BehitSplashCfg = require("TableCfg/BehitSplashCfg")
 local BehitRadialBlurCfg = require("TableCfg/BehitRadialBlurCfg")
-local SettingsUtils = require("Game/Settings/SettingsUtils")
+local SettingsTabPicture = require("Game/Settings/SettingsTabPicture")
 local MajorUtil = require("Utils/MajorUtil")
 
 local CS_ATTACK_EFFECT = ProtoCS.CS_ATTACK_EFFECT
@@ -165,7 +165,19 @@ local function DODamageAttackEffect(CellData, AttackData, SimpleSkillObject)
     end
 end
 
+local EActorType_Player <const> = UE.EActorType.Player
+local EActorType_Major  <const> = UE.EActorType.Major
 local EActorType_Monster  <const> = UE.EActorType.Monster
+local SetVfxTransform   <const> = USkillUtil.SetVfxTransform
+
+local GMMgr             <const> = _G.GMMgr
+local ClientVisionMgr   <const> = _G.ClientVisionMgr
+
+local PARTICLESYSTEMLODMETHOD_ActivateAutomatic <const> = ParticleSystemLODMethod.PARTICLESYSTEMLODMETHOD_ActivateAutomatic
+local PlaySourceType_SkillVfxCell               <const> = UE.EVFXPlaySourceType.PlaySourceType_SkillVfxCell
+
+local VfxParameter = FVfxParameter()
+
 function SkillVfxCell:StartCell()
     local CellData = self.CellData
     local SkillObject = self.SkillObject
@@ -189,31 +201,32 @@ function SkillVfxCell:StartCell()
     local LODLevel, bHighPriority = SkillActionUtil.GetLODLevel(OwnerEntityID)
 
     local ActorType = ActorUtil.GetActorType(OwnerEntityID)
-    if ActorType == _G.UE.EActorType.Player and SettingsUtils.SettingsTabPicture:GetOtherPlayerEffectSwitch() == 0 then
+    if ActorType == EActorType_Player and SettingsTabPicture:GetOtherPlayerEffectSwitch() == 0 then
         LODLevel = 2
-        if _G.GMMgr.PlayerEffWhiteListSwitch ~= true or not EffectUtil.InVfxEffectBlockeList(CurrentSubSkillID) then
+        if GMMgr.PlayerEffWhiteListSwitch ~= true or not EffectUtil.InVfxEffectBlockeList(CurrentSubSkillID) then
             return
         end
     end
 
 
-    local VfxParameter = FVfxParameter()
+    VfxParameter:Reset()
     local VfxRequireData = VfxParameter.VfxRequireData
     VfxRequireData.EffectPath = CellData.m_VfxClass
 
     if SkillObject.bJoyStick or CellData.bUseSelectPoint then
-        VfxRequireData.VfxTransform = FTransform(_G.UE.FRotator(0, SkillObject.Angle, 0):ToQuat(), SkillObject.Position)
+        -- VfxRequireData.VfxTransform = FTransform(_G.UE.FRotator(0, SkillObject.Angle, 0):ToQuat(), SkillObject.Position)
+        SetVfxTransform(VfxRequireData, SkillObject.Angle, SkillObject.Position)
     else
         VfxRequireData.VfxTransform = Me:FGetActorTransform()
     end
 
-    VfxParameter.PlaySourceType = _G.UE.EVFXPlaySourceType.PlaySourceType_SkillVfxCell
+    VfxParameter.PlaySourceType = PlaySourceType_SkillVfxCell
     
     local bInInMonsterWhitelist = false
     local ResID = ActorUtil.GetActorResID(OwnerEntityID)
-    bInInMonsterWhitelist = _G.ClientVisionMgr:GetIsInMonsterWhitelist(ResID) 
+    bInInMonsterWhitelist = ClientVisionMgr:GetIsInMonsterWhitelist(ResID) 
 
-    if  _G.GMMgr.VisionEffWhiteListSwitch == false then
+    if GMMgr.VisionEffWhiteListSwitch == false then
         bInInMonsterWhitelist = false
     end
 
@@ -226,13 +239,18 @@ function SkillVfxCell:StartCell()
     end
 
     if not VfxRequireData.bAlwaysSpawn then
-        local IsMajorRide = Me:GetActorType() == _G.UE.EActorType.Major and Me:GetRideComponent() ~= nil and Me:GetRideComponent():IsInRide() --主角坐骑技能特效强显
+        local IsMajorRide = false
+        if ActorType == EActorType_Major then
+            local RideComp = Me:GetRideComponent()
+            IsMajorRide = RideComp ~= nil and RideComp:IsInRide() --主角坐骑技能特效强显
+        end
         VfxRequireData.bAlwaysSpawn =VfxRequireData.bAlwaysSpawn or IsMajorRide
     end
     
     VfxRequireData.FixedPositionType = CellData.FixedPositionType or 0
-    VfxParameter.OffsetTransform = SkillActionUtil.ProtoTransform2FTransform(CellData.OffsetTransform)
-	VfxParameter.LODMethod = ParticleSystemLODMethod.PARTICLESYSTEMLODMETHOD_ActivateAutomatic
+    -- VfxParameter.OffsetTransform = SkillActionUtil.ProtoTransform2FTransform(CellData.OffsetTransform)
+    SkillActionUtil.CppProtoTransform2FTransform(VfxParameter.OffsetTransform, CellData.OffsetTransform)
+	VfxParameter.LODMethod = PARTICLESYSTEMLODMETHOD_ActivateAutomatic
 	VfxParameter.LODLevel = LODLevel
     VfxParameter.PlaybackRate = 1 / SkillObject.PlayRate
     VfxParameter:SetCaster(Me, CellData.CasterOverwriteEID, CellData.CasterSlot, 0)
@@ -259,7 +277,8 @@ function SkillVfxCell:StartCell()
 
         if bServerPos then
             local TargetVector = SkillActionUtil.ConvertServerVector(AttackData.SelectPos)
-            VfxRequireData.VfxTransform = FTransform(FQuat(), TargetVector)
+            -- VfxRequireData.VfxTransform = FTransform(FQuat(), TargetVector)
+            SetVfxTransform(VfxRequireData, 0, TargetVector)
         end
         for Index, EffectInfo in ipairs(AttackData.EffectList) do
             if bShowMainTarget and Index > 1 then
@@ -275,39 +294,20 @@ function SkillVfxCell:StartCell()
         Skip = TagrgetNum <= 0
     end
 
-	local Proxy = ULuaDelegateMgr:NewLevelLifeDelegateProxy()
-	local Ref = UnLuaRef(Proxy)
+    if not Skip then
+        local EffectID = EffectUtil.PlayVfx(VfxParameter)
+        self.EffectID = EffectID
+        SkillObject:RecordEffectID(EffectID)
+        SkillObject:AddEffectID(EffectID)
 
-    VfxParameter.VfxCommonEvent = {
-        Proxy,
-        function(_, bMajorOnly, Key)
+        EffectUtil.AddVfxCommonEvent(EffectID, function(bMajorOnly, Key)
             if (bMajorOnly and not ActorUtil.IsMajor(OwnerEntityID)) then
                 return
             end
             if Key == 1 then
                 DODamageAttackEffect(DamageCellData, AttackData, {CurrentSubSkillID = CurrentSubSkillID, OwnerEntityID = OwnerEntityID})
             end
-            --[[
-                VfxParameter的生命周期应当与回调函数相同
-                否则, 极小概率出现VfxParameter被回收, 原Delegate地址的内存被其他Delegate复用, 但此时回调函数仍然存活,  产生崩溃
-                这里显式地捕获它作为回调函数的上值, 保证VfxParameter的生命周期和回调函数的生命周期同步
-            ]]
-            VfxParameter = VfxParameter
-        end
-    }
-    -- VfxCommonEvent不一定会执行到, 绑定End事件确保DelegateProxy的销毁
-    VfxParameter.OnVfxEnd = {
-        Proxy,
-        function()
-            Ref = nil
-        end
-    }
-
-    if not Skip then
-        local EffectID = EffectUtil.PlayVfx(VfxParameter)
-        self.EffectID = EffectID
-        SkillObject:RecordEffectID(EffectID)
-        SkillObject:AddEffectID(EffectID)
+        end)
     end
     local EndTime = (CellData.m_EndTime - CellData.m_StartTime) * SkillObject.PlayRate
     self.BreakEffectTimerID = AddCellTimer(self, "BreakEffect", EndTime)

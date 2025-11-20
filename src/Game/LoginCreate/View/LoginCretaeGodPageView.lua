@@ -195,7 +195,8 @@ end
 function LoginCretaeGodPageView:OnGodBtnClick(Params)
 	local GodID = Params.GodID
 	--描述回滚到顶部
-	self.ScrollBox_0:ScrollToStart()
+	-- self.ScrollBox_0:ScrollToStart()
+	self.TextInfo:ScrollToStart()
 
 	if self.LastSelectBtnName then
 		local LastBtn = self[self.LastSelectBtnName]

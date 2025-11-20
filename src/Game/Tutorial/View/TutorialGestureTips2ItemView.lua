@@ -83,29 +83,6 @@ function TutorialGestureTips2ItemView:SetText(Content)
 	self.RichTextTips:SetText(Content)
 end
 
-function TutorialGestureTips2ItemView:NearBySkill(Dir)
-	UIUtil.SetIsVisible(self.ImgArrowDown, TutorialDefine.TutorialArrowDir.Bottom == Dir)
-	UIUtil.SetIsVisible(self.ImgArrowLeft, TutorialDefine.TutorialArrowDir.Left == Dir)
-	UIUtil.SetIsVisible(self.ImgArrowRight, TutorialDefine.TutorialArrowDir.Right == Dir)
-	UIUtil.SetIsVisible(self.ImgArrowUp, TutorialDefine.TutorialArrowDir.Top == Dir)
-
-	if TutorialDefine.TutorialArrowDir.Bottom == Dir then
-		self.Anim = self.AnimInUp
-	elseif TutorialDefine.TutorialArrowDir.Left == Dir then
-		self.Anim = self.AnimInRight
-
-	elseif TutorialDefine.TutorialArrowDir.Right == Dir then
-		self.Anim = self.AnimInLeft
-
-	elseif TutorialDefine.TutorialArrowDir.Top == Dir then
-		self.Anim = self.AnimInDown
-	end
-
-	if self.Anim then
-		self:PlayAnimation(self.Anim)
-	end
-end
-
 function TutorialGestureTips2ItemView:NearBy(Dir,Cfg)
 	UIUtil.SetIsVisible(self.ImgArrowDown, TutorialDefine.TutorialArrowDir.Bottom == Dir)
 	UIUtil.SetIsVisible(self.ImgArrowLeft, TutorialDefine.TutorialArrowDir.Left == Dir)

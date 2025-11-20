@@ -124,6 +124,7 @@ function MagicsparInforItemView:InitItem(InResID, InGID, InPart)
 	self.EquipSlot.ViewModel:SetPart(self.ViewModel.Part, self.ViewModel.ResID, self.ViewModel.GID)
     self.EquipSlot.ViewModel.bBtnVisibel = false
     self.EquipSlot.ViewModel.bCheckShowRepair = false
+	self.EquipSlot.ViewModel.bIsWearable = true
 	self.EquipSlot.ViewModel:CheckInUse()
 	--设置魔晶石
 	self:UpdateInlayAllSlot()

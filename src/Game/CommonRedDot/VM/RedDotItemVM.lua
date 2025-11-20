@@ -31,6 +31,7 @@ function RedDotItemVM:Reset()
 	self.RedDotStyle = nil
 	self.Text = nil
 	self.IsShowMax = nil
+	self.ListKey = nil
 	self.RedDotNode = nil
 end
 
@@ -166,6 +167,22 @@ end
 
 function RedDotItemVM:SetRedDotText(InText)
 	self.Text = InText
+end
+
+function RedDotItemVM:SetListKey(ListKey, Index)
+	self.ListKey = ListKey
+	self.Index = Index
+	if self.RedDotName and self.Index and self.ListKey then
+		RedDotMgr:AddListRedDotIndexData(self.ListKey, self.RedDotName, self.Index)
+	end
+end
+
+function RedDotItemVM:GetListKey()
+	return self.ListKey
+end
+
+function RedDotItemVM:GetIndex()
+	return self.Index
 end
 
 return RedDotItemVM

@@ -21,6 +21,7 @@ local PVPColosseumMgr = _G.PVPColosseumMgr
 ---@field ViewModel PVPColosseumRecordItemVM
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnGood UFButton
+---@field BtnName UFButton
 ---@field IconGood UFImage
 ---@field IconJob UFImage
 ---@field ImgLight UFImage
@@ -28,6 +29,7 @@ local PVPColosseumMgr = _G.PVPColosseumMgr
 ---@field PanelRecord UFCanvasPanel
 ---@field TextA UFTextBlock
 ---@field TextD UFTextBlock
+---@field TextDan UFTextBlock
 ---@field TextGood UFTextBlock
 ---@field TextHurt UFTextBlock
 ---@field TextInTreatment UFTextBlock
@@ -42,6 +44,7 @@ local PVPColosseumRecordItemView = LuaClass(UIView, true)
 function PVPColosseumRecordItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnGood = nil
+	--self.BtnName = nil
 	--self.IconGood = nil
 	--self.IconJob = nil
 	--self.ImgLight = nil
@@ -49,6 +52,7 @@ function PVPColosseumRecordItemView:Ctor()
 	--self.PanelRecord = nil
 	--self.TextA = nil
 	--self.TextD = nil
+	--self.TextDan = nil
 	--self.TextGood = nil
 	--self.TextHurt = nil
 	--self.TextInTreatment = nil
@@ -70,6 +74,7 @@ function PVPColosseumRecordItemView:OnInit()
 	{
 		{ "Name", UIBinderSetText.New(self, self.TextName) },
 		{ "ProfID", UIBinderSetProfIcon.New(self, self.IconJob) },
+		{ "RankName", UIBinderValueChangedCallback.New(self, nil, self.OnRankNameChanged) },
 
 		{ "KillCount", UIBinderSetText.New(self, self.TextK) },
 		{ "DeadCount", UIBinderSetText.New(self, self.TextD) },
@@ -128,6 +133,15 @@ function PVPColosseumRecordItemView:OnRegisterBinder()
 	self.ViewModel = ViewModel
 	self:RegisterBinders(self.ViewModel, self.Binders)
 	self:RegisterBinders(PVPColosseumRecordVM, self.BindersShowData)
+end
+
+function PVPColosseumRecordItemView:OnRankNameChanged(NewValue, OldValue)
+	local IsRank = _G.PWorldMgr:CurrIsInPVPColosseumRank()
+	UIUtil.SetIsVisible(self.TextDan, IsRank)
+
+	if IsRank then
+		self.TextDan:SetText(NewValue)
+	end
 end
 
 function PVPColosseumRecordItemView:OnShowIconLikeChanged(NewValue, OldValue)

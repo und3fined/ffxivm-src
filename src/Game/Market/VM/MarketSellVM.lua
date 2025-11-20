@@ -72,7 +72,7 @@ function MarketSellVM:UpdateItemListInfo()
 	ItemList = BagMgr:FilterItemByCondition(function (Item)
 		local ResID = Item.ResID
 		local GoodCfg = TradeMarketGoodsCfg:FindCfgByKey(ResID)
-		if nil ~= GoodCfg and Item.IsBind == false then
+		if nil ~= GoodCfg and Item.IsBind == false and not ItemUtil.ItemIsInScheme(Item) then
 			local ItemType = self:IsItemTab() and BagMainVM:GetItemTabType(self.TabIndex) or BagMainVM:GetEquipTabType(self.TabIndex)
 			local Cfg = ItemCfg:FindCfgByKey(Item.ResID)
 			if Cfg then
@@ -148,7 +148,7 @@ function MarketSellVM:UpdateStallListInfo(PlayLockAni)
 	self.CurrentStallVMList:UpdateByValues(StallList)
 	local OpenStall = string.format("%d", FreeStallNum)
 	if IsOpenMonthCard == true then
-		OpenStall = RichTextUtil.GetText(string.format("%d", AllStallNum), "d1ba81", 0, nil)
+		OpenStall = RichTextUtil.GetText(string.format("%d", AllStallNum), "d1ba81")
 	end
 	self.StallsNum  = string.format(LSTR(1010013), OccupancyStallNum, OpenStall)
 

@@ -288,33 +288,35 @@ end
 ---@param MsgBody any
 function AdventureMgr:OnNetMsgChallengeLog(MsgBody)
     self.FinishCount = 0
-    for _,ChallengeLog in ipairs(MsgBody.ChallengeLog.ChallengeLogs) do
-        local Cfg = self.ChallengeLogCfg[ChallengeLog.LogID]
+    if MsgBody.ChallengeLog ~= nil then
+        for _,ChallengeLog in ipairs(MsgBody.ChallengeLog.ChallengeLogs) do
+            local Cfg = self.ChallengeLogCfg[ChallengeLog.LogID]
 
-        if Cfg ~= nil then
-            ChallengeLog.Category = Cfg.Category
-           -- ChallengeLog.LootIDs = Cfg.Produce
-            ChallengeLog.Desc = Cfg.Desc
-            ChallengeLog.Total = Cfg.Count
-            ChallengeLog.RewardItemList = self:GetLootItems(Cfg.LootID)
-            ChallengeLog.Type = Cfg.Type
-            ChallengeLog.Icon = Cfg.Icon
-            ChallengeLog.JumpID = Cfg.JumpID or 0
-            ChallengeLog.ModuleID = Cfg.ModuleID
-            ChallengeLog.FinishMsg = Cfg.FinishMsg
-            ChallengeLog.PWorldID = Cfg.PWorldID
-            if ChallengeLog.Progress >= Cfg.Count then
-                if ChallengeLog.Collected then
-                    ChallengeLog.IsFinish = false
+            if Cfg ~= nil then
+                ChallengeLog.Category = Cfg.Category
+                -- ChallengeLog.LootIDs = Cfg.Produce
+                ChallengeLog.Desc = Cfg.Desc
+                ChallengeLog.Total = Cfg.Count
+                ChallengeLog.RewardItemList = self:GetLootItems(Cfg.LootID)
+                ChallengeLog.Type = Cfg.Type
+                ChallengeLog.Icon = Cfg.Icon
+                ChallengeLog.JumpID = Cfg.JumpID or 0
+                ChallengeLog.ModuleID = Cfg.ModuleID
+                ChallengeLog.FinishMsg = Cfg.FinishMsg
+                ChallengeLog.PWorldID = Cfg.PWorldID
+                if ChallengeLog.Progress >= Cfg.Count then
+                    if ChallengeLog.Collected then
+                        ChallengeLog.IsFinish = false
+                    else
+                        ChallengeLog.IsFinish = true
+                    end
+                    self.FinishCount = self.FinishCount + 1
                 else
-                    ChallengeLog.IsFinish = true
+                    ChallengeLog.IsFinish = false
                 end
-                self.FinishCount = self.FinishCount + 1
-            else
-                ChallengeLog.IsFinish = false
-            end
 
-            self.ChallengeLogs[ChallengeLog.LogID] = ChallengeLog
+                self.ChallengeLogs[ChallengeLog.LogID] = ChallengeLog
+            end
         end
     end
 
@@ -356,6 +358,7 @@ function AdventureMgr:OnNetMsgChallengeLogCollect(MsgBody)
             if ChallengeLog.FinishMsg then
                 local MsgTipsID = require("Define/MsgTipsID")
                 _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.WeekTaskRewardTips, nil, ChallengeLog.FinishMsg)
+                FLOG_INFO("ZYHADVENTURE Show Reward Tips LogIDIs: %s", LogID)
             end
             break
         end
@@ -544,8 +547,8 @@ function AdventureMgr:GetWeeklyRefreshSurplusTime()
 end
 
 function AdventureMgr:GetDailyRefreshSurplusTime()
-    local ServerTime = TimeUtil.GetServerTime()
-    local CurDayZeroTime = TimeUtil.GetCurTimeStampZero(ServerTime)
+    local ServerTime = TimeUtil.GetServerLogicTime()
+    local CurDayZeroTime = TimeUtil.GetCurTimeStampZeroLocal(ServerTime)
     local OffTimeHour = (os.time() - os.time(os.date("!*t"))) / 3600
 
     local NextTimeSpan = DailyRefreshOffset * 3600 + CurDayZeroTime - (8 - OffTimeHour) * 3600

@@ -19,6 +19,7 @@ function ChatHyperlinkLocationItemVM:Ctor()
     self.MapDesc    = nil
     self.Tips       = nil
     self.NormalIcon = nil
+    self.UIMapID    = nil
 
     self.Position = nil
     self.PositionDesc = nil
@@ -41,16 +42,16 @@ function ChatHyperlinkLocationItemVM:UpdateVM( Value )
     self.MapID = nil
     self.Position = nil
     self.PositionDesc = nil
+    self.UIMapID    = Value.UIMapID
 end
 
 function ChatHyperlinkLocationItemVM:UpdateByCurLocation()
     local MapID, Pos = MapUtil.GetMajorMapIDAndPosition()
     self.MapID = MapID
     self.Position = Pos
-
+    self.UIMapID = _G.MapMgr:GetUIMapID()
     -- 地图名
     self.MapDesc =  MapUtil.GetChatHyperlinkMapName(MapID)
-
     -- 位置描述
     self.PositionDesc = string.format("(%.1f,%.1f)", Pos.X or "", Pos.Y or "")
 end

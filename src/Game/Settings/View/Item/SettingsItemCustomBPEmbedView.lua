@@ -41,15 +41,15 @@ function SettingsItemCustomBPEmbedView:OnShow()
 	self.ItemVM = self.Params.Data
 	local BPPath = self.ItemVM.NoTranslateStr
 	if not string.isnilorempty(BPPath) then
-		self.ChildBPView = _G.UIViewMgr:CreateViewByName(BPPath, nil, nil, true, true)
+		self.ChildBPView = _G.UIViewMgr:CreateViewByName(BPPath, nil, nil, true, true, self.Params)
 		self.BPContainer:AddChildToCanvas(self.ChildBPView)
-
 		local Anchor = _G.UE.FAnchors()
-		Anchor.Minimum = _G.UE.FVector2D(0.5, 0)
-		Anchor.Maximum = _G.UE.FVector2D(0.5, 0)
+		Anchor.Minimum = _G.UE.FVector2D(0.0, 0)
+		Anchor.Maximum = _G.UE.FVector2D(1.0, 0)
+		local InOffset = _G.UE.FMargin()
 		UIUtil.CanvasSlotSetAnchors(self.ChildBPView, Anchor)
 		UIUtil.CanvasSlotSetAlignment(self.ChildBPView, _G.UE.FVector2D(0.5, 0))
-
+		UIUtil.CanvasSlotSetOffsets(self.ChildBPView, InOffset)
 		UIUtil.CanvasSlotSetAutoSize(self.ChildBPView, true)
 	end
 end

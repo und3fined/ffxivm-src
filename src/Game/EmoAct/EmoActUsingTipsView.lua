@@ -64,10 +64,10 @@ end
 -- end
 
 ---注册计时器
-function EmoActUsingTipsView:OnRegisterTimer()
-	self.Super:OnRegisterTimer()
+-- function EmoActUsingTipsView:OnRegisterTimer()
+	-- self.Super:OnRegisterTimer()
 --	self:RegisterTimer(self.OnTimer, 0.0, self.Interval, self.ShowTime / self.Interval + 1)
-end
+-- end
 
 ---计时器(实时调整Tips的位置)
 function EmoActUsingTipsView:OnTimer()
@@ -89,6 +89,11 @@ function EmoActUsingTipsView:OnHide()
 	self.Params = nil
 	self.ShowTime = 2.0
 	self.ScreenLocation = _G.UE.FVector2D(0)
+
+	if self.UpdateTimerID ~= nil then
+        self:UnRegisterTimer(self.UpdateTimerID)
+        self.UpdateTimerID = nil
+    end
 end
 
 function EmoActUsingTipsView:OnShow()
@@ -97,7 +102,7 @@ function EmoActUsingTipsView:OnShow()
 	if EmotionID == EmotionMgr.EXD_EMOTE_BAjAFIRE then
 		self.Interval = 0.01
 	end
-	self:RegisterTimer(self.OnTimer, 0.0, self.Interval, self.ShowTime / self.Interval + 1)
+	self.UpdateTimerID = self:RegisterTimer(self.OnTimer, 0.0, self.Interval, self.ShowTime / self.Interval + 1)
 
 	self:UpdatePos(EntityID)
 	self:SetIcon(EmotionID)

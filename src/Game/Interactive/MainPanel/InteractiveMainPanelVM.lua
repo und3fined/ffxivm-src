@@ -33,6 +33,11 @@ function InteractiveMainPanelVM:Ctor()
     self.PlayerName = ""
 
     self.NewEntranceItemList = {}
+
+    self.CurHandleSelectItemIndex = 1
+    self.IsHandleAttached = false
+    self.ItemListNum = 0
+    self.ItemListVisible = false
 end
 
 function InteractiveMainPanelVM:OnInit()
@@ -81,6 +86,7 @@ end
 function InteractiveMainPanelVM:OnEnd()
     self.EntranceItemList = {}
     self.FunctionItemList = {}
+    self:UpdateItemListNum()
 end
 
 function InteractiveMainPanelVM:OnShutdown()
@@ -116,6 +122,7 @@ function InteractiveMainPanelVM:SetEntranceItems(EntranceList, SingleEntranceIte
         do
             local _ <close> = CommonUtil.MakeProfileTag("InteractiveMainPanelVM.SetEntranceItems.GenNewEntranceItems")
             self.EntranceItemList = self:GenNewEntranceItems(EntranceList)
+            self:UpdateItemListNum()
         end
 
         local EntityID = 0
@@ -135,6 +142,12 @@ function InteractiveMainPanelVM:GenNewEntranceItems(EntranceList)
     if #EntranceList > 0 then
         local bNeedFirstEntrance = true
         local Entrance = EntranceList[self.InteractiveTargetIndex]
+
+        if not Entrance.IsValidItem then
+            self.InteractiveTargetIndex = 1
+            Entrance = EntranceList[self.InteractiveTargetIndex]
+        end
+        
         self.TargetName = Entrance.TargetName
         local TargetType = Entrance.TargetType
         if (TargetType == _G.LuaEntranceType.NPC and
@@ -188,6 +201,10 @@ function InteractiveMainPanelVM:GenNewEntranceItems(EntranceList)
                         bNeedFirstEntrance = false
                     end
                 end
+            end
+        elseif TargetType == _G.LuaEntranceType.WorldViewObj then
+            if #self.NewEntranceItemList > 0 and self.NewEntranceItemList[1].EntityID == Entrance.EntityID then
+                return self.NewEntranceItemList
             end
         -- elseif TargetType == _G.LuaEntranceType.EOBJ then
         --     local EntranceItems = Entrance:GenInteractiveQuestEntranceItems(Entrance)
@@ -267,6 +284,7 @@ function InteractiveMainPanelVM:SetFunctionItems(FunctionList)
     self.FunctionItemList = FunctionList
     self:SetFuctionTableViewTop(FunctionList)
     self:SetFunctionVisible(true)
+    self:UpdateItemListNum()
 end
 
 function InteractiveMainPanelVM:SetFuctionTableViewTop(FunctionItems)
@@ -316,6 +334,7 @@ function InteractiveMainPanelVM:SetEntrancesVisible(bShow)
     end
 
     self.EntranceVisible = bShow
+    self.ItemListVisible = self.EntranceVisible or self.FunctionVisible
 
     --有互斥逻辑
     if bShow then
@@ -349,6 +368,7 @@ function InteractiveMainPanelVM:SetFunctionVisible(bShow)
     end
 
     self.FunctionVisible = bShow
+    self.ItemListVisible = self.EntranceVisible or self.FunctionVisible
 
     --有互斥逻辑
     if bShow then
@@ -412,5 +432,53 @@ end
 
 -- 	BindableProperty:UnRegisterBinder(Binder)
 -- end
+
+---手柄交互相关
+
+function InteractiveMainPanelVM:UpdateItemListNum()
+    --self.ItemListNum = 0
+    local ItemList
+    if self.FunctionVisible then
+        ItemList = self.FunctionItemList
+    elseif self.EntranceVisible then
+       ItemList = self.EntranceItemList
+    end
+    if nil == ItemList then
+        return
+    end
+    self.ItemListNum = #ItemList
+    if self.CurHandleSelectItemIndex ~= 1 then
+        self.CurHandleSelectItemIndex = 1
+        _G.EventMgr:SendEvent(EventID.GamePadUpdateInteractive)
+    end 
+     self.CurHandleSelectItemIndex = 1
+end
+function InteractiveMainPanelVM:SwitchCurSelectEntranceItem(IsDown)
+    local ItemList  = self.EntranceItemList
+    if self.FunctionVisible then
+        ItemList = self.FunctionItemList
+    elseif self.FixedFunctionVisible then
+        ItemList = self.FixedFunctionItemList
+    end
+    local ItemNum = #ItemList
+    if #ItemList < 1 then
+        self.CurHandleSelectItemIndex = 1
+        return 
+    end 
+    if IsDown then
+        if self.CurHandleSelectItemIndex + 1 <= ItemNum then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex + 1
+        else
+            self.CurHandleSelectItemIndex = 1
+        end
+    else
+        if self.CurHandleSelectItemIndex - 1 >= 1 then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex - 1
+        else
+            self.CurHandleSelectItemIndex = #ItemList
+        end
+    end
+end
+
 
 return InteractiveMainPanelVM

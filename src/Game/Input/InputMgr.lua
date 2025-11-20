@@ -35,6 +35,7 @@ end
 
 function InputMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.ControllerRightJoystickSelect, self.OnGameEventRJoystickSelect)
+	InputCallback.InputCallBackRegisiter()
 end
 
 function InputMgr.OnSetupInput()

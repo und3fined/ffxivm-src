@@ -58,7 +58,7 @@ function ArmyInfoTrendsItemVM:UpdateVM(Data)
     --end
     local Type = Data.LogType
     self.IsCloseBG = Data.IsCloseBG
-    self.LogIcon = ArmyMgr:GetArmyLogIconByLogType(Type)
+    self.LogIcon = ArmyMgr:GetArmyLogIconByLogType(Type, Data)
     ArmyMgr:GetArmyLogTextByLogData(Data,function(Text)
         self.LogContent = Text
     end )

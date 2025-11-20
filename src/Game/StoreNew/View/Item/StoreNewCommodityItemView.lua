@@ -17,6 +17,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field IconTime UFImage
 ---@field ImgItem UFImage
+---@field ImgItemSize USizeBox
 ---@field ImgLine1 UFImage
 ---@field ImgMask1 UFImage
 ---@field ImgMask2 UFImage
@@ -27,6 +28,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 ---@field PanelMoney UFHorizontalBox
 ---@field PanelOriginalPrice UFCanvasPanel
 ---@field PanelTime UFHorizontalBox
+---@field RedDot CommonRedDotView
 ---@field TextAlreadyOwned UFTextBlock
 ---@field TextDiscount UFTextBlock
 ---@field TextHotSale UFTextBlock
@@ -41,6 +43,7 @@ function StoreNewCommodityItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.IconTime = nil
 	--self.ImgItem = nil
+	--self.ImgItemSize = nil
 	--self.ImgLine1 = nil
 	--self.ImgMask1 = nil
 	--self.ImgMask2 = nil
@@ -51,6 +54,7 @@ function StoreNewCommodityItemView:Ctor()
 	--self.PanelMoney = nil
 	--self.PanelOriginalPrice = nil
 	--self.PanelTime = nil
+	--self.RedDot = nil
 	--self.TextAlreadyOwned = nil
 	--self.TextDiscount = nil
 	--self.TextHotSale = nil
@@ -63,6 +67,7 @@ end
 
 function StoreNewCommodityItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.RedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -121,6 +126,11 @@ function StoreNewCommodityItemView:OnShow()
 		UIUtil.SetIsVisible(self.ImgMask1, false)
 		UIUtil.SetIsVisible(self.ImgMask2, false)
 		UIUtil.SetIsVisible(self.PanelMoney, false)
+	end
+	if _G.StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_PET then
+		self:SetSelfScale(248, 248)
+	elseif _G.StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_ACTINGTEXTBOOK then
+		self:SetSelfScale(220, 220)
 	end
 end
 

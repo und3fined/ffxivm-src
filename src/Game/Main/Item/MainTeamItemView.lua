@@ -25,8 +25,10 @@ local FriendDefine = require("Game/Social/Friend/FriendDefine")
 
 local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 
 local ProtoCS = require("Protocol/ProtoCS")
+local ProtoCommon = require("Protocol/ProtoCommon")
 
 local EventID = require("Define/EventID")
 local UIViewID = require("Define/UIViewID")
@@ -40,6 +42,8 @@ local UIBinderSetIsVisiblePred = require("Binder/UIBinderSetIsVisiblePred")
 local UIBinderSetImageBrushByResFunc = require("Binder/UIBinderSetImageBrushByResFunc")
 local MakeLSTRAttrKey = require("Common/StringTools").MakeLSTRAttrKey
 local MakeLSTRDict = require("Common/StringTools").MakeLSTRDict
+local BuffDefine = require("Game/Buff/BuffDefine")
+local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
 
 local LSTR = _G.LSTR
 local TeamMgr = _G.TeamMgr
@@ -162,6 +166,15 @@ function MainTeamItemView:OnInit()
 
 	self.AdapterBuffer = UIAdapterTableViewEx.CreateAdapter(self, self.TableViewBuffer)
 	self.AdapterBuffer:UpdateSettings(8, nil, false, false, false, true)
+	
+	--演奏系统的组队列表，BUFF列表显示规则不同
+	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceMainPanelView) then
+		self.AdapterBuffer.IsItemVisible = function(Adapter, ItemData) 
+			if ItemData.BuffID == BuffDefine.PerformanceBuffID then
+				return true
+			end
+		end 
+	end
 
 	local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
 	self.RoleBinders = {
@@ -377,7 +390,6 @@ function MainTeamItemView:OnRegisterUIEvent()
 end
 
 local function IsMajorHealProf()
-	local ProtoCommon = require("Protocol/ProtoCommon")
 	return MajorUtil.GetMajorProfFunc() == ProtoCommon.function_type.FUNCTION_TYPE_RECOVER
 end
 
@@ -668,6 +680,7 @@ function MainTeamItemView:OnUpdateRollResultChangeCallback()
 	if ViewModel.NotRollResultNotify then
 		-- 没有Roll点结果是设置问号并return
 		selfRollItem:StopAllAnimations()
+		selfRollItem:PlayAnimation(selfRollItem.AnimHideAll)
 		UIUtil.SetIsVisible(DecadeTextNumber, true)
 		UIUtil.SetIsVisible(UintTextNumber, true)
 		DecadeTextNumber:SetText("?")
@@ -858,7 +871,7 @@ function MainTeamItemView:ShowMutualRightView(ViewID)
 end
 
 function MainTeamItemView:OnValueChangedIsSaying()
-	if nil == self.ViewModel then
+	if not self:IsValid() or nil == self.ViewModel then
 		return
 	end
 
@@ -955,6 +968,40 @@ function MainTeamItemView:Rescure()
 		return
 	end
 
+	-- mp check
+	do
+		local LogicData = _G.SkillLogicMgr:GetMajorSkillLogicData()
+		if LogicData == nil then
+			return
+		end
+
+		local _, RequireCost = LogicData:PlayerAttrCheck(SkillCommonDefine.SkillButtonIndexRange.TeamRescure, Cfg.SkillID, ProtoCommon.attr_type.attr_mp)
+		if RequireCost and RequireCost ~= nil then
+			if (MajorUtil.GetMajorCurMp() or 0) < RequireCost then
+				_G.MsgTipsUtil.ShowTips(LSTR(140069))	-- 魔力不足
+				self:PlayAnimation(self.AnimReviveDisable)
+				return
+			end
+		end
+	end
+
+	-- common behavoir check
+	if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_SKILL, true) then
+		self:PlayAnimation(self.AnimReviveDisable)
+		return
+	end
+
+	-- battle state check
+	do
+		local StateComponent = MajorUtil.GetMajorStateComponent()
+		if StateComponent == nil or not StateComponent:GetActorControlState(_G.UE.EActorControllStat.CanUseSkill) then
+			_G.FLOG_WARNING(string.sformat("can not rescure %s for `CanUseSkill` not passed", self:GetRoleID()))
+			_G.MsgTipsUtil.ShowTipsByID(106016)
+			self:PlayAnimation(self.AnimReviveDisable)
+			return
+		end
+	end
+
 	if  not InRescureCD then
 		self.Params.Adapter:SetSelectedIndex(self.Params.Index)
 		SkillUtil.CastSkill(EntityID, self:GetRoleID() or 0, Cfg.SkillID)
@@ -1012,7 +1059,6 @@ local function GetCDGroupInfo(SkillID, GroupID, SkillCD, BaseCD)
 			local ShortenCDRate = 0
 			local AttributeComp = ActorUtil.GetActorAttributeComponent(MajorUtil.GetMajorEntityID())
 			if AttributeComp ~= nil then
-				local ProtoCommon = require("Protocol/ProtoCommon")
 				ShortenCDRate = AttributeComp:GetAttrValue(ProtoCommon.attr_type.attr_shorten_cd_time) / 10000
 			end
 			BaseCD = BaseCD * (1 - ShortenCDRate)
@@ -1057,8 +1103,6 @@ function MainTeamItemView:OnMajorMPChange(Params)
 		return
 	end
 
-	local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
-	local ProtoCommon = require("Protocol/ProtoCommon")
 	local bValid, RequireCost = LogicData:PlayerAttrCheck(SkillCommonDefine.SkillButtonIndexRange.TeamRescure, Cfg.SkillID, ProtoCommon.attr_type.attr_mp)
 
 	local bPassMp = true

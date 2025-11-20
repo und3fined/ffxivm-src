@@ -72,7 +72,7 @@ function LoginCreateAccountItemView:OnShow()
 				self.CommPlayerHeadSlot_UIBP:SetClickEnable(false)
 
 				local HeadInfo = VM.HeadInfo
-				-- FLOG_INFO("pcw HeadInfo.HeadType:%s", tostring(HeadInfo.HeadType))
+				FLOG_INFO("pcw HeadInfo.HeadType:%s", tostring(HeadInfo.HeadType))
 				local Type = HeadInfo.HeadType or PersonPortraitHeadDefine.HeadType.Default
 				if Type == PersonPortraitHeadDefine.HeadType.Custom then
 					UIUtil.SetIsVisible(self.CommPlayerHeadSlot_UIBP.IconSilhouette, false)

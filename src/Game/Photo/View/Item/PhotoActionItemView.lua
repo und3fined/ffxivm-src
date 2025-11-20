@@ -13,6 +13,9 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local PhotoUtil = require("Game/Photo/PhotoUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+
+local LSTR = _G.LSTR
 
 ---@class PhotoActionItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -109,8 +112,17 @@ function PhotoActionItemView:OnClickButtonItem()
 		return
 	end
 
+	if not _G.PhotoMgr:IsCurSeltMajor() then
+		MsgTipsUtil.ShowTips(LSTR(630078))
+		return
+	end
+
 	if not ViewModel.IsEnable then
-		PhotoUtil.ShowAnimTips(ViewModel.Type, ViewModel.ID)
+		if ViewModel.IsMouthTip then
+			MsgTipsUtil.ShowTips(LSTR(630082))
+		else
+			PhotoUtil.ShowAnimTips(ViewModel.Type, ViewModel.ID)
+		end
 		return
 	end
 

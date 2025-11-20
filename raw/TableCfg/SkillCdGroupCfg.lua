@@ -35,7 +35,6 @@ local SkillCdGroupCfg = {
         },
         {
             ID = 6,
-            Time = 15000,
         },
         {
             ID = 7,
@@ -58,7 +57,7 @@ local SkillCdGroupCfg = {
         },
         {
             ID = 12,
-            Time = 30000,
+            Time = 42000,
         },
         {
             ID = 13,

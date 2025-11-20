@@ -230,6 +230,12 @@ function WardrobeAppearancePageView:ClearSwitchList()
 	end
 end
 
+function WardrobeAppearancePageView:ClearBindList()
+	if self.VM then
+		self.VM:ClearBindList()
+	end
+end
+
 function WardrobeAppearancePageView:OnBindListChanged(Index, ItemData, ItemView)
 	if self.VM == nil then
 		return
@@ -267,7 +273,7 @@ function WardrobeAppearancePageView:OnSwitchListChanged(Index, ItemData, ItemVie
 		if BindItemVM.ID == self.CurEquipID then
 			local BindGID = BindItemVM.GID
 			BindItemVM:UpdateBindItemGID(SwitchGID)
-			ItemData.GID = BindGID
+			-- ItemData.GID = BindGID
 		end
 	end
 end
@@ -286,7 +292,7 @@ function WardrobeAppearancePageView:OnClickedBtnInfo2()
 		local Data = WardrobeMgr:GetUnlockAppearanceDataByID(ID)
 		local ProfLimit = WardrobeMgr:GetProfLimit(Data)
 		local ClassLimit = WardrobeMgr:GetClassLimits(Data)
-		Content = WardrobeUtil.GetDetailProfCondText(ProfLimit, ClassLimit)
+		Content = WardrobeUtil.GetDetailProfCondText2(ProfLimit, ClassLimit)
 	end
 
 	if not WardrobeUtil.GetIsSpecial(ID) then
@@ -317,7 +323,7 @@ function WardrobeAppearancePageView:OnClickedBtnInfo2()
 		end
 	end
 
-	Content =  WardrobeUtil.GetDetailProfCondText(ProfLimit, table.is_nil_empty(ClassLimit) and 0 or ClassLimit) 
+	Content =  WardrobeUtil.GetDetailProfCondText2(ProfLimit, table.is_nil_empty(ClassLimit) and 0 or ClassLimit) 
 
 	TipsUtil.ShowInfoTips(Content, self.WardrobeJob.BtnInfo2, _G.UE.FVector2D(
 		-70, 50),  _G.UE.FVector2D(1, 1))

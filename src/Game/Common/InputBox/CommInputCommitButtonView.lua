@@ -19,7 +19,6 @@ local LSTR = _G.LSTR
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field FBtnFinish UFButton
 ---@field FBtnMask UFButton
----@field ImgBg UFImage
 ---@field PanelContent UFCanvasPanel
 ---@field TextFinish UFTextBlock
 ---@field StyleType CommUIStyleType
@@ -142,7 +141,7 @@ end
 
 function CommInputCommitButtonView:OnClickButtonFinish()
 	local View = self.View
-	if View and View.OnTextCommitted and self.TextInputInvoker then
+	if View and View.OnTextCommitted and self.TextInputInvoker and self.TextInputInvoker:IsValid() then
 		local Text = self.TextInputInvoker:GetText()
 		View:OnTextCommitted(nil, Text, _G.UE.ETextCommit.OnEnter)
 	end

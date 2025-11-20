@@ -26,7 +26,6 @@ local QuestHelper = require("Game/Quest/QuestHelper")
 local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
 local QUEST_TYPE = ProtoRes.QUEST_TYPE
-local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 local CHAPTER_STATUS =  QuestDefine.CHAPTER_STATUS
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 local ProtoCommon = require("Protocol/ProtoCommon")
@@ -289,8 +288,12 @@ function AdventureRecommendTaskMgr:CheckGrandCompanyCondition(Cfg)
     local CompoanySealInfo = _G.CompanySealMgr:GetCompanySealInfo()
     local CurGrandCompanyID = CompoanySealInfo.GrandCompanyID
     local ChapterCfg = Cfg[1]
-    if ChapterCfg.GrandCompanyLimit and ChapterCfg.GrandCompanyLimit ~= 0 and CurGrandCompanyID ~= 0 then
-        return ChapterCfg.GrandCompanyLimit == CurGrandCompanyID
+    if ChapterCfg.GrandCompanyLimit and ChapterCfg.GrandCompanyLimit ~= 0 then
+        if CurGrandCompanyID == 0 then
+            return false
+        else
+            return ChapterCfg.GrandCompanyLimit == CurGrandCompanyID
+        end   
     end
 
     return true

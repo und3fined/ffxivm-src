@@ -101,11 +101,14 @@ end
 
 --活动结束时间戳
 function OpsCommTabChildItemVM:GetActivityTimeCountdown()
-	local ActivityTime = self:GetActivityTime()
+	local ActivityTime = OpsActivityMgr:GetActivityTime(self.Activity)
 	if ActivityTime == nil then
 		return 0
 	end
 	
+	if ActivityTime.EndTime == nil then
+		return 0
+	end
 	local EndTime = ActivityTime.EndTime
 	local ZoneOffset = ActivityTime.TimeZoneOffset - TimeZoneOffset.TimeZoneOffset0
 
@@ -119,11 +122,14 @@ end
 
 --活动完整时间显示
 function OpsCommTabChildItemVM:GetActivityCompleteTime()
-	local ActivityTime = self:GetActivityTime()
+	local ActivityTime =  OpsActivityMgr:GetActivityTime(self.Activity)
 	if ActivityTime == nil then
 		return ""
 	end
 
+	if ActivityTime.StartTime == nil or ActivityTime.EndTime == nil then
+		return ""
+	end
 	local StartTimeTable =self:GetDataTable(ActivityTime.StartTime)
 	local EndTimeTable = self:GetDataTable(ActivityTime.EndTime)
 
@@ -135,11 +141,14 @@ end
 
 --指定输入时间显示
 function OpsCommTabChildItemVM:GetActivityAppointTime()
-	local ActivityTime = self:GetActivityTime()
+	local ActivityTime = OpsActivityMgr:GetActivityTime(self.Activity)
 	if ActivityTime == nil then
 		return ""
 	end
 
+	if ActivityTime.StartTime == nil then
+		return ""
+	end
 	
 	local StartTimeTable =self:GetDataTable(ActivityTime.StartTime)
 	local TimeZoneOffset = ActivityTime.TimeZoneOffset - TimeZoneOffset.TimeZoneOffset0
@@ -152,31 +161,28 @@ function OpsCommTabChildItemVM:GetDataTable(TimeText)
 	return {year = year, month = month, day = day, hour = hour, min = min, sec = sec}
 end
 
---得到活动时间数据 TODO 备注：服务器还没有开发大区id。目前统一全部返回china时间
-function OpsCommTabChildItemVM:GetActivityTime()
-	if self.Activity  == nil then
-		return
-	end
-	return self.Activity.ChinaActivityTime
-
-	--[[local WorldID = _G.LoginMgr:GetWorldID()
-	local ZoneIDs = self.Activity.ChinaActivityTime.ZoneIDs
-	if ZoneIDs then
-		for i = 1, #ZoneIDs do
-			if WorldID == ZoneIDs[i] then
-				return self.Activity.ChinaActivityTime
-			end
-		end
+--活动节点完整时间显示
+function OpsCommTabChildItemVM:GetActivityNodeCompleteTime(NodeID)
+	local ActivityTime =  OpsActivityMgr:GetActivityTime(self.Activity)
+	if ActivityTime == nil then
+		return ""
 	end
 
-	ZoneIDs = self.Activity.InternationActivityTime.ZoneIDs
-	if ZoneIDs then
-		for i = 1, #ZoneIDs do
-			if WorldID == ZoneIDs[i] then
-				return self.Activity.InternationActivityTime
-			end
-		end
-	end]]--
+	local NodeCfg = ActivityNodeCfg:FindCfgByKey(NodeID) or {}
+	if NodeCfg == nil then
+		return ""
+	end
+
+	if NodeCfg.StartTime == nil or NodeCfg.EndTime == nil then
+		return ""
+	end
+	local StartTimeTable =self:GetDataTable(NodeCfg.StartTime)
+	local EndTimeTable = self:GetDataTable(NodeCfg.EndTime)
+
+	local StartDate = os.date("%Y/%m/%d", os.time(StartTimeTable))
+	local EndDate = os.date("%Y/%m/%d", os.time(EndTimeTable))
+	local ZoneOffset = ActivityTime.TimeZoneOffset - TimeZoneOffset.TimeZoneOffset0
+	return _G.StringTools.Format("%s - %s(UTC%+d)", StartDate, EndDate, ZoneOffset)
 end
 
 --------------活动说明
@@ -263,10 +269,15 @@ function OpsCommTabChildItemVM:UpdateTreasureChestRedDot(Cfg, Nodes)
 end
 
 function OpsCommTabChildItemVM:IsActivityLastThreeDays()
-	local ActivityTime = self:GetActivityTime()
+	local ActivityTime =  OpsActivityMgr:GetActivityTime(self.Activity)
 	if ActivityTime == nil then
 		return false
 	end
+
+	if ActivityTime.EndTime == nil then
+		return false
+	end
+
 	local EndTimeStamp = os.time(self:GetDataTable(ActivityTime.EndTime))
 	local three_days_in_seconds = 3 * 24 * 60 * 60
 	local CurrentTimeStamp = TimeUtil:GetServerLogicTime()

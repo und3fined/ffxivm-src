@@ -16,6 +16,7 @@ local BuddySkillDetailTipsVM = LuaClass(UIViewModel)
 function BuddySkillDetailTipsVM:Ctor()
 	self.NameText = nil
 	self.DescText = nil
+    self.ImgLine01Visible = nil
 	self.AttriVMList = UIBindableList.New(BuddyDetailAttriItemVM)
     self.SkillTypeVMList = UIBindableList.New(BuddySkillTypeItemVM)
 end
@@ -27,15 +28,23 @@ function BuddySkillDetailTipsVM:UpdateVM(SkillID)
         self.NameText = Cfg.Name
         -- local TagType = Cfg.SkillType
     
-
 	    self.DescText = Cfg.Desc
 
         local AttriList = {}
-        table.insert(AttriList, {Attri = LSTR(1000027), Value = Cfg.Power})
-        table.insert(AttriList, {Attri = LSTR(1000028), Value = Cfg.Duration})
-        table.insert(AttriList, {Attri = LSTR(1000029), Value = Cfg.AdditionalEffects})
+        if not string.isnilorempty(Cfg.Power) then
+            table.insert(AttriList, {Attri = LSTR(1000027), Value = Cfg.Power})
+        end
 
-        self.AttriVMList :UpdateByValues(AttriList)
+        if not string.isnilorempty(Cfg.Duration) then
+            table.insert(AttriList, {Attri = LSTR(1000028), Value = Cfg.Duration})
+        end
+
+        if not string.isnilorempty(Cfg.AdditionalEffects) then
+            table.insert(AttriList, {Attri = LSTR(1000029), Value = Cfg.AdditionalEffects})
+        end
+
+        self.ImgLine01Visible = #AttriList > 0
+        self.AttriVMList:UpdateByValues(AttriList)
 
         local TagText = {}
         local IconPath = {}

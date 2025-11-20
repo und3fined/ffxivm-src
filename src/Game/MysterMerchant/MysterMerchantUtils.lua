@@ -31,9 +31,15 @@ local MysterMerchantUtils = {}
 
 
 ---@type 获取货物拾取交互ID
-function MysterMerchantUtils.GetInteractID()
-    local AwardIDs = GameGlobalCfg:FindValue(GLOBAL_CFG_ID.GAME_CFG_MERCHANT_INTERACTION_ID, "Value") -- 1002
-    return AwardIDs and AwardIDs[1] or 0
+function MysterMerchantUtils.IsMerchantTaskItemInteractID(InteractiveID)
+	if InteractiveID == nil or InteractiveID <= 0 then
+		return false
+	end
+    local ExInteractIDValue = GameGlobalCfg:FindValue(GLOBAL_CFG_ID.GAME_CFG_MERCHANT_INTERACTION_ID, "Value")
+	local ShareInteractIDValue = GameGlobalCfg:FindValue(GLOBAL_CFG_ID.GAME_CFG_SHARED_MERCHANT_INTERACTION_ID, "Value")
+	local ExInteractID = ExInteractIDValue and ExInteractIDValue[1]
+	local ShareInteractID = ShareInteractIDValue and ShareInteractIDValue[1]
+    return InteractiveID == ExInteractID or InteractiveID == ShareInteractID
 end
 
 ---@type 获取友好度等级信息
@@ -165,6 +171,7 @@ function MysterMerchantUtils.GetMerchantTaskInfo(TaskID)
 	end
 	local TaskInfo = {
 		TaskRadius = MerchantTaskCfg.ClientAwakenDistance, --任务（触发与提示，显示任务情报栏）半径
+		HintDistance = MerchantTaskCfg.HintDistance, -- 当前地图有商人提示距离
 		EscapeDistance = MerchantTaskCfg.EscapeDistance, -- 脱战距离（移除加成状态与隐藏任务情报栏）
 		AskForHelpDistance = MerchantTaskCfg.AskForHelpDistance, -- 喊话距离
 		TaskHeight = MerchantTaskCfg.ClientAwakenHeight or 500, --任务触发高度，运输陆行鸟中不会触发
@@ -179,7 +186,7 @@ function MysterMerchantUtils.GetMerchantTaskInfo(TaskID)
 		NPCListID = MerchantTaskCfg.NPCListID,
 		SceneResID = MerchantTaskCfg.SceneResID, --位面副本ID
 		DefaultDialogID = MerchantTaskCfg.DefaultDialogID, -- 未完成任务默认对话ID
-		MonsterGroupListID = MerchantTaskCfg.MonsterGroupListID, -- 位面外怪物组ID
+		MonsterGroupListIDs = MerchantTaskCfg.MonsterGroupListIDs, -- 位面外怪物组ID列表
 	}
 
     return TaskInfo

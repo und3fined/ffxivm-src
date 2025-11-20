@@ -27,7 +27,7 @@ function MapMarkerMonster:Ctor()
 	self.ResID = nil -- 怪物资源ID
     self.IsBoss = false -- 是否是Boss
 
-	self.IsColosseumCrystal = false -- 是否是PVP水晶bnpc
+	self.IsColosseumCrystal = false -- 是否是PVP地图水晶bnpc
 end
 
 function MapMarkerMonster:GetType()
@@ -35,6 +35,11 @@ function MapMarkerMonster:GetType()
 end
 
 function MapMarkerMonster:GetBPType()
+	if self.IsColosseumCrystal then
+		-- PVP地图水晶bnpc，使用PVP地图玩家标记蓝图，原因是水晶和玩家一样可以被选中
+		return MapMarkerBPType.PVPPlayer
+	end
+
     return MapMarkerBPType.Monster
 end
 
@@ -95,6 +100,17 @@ function MapMarkerMonster:GetAreaMapPos()
 	if self.EntityID then
 		return MapUtil.GetActorUIPosByEntityID(self.UIMapID, self.EntityID)
 	end
+end
+
+function MapMarkerMonster:GetResID()
+	return self.ResID
+end
+
+function MapMarkerMonster:CanDragSelect()
+	if self.IsColosseumCrystal then
+		return true
+	end
+	return false
 end
 
 function MapMarkerMonster:NeedShowInMiniMap()

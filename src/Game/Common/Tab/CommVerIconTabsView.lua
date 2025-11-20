@@ -190,4 +190,17 @@ function CommVerIconTabsView:SelectIndexPredicate(Pred)
 	end
 end
 
+--- 设置特定Item的自定义红点显隐
+function CommVerIconTabsView:SetCustomRedDotVisibleByPred(Pred, bVisible)
+	local AdapterTabs = self.AdapterTabs
+	if not AdapterTabs then
+		return
+	end
+	local ItemVM = AdapterTabs:GetItemDataByPredicate(Pred)
+	if not ItemVM then
+		return
+	end
+	ItemVM.bCustomsizedRedDotShow = bVisible
+end
+
 return CommVerIconTabsView

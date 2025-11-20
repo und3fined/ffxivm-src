@@ -29,10 +29,10 @@ local GlobalCfg = require("TableCfg/GlobalCfg")
 local DialogueBranchCfg = require("TableCfg/DialogueBranchCfg")
 local QuestGenreCfg = require("TableCfg/QuestGenreCfg")
 local DialogCfg = require("TableCfg/DialogCfg")
-local DefaultDialogCfg = require("TableCfg/DefaultDialogCfg")
 local LootMappingCfg = require("TableCfg/LootMappingCfg")
 local GrandCompanyCfg = require("TableCfg/GrandCompanyCfg")
 local QuestServerActionCfg = require("TableCfg/QuestServerActionCfg")
+local QuestTimeControllerCfg = require("TableCfg/QuestTimeControllerCfg")
 
 local TARGET_STATUS =   ProtoCS.CS_QUEST_NODE_STATUS
 local ACCEPT_TYPE =     ProtoRes.QUEST_ACCEPT_TYPE
@@ -219,6 +219,25 @@ function QuestHelper.CheckCanAccept(QuestID, QuestCfgItem, ChapterCfgItem)
         else
             if QuestCfgItem.QuestType ~= QUEST_TYPE.QUEST_TYPE_MAIN then
                 QuestRegister:UnRegisterTimeLimit(QuestID)
+            end
+        end
+    end
+    local TimeController = ChapterCfgItem.TimeController
+    if TimeController ~= 0 then
+        local Cfg = QuestTimeControllerCfg:GetCacheCfgByKey(TimeController)
+        local ServerTime = TimeUtil.GetServerLogicTime()
+        if Cfg.StartTime > ServerTime then
+            QuestRegister:RegisterTimeLimit(QuestID, Cfg.StartTime)
+            return false
+        else
+            QuestRegister:UnRegisterTimeLimit(QuestID)
+            if Cfg.EndTime ~= 0 then
+                if ServerTime > Cfg.EndTime then
+                    QuestRegister:UnRegisterTimeLimit(QuestID)
+                    -- 过期的任务不会return false，由其他模块进行give up
+                else
+                    QuestRegister:RegisterTimeLimit(QuestID, Cfg.EndTime)
+                end
             end
         end
     end
@@ -521,10 +540,12 @@ function QuestHelper.CheckUnrestricted(QuestID, QuestCfgItem, ChapterCfgItem)
     if Quest.StateRestrictions ~= nil then
         local bPassRestriction = true
         for _, Restriction in pairs(Quest.StateRestrictions) do
-            if not Restriction:CheckPassRestriction() then
-                QuestMgr:LogQuestCheckInfo(nil, "Restriction "..(Restriction.LogicID or 0))
-                bPassRestriction = false
-                break
+            if Restriction.IsRestrictAllTarget then
+                if not Restriction:CheckPassRestriction() then
+                    QuestMgr:LogQuestCheckInfo(nil, "Restriction "..(Restriction.LogicID or 0))
+                    bPassRestriction = false
+                    break
+                end
             end
         end
         if not bPassRestriction then return false end
@@ -558,16 +579,50 @@ function QuestHelper.CheckCanFinishTargets(QuestID)
     local Quest = QuestMgr.QuestMap[QuestID]
     if Quest and Quest.Targets then
         for _, Target in pairs(Quest.Targets) do
-            if Target.Status == TARGET_STATUS.CS_QUEST_NODE_STATUS_IN_PROGRESS
-            and not Target:CheckCanFinish() then
-                QuestMgr:LogQuestCheckInfo(nil, "Target "..(Target.TargetID))
-                return false
+            if Target.Status == TARGET_STATUS.CS_QUEST_NODE_STATUS_IN_PROGRESS then
+                if not QuestHelper.CheckTargetRestriction(QuestID, Target.TargetID) then
+                    QuestMgr:LogQuestCheckInfo(nil, "Target "..(Target.TargetID))
+                    return false
+                end
+                if not Target:CheckCanFinish() then
+                    QuestMgr:LogQuestCheckInfo(nil, "Target "..(Target.TargetID))
+                    return false
+                end
             end
         end
     end
     return true
 end
 
+---任务目标是否被限制
+function QuestHelper.CheckTargetRestriction(QuestID, TargetID)
+    if QuestID == nil or TargetID == nil then return false end
+
+    local Quest = QuestMgr.QuestMap[QuestID]
+    if Quest == nil then return false end
+
+    if Quest.StateRestrictions ~= nil then
+        for _, Restriction in pairs(Quest.StateRestrictions) do
+            if Restriction.IsRestrictAllTarget then
+                if not Restriction:CheckPassRestriction() then
+                    QuestMgr:LogQuestCheckInfo(nil, "Restriction "..(Restriction.LogicID or 0))
+                    return false
+                end
+            else
+                for _, Target in pairs(Restriction.AffectedTargets) do
+                    if Target == TargetID then
+                        if not Restriction:CheckPassRestriction() then
+                            QuestMgr:LogQuestCheckInfo(nil, "Restriction "..(Restriction.LogicID or 0))
+                            return false
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return true
+end
 ---@param Cfg luatable
 ---@return boolean
 function QuestHelper.CheckAutoDialogSubmit(Cfg)
@@ -755,7 +810,7 @@ function QuestHelper.AddNpcActivatedQuest(QuestCfgItem, ChapterCfgItem)
         ChapterCfgItem.QuestType, QuestCfgItem.AcceptDialogID, ChapterCfgItem.QuestName)
     if bRegSuccess then
         QuestTrackMgr:AddMapQuestParam(QuestCfgItem.AcceptMapID, QuestCfgItem.id, nil,
-            QuestDefine.NaviType.NpcResID, QuestCfgItem.StartNpc, nil, QuestCfgItem.AcceptUIMapID)
+            QuestDefine.NaviType.NpcResID, QuestCfgItem.StartNpc, QuestCfgItem.AssistNaviPoint, QuestCfgItem.AcceptUIMapID)
     end
 end
 
@@ -1122,7 +1177,7 @@ function QuestHelper.GetSequencePath(SequenceID)
         return nil
     end
     -- 设置跳过任务剧情动画
-    if StorySetting.GetAutoSkipQuestSequence() then
+    if QuestMgr:ShouldSkipQuestSequence(SequenceID) then
         return nil
     end
     local DialogueType = QuestDefine.GetDialogueType(SequenceID)
@@ -1152,13 +1207,15 @@ function QuestHelper.QuestPlaySequence(SequenceID,
     end
 
     -- 设置跳过任务剧情动画
-    if StorySetting.GetAutoSkipQuestSequence() then
+    if QuestMgr:ShouldSkipQuestSequence(SequenceID) then
         if SequenceFinishedCallback then
             SequenceFinishedCallback()
         end
         if SequenceStopCallback then
             SequenceStopCallback()
         end
+        -- 弹提示提醒玩家动画跳过
+        MsgTipsUtil.ShowTips(LSTR(597004)) --597004("任务剧情动画已经自动跳过，后续可前往旅馆旅行笔记处重温")
         return
     end
 
@@ -1226,12 +1283,14 @@ function QuestHelper.GetQuestIconInternal(QuestID, QuestType, bMonster, ShowPlac
         end
 
         QuestType = QuestType or ChapterCfgItem.QuestType
+        local IsCycle = QuestType == QUEST_TYPE.QUEST_TYPE_REPEAT
         local bCanProceed = QuestHelper.CheckCanAccept(QuestID, QuestCfgItem, ChapterCfgItem)
         return QuestDefine.MakeIconPath(QuestType, ChapterStatus,
-            bCanProceed, bMonster, false, ShowPlace)
+            bCanProceed, bMonster, IsCycle, ShowPlace)
 
     else
         QuestType = QuestType or Chapter.Cfg.QuestType
+        local IsCycle = QuestType == QUEST_TYPE.QUEST_TYPE_REPEAT
         local bCanProceed = false
         local ChapterStatus = Chapter.Status
         if ShowPlace == "LOG" then
@@ -1243,7 +1302,7 @@ function QuestHelper.GetQuestIconInternal(QuestID, QuestType, bMonster, ShowPlac
             bCanProceed = QuestHelper.CheckCanProceed(QuestID, Quest.Cfg, Chapter.Cfg)
         end
         return QuestDefine.MakeIconPath(QuestType, ChapterStatus,
-            bCanProceed, bMonster, false, ShowPlace)
+            bCanProceed, bMonster, IsCycle, ShowPlace)
     end
 end
 
@@ -1315,7 +1374,7 @@ function QuestHelper.PlayDialogOrSequence(DialogOrSeqID, PlayDialogFunc, PlaySeq
         if PlaySeqFunc then PlaySeqFunc() end
 
     else
-        QuestHelper.PrintQuestError("DialogOrSequenceID %d digit invalid", DialogOrSeqID or 0)
+        QuestHelper.PrintQuestWarning("DialogOrSequenceID %d digit invalid", DialogOrSeqID or 0)
         -- QuestHelper.PrintQuestWarning("PlayDialogOrSequence meets ID = %d, called by %s",
         --     DialogOrSeqID or 0, debug.getinfo(2,"n").name)
         if PlayFailedFunc then PlayFailedFunc() end
@@ -1505,7 +1564,7 @@ function QuestHelper.PlayRestrictedDialog(QuestID, TargetID, bPlayCustomDialog)
             end)
 
         elseif (RestrictedDialogID == 0) then
-            NpcDialogMgr:PushDialog(LSTR(596301), 8, LSTR(10004)) --596301("未满足任务条件，同时未配置定制对话，也不支持生成对话")
+            NpcDialogMgr:PushDialog(LSTR(596301), 8, LSTR(10004)) --596301("未满足领取或继续推进本任务的条件。")
         end
     end
 
@@ -1542,7 +1601,7 @@ end
 ---@return string
 function QuestHelper.MakeRestrictedDialogLowLevel(MinLevel)
     local SearchConditions = string.format("DialogLibID==%d", RDID.LowLevel)
-    local DialogCfg = DefaultDialogCfg:FindCfg(SearchConditions)
+    local DialogCfg = DialogCfg:FindCfg(SearchConditions)
     if DialogCfg ~= nil then
         return string.format(DialogCfg.DialogContent, MinLevel)
     end
@@ -1553,7 +1612,7 @@ end
 ---@return string
 function QuestHelper.MakeRestrictedDialogProf(RequiredProfName)
     local SearchConditions = string.format("DialogLibID==%d", RDID.Prof)
-    local DialogCfg = DefaultDialogCfg:FindCfg(SearchConditions)
+    local DialogCfg = DialogCfg:FindCfg(SearchConditions)
     if DialogCfg ~= nil then
         return string.format(DialogCfg.DialogContent, RequiredProfName)
     end
@@ -1576,7 +1635,7 @@ end
 ---@return string
 function QuestHelper.MakeRestrictedDialogFixedProf(FixedProfName)
     local SearchConditions = string.format("DialogLibID==%d", RDID.FixedProf)
-    local DialogCfg = DefaultDialogCfg:FindCfg(SearchConditions)
+    local DialogCfg = DialogCfg:FindCfg(SearchConditions)
     if DialogCfg ~= nil then
         return string.format(DialogCfg.DialogContent, FixedProfName)
     end
@@ -1587,7 +1646,7 @@ end
 ---@return string
 function QuestHelper.MakeRestrictedDialogLootCount(LootCount)
     local SearchConditions = string.format("DialogLibID==%d", RDID.LootCount)
-    local DialogCfg = DefaultDialogCfg:FindCfg(SearchConditions)
+    local DialogCfg = DialogCfg:FindCfg(SearchConditions)
     if DialogCfg ~= nil then
         return string.format(DialogCfg.DialogContent, LootCount)
     end
@@ -1614,6 +1673,24 @@ function QuestHelper.MakeRestrictedDialogTimeLimit(QuestName, Second)
         RawText = string.format(LSTR(593011), math.ceil(Second / 60))
     end
     return string.format(LSTR(596306), QuestName, RawText) --596306("下一章节主线任务《%s》，%s，敬请期待。")
+end
+
+function QuestHelper.MakeRestrictedDialogPWorldRestriction(PWorldID)
+    local PworldCfgItem = PworldCfg:FindCfgByKey(PWorldID)
+    if not PworldCfgItem then
+        return ""
+    end
+    
+    local SearchConditions = string.format("DialogLibID==%d", RDID.PWorld)
+    local DialogCfgItem = DialogCfg:FindCfg(SearchConditions)
+    if DialogCfgItem ~= nil then
+        return string.format(DialogCfgItem.DialogContent, PworldCfgItem.PWorldName)
+    end
+    return ""
+end
+
+function QuestHelper.MakeRestrictedDialogBuddyLevelRestriction(NeedLevel)
+    return string.format(LSTR(597005), NeedLevel) --596306("竞赛陆行鸟等级达到%d级。")
 end
 
 ---@param ChapterStatus CHAPTER_STATUS
@@ -1768,6 +1845,29 @@ function QuestHelper.MakeRestrictedDialog(ChapterStatus, ChapterCfgItem, QuestCf
         end
     end
 
+    -- 副本未完成
+    local PWorldRestriction = QuestCfgItem.SceneFinish or {}
+    if next(PWorldRestriction) then
+        for _, PWorldID in ipairs(PWorldRestriction) do
+            local SucceedCounterID = PworldCfg:FindValue(PWorldID, "SucceedCounterID")
+            if (SucceedCounterID == nil) or (SucceedCounterID == 0)
+            or (CounterMgr:GetCounterCurrValue(SucceedCounterID) == 0) then
+                RestrictedDialogList[RDType.PWorld] = QuestHelper.MakeRestrictedDialogPWorldRestriction(PWorldID)
+                break -- 需求要求只显示一个
+            end
+        end
+    end
+
+    local bNotMatched = false
+    local NeedLevel = ChapterCfgItem.BuddyLevel or 0
+    if NeedLevel > 0 then
+        local HighestLevel = _G.ChocoboMgr:GetChocoboMaxLevel()
+        bNotMatched = (HighestLevel < NeedLevel)
+    end
+    if bNotMatched then
+        RestrictedDialogList[RDType.ChocoboLevel] = bNoGenDialog and "" or QuestHelper.MakeRestrictedDialogBuddyLevelRestriction(NeedLevel)
+    end
+
     if next(RestrictedDialogList) == nil then return {} end
 
     return RestrictedDialogList
@@ -1822,6 +1922,11 @@ function QuestHelper.ShowQuestTip(ChapterID, bShowAccept, Callback)
 	local ChapterCfgItem = QuestHelper.GetChapterCfgItem(ChapterID)
 	if ChapterCfgItem == nil then return end
 
+    if (bShowAccept and (ChapterCfgItem.ShowAcceptUI == 0))
+    or (not bShowAccept and (ChapterCfgItem.ShowFinishUI == 0)) then
+        return
+    end
+
 	local Content = bShowAccept and LSTR(596005) or LSTR(596006) --596005("接受任务") 596006("任务完成")
 	local SoundName = nil
 	local TypeInfo = QuestDefine.QuestTypeInfo[ChapterCfgItem.QuestType]
@@ -1855,6 +1960,37 @@ function QuestHelper.UnRegisterWaitingSequenceWithChangeMap(SequenceID)
     end
 end
 
+--- 目前只针对搬运作处理，后续如果还有新增的特殊需要提示的再处理
+function QuestHelper.CheckQuestRevertAction(Quests)
+    if Quests == nil then return end
+
+    table.sort(Quests, function(Quest1, Quest2)
+        return Quest1.Status > Quest2.Status
+    end)
+
+    local QUEST_STATUS = ProtoCS.CS_QUEST_STATUS
+    local NODE_STATUS = ProtoCS.CS_QUEST_NODE_STATUS
+    for _, RspQuest in ipairs(Quests) do
+        local QuestID = RspQuest.QuestID
+        local Quest = QuestMgr.QuestMap[QuestID]
+        if Quest then
+            local Cfg = Quest.Cfg
+            if Cfg and Cfg.IsCarry == 1 then
+                if RspQuest.Status == QUEST_STATUS.CS_QUEST_STATUS_IN_PROGRESS then
+                    for _, Node in pairs(RspQuest.TargetNodes) do
+                        local NewStatus = Node.Status
+                        local OldNode = Quest.Targets[Node.NodeID]
+                        local OldStatus = OldNode and OldNode.Status
+                        if NewStatus == NODE_STATUS.CS_QUEST_NODE_STATUS_NOT_STARTED and OldStatus == NODE_STATUS.CS_QUEST_NODE_STATUS_IN_PROGRESS then
+                            MsgTipsUtil.ShowTipsByID(70007) -- 搬运失效，重新搬运
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
 -- ==================================================
 -- 打印信息
 -- ==================================================

@@ -146,6 +146,10 @@ function CommonTitleView:SetTitleIcon(IconPath)
 	if IconPath ~= nil then
 		UIUtil.ImageSetBrushFromAssetPath(self.IconTitle, IconPath)
 	end
-
 end
+
+function CommonTitleView:SetHelpInfoID(ID)
+	self.CommInforBtn:SetHelpInfoID(ID)
+end
+
 return CommonTitleView

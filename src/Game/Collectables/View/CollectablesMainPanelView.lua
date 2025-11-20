@@ -212,7 +212,7 @@ function CollectablesMainPanelView:TranslatedText()
     self.TextValue:SetText(LSTR(770028))
     self.TextReward:SetText(LSTR(770029))
     self.TextHoldNum:SetText(LSTR(770030))
-    self.BtnExchange:SetText(LSTR(10026))
+    self.BtnExchange:SetText(LSTR(770035))   --- 交 纳
     self.TextEmptyProp:SetText(LSTR(770031))
     self.TextTips:SetText(LSTR(770032))
 	self.CommonTitle_UIBP:SetTextTitleName(LSTR(770021))   -- "收藏品交易"
@@ -444,6 +444,7 @@ function CollectablesMainPanelView:OnSelectionChangedVerIconTabs(ProfessionIndex
     DefaultSelectIndex = DefaultSelectIndex or 1
     self.DropDownFilter:UpdateItems(DropFilterTabData, DefaultSelectIndex)
     self.DropDownFilter:SetSelectedIndex(DefaultSelectIndex)
+    self.NeedQueryRecord = true
     self:OnSelectionChangedDropDown(DefaultSelectIndex)
     _G.ObjectMgr:CollectGarbage(false, true, false)
 end
@@ -451,27 +452,36 @@ end
 ---@type 筛选选择变化
 ---@param DropFilterIndex number @范围：1~5
 function CollectablesMainPanelView:OnSelectionChangedDropDown(DropFilterIndex, ItemData, ItemView, bByClick)
-	self:PlayAnimation(self.AnimUpdateList)
-    --保存上次选择的筛选
+    self:PlayAnimation(self.AnimUpdateList)
+
     local LastSelectData = CollectablesMgr.LastSelectData
     local ProfIndex = LastSelectData.ProfIndex or 1
     local ProfessData = CollectablesMgr.ProfessionData
     local ProfID = LastSelectData.ProfID or ProfessData[1].ProfID
+
     --ProfessionIndex范围：1~11
     local ProfessionData = CollectablesMgr.ProfessionData[ProfIndex]
     local ProfessionLevel = ProfessionData.Level
     local DropFilterTabData = CollectablesMgr:GetDropFilterData(ProfessionLevel)
 
+    local LastDropFilterIndex = LastSelectData.DropFilterIndexMap[ProfID] 
+    self.NeedQueryRecord = self.NeedQueryRecord or (LastDropFilterIndex ~= nil and LastDropFilterIndex ~= DropFilterIndex)
+
     local DropFilterID = DropFilterTabData[DropFilterIndex].ID
     LastSelectData.DropFilterIndexMap[ProfID] = DropFilterIndex
     local CollectionData = CollectablesMgr:GetCollectByDropFilter(ProfID, DropFilterID)
     local ShowCollectionData = {}
+    local NeedQueryRecordIDList = {}
     for _, Elem in pairs(CollectionData) do
         if CollectablesMgr:CheckCollectionDisplayed(Elem) then
             table.insert(self.ShowingIDList, Elem.ID)
             table.insert(ShowCollectionData, Elem)
+            if self.NeedQueryRecord and CollectablesMgr:CheckInRecordUpdating(Elem) then
+                table.insert(NeedQueryRecordIDList, Elem.ID)
+            end
         end
     end
+
     if #ShowCollectionData < 1 then
         CollectablesVM.bRewardVisible = false
         CollectablesVM.bTableViewPropVisible = false
@@ -479,6 +489,11 @@ function CollectablesMainPanelView:OnSelectionChangedDropDown(DropFilterIndex, I
     CollectablesVM:UpdateCollectionList(ShowCollectionData)
     self.TableViewMarketAdapter:ScrollToIndex(LastSelectData.CurCollectSelectIndex or 1)
     _G.ObjectMgr:CollectGarbage(false, true, false)
+
+    self.NeedQueryRecord = false
+    if #NeedQueryRecordIDList > 0 then
+        CollectablesMgr:SendMsgGetRecordinfo(NeedQueryRecordIDList)
+    end
 end
 
 ---@type 点击交换按钮
@@ -536,11 +551,12 @@ end
 function CollectablesMainPanelView:OnGameEventCollectExchange(bIsBreakRecord)
     CollectablesMgr:UpdateCurAndMaxTicket()
     CollectablesVM:UpdateWarnImgVisbile()
+    local SelectPossCollect = CollectablesVM:GetSelectPossCollect()
     if bIsBreakRecord then
-        local SelectPossCollect = CollectablesVM:GetSelectPossCollect()
         CollectablesVM:UpdateImproveRecordTips(SelectPossCollect)
     else
         CollectablesVM:RemovePossCollect()
+        CollectablesMgr:SendMsgGetRecordinfo({SelectPossCollect.ID})
     end
 end
 

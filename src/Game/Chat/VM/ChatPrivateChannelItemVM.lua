@@ -45,7 +45,13 @@ end
 --- 更新角色信息 
 ---@param Value RoleVM @角色数据
 function ChatPrivateChannelItemVM:UpdateRoleInfo( Value )
-    self.Name = Value.Name or "" 
+    local RoleName = Value.Name or ""
+    if not _G.FriendMgr:IsFriend(self.RoleID) then
+        self:SetName(RoleName)
+    else
+        local NickName = _G.FriendMgr:GetFriendNickname(self.RoleID) or ""
+        self:SetName(#NickName > 0 and NickName or RoleName)
+    end
     self.HeadInfo = Value.HeadInfo 
     self.HeadFrameID = Value.HeadFrameID
     self.IsOnline = Value.IsOnline

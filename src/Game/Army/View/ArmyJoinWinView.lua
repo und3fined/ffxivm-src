@@ -86,16 +86,18 @@ function ArmyJoinWinView:OnClickedCommit()
 	local Msg = self.InputBox:GetText()
 	---查询文本是否合法（敏感词）
 	ArmyMgr:CheckSensitiveText(Msg, function( IsLegal )
-		if IsLegal then
-            if self.Callback then
-				self.Callback(Msg)
-				self.InputBox:SetText("")
+		if self:IsValid() then
+			if IsLegal then
+				if self.Callback then
+					self.Callback(Msg)
+					self.InputBox:SetText("")
+				end
+				self:Hide()
+			else
+				-- LSTR string:当前文本不可使用，请重新输入
+				MsgTipsUtil.ShowErrorTips(LSTR(10057))
 			end
-			self:Hide()
-		else
-			-- LSTR string:当前文本不可使用，请重新输入
-			MsgTipsUtil.ShowErrorTips(LSTR(10057))
-        end
+		end
     end)
 end
 

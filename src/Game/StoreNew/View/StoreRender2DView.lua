@@ -16,11 +16,17 @@ local CommonUtil = require("Utils/CommonUtil")
 local CompanionCfg = require("TableCfg/CompanionCfg")
 local CompanionGlobalCfg = require("TableCfg/CompanionGlobalCfg")
 local CompanionMgr = require("Game/Companion/CompanionMgr")
+local EmotionMgr = require("Game/Emotion/EmotionMgr")
 local EquipmentCameraControlDataLoader = require("Game/Equipment/EquipmentCameraControlDataLoader")
+local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local EquipmentDefine = require("Game/Equipment/EquipmentDefine")
 local EquipmentMgr = require("Game/Equipment/EquipmentMgr")
+local EventID = require("Define/EventID")
 local MajorUtil = require("Utils/MajorUtil")
 local MathUtil = require("Utils/MathUtil")
+local ModelPreviewCameraControlDataLoader = require("Game/Preview/ModelPreviewCameraControlDataLoader")
+local ModelPreviewSubstituteCfg = require("TableCfg/ModelPreviewSubstituteCfg")
+local ObjectMgr = require("Object/ObjectMgr")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ProtoRes = require("Protocol/ProtoRes")
 local RideCfg = require("TableCfg/RideCfg")
@@ -31,14 +37,23 @@ local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local FLOG_ERROR = _G.FLOG_ERROR
 local FLOG_INFO = _G.FLOG_INFO
 local UE = _G.UE
+local UnLua = _G.UnLua
+local EquipmentType = ProtoRes.EquipmentType
 
 local RenderActorPathFormat = "Class'/Game/UI/Render2D/StoreRender/BP_Render2DLoginActor_%s.BP_Render2DLoginActor_%s_C'"
+local CloseUpViewPathFormat = "CloseUpViewDataAsset'/Game/UI/Render2D/StoreRender/CloseUpViewConfig/DA_CloseUpView_%s.DA_CloseUpView_%s'"
 local DefaultLightPresetPath = "LightPreset'/Game/UI/Render2D/LightPresets/Login/UniversalLightingPreset/UniversalLightingPreset01.UniversalLightingPreset01'"
 local LightPresetType =
 {
 	Common = 1,
 	Roegadyn = 2,
 	Lalafell = 3,
+}
+
+local RenderActorCreateCallbackType =
+{
+	ModelSwitch = 1, -- 身体模型切换
+	PlayEmotion = 2, -- 播放情感动作
 }
 
 local CompanionInteractActionPaths =
@@ -70,15 +85,26 @@ function StoreRender2DView:OnInit()
 	self.CameraCenterOffsetY = -25
 	self.SkeletonName = ""
 
+	self.RenderActorCreateCallback = {} -- RenderActor加载完后的回调
+
 	-- 灯光
 	self.bOtherLightSwitched = false
+
+	-- 相机
+	self.DefaultCamCtrlDataLoader = EquipmentCameraControlDataLoader.New()
+	self.ModelPreviewCamCtrlDataLoader = ModelPreviewCameraControlDataLoader.New()
+	self.CloseUpViewConfigRefMap = {} -- 特写镜头配置Map
+	self.ViewGroupID = 0 -- 为0时使用角色系统镜头参数，>0时使用模型预览镜头参数
 
 	-- 外观
 	self.RawEquips = {}
 	self.RawCustoms = {}
-	self.AppearEquips = {}
+	self.AppearEquips = {} --当前预览的外观装备
+	self.AppearRegionDyesInfo = {} --预览的外观染色数据
 	self.AppearCustoms = {}
 	self.bRawEquipsVisible = false
+	self.bHelmetGimmickOn = false
+	self.bHelmetHidden = false
 
 	-- 宠物
 	self.CompanionEntityID = -1
@@ -103,6 +129,30 @@ function StoreRender2DView:OnHide()
 		self.bOtherLightSwitched = false
 	end
 	self:RemoveCompanion()
+	self.RenderActorCreateCallback = {}
+	for _, CloseUpViewConfig in pairs(self.CloseUpViewConfigRefMap) do
+		CloseUpViewConfig = nil
+	end
+	self.CloseUpViewConfigRefMap = {}
+	self.ViewGroupID = 0
+end
+
+function StoreRender2DView:OnActive()
+	local Companion = self:GetCompanion()
+	if nil ~= Companion and CommonUtil.IsObjectValid(Companion) then
+        Companion:SetActorVisibility(true, _G.UE.EHideReason.Common) -- Reason与CommonRender2DView:ShowCharacter保持一致
+	end
+end
+
+function StoreRender2DView:OnInactive()
+	if nil ~= self.CommRender2D.SkeletalMeshComponent and CommonUtil.IsObjectValid(self.CommRender2D.SkeletalMeshComponent) then
+		self.CommRender2D.SkeletalMeshComponent.VisibilityBasedAnimTickOption =
+			_G.UE.EVisibilityBasedAnimTickOption.OnlyTickPoseWhenRendered -- 停止动画更新，避免动作里的特效带入其他界面
+	end
+	local Companion = self:GetCompanion()
+	if nil ~= Companion and CommonUtil.IsObjectValid(Companion) then
+        Companion:SetActorVisibility(false, _G.UE.EHideReason.Common)
+	end
 end
 
 function StoreRender2DView:OnRegisterUIEvent()
@@ -110,17 +160,52 @@ function StoreRender2DView:OnRegisterUIEvent()
 end
 
 function StoreRender2DView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(EventID.PostEmotionEnd, self.OnGameEventPostEmotionEnd)
 end
 
 function StoreRender2DView:OnRegisterBinder()
 
 end
 
+--region 游戏事件
+
+function StoreRender2DView:OnGameEventPostEmotionEnd(Params)
+	if nil == Params or Params.ULongParam1 ~= ActorUtil.GetActorEntityID(self.CommRender2D.ChildActor) then
+		return
+	end
+	local bInterupted = Params.BoolParam1
+	if bInterupted then
+		return
+	end
+	local EmotionID = Params.IntParam1
+	self:UnRegisterEmotionTimer()
+	self.EmotionTimer = self:RegisterTimer(function() self:PlayEmotion(EmotionID) end, 3)
+end
+
+--endregion
+
+function StoreRender2DView:UnRegisterEmotionTimer()
+	if self.EmotionTimer then
+		self:UnRegisterTimer(self.EmotionTimer)
+	end
+end
+
 function StoreRender2DView:GetCommonRender2D()
 	return self.CommRender2D
 end
 
+function StoreRender2DView:UpdateSkeletonName(SkeletonName)
+	if self.SkeletonName == SkeletonName then
+		return
+	end
+	self.SkeletonName = SkeletonName
+	if nil == self.SkeletonName then
+		return
+	end
+	self:UpdateCloseUpViewConfig(SkeletonName)
+end
+
+--region RenderActor相关
 -- 创建RenderActor以及默认角色、灯光、相机配置
 function StoreRender2DView:CreateRenderActor(Params)
 	local EntityID = Params.EntityID or MajorUtil.GetMajorEntityID()
@@ -133,19 +218,27 @@ function StoreRender2DView:CreateRenderActor(Params)
 		-- 角色模型
 		self.CommRender2D:SetUICharacterByEntityID(EntityID)
 		self:UpdateAvatar()
+		self:HideHelmet(self.bHelmetHidden)
+		self:SwitchHelmet(self.bHelmetGimmickOn)
 
 		-- 灯光
 		self.bOtherLightSwitched = true
 		self.CommRender2D:SwitchOtherLights(false)
 
 		-- 相机
-		self.CameraFocusCfgMap:SetAssetUserData(self.CommRender2D:GetEquipmentConfigAssetUserData())
-		local CamControlParams = EquipmentCameraControlDataLoader:GetCameraControlParams(self.SkeletonName,
-			CameraControlDefine.FocusType.WholeBody)
-		self.CommRender2D:SetCameraControlParams(CamControlParams)
+		self:CheckCameraControlParams()
 		self.CommRender2D:ChangeUIState(false)
-		self.CommRender2D:SetSpringArmCenterOffsetY(self.CameraCenterOffsetY, CamControlParams.DefaultViewDistance)
+		if nil ~= self.CommRender2D.CamControlParams then
+			self.CommRender2D:SetSpringArmCenterOffsetY(self.CameraCenterOffsetY,
+				self.CommRender2D.CamControlParams.DefaultViewDistance)
+		end
 
+		if not table.is_nil_empty(self.RenderActorCreateCallback) then
+			for _, Callback in pairs(self.RenderActorCreateCallback) do
+				Callback()
+			end
+			self.RenderActorCreateCallback = {}
+		end
 		if nil ~= InCallback then
 			InCallback()
 		end
@@ -166,12 +259,21 @@ function StoreRender2DView:CreateRenderActor(Params)
 	if nil == CopyFromActor or nil == CopyFromActor:GetAvatarComponent() then
 		return
 	end
-	self.SkeletonName = CopyFromActor:GetAvatarComponent():GetAttachTypeIgnoreChangeRole()
+	self:UpdateSkeletonName(CopyFromActor:GetAvatarComponent():GetAttachTypeIgnoreChangeRole())
 	local RenderActorPath = string.format(RenderActorPathFormat, self.SkeletonName, self.SkeletonName)
 	self.CommRender2D:CreateRenderActor(RenderActorPath,
 		EquipmentMgr:GetEquipmentCharacterClass(), LightPresetPath,
 		false, CallBack, ReCreateCallBack, nil, {bSyncLoad = bSyncLoad})
 end
+
+function StoreRender2DView:AddRenderActorCreateCallback(CallbackType, Callback)
+	if nil == CallbackType or nil == Callback then
+		return
+	end
+	self.RenderActorCreateCallback[CallbackType] = Callback
+end
+
+--endregion
 
 --region 灯光相关
 
@@ -202,6 +304,42 @@ end
 --endregion
 
 --region 相机相关
+
+-- 根据骨骼名更新特写镜头配置
+function StoreRender2DView:UpdateCloseUpViewConfig(SkeletonName)
+	if nil == SkeletonName then
+		return
+	end
+	local CloseUpViewConfig = self.CloseUpViewConfigRefMap[SkeletonName] and self.CloseUpViewConfigRefMap[SkeletonName]:GetObject()
+	if nil == CloseUpViewConfig then
+		CloseUpViewConfig = ObjectMgr:LoadObjectSync(string.format(CloseUpViewPathFormat, SkeletonName, SkeletonName))
+		if nil == CloseUpViewConfig then
+			return
+		end
+		self.CloseUpViewConfigRefMap[SkeletonName] = UnLua.Ref(CloseUpViewConfig)
+	end
+	self.CameraFocusCfgMap:SetAssetUserData(CloseUpViewConfig.CloseUpViewData)
+end
+
+-- 根据骨骼名更新默认镜头控制参数
+function StoreRender2DView:CheckCameraControlParams()
+	if nil == self.SkeletonName then
+		return
+	end
+	local CamControlParams = nil
+	if self.ViewGroupID ~= 0 then
+		CamControlParams = self.ModelPreviewCamCtrlDataLoader:GetCameraControlParams(self.SkeletonName, self.ViewGroupID)
+	end
+	if nil == CamControlParams then
+		CamControlParams = self.DefaultCamCtrlDataLoader:GetCameraControlParams(self.SkeletonName, CameraControlDefine.FocusType.WholeBody)
+	end
+	self.CommRender2D:SetCameraControlParams(CamControlParams)
+end
+
+-- 更新默认镜头组ID
+function StoreRender2DView:UpdateViewGroupID(ViewGroupID)
+	self.ViewGroupID = ViewGroupID
+end
 
 -- 更新相机水平偏移
 function StoreRender2DView:UpdateCameraOffsetY(InOffsetY)
@@ -236,7 +374,6 @@ function StoreRender2DView:FocusView(Part, Prof)
 	local UIY = ViewportSize.Y / 2 + CameraFocusCfg.UIY
 	self.CommRender2D:SetCameraFocusScreenLocation(UIX * DPIScale, UIY * DPIScale, CameraFocusCfg.SocketName,
 	CameraFocusCfg.Distance)
-	
 
 	-- 角色模型
 	self.CommRender2D:SetModelRotation(0, CameraFocusCfg.Yaw , 0, true)
@@ -254,13 +391,14 @@ function StoreRender2DView:ResetView(bInterp, ViewportPos)
 		bInterp = true
 	end
 	self.CommRender2D.bAutoInitSpringArm = true
+	self:CheckCameraControlParams()
 	local DefaultSpringArmLength = 0
 	if nil ~= self.CommRender2D.CamControlParams then
 		DefaultSpringArmLength = self.CommRender2D.CamControlParams.DefaultViewDistance
 	end
 	-- 相机
 	if nil ~= ViewportPos then
-		self.CameraCenterOffsetY = -self.GetCameraOffsetY(ViewportPos,
+		self.CameraCenterOffsetY = -CameraUtil.GetCameraOffsetY(ViewportPos.X,
 			CameraUtil.FOVYToFOVX(self.CommRender2D:GetZoomFOV(DefaultSpringArmLength)),
 			DefaultSpringArmLength)
 	end
@@ -305,35 +443,96 @@ function StoreRender2DView:GetSpringArmLocationTarget()
 	end
 end
 
--- 假定相机朝向平行于X轴，且无滚筒角，计算相机注视点偏移量，使得ViewportPos的X轴坐标与世界坐标系Y=0对齐
-function StoreRender2DView.GetCameraOffsetY(ViewportPos, FOV, ViewDistance)
-	if nil == ViewportPos or nil == FOV or nil == ViewDistance then
-		return
-	end
-	-- 计算反投影向量与中轴的夹角
-	local ViewportWidth = UIUtil.GetScreenSize().X
-	if ViewportWidth == 0 then
-		return 0
-	end
-	return (1 - 2 * ViewportPos.X / ViewportWidth) * math.tan(math.rad(FOV * 0.5)) * ViewDistance
-end
-
 --endregion
 
 --region 换装相关
 
 -- 设置原始外观
 ---@param RoleAvatar common.RoleAvatar
+
+-- 切换到预设的模型外观
+function StoreRender2DView:SwitchToPresetModel(Race, Gender)
+	if nil == Race or nil == Gender then
+		return
+	end
+	local SubstituteCfgData = ModelPreviewSubstituteCfg:FindCfgByKey(Race)
+	if nil == SubstituteCfgData then
+		return
+	end
+	local NPCBaseID = Gender == ProtoCommon.role_gender.GENDER_MALE and SubstituteCfgData.MaleNPCBaseID
+		or SubstituteCfgData.FemaleNPCBaseID
+	local Character = self.CommRender2D:GetCharacter()
+	if nil == Character then
+		self:AddRenderActorCreateCallback(RenderActorCreateCallbackType.ModelSwitch,
+			function() self:SwitchToPresetModel(Race, Gender) end)
+		return
+	end
+	local AvatarComp = Character:GetAvatarComponent()
+	if nil == AvatarComp then
+		return
+	end
+	-- 加载Npcbase数据并更新模型
+	AvatarComp:LoadByAvatarNpcbaseID(NPCBaseID, true)
+	Character:MarkUIActor()
+	self:UpdateSkeletonName(AvatarComp:GetAttachTypeIgnoreChangeRole())
+	-- 更新原始AvatarFace数据
+	local FaceMap = _G.UE.TMap(_G.UE.int32, _G.UE.int32)
+	AvatarComp:GetAvatarFaceMapByProfile(FaceMap)
+	self:UpdateRawCustoms(FaceMap)
+	-- 根据新Face数据更新模型
+	self:UpdateAvatar()
+end
+
+-- 恢复到默认模型外观
+function StoreRender2DView:ResetToDefaultModel(RoleSimple)
+	if nil == RoleSimple then
+		return
+	end
+	local Character = self.CommRender2D:GetCharacter()
+	if nil == Character then
+		self:AddRenderActorCreateCallback(RenderActorCreateCallbackType.ModelSwitch,
+			function() self:ResetToDefaultModel(RoleSimple) end)
+		return
+	end
+	local AvatarComp = Character:GetAvatarComponent()
+	if nil == AvatarComp then
+		return
+	end
+	local AttributeComp = Character:GetAttributeComponent()
+	if nil == AttributeComp then
+		return
+	end
+	-- 还原种族与性别
+	AttributeComp.Gender = RoleSimple.Gender
+	AttributeComp.RaceID = RoleSimple.Race
+	AttributeComp:SetTribeID(RoleSimple.Tribe)
+	AvatarComp:ResetHasRoleAvatar()
+	AvatarComp:UpdateDefaultBody()
+	self:UpdateSkeletonName(AvatarComp:GetAttachTypeIgnoreChangeRole())
+	-- 还原原始AvatarFace数据
+	self:SetRawAvatar(RoleSimple.Avatar)
+	-- 根据新Face数据更新模型
+	self:UpdateAvatar()
+end
+
 function StoreRender2DView:SetRawAvatar(RoleAvatar)
 	for _, Equip in pairs(RoleAvatar.EquipList) do
-		local EquipID = WardrobeUtil.GetEquipID(Equip.EquipID, Equip.ResID, Equip.RandomID)
+		--这里接口可能有问题，不能传入RandomID，不然会直接返回RandomID，有时候不是EquipID
+		local EquipID = WardrobeUtil.GetEquipID(Equip.EquipID, Equip.ResID, nil)
 		self.RawEquips[Equip.Part] = {EquipID = EquipID, ColorID = Equip.ColorID}
 	end
-	self.RawCustoms = RoleAvatar.Face
+	self.RawCustoms = table.deepcopy(RoleAvatar.Face)
 	-- 下面几个外观设置受界面控制，不保存原始数据
 	self.RawCustoms[ProtoCommon.avatar_personal.AvatarEquipHeadShow] = nil
 	self.RawCustoms[ProtoCommon.avatar_personal.AvatarEquipHandShow] = nil
 	self.RawCustoms[ProtoCommon.avatar_personal.AvatarEquipSwitchShow] = nil
+end
+
+-- 更新原始AvatarFace数据，默认只更新传入部分数据
+function StoreRender2DView:UpdateRawCustoms(AvatarFaceMap)
+	for Key, Value in pairs(AvatarFaceMap) do
+		self.RawCustoms[Key] = Value
+	end
 end
 
 -- 设置原始装备可见性（默认关）
@@ -342,7 +541,32 @@ function StoreRender2DView:SetRawEquipsVisible(bVisible)
 	self:UpdateAvatar()
 end
 
--- 穿着单个外观
+-- 设置当前预览的外观染色数据
+function StoreRender2DView:SetAppearRegionDyesInfo(RegionDyesInfo)
+	self.AppearRegionDyesInfo = RegionDyesInfo
+end
+
+-- 头盔显隐
+function StoreRender2DView:HideHelmet(bHide)
+	self.bHelmetHidden = bHide
+	if nil == self.CommRender2D.ChildActor then
+		-- 角色未创建，待创建回调后根据bHelmetHidden设置
+		return
+	end
+	self.CommRender2D:HideHead(bHide)
+end
+
+-- 头盔开关
+function StoreRender2DView:SwitchHelmet(bOn)
+	self.bHelmetGimmickOn = bOn
+	if nil == self.CommRender2D.ChildActor then
+		-- 角色未创建，待创建回调后根据bHelmetGimmickOn设置
+		return
+	end
+	self.CommRender2D:SwitchHelmet(bOn)
+end
+
+-- 穿上当前点击的外观装备
 ---@param AppearData table @{EquipmentID: number, Part: number, ItemType: ProtoCommon.ITEM_TYPE_DETAIL}
 function StoreRender2DView:WearAppearance(AppearData, bLoadInstantly)
 	if nil == AppearData.EquipmentID or nil == AppearData.Part then
@@ -354,7 +578,7 @@ function StoreRender2DView:WearAppearance(AppearData, bLoadInstantly)
 		self:PreviewCustom(Part, AppearData.EquipmentID)
 	else
 		self.AppearEquips[AppearData.Part] = AppearData
-		self:PreviewEquipment(AppearData.EquipmentID, AppearData.Part, AppearData.ColorID, nil, bLoadInstantly)
+		self:PreviewEquipment(AppearData.EquipmentID, AppearData.Part, AppearData.ColorID, self.AppearRegionDyesInfo, bLoadInstantly)
 	end
 end
 
@@ -377,24 +601,34 @@ function StoreRender2DView:WearSuit(SuitData)
 	self:LoadAvatar()
 end
 
+function StoreRender2DView:SetOrnamentCompData(Type, ID)
+	self.CommRender2D.ChildActor:SetOrnamentCompData(Type, ID)
+end
+
+function StoreRender2DView:DeleteOrnamentData(Type)
+	self.CommRender2D.ChildActor:DeleteOrnamentData(Type)
+end
+
 -- 根据当前外观数据与原始装备数据更新模型
 function StoreRender2DView:UpdateAvatar()
 	-- 穿上外观
 	for _, EquipData in pairs(self.AppearEquips) do
-		self:PreviewEquipment(EquipData.EquipmentID, EquipData.Part, EquipData.ColorID, nil, false)
+		self:PreviewEquipment(EquipData.EquipmentID, EquipData.Part, EquipData.ColorID, self.AppearRegionDyesInfo, false)
 	end
 	for _, CustomData in pairs(self.AppearCustoms) do
 		self:PreviewCustom(CustomData, CustomData.EquipmentID)
+	end
+
+	--获取原始装备的染色数据
+	local RegionDyesInfo = nil
+	if self.bRawEquipsVisible then
+		RegionDyesInfo = ActorUtil.GetActorRegionDyesInfo(MajorUtil.GetMajorEntityID())
 	end
 
 	-- 穿上外观部位没有的原始装备与妆容
 	for Part, EquipData in pairs(self.RawEquips) do
 		if nil == self.AppearEquips[Part] then
 			local EquipID = self.bRawEquipsVisible and EquipData.EquipID or 0
-			local RegionDyesInfo = nil
-			if self.bRawEquipsVisible then
-				RegionDyesInfo = ActorUtil.GetActorRegionDyesInfo(MajorUtil.GetMajorEntityID())
-			end
 			self:PreviewEquipment(EquipID, Part, EquipData.ColorID, RegionDyesInfo, false)
 		end
 	end
@@ -408,6 +642,7 @@ function StoreRender2DView:UpdateAvatar()
 	self:LoadAvatar()
 end
 
+--脱掉对应Part预览的外观
 function StoreRender2DView:TakeOffAppear(Part, bLoadInstantly)
 	if Part == ProtoCommon.equip_part.EQUIP_PART_BODY_HAIR then
 		local CustomPart = EquipmentDefine.AvatarPersonalMap[Part]
@@ -489,6 +724,25 @@ end
 
 --endregion
 
+--region 动作相关
+function StoreRender2DView:PlayEmotion(EmotionID)
+	if nil == self.CommRender2D.ChildActor then
+		self:AddRenderActorCreateCallback(RenderActorCreateCallbackType.PlayEmotion, function() self:PlayEmotion(EmotionID) end)
+		return
+	end
+	EmotionMgr:PlayEmotionIDFromEntityID(EmotionID, self.CommRender2D.ChildActor:GetActorEntityID())
+end
+
+function StoreRender2DView:StopEmotion()
+	if nil == self.CommRender2D.ChildActor then
+		self:AddRenderActorCreateCallback(RenderActorCreateCallbackType.PlayEmotion, function() self:StopEmotion() end)
+		return
+	end
+	EmotionMgr:StopAllEmotions(self.CommRender2D.ChildActor:GetActorEntityID())
+end
+
+--endregion
+
 --region 宠物相关
 
 ---@param CreateParam table @{Location: UE.FVector, Rotation: UE.FVector}
@@ -498,18 +752,22 @@ function StoreRender2DView:CreateCompanion(CompanionID, CreateParam)
 
     local Location = CreateParam.Location
 	local Rotation = CreateParam.Rotation
-
+	
     local CreateClientActorParam = UE.FCreateClientActorParams()
 	CreateClientActorParam.bUIActor = true
 	CreateClientActorParam.bAsync = true
+	CreateClientActorParam.bNoFadeInOut = CreateParam.bNoFadeInOut or false
 	self.CompanionEntityID = UE.UActorManager:Get():CreateClientActorByParams(UE.EActorType.Companion, 0, CompanionID,
 		Location, Rotation, CreateClientActorParam)
 end
 
 function StoreRender2DView:RemoveCompanion()
 	if self.CompanionEntityID > 0 then
-		UE.UActorManager.Get():RemoveClientActor(self.CompanionEntityID)
-		self.CompanionEntityID = -1
+		local Companion = ActorUtil.GetActorByEntityID(self.CompanionEntityID)
+        if Companion then
+            _G.UE.UActorManager.Get():RemoveClientActor(self.CompanionEntityID)
+			self.CompanionEntityID = -1
+        end
 	end
 end
 
@@ -669,26 +927,22 @@ end
 
 -- 更新假阴影捕获目标
 function StoreRender2DView:UpdateShadowTarget(Actor)
-	local ShadowActor = self.CommRender2D.ShandowActor
+	local ShadowActor = self.CommRender2D.ShadowActor
 	if nil == ShadowActor or not CommonUtil.IsObjectValid(ShadowActor) then
 		return
 	end
 	if _G.StoreMainVM.TabSelecteType ~= ProtoRes.StoreMall.STORE_MALL_PET then
 		local AllActor = _G.UE.TArray(_G.UE.AActor)
 		AllActor:Add(Actor)
-		ShadowActor.SceneCaptureComponent2D:ClearShowOnlyComponents()
-		ShadowActor.SceneCaptureComponent2D.ShowOnlyActors= AllActor
+		_G.UIShadowMgr:UpdateActorList(AllActor)
 	else
-		local AllActor = _G.UE.TArray(_G.UE.AActor)
-		ShadowActor.SceneCaptureComponent2D.ShowOnlyActors= AllActor
-		ShadowActor.SceneCaptureComponent2D:ClearShowOnlyComponents()
-		ShadowActor.SceneCaptureComponent2D:ShowOnlyActorComponents(Actor)
+		_G.UIShadowMgr:UpdateCompnent(Actor)
 	end
 end
 
 ---@param ShadowType ActorUtil.ShadowType
 function StoreRender2DView:SwitchShadowType(ShadowType)
-	local ShadowActor = self.CommRender2D.ShandowActor
+	local ShadowActor = self.CommRender2D.ShadowActor
 	if nil == ShadowActor or not CommonUtil.IsObjectValid(ShadowActor) then
 		return
 	end

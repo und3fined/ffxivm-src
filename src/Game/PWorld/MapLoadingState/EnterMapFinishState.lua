@@ -14,6 +14,7 @@ function EnterMapFinishState:EnterState()
     _G.PWorldMgr:NotifyEnterMapFinish()
 
     _G.CommonUtil.DisableShowJoyStick(false)
+    MajorUtil.SetDisableMoveReq(false)
 
     local PWorldTableCfg = _G.PWorldMgr:GetCurrPWorldTableCfg()
     if PWorldTableCfg and PWorldTableCfg.MainPanelUIType ~= _G.LoginMapType.HairCut and PWorldTableCfg.MainPanelUIType ~= _G.LoginMapType.Fantasia then

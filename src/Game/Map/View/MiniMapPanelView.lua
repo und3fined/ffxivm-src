@@ -1,7 +1,7 @@
 ---
 --- Author: anypkvcai
 --- DateTime: 2022-10-24 14:48
---- Description:
+--- Description: 小地图
 ---
 
 local UIView = require("UI/UIView")
@@ -199,6 +199,9 @@ end
 --end
 
 function MiniMapPanelView:OnTimerUpdateMap()
+	if nil == self.Object or not self.Object:IsValid() then
+		return
+	end
 	self:UpdateImagePosition()
 end
 
@@ -220,7 +223,7 @@ function MiniMapPanelView:OnRangeIndexChange(RangeIndex)
 	if not RangeIndex then
 		return
 	end
-   
+
 	local FeedBackDef = MachineDetectDef[RangeIndex]
 	if not FeedBackDef then
 		return

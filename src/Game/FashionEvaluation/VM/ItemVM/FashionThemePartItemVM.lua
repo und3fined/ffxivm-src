@@ -46,13 +46,15 @@ function FashionThemePartItemVM:UpdateVM(Value)
 		self.AppearanceIcon = EquipInfo.AppIconPath
         self.EquipIconOpacity = 1
     else
-        if ViewType == FashionEvaluationDefine.EFashionView.Fitting then
-            self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
-            self.EquipIconOpacity = 0.4
-        elseif ViewType == FashionEvaluationDefine.EFashionView.Main then
-            self.AppearanceIcon = FashionEvaluationVMUtils.GetPartIcon(self.Part) -- 装备部位底图
-            self.EquipIconOpacity = 1
-        end
+        -- if ViewType == FashionEvaluationDefine.EFashionView.Fitting then
+        --     self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
+        --     self.EquipIconOpacity = 0.4
+        -- elseif ViewType == FashionEvaluationDefine.EFashionView.Main then
+        --     self.AppearanceIcon = FashionEvaluationVMUtils.GetPartIcon(self.Part) -- 装备部位底图
+        --     self.EquipIconOpacity = 1
+        -- end
+        self.AppearanceIcon = FashionEvaluationVMUtils.GetPartIcon(self.Part) -- 装备部位底图
+        self.EquipIconOpacity = 1
     end
 
 end

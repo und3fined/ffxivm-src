@@ -13,6 +13,7 @@ local QuestHelper = require("Game/Quest/QuestHelper")
 local QuestDefine = require("Game/Quest/QuestDefine")
 local EventID = require("Define/EventID")
 local TimeUtil = require("Utils/TimeUtil")
+local MapUtil = require("Game/Map/MapUtil")
 
 local QuestCfg = require("TableCfg/QuestCfg")
 local NpcQuestCfg = require("TableCfg/NpcQuestCfg")
@@ -142,6 +143,7 @@ function QuestRegister:InitData()
 
 	self.NpcHintTalks = {} -- map< int NpcID, list { int DialogID, function Callback } >
 	self.EObjHintTalks = {} -- map< int EObjID, list { int DialogID, function Callback } >
+	self.MapAreaHintTalks = {} -- map< int MapAreaID64, list { int DialogID, function Callback } >
 
 	self.ActivityMap = {} --map<int ActivityID, int Status>
 	self.ActivityQuestMap = {} --map<int QuestID, int ActivityID>
@@ -523,7 +525,12 @@ function QuestRegister:OperateInteractorQuestList(OpFunc)
 end
 
 function QuestRegister:OperateCurrMapQuestList(OpFunc)
-	local MapID = PWorldMgr:GetCurrMapResID()
+	local CurMapID = PWorldMgr:GetCurrMapResID()
+	local DefaultMapID = MapUtil.GetDefaultMapID(CurMapID)
+	local MapID = CurMapID
+	if DefaultMapID ~= 0 then	-- 只有查到DefaultMapID才去使用，不然都用原本的MapID，因为有的地图并没有DefaultMapID
+		MapID = DefaultMapID
+	end
 	local QuestList = _G.QuestTrackMgr:GetMapQuestList(MapID)
 	for _, QuestParam  in ipairs(QuestList) do
 		local ResID = QuestParam.NaviObjID
@@ -659,11 +666,7 @@ function QuestRegister:RegisterAreaScene(MapID, AreaID)
 	end
 	self.QuestAreaScene[MapID][AreaID] = true
 
-	local Register = self.GameEventRegister
-	if not Register then
-		Register = GameEventRegister.New()
-		self.GameEventRegister = Register
-	end
+	local Register = self:GetGameEventRegister()
 	Register:Register(EventID.AreaTriggerBeginOverlap, self, self.OnGameEventAreaTriggerBeginOverlap)
 
 	local PWorldDynDataMgr = _G.PWorldMgr.GetPWorldDynDataMgr()
@@ -693,7 +696,7 @@ function QuestRegister:UnRegisterAreaScene(MapID, AreaID)
 		end
 	end
 	if not NeedListen then
-		local Register = self.GameEventRegister
+		local Register = self:GetGameEventRegister()
 		if Register then
 			Register:UnRegister(EventID.AreaTriggerBeginOverlap, self, self.OnGameEventAreaTriggerBeginOverlap)
 		end
@@ -1278,7 +1281,7 @@ function QuestRegister.InsertUniqueToListMap(ListMap, ListID, InsertItem)
 	table.insert(ListMap[ListID], InsertItem)
 end
 
-function QuestRegister:SetHintTalk(NpcID, EObjID, DialogID, Callback)
+function QuestRegister:SetHintTalk(NpcID, EObjID, MapAreaID64, DialogID, Callback)
 	local HintTalks = nil
 	local ResID = 0
 	if (NpcID or 0) ~= 0 then
@@ -1287,28 +1290,42 @@ function QuestRegister:SetHintTalk(NpcID, EObjID, DialogID, Callback)
 	elseif (EObjID or 0) ~= 0 then
 		HintTalks = self.EObjHintTalks
 		ResID = EObjID
+	elseif (MapAreaID64 or 0) ~= 0 then
+		HintTalks = self.MapAreaHintTalks
+		ResID = MapAreaID64
 	end
 	if HintTalks == nil or ResID == 0 then
-		QuestHelper.PrintQuestError("SetHintTalk falied", NpcID, EObjID, DialogID, Callback ~= nil)
+		QuestHelper.PrintQuestError("SetHintTalk falied", NpcID, EObjID, MapAreaID64, DialogID, Callback ~= nil)
 		return
 	end
 
-	local Value = {}
-	if DialogID == nil and Callback == nil then
-		Value = nil
-	else
+	local Value = nil
+	if DialogID ~= nil or Callback ~= nil then
+		Value = {}
 		Value.DialogID = DialogID
 		Value.Callback = Callback
 	end
+
+	if (MapAreaID64 or 0) ~= 0 then
+		local Register = self:GetGameEventRegister()
+		if Value ~= nil then
+			Register:Register(EventID.AreaTriggerBeginOverlap, self, self.OnGameEventHintTalkAreaBeginOverlap)
+		else
+			Register:UnRegister(EventID.AreaTriggerBeginOverlap, self, self.OnGameEventHintTalkAreaBeginOverlap)
+		end
+	end
+
 	HintTalks[ResID] = Value
 end
 
 ---@return table table { DialogID, Callback }
-function QuestRegister:GetHintTalk(NpcID, EObjID)
+function QuestRegister:GetHintTalk(NpcID, EObjID, MapAreaID64)
 	if (NpcID or 0) ~= 0 then
 		return self.NpcHintTalks[NpcID]
 	elseif (EObjID or 0) ~= 0 then
 		return self.EObjHintTalks[EObjID]
+	elseif (MapAreaID64 or 0) ~= 0 then
+		return self.MapAreaHintTalks[MapAreaID64]
 	end
 	return nil
 end
@@ -1316,6 +1333,13 @@ end
 -- ==================================================
 -- 事件监听
 -- ==================================================
+
+function QuestRegister:GetGameEventRegister()
+	if not self.GameEventRegister then
+		self.GameEventRegister = GameEventRegister.New()
+	end
+	return self.GameEventRegister
+end
 
 function QuestRegister:OnGameEventAreaTriggerBeginOverlap(Params)
 	local CurrMapID = _G.PWorldMgr:GetCurrMapResID()
@@ -1327,6 +1351,17 @@ function QuestRegister:OnGameEventAreaTriggerBeginOverlap(Params)
 			_G.QuestMgr:SendAreaSceneEnter(CurrMapID, AreaID)
 		end
 	end
+end
+
+function QuestRegister:OnGameEventHintTalkAreaBeginOverlap(Params)
+	local MapID = _G.PWorldMgr:GetCurrMapResID()
+	local AreaID = Params.AreaID
+    local MapAreaID64 = (MapID << 32) | AreaID
+
+	local HintTalkData = self:GetHintTalk(nil, nil, MapAreaID64)
+    if HintTalkData and next(HintTalkData) then
+        _G.NpcDialogMgr:PlayDialogLib(HintTalkData.DialogID, nil, nil, HintTalkData.Callback)
+    end
 end
 
 return QuestRegister

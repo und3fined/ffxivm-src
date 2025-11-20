@@ -131,7 +131,6 @@ function CommMenuChildItemView:RefreshShowColor()
 	if nil == Params then return end
 
 	UIUtil.SetColorAndOpacity(self.ImgIcon, 1, 1, 1, 1)
-	local ViewModel = Params.Data
 	local Color = self.IsSelected and self.ColorSelect or self.ColorNormal
 	self.TextName:SetColorAndOpacity(Color)
 	self.TextNameFont.OutlineSettings.OutlineSize = 2

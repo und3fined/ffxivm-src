@@ -26,6 +26,7 @@ local ScoreMgr = require("Game/Score/ScoreMgr")
 local ProtoRes = require("Protocol/ProtoRes")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local TimeUtil = require("Utils/TimeUtil")
+local CommonUtil = require("Utils/CommonUtil")
 
 local BuyAccess = {
 	FirstBuy = 1,	-- 一次购买
@@ -50,9 +51,9 @@ local LSTR = _G.LSTR
 ---@field BoradBtn UHorizontalBox
 ---@field BtnBuyOne UFButton
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonTitle CommonTitleView
 ---@field FBtn_CloseCheck UFButton
 ---@field FBtn_Decide UFButton
----@field FBtn_Help CommInforBtnView
 ---@field FBtn_Mask UFButton
 ---@field FCanvasPanel_DX UFCanvasPanel
 ---@field FText_Grid1 UFTextBlock
@@ -94,7 +95,6 @@ local LSTR = _G.LSTR
 ---@field RichTextRemainder01 URichTextBox
 ---@field RichTextremainderTimes URichTextBox
 ---@field RichTextremainderTimes_1 URichTextBox
----@field T1_MiniCactpot UFTextBlock
 ---@field TableView_Keys UTableView
 ---@field TableView_List1 UTableView
 ---@field TableView_List2 UTableView
@@ -152,9 +152,9 @@ function MiniCactpotMainView:Ctor()
 	--self.BoradBtn = nil
 	--self.BtnBuyOne = nil
 	--self.CloseBtn = nil
+	--self.CommonTitle = nil
 	--self.FBtn_CloseCheck = nil
 	--self.FBtn_Decide = nil
-	--self.FBtn_Help = nil
 	--self.FBtn_Mask = nil
 	--self.FCanvasPanel_DX = nil
 	--self.FText_Grid1 = nil
@@ -196,7 +196,6 @@ function MiniCactpotMainView:Ctor()
 	--self.RichTextRemainder01 = nil
 	--self.RichTextremainderTimes = nil
 	--self.RichTextremainderTimes_1 = nil
-	--self.T1_MiniCactpot = nil
 	--self.TableView_Keys = nil
 	--self.TableView_List1 = nil
 	--self.TableView_List2 = nil
@@ -251,7 +250,7 @@ function MiniCactpotMainView:OnRegisterSubView()
 	self:AddSubView(self.Arrow07)
 	self:AddSubView(self.Arrow08)
 	self:AddSubView(self.CloseBtn)
-	self:AddSubView(self.FBtn_Help)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.MoneySlot)
 	self:AddSubView(self.PopUpBG)
 	self:AddSubView(self.PopUpBG01)
@@ -321,7 +320,7 @@ function MiniCactpotMainView:OnShow()
 end
 
 function MiniCactpotMainView:InitLSTRText()
-	self.T1_MiniCactpot:SetText(LSTR(230016)) --仙人微彩
+	self.CommonTitle:SetTextTitleName(LSTR(230016)) --仙人微彩
 	self.Text_Decide:SetText(LSTR(230017)) -- 决  定
 	self.Text_CloseCheck:SetText(LSTR(230018)) -- 再次购买
 	self.TextTotal:SetText(LSTR(230021)) -- 合计
@@ -421,13 +420,13 @@ function MiniCactpotMainView:OnCloseBtnClick()
 		return
 	end
 	MiniCactpotMgr:UnRegisterAllTimer()
-	self.FBtn_Help.BtnInfor:SetIsEnabled(true)
+	--self.FBtn_Help.BtnInfor:SetIsEnabled(true)
 	self:Hide()
 end
 
 function MiniCactpotMainView:OnRsqExitMsg()
 	MiniCactpotMgr.bIsInProgress = false
-	self.FBtn_Help.BtnInfor:SetIsEnabled(true)
+	--self.FBtn_Help.BtnInfor:SetIsEnabled(true)
 	self:Hide()
 end
 
@@ -465,7 +464,7 @@ function MiniCactpotMainView:OpenRemunerList()
 		UIUtil.SetIsVisible(self.Ticket, true)
 
 		self:PlayAnimation(self.AnimTicketZoomOut)
-		self.FBtn_Help.BtnInfor:SetIsEnabled(true)
+		--self.CommonTitle.CommInforBtn:SetIsEnabled(true)
 
 		self.PreviewOpening = false
 	else
@@ -476,7 +475,7 @@ function MiniCactpotMainView:OpenRemunerList()
 
 		UIUtil.SetIsVisible(self.Ticket, false)
 		self:PlayAnimation(self.AnimTicketZoomIn)
-		self.FBtn_Help.BtnInfor:SetIsEnabled(false)
+		--self.FBtn_Help.BtnInfor:SetIsEnabled(false)
 
 		self.PreviewOpening = true
 	end
@@ -509,7 +508,10 @@ function MiniCactpotMainView:OnBtnPurOnceSuccess()
 	self:BuySucessTip()
 	self:UpdateCurTerm()
 
-	UIUtil.SetIsVisible(self.FBtn_Mask, true, true)
+	local FBtn_Mask = self.FBtn_Mask
+	if FBtn_Mask and CommonUtil.IsObjectValid(FBtn_Mask) then
+		UIUtil.SetIsVisible(FBtn_Mask, true, true)
+	end
 	UIUtil.SetIsVisible(self.PanelMain, false)
 	UIUtil.SetIsVisible(self.Board, true)
 	UIUtil.SetIsVisible(self.Ticket, true)
@@ -530,6 +532,9 @@ end
 
 --- @type 再次购买成功
 function MiniCactpotMainView:OnReBuySuccess()
+	if not CommonUtil.IsObjectValid(self) then
+		return
+	end
 	MiniCactpotMgr.IsFinished = false
 	UIUtil.SetIsVisible(self.Ticket, true)
 	UIUtil.SetIsVisible(self.FBtn_Mask, true, true)
@@ -545,17 +550,21 @@ function MiniCactpotMainView:OnReBuySuccess()
 
 	if self.PreviewOpening then
 		self:PlayAnimation(self.AnimTicketZoomOut)
-		self.FBtn_Help.BtnInfor:SetIsEnabled(true)
+		--self.FBtn_Help.BtnInfor:SetIsEnabled(true)
 
 		--self:PlayAnimation(self.AnimFirstTipsShow)
 		self.PreviewOpening = false
 	else
 		self:PlayAnimation(self.AnimTicketZoomIn)
-		self.FBtn_Help.BtnInfor:SetIsEnabled(false)
+		--self.FBtn_Help.BtnInfor:SetIsEnabled(false)
 
 		self.PreviewOpening = true
 	end
 	local function HideRewardPanel()
+		local RewardPreviewPanel = self.RewardPreviewPanel
+		if not RewardPreviewPanel or not CommonUtil.IsObjectValid(RewardPreviewPanel) then
+			return
+		end
 		UIUtil.SetIsVisible(self.RewardPreviewPanel, false)
 	end
 	self:RegisterTimer(HideRewardPanel, 0.33, 0, 1, nil)

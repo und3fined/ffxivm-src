@@ -11,26 +11,32 @@ local UIUtil = require("Utils/UIUtil")
 ---@class PlayStyleCommFrameLView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field ButtonClose UFButton
----@field CanvasPanel UFCanvasPanel
 ---@field CommCurrency01_1 CommMoneySlotView
 ---@field CommCurrency02_1 CommMoneySlotView
 ---@field FText_Title UFTextBlock
 ---@field NamedSlotChild UNamedSlot
 ---@field PanelCurrency UFCanvasPanel
 ---@field PopUpBG CommonPopUpBGView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
+---@field TextTitle text
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PlayStyleCommFrameLView = LuaClass(UIView, true)
 
 function PlayStyleCommFrameLView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ButtonClose = nil
-	--self.CanvasPanel = nil
 	--self.CommCurrency01_1 = nil
 	--self.CommCurrency02_1 = nil
 	--self.FText_Title = nil
 	--self.NamedSlotChild = nil
 	--self.PanelCurrency = nil
 	--self.PopUpBG = nil
+	--self.SkillHandleCloseBtn = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
+	--self.TextTitle = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -39,6 +45,7 @@ function PlayStyleCommFrameLView:OnRegisterSubView()
 	self:AddSubView(self.CommCurrency01_1)
 	self:AddSubView(self.CommCurrency02_1)
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

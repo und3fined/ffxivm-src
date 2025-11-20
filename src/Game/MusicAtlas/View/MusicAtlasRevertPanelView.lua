@@ -239,10 +239,13 @@ function MusicAtlasRevertPanelView:ClickToggleBtnStart()
 		self.ToggleBtnStart:SetChecked(false)
 		MusicPlayerMgr:StopCurRevertMusic()
 		self.ViewModel:StopPlayChoseMusic()
+		MusicPlayerMgr:RecoverBGM()
 	else
+		self.PlayState = true
 		MusicPlayerMgr.ReCallPlayState = true
 		self.ToggleBtnStart:SetChecked(true)
-		self.MusicAtlasList:SetSelectedIndex(self.CurPlayingIndex)
+		MusicPlayerMgr:PlayAtlasRevertMusic(self.CurPlayingID)
+		self.ViewModel:PlayChoseMusic(self.CurPlayingID, self.ChangedPercent)
 	end
 end
 

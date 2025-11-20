@@ -8,8 +8,8 @@ local AccountUtil = require("Utils/AccountUtil")
 local UIView = require("UI/UIView")
 local EventID = require("Define/EventID")
 local LuaClass = require("Core/LuaClass")
-local LocalizationUtil = require("Utils/LocalizationUtil")
-local TimeUtil = require("Utils/TimeUtil")
+--local LocalizationUtil = require("Utils/LocalizationUtil")
+--local TimeUtil = require("Utils/TimeUtil")
 local UIUtil = require("Utils/UIUtil")
 
 local FLOG_INFO = _G.FLOG_INFO
@@ -32,6 +32,7 @@ local FLOG_INFO = _G.FLOG_INFO
 ---@field ImgTime UImage
 ---@field PanelBubble UFCanvasPanel
 ---@field PanelTips UCanvasPanel
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TextNum1 UTextBlock
 ---@field TextNumNew UTextBlock
 ---@field AnimBubbleAwardLoop UWidgetAnimation
@@ -61,6 +62,7 @@ function LoginNewAssemblePanelView:Ctor()
 	--self.ImgTime = nil
 	--self.PanelBubble = nil
 	--self.PanelTips = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextNum1 = nil
 	--self.TextNumNew = nil
 	--self.AnimBubbleAwardLoop = nil
@@ -74,6 +76,7 @@ end
 
 function LoginNewAssemblePanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -89,20 +92,20 @@ function LoginNewAssemblePanelView:OnShow()
     FLOG_INFO("[LoginNewAssemblePanelView:OnShow] ")
     self:ShowFromLogin()
 
-    UIUtil.SetIsVisible(self.PanelTips, true);
-    UIUtil.SetIsVisible(self.TextNum1, false);
-    UIUtil.SetIsVisible(self.TextNumNew, true);
-
-    local OpeningTimestamp = _G.UE.UIntegrationMgr.Get():GetOpeningTimestamp();
-    self.OpeningTimestamp = OpeningTimestamp - 28800;
-    FLOG_INFO("[LoginNewAssemblePanelView:OnShow] OpeningTimestamp: %d", self.OpeningTimestamp)
-
-    if self.OpeningTimestamp > 0 then
-        self:UpdateRemainTime();
-        self.TimerId = self:RegisterTimer(function()
-            self:UpdateRemainTime();
-        end, 1, 1, 0)
-    end
+    --UIUtil.SetIsVisible(self.PanelTips, true);
+    --UIUtil.SetIsVisible(self.TextNum1, false);
+    --UIUtil.SetIsVisible(self.TextNumNew, true);
+    --
+    --local OpeningTimestamp = _G.UE.UIntegrationMgr.Get():GetOpeningTimestamp();
+    --self.OpeningTimestamp = OpeningTimestamp - 28800;
+    --FLOG_INFO("[LoginNewAssemblePanelView:OnShow] OpeningTimestamp: %d", self.OpeningTimestamp)
+    --
+    --if self.OpeningTimestamp > 0 then
+    --    self:UpdateRemainTime();
+    --    self.TimerId = self:RegisterTimer(function()
+    --        self:UpdateRemainTime();
+    --    end, 1, 1, 0)
+    --end
 end
 
 function LoginNewAssemblePanelView:OnHide()
@@ -161,24 +164,24 @@ function LoginNewAssemblePanelView:OnShowIntegration()
     self:ShowFromLogin()
 end
 
-function LoginNewAssemblePanelView:UpdateRemainTime()
-    local CurServerTime = TimeUtil.GetServerTime();
-    local RemainingSeconds = self.OpeningTimestamp - CurServerTime;
-    --FLOG_INFO("[LoginNewAssemblePanelView:UpdateRemainTime] OpeningTimestamp:%d, ServerTime:%d, RemainingSeconds :%d", self.OpeningTimestamp, CurServerTime, RemainingSeconds)
-
-    if RemainingSeconds < 0 then
-        UIUtil.SetIsVisible(self.PanelTips, false);
-        if self.TimerId then
-            self:UnRegisterTimer(self.TimerId)
-            self.TimerId = nil
-        end
-        return;
-    end
-
-    local RemainingTime = LocalizationUtil.GetCountdownTimeForLongTime(RemainingSeconds);
-    if self.TextNumNew then
-        self.TextNumNew:SetText(RemainingTime)
-    end
-end
+--function LoginNewAssemblePanelView:UpdateRemainTime()
+--    local CurServerTime = TimeUtil.GetServerTime();
+--    local RemainingSeconds = self.OpeningTimestamp - CurServerTime;
+--    --FLOG_INFO("[LoginNewAssemblePanelView:UpdateRemainTime] OpeningTimestamp:%d, ServerTime:%d, RemainingSeconds :%d", self.OpeningTimestamp, CurServerTime, RemainingSeconds)
+--
+--    if RemainingSeconds < 0 then
+--        UIUtil.SetIsVisible(self.PanelTips, false);
+--        if self.TimerId then
+--            self:UnRegisterTimer(self.TimerId)
+--            self.TimerId = nil  -- 清除定时器ID引用
+--        end
+--        return;
+--    end
+--
+--    local RemainingTime = LocalizationUtil.GetCountdownTimeForLongTime(RemainingSeconds);
+--    if self.TextNumNew then
+--        self.TextNumNew:SetText(RemainingTime)
+--    end
+--end
 
 return LoginNewAssemblePanelView

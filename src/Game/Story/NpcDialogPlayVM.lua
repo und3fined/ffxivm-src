@@ -18,6 +18,7 @@ local StoryDefine = require("Game/Story/StoryDefine")
 local ClientGlobalCfg = require("TableCfg/ClientGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local QuestDefine = require("Game/Quest/QuestDefine")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local USaveMgr = _G.UE.USaveMgr
 
@@ -80,12 +81,21 @@ function NpcDialogPlayVM:ResetVM()
 	if self.DialogPlayingStateTimer then
 		_G.TimerMgr:CancelTimer(self.DialogPlayingStateTimer)
 	end
+
+	self.CurHandleSelectItemIndex = 1
+	self.IsHandleAttached = false
+	self.bHandleBtnContinue = false
+	self.HandleBtnContinue = ""
+	self.bHandleBtnJumpOver = false
+	self.HandleBtnJumpOver = ""
+	self.ItemListNum = 0
 end
 
 function NpcDialogPlayVM:ShowDialog(Name, Post, Content, TexturePath)
     local DialogueUtil = require("Utils/DialogueUtil")
 	local EffectUtil = require("Utils/EffectUtil")
 	self.IsArrowHide = false
+	self:UpdateHandlebtn()
     --这里判断一下对话内容
     self.SpeakerName = Name
     self.SpeakerTag = Post
@@ -164,6 +174,7 @@ end
   
 function NpcDialogPlayVM:OnClickButtonChangeSpeed()
 	self.SpeedLevel = (self.SpeedLevel % 3) + 1
+	FLOG_INFO("NpcDialogPlayVM:OnClickButtonChangeSpeed SpeedLevel========"..tostring(self.SpeedLevel))
 	USaveMgr.SetInt(SaveKey.AutoPlaySpeedLevel, self.SpeedLevel, true)
 	--现在没有打字机效果，切换速度要重新加一个计时器
 	self:AddAutoPlayTimer()
@@ -211,6 +222,7 @@ function NpcDialogPlayVM:SetAutoPlay(bAutoPlay)
 	USaveMgr.SetInt(SaveKey.IsAutoPlay, bAutoPlay and 1 or 0, true)
 
 	local SpeedLevelValue = USaveMgr.GetInt(SaveKey.AutoPlaySpeedLevel, 1, true)
+	FLOG_INFO("NpcDialogPlayVM:SetAutoPlay SpeedLevelValue ========"..tostring(SpeedLevelValue))
 	self.SpeedLevel = SpeedLevelValue
 end
 
@@ -222,6 +234,7 @@ end
 
 function NpcDialogPlayVM:SetArrowHide(IsHide)
 	self.IsArrowHide = IsHide
+	self:UpdateHandlebtn()
 end
 
 --隐藏或者显示自动速率
@@ -252,12 +265,14 @@ function NpcDialogPlayVM:SetSelfBranchList()
 	local TempUnitList = _G.NpcDialogMgr:GetBranchListItem(self.BranchCfg)
 	self.DialogBranchList = TempUnitList
 	self.ChoiceMessage = self.BranchCfg.DialogQuestion or ""
+	self:OnDialogBranchListNumChange()
 end
 
 --设置对话显示
 function NpcDialogPlayVM:SetDialogBranchVisible(Visible)
 	self.bChoicePanelVisible = Visible
 	self.IsArrowHide = Visible
+	self:UpdateHandlebtn()
 	local MyView = _G.UIViewMgr:FindView(_G.UIViewID.NpcDialogueMainPanel)
 	if MyView then
 		UIUtil.SetIsVisible(MyView.TopButtonGroup, not Visible)
@@ -273,6 +288,7 @@ function NpcDialogPlayVM:ChooseMenuChoice(Index)
 		_G.QuestMgr:SetDialogBranchInfo(Index, self.BranchCfg.ID)
 	end
 	self.DialogBranchList = {}
+	self:OnDialogBranchListNumChange()
 	self.ChoiceMessage = ""
 	self:DialogBranchStartOrEnd(false)
 	self:SetDialogBranchVisible(false)
@@ -336,6 +352,58 @@ function NpcDialogPlayVM:ResumeAutoPlay()
 		self:AddAutoPlayTimer()
 	end
 	self.PreResumeParam = false
+end
+
+---手柄交互相关
+function NpcDialogPlayVM:SwitchCurSelectItem(IsDown)
+    local ItemList  = self.DialogBranchList
+    local ItemNum = #ItemList
+    if IsDown then
+        if self.CurHandleSelectItemIndex + 1 <= ItemNum then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex + 1
+        else
+            self.CurHandleSelectItemIndex = 1
+        end
+    else
+        if self.CurHandleSelectItemIndex - 1 >= 1 then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex - 1
+        else
+            self.CurHandleSelectItemIndex = #ItemList
+        end
+    end
+end
+
+function NpcDialogPlayVM:UpdateHandlebtn(IsHandleAttached, IsUpdateButtonText)
+	if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+	self.IsHandleAttached = IsHandleAttached
+	if IsHandleAttached then
+		-- local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.Jump)
+		-- if HandleButtonText then
+		-- 	self.HandleBtnJumpOver = HandleButtonText
+		-- end
+		if IsUpdateButtonText then
+			local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+			if HandleButtonText then
+				self.HandleBtnContinue = HandleButtonText
+			end
+		end
+		self.bHandleBtnContinue = not self.IsArrowHide
+	else
+		self.bHandleBtnContinue = false
+	end
+	self.bHandleBtnJumpOver = false
+end
+
+function NpcDialogPlayVM:OnDialogBranchListNumChange()
+	if self.IsHandleAttached then
+		 if self.CurHandleSelectItemIndex ~= 1 then
+			self.CurHandleSelectItemIndex = 1
+			_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+		end
+		self.CurHandleSelectItemIndex = 1
+	end
 end
 
 return NpcDialogPlayVM

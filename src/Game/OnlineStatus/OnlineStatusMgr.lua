@@ -324,10 +324,10 @@ function OnlineStatusMgr:OnGameEventPWorldMapEnter()
 	if _G.PWorldMgr.DailyRandomID == 4 then 
 		if OnlineStatusUtil.CheckBit(self.MajorIdentity, ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyBattleMentor) then
 			local RoleVM = MajorUtil.GetMajorRoleVM() or {}
-			local IsOnlineStatusMentor = RoleVM.OnlineStatusCustomID == OnlineStatusRes.OnlineStatusMentor
+			local IsOnlineStatusCombatMentor = RoleVM.OnlineStatusCustomID == OnlineStatusRes.OnlineStatusMentor
 			-- 进入导随副本切为战斗指导者在线状态
 			self:SetCustomStatus(OnlineStatusRes.OnlineStatusCombatMentor)
-			if IsOnlineStatusMentor then
+			if IsOnlineStatusCombatMentor then
 				self.MentorDailyRandomOnlineState = 1
 				USaveMgr.SetInt(SaveKey.MentorDailyRandomOnlineState, 1, true)
 			end
@@ -550,7 +550,7 @@ end
 ---@param EntityID number
 ---@param NewStatus Bitset
 function OnlineStatusMgr:SetVisionEntityOnlineStatus(EntityID, NewStatus)
-	if EntityID == 0 or NewStatus == nil then
+	if (EntityID or 0) == 0 or NewStatus == nil then
 		return
 	end
 	local RoleID = ActorUtil.GetRoleIDByEntityID(EntityID)
@@ -671,6 +671,9 @@ function OnlineStatusMgr:OnIdentityChanged(RoleVM)
 	elseif CheckEnter(ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyRedFlowerMentor) then
 		-- 激活小红花指导者身份，主动设置相关状态
 		self:SetCustomStatus(OnlineStatusRes.OnlineStatusRedFlowerMentor)
+	elseif CheckEnter(ProtoRes.OnlineStatusIdentify.OnlineStatusIdentifyGoldSauserMentor) then
+		-- 激活金碟指导者身份，主动设置相关状态
+		self:SetCustomStatus(OnlineStatusRes.OnlineStatusGoldSauserMentor)
 	end
 end
 

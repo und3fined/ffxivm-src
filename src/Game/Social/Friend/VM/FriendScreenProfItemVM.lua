@@ -15,12 +15,14 @@ local MaxLineProf = 11
 function FriendScreenProfItemVM:Ctor()
     self.Name = "" 
     self.Icon = ""
+    self.IconBg = ""
     self.ProfInfoList = {}
 end
 
 function FriendScreenProfItemVM:UpdateVM(Value)
     self.Name = Value.Name 
     self.Icon = Value.Icon 
+    self.IconBg = Value.IconBg
 
     local Data = {}
     local CfgList = Value.CfgList or {}

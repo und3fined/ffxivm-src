@@ -25,6 +25,7 @@ local PathMgr = require("Path/PathMgr")
 local DialogueUtil = require("Utils/DialogueUtil")
 local QuestDefine = require("Game/Quest/QuestDefine")
 local CommonUtil = require("Utils/CommonUtil")
+local ColorUtil = require("Utils/ColorUtil")
 
 local ProtoCS = require("Protocol/ProtoCS")
 local QUEST_STATUS =    ProtoCS.CS_QUEST_STATUS
@@ -424,6 +425,7 @@ function TravelLogMainPanelVM:UpdateTaskContent(LogID)
     else
         Content = DialogueUtil.ParseLabel(Content)
         Content = CommonUtil.GetTextFromStringWithSpecialCharacter(Content)
+        Content = ColorUtil.ParseItemNameDarkStyle(Content)
         self.Content = Content
     end
     self.TaskTitle = Title

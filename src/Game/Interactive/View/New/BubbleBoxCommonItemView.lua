@@ -9,6 +9,9 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local EventID = require("Define/EventID")
 local AudioUtil = require("Utils/AudioUtil")
+local InteractiveMainPanelVM = require("Game/Interactive/MainPanel/InteractiveMainPanelVM")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
+local SequencePlayerVM = require("Game/Story/SequencePlayerVM")
 --local KIL = _G.UE.UKismetInputLibrary
 --local WBL = _G.UE.UWidgetBlueprintLibrary
 
@@ -39,6 +42,7 @@ end
 
 function BubbleBoxCommonItemView:OnInit()
 	self.EntranceItem = nil
+	self.ItemIndex = 1
 end
 
 function BubbleBoxCommonItemView:OnDestroy()
@@ -56,7 +60,10 @@ function BubbleBoxCommonItemView:OnShow()
 	end
 
 	self:FillEntrance(Data)
-
+	self.ItemIndex = self.Params.Index
+	self.ParentViewID = self.ParentView.ViewID
+	self:GetParentVM()
+	self:InitPanelHandle()
 	--self:ClearSelected()
 end
 
@@ -70,6 +77,12 @@ end
 
 function BubbleBoxCommonItemView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.EntranceItemChanged, self.OnEntranceItemChanged)
+	self:RegisterGameEvent(EventID.InputActionTypeChange, self.InitPanelHandle)
+	self:RegisterGameEvent(EventID.GamePadUpdateInteractive, self.UpdatePanelHandle)
+	self:RegisterGameEvent(EventID.GamePadUpdateDialogue, self.UpdatePanelHandle)
+	self:RegisterGameEvent(EventID.GamePadUpdateCombatType, self.UpdatePanelHandle)
+	self:RegisterGameEvent(EventID.GamePadEnter, self.OnGamePadEnter)
+    self:RegisterGameEvent(EventID.GamePadCancel, self.OnGamePadCancel)
 end
 
 function BubbleBoxCommonItemView:OnRegisterBinder()
@@ -209,5 +222,101 @@ function BubbleBoxCommonItemView:OnMouseButtonUp(MyGeometry, MouseEvent)
 	local Handled = WBL.Handled()
 	return WBL.ReleaseMouseCapture(Handled)
 end ]]
+
+---手柄交互相关---
+function BubbleBoxCommonItemView:SetHandleDirectionVisible(Value)
+	if Value then
+		self.HandleDirection:SetHandleDirectionType("UpAndDown")
+	else
+		self.HandleDirection:SetHandleDirectionType("Hide")
+	end
+end
+
+function BubbleBoxCommonItemView:SetHandleButtonText(Value)
+	self.HandleState.TextNum:SetText(Value)
+end
+
+function BubbleBoxCommonItemView:UpdatePanelHandle(IsUpdateButtonText)
+	if IsUpdateButtonText then
+		local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		if HandleButtonText then
+			self:SetHandleButtonText(HandleButtonText)
+		end
+	end
+	if self.ParentVM.CurHandleSelectItemIndex == self.ItemIndex then
+		UIUtil.SetIsVisible(self.PanelHandle, true)
+	else
+		UIUtil.SetIsVisible(self.PanelHandle, false)
+	end
+end
+
+function BubbleBoxCommonItemView:InitPanelHandle(IsHandleAttached)
+	if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+	local ItemList = self:GetItemList()
+	if IsHandleAttached and #ItemList > 0 then
+		local IsSingle = #ItemList > 1
+		if IsSingle then
+			self:SetHandleDirectionVisible(true)
+		else
+			self:SetHandleDirectionVisible(false)
+		end
+		local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		if HandleButtonText then
+			self:SetHandleButtonText(HandleButtonText)
+		end
+		if self.ParentVM.CurHandleSelectItemIndex == self.ItemIndex then
+			UIUtil.SetIsVisible(self.PanelHandle, true)
+		else
+			UIUtil.SetIsVisible(self.PanelHandle, false)
+		end
+	else
+		UIUtil.SetIsVisible(self.PanelHandle, false)
+	end
+end
+
+function BubbleBoxCommonItemView:OnGamePadEnter(Params)
+	local Priority = Params.IntParam1
+    if self:IsClickBtnValid(Priority) then
+		self:OnClickBtn()
+	end
+end
+
+function BubbleBoxCommonItemView:IsClickBtnValid(Priority)
+	if self.ParentViewID == UIViewID.InteractiveMainPanel
+		and Priority == SettingsHandleDefine.HandleActionPriority.InteractiveCustom then
+		if InteractiveMainPanelVM:GetEntrancesVisible() and InteractiveMainPanelVM.ItemListNum > 0 
+			and InteractiveMainPanelVM.CurHandleSelectItemIndex == self.ItemIndex then
+			return true
+		end
+	elseif self.ParentViewID == UIViewID.DialogueMainPanel
+		and Priority == SettingsHandleDefine.HandleActionPriority.NpcDialogCustom then
+		if SequencePlayerVM.bChoicePanelVisible and #SequencePlayerVM.ChoiceUnitList > 0 and SequencePlayerVM.CurHandleSelectItemIndex == self.ItemIndex then
+			return true
+		end
+	end
+	return false
+end
+
+function BubbleBoxCommonItemView:OnGamePadCancel(Params)
+    
+end
+
+function BubbleBoxCommonItemView:GetParentVM()
+	if self.ParentViewID == UIViewID.InteractiveMainPanel then
+		self.ParentVM = InteractiveMainPanelVM
+	else
+		self.ParentVM = self.ParentView.View.ViewModel
+	end
+end
+
+function BubbleBoxCommonItemView:GetItemList()
+	if self.ParentViewID == UIViewID.InteractiveMainPanel then
+		return InteractiveMainPanelVM.EntranceItemList
+	else
+		return SequencePlayerVM.ChoiceUnitList
+	end
+end
 
 return BubbleBoxCommonItemView

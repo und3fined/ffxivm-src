@@ -41,6 +41,7 @@ function WardrobePresetsPanelVM:Ctor()
     self.AssocaitionVisible = false
     self.AssociationText = ""
     self.SuitName = ""
+    self.SaveText = ""
     -- self.BtnUseText = "使用"
 end
 
@@ -215,7 +216,7 @@ function WardrobePresetsPanelVM:GetCurSuitData()
                 Data.EquipmentIcon = WardrobeUtil.GetEquipmentAppearanceIcon(AppID)
                 Data.EquipmentIconAlpha = 1.0
                 Data.StainTagVisible = WardrobeMgr:GetDyeEnable(AppID)
-                Data.StainColorVisible = WardrobeMgr:GetIsDye(AppID)
+                Data.StainColorVisible = WardrobeMgr:GetCurrentIsDye(AppID)
                 if WardrobeMgr:GetIsUnlock(AppID) then
                     Data.CanEquiped = WardrobeMgr:CanEquipedAppearanceByServerData(AppID) 
                 else
@@ -261,6 +262,7 @@ function WardrobePresetsPanelVM:UpdateBtnStatus(PresetsID)
     --self.UsingBtnVisible 使用中按钮
 
     self.BtnUseText = IsCurrendUsed and _G.LSTR(1080065) or _G.LSTR(1080066)
+    self.SaveText = WardrobeMgr:GetPresets(PresetsID) ~= nil and _G.LSTR(1080153) or _G.LSTR(10011) --更新预设  保存
 
     if DataSaveServer then
         -- 在服务器上有数据，判断两个按钮的显示
@@ -306,7 +308,8 @@ function WardrobePresetsPanelVM:UpdateBtnStatus(PresetsID)
 
 end
 
-function WardrobePresetsPanelVM:UpdatePresetListByID(SuitID)
+function WardrobePresetsPanelVM:UpdatePresetListByID()
+    local SuitID = WardrobeMgr:GetUsedSuitID()
     for i = 1 , self.PresetsList:Length() do
         local ItemVM = self.PresetsList:Get(i)
         local ItemSuitID = ItemVM.ID
@@ -327,7 +330,10 @@ function WardrobePresetsPanelVM:UpdatePresetListByID(SuitID)
         end
 
         if ItemSuitID ~= nil then
-            ItemVM:UpdateCurSuitCheck(ItemSuitID == WardrobeMgr:GetUsedSuitID() and WardrobeMgr:GetPresets(ItemSuitID) ~= nil and WardrobeMgr:GetCurUsedSuitIsUsed(ItemSuitID, self:GetCurSuitData()))
+            local LocalPresetsExist =  WardrobeMgr:GetPresets(ItemSuitID) ~= nil
+            local IsSameData = WardrobeMgr:GetCurUsedSuitIsUsed(ItemSuitID, self:GetCurSuitData())
+            local IsCur = (ItemSuitID == SuitID and LocalPresetsExist and IsSameData)
+            ItemVM:UpdateCurSuitCheck(IsCur)
         else
             ItemVM:UpdateCurSuitCheck(false)
         end

@@ -540,6 +540,8 @@ end
 
 function SkillActionMgr:OnWorldPreLoad()
     ClearLoadedMap()
+    SkillActionUtil.ClearCache()
+    EffectUtil.ClearVfxEventCache()
 end
 
 --只有指定副本才允许职业技能预加载

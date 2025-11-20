@@ -20,6 +20,10 @@ local ModuleOpenCfg = require("TableCfg/ModuleOpenCfg")
 local CommercializationRandConsumeCfg = require("TableCfg/CommercializationRandConsumeCfg")
 local FestivalLayersetCfg = require("TableCfg/FestivalLayersetCfg")
 local TimeZoneOffset = ProtoRes.Game.TimeZoneOffset
+local CommonUtil = require("Utils/CommonUtil")
+local MSDKDefine = require("Define/MSDKDefine")
+local MajorUtil = require("Utils/MajorUtil")
+local UIUtil = require("Utils/UIUtil")
 local FLOG_WARNING = LogMgr.Warning
 local LSTR
 local GameNetworkMgr
@@ -35,6 +39,9 @@ local SUB_MSG_ID = ProtoCS.Game.Activity.Cmd
 local OPS_JUMP_TYPE = ProtoRes.Game.OPS_JUMP_TYPE
 local ActivityNodeType = ProtoRes.Game.ActivityNodeType
 local ActivityType =ProtoRes.Game.ActivityType
+local RewardStatus = ProtoCS.Game.Activity.RewardStatus
+local FLOG_INFO = _G.FLOG_INFO
+local FLOG_ERROR = _G.FLOG_ERROR
 
 ---@class OpsActivityMgr : MgrBase
 local OpsActivityMgr = LuaClass(MgrBase)
@@ -45,10 +52,13 @@ function OpsActivityMgr:OnInit()
 
 	self.IDIPActivitys = {}
 	self.IDIPActivityNodes = {}
-	
+
 	self.CommonActivitysMap = {}
 	self.SeasonActivitys = {}
 	self.ActivityNodeMap = {}
+	self.CurrentProductID = ""
+	self.OrderToken = ""
+	self.CurrentRequestOrder = 0
 end
 
 function OpsActivityMgr:OnBegin()
@@ -82,7 +92,6 @@ function OpsActivityMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.List, self.OnNetMsgQueryActivityList) -- 查询活动信息
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.Detail, self.OnNetMsgQueryActivity) -- 查询单个活动详情
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.ListByID, self.OnNetMsgQueryActivityListByID) -- 查询多个活动详情
-	
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.ChgNotify, self.OnNetMsgActivityChgNotify) -- 活动信息变化通知
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.Reward, self.OnNetMsgNodeGetReward) -- 领取活动节点奖励
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACTIVITY_SYSTEM, SUB_MSG_ID.NodeOperate, self.OnNetMsgNodeOperate) -- 节点操作
@@ -101,6 +110,7 @@ function OpsActivityMgr:OnRegisterGameEvent()
 
     self:RegisterGameEvent(EventID.PandoraShowRedot, self.OnUpdatePandoraActivityRedot)
 	self:RegisterGameEvent(EventID.SinkActivityToBottom, self.OnUpdatePandoraActivityToBottom)
+	self:RegisterGameEvent(EventID.TakePhotoSucc, self.OnTakePhotoSucc)
 end
 
 function OpsActivityMgr:OnUpdatePandoraActivityRedot(Params)
@@ -141,12 +151,18 @@ function OpsActivityMgr:OnUpdatePandoraActivityToBottom(Params)
 end
 
 function OpsActivityMgr:OnGameEventLoginRes(Params)
+	if nil ~= Params and nil ~= Params.bReconnect and Params.bReconnect == true then
+		_G.FLOG_INFO("OpsActivityMgr:OnGameEventLoginRes, bReconnect is true")
+		if self.CurrentProductID ~= "" then
+			-- 断线重连时，可能有未收到完成通知的订单，需要重新查询状态
+			_G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, true, self.OrderToken)
+		end
+	end
 	if not ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDActivitySystem) then
         return
     end
 	self:SendQueryActivityList()
 end
-
 
 function OpsActivityMgr:OnModuleOpenNotify(InModuleID)
     if InModuleID == ProtoCommon.ModuleID.ModuleIDActivitySystem then
@@ -171,7 +187,7 @@ function OpsActivityMgr:SendQueryActivityListByID(ListByIDs)
 		return
 	end
     local MsgID = CS_CMD.CS_CMD_ACTIVITY_SYSTEM
-    local SubMsgID = SUB_MSG_ID.ListByID 
+    local SubMsgID = SUB_MSG_ID.ListByID
 
     local MsgBody = {}
 	MsgBody.Cmd = SubMsgID
@@ -193,7 +209,6 @@ function OpsActivityMgr:OnNetMsgQueryActivityListByID(MsgBody)
 	end
 
 	EventMgr:SendEvent(EventID.OpsActivityUpdate)
-	
 end
 
 
@@ -205,7 +220,7 @@ function OpsActivityMgr:OnNetMsgQueryActivityList(MsgBody)
 	local IDIPCfgs = List.Cfgs or {}
 	self.IDIPActivitys = IDIPCfgs.Acts or {}
 	self.IDIPActivityNodes = IDIPCfgs.Nodes or {}
-	
+
 	self.CommonActivitysMap = {}
 	self.SeasonActivitys = {}
 
@@ -310,8 +325,7 @@ function OpsActivityMgr:OnNetMsgQueryActivity(MsgBody)
 	end
 	local Detail = MsgBody.Detail
 	self:SetActivityInfo(Detail.Detail)
-
-	EventMgr:SendEvent(EventID.OpsActivityUpdate)
+	EventMgr:SendEvent(EventID.OpsActivityUpdate, Detail.Detail)
 end
 
 function OpsActivityMgr:OnNetMsgActivityChgNotify(MsgBody)
@@ -337,7 +351,6 @@ function OpsActivityMgr:OnNetMsgActivityChgNotify(MsgBody)
 			if Cfg ~= nil and (Cfg.ActivityType == ActivityType.ActivityTypeNormal or Cfg.ActivityType == ActivityType.ActivityTypePandora) then
 				RedDotMgr:DelRedDotByName(self:GetRedDotName(Cfg.ClassifyID, ActivityID))
 			end
-			
 		end
 	end
 
@@ -368,6 +381,8 @@ function OpsActivityMgr:OnNetMsgNodeChangeNotify(MsgBody)
 	end
 
 	EventMgr:SendEvent(EventID.OpsActivityUpdate)
+	EventMgr:SendEvent(EventID.OpsActivityNodeChanged, NodesList)
+
 end
 
 --刷新活动
@@ -383,17 +398,28 @@ function OpsActivityMgr:SetActivityInfo(ActivityDate)
 		return 
 	end
 
-	
 	local ShowMinVersion = Cfg.ShowMinVersion or ""
 	local ShowMaxVersion = Cfg.ShowMaxVersion or ""
 
-	if ShowMinVersion ~= "" and not _G.ClientVisionMgr:CheckVersionByGlobalVersion(ShowMinVersion) then
-		_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, ShowMinVersion = %s > GameVersion", ActivityID, ShowMinVersion)
+	if not self.IgnoreCheckVersion then
+		if ShowMinVersion ~= "" and not _G.ClientVisionMgr:CheckVersionByGlobalVersion(ShowMinVersion) then
+			_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, ShowMinVersion = %s > GameVersion", ActivityID, ShowMinVersion)
+			return
+		end
+
+		if ShowMaxVersion ~= "" and  ShowMaxVersion ~= UE.UVersionMgr.GetGameVersion() and _G.ClientVisionMgr:CheckVersionByGlobalVersion(ShowMaxVersion) then
+			_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, ShowMaxVersion = %s < GameVersion", ActivityID, ShowMaxVersion)
+			return
+		end
+	end
+
+	if (Cfg.Platform == 1 and CommonUtil.GetPlatformName() ~= "IOS") or (Cfg.Platform == 2 and CommonUtil.GetPlatformName() ~= "Android") then
+		_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, Cfg.Platform = %d ~= PlatformName = %s ", ActivityID, Cfg.Platform, CommonUtil.GetPlatformName())
 		return
 	end
 
-	if ShowMaxVersion ~= "" and  ShowMaxVersion ~= UE.UVersionMgr.GetGameVersion() and _G.ClientVisionMgr:CheckVersionByGlobalVersion(ShowMaxVersion) then
-		_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, ShowMaxVersion = %s < GameVersion", ActivityID, ShowMaxVersion)
+	if (Cfg.Channel == 1 and _G.LoginMgr:GetChannelID() ~= MSDKDefine.ChannelID.QQ ) or (Cfg.Channel == 2 and _G.LoginMgr:GetChannelID() ~= MSDKDefine.ChannelID.WeChat) then
+		_G.FLOG_WARNING("OpsActivityMgr:SetActivityInfo  ActivityID = %d, Cfg.Platform = %d ~= ChannelID = %d ", ActivityID, Cfg.Channel, _G.LoginMgr:GetChannelID())
 		return
 	end
 
@@ -402,7 +428,7 @@ function OpsActivityMgr:SetActivityInfo(ActivityDate)
 		if ActivityHead.EmergencyShutDown == false and not ActivityHead.Hiden then
 			self:AddActivityToCommonActivitysMap(Cfg.ClassifyID, {Activity = Cfg})
 		end
-	elseif Cfg.ActivityType == ActivityType.ActivityTypeSeasonal then
+	elseif Cfg.ActivityType == ActivityType.ActivityTypeSeasonal or  Cfg.ActivityType == ActivityType.ActivityTypeDaughterDay then
 		self:RemoveActivityFromSeasonActivitys(ActivityID)
 		if ActivityHead.EmergencyShutDown == false and not ActivityHead.Hiden then
 			self:AddActivityToSeasonActivitys({Activity = Cfg})
@@ -413,34 +439,33 @@ function OpsActivityMgr:SetActivityInfo(ActivityDate)
 
 	if self.ActivityNodeMap == nil then
 		self.ActivityNodeMap = {}
-	end 
+	end
 
 	if ActivityHead.EmergencyShutDown == false then
 		local NodeList = {}
 		local Nodes = ActivityDate.Nodes
 		for i = 1, #Nodes do
 			local NodeHeadInfo = Nodes[i].Head
-			
 			if NodeHeadInfo.EmergencyShutDown == false then
 				table.insert(NodeList, Nodes[i])
 			end
 		end
 
-		local ActivityFinish = false
+		local bActivityFinish = false
 		if Cfg.ActivityType == ActivityType.ActivityTypePandora then
 			--查询潘多拉活动是否完成
-			ActivityFinish = _G.PandoraMgr:IsActivityNeedToSinkToBottom(Cfg.Title)
+			bActivityFinish = _G.PandoraMgr:IsActivityNeedToSinkToBottom(Cfg.Title)
 		else
-			ActivityFinish = self:IsActivityFinish(NodeList)
+			bActivityFinish = self:IsActivityFinish(NodeList)
 		end
-		self.ActivityNodeMap[ActivityID] = {NodeList = NodeList, ActivityFinish = ActivityFinish, Effected = ActivityHead.Effected} 
+		self.ActivityNodeMap[ActivityID] = {NodeList = NodeList, ActivityFinish = bActivityFinish, Effected = ActivityHead.Effected} 
 		_G.QuestMgr.QuestRegister:RegisterActivity(ActivityID, true)
 	else
 		self.ActivityNodeMap[ActivityID] = nil
 		_G.QuestMgr.QuestRegister:RegisterActivity(ActivityID, false)
 	end
 
-	if (Cfg.ActivityType == ActivityType.ActivityTypeNormal or Cfg.ActivityType == ActivityType.ActivityTypePandora) and not ActivityHead.Hiden then
+	if self:NeedUpdateActivityRedDot(Cfg, ActivityHead) then
 		self:UpdateActivityRedDot(Cfg.ClassifyID, Cfg)
 	end
 
@@ -448,8 +473,103 @@ function OpsActivityMgr:SetActivityInfo(ActivityDate)
 	self:LoadLayerMapEditCfg(ActivityID, Cfg.LayerIDs)
 end
 
+function OpsActivityMgr:NeedUpdateActivityRedDot(Activity, ActivityHead)
+	if Activity == nil then
+		return false
+	end
+
+	if ActivityHead.Hiden then
+		return false
+	end
+
+	if ActivityHead.EmergencyShutDown then
+		return false
+	end
+
+	if Activity.ActivityType == ActivityType.ActivityTypePandora and _G.PandoraMgr:IsActivityReady(Activity.Title) == false then
+		return false
+	end
+
+	return Activity.ActivityType == ActivityType.ActivityTypeNormal or Activity.ActivityType == ActivityType.ActivityTypePandora
+end
+
+function OpsActivityMgr:IsOpsActivityOnShelf(ActivityID)
+	local Cfg = ActivityCfg:FindCfgByKey(ActivityID)
+	if Cfg == nil then
+		return false
+	end
+
+	if Cfg.ClassifyID ~= nil then
+		local ClassifyActivityTab =  self.CommonActivitysMap[Cfg.ClassifyID] or {}
+		for i = 1, #ClassifyActivityTab do
+			local Activity = ClassifyActivityTab[i].Activity or {}
+			if Activity.ActivityID == ActivityID then
+				local StartTime = OpsActivityMgr:GetActivityStartTime(Activity)
+				local EndTime = OpsActivityMgr:GetActivityEndTime(Activity)
+				if StartTime <= TimeUtil.GetServerLogicTime() and EndTime > TimeUtil.GetServerLogicTime() then
+					return true
+				else
+					return false
+				end
+			end
+		end
+	end
+
+	local SeasonActivityTab =  self.SeasonActivitys
+	for i = 1, #SeasonActivityTab do
+		local Activity = SeasonActivityTab[i].Activity or {}
+		if Activity.ActivityID == ActivityID then
+			local StartTime = OpsActivityMgr:GetActivityStartTime(Activity)
+			local EndTime = OpsActivityMgr:GetActivityEndTime(Activity)
+			if StartTime <= TimeUtil.GetServerLogicTime() and EndTime > TimeUtil.GetServerLogicTime() then
+				return true
+			else
+				return false
+			end
+		end
+	end
+
+	return false
+end
+
+function OpsActivityMgr:IsClassifyID(ClassifyID)
+	return self.CommonActivitysMap[ClassifyID] ~= nil
+end
+-- 检测活动是否已经开启
+function OpsActivityMgr:IsActivityOpen(InActivityID)
+    local CelebrationActivity = ActivityCfg:FindCfgByKey(InActivityID)
+    if (CelebrationActivity == nil) then
+        _G.FLOG_ERROR("无法获取活动表格数据，ID是:%s", InActivityID)
+        return false
+    end
+
+    local StartTimeStamp = TimeUtil.GetTimeFromString(CelebrationActivity.ChinaActivityTime.StartTime)
+    local EndTimeStamp = TimeUtil.GetTimeFromString(CelebrationActivity.ChinaActivityTime.EndTime)
+    local CurServerTime = TimeUtil.GetServerLogicTime()
+
+    if (CurServerTime > StartTimeStamp and CurServerTime < EndTimeStamp) then
+        return true
+    end
+
+    return false
+end
+
+function OpsActivityMgr:JumpToActivity(ActivityID)
+	local View = UIViewMgr:FindVisibleView(UIViewID.OpsActivityMainPanel)
+    if not View then
+        UIViewMgr:ShowView(UIViewID.OpsActivityMainPanel, {JumpData = {ActivityID}})
+    else
+        local Params = View.Params or {}
+        Params.JumpData = {ActivityID}
+        View:UpdateView(Params)
+    end
+end
+
 -------------常规活动数据
 function OpsActivityMgr:AddActivityToCommonActivitysMap(ClassifyID, ActivityDate)
+	if ClassifyID == nil then
+		return
+	end
 	if self.CommonActivitysMap == nil then
 		self.CommonActivitysMap = {}
 	end
@@ -470,7 +590,7 @@ function OpsActivityMgr:RemoveActivityFromCommonActivitysMap(ClassifyID, Activit
 
 	local ClassifyActivityTab =  self.CommonActivitysMap[ClassifyID] or {}
 	for i = 1, #ClassifyActivityTab do
-		local Activity = ClassifyActivityTab[i].Activity
+		local Activity = ClassifyActivityTab[i].Activity or {}
 		if Activity.ActivityID == ActivityID then
 			table.remove(ClassifyActivityTab, i)
 			break
@@ -508,11 +628,9 @@ function OpsActivityMgr:RemoveActivityFromSeasonActivitys(ActivityID)
 	end
 	self.SeasonActivitys = SeasonActivityTab
 end
-
-
 -----------------------------------------------------------------------
 
-function OpsActivityMgr:IsActivityOpenByType(ActivityType)
+function OpsActivityMgr:IsActivityOpenByType(InActivityType)
 	if self.ActivityNodeMap == nil then
 		return nil
 	end
@@ -520,7 +638,7 @@ function OpsActivityMgr:IsActivityOpenByType(ActivityType)
 	for ActivityID, _ in pairs(ActivityNodeMap) do
 		local Cfg = ActivityCfg:FindCfgByKey(ActivityID)
 		if Cfg then
-			return Cfg.ActivityType == ActivityType
+			return Cfg.ActivityType == InActivityType
 		end
 	end
 
@@ -582,13 +700,12 @@ function OpsActivityMgr:IsActivityFinish(NodeList)
 		if NodeCfg then
 			if NodeCfg.NodeType == ActivityNodeType.ActivityNodeTypeShareBuy then
 				local ShareBuyData = Extra.ShareBuy or {}
-            	if ShareBuyData.Status == ProtoCS.Game.Activity.enStatus.DiscountPayed then
+				if ShareBuyData.Status == ProtoCS.Game.Activity.enStatus.DiscountPayed then
 					return true
 				end
 			end
 		end
 	end
-
 
 	for i = 1, #NodeList do
 		local NodeHeadInfo = NodeList[i].Head
@@ -631,7 +748,6 @@ function OpsActivityMgr:IsActivityFinish(NodeList)
 	return true
 end
 
-
 ---获取活动节点奖励
 function OpsActivityMgr:SendActivityNodeGetReward(ActivityNodeID)
 	local MsgID = CS_CMD.CS_CMD_ACTIVITY_SYSTEM
@@ -644,7 +760,6 @@ function OpsActivityMgr:SendActivityNodeGetReward(ActivityNodeID)
 
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
-
 
 function OpsActivityMgr:OnNetMsgNodeGetReward(MsgBody)
 	if nil == MsgBody or nil ==  MsgBody.Reward then
@@ -701,7 +816,13 @@ end
 ---@param ReplaceParamData 小程序跳转传入约定参数  {QQ = {ReplaceParamName = {ParamValue1, ParamValue2}}, WeChat = {ReplaceParamName = {ParamValue1, ParamValue2}}}
 function OpsActivityMgr:Jump(JumpType, JumpParam, ReplaceParamData)
 	if JumpType == OPS_JUMP_TYPE.TABLE_JUMP then
-		JumpUtil.JumpTo(tonumber(JumpParam), true)
+		local JumpValue = tonumber(JumpParam)
+		local IsCanJump = JumpUtil.IsCurJumpIDCanJump(JumpValue)
+        if IsCanJump then
+			JumpUtil.JumpTo(JumpValue, true)
+        else
+			_G.OpsNewbieStrategyMgr:JumpUnlockSys(JumpValue)
+        end
 	elseif JumpType == OPS_JUMP_TYPE.PANDORA_JUMP then
 		_G.PandoraMgr:OpenApp(JumpParam)
 	elseif JumpType == OPS_JUMP_TYPE.WEB_JUMP then
@@ -736,9 +857,16 @@ function OpsActivityMgr:OnNetMsgNodeOperate(MsgBody)
 	if nil == MsgBody or nil ==  MsgBody.NodeOperate then
 		return
 	end
-	local NodeOperate = MsgBody.NodeOperate 
+	local NodeOperate = MsgBody.NodeOperate
 	self:SetActivityInfo(NodeOperate.ActivityDetail)
 	EventMgr:SendEvent(EventID.OpsActivityUpdateInfo, MsgBody)
+	
+	local OpType = NodeOperate.OpType
+	if OpType == ProtoCS.Game.Activity.NodeOpType.NodeOpTypeStarDayPutGift then
+		_G.MsgTipsUtil.ShowTips(LSTR(1700065))
+	elseif OpType == ProtoCS.Game.Activity.NodeOpType.NodeOpTypeStarDayGetGift then
+		_G.UIViewMgr:ShowView(_G.UIViewID.OpsNightGetGiftPanel)
+	end 
 end
 
 
@@ -783,28 +911,35 @@ function OpsActivityMgr:OnNetMsgActivityGetReward(MsgBody)
 
 	EventMgr:SendEvent(EventID.OpsActivityNodeGetReward, MsgBody)
 end
+
 -----------------------直购相关
 function OpsActivityMgr:Recharge(Order, ActivityID, View)
 	FLOG_INFO("OpsActivityMgr Recharge ActivityID: "..tostring(ActivityID))
 	self.RechargeActivityID = ActivityID
-
+	self.CurrentRequestOrder = Order
 	PayUtil.BuyCoins(Order,
 	function(_, BillData) self:OnBillReceived(BillData) end,
 	function(_) self:OnLoginExpired() end,
-	nil, -- 切后台可能导致米大师回调丢失，不再使用
+	function(_, PayReturnData) self:OnPayFinished(PayReturnData) end,
 	function(_, GoodsData) self:OnGoodsReceived(GoodsData) end,
 	View)
+	self.CurrentProductID = PayUtil.GetProductID(Order)
 end
-
 
 function OpsActivityMgr:OnBillReceived(BillData)
 	if BillData == nil then
-		FLOG_ERROR("Cannot get pay bill data")
+		FLOG_ERROR("OpsActivityMgr:OnBillReceived, Cannot get pay bill data")
 		return
 	end
 
+	if string.isnilorempty(BillData.Token) then
+		FLOG_ERROR("OpsActivityMgr:OnBillReceived, Pay token is empty")
+	else
+		self.OrderToken = BillData.Token
+	end
+
 	if BillData.URL == "" then
-		FLOG_ERROR("Pay bill is empty")
+		FLOG_ERROR("OpsActivityMgr:OnBillReceived, Pay bill is empty")
 	end
 end
 
@@ -812,9 +947,28 @@ function OpsActivityMgr:OnLoginExpired()
 	FLOG_ERROR("Login expired!")
 end
 
+function OpsActivityMgr:OnPayFinished(PayReturnData)
+	local IsPaySuccess = true
+	if PayReturnData == nil then
+		_G.FLOG_ERROR("OpsActivityMgr:OnPayFinished, Cannot get pay return data")
+		IsPaySuccess = false
+	else
+		if PayReturnData.ResultCode == 0 then
+			_G.FLOG_INFO("OpsActivityMgr:OnPayFinished, Pay succeeded.")
+			--self.CurrentProductID = ""
+			local TipsContent = string.format(_G.LSTR(940042), PayUtil.GetProductTypeName(self.CurrentRequestOrder))
+			_G.MsgTipsUtil.ShowTips(TipsContent)
+		else
+			IsPaySuccess = false
+		end
+	end
+    _G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, IsPaySuccess, self.OrderToken)
+end
 
 function OpsActivityMgr:OnGoodsReceived(GoodsData)
 	self:OnRechargeSucceed()
+	self.CurrentProductID = ""
+	self.OrderToken = ""
 end
 
 function OpsActivityMgr:OnRechargeSucceed()
@@ -852,7 +1006,7 @@ function OpsActivityMgr:LoadLayerMapEditCfg(ActivityID, LayerIDs)
 	if (#LayerIDs > 0) then
 		self.CacheLayerIDs = LayerIDs
 	end
-	
+
 	if IsLoad then
 		LoadLayerMapEditCfgMap[ActivityID] = true
 	end
@@ -873,7 +1027,7 @@ function OpsActivityMgr:UpdateActivityRedDot(ClassifyID, Activity)
 	local RedPointList = string.split(RedPoints, "|")
 	for _, RedPoint in ipairs(RedPointList) do
 		local  Value  = tonumber(RedPoint) or 0
-		if self.OpsActivityRedDotFun[Value] ~= nil then
+		if self.OpsActivityRedDotFun and self.OpsActivityRedDotFun[Value] ~= nil then
 			local ActivityRedDotName = self:GetRedDotName(ClassifyID, Activity.ActivityID, self.OpsActivityRedDotFun[Value].Name)
 			if self.OpsActivityRedDotFun[Value].Fun(self, Activity) == true then
 				RedDotMgr:AddRedDotByName(ActivityRedDotName)
@@ -890,6 +1044,7 @@ function OpsActivityMgr:UpdateActivityRedDot(ClassifyID, Activity)
 			end
 		end
 	end
+	self:UpdateFestivalRedDot(ClassifyID, Activity)
 end
 
 function OpsActivityMgr:GetRedDotName(ClassifyID, ActivityID, Name)
@@ -902,7 +1057,6 @@ function OpsActivityMgr:GetRedDotName(ClassifyID, ActivityID, Name)
 	end
 	return OpsActivityDefine.RedDotName .. '/' .. tostring(ClassifyID)
 end
-
 
 function OpsActivityMgr:FirstRedDot(Activity)
 	if Activity == nil then
@@ -1001,6 +1155,30 @@ function OpsActivityMgr:CheckIsEnoughForLottery(ActivityNode)
 		end
 	end
 end
+
+function OpsActivityMgr:GetPrizeDrawCostItemID(InPoolID)
+	local LotteryCousumeNode = CommercializationRandConsumeCfg:FindCfg("PoolID = "..InPoolID)
+	if (LotteryCousumeNode) then
+		return LotteryCousumeNode.ConsumeResID
+	else
+		return 0
+	end
+end
+
+function OpsActivityMgr:UpdateFestivalRedDot(ClassifyID, Activity)
+	if Activity.ActivityID == 25072210 then
+		if not self.OpsActivityRedDotFun[1].Fun(self, Activity) and not self.OpsActivityRedDotFun[5].Fun(self, Activity) then
+			local ActivityRedDotName = self:GetRedDotName(ClassifyID, Activity.ActivityID, "Reward")
+			local Subctivity = {ActivityID = 25072211}
+			if self.OpsActivityRedDotFun[5].Fun(self, Subctivity) then
+				RedDotMgr:AddRedDotByName(ActivityRedDotName)
+			else
+				RedDotMgr:DelRedDotByName(ActivityRedDotName)
+			end
+		end
+	end
+end
+
 ---- 活动购买商城物品后再次刷红点
 function OpsActivityMgr:StoreBuyRemindRedDot(Activity)
 	if not Activity then return end
@@ -1010,7 +1188,6 @@ function OpsActivityMgr:StoreBuyRemindRedDot(Activity)
 	local NodeList = NodeData.NodeList
 	for i, v in ipairs(NodeList) do
 		if not v.Head.EmergencyShutDown then
-			local ActivityNodeCfg = require("TableCfg/ActivityNodeCfg")
 			local NodeCfg = ActivityNodeCfg:FindCfgByKey(v.Head.NodeID) or {}
 			if NodeCfg.NodeType and NodeCfg.NodeType == ActivityNodeType.ActivityNodeTypeMallPurchased then
 				GoodsID = NodeCfg.Params and NodeCfg.Params[1] or 0
@@ -1033,8 +1210,22 @@ function OpsActivityMgr:MonthCardRedDot(Activity)
 	if Activity == nil then
 		return false
 	end
+	local bOpenStatus = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard)
+	if (not bOpenStatus) then
+		return false
+	end
 
-	return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard)  and _G.MonthCardMgr:GetMonthCardStatus() and _G.MonthCardMgr:GetMonthCardReward()
+	return _G.MonthCardMgr:GetMonthCardStatus() and _G.MonthCardMgr:GetMonthCardReward()
+end
+
+-- 回流指南红点
+function OpsActivityMgr:ReturningRedDot(Activity)
+	if Activity == nil then
+		return false
+	end
+	-- 页签未打开，阶段未打开，有签到任务奖励，阶段任务可领取时 显示红点
+	local CurStage =  _G.OpsReturnMgr:GetTaskStage()
+	return _G.OpsReturnMgr:GetPageOpenTimeStatus() or _G.OpsReturnMgr:GetStageOpenTimeStatus(CurStage) or  _G.OpsReturnMgr:GetSignListRewardStatus() or _G.OpsReturnMgr:GetStageTaskStatus()
 end
 
 function OpsActivityMgr:JumpToMonthCard()
@@ -1055,6 +1246,7 @@ function OpsActivityMgr:InitOpsActivityRedDotFun()
 	self.OpsActivityRedDotFun[ProtoRes.RED_POINT_TYPE.MONTHCARD_PROMPT] = {Name = "MonthCard", Fun = self.MonthCardRedDot}
 	self.OpsActivityRedDotFun[ProtoRes.RED_POINT_TYPE.LOTTERY_PROMPT] = {Name = "Lottery", Fun = self.LotteryRedDot}
 	self.OpsActivityRedDotFun[ProtoRes.RED_POINT_TYPE.PANDORA_PROMPT] = {Name = "Pandora", Fun = self.PandoraRedDot}
+	self.OpsActivityRedDotFun[ProtoRes.RED_POINT_TYPE.RETURNING_PROMPT] = {Name = "Returning", Fun = self.ReturningRedDot}
 end
 
 function OpsActivityMgr:GetLastClickedTime(ActivityID)
@@ -1067,7 +1259,7 @@ end
 
 function OpsActivityMgr:ReadSaveKeyData()
 	self.CustomizeRedDotList = {}
-    local RedDotStr = USaveMgr.GetString(SaveKey.OpsActivityRecordRedDot, "", true)
+    local RedDotStr = USaveMgr.GetString(SaveKey.OpsActivityRecordRedDot, "", true) or ""
     local SplitStr = string.split(RedDotStr,",")
 	for i = 1, #SplitStr, 2 do
 		self.CustomizeRedDotList[tonumber(SplitStr[i])] = tonumber(SplitStr[i + 1])
@@ -1085,6 +1277,7 @@ function OpsActivityMgr:RecordRedDotClicked(ActiviyID, TimeStamp)
 	local Cfg = ActivityCfg:FindCfgByKey(ActiviyID)
 	if Cfg ~= nil then
 		self:UpdateActivityRedDot(Cfg.ClassifyID, Cfg)
+		self:UpdateActivityPositionRedDot(false, ActiviyID)
 	end
 
 	self:WriteSaveKeyData()
@@ -1102,25 +1295,13 @@ function OpsActivityMgr:WriteSaveKeyData()
     USaveMgr.SetString(SaveKey.OpsActivityRecordRedDot, RedDotStr, true)
 end
 
-
 function OpsActivityMgr:GetActivityStartTime(Activity)
 	local ActivityTime = self:GetActivityTime(Activity)
 	if ActivityTime == nil then
 		return 0
 	end
-
-	if ActivityTime.StartTime == nil then
-		return 0
-	end
-
-	local StartTime = ActivityTime.StartTime
-	local ZoneOffset = ActivityTime.TimeZoneOffset - TimeZoneOffset.TimeZoneOffset0
-
-	local ServerZone = 8 --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
-	local year, month, day, hour, min, sec = StartTime:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
 	
-	local TimeTable = {year = year, month = month, day = day, hour = hour, min = min, sec = sec}
-	return os.time(TimeTable) + (ZoneOffset - ServerZone) * 3600
+	return self:GetTimeStampByTimeStr(ActivityTime.StartTime, ActivityTime.TimeZoneOffset)
 end
 
 function OpsActivityMgr:GetActivityEndTime(Activity)
@@ -1128,71 +1309,23 @@ function OpsActivityMgr:GetActivityEndTime(Activity)
 	if ActivityTime == nil then
 		return 0
 	end
-	
-	if ActivityTime.EndTime == nil then
+
+	return self:GetTimeStampByTimeStr(ActivityTime.EndTime, ActivityTime.TimeZoneOffset)
+end
+
+function OpsActivityMgr:GetTimeStampByTimeStr(TimeStr, CurZoneOffset)
+	if TimeStr == nil then
 		return 0
 	end
-	local EndTime = ActivityTime.EndTime
-	local ZoneOffset = ActivityTime.TimeZoneOffset - TimeZoneOffset.TimeZoneOffset0
+
+	local ZoneOffset = (CurZoneOffset or TimeZoneOffset.TimeZoneOffsetEast8) - TimeZoneOffset.TimeZoneOffset0
 
 	local ServerZone = 8 --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
-	
-	local year, month, day, hour, min, sec = EndTime:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
-	
+
+	local year, month, day, hour, min, sec = TimeStr:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+
 	local TimeTable = {year = year, month = month, day = day, hour = hour, min = min, sec = sec}
 	return os.time(TimeTable) + (ZoneOffset - ServerZone) * 3600
-	
-end
-
-function OpsActivityMgr:IsOpsActivityOnShelf(ActivityID)
-	local Cfg = ActivityCfg:FindCfgByKey(ActivityID)
-	if Cfg == nil then
-		return false
-	end
-
-	if Cfg.ClassifyID ~= nil then
-		local ClassifyActivityTab =  self.CommonActivitysMap[Cfg.ClassifyID] or {}
-		for i = 1, #ClassifyActivityTab do
-			local Activity = ClassifyActivityTab[i].Activity or {}
-			if Activity.ActivityID == ActivityID then
-				local StartTime = OpsActivityMgr:GetActivityStartTime(Activity)
-				local EndTime = OpsActivityMgr:GetActivityEndTime(Activity)
-				if StartTime <= TimeUtil.GetServerLogicTime() and EndTime > TimeUtil.GetServerLogicTime() then
-					return true
-				else
-					return false
-				end
-			end
-		end
-	end
-
-	local SeasonActivityTab =  self.SeasonActivitys
-	for i = 1, #SeasonActivityTab do
-		local Activity = SeasonActivityTab[i].Activity or {}
-		if Activity.ActivityID == ActivityID then
-			local StartTime = OpsActivityMgr:GetActivityStartTime(Activity)
-			local EndTime = OpsActivityMgr:GetActivityEndTime(Activity)
-			if StartTime <= TimeUtil.GetServerLogicTime() and EndTime > TimeUtil.GetServerLogicTime() then
-				return true
-			else
-				return false
-			end
-		end
-	end
-
-	return false
-end
-
-
-function OpsActivityMgr:JumpToActivity(ActivityID)
-	local View = UIViewMgr:FindVisibleView(UIViewID.OpsActivityMainPanel)
-    if not View then
-        UIViewMgr:ShowView(UIViewID.OpsActivityMainPanel, {JumpData = {ActivityID}})
-    else
-        local Params = View.Params or {}
-        Params.JumpData = {ActivityID}
-        View:UpdateView(Params)
-    end
 end
 
 function OpsActivityMgr:GetActivityTime(Activity)
@@ -1201,7 +1334,6 @@ function OpsActivityMgr:GetActivityTime(Activity)
 	end
 	return Activity.ChinaActivityTime
 end
-
 
 function OpsActivityMgr:OnNetMsgQueryLastLoginRoles(MsgBody)
 	local Msg = MsgBody.Roles
@@ -1216,5 +1348,236 @@ function OpsActivityMgr:OnNetMsgQueryLastLoginRoles(MsgBody)
     end
 	EventMgr:SendEvent(EventID.OpcConcertLastLoginRolesUpdate, FriendMap)
 end
+
+-- @param ActivityID 活动ID
+-- @param SkipState 跳过状态(1=跳过,0=不跳过)
+function OpsActivityMgr:UpdateSkipAnimationState(ActivityID, SkipState)
+    local SkipAnimationStr = USaveMgr.GetString(SaveKey.OpsSkipAnimation, "", true)
+
+    local ActivityStates = {}
+    if SkipAnimationStr ~= "" then
+        for id, state in string.gmatch(SkipAnimationStr, "([^,]+),([^,]+)") do
+            ActivityStates[id] = state
+        end
+    end
+
+    ActivityStates[tostring(ActivityID)] = tostring(SkipState)
+
+    local NewStr = ""
+    for id, state in pairs(ActivityStates) do
+        if NewStr ~= "" then
+            NewStr = NewStr .. ","
+        end
+        NewStr = NewStr .. id .. "," .. state
+    end
+
+    USaveMgr.SetString(SaveKey.OpsSkipAnimation, NewStr, true)
+end
+
+function OpsActivityMgr:GetSkipAnimationState(ActivityID)
+    local SkipAnimationStr = USaveMgr.GetString(SaveKey.OpsSkipAnimation, "", true)
+    if SkipAnimationStr == "" then
+        return 0
+    end
+
+    for id, state in string.gmatch(SkipAnimationStr, "([^,]+),([^,]+)") do
+        if id == tostring(ActivityID) then
+            return tonumber(state)
+        end
+    end
+
+    return 0
+end
+
+function OpsActivityMgr:GetActivityNodeStatus(InActivityID, InNodeID)
+	local ActivityData = self:GetActivtyNodeInfo(InActivityID)
+	if (ActivityData == nil) then
+		return RewardStatus.RewardStatusNo
+	end
+
+	if (ActivityData.Head.EmergencyShutDown) then
+		_G.FLOG_ERROR("活动：%s, 目前是紧急停止的状态，返回 RewardStatusNo", InActivityID)
+		return RewardStatus.RewardStatusNo
+	end
+
+	local NodeList = ActivityData.NodeList
+	if (NodeList == nil or #NodeList < 1) then
+		_G.FLOG_ERROR("活动：%s 的 NodeList 为空，请检查!")
+		return RewardStatus.RewardStatusNo
+	end
+
+	for Key, Value in pairs(NodeList) do
+		if (Value.Head.NodeID == InNodeID) then
+			if (Value.Head.EmergencyShutDown) then
+				-- 如果是紧急 shutdown ，那么返回不可领取
+				_G.FLOG_ERROR("活动：%s, 节点 : %s, 目前是紧急停止的状态，返回 RewardStatusNo", InActivityID, InNodeID)
+				return RewardStatus.RewardStatusNo
+			end
+
+			-- 这里看 ActivityNode 的状态
+			return Value.Head.RewardStatus
+		end
+	end
+
+	return RewardStatus.RewardStatusNo
+end
+
+function OpsActivityMgr:GetNodeExtraData(InActivityID, InNodeID)
+	local ActivityData = self:GetActivtyNodeInfo(InActivityID)
+	if (ActivityData == nil) then
+		return nil
+	end
+
+	local NodeList = ActivityData.NodeList
+	if (NodeList == nil or #NodeList < 1) then
+		_G.FLOG_ERROR("活动：%s 的 NodeList 为空，请检查!")
+		return
+	end
+
+	for Key, Value in pairs(NodeList) do
+		if (Value.Head.NodeID == InNodeID) then
+			if (Value.Head.EmergencyShutDown) then
+				-- 如果是紧急 shutdown ，那么返回空
+				_G.FLOG_ERROR("活动：%s, 节点 : %s, 目前是紧急停止的状态，返回 nil", InActivityID, InNodeID)
+				return nil
+			end
+
+			-- 这里看 ActivityNode 的状态
+			return Value.Extra
+		end
+	end
+
+	return nil
+end
+
+
+
+function OpsActivityMgr:IsActivityID(ID)
+	if math.floor(ID/10000000) > 0 and math.floor(ID/100000000) == 0  then
+		return self:IsOpsActivityOnShelf(ID)
+	end
+
+	return false
+end
+
+function OpsActivityMgr:UpdateActivityPositionRedDot(IsShow, ActiviyID)
+	local Cfg = ActivityCfg:FindCfgByKey(ActiviyID)
+	if Cfg ~= nil then
+		local ActivityRedDotName = self:GetRedDotName(Cfg.ClassifyID, ActiviyID, "PositionRed")
+
+		if IsShow then
+			RedDotMgr:AddRedDotByName(ActivityRedDotName)
+		else
+			RedDotMgr:DelRedDotByName(ActivityRedDotName)
+			_G.MainPanelMgr:OnCancelGameBotRedDot(ActiviyID)
+		end
+	end
+
+end
+
+
+function OpsActivityMgr:GetNodesByNodeType(ActivityID, NodeType)
+	local Detail = self.ActivityNodeMap[ActivityID]
+	local TypeNodeList = {}
+	if Detail then
+		for _, Node in ipairs(Detail.NodeList) do
+			local NodeID  = Node.Head.NodeID
+			local ActivityNode = ActivityNodeCfg:FindCfgByKey(NodeID)
+			if ActivityNode and ActivityNode.NodeType == NodeType then
+				table.insert(TypeNodeList, Node)
+			end
+		end
+	end
+	
+	return TypeNodeList
+end
+
+---检测拍照相片中是否有主角和至少一个其他玩家
+---@return boolean 是否满足条件（有主角且至少有一个其他玩家）
+function OpsActivityMgr:IsPhotoValidWithPlayers()
+    
+    -- 获取视口大小
+    local ViewportSize = _G.UE.UWidgetLayoutLibrary.GetViewportSize(_G.FWORLD())
+    if not ViewportSize then
+        return false
+    end
+    
+    -- 检测主角是否在相片中
+    local MajorEntityID = MajorUtil.GetMajorEntityID()
+    local MajorActor = MajorUtil.GetMajor()
+    local bMajorInPhoto = false
+    
+    if MajorActor then
+        bMajorInPhoto = self:IsActorInCameraView(MajorActor, ViewportSize)
+    end
+    
+    if not bMajorInPhoto then
+        return false
+    end
+    
+    -- 检测其他玩家是否在相片中
+    local UActorManager = _G.UE.UActorManager:Get()
+    local AllPlayers = UActorManager:GetAllPlayers()
+    
+    if AllPlayers and AllPlayers:Length() > 0 then
+        for i = 1, AllPlayers:Length() do
+            local Player = AllPlayers:Get(i)
+            if Player then
+                local AttrComponent = Player:GetAttributeComponent()
+                if AttrComponent and AttrComponent.EntityID ~= MajorEntityID then
+                    if self:IsActorInCameraView(Player, ViewportSize) then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+---检测Actor是否在相机视野内
+---@param Actor userdata 要检测的Actor
+---@param ViewportSize UE.FVector2D 视口大小
+---@return boolean 是否在视野内
+function OpsActivityMgr:IsActorInCameraView(Actor, ViewportSize)
+    if not Actor then
+        return false
+    end
+    
+    -- 获取Actor的世界位置
+    local ActorLocation = Actor:FGetActorLocation()
+    if not ActorLocation then
+        return false
+    end
+    
+    -- 将世界坐标投影到屏幕坐标
+    local ScreenPosition = _G.UE.FVector2D(0, 0)
+    local bIsInScreen = UIUtil.ProjectWorldLocationToScreen(ActorLocation, ScreenPosition, false, 0)
+    
+    if not bIsInScreen then
+        return false
+    end
+    
+    -- 检查是否在屏幕范围内（考虑一定的边界容差）
+    local Margin = 50 -- 边界容差
+    local bInBounds = (ScreenPosition.X >= -Margin and ScreenPosition.X <= ViewportSize.X + Margin) and
+                      (ScreenPosition.Y >= -Margin and ScreenPosition.Y <= ViewportSize.Y + Margin)
+    
+    return bInBounds
+end
+
+
+
+function OpsActivityMgr:OnTakePhotoSucc()
+	if self:IsPhotoValidWithPlayers() then
+		OpsActivityMgr:SendActivityEventReport(ActivityNodeType.ActivityNodeTypeCommClientReport, {1})
+	end
+end
+
+
+function OpsActivityMgr:TestHalloween1()
+end
+
 --要返回当前类
 return OpsActivityMgr

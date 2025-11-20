@@ -27,6 +27,8 @@ local FLOG_INFO = _G.FLOG_INFO
 ---@field LevelProbar UProgressBar
 ---@field TextProfLevel UFTextBlock
 ---@field TextProfName UFTextBlock
+---@field iconTask UFImage
+---@field AnimProBar UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ProfessionLevelItemView = LuaClass(UIView, true)
 
@@ -38,6 +40,8 @@ function ProfessionLevelItemView:Ctor()
 	--self.LevelProbar = nil
 	--self.TextProfLevel = nil
 	--self.TextProfName = nil
+	--self.iconTask = nil
+	--self.AnimProBar = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -56,6 +60,7 @@ function ProfessionLevelItemView:OnInit()
 		{ "bIsCurProf", UIBinderSetIsVisible.New(self, self.ImgSelect) },
 		{ "LevelColor", UIBinderSetColorAndOpacityHex.New(self, self.TextProfLevel) },
 		{ "NameColor", UIBinderSetColorAndOpacityHex.New(self, self.TextProfName) },
+		{ "bIsQuestProf", UIBinderSetIsVisible.New(self, self.iconTask) },
 	}
 end
 
@@ -93,6 +98,17 @@ function ProfessionLevelItemView:OnBtnClicked()
 
 		local View = _G.UIViewMgr:FindView(_G.UIViewID.EquipmentMainPanel)
 		local CanPreview = View and true or false
+		local MajorRoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+		local ProfIslock = false
+		if nil == MajorRoleDetail or nil == MajorRoleDetail.Prof.ProfList[self.ViewModel.ProfID] then
+			ProfIslock = true
+		end
+
+		if not CanPreview and ProfIslock then
+			_G.EquipmentMgr:OpenEquipmentByPreviewProf(self.ViewModel.ProfID)
+			return
+		end
+
 		if not _G.ProfMgr:CanChangeProf(self.ViewModel.ProfID, CanPreview) then
 			return
 		end

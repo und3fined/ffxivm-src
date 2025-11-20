@@ -13,14 +13,16 @@ local ItemUtil = require("Utils/ItemUtil")
 local QuestHelper = require("Game/Quest/QuestHelper")
 local QuestMgr = require("Game/Quest/QuestMgr")
 local HelpCfg = require("TableCfg/HelpCfg")
-
+local AdventureRecommendTaskMgr = require("Game/Adventure/AdventureRecommendTaskMgr")
+local TipsUtil = require("Utils/TipsUtil")
 local LSTR = nil
+local UIViewMgr = nil
+local UIViewID = nil
 
 ---@class PWorldEnhancedEntranceItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnSelect UFButton
 ---@field Icon UFImage
----@field IconLock_1 UFImage
 ---@field ImgPoster UFImage
 ---@field PanelGoto UFCanvasPanel
 ---@field PanelLock UFCanvasPanel
@@ -37,7 +39,6 @@ function PWorldEnhancedEntranceItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnSelect = nil
 	--self.Icon = nil
-	--self.IconLock_1 = nil
 	--self.ImgPoster = nil
 	--self.PanelGoto = nil
 	--self.PanelLock = nil
@@ -57,6 +58,8 @@ end
 
 function PWorldEnhancedEntranceItemView:OnInit()
 	LSTR = _G.LSTR
+	UIViewMgr = require("UI/UIViewMgr")
+	UIViewID = require("Define/UIViewID")
 end
 
 function PWorldEnhancedEntranceItemView:OnDestroy()
@@ -70,9 +73,6 @@ function PWorldEnhancedEntranceItemView:OnShow()
 	local CfgData = self.Params.Data
 	if self.PanelLock then
 		UIUtil.SetIsVisible(self.PanelLock, false)
-	end
-	if self.IconLock_1 then
-		UIUtil.SetIsVisible(self.IconLock_1, false)
 	end
 	if self.TextTitle then
 		local EntranceTitle = CfgData.Name
@@ -119,10 +119,10 @@ function PWorldEnhancedEntranceItemView:SetUnlockedText()
 	if TaskID then
 		local QuestCfg = QuestHelper.GetQuestCfgItem(TaskID)
 		if QuestCfg then
-			if self.IconLock_1 then
-				local Icon = QuestMgr:GetChapterIconAtLog(QuestCfg.ChapterID, nil, false)
-				UIUtil.ImageSetBrushFromAssetPath(self.IconLock_1, Icon) 	-- 设置任务图标
-			end
+			-- if self.IconLock_1 then
+			-- 	local Icon = QuestMgr:GetChapterIconAtLog(QuestCfg.ChapterID, nil, false)
+			-- 	UIUtil.ImageSetBrushFromAssetPath(self.IconLock_1, Icon) 	-- 设置任务图标
+			-- end
 			local UnlockedText = ""
 
 			-- 不使用具体任务名来显示文本
@@ -156,11 +156,15 @@ function PWorldEnhancedEntranceItemView:SetUnlockedText()
 end
 
 function PWorldEnhancedEntranceItemView:OnHide()
-
+	self:UnRegisterTimer(self.ClickButtonTimer)
 end
 
 function PWorldEnhancedEntranceItemView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.BtnSelect, self.OnClickButtonItem)
+	self.ClickButtonTimer = self:RegisterTimer(function()
+		if self and self.BtnSelect then
+			UIUtil.AddOnClickedEvent(self, self.BtnSelect, self.OnClickButtonItem)
+		end
+	end, 1)
 end
 
 function PWorldEnhancedEntranceItemView:OnRegisterGameEvent()
@@ -176,13 +180,56 @@ function PWorldEnhancedEntranceItemView:OnClickButtonItem()
 	if not CfgData then return end
 	local GetCfg = ItemGetaccesstypeCfg:FindCfgByKey(CfgData.JumpID)
 	if GetCfg == nil then return end
-	if not self.IsOpen then
-		--未解锁
-		_G.MsgTipsUtil.ShowTipsByID(GetCfg.UnLockTipsID)
+	if self.IsOpen then
+		_G.PromoteLevelUpMgr:JumpPanelByGetWayID(CfgData.JumpID)
 		return
 	end
 
-	_G.PromoteLevelUpMgr:JumpPanelByGetWayID(CfgData.JumpID)
+	---未解锁
+	local ModuleOpenData = ModuleOpenCfg:FindCfgByKey(CfgData.SystemOpenID)
+	if not ModuleOpenData then return end
+	if not ModuleOpenData.PreTask or #ModuleOpenData.PreTask == 0 then
+		_G.MsgTipsUtil.ShowTipsByID(GetCfg.UnLockTipsID)
+		return
+	end
+	local IsRecommendTask = false
+	local TaskID
+	local HelpInfoID = self.Params.Data.HelpID
+	---目前只显示一个任务,默认显示配置第一个
+	for _, ID in ipairs(ModuleOpenData.PreTask) do
+		local QuestCfg = QuestHelper.GetQuestCfgItem(ID)
+		if QuestCfg ~= nil then
+			local RecommendTask = AdventureRecommendTaskMgr:GetRecommendTask()
+			if RecommendTask then
+				IsRecommendTask =  table.contain(RecommendTask, QuestCfg.ChapterID)
+			end
+			break
+		end
+	end
+	if IsRecommendTask then
+		HelpInfoID = self.Params.Data.HelpID
+	end
+	if ModuleOpenData.PreTask and ModuleOpenData.PreTask[1] then
+		TaskID = ModuleOpenData.PreTask[1]
+	end
+	if TaskID then
+		local Offset = _G.UE.FVector2D( 0, 0 )
+		local TargetWidgetSize = _G.UE.UUIUtil.GetLocalSize(self)
+		local Params
+		Params = {
+			ID = HelpInfoID,
+			TitleText = LSTR(1210001),
+			InTargetWidget = self,	
+			Offset = Offset,
+			Alignment = _G.UE.FVector2D( 1, 0 ),
+			IsAutoFlip = true,
+			TaskID = TaskID,
+			IsShowTaskUI = true,
+			IsAdaptationX = true,
+		}
+	 	UIViewMgr:ShowView(UIViewID.Main2ndHelpInfoTips, Params)
+	end
+	return
 end
 
 return PWorldEnhancedEntranceItemView

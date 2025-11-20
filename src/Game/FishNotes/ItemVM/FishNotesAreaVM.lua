@@ -58,7 +58,7 @@ function FishNotesAreaVM:UpdateVM(Value)
     self.AreaName = Value.Name
     --self.ToggleState = self.bAreaChanged and EToggleButtonState.Checked or EToggleButtonState.Unchecked
     self:UpdateColor()
-    self.AreaChildrenList:Clear()
+    --self.AreaChildrenList:Clear()
     self.AreaChildrenList:UpdateByValues(ValueChildren, nil)
     self.IconArrow = nil
 end

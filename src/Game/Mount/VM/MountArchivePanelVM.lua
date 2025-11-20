@@ -92,6 +92,7 @@ function MountArchivePanelVM:Ctor()
     self.Source = BagDefine.ItemGetWaySource.Mount
     self.bShowActionBtn = false
     self.bShowPanelCustomMadeBtn = false    --滑板定制按钮
+    self.IsPanelSpeedInfo = false
 end
 
 function MountArchivePanelVM:UpdateData()
@@ -118,7 +119,7 @@ function MountArchivePanelVM:GetAllMounts()
                 end
             end
             if IsInsert then
-                local GMRideCfg = RideCfg:FindCfgByKey(ID)
+                local GMRideCfg = _G.MountMgr:GetRideCfg(ID)
                 if GMRideCfg then
                     table.insert(AllRideTable, 1, GMRideCfg)  
                 end
@@ -128,7 +129,7 @@ function MountArchivePanelVM:GetAllMounts()
     
     self.AllMountList = {}
     self.AllMountMp = {}
-    local ServerTime = TimeUtil.GetServerTime()
+    local ServerTime = TimeUtil.GetServerLogicTime()
     local VersGloCfg = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GLOBAL_CFG_GAME_VERSION)
     local VersG = VersGloCfg and VersGloCfg.Value or {2,0,0}
     for _,v in ipairs(AllRideTable) do
@@ -148,10 +149,12 @@ function MountArchivePanelVM:GetAllMounts()
         if bOnLine and bVersion and (v.ID ~= nil) then
             local MountText = ""
             local MountTextCry = ""
+            local RideSpeedText = ""
             local c_RideText_Cfg = RideTextCfg:FindCfgByKey(v.ID)
             if  c_RideText_Cfg ~= nil then
                 MountText = c_RideText_Cfg.Expository
                 MountTextCry = c_RideText_Cfg.Cry
+                RideSpeedText = c_RideText_Cfg.RideSpeedText
             end
             local GetAccess ={}
             local Cfg = ItemCfg:FindCfgByKey(v.ItemID)
@@ -159,8 +162,8 @@ function MountArchivePanelVM:GetAllMounts()
                 GetAccess = Cfg.Access
             end
             local Mount = {Flag = 0, LikeTime = 0, ResID = v.ID, Name = v.Name, SeatCount = v.SeatCount + 1, AccessGetList = GetAccess,
-            SkeletonId = v.SkeletonId, PatternId = v.PatternId, ImeChanId = v.ImeChanId, IsStoryProtect = v.IsStoryProtect,
-            MountExpository = MountText, MountCry = MountTextCry, ItemID = v.ItemID, ModelScaling = v.ModelScaling, MountTrack = v.MountTrack,
+            SkeletonId = v.SkeletonId, PatternId = v.PatternId, ImeChanId = v.ImeChanId, IsStoryProtect = v.IsStoryProtect, DisableLights = v.DisableLights,
+            MountExpository = MountText, MountCry = MountTextCry, RideSpeedText = RideSpeedText, ItemID = v.ItemID, ModelScaling = v.ModelScaling, MountTrack = v.MountTrack,
             RotationX = v.RotationX or 0, RotationY = v.RotationY or 0, RotationZ = v.RotationZ or 0, OffsetX = v.LocationX or 0, OffsetY = v.LocationY or 0, OffsetZ = v.LocationZ or 0, BgmID = v.MountBgm}
             table.insert(self.AllMountList, Mount)
             self.AllMountMp[Mount.ResID] = Mount
@@ -181,6 +184,7 @@ function MountArchivePanelVM:UpdateShowText(Mount)
     end
     self.DescribeTitle = LSTR(1090040)..self.TextShowName
     self.TextShowDesc = Mount.MountCry
+    self.IsPanelSpeedInfo = not string.isnilorempty(Mount.RideSpeedText)
     --编号
     self.TextShowID = string.format("%03d", Mount.ResID)
     --隐藏坐骑的文本显示和功能
@@ -237,7 +241,7 @@ function MountArchivePanelVM:UpdateShowText(Mount)
 			self.bShowPanelCustomMadeBtn = false
 		else
 			self.bShowPanelCustomMadeBtn = true
-			self.ShowBtnGo = false
+			-- self.ShowBtnGo = false
 		end
 	else
         self.bShowPanelCustomMadeBtn = false
@@ -269,31 +273,35 @@ function MountArchivePanelVM:SetShowMounts()
 end
 
 function MountArchivePanelVM:IsShowMount(Mount, InName)
-    local c_ride_cfg = RideCfg:FindCfgByKey(Mount.ResID)
-    if c_ride_cfg == nil then return false end
-    local IsVersion = MountVM:IsVersionFilterValue(c_ride_cfg.OpenVersion)
+    local MountCfg = _G.MountMgr:GetRideCfg(Mount.ResID)
+    if MountCfg == nil then return false end
+    local IsVersion = MountVM:IsVersionFilterValue(MountCfg.OpenVersion)
     if IsVersion == false then return false end
 
     if self.IsShowFilter and not self.IsSearch then  --获取途径
+        local bShow = false
         if Mount.AccessGetList and self.ShowGetWayFilter ~= {} then
             for _, AccessID in pairs(Mount.AccessGetList) do
                 local AccessCfg = ItemGetaccesstypeCfg:FindCfgByKey(AccessID)
                 if AccessCfg ~= nil and AccessCfg.FunType ~= nil then
-                    return self.ShowGetWayFilter[AccessCfg.FunType] ~= nil
+                    bShow = self.ShowGetWayFilter[AccessCfg.FunType] ~= nil
+                    if bShow then
+                        break
+                    end
                 end
             end
         end
-        return false
+        return bShow
     end
 
     if self.IsSearch then  --全局搜索
         if InName and string.len(InName) > 0 then
             -- 精确搜索-提审版本临时处理
-            --if c_ride_cfg.Name == InName then
+            --if MountCfg.Name == InName then
             --    return true
             --end
             -- 模糊搜索-提审版本临时处理
-            if string.find(c_ride_cfg.Name, InName) ~= nil then 
+            if string.find(MountCfg.Name, InName) ~= nil then 
                 return true
             end
             return false
@@ -459,6 +467,14 @@ function MountArchivePanelVM:IsVersion(VersGlobal, VersionName)
             end
         end
     end
+end
+
+function MountArchivePanelVM:GetPanelSpeedInfoText()
+	local Mount = self.AllMountMp[self.SelectedMountID]
+	if Mount == nil then
+		return
+	end
+    return Mount.RideSpeedText
 end
 
 return MountArchivePanelVM

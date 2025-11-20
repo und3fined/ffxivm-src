@@ -12,17 +12,12 @@ local DynamicMapGroupCfg = {
         Config = {}
     },
     DefaultValues = {
-        DGroupID = 0,
-        _DMapList = '[]',
-        MapID = 0,
+        DGroupID = 1,
+        _DMapList = '[1071,1072,1073,1074,1075,1076,1077,1078,1079,1080,1081,1082,1083,1084,1085,1086,1087]',
+        MapID = 1065,
     },
 	LuaData = {
         {
-        },
-        {
-            DGroupID = 1,
-            _DMapList = '[1071,1072,1073,1074,1075,1076,1077,1078,1079,1080,1081,1082,1083,1084,1085,1086,1087]',
-            MapID = 1065,
         },
         {
             DGroupID = 2,
@@ -113,6 +108,11 @@ local DynamicMapGroupCfg = {
             DGroupID = 19,
             _DMapList = '[2118,2150]',
             MapID = 15003,
+        },
+        {
+            DGroupID = 20,
+            _DMapList = '[7019]',
+            MapID = 7018,
         },
 	},
 }

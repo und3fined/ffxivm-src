@@ -26,7 +26,7 @@ local CompleteSkillCfg = require("TableCfg/DiscoverNoteCompleteSkillCfg")
 local MapRegionIconCfg = require("TableCfg/MapRegionIconCfg")
 --local EObjCfg = require("TableCfg/EobjCfg")
 local MapUtil = require("Game/Map/MapUtil")
-------local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local EffectUtil = require("Utils/EffectUtil")
 local TimeUtil = require("Utils/TimeUtil")
@@ -38,16 +38,16 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local BitUtil = require("Utils/BitUtil")
 local SaveKey = require("Define/SaveKey")
 local FlagBit = ProtoCS.FlagBit
---local HUDType = require("Define/HUDType")
 local RangeCheckTriggerDefine = require("Game/RangeCheckTrigger/RangeCheckTriggerDefine")
 
 local CS_CMD = ProtoCS.CS_CMD
 local QUEST_STATUS = ProtoCS.CS_QUEST_STATUS
 local SUB_MSG_ID = ProtoCS.SearchNoteCmd
-local NoteUnlockType = DiscoverNoteDefine.NoteUnlockType
 local NoteClueType = DiscoverNoteDefine.NoteClueType
 local NoteClueSrcType = DiscoverNoteDefine.NoteClueSrcType
-local NoteDetailSevReturnType = DiscoverNoteDefine.NoteDetailSevReturnType
+local NpcLeaveSpeed = DiscoverNoteDefine.NpcLeaveSpeed
+local NpcLeaveWaitMaxTime = DiscoverNoteDefine.NpcLeaveWaitMaxTime
+local RegionTabRedDotUpdateReason = DiscoverNoteDefine.RegionTabRedDotUpdateReason
 local LeftSidebarType = SidebarDefine.LeftSidebarType
 local TriggerGamePlayType = RangeCheckTriggerDefine.TriggerGamePlayType
 local ModuleID = ProtoCommon.ModuleID
@@ -79,6 +79,7 @@ local EventMgr
 local WildBoxMoundMgr
 local MysterMerchantMgr
 local TouringBandMgr
+local NavigationPathMgr
 
 ---@class DiscoverNoteMgr : MgrBase
 ---@field EmotionEndCallBack function@情感动作结束后向服务器发送
@@ -123,6 +124,7 @@ function DiscoverNoteMgr:OnBegin()
     WildBoxMoundMgr = _G.WildBoxMoundMgr
     MysterMerchantMgr = _G.MysterMerchantMgr
     TouringBandMgr = _G.TouringBandMgr
+    NavigationPathMgr = _G.NavigationPathMgr
     self.MapId2PointCompleteInfo = {} -- 地图ID点位完成进度信息
     self.MapIdZeroPercentage = {} -- 地图进度为0的id列表
     self:InitMapIdZeroPercentage()
@@ -136,12 +138,14 @@ function DiscoverNoteMgr:OnBegin()
     self.ClueUnlockAnimRecordList = {} -- 笔记线索解锁动画记录
 
     self.NoteItemRedDotList = {} -- 探索笔记新解锁笔记红点列表
+    self.NoteLinkRegionIdRedDotMap = {} -- 探索笔记关联区域红点缓存(不需要本地存储，每次加载依据笔记红点更新数据)
 
     self:LoadLastAddPointDataFromLocalDevice()
 
     -- 二期风景点激活情感动作流程修改不使用闭包回调完成请求交互逻辑
     self.InteractiveID = nil -- 单次解锁交互ID记录
     self.EntityID = nil -- 单次解锁交互的Actor唯一ID
+    self.EmotionIDWaitForCheck = nil -- 2025.6.9新增缓存单次操作的情感动作ID验证
     self.bPerfectPointActive = false -- 是否为完美探索风景点操作
     self.NotePointEobjIDsInVision = {} -- 视野内风景点列表
 
@@ -163,6 +167,11 @@ function DiscoverNoteMgr:OnBegin()
     --- V2 协议及存储结构优化
     self.NoteSevDatasMap = {} -- 笔记服务器数据结构直接存储{Key = NoteID Info = {Flag(点位及线索状态), NextTime(下次出现时间)}}
     self.NoteIDPerfectCompleteMap = {} -- 完美探索完成笔记Id(默认线索全解锁，节省内存)
+
+    self.TurningNpcEntityID = nil -- 只有线索Npc会对话
+    self.ClueNpcLeavePos = nil -- 线索Npc离开位置
+    self.CheckEndTurningTimer = nil -- 检测npc对话结束转身状态
+    self.bFinishDialogEndTurnningEnterd = nil -- Npc对话结束是否进入过回转状态
 end
 
 function DiscoverNoteMgr:OnEnd()
@@ -174,14 +183,20 @@ function DiscoverNoteMgr:OnEnd()
     self.RegionTabNewRedDotList = nil
     self.RegionWaitForUnlock = nil
     self.NoteItemRedDotList = nil
+    self.NoteLinkRegionIdRedDotMap = nil
     self.ClueUnlockAnimRecordList = nil
     self.InteractiveID = nil -- 单次解锁交互ID记录
     self.EntityID = nil -- 单次解锁交互的Actor唯一ID
+    self.EmotionIDWaitForCheck = nil
     self.MapId2PointCompleteInfo = nil
     self.MapIdZeroPercentage = nil
     self.DetectTargetInRange = nil
     self.PerfectCondFirstTimeHandle = nil
     self.PerfectCondLoopTimeHandle = nil
+    self.TurningNpcEntityID = nil -- 只有线索Npc会对话
+    self.ClueNpcLeavePos = nil
+    self.CheckEndTurningTimer = nil
+    self.bFinishDialogEndTurnningEnterd = nil -- Npc对话结束回转状态
 end
 
 function DiscoverNoteMgr:OnShutdown()
@@ -212,6 +227,8 @@ function DiscoverNoteMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.ShowUI, self.OnMainMapUIShow)
     self:RegisterGameEvent(EventID.HideUI, self.OnMainMapUIHide)
     self:RegisterGameEvent(EventID.BagUpdate, self.OnGameEventBagUpdate)
+    --self:RegisterGameEvent(EventID.NPCFinishTurning, self.OnClueNPCFinishTurning)
+    self:RegisterGameEvent(EventID.FinishDialog, self.OnGameEventFinishDialog)
 
     self:RegisterGameEvent(EventID.LoadWildBoxRangeCheckData, self.LoadWildBoxRangeCheckData)
     self:RegisterGameEvent(EventID.RemoveWildBoxRangeCheckDataByBoxOpened, self.OnRemoveWildBoxRangeCheckDataByBoxOpened)
@@ -337,7 +354,7 @@ function DiscoverNoteMgr:NotifyNotePointVisionStateChange(Params, bEnterOrLeave)
                 self.bIsInteracting = false
                 self.bEmotionEndWaitForInteract = false
                 _G.InteractiveMgr:SetShowMainPanelEnabled(true)
-                _G.InteractiveMgr:ShowInteractiveEntrance()
+                _G.InteractiveMgr:ShowMainPanel()
             end
         end
     end
@@ -475,7 +492,15 @@ function DiscoverNoteMgr:OnGameEventNetworkReconnected(Params)
 end
 
 function DiscoverNoteMgr:OnGameEventPostEmotionEnter(Params)
-
+    local EntityID = Params.ULongParam1
+	if EntityID ~= MajorUtil.GetMajorEntityID() then
+		return
+	end
+    if not self.bIsInteracting then
+        return
+    end
+    _G.InteractiveMgr:SetShowMainPanelEnabled(false)
+    _G.InteractiveMgr:HideMainPanel()
 end
 
 function DiscoverNoteMgr:NotifyActivateDiscoverNote(Params)
@@ -635,6 +660,7 @@ function DiscoverNoteMgr:MakeTheRegionNoteItemSevInfos(RegionID, bUpdatePerfectC
                 bCompleted = self:IsNotePointActived(Id),
                 bPerfectComplete = self:IsNotePointPerfectActived(Id),
                 bShowPerfectCondEffect = false,
+                bRedDotShow = self:IsNewNoteItemRedDotNeedShow(Id)
             }
             
             local bPerfectComplete = ItemSev.bPerfectComplete
@@ -1144,8 +1170,7 @@ function DiscoverNoteMgr:OnNetMsgExploreNoteAccomplishRsp(MsgBody)
             end
         end
         if ClueGotNum >= SingleNoteTotalClueNum then
-            --- 解锁满3条线索添加红点提示 2025.4.23暂不处理解锁线索满红点，P5再处理红点不传到顶的问题
-            --self:AddNewUnlockNoteItemRedDot(AccomplishID)
+            self:AddNewUnlockNoteItemRedDot(AccomplishID)
         end
 
         local function JumpToDiscoverPanel()
@@ -1200,7 +1225,7 @@ function DiscoverNoteMgr:OnNetMsgExploreNoteAccomplishRsp(MsgBody)
         self.bIsInteracting = false
         self.bEmotionEndWaitForInteract = false
         _G.InteractiveMgr:SetShowMainPanelEnabled(true)
-        _G.InteractiveMgr:ShowInteractiveEntrance()
+        _G.InteractiveMgr:ShowMainPanel()
     end
 end
 
@@ -1476,17 +1501,19 @@ function DiscoverNoteMgr:AddNewUnlockRegionTabRedDot(RegionID)
         return
     end
     RegionTabNewRedDotList[RegionID] = true
-    RedDotMgr:AddRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), "NewUnlock"))
+    EventMgr:SendEvent(EventID.RegionTabUIRedDotUpdate, RegionID, true, RegionTabRedDotUpdateReason.NewRegionOpen) -- 使用事件更新，因为通用控件在UI上处理的相关逻辑
+    RedDotMgr:AddRedDotByName(DiscoverNoteDefine.RedDotBaseName)
+    --RedDotMgr:AddRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), "NewUnlock"))
 end
 
 --- 清除地域页签是否显示新解锁红点
 ---@param RegionID number@地域ID
 function DiscoverNoteMgr:RemoveNewUnlockRegionTabRedDot(RegionID)
-    local DelSuccess = RedDotMgr:DelRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), "NewUnlock"))
+    --[[local DelSuccess = RedDotMgr:DelRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), "NewUnlock"))
     if not DelSuccess then
         FLOG_ERROR("DiscoverNoteMgr:RemoveNewUnlockRegionTabRedDot REDDOT IS NOT EXIST")
         return
-    end
+    end--]]
     local RegionTabNewRedDotList = self.RegionTabNewRedDotList
     if not RegionTabNewRedDotList then
         return
@@ -1496,7 +1523,67 @@ function DiscoverNoteMgr:RemoveNewUnlockRegionTabRedDot(RegionID)
         return
     end
     RegionTabNewRedDotList[RegionID] = nil
+    EventMgr:SendEvent(EventID.RegionTabUIRedDotUpdate, RegionID, false, RegionTabRedDotUpdateReason.NewRegionOpen) -- 使用事件更新，因为通用控件在UI上处理的相关逻辑
+    RedDotMgr:DelRedDotByName(DiscoverNoteDefine.RedDotBaseName)
     self:SaveLastAddPointDataInLocalDeviceInternal(SaveKey.DiscoverNoteRegionID)
+end
+
+--- 增加笔记相关页签红点计数
+function DiscoverNoteMgr:AddNoteItemLinkRegionCount(RegionID)
+    local NoteLinkRegionIdRedDotMap = self.NoteLinkRegionIdRedDotMap or {}
+    local RegionCount = NoteLinkRegionIdRedDotMap[RegionID] or 0
+    RegionCount = RegionCount + 1
+    NoteLinkRegionIdRedDotMap[RegionID] = RegionCount
+    self.NoteLinkRegionIdRedDotMap = NoteLinkRegionIdRedDotMap
+end
+
+--- 减少笔记相关页签红点计数
+function DiscoverNoteMgr:MinusNoteItemLinkRegionCount(RegionID)
+    local NoteLinkRegionIdRedDotMap = self.NoteLinkRegionIdRedDotMap
+    if not NoteLinkRegionIdRedDotMap or not next(NoteLinkRegionIdRedDotMap) then
+        return
+    end
+
+    local RegionCount = NoteLinkRegionIdRedDotMap[RegionID]
+    if not RegionCount then
+        return
+    end
+
+    if RegionCount <= 0 then
+        NoteLinkRegionIdRedDotMap[RegionID] = nil
+        return
+    end
+    RegionCount = RegionCount - 1
+    if RegionCount > 0 then
+        NoteLinkRegionIdRedDotMap[RegionID] = RegionCount
+    else
+        NoteLinkRegionIdRedDotMap[RegionID] = nil
+    end
+end
+
+--- 判断对应区域页签下是否有笔记红点
+function DiscoverNoteMgr:IsRegionTabRedDotActiveByNoteItem(RegionID)
+    local NoteLinkRegionIdRedDotMap = self.NoteLinkRegionIdRedDotMap
+    if not NoteLinkRegionIdRedDotMap or not next(NoteLinkRegionIdRedDotMap) then
+        return false
+    end
+
+    local Count = NoteLinkRegionIdRedDotMap[RegionID]
+    if not Count then
+        return false
+    end
+
+    return Count > 0
+end
+
+--- 是否有笔记相关红点需要显示
+function DiscoverNoteMgr:IsNewNoteItemRedDotNeedShow(NoteItemID)
+    local NoteItemRedDotList = self.NoteItemRedDotList
+    if not NoteItemRedDotList or not next(NoteItemRedDotList) then
+        return false
+    end
+
+    return NoteItemRedDotList[NoteItemID]
 end
 
 --- 添加探索笔记新解锁红点
@@ -1518,12 +1605,24 @@ function DiscoverNoteMgr:AddNewUnlockNoteItemRedDot(NoteItemID)
     NoteItemRedDotList[NoteItemID] = true
     local MapID = NoteCfg.MapID
     local RegionID = MapUtil.GetMapRegionID(MapID)
-    RedDotMgr:AddRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID)))
+    self:AddNoteItemLinkRegionCount(RegionID)
+    EventMgr:SendEvent(EventID.RegionTabUIRedDotUpdate, RegionID, true, RegionTabRedDotUpdateReason.PassByNoteItem)
+    DiscoverNoteVM:SetNoteItemRedDotVisible(NoteItemID, true)
+    --RedDotMgr:AddRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID)))
 end
 
 --- 清除探索笔记新解锁红点
 ---@param NoteItemID number@笔记ID
 function DiscoverNoteMgr:RemoveNewUnlockNoteItemRedDot(NoteItemID)
+    local NoteItemRedDotList = self.NoteItemRedDotList
+    if not NoteItemRedDotList then
+        return
+    end
+
+    local RedDotStore = NoteItemRedDotList[NoteItemID]
+    if not RedDotStore then
+        return
+    end
     local NoteCfg = DiscoverNoteCfg:FindCfgByKey(NoteItemID)
     if not NoteCfg then
         return
@@ -1532,20 +1631,16 @@ function DiscoverNoteMgr:RemoveNewUnlockNoteItemRedDot(NoteItemID)
     local MapID = NoteCfg.MapID
     local RegionID = MapUtil.GetMapRegionID(MapID)
 
-    local DelSuccess = RedDotMgr:DelRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID)))
+    --[[local DelSuccess = RedDotMgr:DelRedDotByName(string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID)))
     if not DelSuccess then
         return
-    end
-    local NoteItemRedDotList = self.NoteItemRedDotList
-    if not NoteItemRedDotList then
-        return
-    end
-    local RedDotStore = NoteItemRedDotList[NoteItemID]
-    if not RedDotStore then
-        return
-    end
+    end--]]
+
+    self:MinusNoteItemLinkRegionCount(RegionID)
+    EventMgr:SendEvent(EventID.RegionTabUIRedDotUpdate, RegionID, false, RegionTabRedDotUpdateReason.PassByNoteItem)
     NoteItemRedDotList[NoteItemID] = nil
     self:SaveLastAddPointDataInLocalDeviceInternal(SaveKey.DiscoverNoteItemID)
+    DiscoverNoteVM:SetNoteItemRedDotVisible(NoteItemID, false)
 end
 
 --- 清除所有新区域解锁红点（关闭界面使用）
@@ -1561,6 +1656,7 @@ function DiscoverNoteMgr:ClearRegionTabUnlockRedDot()
     end
 end
 
+---@deprecated
 --- 清除所有新笔记解锁红点（关闭界面使用）
 function DiscoverNoteMgr:ClearNoteItemUnlockRedDot()
     local NoteItemRedDotList = self.NoteItemRedDotList
@@ -1881,11 +1977,9 @@ function DiscoverNoteMgr:MakeTheRegionData()
 				Data.Name = RegionIconCfg.Name
 				Data.IconPath = RegionIconCfg.Icon
                 Data.IsLock = not self:IsRegionActive(RegionID)
-                local UnlockRegionRedDotName = string.format("%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID))
-                Data.RedDotData = {
-                    RedDotName = UnlockRegionRedDotName,
-                    IsStrongReminder = false
-                }
+                Data.bCustomsizedRedDot = true
+                Data.bCustomsizedRedDotShow = self:IsNewUnlockRegion(RegionID)
+                or self:IsRegionTabRedDotActiveByNoteItem(RegionID)
 
 				table.insert(ListData, Data)
 			end
@@ -1920,7 +2014,85 @@ function DiscoverNoteMgr:NotifyRemoveNoteClueEobj(NoteID, ClueType)
     ClientVisionMgr:ClientActorLeaveVision(MapEditorID, EActorType.EObj)
 end
 
+--- Npc移动消失逻辑
+function DiscoverNoteMgr:OnNpcMoveToTheEndPosition(NpcListID, EndLocation, DisappearTime)
+    local NpcEditorData = MapEditDataMgr:GetNpcByListID(NpcListID)
+    if not NpcEditorData then
+        return
+    end
+    local NpcResID = NpcEditorData.NpcID
+    if not NpcResID then
+        return
+    end
+    local NpcActor = ActorUtil.GetActorByResIDAndListID(NpcResID, NpcListID)
+    if not NpcActor then
+        return
+    end
+
+    local NpcEntityID = ActorUtil.GetActorEntityID(NpcActor)
+    if not NpcEntityID then
+        return
+    end
+    
+    local NpcLocation = NpcActor:FGetLocation(_G.UE.EXLocationType.ActorLoc)
+    if not NpcLocation then
+        return
+    end
+
+    local MapID = PWorldMgr:GetCurrMapResID()
+    if not MapID then
+        return
+    end
+
+    local function RemoveNpc()
+        ClientVisionMgr:ClientActorLeaveVision(NpcListID, EActorType.Npc)
+    end
+    local PosTable = _G.UE.TArray(_G.UE.FVector)
+    local UMoveSyncMgr = _G.UE.UMoveSyncMgr:Get()
+    local MapPaths = _G.NavigationPathMgr:FindMapPaths(MapID, NpcLocation, MapID, EndLocation)
+    if MapPaths and #MapPaths > 0 then
+        for _, Path in ipairs(MapPaths) do
+            for _, Pos in ipairs(Path.Paths) do
+                PosTable:Add(Pos.StartPos)
+                --PosTable:Add(Pos.EndPos)
+                local ElementEndPos = Pos.EndPos
+                if ElementEndPos then
+                    local EndPosVector = _G.UE.FVector(ElementEndPos.X, ElementEndPos.Y, ElementEndPos.Z)
+                    PosTable:Add(EndPosVector)
+                end
+            end
+        end
+        local function ShellCallback(_, InEntityID)
+            if NpcEntityID ~= InEntityID then return end
+            -- 延迟一会儿执行，避免在FMoveSyncPipeline::Tick()内CurrentStrategy->Tick()销毁Actor，导致破坏CurrentStrategy非空假设
+            self:RegisterTimer(RemoveNpc, 0.1, 0, 1)
+            if not DisappearTime then
+                UMoveSyncMgr.OnClientLocalMoveFinish:Remove(UMoveSyncMgr, ShellCallback)
+            end
+        end
+        --PosTable:Add(NpcLocation)
+        --PosTable:Add(_G.UE.FVector(EndLocation.X, EndLocation.Y, EndLocation.Z))
+        if not DisappearTime then
+            UMoveSyncMgr.OnClientLocalMoveFinish:Add(UMoveSyncMgr, ShellCallback)
+        end
+        local Speed = NpcLeaveSpeed
+        UMoveSyncMgr:StartClientMove(NpcEntityID, PosTable, Speed)
+        if DisappearTime and type(DisappearTime) == "number" then
+            self:RegisterTimer(function()
+                ShellCallback(_, NpcEntityID)
+            end, DisappearTime)
+        end
+    else
+        FLOG_ERROR("没有找到移动到消失位置的路！！！！！")
+        RemoveNpc()
+    end--]]
+
+    self:RegisterTimer(RemoveNpc, NpcLeaveWaitMaxTime, 0, 1) -- 在无法移动到消失地点情况下的保底做法，5秒后强制移除NPC
+end
+
 --- 隐藏对应的Npc线索
+---@param NoteID number@笔记ID
+---@param ClueType NoteClueType@线索种类枚举
 function DiscoverNoteMgr:NotifyRemoveNoteClueNpc(NoteID, ClueType)
     if not NoteID or not ClueType then
         return
@@ -1936,9 +2108,94 @@ function DiscoverNoteMgr:NotifyRemoveNoteClueNpc(NoteID, ClueType)
         return
     end
 
-    ClientVisionMgr:ClientActorLeaveVision(NpcListID, EActorType.Npc)
+    local NpcLeavePos = NoteClueCfg.NpcLeavePos
+    if not NpcLeavePos then
+        return
+    end
+
+    local NpcEditorData = MapEditDataMgr:GetNpcByListID(NpcListID)
+    if not NpcEditorData then
+        return
+    end
+    local NpcResID = NpcEditorData.NpcID
+    if not NpcResID then
+        return
+    end
+    local NpcActor = ActorUtil.GetActorByResIDAndListID(NpcResID, NpcListID)
+    if not NpcActor then
+        return
+    end
+
+    local WaitForNpcTurningTime = 1.5
+    self:RegisterTimer(function()
+        self:OnNpcMoveToTheEndPosition(NpcListID, NpcLeavePos)
+    end, WaitForNpcTurningTime)
 end
 
+--[[function DiscoverNoteMgr:OnGameEventFinishDialog(Params)
+    local EntityID = Params.NpcEntityID
+    if not EntityID then
+        return
+    end
+    local DialogLibID = Params.DialogLibID
+    if not DialogLibID or DialogLibID <= 0 then
+        return
+    end
+
+    self.TurningNpcEntityID = EntityID
+
+    self.CheckEndTurningTimer = self:RegisterTimer(function()
+        local NpcActor = ActorUtil.GetActorByEntityID(TurningNpcEntityID)
+        if not NpcActor then
+            self:UnRegisterTimer(self.CheckEndTurningTimer)
+            print("DiscoverNoteMgr:OnGameEventFinishDialog ActorError")
+            return
+        end
+
+        if not NpcActor.IsTurning then
+            self:UnRegisterTimer(self.CheckEndTurningTimer)
+            print("DiscoverNoteMgr:OnGameEventFinishDialog No IsTurning func")
+            return
+        end
+        local bFinishDialogEndTurnningEnterd = self.bFinishDialogEndTurnningEnterd
+        if NpcActor:IsTurning() then
+            if not bFinishDialogEndTurnningEnterd then
+                self.bFinishDialogEndTurnningEnterd = true
+                print("DiscoverNoteMgr:OnGameEventFinishDialog EnterTurningState")
+            end
+        else
+            if bFinishDialogEndTurnningEnterd then
+                --self:RegisterTimer(self.OnClueNPCFinishTurning, 0.5, 0, 1, self)
+                print("DiscoverNoteMgr:OnGameEventFinishDialog EndTurningState")
+                self:OnClueNPCFinishTurning()
+                self:UnRegisterTimer(self.CheckEndTurningTimer)
+                self.CheckEndTurningTimer = nil              
+            end
+        end
+    end, 0, 0.2, 0)
+end
+
+
+function DiscoverNoteMgr:OnClueNPCFinishTurning()
+    local TurningNpcEntityID = self.TurningNpcEntityID
+    local ClueNpcLeavePos = self.ClueNpcLeavePos
+    if not TurningNpcEntityID or not ClueNpcLeavePos then
+        return
+    end
+
+    local AttrComp = ActorUtil.GetActorAttributeComponent(TurningNpcEntityID)
+    if not AttrComp then
+        return
+    end
+    
+   
+    print("DiscoverNoteMgr:OnGameEventFinishDialog EndTurningState")
+    self.TurningNpcEntityID = nil
+    self.ClueNpcLeavePos = nil
+    self.bFinishDialogEndTurnningEnterd = nil
+end--]]
+
+--- 隐藏对应的情感动作提示Npc
 function DiscoverNoteMgr:NotifyRemoveNoteNpc(NoteID)
     if not NoteID then
         return
@@ -1954,7 +2211,13 @@ function DiscoverNoteMgr:NotifyRemoveNoteNpc(NoteID)
         return
     end
 
-    ClientVisionMgr:ClientActorLeaveVision(NPCListID, EActorType.Npc)
+    local NpcLeavePos = NoteCondCfg.NpcLeavePos
+    if not NpcLeavePos then
+        return
+    end
+
+    self:OnNpcMoveToTheEndPosition(NPCListID, NpcLeavePos)
+    --ClientVisionMgr:ClientActorLeaveVision(NPCListID, EActorType.Npc)
 end
 
 --- 三期需求 ---
@@ -2408,15 +2671,8 @@ end
 ---@param InteractiveID number@交互ID
 ---@param EntityID number@交互Actor唯一ID
 function DiscoverNoteMgr:EmotionReqInternal(EmotionID)
-    if false == EmotionMgr:IsNetMsgBody(EmotionID, true) then -- 情感动作移动判定影响探索笔记执行
-        self:RegisterTimer(function()
-            InteractiveMgr:ShowMainPanel()
-        end, 0.2) -- 延时操作保证交互系统打开界面时判定状态不受计时器内方法调用时改变状态的逻辑影响
-        return
-    end
     EmotionMgr:SendEmotionReq(EmotionID)
     self.bIsInteracting = true
-    _G.InteractiveMgr:SetShowMainPanelEnabled(false)
 end
 
 --- 交互按钮发送情感动作申请接口(普通解锁)
@@ -2431,10 +2687,20 @@ function DiscoverNoteMgr:EmotionInteractReq(NoteItemId, InteractiveID, EntityID)
     if not EmotionID then
         return
     end
+
+    if false == EmotionMgr:IsNetMsgBody(EmotionID, true) then -- 情感动作移动判定影响探索笔记执行(必须放到下面状态修改之前，保证不会受情感动作打断影响)
+        self:RegisterTimer(function()
+            InteractiveMgr:ShowMainPanel()
+        end, 0.2) -- 延时操作保证交互系统打开界面时判定状态不受计时器内方法调用时改变状态的逻辑影响
+        return
+    end
+
     self.bPerfectPointActive = false
     self.InteractiveID = InteractiveID
     self.EntityID = EntityID
+    self.EmotionIDWaitForCheck = EmotionID
     self.bEmotionEndWaitForInteract = false
+
     self:EmotionReqInternal(EmotionID)
 end
 
@@ -2443,6 +2709,13 @@ end
 ---@param CallBack function@情感动作结束后回调
 function DiscoverNoteMgr:PerfectEmotionInteractReq(NoteItemId, EmotionID)
     if not NoteItemId or not EmotionID then
+        return
+    end
+
+    if false == EmotionMgr:IsNetMsgBody(EmotionID, true) then -- 情感动作移动判定影响探索笔记执行(必须放到下面状态修改之前，保证不会受情感动作打断影响)
+        self:RegisterTimer(function()
+            InteractiveMgr:ShowMainPanel()
+        end, 0.2) -- 延时操作保证交互系统打开界面时判定状态不受计时器内方法调用时改变状态的逻辑影响
         return
     end
 
@@ -2473,6 +2746,21 @@ end
 ---@param NoteItemId number@探索笔记ID
 ---@param CallBack function@情感动作结束后回调
 function DiscoverNoteMgr:OpenPerfectEmotionView(NoteItemId, EntityID)
+    -- 处理多次刷新交互按钮导致界面打开的问题
+    if UIViewMgr:IsViewVisible(UIViewID.SightSeeingLogActChooseView) then
+        return
+    end
+
+    if MajorUtil.IsMajorHaveVec() then
+		local ActorManager = _G.UE.UActorManager:Get()
+		if ActorManager and ActorManager:GetVirtualJoystickIsSprintLocked() then
+			ActorManager:SetVirtualJoystickIsSprintLocked(false)    --关闭自动锁定移动
+		else
+			MsgTipsUtil.ShowTips(LSTR(210026))  --"移动中无法操作"
+			return
+		end
+	end
+
     self.bEmotionEndWaitForInteract = false
     self.EntityID = EntityID
     local Params = {
@@ -2500,7 +2788,7 @@ function DiscoverNoteMgr:OpenPerfectEmotionView(NoteItemId, EntityID)
         })
         end
     end
-
+    self.EmotionIDWaitForCheck = TempIDList
     Params.EmotionIDList = TempIDList
     Params.bEmotionClueUnlock = self:IsNoteClueUnlockByClueType(NoteItemId, NoteClueType.Emotion)
 
@@ -2522,11 +2810,24 @@ function DiscoverNoteMgr:InteractiveReqAfterEmotionEnd(EmotionID)
         return
     end
 
+    -- 2025.6.9 增加客户端对情感动作的验证
+    local EmotionIDWaitForCheck = self.EmotionIDWaitForCheck
+    if not EmotionIDWaitForCheck then 
+        return
+    end
+
+    if type(EmotionIDWaitForCheck) == "number" and EmotionIDWaitForCheck ~= EmotionID then
+        return
+    elseif type(EmotionIDWaitForCheck) == "table" and not table.find_by_predicate(EmotionIDWaitForCheck, function(E) return E.ID == EmotionID end) then
+        return
+    end
+
     InteractiveMgr:SendInteractiveStartReq(InteractiveID, InteractiveEntityID)
     self.bEmotionEndWaitForInteract = true
 
     self.InteractiveID = nil
     self.EntityID = nil
+    self.EmotionIDWaitForCheck = nil
 end
 
 --- 是否处于探索笔记交互解锁中

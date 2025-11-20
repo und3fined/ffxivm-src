@@ -74,6 +74,8 @@ function RechargingMgr:OnInit()
 	self.CharacterInteractActionIDs = nil
 	self.CharacterTransitionAction = ""
 	self.InteractCD = 0
+	self.CurrentProductID = ""
+	self.OrderToken = ""
 end
 
 function RechargingMgr:OnBegin()
@@ -158,19 +160,26 @@ function RechargingMgr:Recharge(Order, Crystas, Bonus, View)
 	PayUtil.BuyCoins(Order,
 	function(_, BillData) self:OnBillReceived(BillData) end,
 	function(_) self:OnLoginExpired() end,
-	nil, -- 切后台可能导致米大师回调丢失，不再使用
+	function(_, PayReturnData) self:OnPayFinished(PayReturnData) end,
 	function(_, GoodsData) self:OnGoodsReceived(GoodsData) end,
 	View)
+	self.CurrentProductID = PayUtil.GetProductID(Order)
 end
 
 function RechargingMgr:OnBillReceived(BillData)
 	if BillData == nil then
-		FLOG_ERROR("Cannot get pay bill data")
+		FLOG_ERROR("RechargingMgr:OnBillReceived, Cannot get pay bill data")
 		return
 	end
 
+	if string.isnilorempty(BillData.Token) then
+		FLOG_ERROR("RechargingMgr:OnBillReceived, Pay token is empty")
+	else
+		self.OrderToken = BillData.Token
+	end
+
 	if BillData.URL == "" then
-		FLOG_ERROR("Pay bill is empty")
+		FLOG_ERROR("RechargingMgr:OnBillReceived, Pay bill is empty")
 	end
 end
 
@@ -209,10 +218,34 @@ function RechargingMgr:ShowMidasPayFinishedTips(PayReturnData)
 	if TipsContent ~= "" then
 		MsgTipsUtil.ShowTips(TipsContent)
 	end
+	if ResultCode ~= 0 then
+		self.CurrentProductID = ""
+		self.OrderToken = ""
+	end
+end
+
+function RechargingMgr:OnPayFinished(PayReturnData)
+	local IsPaySuccess = true
+	if PayReturnData == nil then
+		_G.FLOG_ERROR("RechargingMgr:OnPayFinished, Cannot get pay return data")
+		IsPaySuccess = false
+	else
+		if PayReturnData.ResultCode == 0 then
+			_G.FLOG_INFO("RechargingMgr:OnPayFinished, Pay succeeded.")
+			--self.CurrentProductID = ""
+			local TipsContent = string.format(_G.LSTR(940042), PayUtil.GetProductTypeName(self.CurrentRequestOrder))
+			MsgTipsUtil.ShowTips(TipsContent)
+		else
+			IsPaySuccess = false
+		end
+	end
+    self:SendPayResultToServer(self.CurrentProductID, IsPaySuccess, self.OrderToken)
 end
 
 function RechargingMgr:OnGoodsReceived(GoodsData)
 	self:OnRechargeSucceed(self.CurrentRequestSum)
+	self.CurrentProductID = ""
+	self.OrderToken = ""
 end
 
 function RechargingMgr:OnRechargeSucceed(Quantity)
@@ -274,6 +307,26 @@ function RechargingMgr:QueryRewardState()
 	local MsgBody = {
         Cmd = SubMsgID,
         QueryRechargeAward = {}
+    }
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function RechargingMgr:SendPayResultToServer(ProductID, IsPaySuccess, OrderToken)
+	local MsgID = CS_CMD.CS_CMD_PAY
+	local SubMsgID = CS_PAY_CMD.CS_CMD_PAY_BUY_GAME_COIN
+	local MsgBody = {
+        Cmd = SubMsgID,
+        BuyGameCoin = {
+			PayInfo = {
+				OpenID = tostring(_G.LoginMgr:GetOpenID()),
+				OpenKey = _G.LoginMgr:GetOpenKey(),
+				Pf = _G.LoginMgr:GetPf(),
+				PfKey = _G.LoginMgr:GetPfKey()
+			},
+			ProductID = ProductID,
+			Cancel = not IsPaySuccess,
+			Token = OrderToken
+		}
     }
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
@@ -356,8 +409,8 @@ function RechargingMgr:OnNetMsgErrNotify(MsgBody)
 		return
 	end
 
-	FLOG_INFO("[RechargingMgr:OnNetMsgErrNotify] %s", _G.table_to_string(MsgBody))
 	if Msg.Cmd and Msg.SubCmd and Msg.Cmd == CS_CMD.CS_CMD_PAY and Msg.SubCmd == CS_PAY_CMD.CS_CMD_PAY_DISTRIBUTE_ORDER then
+		FLOG_INFO("[RechargingMgr:OnNetMsgErrNotify] %s", _G.table_to_string(Msg))
 		if Msg.ErrCode == nil then
 			FLOG_WARNING("[RechargingMgr:OnNetMsgErrNotify] ErrCode is nil")
 			return
@@ -395,6 +448,14 @@ function RechargingMgr:OnNetMsgErrNotify(MsgBody)
 end
 
 function RechargingMgr:OnLogin(Params)
+	if nil ~= Params and nil ~= Params.bReconnect and Params.bReconnect == true then
+		_G.FLOG_INFO("RechargingMgr:OnLogin, bReconnect is true")
+		if self.CurrentProductID ~= "" then
+			-- 断线重连时，可能有未收到完成通知的订单，需要重新查询状态
+			self:SendPayResultToServer(self.CurrentProductID, true, self.OrderToken)
+		end
+	end
+
 	if _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_REBATE, true) then
 		self:QueryRewardState()
 	end
@@ -419,8 +480,10 @@ function RechargingMgr:OnMainBodyUpdated(Params)
 	end
 	self.bIsReadyToShowMainPanel = true
 
-    self.SceneActor:UpdateLights(Shopkeeper, self.LightPreset)
-    LightMgr:RecordLightPreset(self.SceneActor, self.LightPreset)
+	if nil ~= self.SceneActor and CommonUtil.IsObjectValid(self.SceneActor) then
+    	self.SceneActor:UpdateLights(Shopkeeper, self.LightPreset)
+    	LightMgr:RecordLightPreset(self.SceneActor, self.LightPreset)
+	end
 end
 
 --- 关闭按钮替换为返回
@@ -589,7 +652,10 @@ function RechargingMgr:PreloadScene()
 	local function PreloadCallback()
 		if nil ~= self.SceneActor then
 			self.SceneActor:SetActorHiddenInGame(true)
-			_G.UE.UActorManager.Get():HideActor(self.ShopkeeperEntityID, true)
+			local Shopkeeper = self:GetShopkeeper()
+			if nil ~= Shopkeeper then
+				Shopkeeper:SetActorVisibility(false, _G.UE.EHideReason.ActorCache)
+			end
 		end
 	end
 	self:CreateScene(PreloadCallback)
@@ -602,7 +668,10 @@ function RechargingMgr:SwitchScene(bOn)
 	end
 
 	self.SceneActor:SetActorHiddenInGame(not bOn)
-	_G.UE.UActorManager.Get():HideActor(self.ShopkeeperEntityID, not bOn)
+	local Shopkeeper = self:GetShopkeeper()
+	if nil ~= Shopkeeper then
+		Shopkeeper:SetActorVisibility(bOn, _G.UE.EHideReason.ActorCache)
+	end
 
 	-- local CameraMgr = _G.UE.UCameraMgr.Get()
 	-- if CameraMgr == nil then

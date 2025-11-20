@@ -70,7 +70,10 @@ function PersonInfoPlayerHeadListItemView:OnValChgUrl(Val)
 		return
 	end
 
-	PersonPortraitHeadHelper.SetHeadByUrl(self.PersonInfoPlayerHead.ImgPlayer, Val, 'PersonInfoPlayerHeadListItemView::OnValChgUrl')
+	--PersonPortraitHeadHelper.SetHeadByUrl(self.PersonInfoPlayerHead.ImgPlayer, Val, 'PersonInfoPlayerHeadListItemView::OnValChgUrl')
+	if self.PersonInfoPlayerHead and self.PersonInfoPlayerHead.CommHead then
+		PersonPortraitHeadHelper.SetCommHeadByUrl(self.PersonInfoPlayerHead.CommHead, Val, "PersonInfoPlayerHeadListItemView::OnValChgUrl")
+	end
 end
 
 return PersonInfoPlayerHeadListItemView

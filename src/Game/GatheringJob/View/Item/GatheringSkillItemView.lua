@@ -19,7 +19,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 local attr_type = require("Protocol/ProtoCommon").attr_type
 local ButtonStateTips = SkillButtonStateMgr.ButtonStateTips
 local State = SkillButtonStateMgr.SkillBtnState
-
+local TipsUtil = require("Utils/TipsUtil")
 local OneVector2D          <const> = _G.UE.FVector2D(1, 1)
 
 ---@class GatheringSkillItemView : UIView
@@ -30,6 +30,7 @@ local OneVector2D          <const> = _G.UE.FVector2D(1, 1)
 ---@field FImg_CDNormal UFImage
 ---@field IconSkill UFImage
 ---@field ImgLight UFImage
+---@field ImgMiddleUp UFImage
 ---@field ImgSlot UFImage
 ---@field ImgSlotFrame UFImage
 ---@field MiddleNumber URichTextBox
@@ -58,6 +59,7 @@ function GatheringSkillItemView:Ctor()
 	--self.FImg_CDNormal = nil
 	--self.IconSkill = nil
 	--self.ImgLight = nil
+	--self.ImgMiddleUp = nil
 	--self.ImgSlot = nil
 	--self.ImgSlotFrame = nil
 	--self.MiddleNumber = nil
@@ -254,13 +256,14 @@ function GatheringSkillItemView:OnLongClickedSkillBtn()
 
     --tip
     local ProfID = MajorUtil.GetMajorProfID()
-    View.JobSkillTips:UPdateSkillInfo(self.SkillID, ProfID)
-    UIUtil.SetIsVisible(View.PanelSkillTips, true)
+    local Tips = _G.UIViewMgr:ShowView(_G.UIViewID.GatheringJobSkillTips)
+    Tips:UPdateSkillInfo(self.SkillID, ProfID) 
 
 	local btnsize = UIUtil.CanvasSlotGetSize(self)
 	local InPosition = UIUtil.CanvasSlotGetPosition(self)
 		-_G.UE.FVector2D(-btnsize.X * 0.4, -btnsize.Y)
-	UIUtil.CanvasSlotSetPosition(View.PanelSkillTips, InPosition)
+	--UIUtil.CanvasSlotSetPosition(Tips, InPosition)
+	TipsUtil.AdjustTipsPosition(Tips.PanelJobSkillTips, self, _G.UE.FVector2D(-btnsize.X - 15 , btnsize.Y - 20),  _G.UE.FVector2D(1,1))
 end
 
 ---@type 松开提纯or集中检查技能
@@ -269,7 +272,7 @@ function GatheringSkillItemView:OnLongClickReleasedSkillBtn()
     --当松开的时候，隐藏tip
 	local View = _G.UIViewMgr:FindView(_G.UIViewID.GatheringJobSkillPanel)
 	local CollectionPopup = View.CollectionPopup
-    UIUtil.SetIsVisible(View.PanelSkillTips, false)
+    _G.UIViewMgr:HideView(_G.UIViewID.GatheringJobSkillTips)
     UIUtil.SetIsVisible(CollectionPopup.ProBarYellow, false)
     UIUtil.SetIsVisible(CollectionPopup.ProBarRed, false)
     --如果是提纯，数值回归，只显示绿环

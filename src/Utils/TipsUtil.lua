@@ -18,7 +18,7 @@ local TipsUtil = {}
 ---@param HidePopUpBG boolean   隐藏关闭View
 ---@param ClickedParams <View, HidePopUpBGCallback>  需要重写点击PopBgCallback事件，HidePopUpBG = false
 ---@return UIView	
-function TipsUtil.ShowInfoTips(Content, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams)
+function TipsUtil.ShowInfoTips(Content, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams, Type, ParentViewID)
 	local ViewID = UIViewID.CommHelpInfoTipsView
 	local Params = {}
 	Params.Data = table.is_nil_empty(Content) and {{Title = "", Content = {Content}}} or Content
@@ -26,7 +26,9 @@ function TipsUtil.ShowInfoTips(Content, InTargetWidget, Offset, Alignment, HideP
 	Params.Alignment = Alignment or DefaultFVector2D
 	Params.InTargetWidget = InTargetWidget
 	Params.HidePopUpBG = HidePopUpBG
-	if ClickedParams then
+	Params.Type = Type
+	Params.ParentViewID = ParentViewID
+ 	if ClickedParams then
 		Params.View = ClickedParams.View or nil
 		Params.HidePopUpBGCallback = ClickedParams.HidePopUpBGCallback or nil
 	end
@@ -40,7 +42,7 @@ end
 ---@param HidePopUpBG boolean   隐藏关闭View
 ---@param ClickedParams <View, HidePopUpBGCallback>  需要重写点击PopBgCallback事件，HidePopUpBG = false
 ---@return UIView	
-function TipsUtil.ShowInfoTitleTips(Content, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams)
+function TipsUtil.ShowInfoTitleTips(Content, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams, Type)
 	local ViewID = UIViewID.CommHelpInfoTitleTipsView
 	local Params = {}
 	Params.Data = Content
@@ -48,6 +50,7 @@ function TipsUtil.ShowInfoTitleTips(Content, InTargetWidget, Offset, Alignment, 
 	Params.Alignment = Alignment or DefaultFVector2D
 	Params.InTargetWidget = InTargetWidget
 	Params.HidePopUpBG = HidePopUpBG
+	Params.Type = Type
 	if ClickedParams then
 		Params.View = ClickedParams.View or nil
 		Params.HidePopUpBGCallback = ClickedParams.HidePopUpBGCallback or nil
@@ -151,7 +154,7 @@ end
 ---@param HidePopUpBG boolean 隐藏关闭View
 ---@param ClickedParams <View, HidePopUpBGCallback>  需要重写点击PopBgCallback事件，HidePopUpBG = false
 ---@return UIView
-function TipsUtil.ShowGetWayTips(TipsVM, ForbidRangeWidget, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams, ParentViewID, AdjustTips)
+function TipsUtil.ShowGetWayTips(TipsVM, ForbidRangeWidget, InTargetWidget, Offset, Alignment, HidePopUpBG, ClickedParams, ParentViewID, AdjustTips, Extras)
 	local ViewID = UIViewID.CommGetWayTipsView
 	local Params = {}
 	Params.ViewModel = TipsVM
@@ -162,6 +165,7 @@ function TipsUtil.ShowGetWayTips(TipsVM, ForbidRangeWidget, InTargetWidget, Offs
 	Params.Alignment = Alignment or DefaultFVector2D
 	Params.HidePopUpBG = HidePopUpBG
 	Params.AdjustTips = AdjustTips
+	Params.Extras = Extras
 	if ClickedParams then
 		Params.View = ClickedParams.View or nil
 		Params.HidePopUpBGCallback = ClickedParams.HidePopUpBGCallback or nil
@@ -252,6 +256,26 @@ function TipsUtil.ShowSimpleTipsView(InParams, InTargetWidget, Offset, Alignment
 		Params.HidePopUpBGCallback = ClickedParams.HidePopUpBGCallback or nil
 	end
 	return UIViewMgr:ShowView(UIViewID.CommHelpInfoSimpleTipsView, Params)
+end
+
+
+---@param Content table        显示内容{Title, <Content>}
+---@param InTargetWidget Widget 对齐控件
+---@param Offset FVector2D	    Tips的偏移位置
+---@param Alignment FVector2D   Tips的对齐方式
+---@return UIView
+function TipsUtil.ShowTaskUnlockTips(Content, TaskID, InTargetWidget, Offset, Alignment)
+    local Params = {
+		TitleText = _G.LSTR(1210001),        -- LSTR string:解锁条件
+        Content = Content,
+        InTargetWidget = InTargetWidget,
+        Offset = Offset,
+        Alignment = Alignment,
+        IsAutoFlip = true,
+        TaskID = TaskID,
+        IsShowTaskUI = true
+    }
+    UIViewMgr:ShowView(UIViewID.Main2ndHelpInfoTips, Params)
 end
 
 ---@param InTargetWidget Widget  对齐控件

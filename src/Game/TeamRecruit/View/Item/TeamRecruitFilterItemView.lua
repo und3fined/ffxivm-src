@@ -17,10 +17,12 @@ local UIUtil = require("Utils/UIUtil")
 ---@field ImgFrame1 UFImage
 ---@field ImgFrame2 UFImage
 ---@field ImgSelect UFImage
+---@field ImgTag UFImage
 ---@field PanelHighlyDifficult UFCanvasPanel
 ---@field TextCondition UFTextBlock
 ---@field TextHighlyDifficult UFTextBlock
 ---@field TextName UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---@field MsgLimitWidth float
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local TeamRecruitFilterItemView = LuaClass(UIView, true)
@@ -31,10 +33,12 @@ function TeamRecruitFilterItemView:Ctor()
 	--self.ImgFrame1 = nil
 	--self.ImgFrame2 = nil
 	--self.ImgSelect = nil
+	--self.ImgTag = nil
 	--self.PanelHighlyDifficult = nil
 	--self.TextCondition = nil
 	--self.TextHighlyDifficult = nil
 	--self.TextName = nil
+	--self.AnimIn = nil
 	--self.MsgLimitWidth = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -60,9 +64,18 @@ function TeamRecruitFilterItemView:OnShow()
 
 	local PWorldEntUtil = require("Game/PWorld/Entrance/PWorldEntUtil")
 	local bPrettyHard = PWorldEntUtil.IsPrettyHardPWorld(Data.Task)
-	UIUtil.SetIsVisible(self.PanelHighlyDifficult, bPrettyHard)
+	local bBattle = PWorldEntUtil.IsBattlePWorld(Data.Task)
+	UIUtil.SetIsVisible(self.PanelHighlyDifficult, bPrettyHard or bBattle)
 	if bPrettyHard then
 		self.TextHighlyDifficult:SetText(_G.LSTR(1320232))
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgTag, "Texture2D'/Game/UI/Texture/Icon/Tag/UI_Icon_Tag_Comm1.UI_Icon_Tag_Comm1'")
+		UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.TextHighlyDifficult, "98504B7F")
+		UIUtil.TextBlockSetColorAndOpacityHex(self.TextHighlyDifficult, "D5D5D5FF")
+	elseif bBattle then
+		self.TextHighlyDifficult:SetText("激斗")	--@todo
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgTag, "Texture2D'/Game/UI/Texture/Icon/Tag/UI_Icon_Tag_Comm3.UI_Icon_Tag_Comm3'")
+		UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.TextHighlyDifficult, "9F50187F")
+		UIUtil.TextBlockSetColorAndOpacityHex(self.TextHighlyDifficult, "FFEEBBFF")
 	end
 end
 

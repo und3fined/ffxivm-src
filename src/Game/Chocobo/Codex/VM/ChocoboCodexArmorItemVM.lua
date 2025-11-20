@@ -9,7 +9,10 @@ local ChocoboCodexArmorSlotVM = require("Game/Chocobo/Codex/VM/ChocoboCodexArmor
 
 local ProtoCS = require("Protocol/ProtoCS")
 local ChocoboArmorPos = ProtoCS.ChocoboArmorPos
+local ItemDefine = require("Game/Item/ItemDefine")
+local ProtoRes = require("Protocol/ProtoRes")
 
+local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
 local FLinearColor = _G.UE.FLinearColor
 
 ---@class ChocoboCodexArmorItemVM : UIViewModel
@@ -19,13 +22,15 @@ local ChocoboCodexArmorItemVM = LuaClass(UIViewModel)
 function ChocoboCodexArmorItemVM:Ctor()
     self.ArmorName = "" 
     self.ArmorNum = "" 
-    self.ImgShow = "" 
+    self.Icon = "" 
     self.TextOwnNum = ""
+    self.NumVisible = false
     --self.ItemColorAndOpacity = FLinearColor(1, 1, 1, 1)
     self.IsMask = false
     self.ImgShowVisible = false
     self.ImgSelectVisible = false 
     self.PanelShowSelectVisible = false
+    self.ItemQualityIcon = ItemDefine.LightSlotColotType[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE]
     self.ArmorPartList = UIBindableList.New(ChocoboCodexArmorSlotVM)
 end
 
@@ -48,7 +53,6 @@ function ChocoboCodexArmorItemVM:UpdateVM(Value)
     local ArmorPartList = {}
     local Item = {Value.HeadItem,Value.BodyItem,Value.FootItem}
     local ArmorPos = { ChocoboArmorPos.ChocoboArmorPosHead,ChocoboArmorPos.ChocoboArmorPosBody,ChocoboArmorPos.ChocoboArmorPosLeg }
-    local ArmorPartList = {}
     for i = 1,3 do
         if Item[i] ~= nil then
             local ItemCfg = BuddyEquipCfg:FindCfgByKey(Item[i].ItemID)
@@ -70,10 +74,10 @@ function ChocoboCodexArmorItemVM:UpdateVM(Value)
         self.ImgShowVisible = true
         if Value.IsSpoiler == 1 then
             self.ArmorName = LSTR("???")
-            self.ImgShow = "Texture2D'/Game/UI/Texture/Chocobo/UI_ChocoboCodex_Image_Unknown.UI_ChocoboCodex_Image_Unknown'"
+            self.Icon = "Texture2D'/Game/UI/Texture/Chocobo/UI_ChocoboCodex_Image_Unknown.UI_ChocoboCodex_Image_Unknown'"
         else
             self.ArmorName = Value.Name
-            self.ImgShow = string.format("PaperSprite'/Game/Assets/Icon/ItemIcon/903000/UI_Icon_%s.UI_Icon_%s'",Value.IconID,Value.IconID)--UIUtil.GetIconPath(Value.IconID)
+            self.Icon = string.format("PaperSprite'/Game/Assets/Icon/ItemIcon/903000/UI_Icon_%s.UI_Icon_%s'",Value.IconID,Value.IconID)--UIUtil.GetIconPath(Value.IconID)
         end
     else
         self.ImgShowVisible = false

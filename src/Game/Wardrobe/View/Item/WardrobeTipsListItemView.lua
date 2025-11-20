@@ -11,6 +11,7 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
 
 ---@class WardrobeTipsListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -131,6 +132,8 @@ function WardrobeTipsListItemView:OnSelectChanged(bSelected)
 			-- self:RegisterTimer(function()
 				ItemTipsUtil.OnClickedToGetBtn(Params)
 			-- end, 0.3, 0, 1)
+		else
+			MsgTipsUtil.ShowTips(_G.LSTR(1080130))
 		end
 	end
 end

@@ -734,8 +734,12 @@ function DepartureBigBannerItemView:RefreshFishAndExclamationIcon(IsPlayBubbleAn
 		UIUtil.SetIsVisible(NumIcon, false)
 	end
 
-	-- 随机感叹号数量（对应鱼类级别）
-	local RandomLevel = math.random(#self.ExclamationNumIconList)
+	-- RandIndex（对应鱼类级别）
+	local RandIndex = 1
+	self.RandInteract, RandIndex = DepartOfLightVMUtils.GetRandomInteract(self.InteractList, self.RandInteract)
+
+	-- 感叹号数量（对应鱼类级别）
+	local RandomLevel = math.clamp(RandIndex, 1, #self.ExclamationNumIconList)--math.random(#self.ExclamationNumIconList)
 	for Index = 1, RandomLevel do
 		local NumIcon = self.ExclamationNumIconList[Index]
 		if NumIcon then
@@ -749,16 +753,19 @@ function DepartureBigBannerItemView:RefreshFishAndExclamationIcon(IsPlayBubbleAn
 		AudioUtil.LoadAndPlayUISound(DepartOfLightDefine.UISoundPath.FishNote3)
 	end
 
-	self.RandInteract = DepartOfLightVMUtils.GetRandomInteract(self.InteractList, self.RandInteract)
+	
 	if self.RandInteract then
 		local FishIcons = self.RandInteract.IconPaths
 		local PanelInfo = self.PanelMap[self.ModuleID]
 		local BubbleList = PanelInfo and PanelInfo.Bubbles
-		if BubbleList and #BubbleList > 0 then
-			-- 设置鱼类图片
-			local FishIcon = FishIcons and FishIcons[RandomLevel] or ""
+		-- 设置随机鱼类图片
+		if FishIcons and #FishIcons > 0 then
+			local RandFishIconIndex = math.random(#FishIcons)
+			local FishIcon = FishIcons and FishIcons[RandFishIconIndex] or ""
 			UIUtil.ImageSetBrushFromAssetPath(self.ImgFish, FishIcon)
+		end
 
+		if BubbleList and #BubbleList > 0 then
 			local ToShowBubble = BubbleList[1]
 			if ToShowBubble then
 				-- 设置表情

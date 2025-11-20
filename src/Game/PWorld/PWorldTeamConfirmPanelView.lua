@@ -73,7 +73,6 @@ local UIBinderSetBrushFromMaterial = require("Binder/UIBinderSetBrushFromMateria
 ---@field AnimProgress UWidgetAnimation
 ---@field AnimShowAgain UWidgetAnimation
 ---@field AnimShowFirst UWidgetAnimation
----@field backupAnimIn UWidgetAnimation
 ---@field SoundEvent_Enter SoftObjectPath
 ---@field SoundEvent_CountDown SoftObjectPath
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -120,7 +119,6 @@ function PWorldTeamConfirmPanelView:Ctor()
 	--self.AnimProgress = nil
 	--self.AnimShowAgain = nil
 	--self.AnimShowFirst = nil
-	--self.backupAnimIn = nil
 	--self.SoundEvent_Enter = nil
 	--self.SoundEvent_CountDown = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -196,6 +194,8 @@ function PWorldTeamConfirmPanelView:OnInit()
 		{ "SneceIcon", 			UIBinderSetBrushFromMaterial.New(self, self.ImgPworldIcon)},
 		{ "SceneName", 			UIBinderSetText.New(self, self.TextPworldName) },
 		{ "SceneLevelDesc", 	UIBinderSetText.New(self, self.TextPworldLevel) },
+		{ "MatchFrameImage", 	UIBinderSetBrushFromMaterial.New(self, self.ImgFrame, "MainTexture") },
+		{ "MatchFrameImage", 	UIBinderSetBrushFromMaterial.New(self, self.ImgFrameLight, "MainTexture") },
 
 		{ "IsMajorReady", 		UIBinderValueChangedCallback.New(self, nil, function(_, IsReady)
 			self.BtnRefuse:SetIsEnabled(not IsReady)
@@ -279,8 +279,6 @@ function PWorldTeamConfirmPanelView:OnHide()
 		_G.PWorldVoteMgr:SetVoteConfirmSidebarVisible(_G.PWorldVoteMgr:IsVoteEnterScenePending())
 		_G.PWorldMatchMgr:TryResumeSideBar()
 	end
-	
-	_G.SidebarMgr:TryOpenSidebarMainWin()
 end
 
 function PWorldTeamConfirmPanelView:OnRegisterGameEvent()
@@ -314,7 +312,7 @@ function PWorldTeamConfirmPanelView:UpdateVoteProgressAnimation()
 			self:UnRegisterTimer(self.TimerIDVoteTimeOut)
 		end
 		self.TimerIDVoteTimeOut = self:RegisterTimer(function (_, VoteID)
-			_G.PWorldVoteMgr:MarkTimeoutAndTip(VoteID) 
+			_G.PWorldVoteMgr:MarkTimeoutAndTip(VoteID)
 		end, RemainSecs + 2, 0, 1, _G.PWorldVoteMgr:GetEnterSceneVoteID())
 	end
 end

@@ -2,10 +2,6 @@
 
 local CfgBase = require("TableCfg/CfgBase")
 
-local CS = {
-    _1_1 = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_Army_png.UI_Profile_Icon_Army_png\'',
-}
-
 ---@class PersoninfoBtnCfg : CfgBase
 local PersoninfoBtnCfg = {
 	TableName = "c_personinfo_btn_cfg",
@@ -45,7 +41,7 @@ local PersoninfoBtnCfg = {
             Priority = 5,
         },
         {
-            BtnIcon = CS._1_1,
+            BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_Army_png.UI_Profile_Icon_Army_png\'',
             ID = 5,
             Priority = 6,
         },
@@ -61,7 +57,7 @@ local PersoninfoBtnCfg = {
         {
             BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_Report_png.UI_Profile_Icon_Report_png\'',
             ID = 8,
-            Priority = 8,
+            Priority = 19,
         },
         {
             ID = 9,
@@ -94,12 +90,12 @@ local PersoninfoBtnCfg = {
             Priority = 4,
         },
         {
-            BtnIcon = CS._1_1,
+            BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_RemoveArmy_png.UI_Profile_Icon_RemoveArmy_png\'',
             ID = 15,
             Priority = 15,
         },
         {
-            BtnIcon = CS._1_1,
+            BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_TransferArmy_png.UI_Profile_Icon_TransferArmy_png\'',
             ID = 16,
             Priority = 16,
         },
@@ -112,6 +108,16 @@ local PersoninfoBtnCfg = {
             BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_InviteSign_png.UI_Profile_Icon_InviteSign_png\'',
             ID = 18,
             Priority = 18,
+        },
+        {
+            BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_Notes_png.UI_Profile_Icon_Notes_png\'',
+            ID = 19,
+            Priority = 8,
+        },
+        {
+            BtnIcon = 'PaperSprite\'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_House_png.UI_Profile_Icon_House_png\'',
+            ID = 20,
+            Priority = 20,
         },
 	},
 }

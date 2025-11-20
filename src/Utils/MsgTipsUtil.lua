@@ -804,6 +804,9 @@ function MsgTipsUtil.ShowFogUnlockTips(IsAllUnlock, ShowTime)
 		MsgTipsUtil.AddQueue(UIViewID.InfoMistTips, Params)
 		return
 	end
+	if UIViewMgr:FindView(UIViewID.InfoMistTips) then
+		UIViewMgr:HideView(UIViewID.InfoMistTips)
+	end
 	UIViewMgr:ShowView(UIViewID.InfoMistTips, Params)
 end
 

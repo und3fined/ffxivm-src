@@ -18,6 +18,7 @@ local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 ---@field BtnClock UToggleButton
 ---@field FishNotesSlot FishNotesSlotItemView
 ---@field ImgClock UFImage
+---@field PanelProBar UFCanvasPanel
 ---@field ProBarCD UProgressBar
 ---@field TextNum UFTextBlock
 ---@field TextNum2 UFTextBlock
@@ -31,6 +32,7 @@ function FishIngholeTipsItemView:Ctor()
 	--self.BtnClock = nil
 	--self.FishNotesSlot = nil
 	--self.ImgClock = nil
+	--self.PanelProBar = nil
 	--self.ProBarCD = nil
 	--self.TextNum = nil
 	--self.TextNum2 = nil
@@ -54,7 +56,7 @@ function FishIngholeTipsItemView:OnInit()
 		{ "bClockEnabled", UIBinderSetIsEnabled.New(self, self.BtnClock)},
 		{ "bClockVisible", UIBinderSetIsVisible.New(self, self.BtnClock, false, true)},
 		{ "bProBarCDVisible", UIBinderSetIsVisible.New(self, self.ImgClock)},
-		{ "bProBarCDVisible", UIBinderSetIsVisible.New(self, self.ProBarCD)},
+		{ "bProBarCDVisible", UIBinderSetIsVisible.New(self, self.PanelProBar)},
 		{ "ProgressValue", UIBinderSetPercent.New(self, self.ProBarCD)},
 		{ "Num", UIBinderSetText.New(self, self.TextNum2) },
 	}

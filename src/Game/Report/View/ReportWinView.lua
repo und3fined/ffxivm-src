@@ -159,7 +159,6 @@ function ReportWinView:AssemblyPlayerInfoParam(Params)
 	local ReporteeRoleVM = _G.RoleInfoMgr:FindRoleVM(Params.ReporteeRoleID, true) or {}
 	local InformantRoleVM = MajorUtil.GetMajorRoleVM() or {}
 
-	--必填
 	AssembledParams.Reported = { OpenID = ReporteeRoleVM.OpenID, WorldID = ReporteeRoleVM.WorldID, RoleID = Params.ReporteeRoleID, RoleName = ReporteeRoleVM.Name }
 	AssembledParams.Informant = { OpenID = InformantRoleVM.OpenID, WorldID = InformantRoleVM.WorldID, RoleID = MajorUtil.GetMajorRoleID(), RoleName = InformantRoleVM.Name }
 
@@ -174,7 +173,7 @@ end
 
 function ReportWinView:AssemblyReportee(AssembledParams)
 	local ReportScene = self.ClientReportScene
-	local TextPlayerName
+	local TextPlayerName = ""
 	if ReportScene == ReportDefine.ReportScene.LinkShell then
 		-- "举报对象：" 
 		TextPlayerName = LSTR(780030) .. AssembledParams.ReportGroupName or ""

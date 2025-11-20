@@ -19,6 +19,7 @@ local LinkShellMgr = require("Game/Social/LinkShell/LinkShellMgr")
 local FriendMgr = require("Game/Social/Friend/FriendMgr")
 local FishNoteMgr = require("Game/FishNotes/FishNotesMgr")
 local TeamDefine = require("Game/Team/TeamDefine")
+local SidebarMgr = require("Game/Sidebar/SidebarMgr")
 local WBL = _G.UE.UWidgetBlueprintLibrary
 local UKismetInputLibrary = _G.UE.UKismetInputLibrary
 local UWidgetLayoutLibrary = _G.UE.UWidgetLayoutLibrary
@@ -139,6 +140,8 @@ function SidebarMainWinView:OpenSideBarDetailWin( ItemVM )
 
 	self:Hide()
 
+	_G.EventMgr:SendEvent(_G.EventID.SidebarExpandOpen, ItemVM)
+
 	local StartTime = ItemVM.StartTime
 	local CountDown = ItemVM.CountDown
 
@@ -177,8 +180,6 @@ function SidebarMainWinView:OpenSideBarDetailWin( ItemVM )
 	elseif Type == SidebarType.MagicCardMatchConfirm then -- 幻卡大赛匹配确认
 		local Params = MagicCardTourneyMgr:GetMatchConfirmParams(true)
 		UIViewMgr:ShowView(UIViewID.PWorldConfirm, Params)
-	elseif Type == SidebarType.EntourageEnterConfirm then -- 随从副本确认
-		UIViewMgr:ShowView(UIViewID.EntourageConfirm)
 	elseif Type == SidebarType.MountInvite then -- 坐骑邀请
 		local Params = ItemVM.TransData or {}
 		_G.MountMgr:OpenApplyNotifySidebar(StartTime, CountDown, Params.RoleID, Type)
@@ -190,7 +191,8 @@ function SidebarMainWinView:OpenSideBarDetailWin( ItemVM )
 		Params.StartTime = StartTime
 		Params.CountDown = CountDown
 		Params.Type = Type
-		UIViewMgr:ShowView(UIViewID.SidebarCommon, Params)
+
+		SidebarMgr:ShowCommonSidebarWin(Params)
 	elseif Type == SidebarType.Death then --死亡復活
 		_G.ReviveMgr:ShowReviveMsgBox()
 	elseif Type == SidebarType.Revive then --他人救助
@@ -207,10 +209,24 @@ function SidebarMainWinView:OpenSideBarDetailWin( ItemVM )
 		Params.StartTime = StartTime
 		Params.CountDown = CountDown
 		Params.Type = Type
-		UIViewMgr:ShowView(UIViewID.SidebarCommon, Params)
+
+		SidebarMgr:ShowCommonSidebarWin(Params)
 
 	elseif Type == SidebarType.PrivateChat then -- 私聊
-		UIViewMgr:ShowView(UIViewID.SidebarPrivateChat, ItemVM)
+		SidebarMgr:ShowPrivateChatSidebarWin(ItemVM)
+	elseif Type == SidebarType.EnsembleConfirm then -- 合奏组队确认
+		_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceEnsembleConfirmView, { 
+			BPM = _G.MusicPerformanceVM.EnsembleMetronome.BPM or self.Metronome.VM.BPM,
+			Beat = _G.MusicPerformanceVM.EnsembleMetronome.Beat or self.Metronome.VM.BeatPerBar,
+			OpenAssistant = _G.MusicPerformanceVM.EnsembleMetronome.Assistant or true,
+			bFromSidebar = true
+		 })
+	elseif Type == SidebarType.HouseInvite then  --房屋室友邀请
+		local TransData = ItemVM.TransData or {}
+		_G.HouseInfoMgr:OpenHouseInviteSidebar(StartTime, CountDown, TransData, Type)
+	elseif Type == SidebarType.HouseLandAward then
+		local TransData = ItemVM.TransData or {}
+		_G.HouseInfoMgr:OpenHouseSelectionAwardSidebar(StartTime, CountDown, TransData, Type)
 	end
 end
 

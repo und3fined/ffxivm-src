@@ -89,11 +89,13 @@ local EventID = {
 	GMShowTimeNow = 10212,
 
 	SettingsMaxFPSChanged = 10250, -- 游戏设置中最大帧率变化
+	SettingsOtherPlayerEffectChanged = 10251, -- 游戏设置中其他玩家特效变化
 
 	SidebarItemTimeOut = 10280, --侧边栏Item超时
 	SidebarPlayAnimation = 10281, --侧边栏播放指定动效
 	SidebarRemoveItem = 10282, -- 侧边栏移除Item
 	SidebarRemoveItemByParam = 10283, -- 侧边栏移除指定Item
+	SidebarExpandOpen = 10284, --侧边栏展开打开
 
 	SidePopUpUpdateTime = 10290,--侧边弹出框时间倒数
 	SidePopUpTaskEquipmentUpdate = 10291, -- 一键装备侧边栏更新
@@ -161,13 +163,13 @@ local EventID = {
 
 	TeamMemberBeSelected = 10350,	--队员被选中
 	TeamMemberInfoUpate = 10351,	--队员信息更新
-	TeamRecruitJoin = 10356,
+
 	RecuitCreate = 10352,
 	TeamRecruitStateChanged = 10353, -- 招募状态改变
 
 	TeamRecruitShareToPlayerSuc = 10354, -- 组队招募分享成功(玩家) @add by xingcaicao
 	TeamRecruitOnQueryData = 10355,
-
+	TeamRecruitJoin = 10356,
 	-- TeamMemberOnUpdateValue = 10361,
 	TeamMemberMicSyncStateChanged = 10362,
 	RecuitShareFromChild = 10363,
@@ -177,6 +179,8 @@ local EventID = {
 	ChatMsgPushed = 10372,
 	RecruitChatShared = 10373,
 	TeamMemberOnlineStatus = 10374,
+	TeamDestroy = 10375,
+	TeamReadyConfirmFinish = 10376, -- 队伍准备确认完成
 
 
 	TargetChangeMajor = 10400,
@@ -243,6 +247,9 @@ local EventID = {
 	SkillGuideStart = 10556,
 	SkillGuideEnd = 10557,
 
+	SkillLongClickTips = 10558,
+
+
 	--技能系统
 	SkillSystemEnter = 10580,
 	SkillSystemLeave = 10581,
@@ -300,6 +307,7 @@ local EventID = {
 
 	-- 副本队伍
 	PWorldTeamMemUpd  			= 10640, -- 副本队伍成员更新
+	PWorldEnterNotify	 		= 10641, -- 副本进入通知
 
 	-- 副本进度槽
 	PWorldProgressSlot			= 10650, -- 副本进度槽变化
@@ -337,6 +345,7 @@ local EventID = {
 	SwitchFightPanel = 10752,
 	ForcePeacePanel = 10753,
 	ForceFightPanel = 10754,
+
 	
 
 	--Input
@@ -346,6 +355,8 @@ local EventID = {
 	PreprocessedMouseButtonUp = 10804,
 	PreprocessedMouseMove = 10805,
 	BlockAllInput = 10806,
+	InputActionTypeChange = 10807,--手柄断连通知
+	--GamePadKeyPressedOrReleased = 10808,
 
 	ReviveInfoUpdate = 10901,
 	ReviveInfoUpdateInColosseum = 10902, -- PVP水晶冲突复活信息刷新
@@ -382,6 +393,9 @@ local EventID = {
 	MagicCardCollectionUpdate = 11036, -- 卡牌收藏更新了
 	OnMagicCardStart = 11037, -- 幻卡开始（从准备界面开始）
 	OnMagicCardExit = 11038, -- 幻卡退出（包括准备界面和对局界面退出）
+	MagicCardTutorialEnd = 11039, -- 幻卡引导节点结束
+	MagicCardTutorialCardNumHighlight = 11040, -- 幻卡引导字体高亮
+	PlayMagicCardTutorial = 11041, -- 显示幻卡引导界面
 
 	-- Npc对话交互
 	ClickNextDialog = 11101,
@@ -400,7 +414,6 @@ local EventID = {
 	EntranceItemChanged = 11156,	--一级交互入口有变化
 	EnterInteractive = 11157,	--进入交互
 	ExitInteractive = 11158,	--退出交互
-	FunctionListCreated = 11159,    --交互列表生成
 	--交互：选怪模块
 	SelectMonsterIndex = 11159, --当前选择的怪物的tag index
 	OthersSingBarBegin = 11160,
@@ -410,6 +423,7 @@ local EventID = {
 	SingBarAllOver = 11164,	--读条+动作全部结束
 	PlayItemUsedPlayATLEnd = 11165,--特殊没有读条End的动作走这个
 	--采集
+	GatheringCollectionProBarDoMove = 11170, --采集收藏品界面进度条
 	ActiveGatherItemView = 11171,	--逻辑mgr激活一个采集物
 	DeActiveGatherItemView = 11172,	--逻辑mgr取消激活一个采集物
 	-- HideFunctionItemView = 11173,
@@ -419,11 +433,11 @@ local EventID = {
 	RemoveMiniMapGatherPoint = 11177,
 	CollectionSkillCDUpdate = 11178, --刷新收藏品技能CD
 	OnCastSkillUpdateMask = 11179,
-	--注意下面的id是否用到，不要重复了
+		--注意下面的id是否用到，不要重复了
 
 	GatheringJobCollectionScour = 11180,  -- 采集收藏品提纯事件，用于触发HUD飘字 Params = {LastVal = number, CurrentVal = number, ValueUp = boolean}
 	GatheringJobShowBarView = 11181, --显示GatheringJobPanel_UIBP界面的血条
-	GatheringCollectionProBarDoMove = 11182, --采集收藏品界面进度条
+	--GatheringCollectionProBarDoMove = 11182(11182已用过，->11170)
 
 	--点选交互
 	FixedFunctionPanelShowed = 11182,  --显示点选交互界面
@@ -459,6 +473,7 @@ local EventID = {
 	VirtualKeyboardShown = 11402,
 	VirtualKeyboardHidden = 11403,
 	VirtualKeyboardReturn = 11404,
+	UIStateChange = 11405,
 
 	--钓鱼
 	EnterFishArea = 11501,
@@ -487,6 +502,8 @@ local EventID = {
 	QuestErrorFarDistance = 11610,
 	QuestClosePropPanel = 11611,
 	QuestLimitTimeOver = 11612,
+	QuestFinishGameplay = 11613, --完成玩法
+	QuestAccept = 11614, --接取任务
 
 	--任务系统动态监听的事件
 	ClientInteraction = 11641,
@@ -512,7 +529,9 @@ local EventID = {
 	BagManualSetMedicine = 11709, --背包手动设置/取消设置药品
 	RenameCardCheckRepeat = 11710,
 	BagTreasureChestNumChanged = 11711,
-
+	UpdateUpgradeMainPanel = 11712,
+	BagTidyWinUpdate = 11713,
+	BagUpdateForHouse = 11714,
 
 	--装备
 	AttributeDetailOpen = 12000,	---属性详情点击展开
@@ -533,7 +552,7 @@ local EventID = {
 	MagicsparInlayRefresh = 12015,   ---魔晶石镶嵌刷新
 	ReSelectMajorProf = 12016,
 	EquipStrongestViewHide = 12017,
-	
+
 	--情感动作
 	EmotionUpdateFavorite = 12100,		-- 设置收藏动作
 	BreakPlayEmotion = 12101,			-- 在播放动作之前阻断（还没有开始播放）
@@ -590,6 +609,7 @@ local EventID = {
 	MinimizationUIShow = 12601,
 	ItemSelected = 12602,
 	ItemIsHoverd =12603,
+	GMCRaceTribeGenderChanged = 12604,
 
 	--极限技
 	SkillLimitOff = 12701,		--只要最大值不是0，就展示ui
@@ -626,6 +646,7 @@ local EventID = {
 	FriendAddResetDefaultState = 12911, -- 好友查找重置回默认状态
 	FriendPlayUpdateFriendListAnim = 12912,
 	FriendPlayAddUpdateListAnim = 12913,
+	FriendSetNicknameSuc = 12914,
 
 	-- 通讯贝系统
 	LinkShellCreateSuc = 13001,
@@ -664,6 +685,7 @@ local EventID = {
 	CrafterSkillCostUpdate = 13116,  -- 生产职业Cost更新
 	CrafterAllEnterRecipeState = 13118,--所有人离开制作状态便会通知
 	CrafterAllExitAllState=13119,--所有人离开制作状态动作结束
+	CrafterFailed = 13120,--制作失败
 
 	-- 地图
 	MapOnAddMarker = 13201,
@@ -701,6 +723,7 @@ local EventID = {
 	GetChallengeLogInfo = 13405, --获得挑花战笔记状态
 	GetChallengeRewardCollect = 13406, --获得挑花战笔记宝箱状态
 	AdvenCareerTaskGuide = 13407,	-- 冒险职业任务推荐气泡
+	AdventureFateMapsWeight = 13408,  --fate 推荐地图强度权重
 
 	-- 宝箱
 	TreasureAssign = 13501, --分配宝箱的事件
@@ -780,7 +803,6 @@ local EventID = {
 	ChaneNameNotify = 14708,
 	GetHistoryNameSuccess = 14709,
 	QueryRoleInfo = 14710,
-
 	-- 肖像编辑
 	PersonPortraitGetDataSuc = 14750, 		-- 获取个人信息肖像数据成功
 	PersonPortraitResStatusUpdate = 14751, -- 肖像编辑资源状态更新
@@ -847,6 +869,8 @@ local EventID = {
 	WardrobeUnlockIDUpdate  = 15613, 	--- 衣橱指定外观数据更新
 	WardrobeUsedStainUpdate = 15614,	--- 衣橱染色试剂更新
 	WardrobeRegionDyeUpdate = 15615,	--- 衣橱染色区域更新
+	WardrobeSuitIDOpen = 15616,         --- 衣橱指定套装更新
+	WardrobeRegionDyeNameUpdate = 15617,     --- 衣橱染色区域改名
 
 	--迷雾
 	UpdateFogInfo = 15500,				-- 迷雾数据更新
@@ -872,11 +896,22 @@ local EventID = {
 	OpenAnotherOpsActivity = 15813, -- 打开另一个活动
 	OpcConcertLastLoginRolesUpdate = 15814, -- 拉回流活动中好友角色更新通知
 	OpsTreasureChestSkipAnimation = 15815,	--跳过动画按钮通知
-	PandoraActivityClosed = 15816,                        -- 潘多拉活动关闭通知
+	PandoraActivityClosed = 15816,			-- 潘多拉活动关闭通知
+    OpsActivityNodeChanged = 15817, --节点变化通知，会发变化节点列表
+	PandoraPayment = 15818, -- 潘多拉支付通知
+	OpsSkiSelectSuit = 15819, --
+	UpdateOpsMysteryShop = 15820, -- 更新神秘商店
+	UpdateOpsMysteryShopGoods = 15821, -- 更新神秘商店商品
 	OpsConcertInvite = 15822, -- 通知邀请玩家
-
+	UpdateMysteryShopCommMoney = 15823, -- 神秘商店货币栏显隐更新
+	OpsLolitaNodeChanged = 15824, --洛丽塔套装购买节点更新
+	UpdateOpsReturn = 15826, --更新回归
+	PlayRefreshAnim = 15825, -- 播放刷新动画
+	RefreshSnowRiceFruitNum = 15827, -- 更新雪米果数量
 	-- 季节活动中的事件
 	FatPenguinBlessUpdatRedDot = 15900, -- 胖胖企鹅红点更新
+	-- 莫古力
+	MoggleUpdateNormal	= 15951,
 	-- PVP玩法
 	PVPStart = 16000,
 
@@ -884,6 +919,7 @@ local EventID = {
 	PVPColosseumSGUpdate = 16001, -- 物件状态更新
 	PVPColosseumCheckPointUpdate = 16001, -- 检查点更新
 	PVPColosseumCrystalStateUpdate = 16002, -- 水晶状态更新
+	PVPColosseumCommunicateInfo = 16003, -- 局内沟通信息同步
 
 	-- Frontline 战争前线
 	PVPFrontlineStart = 16100,
@@ -894,6 +930,9 @@ local EventID = {
 	MeetTradeLockStateChange = 16200,
 	MeetTradeConfirmStateChange = 16201,
 	EnterLevelConfirmView = 16202,
+	MeetTradeConfirmLock = 16203,
+	ChangeTabState = 16204,
+	ScrollToIndex = 16205,
 
 	-- Login
 	MSDKCustomAccountNotify = 16301,
@@ -927,7 +966,7 @@ local EventID = {
 	MainPanelShow = 16500,
 	-- 主界面右上角入口
 	MainPanelFunctionLayoutChange = 16501,
-	MainPanelShowBuffTips = 16502, 
+	MainPanelShowBuffTips = 16502,
 
 	-- 播片
 	StopSequenceHalfway = 16601,
@@ -940,10 +979,6 @@ local EventID = {
 	JumboCactpotChangeTogGroup = 200103,	-- 购买成功回调
 	JumboCactpotUpdateBouns = 200104,	-- 刷新主界面购买加成进度图片
 	JumboCactpotShowInfo = 200105, -- 仙彩展示任务信息
-
-	-- 拼装剪影
-	PuzzleFinishNotify = 200501,
-	PuzzleForceExitNotify = 200502, -- 强行退出拼装剪影，会导致任务回退
 
 	-- 系统解锁
 	ModuleOpenNotify = 200201,
@@ -984,7 +1019,11 @@ local EventID = {
 	TutorialCloseBorderView = 200421,--关闭侧边栏
 	TutorialGuideSwitch = 200422,	--新手指南开关
 	TutorialGuideTouringBandFinish = 200423, --引导巡回乐团结束
+	ForceFinishTutorial = 200424,--强行关闭当前引导因为找不到控件
 
+	-- 拼装剪影
+	PuzzleFinishNotify = 200501,
+	PuzzleForceExitNotify = 200502, -- 强行退出拼装剪影，会导致任务回退
 
 	--掉落提示
 	DealLootItem = 200601,  --获得物品时触发掉落提示tips
@@ -1004,6 +1043,8 @@ local EventID = {
 	QualityLevelChg = 200711,	--五档画质的变化
 	OnVoicePkgDownLoad = 200712,	--语音包下载完成，刷新语音资源管理界面
 	BgVoiceCloseCancel = 200713,	--后台语音取消关闭
+	OnResetHandleCusAction = 200714, --重置手柄按键(技能类型不会单独发送更新事件)
+	OnUpdateHandleCusAction = 200715, --更新手柄按键说明(其他类型会发送这个更新事件)
 
 	--货币一览
 	EquipmentCurrencyConvertViewHide = 200801,
@@ -1061,7 +1102,9 @@ local EventID = {
 	StoreMysteryAnimEvent = 201306,	--- 奇遇盲盒Icon动效
 	StoreUpdateTabListByTimer = 201307,	--- 奇遇盲盒上架事件 可能要刷新商城界面menu
 	StoreUpdateBlindText = 201308,
-	StoreUpdateMysterBoxRedDot = 201309,
+	StoreUpdateMysteryBoxRedDot = 201309,
+	StoreBatchBuyParams = 201310,
+	StorePlaySkillEvent = 201311,
 
 	-- 战令主界面
 	BattlePassBaseInfoUpdate = 201400, --战令基础信息更新
@@ -1083,6 +1126,8 @@ local EventID = {
 	OpenShop = 300005,--打开商店
 	UpdateSerchGoods = 300006, --更新搜索列表
 	ShopPlayOutAni = 300007,
+	ShopSetPriceState = 300008,
+	ShopBuyViewSearch = 300009,
 	--ScrollToGoods
 
 	--region Army部队
@@ -1102,6 +1147,7 @@ local EventID = {
 	ArmyLevelUpdate = 300114, ---部队等级变化
 	ArmySelfArmyAliasUpdateBySelf = 300115, --自身编辑部队简称更新（专用于编辑界面更新）
 	ArmySignNumToc = 300116, --部队署名人数变化
+	ArmySelfPermisstionToc = 300117, --自身权限变化
 	--endregion Army部队
 
 	-- 钓鱼笔记
@@ -1121,6 +1167,7 @@ local EventID = {
 	FishNotesScrollClockFishList = 300215, -- 钓鱼笔记闹钟列表滚动到指定位置列表
 	FishNotesMapScaleChanged = 300216, --钓鱼笔记地图缩放条值改变时
 	FishNoteRefreshWindowState = 300217, --钓鱼笔记刷新窗口期状态
+	FishNoteUpdateRank = 300218, --鱼类尺寸排名更新->钓鱼主界面
 
 	--收藏品
 	OnExchangeRspEvent = 300301,
@@ -1217,7 +1264,6 @@ local EventID = {
 	MusicPerformanceAssistantStop = 300856,				-- 演奏助手停止
 	MusicPerformanceAssistantDone = 300857,				-- 演奏助手结束
 	MusicPerformanceAssistantComboChanged = 300858,		-- 演奏助手Combo数量变更
-	MusicPerformanceAssistantTotalScoreChanged = 300859,		-- 演奏助手得分变更
 	MusicPerformanceAssistantItemUpdate	= 300860,		-- 演奏助手单项更新
 	--MusicPerformanceAssistantItemFocus	= 300861,		-- 提示需要按下的按键
 	MusicPerformanceEntityStart	= 300862, --角色演奏状态开始
@@ -1270,6 +1316,11 @@ local EventID = {
 	MiniGameCuffMainPlayAnim = 301110,
 	MiniGameMajorEnterStartMode = 301111, -- 小游戏主角进入开始模式
 	MiniGameMajorEnterQuitMode = 301112,  -- 小游戏主角进入离开模式
+	MiniGameCuffCenterLastPunchTipsShow = 301113, -- 最后一击出现提示
+	MiniGameCrystalTowerCenterLastPunchTipsShow = 301114, -- 强袭水晶塔最后一击提示
+	MiniGameMarkerBlessStateChange = 301115, -- 仙人赐福状态改变地图标记更新
+	MiniGameBigBlessStartTipsShow = 301116, -- 仙人大赐福赐福时间开始tips显示
+	MiniGameBigBlessEnterMsgRspSuccess = 301117, -- 大赐福进入赐福模式协议回包成功
 
 	--搭档系统
 	BuddyQueryInfo = 301201, --查询搭档系统数据
@@ -1321,6 +1372,7 @@ local EventID = {
 
 	--神秘商人
 	MysteryMerchantUpdateNPCHudIcon = 304300,
+	MysteryMerchantLateShowLoot = 304301, -- 延迟显示投资回报
 
 	--光之启程
 	DepartOfLightBaseInfoUpdate = 304400,
@@ -1347,6 +1399,7 @@ local EventID = {
 	TouringBandRefreshCherringBtnVisible = 306006,
 	TouringBandForceExitInteractive = 306007, -- 强制退出交互状态
 	TouringBandStatesNotify = 306008, -- 状态改变的通知，比TouringBandStatesChange晚
+	TouringBandVisionEnter = 306009,
 
 	--问卷调查
 	ShowMURSurveyEntrance = 307001,
@@ -1367,13 +1420,19 @@ local EventID = {
 	-- 时尚配饰
 	FashionDecorateUpdateData = 307401,
 	FashionDecorateShowThirdPersonAll = 307402,
+	DecorateImproveSuccess = 307403, --配饰改良成功（刷新配饰改良和时尚配饰主界面容器列表）
+	FashionDecorateWingSelectChange = 307404, --从配饰改良返回时，翅膀选中的改变
+	
 	-- 对战资料
 	PVPSeriesRewardDataUpdate = 307501,	-- 星里路标奖励数据更新
 	PVPSeriesDataUpdate = 307502,	-- 星里路标数据更新
-
+	PVPCrystallineRankingInfoUpdate = 307503, -- 水晶冲突排行榜数据更新
+	PVPCrystallineRankRewardReceived = 307504,	-- 水晶冲突段位奖励领取
+	PVPCrystallineRankingRewardReceived = 307505,	-- 水晶冲突排名奖励领取
 	-- PVP决斗
 	PVPDuelInviteTimeout = 307601,	-- PVP决斗申请超时
 	PVPDuelAccept = 307602,	-- PVP决斗成立
+	PVPDuelEnd = 307603,	-- PVP决斗结束
 
 	--零式排行榜
 	SavageRankUpdateData = 307701,  --零式排行榜更新
@@ -1397,6 +1456,7 @@ local EventID = {
 	RemoveMysterMerchantRangeCheckData = 307907, -- 神秘商人移除范围检测数据
 	TimeToUpdateMapPointPerfectCond = 307908, -- 定时器更新当前打开地图点位完美状态
 	NoteSinglePerfectActive = 307909, -- 单个点位完美探索通知事件
+	RegionTabUIRedDotUpdate = 307910, -- 主界面地域页签Icon红点更新
 
 	-- 救助
 	OnRescureInfo = 308000,
@@ -1414,6 +1474,131 @@ local EventID = {
 	StoragePermissionNotify = 309101,
 	ApplicationWillDeactivate = 309102,
 	ApplicationHasReactivated = 309103,
+
+	--GamePad输入
+	GamePadEnter = 400000,
+	GamePadJump = 400001,
+	GamePadCancel = 400002,
+	GamePadSwitchTarget = 400003,
+	GamePadAttack = 400004,
+	GamePadSkip = 400005, --跳过
+	GamePadSwitchSkillPanel = 400006,
+	GamePadAbleExtend = 400007,
+	GamePadUpdateInteractive = 400008,
+	GameHandleMode = 400009,
+	GamePadFunction = 400010,
+	GamepadDPadRight = 400011,
+	GamepadDPadUp = 400012,
+	GamepadDPadDown = 400013,
+	GamePadSkillHighLight = 400014,
+	GamePadSkillCancel = 400015,
+	GamePadUpdateDialogue = 400016,
+	GamePadCursor = 400017,
+	GamePadClose = 400018,
+	GamePadUpdateCombatType = 400019,
+	GamepadDPadSwitchInteractive = 400020,
+	GamePadCastSpeedSkill = 400021,
+	GamePadFishingSit = 400022,
+
+	--house
+	ShowHouseItemTips = 410000,
+	HideHouseItemTips = 410001,
+	UpdateHouseItems = 410002,
+	RefreshDecorateEffect = 410003, --刷新房屋装修外观
+	RefreshDecoratePanelViewOKBtn = 410004,
+	HouseLandBuyTabSwitch = 410005, -- 房屋和土地购买Tab切换
+
+	HouseLandListUpdate = 410006, -- 房屋土地列表数据更新
+	HouseLandMapDataUpdate = 410007, -- 地图房屋土地数据更新
+	HouseLandInfoUpdate = 410008, -- 房屋土地资料数据更新
+	HouseLandSelectRet = 410009, -- 房屋土地参选结果
+
+	HouseListLocationUpdate = 410010, -- 房屋列表刷新(地理名称界面)
+
+	HouseMainPanelTabMenuChange = 410011,--装修界面Tab
+
+	DepotUpdate = 410012,--仓库变化
+	DecorateSlotUpdate = 410013, --装修槽变化
+	UpdateDecorateSlotItem = 410014, --更新下方装修SLOT中的道具
+	SaveDecorateSucc = 410015, --保存成功
+	PutFurnitureSucc = 410016, --布置家具成功
+	PutFurnitureBc = 410017, --布置家具广播
+	MoveFurnitureSucc = 410018, --移动家具成功
+	RemoveFurniture = 410019, --删除家具
+	RemoveFurnitureAll = 410020,
+	EnterHouseFurniturePreview = 410021, --进入家具编辑
+	ExitHouseFurniturePreview = 410022, --离开家具编辑
+	ExitHouseRange = 410023, --离开HOUSE区域
+	ChangeHouseEditRole = 410024, --改变当前房屋编辑人员
+	ShowDecorateView = 410025,--家具编辑功能是否启用
+
+	RoleHouseAddrListUpdate = 410027, -- 角色房屋地址列表更新
+	BuildHouseResSelected = 410028, --选中建房资源证
+	HousePrivilegeUpdate = 410029, --拉取房屋房屋权限成功
+	PickEndFurniture = 410030,--拖动家具结束
+	EnterOrExitHouseBlock = 410031,--进入离开区域
+	FurnitureDataUpdate = 410032,--家具信息变化
+	HouseBuildSuccess = 410033, -- 建房成功
+	HouseDestroy = 410034,		-- 拆房成功
+
+	--房屋信息界面
+	HouseRoleInfoUpdate = 410050,--拉取个人房屋信息
+	DoLikeRsp = 410051, --房屋点赞
+	HouseInfoModifyRsp = 410052, --房屋信息修改
+	HousePrivilegeModifyRsp = 410053, --房屋权限修改
+	HouseGroupInfoUpdate = 410054, --拉取部队房屋信息
+	HouseInviteRsp = 410055, --邀请室友
+	HouseGetInvitedRsp = 410056, -- 获取被邀请列表
+	HouseInviteReplyRsp = 410057, -- 回复室友邀请
+	HouseRemoveRoommate = 410058, -- 移除室友 
+	HouseChangeRoommatePrivilege = 410059, --改变室友权限
+	HouseDissolveRoom = 410060, --解除共享房屋
+	HouseDetailInfoUpdate = 410061, --拉取房屋信息
+	HouseUploadPicture = 410062, --上传房屋照片
+	HousePullRoleBasic = 410063, --拉取角色房屋ID信息
+	HouseInviteReplyNtf = 410064, --回复室友邀请Ntf
+	HouseShareUpdate = 410065, -- 主角共享房屋状态更新
+	HouseBeDissolveRoomNtf = 410066, -- 主角室友解除共享
+	HouseCreateMemberRoom = 410067, -- 创建部队个人房屋
+	HousePullArmyMemberRoom = 410068, -- 拉取部队个人房屋
+	HouseReciveReturnMoney= 410069, -- 领取返还货币成功
+	HousePullMajorMemberRoom = 410070, --拉取主角部队个人房间
+	HousePicUploadFinish = 410071,  --拍照上传完成
+	HouseInfoOpenPage = 410072, --房屋信息界面跳转页签
+	HouseGetArmyInfo = 410073, -- 获取部队信息
+	OpenHouseOrLandInfoPanel = 410074, -- 门牌打开房屋土地资料界面
+	HousePrivilegeChangeNotify = 410075, -- 房屋权限变化通知
+	HouseBuildNotify = 410076, ---房屋创建成功通知
+	HouseDestroyNotify = 410077, ---房屋销毁通知
+	HouseTransAreaChange = 410078, --- 房屋传送小区位置变化
+	LandBuyStatusNotify = 410079, --- 土地参选状态信息
+	HouseMemberPrivilegeChangeNtf = 410080, ---房屋成员权限变化通知
+	PullSelfRoleHouseInfo = 410081,
+	HouseAbandonLand = 410082, ---放弃土地
+	HouseGetReturnAssets = 410083, --- 土地落选退钱
+	HouseMineBGLocationAni = 410084, --- location切换动画
+	HouseLandInfotmationItemAni = 410085, ---土地信息获奖动画通知
+	--手柄
+	SimulatedTouchStartClick = 411000,
+	SimulatedTouchStartClickConfirm = 411001,
+	SimulatedTouchEndClick = 411002,
+	SimulatedTouchEndClickConfirm = 411003,
+	ForceEndSimulatedTouchEndClick = 411004,
+	HandleBUp = 411005,
+	HandleBDown = 411006,
+	LimitSkillHandleBUp = 411007,
+	LimitSkillHandleBDown = 411008,
+	VirtualCursorClickStart = 411009,
+	VirtualCursorClickMoveX = 411010,
+	VirtualCursorClickEnd = 411011,
+	VirtualCursorClickMoveY = 411012,
+	CursorSpeedChange = 411013,
+	ChangeHandleSpeedSkillFunc = 411014,
+
+	-- 玩具相关 411100 - 411199
+	PlayToy 		= 411100,
+	ToyCDOver 		= 411101,
+	-- 玩具相关END --
 
 	--每个系统用一个ID段
 	--15700

@@ -28,6 +28,8 @@ local FishEffectDataAssetPath = "FishEffectDataAsset'/Game/BluePrint/Skill/Fish/
 
 local FishActionID = 23
 
+local DefaultLineTraceOffset = 200
+
 ---------------------捕鱼中使用的特定IDEND-----------------
 
 ---------------------捕鱼相关通知-----------------
@@ -141,7 +143,8 @@ local FishDefine = {
     FishNewThingTipsItemText = FishNewThingTipsItemText,
     FishNewTimeItemText = FishNewTimeItemText,
     FishEffectDataAssetPath = FishEffectDataAssetPath,
-    FishActionID = FishActionID
+    FishActionID = FishActionID,
+    DefaultLineTraceOffset = DefaultLineTraceOffset
 }
 
 return FishDefine

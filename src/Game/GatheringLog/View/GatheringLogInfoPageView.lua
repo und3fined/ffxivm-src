@@ -144,7 +144,7 @@ end
 function GatheringLogInfoPageView:OnIconClick(ItemView)
     local GatherID = _G.GatheringLogVM:GetSelectGatherID()
     local ItemData = _G.GatheringLogVM:GetItemDataByID(GatherID)
-	if ItemData.ItemID > 0 then
+	if ItemData ~= nil and ItemData.ItemID > 0 then
 	ItemTipsUtil.ShowTipsByItem({ResID = ItemData.ItemID}, ItemView, {X = -2, Y = 0})
 	end
 end
@@ -195,7 +195,12 @@ function GatheringLogInfoPageView:GatheringLogSetMapSpaceAndAnim(FirstMapID)
 end
 
 function GatheringLogInfoPageView:GoToSwichProf()
-    local Prof = _G.GatheringLogMgr:GetChoiceProfID()
+    local GatherData = _G.GatheringLogMgr:GetSelectGatherData()
+	if GatherData == nil then
+		_G.FLOG_INFO("GatheringLogInfoPageView:GoToSwichProf GatherData is nil")
+		return
+	end
+	local Prof = GatherData.GatheringJob
     if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDJobQuest) then
         _G.AdventureCareerMgr:JumpToTargetProf(Prof)
         return

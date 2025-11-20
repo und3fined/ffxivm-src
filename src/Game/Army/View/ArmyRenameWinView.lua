@@ -117,13 +117,15 @@ function ArmyRenameWinView:OnClickedRename()
 	local Name = self.InputBox:GetText()
 	---查询文本是否合法（敏感词）
 	ArmyMgr:CheckSensitiveText(Name, function( IsLegal )
-		if IsLegal then
-			ArmyMgr:SendGroupStoreSetStoreName(Index, Name, ArmyRenameWinVM.CurrentIndex)
-			self:Hide()
-		else
-			-- LSTR string:当前文本不可使用，请重新输入
-			MsgTipsUtil.ShowErrorTips(LSTR(10057))
-        end
+		if self:IsValid() then
+			if IsLegal then
+				ArmyMgr:SendGroupStoreSetStoreName(Index, Name, ArmyRenameWinVM.CurrentIndex)
+				self:Hide()
+			else
+				-- LSTR string:当前文本不可使用，请重新输入
+				MsgTipsUtil.ShowErrorTips(LSTR(10057))
+			end
+		end
     end)
 end
 

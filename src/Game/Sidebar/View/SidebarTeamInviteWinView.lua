@@ -87,7 +87,7 @@ function SidebarTeamInviteWinView:OnShow()
 		self.RichTextMsg:SetText("")
 	end
 
-	UIUtil.SetIsVisible(self.EFF_ProBarLight, false)
+	-- UIUtil.SetIsVisible(self.EFF_ProBarLight, false)
 	self:PlayAnimationTimeRange(self.AnimProBarLight, 0, self.ProBarCD.Percent, 1, nil, 1.0, false)
 end
 
@@ -126,6 +126,7 @@ function SidebarTeamInviteWinView:OnTimer()
 
 	self:SetProBarCD(self:GetTimeElapsed())
 	if self:GetTimeElapsed() >= self.Params.CountDown then
+		self.Params.bResume = false
 		self:Hide()
 		return
 	end
@@ -136,9 +137,9 @@ function SidebarTeamInviteWinView:GetTimeElapsed()
 end
 
 function SidebarTeamInviteWinView:OnAnimationFinished(Animation)
-	if Animation == self.AnimProBarLight then
-		UIUtil.SetIsVisible(self.EFF_ProBarLight, false)
-	end
+	-- if Animation == self.AnimProBarLight then
+	-- 	UIUtil.SetIsVisible(self.EFF_ProBarLight, false)
+	-- end
 end
 
 -------------------------------------------------------------------------------------------------------

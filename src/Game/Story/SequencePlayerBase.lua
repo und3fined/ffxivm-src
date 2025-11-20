@@ -30,6 +30,9 @@ local DEFAULT_MAX_PLAYER_RESID = 1000
 local ZeroLocation = FVector(0, 0, 0)
 local ZeroRotator = FRotator(0, 0, 0)
 
+local FLOG_INFO = _G.FLOG_INFO
+local FLOG_ERROR = _G.FLOG_ERROR
+
 --缓存未进入视野的队友信息(播放过场动画时)
 local TempMemberCacheInfo = LuaClass()
 
@@ -102,9 +105,18 @@ function SequencePlayerBase:OnFinish()
         StoryMgrInstance:Finish()
     end
 
-    _G.FLOG_INFO("SequencePlayerBase_OnFinish LowerUpdatePrimitiveFramedNum()")
+    FLOG_INFO("SequencePlayerBase_OnFinish LowerUpdatePrimitiveFramedNum()")
     --恢复
     _G.UE.UKismetRenderingLibrary.LowerUpdatePrimitiveFramedNum()
+
+    --恢复武器隐藏检查
+    local Major = MajorUtil.GetMajor()
+    if (Major ~= nil) then
+        Major:IgnoreWeaponVisibilityCheck(false)
+    else
+        FLOG_ERROR("SequencePlayerBase_OnFinish Major is nil")
+    end
+    
 end
 
 function SequencePlayerBase:OnStop()
@@ -112,17 +124,27 @@ function SequencePlayerBase:OnStop()
 	if (StoryMgrInstance ~= nil) then
         StoryMgrInstance:ResetStaticMeshLODAndCullDistance()
     end
+    --恢复方向光级联阴影分布指数
+    self:ResetDistributionExponent()
     --这里清除一下剧情回顾的数据
     --如果后续需要任务回顾需要先判断是否完成HistoryVM的任务
     NpcDialogHistoryVM:ClearHistoryData()
-    if (self.ManualStopSequence) then
+    if (self.ManualStopSequence or self.SequenceStopedInException) then
         --此时不会执行OnFinished.Broadcast()，放到这里清除
         self:OnFinish()
     end
 
     --恢复
-    _G.FLOG_INFO("SequencePlayerBase_OnStop LowerUpdatePrimitiveFramedNum()")
+    FLOG_INFO("SequencePlayerBase_OnStop LowerUpdatePrimitiveFramedNum()")
     _G.UE.UKismetRenderingLibrary.LowerUpdatePrimitiveFramedNum()
+
+    --恢复武器隐藏检查
+    local Major = MajorUtil.GetMajor()
+    if (Major ~= nil) then
+        Major:IgnoreWeaponVisibilityCheck(false)
+    else
+        FLOG_ERROR("SequencePlayerBase_OnStop Major is nil")
+    end
 end
 
 --获取当前对白文本的长度
@@ -216,6 +238,37 @@ function SequencePlayerBase:DestroyAllPossessableActors()
     end
 end
 
+-- 将NCut用到的Npc加到WorldComposition的视点计算中
+function SequencePlayerBase:UpdateExternalViewportActors(bIsAdd)
+    local UWorldMgr = _G.UE.UWorldMgr.Get()
+    if UWorldMgr == nil then
+        return
+    end
+    local CutSceneSequence = _G.StoryMgr:GetDynamicCutsceneCfgByPath(self.SequenceCfg.SequencePath)
+    if (CutSceneSequence == nil) or (not CutSceneSequence.UseCharacterAsViewPoint) or (CutSceneSequence.UseCharacterAsViewPoint == 0) then
+        return
+    end
+    if bIsAdd then
+        local ExternalViewportActors = _G.UE.TArray(_G.UE.AActor)
+        local PossessableCnt = self.PossessableActorTArray:Length()
+        for i = 1, PossessableCnt do
+            local PossessableActor = self.PossessableActorTArray:Get(i)
+            if (PossessableActor ~= nil and PossessableActor.Actor ~= nil and _G.CommonUtil.IsObjectValid(PossessableActor.Actor)) then
+                local Actor = PossessableActor.Actor
+                if Actor:GetActorType() == _G.UE.EActorType.Npc then
+                    ExternalViewportActors:AddUnique(Actor)
+                end
+            end
+        end
+        local ExternalVPCnt = ExternalViewportActors:Length()
+        if ExternalVPCnt > 0 then
+            UWorldMgr:AddExternalViewportActors(ExternalViewportActors)
+        end
+    else
+        UWorldMgr:ClearExternalViewportActors()
+    end
+end
+
 function SequencePlayerBase:HideOtherCharacters(bIsHide)
     --头顶信息
     _G.HUDMgr:SetIsDrawHUD(not bIsHide, HUDConfig.IsDrawFlag.Sequence)
@@ -269,6 +322,16 @@ function SequencePlayerBase:HideOtherCharacters(bIsHide)
                     -- https://tapd.woa.com/tapd_fe/20420083/story/detail/1020420083120925096
                     local EntityID = Actor:GetActorEntityID()
                     ExcludeActorIDs:Add(EntityID)
+
+                    if Actor.GetSgWeaponActorIds then
+                        local SgWeaponActorIds = Actor:GetSgWeaponActorIds()
+                        for j = 1, SgWeaponActorIds:Length() do
+                            local ID = SgWeaponActorIds:Get(j)
+                            if ID then
+                                ExcludeActorIDs:Add(ID)
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -392,9 +455,11 @@ function SequencePlayerBase:UpdateMajorSetting(bIsPlay)
 end
 
 function SequencePlayerBase:OnSequenceFinishProcess()
+    _G.FLOG_INFO("OnSequenceFinishProcess!")
 	_G.UE.UCameraMgr.Get():ResetToCurrentCamera()
     self:SetPossessableActorsState(false)
     self:HideOtherCharacters(false)
+    self:UpdateExternalViewportActors(false)
     --需要放到HideOtherCharacters后执行
     self:UpdateMajorSetting(false)
     self:DestroyAllPossessableActors()
@@ -521,6 +586,8 @@ function SequencePlayerBase:PlaySequence(
     self:InitPossessableActors()
     --隐藏Sequence里没有用到的Characters
     self:HideOtherCharacters(true)
+    --将Sequence用到的Npc作为额外的视点
+    self:UpdateExternalViewportActors(true)
     --放到Play和BindPossessable之前（BindPossessable里会为每个section提前生成Montage资源），保证play的时候basecharacter已经进入insequence状态了
     self:SetPossessableActorsState(true)
     --Bind Sequence里的Possables
@@ -570,7 +637,8 @@ function SequencePlayerBase:PlaySequence(
        
         self.bWaitRestoreLayerSet = StoryMgrInstance:IsNeedChangeLayerSet(self.SequenceCfg.SequenceObject)
     end
-
+    -- 设置一下方向光的分布指数
+    self:InitializeDistributionExponent()
     if (self.UIViewID ~= nil) then
         self.SequenceCfg.bHasAnyDialog = self.SequenceActor:HasAnyDialogueSection()
         SequencePlayerVM:InitSequenceInfo(self.SequenceCfg)
@@ -663,26 +731,27 @@ function SequencePlayerBase:DoPlaySequence()
     self:UpdateMajorStatePrePlay()
     
     self:DisablePVSAndSOC()	--有过场需要关闭PVS,SOCs
-
+    
     --播放之前做个判断，如:角色模型加载是异步执行，加载完成后可能SequenceActor被干掉了
     if (not self:SequenceActorIsValid()) then
-        _G.FLOG_INFO("SequenceActor is invalid!!!!")
+        _G.FLOG_INFO("SequenceActor is invalid 111!!!!")
         return
     end
 
     --设置
-    _G.FLOG_INFO("SequencePlayerBase_DoPlaySequence HigherUpdatePrimitiveFramedNum()")
+    FLOG_INFO("SequencePlayerBase_DoPlaySequence HigherUpdatePrimitiveFramedNum()")
     _G.UE.UKismetRenderingLibrary.HigherUpdatePrimitiveFramedNum()
 
     self.SequenceActor:Play()
 
-    if (self.SequenceCfg ~= nil and self.SequenceCfg.StartFrameNumber ~= nil and self.SequenceCfg.StartFrameNumber > 0) then
-        self.SequenceActor:PlayToFrame(self.SequenceCfg.StartFrameNumber)
-    end
-
     --Play后 有可能执行Stop，释放了SequenceActor
     if (not self:SequenceActorIsValid()) then
+        _G.FLOG_INFO("SequenceActor is invalid 222!!!!")
         return
+    end
+
+    if (self.SequenceCfg ~= nil and self.SequenceCfg.StartFrameNumber ~= nil and self.SequenceCfg.StartFrameNumber > 0) then
+        self.SequenceActor:PlayToFrame(self.SequenceCfg.StartFrameNumber)
     end
 
     if (self.UIViewID ~= nil) then
@@ -747,6 +816,49 @@ function SequencePlayerBase:EnablePVSAndSOC()
 	--_G.FLOG_INFO("r.AllowPrecomputedVisibility 1")	
 end
 
+
+--设置默认CascadeDistributionExponent
+function SequencePlayerBase:InitializeDistributionExponent()
+    self.CachePreDistributionExponent = 0
+    if self.SequenceCfg == nil then
+        return
+    end
+    local SequencePath = self.SequenceCfg.SequencePath
+    if SequencePath == nil or SequencePath == "" then
+        return
+    end
+    local TodMainActor = _G.UE.UEnvMgr:Get():GetTodSystem()
+    if TodMainActor == nil then
+        return
+    end
+    local DirLightComp = TodMainActor.DirLightCom
+    if DirLightComp == nil then
+        return
+    end
+    local CutsceneCfg = _G.StoryMgr:GetDynamicCutsceneCfgByPath(SequencePath)
+    if CutsceneCfg == nil or CutsceneCfg.DistributionExponent == nil or CutsceneCfg.DistributionExponent == 0 then
+        return
+    end
+    self.CachePreDistributionExponent = DirLightComp.CascadeDistributionExponent
+    DirLightComp.CascadeDistributionExponent = CutsceneCfg.DistributionExponent
+end
+
+--恢复CascadeDistributionExponent
+function SequencePlayerBase:ResetDistributionExponent()
+    if self.CachePreDistributionExponent == nil or self.CachePreDistributionExponent == 0 then
+        return
+    end
+    local TodMainActor = _G.UE.UEnvMgr:Get():GetTodSystem()
+    if TodMainActor == nil then
+        return
+    end
+    local DirLightComp = TodMainActor.DirLightCom
+    if DirLightComp == nil then
+        return
+    end
+    DirLightComp.CascadeDistributionExponent = self.CachePreDistributionExponent
+end
+
 --屏蔽他人技能音效
 function SequencePlayerBase:ProcessAudioVolumeScale(bPlay)
     if (bPlay) then
@@ -767,6 +879,8 @@ function SequencePlayerBase:UpdateMajorStatePrePlay()
         _G.EmotionMgr:SendStopEmotionAll()
         Major:GetStateComponent():SetHoldWeaponState(false)
 		Major:GetStateComponent():ClearTempHoldWeapon(_G.UE.ETempHoldMask.ALL, true)
+
+        Major:IgnoreWeaponVisibilityCheck(true)
     end
 end
 
@@ -1235,27 +1349,24 @@ function SequencePlayerBase:StopSequence(bClickButtonSkip)
 end
 
 function SequencePlayerBase:FindSequenceSkipGroup()
-    local StoryMgr = _G.StoryMgr
-    StoryMgr.SkipGroupSeqIDs = {}
     if not self.SequenceCfg then
         return
     end
 
-    -- 读表记录动画分组，下次播动画时检查分组
-    local CfgOnSeq = SequenceSkipGroupCfg:FindCfgByKey(self.SequenceCfg.SequenceID);
-    if (nil == CfgOnSeq) or (nil == CfgOnSeq.SkipGroupID) then
+    local StoryMgr = _G.StoryMgr
+    StoryMgr:ResetSkipGroup()
+
+    local SequenceID = self.SequenceCfg.SequenceID
+    local CfgOnSeq = SequenceSkipGroupCfg:FindCfgByKey(SequenceID);
+    if (nil == CfgOnSeq) or (nil == CfgOnSeq.SkipGroupID) or (CfgOnSeq.IsEndSequence == 1) then
         return
     end
 
     local Condition = "SkipGroupID = "..(CfgOnSeq.SkipGroupID)
     local Cfgs = SequenceSkipGroupCfg:FindAllCfg(Condition);
-    if (nil == Cfgs) then
-        return
-    end
+    StoryMgr:SetSkipGroup(Cfgs)
 
-    for _, Cfg in ipairs(Cfgs) do
-        table.insert(StoryMgr.SkipGroupSeqIDs, Cfg.SequenceID)
-    end
+    _G.QuestMgr:SetQuestSeqInSkipGroup(true)
 end
 
 function SequencePlayerBase:AdjustCharactersPostion()

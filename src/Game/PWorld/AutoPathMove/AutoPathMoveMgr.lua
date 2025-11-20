@@ -10,6 +10,7 @@ local EventID = require("Define/EventID")
 local AutoMoveTargetType = require("Define/AutoMoveTargetType")
 local ProtoRes = require("Protocol/ProtoRes")
 local MajorUtil = require("Utils/MajorUtil")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
 --local ProtoCS = require("Protocol/ProtoCS")
 local CrystalPortalCfg = require("TableCfg/TeleportCrystalCfg")
@@ -228,10 +229,20 @@ function AutoPathMoveMgr:IsMajorAutoPathMoveEnable()
             return false
         end
     end
+    --游泳状态不可寻路
+    if (Major:IsSwimming()) then
+        _G.MsgTipsUtil.ShowTipsByID(40191)
+        return false
+    end
 
-    --飞行状态不可寻路    
+    --飞行状态不可寻路
     if (Major:IsInFly()) then
         _G.MsgTipsUtil.ShowTipsByID(40190)
+        return false
+    end
+
+    -- 搬运状态不可寻路
+    if CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatCarry) then
         return false
     end
 
@@ -977,7 +988,9 @@ function AutoPathMoveMgr:GetShortestActivatedCrystalID(DstMapID, DstPos, IsBigCr
                     (not IsBigCrystal or CrystalCfg.Type == ProtoRes.TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP))
              then
                 --可行走距离
-                local Distance = self:GetMapPosDistance(DstMapID, CrystalCfg.Pos[1], DstPos)
+                local SrcPos = _G.UE.FVector(CrystalCfg.X, CrystalCfg.Y, CrystalCfg.Z)
+
+                local Distance = self:GetMapPosDistance(DstMapID, SrcPos, DstPos)
                 if (Distance < MinDistance) then
                     MinDistance = Distance
                     ShortestCrystalID = CrystalCfg.CrystalID
@@ -1153,6 +1166,8 @@ function AutoPathMoveMgr:IsAutoPathMoving(DstMapID, DstPos)
 end
 
 function AutoPathMoveMgr:StopAutoPathMoving()
+    FLOG_INFO("AutoPathMoveMgr: stop autopathmove")
+
     AutoPathMoveImpl:Stop()
 end
 

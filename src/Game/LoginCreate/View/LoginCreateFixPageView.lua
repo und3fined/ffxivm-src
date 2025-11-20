@@ -13,11 +13,15 @@ local UIUtil = require("Utils/UIUtil")
 ---@field BtnBack LoginCreateBackPageView
 ---@field BtnClose UFButton
 ---@field BtnStart UFButton
+---@field BtnStartDisableImg UFImage
 ---@field ButtonDownloadPak UButton
 ---@field MorePage LoginCreateMorePageView
 ---@field ProgressPage LoginCreateProgressPageView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TextStart UFTextBlock
----@field AnimIn UWidgetAnimation
+---@field AnimBtnStart UWidgetAnimation
+---@field AnimDelayIn UWidgetAnimation
+---@field AnimInCode UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field AnimUIHidden UWidgetAnimation
 ---@field AnimUIShow UWidgetAnimation
@@ -29,11 +33,15 @@ function LoginCreateFixPageView:Ctor()
 	--self.BtnBack = nil
 	--self.BtnClose = nil
 	--self.BtnStart = nil
+	--self.BtnStartDisableImg = nil
 	--self.ButtonDownloadPak = nil
 	--self.MorePage = nil
 	--self.ProgressPage = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextStart = nil
-	--self.AnimIn = nil
+	--self.AnimBtnStart = nil
+	--self.AnimDelayIn = nil
+	--self.AnimInCode = nil
 	--self.AnimOut = nil
 	--self.AnimUIHidden = nil
 	--self.AnimUIShow = nil
@@ -45,6 +53,7 @@ function LoginCreateFixPageView:OnRegisterSubView()
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.MorePage)
 	self:AddSubView(self.ProgressPage)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

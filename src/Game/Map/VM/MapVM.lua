@@ -1,20 +1,18 @@
 --
 -- Author: anypkvcai
 -- Date: 2022-10-24 14:55
--- Description:
+-- Description: 小地图
 --
-
 
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
-local TimeUtil = require("Utils/TimeUtil")
+
 
 ---@class MapVM : UIViewModel
 ---@field MajorPosition table  @主角在UI上的地图坐标，中心点在地图中心
 ---@field MajorLeftTopPosition table  @主角在UI上的地图坐标，中心点在地图左上角
 local MapVM = LuaClass(UIViewModel)
 
----Ctor
 function MapVM:Ctor()
 	self.WeatherID = 0  -- 当前地图天气
 
@@ -194,10 +192,6 @@ end
 function MapVM:SetIsMajorVisible(Val)
 	self.IsMajorVisible = Val
 end
-
---function MapVM:SetSettingPropertyValue(PropertyName, Value)
---	self:SetPropertyValue()
---end
 
 function MapVM:SetGameplayLocationVisible(Visible)
 	self.GameplayLocationVisible = Visible

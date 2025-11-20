@@ -16,6 +16,7 @@ local RaceCfg = require("TableCfg/RaceCfg")
 local EquipmentCameraControlDataLoader = require("Game/Equipment/EquipmentCameraControlDataLoader")
 local CameraControlDefine = require("Game/Common/Render2D/CameraControlDefine")
 local SystemLightCfg = require("TableCfg/SystemLightCfg")
+local FriendMgr = require("Game/Social/Friend/FriendMgr")
 
 local UIBinderSetHead = require("Binder/UIBinderSetHead")
 local UIBinderSetFrameIcon = require("Binder/UIBinderSetFrameIcon")
@@ -58,6 +59,10 @@ local RenderActorPath = ModelDefine.StagePath.Universe
 local TipsUtil = require("Utils/TipsUtil")
 local MSDKDefine = require("Define/MSDKDefine")
 local OperationUtil = require("Utils/OperationUtil")
+local PersonPortraitHeadHelper = require("Game/PersonPortraitHead/PersonPortraitHeadHelper")
+local EquipParts = ProtoCommon.equip_part
+local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+
 
 local WeatgerTODID = 25
 
@@ -310,11 +315,12 @@ function PersonInfoMainPanelView:OnInit()
 
 		{ "bIsHoldWeapon", 			UIBinderValueChangedCallback.New(self, nil, self.PoseStyleSwitch) },
 		{ "bIsShowHead", 			UIBinderValueChangedCallback.New(self, nil, self.HatVisibleSwitch) },
+		{ "OnEquipList", 			UIBinderValueChangedCallback.New(self, nil, self.OnOnEquipListChanged) },
 	}
 
 	self.Binders = {
-		{ "HeadFrameID", UIBinderSetFrameIcon.New(self, self.PersonInfoPlayer.ImgFrame) },
-		{ "HeadInfo", 	UIBinderSetHead.New(self, self.PersonInfoPlayer.ImgPlayer) },
+		{ "HeadFrameID", UIBinderValueChangedCallback.New(self, nil, self.SetHeadFrame) },
+		{ "HeadInfo", 	UIBinderValueChangedCallback.New(self, nil, self.SetHeadIcon) },
 		{ "Prof", 		UIBinderSetProfIcon.New(self, self.IconJob) },
 		{ "Level", 		UIBinderSetText.New(self, self.TextJobLevel) },
 		{ "TitleID",  	UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedTitleID) },
@@ -384,7 +390,7 @@ function PersonInfoMainPanelView:OnShow()
 	if self.IsMajor then
 		self.CommonRedDot:SetRedDotIDByID(201)
 		self.CommonRedDotSet:SetRedDotIDByID(201)
-		_G.PersonPortraitHeadMgr:ReqQueryFantasyStat()
+		-- _G.PersonPortraitHeadMgr:ReqQueryFantasyStat()
 		MajorUtil.UpdMvpTimes()
 
 		local ShowSaveTips = PersonInfoVM.IsShowPortraitInitSaveTips
@@ -401,7 +407,9 @@ function PersonInfoMainPanelView:OnShow()
 	self.MulEditTextSign:SetIsHideNumber(true)
 	
 	self.ModuleList = self.IsMajor and PersonInfoDefine.ModuleListSelf or PersonInfoDefine.ModuleListOther
-
+	self.ModuleList[2].ConditionFunc = function()
+		return not self.bLoadFinished
+	end
 	if self.Params then
 		--模块类型
 		local Type = self.Params.ModuleType
@@ -423,6 +431,7 @@ function PersonInfoMainPanelView:OnShow()
 
 	self:SetServerInfo()
 	self:InitActiveHours()
+	
 	self:UpdateSignText()
 	self:UpdateTopRightPanel()
 
@@ -500,6 +509,7 @@ function PersonInfoMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.GetHistoryNameSuccess, self.OnGetHistoryName)
 	self:RegisterGameEvent(EventID.ChaneNameNotify, self.OnChangeNameNotify)
 	self:RegisterGameEvent(EventID.CompanySealRankUp, self.OnChangeCompanyRankNotify)
+	self:RegisterGameEvent(EventID.FriendSetNicknameSuc, self.OnEveNickNameChg)
 end
 
 function PersonInfoMainPanelView:OnRegisterBinder()
@@ -519,6 +529,44 @@ function PersonInfoMainPanelView:OnRegisterBinder()
 
 		self:RegisterBinders(RoleVM, self.Binders)
 	end
+end
+
+function PersonInfoMainPanelView:OnEveNickNameChg(RoleID)
+	local RoleVM = PersonInfoVM.RoleVM
+
+	if not RoleVM or RoleVM.RoleID ~= RoleID then
+		return
+	end
+
+	self:UpdPlayerName()
+end
+
+function PersonInfoMainPanelView:UpdPlayerName(Name)
+	local RoleVM = PersonInfoVM.RoleVM
+
+	if not RoleVM then
+		return
+	end
+
+	local RoleID = RoleVM.RoleID
+
+	local IsFriend = FriendMgr:IsFriend(RoleID)
+	local PlayerName = Name or PersonInfoVM.RoleVM.Name
+
+	if IsFriend then
+		local NickName = FriendMgr:GetFriendNickname(RoleID)
+		if not string.isnilorempty(NickName) then
+			--PlayerName = string.format("%s(%s)", PlayerName, NickName)
+			self.TextNotes:SetText(string.format(LSTR(620143),NickName))
+			UIUtil.SetIsVisible(self.TextNotes, true)
+		else
+			UIUtil.SetIsVisible(self.TextNotes, false)
+		end
+	else
+		UIUtil.SetIsVisible(self.TextNotes, false)
+	end
+	
+	self.TextPlayerName:SetText(PlayerName)
 end
 
 function PersonInfoMainPanelView:OnPostActive()
@@ -556,6 +604,7 @@ function PersonInfoMainPanelView:OnAssembleAllEnd(Params)
 	local EntityID = Params.ULongParam1
 	local ObjType = Params.IntParam1
 	local AttrComp = ChildActor:GetAttributeComponent()
+	self.bLoadFinished = true
 
 	if EntityID == AttrComp.EntityID and ObjType == AttrComp.ObjType then
 		self.CommonRender2D:UpdateAllLights()
@@ -564,7 +613,6 @@ function PersonInfoMainPanelView:OnAssembleAllEnd(Params)
 			UIComplexCharacter:GetAvatarComponent():SetForcedLODForAll(1)
 		end
 	end
-
 	-- self:SetCameraFocus()
 end
 
@@ -586,7 +634,7 @@ end
 function PersonInfoMainPanelView:OnChangeNameNotify(RoleID, EntityID, NewName)
 	local CurRoleID = self.RoleVM.RoleID or 0
 	if RoleID and CurRoleID == RoleID and not string.isnilorempty(NewName) then
-		self.TextPlayerName:SetText(NewName)
+		self:UpdPlayerName(NewName)
 	end
 end
 
@@ -625,8 +673,6 @@ function PersonInfoMainPanelView:GetLightPath(AttachType)
 end
 
 function PersonInfoMainPanelView:ShowModuleBg()
-	self.CommonRender2D:SetShadowActorType(ActorUtil.ShadowType.OtherEquipment)
-	self.CommonRender2D.bCreateShandowActor = true
 	if nil == self.RoleVM then
 		return
 	end
@@ -680,6 +726,8 @@ function PersonInfoMainPanelView:ShowModuleBg()
 		true, 
 		CallBack, 
 		ReCreateCallBack)
+	
+	self.bLoadFinished = false
 end
 
 -- function PersonInfoMainPanelView:SetCameraFocus()
@@ -727,11 +775,15 @@ end
 function PersonInfoMainPanelView:PoseStyleSwitch()
 	local Prof = PersonInfoVM.RoleVM.Prof
 	local IsSpe = ProfUtil.IsProductionProf(Prof)
-	self.CommonRender2D:HoldOnWeapon(PersonInfoVM.bIsHoldWeapon and not IsSpe)
+	local IsHold = PersonInfoVM.bIsHoldWeapon and not IsSpe
+	self.CommonRender2D:HoldOnWeapon(IsHold)
+
 	self:UpdateWeaponHideState()
 end
 
 function PersonInfoMainPanelView:UpdateWeaponHideState()
+	
+
 	local bHideMasterHand = self:IsHideMasterHand()
 	local bHideSlaveHand = self:IsHideSlaveHand()
 	self.CommonRender2D:HideMasterHand(bHideMasterHand)
@@ -744,19 +796,19 @@ end
 -- 判断是否隐藏主手武器，拔刀必定显示武器
 -- 生产职业预览副手，隐藏主手
 function PersonInfoMainPanelView:IsHideMasterHand()
+	local Prof = PersonInfoVM.RoleVM.Prof
 	local bIsHideWeapon = not (PersonInfoVM.bIsShowWeapon or PersonInfoVM.bIsHoldWeapon)
-	local bIsProductProf = RoleInitCfg:FindProfSpecialization(MajorUtil.GetMajorProfID()) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
-	local bIsPreviewSlaveHand = false --self.SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
-	return bIsHideWeapon or (bIsProductProf and bIsPreviewSlaveHand)
+	local bIsProductProf = RoleInitCfg:FindProfSpecialization(Prof) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
+	return bIsHideWeapon or bIsProductProf
 end
 
 -- 判断是否隐藏副手武器，拔刀必定显示武器
 -- 生产职业非预览副手状态隐藏副手
 function PersonInfoMainPanelView:IsHideSlaveHand()
+	local Prof = PersonInfoVM.RoleVM.Prof
 	local bIsHideWeapon = not (PersonInfoVM.bIsShowWeapon or PersonInfoVM.bIsHoldWeapon)
-	local bIsProductProf = RoleInitCfg:FindProfSpecialization(MajorUtil.GetMajorProfID()) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
-	local bIsPreviewSlaveHand = false --self.SelectSlotPart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND
-	return bIsHideWeapon or (bIsProductProf and not bIsPreviewSlaveHand)
+	local bIsProductProf = RoleInitCfg:FindProfSpecialization(Prof) == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
+	return bIsHideWeapon or bIsProductProf 
 end
 
 -- 判断是否隐藏主手武器挂件，继承主手武器隐藏状态，但只有拔刀时才显示
@@ -773,7 +825,7 @@ end
 
 function PersonInfoMainPanelView:HatVisibleSwitch()
 	-- self:SendClientSetupPost(ClientSetupID.RoleHatVisible, self.ViewModel.bHideHead)
-	local bHideHead = PersonInfoVM.bIsShowHead
+	local bHideHead = not PersonInfoVM.bIsShowHead
 	self.CommonRender2D:HideHead(bHideHead)
 end
 
@@ -848,7 +900,7 @@ function PersonInfoMainPanelView:SetBaseInfo()
 	self.MulEditTextSign:SetIsEnabled(IsMajor)
 
 	--玩家名字
-	self.TextPlayerName:SetText(RoleVM.Name or "")
+	self:UpdPlayerName()
 
 	--称号
 	self:SetTitleInfo(RoleVM.TitleID, RoleVM.Gender)
@@ -1015,6 +1067,10 @@ function PersonInfoMainPanelView:SetEquipInfo()
 	
 	self.CommonRender2D:ShowCharacter(true)
 	self.CommonRender2D:EnableRotator(true)
+	--设置可见后再创建阴影，如果此时还没有组装完成，组装也会重新指定一次Actor
+	self.CommonRender2D:SetShadowActorType(ActorUtil.ShadowType.OtherEquipment)
+	self.CommonRender2D.bCreateShandowActor = true
+	self.CommonRender2D:CreateShandowActor()
 
 	self:PoseStyleSwitch()
 	self:HatVisibleSwitch()
@@ -1401,28 +1457,28 @@ function PersonInfoMainPanelView:OpenNamePanel()
 			},
 		}
 	else
-		-- if _G.FriendMgr:IsFriend(RoleVM.RoleID) then
-		-- 	self.NameTable = {
-		-- 		{
-		-- 			Name = LSTR(620124), -- 改成备注昵称
-		-- 			Callback = function()
-		-- 				self:OnBtnChangeName()
-		-- 				self:HideNameBtnTipsPanel()
-		-- 			end,
-		-- 		},
+		if _G.FriendMgr:IsFriend(RoleVM.RoleID) then
+			self.NameTable = {
+				{
+					Name = LSTR(620144), -- 改成备注昵称
+					Callback = function()
+						FriendMgr:SetFriendNickname(RoleVM.RoleID)
+						self:HideNameBtnTipsPanel()
+					end,
+				},
 			
-		-- 		{
-		-- 			Name = LSTR(620125),
-		-- 			Callback = function()
-		-- 				self:OnBtnCopyName()
-		-- 				self:HideNameBtnTipsPanel()
-		-- 			end,
-		-- 		},
-		-- 	}
-		-- else
+				{
+					Name = LSTR(620125),
+					Callback = function()
+						self:OnBtnCopyName()
+						self:HideNameBtnTipsPanel()
+					end,
+				},
+			}
+		else
 			self:CopyName()
 			return
-		-- end
+		end
 	end
 
 	self.NameBtnPanel:UpdateView(self.NameTable)
@@ -1526,7 +1582,8 @@ function PersonInfoMainPanelView:OpenInfoPanel()
 		--
 
 		{
-			Name = LSTR(620134), 
+			ReddotID = PersonInfoDefine.RedDotIDs.PortraitInitTips,
+			Name = LSTR(620134), ---更改肖像
 			Callback = function()
 				self:OnClickButtonPortraitEdit()
 				self:HideInfoBtnTipsPanel()
@@ -1566,14 +1623,89 @@ function PersonInfoMainPanelView:OnClickBtnSetting()
 	self:OpenInfoPanel()
 end
 
---临时修复，主干与分支代码差异比较大，与策划沟通临时修复此问题，等待主干合入其他代码
---【【现网】【个人信息】玩家B主武器为传武，玩家A点击玩家B个人名片-个人信息-装备信息点击传武获取路径到传武界面，关闭传武界面后，玩家B装备信息界面背景消失，显示为主界面】
---https://tapd.tencent.com/tapd_fe/20420083/bug/detail/1020420083145611976
 function PersonInfoMainPanelView:OnActive()
 	local CameraMgr = _G.UE.UCameraMgr.Get()
 	if CameraMgr ~= nil then
 		CameraMgr:SwitchCamera(self.CommonRender2D.RenderActor, 0)
 	end
 end
+
+function PersonInfoMainPanelView:SetHeadFrame(HeadFrameID)
+	if self.PersonInfoPlayer.CommHead then
+		self.PersonInfoPlayer.CommHead:SetFrameIconByHeadFrameID(HeadFrameID)
+	end
+end
+
+function PersonInfoMainPanelView:SetHeadIcon(HeadInfo)
+	if HeadInfo == nil or table.empty(HeadInfo) then
+		_G.FLOG_Warning('[PersonInfoMainPanelView][OnValueChanged][SetHeadIcon] HeadInfo nil')
+	end
+	if self.PersonInfoPlayer.CommHead then
+		self.PersonInfoPlayer.CommHead:SetFrameIconByHeadFrameID(HeadInfo)
+		PersonPortraitHeadHelper.SetHeadByHeadInfo(self.PersonInfoPlayer.CommHead.ImageIcon, HeadInfo or {})
+	end
+end
+
+----装备列表变化时，模型也要变化
+function PersonInfoMainPanelView:OnOnEquipListChanged(OnEquipList)
+	if OnEquipList then
+		self:UpdateModelEquipments(OnEquipList)
+	end
+end
+
+--- 更新模型装备
+function PersonInfoMainPanelView:UpdateModelEquipments(EquipList)
+	if nil == EquipList then
+		return
+	end
+
+	local UIComplexCharacter = self.CommonRender2D:GetUIComplexCharacter()
+	if nil == UIComplexCharacter then
+		return
+	end
+	if not table.is_nil_empty(EquipParts) then
+		for _, v in pairs(EquipParts) do
+			if v > 0 then
+				local EquipAvatar = table.find_by_predicate(EquipList, function(e) return e.Part == v end) or {}
+				local EquipID
+				---需要考虑无装备但是有外观的情况,同时检查EquipID和ResID
+				if EquipAvatar and (EquipAvatar.EquipID or EquipAvatar.ResID) then
+					EquipID = WardrobeUtil.GetEquipID(EquipAvatar.EquipID, EquipAvatar.ResID, EquipAvatar.RandomID)
+				end
+				----EquipID 为nil代表没有装备和外观，也需要执行更新
+				self:PreViewEquipmentEx(EquipID, v, EquipAvatar.ColorID, false)
+				ActorUtil.UpdateEquipRegionDyes(UIComplexCharacter, v, EquipList)
+
+			end
+		end
+	end
+
+	local AvatarComp = UIComplexCharacter:GetAvatarComponent()
+	if AvatarComp then
+		AvatarComp:ForceUpdateCurRoleAvatar()
+		AvatarComp:SetForcedLODForAll(1)
+	end
+
+	---更新显隐
+	self:IsHideMasterHand()
+	self:HatVisibleSwitch()
+end
+
+
+-- 预览装备，bLoadInstantly设为false可只存储数据，暂时不执行模型加载
+function PersonInfoMainPanelView:PreViewEquipmentEx(EquipID, Part, ColorID, bLoadInstantly)
+	if self.CommonRender2D.ChildActor then
+		local UIComplexCharacter = self.CommonRender2D.ChildActor:Cast(_G.UE.AUIComplexCharacter)
+		if UIComplexCharacter then
+			local AvatarComp = UIComplexCharacter:GetAvatarComponent()
+			AvatarComp:UpdateEquipAppearData(Part, EquipID, ColorID)
+
+			if nil == bLoadInstantly or bLoadInstantly then
+				AvatarComp:ForceUpdateCurRoleAvatar()
+			end
+		end
+	end
+end
+
 
 return PersonInfoMainPanelView

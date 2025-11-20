@@ -18,6 +18,8 @@ local GoldSaucerGameDescCfg = require("TableCfg/GoldSaucerGameDescCfg")
 local GoldSaucerCfg = require("TableCfg/GoldSaucerCfg")
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 local LSTR = _G.LSTR
+local FLOG_INFO = _G.FLOG_INFO
+local FLOG_ERROR = _G.FLOG_ERROR
 local RedDotBaseName = GoldSauserMainPanelDefine.RedDotBaseName
 local ProtoCS =  require("Protocol/ProtoCS")
 local MagicCardTourneyMgr = _G.MagicCardTourneyMgr
@@ -164,7 +166,7 @@ function GoldSauserMainPanelExplainWinVM:SetTitleAndDescContentText()
         return
     end
 
-    local SearchConditions = string.format("GameType=%d", GameID) 
+    local SearchConditions = string.format("GameType = %d", GameID) 
     local DescCfg = GoldSaucerGameDescCfg:FindCfg(SearchConditions)
     if not DescCfg then
         return
@@ -217,7 +219,7 @@ end
 --- 设定玩法的时限结束时间戳
 ---@param EndTime number @结束时间戳 MS
 function GoldSauserMainPanelExplainWinVM:SetTimeLimitEndTimeStamp(EndTime)
-    local CurrentTime = TimeUtil.GetServerTimeMS()
+    local CurrentTime = TimeUtil.GetServerLogicTimeMS()
 
     if EndTime <= CurrentTime or self.bAwardToGet then
         self.IsShowTimeText = false

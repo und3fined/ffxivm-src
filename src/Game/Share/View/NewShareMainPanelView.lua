@@ -235,7 +235,7 @@ function NewShareMainPanelView:UpdateShareContent(bSave)
 end
 
 function NewShareMainPanelView:GetSharePictureSize()
-	if self.Params.W and self.Params.H then
+	if self.Params and self.Params.W and self.Params.H then
 		return self.Params.W, self.Params.H
 	end
 

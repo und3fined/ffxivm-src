@@ -89,16 +89,18 @@ function BattlePassAdvanceVM:UpdateRewardList()
     end
 
     for index, v in ipairs(Cfgs) do
-        local Temp = {}
-        Temp.ResID = v.ItemID
-        Temp.Num = v.Num
-        Temp.ItemVM = ItemUtil.CreateItem(v.ItemID, v.Num)
-        Temp.IsGetNow = false
-        Temp.IsShowLevel = true
-        Temp.Level = v.Level
-        Temp.JumpID = v.ItemType == 4 and v.SuitID or nil
-        table.insert(ItemList, Temp)
-        table.insert(ItemList2, Temp)
+        if v.IsShowAdvance and v.IsShowAdvance == 1 then
+            local Temp = {}
+            Temp.ResID = v.ItemID
+            Temp.Num = v.Num
+            Temp.ItemVM = ItemUtil.CreateItem(v.ItemID, v.Num)
+            Temp.IsGetNow = false
+            Temp.IsShowLevel = true
+            Temp.Level = v.Level
+            Temp.JumpID = v.ItemType == 4 and v.SuitID or nil
+            table.insert(ItemList, Temp)
+            table.insert(ItemList2, Temp)
+        end
     end
     self.BigRewardList:UpdateByValues(ItemList)
     self.BigRewardList2:UpdateByValues(ItemList2)

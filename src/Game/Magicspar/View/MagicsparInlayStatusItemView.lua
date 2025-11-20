@@ -14,6 +14,7 @@ local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetP
 local UIBinderSetItemMicroIcon = require("Binder/UIBinderSetItemMicroIcon")
 ---@class MagicsparInlayStatusItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field BtnGoto UFButton
 ---@field FImg_InlayStatus UFImage
 ---@field Text_AttriType UFTextBlock
 ---@field Text_MagicsparName UFTextBlock
@@ -23,6 +24,7 @@ local MagicsparInlayStatusItemView = LuaClass(UIView, true)
 
 function MagicsparInlayStatusItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.BtnGoto = nil
 	--self.FImg_InlayStatus = nil
 	--self.Text_AttriType = nil
 	--self.Text_MagicsparName = nil
@@ -52,7 +54,7 @@ function MagicsparInlayStatusItemView:OnHide()
 end
 
 function MagicsparInlayStatusItemView:OnRegisterUIEvent()
-
+	UIUtil.AddOnClickedEvent(self, self.BtnGoto, self.OnBtnGotoClick)
 end
 
 function MagicsparInlayStatusItemView:OnRegisterGameEvent()
@@ -72,6 +74,18 @@ function MagicsparInlayStatusItemView:OnRegisterBinder()
 	}
 	self:RegisterBinders(self.ViewModel, Binders)
 
+end
+
+function MagicsparInlayStatusItemView:OnBtnGotoClick()
+	local Params = self.Params
+	if nil == Params then
+		return
+	end
+	local Adapter = Params.Adapter
+	if nil == Adapter then
+		return
+	end
+	Adapter:OnItemClicked(self, Params.Index)
 end
 
 return MagicsparInlayStatusItemView

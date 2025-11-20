@@ -26,6 +26,10 @@ local ChatGifTypeCfg = {
             ID = 2,
             RedDotID = 303,
         },
+        {
+            ID = 3,
+            RedDotID = 304,
+        },
 	},
 }
 

@@ -70,7 +70,7 @@ function FunctionItemFactory:CreateInteractiveDescFunc(FuncParams, bOnlyCheck, b
     if Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_START_FATE or 
     Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_PROCESS_FATE then
         local FataState = _G.FateMgr:CheckNpcFateState(EntityID)
-        if FataState == nil then
+        if FataState == nil or FataState == ProtoCS.FateState.FateState_Invalid then
             return nil
         end
 
@@ -83,16 +83,18 @@ function FunctionItemFactory:CreateInteractiveDescFunc(FuncParams, bOnlyCheck, b
             return nil
         end
     elseif(Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_ENTER_FANTASYCARD) then
-        -- 如果是九宫幻卡，那么要完成幻卡任务，又或者是解锁了幻卡系统功能才行
-        local bFinish = _G.MagicCardMgr:HasFinishTargetQuest()
-        if (not bFinish) then
-            return nil
-        end
-        
-        -- 新需求，这里需要看一下，互动的NPC是否有前置任务，如果没有完成前置任务，那么也不显示 2024-8-5
-        local bFinishPreQuest = _G.MagicCardMgr:HasFinishPreQuestByEntityID(EntityID)
-        if (not bFinishPreQuest) then
-            return nil
+        if not _G.MagicCardMgr:IsTutorialGame(EntityID) then
+            -- 如果是九宫幻卡，那么要完成幻卡任务，又或者是解锁了幻卡系统功能才行
+            local bFinish = _G.MagicCardMgr:HasFinishTargetQuest()
+            if (not bFinish) then
+                return nil
+            end
+            
+            -- 新需求，这里需要看一下，互动的NPC是否有前置任务，如果没有完成前置任务，那么也不显示 2024-8-5
+            local bFinishPreQuest = _G.MagicCardMgr:HasFinishPreQuestByEntityID(EntityID)
+            if (not bFinishPreQuest) then
+                return nil
+            end
         end
     elseif(Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_SWITCH_COMPANION) then
         -- 如果是切换宠物，拥有的宠物数量必须大于1
@@ -100,9 +102,14 @@ function FunctionItemFactory:CreateInteractiveDescFunc(FuncParams, bOnlyCheck, b
         if #CompanionList <= 1 then
             return nil
         end
-    elseif Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_TREASUREHUNT then
+    elseif Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_TREASUREHUNT or Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_BOX or Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_DROP then
         local IsBoxBelongMajorOrTeam = _G.TreasureHuntMgr:IsBoxBelongMajorOrTeam(EntityID)
         if not IsBoxBelongMajorOrTeam then
+            return nil
+        end
+    elseif Cfg.FuncType == ProtoRes.interact_func_type.INTERACT_FUNC_ROULETTE_PASS_BOX then
+        local IsOpened = _G.TreasureHuntMgr:IsTreasureHuntBoxOpened(EntityID)
+        if IsOpened then
             return nil
         end
     end

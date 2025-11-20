@@ -52,6 +52,7 @@ function ArmyInformationPanelVM:Ctor()
 	self.ReputationColor = nil
 	self.EditWinVM = ArmyEditArmyInformationWinVM.New()
 	self.IsShowEditBtn = nil
+	self.IsShowReportBtn = nil
 	self.CreateTimeText = nil
 end
 
@@ -78,6 +79,7 @@ end
 --- 更新情报数据
 function ArmyInformationPanelVM:UpdateInformationData(InformationData)
 	self.IsShowEditBtn = _G.ArmyMgr:GetSelfIsHavePermisstion(ProtoRes.GroupPermissionType.GROUP_PERMISSION_TYPE_EditNotice)
+	self.IsShowReportBtn = not _G.ArmyMgr:IsLeader()
     if InformationData then
 		self.InformationData = table.clone(InformationData) ---保存数据用于预览处理
 		self:UpdateEditData(InformationData)

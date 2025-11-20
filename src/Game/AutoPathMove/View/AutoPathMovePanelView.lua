@@ -49,6 +49,7 @@ function AutoPathMovePanelView:OnInit()
 	self.TimeIndex = 0
 
 	self.TextContinue:SetText(_G.LSTR(1590001))
+	self.TextMoving:SetText("") -- 初始化清空显示
 end
 
 function AutoPathMovePanelView:OnDestroy()

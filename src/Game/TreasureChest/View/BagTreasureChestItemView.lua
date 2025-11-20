@@ -63,9 +63,9 @@ function BagTreasureChestItemView:OnShow()
 		self.ViewModel:SetNum(NewNum)
 		_G.TreasureChestVM:UpdateCurrentNum()
 	end)
+	self.Comm152Slot:SetNumVisible(true)
 	self.Comm152Slot:SetClickButtonCallback(self, function() ItemTipsUtil.ShowTipsByResID(self.ViewModel.ResID, self, {X = 0,Y = 0}, nil) end)
 	self.Comm152Slot:SetCoubleClickButtonCallback(self, function() ItemTipsUtil.ShowTipsByResID(self.ViewModel.ResID, self, {X = 0,Y = 0}, nil) end)
-	self.Comm152Slot:SetNum(self.ViewModel.Num)
 end
 
 function BagTreasureChestItemView:OnHide()

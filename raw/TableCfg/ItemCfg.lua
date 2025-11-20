@@ -36,10 +36,11 @@ ItemCfg:InitCfg()
 
 local CommonUtil = require("Utils/CommonUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local UIUtil = require("Utils/UIUtil")
+
 --- 通过IconID获取图标路径
 --- 建议直接在VM中保存IconID，View中使用UIBinderSetBrushFromIconID
 function ItemCfg.GetIconPath(IconID)
+	local UIUtil = require("Utils/UIUtil")
 	return UIUtil.GetIconPath(IconID)
 end
 
@@ -49,7 +50,7 @@ function ItemCfg:GetItemName(ResID)
 		return ""
 	end
 
-	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemName) 
+	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemName)
 end
 
 function ItemCfg:GetItemDesc(ResID)
@@ -57,7 +58,7 @@ function ItemCfg:GetItemDesc(ResID)
 	if Cfg == nil then
 		return ""
 	end
-	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemDesc) 
+	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemDesc)
 end
 
 function ItemCfg:GetItemEffectDesc(ResID)
@@ -65,7 +66,7 @@ function ItemCfg:GetItemEffectDesc(ResID)
 	if Cfg == nil then
 		return ""
 	end
-	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.EffectDesc) 
+	return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.EffectDesc)
 end
 
 return ItemCfg

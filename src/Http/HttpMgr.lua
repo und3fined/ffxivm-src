@@ -112,6 +112,8 @@ function Class:Get(URL, Token, SendData, Callback, Listener, NeedShowLoading, Co
     local UUID = self:GetUUID() 
     local URLReq=self:SetGetSendData(URL,SendData)
 
+    -- print("[Http:Get] -- URLReq: " .. URLReq)
+
     ContentType = ContentType or ContentTypeMap.Json 
     local HttpRet = UHttpHelper.HttpGet(UUID, URLReq, Token, ContentType)
 

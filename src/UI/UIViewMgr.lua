@@ -64,9 +64,9 @@ function UIViewMgr:OnBegin()
 	--_G.UE.UUIMgr.Get():InitEmulatorInfo()
 	_G.UE.UUIMgr.Get():InitKeyboardListen()
 
-	if _G.UE.UUIMgr.Get():IsWithEmulator() then
-		_G.UE.UCrashSightMgr.Get():CloseCrashReport()
-	end
+	-- if _G.UE.UUIMgr.Get():IsWithEmulator() then
+	-- 	_G.UE.UCrashSightMgr.Get():CloseCrashReport()
+	-- end
 
 	self:InitDeviceAdapter()
 	--end
@@ -410,6 +410,21 @@ function UIViewMgr:ShowViewInternal(View, Params)
 	_G.EventMgr:SendEvent(_G.EventID.TutorialShowView, ViewID)
 end
 
+--判断一下新手相关阻止界面操作
+function UIViewMgr:CheckTutorial(ViewID)
+	if ViewID == UIViewID.CommStorageTipsView then
+		local TutorialCurID = _G.NewTutorialMgr:GetTutorialCurID()
+
+		if TutorialCurID ~= nil then
+			if TutorialCurID == 117 or TutorialCurID == 131 then
+				return true
+			end
+		end
+	end
+	
+	return false
+end
+
 ---HideView @隐藏是不会立即调用DestroyView相关函数，会根据GC类型，最终销毁时才会调用
 ---@param ViewID UIViewID
 ---@param bImmediatelyHide @是否立即隐藏 为true时不播放AnimOut动画
@@ -417,6 +432,11 @@ end
 function UIViewMgr:HideView(ViewID, bImmediatelyHide, Params)
 	if not ViewID then
 		FLOG_ERROR("UIViewMgr:HideView ViewID is nil")
+		return
+	end
+
+	--新手引导相关打断HIDE
+	if self:CheckTutorial(ViewID) then
 		return
 	end
 
@@ -665,7 +685,10 @@ function UIViewMgr:InitDeviceAdapter()
 	end
 
 	--check CPUBrand to Set  SFSafeZone EnableNotch
-	self:CheckFSafeZoneEnableNotch()
+	local ScreenSize = UIUtil.GetScreenSize()
+	if ScreenSize.X > 0 and ScreenSize.Y > 0 then
+		self:CheckFSafeZoneEnableNotch(ScreenSize.X, ScreenSize.Y)
+	end
 end
 
 ---InitDeviceAdapter
@@ -686,17 +709,16 @@ function UIViewMgr:GetDeviceAdapterCfg()
 end
 
 ---CheckFSafeZoneEnableNotch
-function UIViewMgr:CheckFSafeZoneEnableNotch()
-	local ScreenSize = UIUtil.GetScreenSize()
-	if ScreenSize.X > 0 and ScreenSize.Y > 0 then
-		local TempCV = ScreenSize.X / ScreenSize.Y
-		if ScreenSize.X < ScreenSize.Y then
-			TempCV = ScreenSize.Y / ScreenSize.X
-		end
-		FLOG_INFO("UIViewMgr:CheckFSafeZoneEnableNotch tempCV = %f",TempCV)
-		if TempCV <= 4 / 3 then
-			_G.UE.UFSafeZone.SeEnableNotch(false)
-		end
+function UIViewMgr:CheckFSafeZoneEnableNotch(ResX, ResY)
+	FLOG_INFO("UIViewMgr:CheckFSafeZoneEnableNotch ResX=%f, ResY=%f",ResX, ResY)
+	local TempCV = ResX / ResY
+	if ResX < ResY then
+		TempCV = ResY / ResX
+	end
+	if TempCV <= 1.5 then
+		_G.UE.UFSafeZone.SeEnableNotch(false)
+	else
+		_G.UE.UFSafeZone.SeEnableNotch(true)
 	end
 end
 
@@ -845,9 +867,9 @@ function UIViewMgr:OnWorldPreLoad(Params)
 
 	local HideList = {}
 
-	for k, _ in pairs(self.VisibleViews) do
-		local Config = self:FindConfig(k)
-		if nil ~= Config and not Config.DontHideWhenLoadMap then
+	for k, v in pairs(self.VisibleViews) do
+		local DontHideWhenLoadMap = v:GetConfigDontHideWhenLoadMap()
+		if not DontHideWhenLoadMap then
 			table.insert(HideList, k)
 		end
 	end
@@ -1109,6 +1131,10 @@ function UIViewMgr:SetUseMainFont(bUseMainFont)
 	self.bUseAozyFont = not bUseMainFont
 	--- 重设了字体设置，刷新RootView下的所有UI
 	self.RootView:RreshAllLayer()
+end
+
+function UIViewMgr:GetVisibleViewList()
+	return self.VisibleViews
 end
 --------------------------------------------------------------------------------------------------------------------------------------
 

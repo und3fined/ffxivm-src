@@ -28,6 +28,10 @@ local ChocoboDefine = {
     FATIGUE_STAMINA = 2500, --进入疲惫状态的体力值,后期再决定走配置还是后台下发
     OVERVIEW_FILTER_TYPE = OVERVIEW_FILTER_TYPE,
     DEFAULT_HEAD_COLOR = _G.UE.FLinearColor(172 / 255, 168 / 255, 162 / 255, 1), --默认灰色
+    
+    LIFE_RED_DOT_NAME = "Root/ChocoboLife",
+    LIFE_RED_DOT_CHECKID = 60,  -- 红点表里的checkID
+    
     CHOCOBO_RACE_WIN_1ST_SOUND_PATH = "AkAudioEvent'/Game/WwiseAudio/Events/Music/Sequence/Play_BGM_ChocoboRace_Win1st.Play_BGM_ChocoboRace_Win1st'",
     CHOCOBO_RACE_WIN_2ND_SOUND_PATH = "AkAudioEvent'/Game/WwiseAudio/Events/Music/Sequence/Play_BGM_ChocoboRace_Win2nd.Play_BGM_ChocoboRace_Win2nd'",
     CHOCOBO_RACE_LOST_SOUND_PATH = "AkAudioEvent'/Game/WwiseAudio/Events/Music/Sequence/Play_BGM_ChocoboRace_Lose.Play_BGM_ChocoboRace_Lose'",

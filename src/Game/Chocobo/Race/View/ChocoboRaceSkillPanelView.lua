@@ -27,7 +27,6 @@ local ChocoboRaceMgr = _G.ChocoboRaceMgr
 ---@field BtnRight UFButton
 ---@field IconBox UFImage
 ---@field IconBoxMask UFImage
----@field ImgBox UFImage
 ---@field PanelBox UFCanvasPanel
 ---@field PanelSkill UFCanvasPanel
 ---@field ScaleBoxAppear UScaleBox
@@ -53,7 +52,6 @@ function ChocoboRaceSkillPanelView:Ctor()
 	--self.BtnRight = nil
 	--self.IconBox = nil
 	--self.IconBoxMask = nil
-	--self.ImgBox = nil
 	--self.PanelBox = nil
 	--self.PanelSkill = nil
 	--self.ScaleBoxAppear = nil
@@ -98,6 +96,7 @@ function ChocoboRaceSkillPanelView:OnShow()
     UIUtil.SetIsVisible(self.SkillChocoboAttackBtn.Img_CD, false)
     UIUtil.SetIsVisible(self.SkillChocoboAttackBtn.Text_SkillCD, false)
     self.SkillChocoboAttackBtn:SetDisabled(false)
+    self.TextBoxAppear:SetText(_G.LSTR(430026))
 end
 
 function ChocoboRaceSkillPanelView:OnHide()
@@ -299,6 +298,10 @@ end
 
 function ChocoboRaceSkillPanelView:OnCastBox()
     if not self.ViewMode then
+        return
+    end
+
+    if self.ViewMode.IsCD then
         return
     end
     

@@ -1,4 +1,5 @@
 local ProtoCommon = require("Protocol/ProtoCommon")
+local ProtoRes = require("Protocol/ProtoRes")
 local EquipmentPartList = ProtoCommon.equip_part
 
 local WardrobeDefine = {}
@@ -16,6 +17,8 @@ WardrobeDefine.PresetPanelOffsetY = 55
 WardrobeDefine.NormalItemID = 60700004
 -- 特殊外观转换ID
 WardrobeDefine.SpecialShiftID = 12190000
+-- 魅力值帮助ID
+WardrobeDefine.CharismHelpID = 11228
 
 -- 
 WardrobeDefine.UnStainedImg = "PaperSprite'/Game/UI/Atlas/Wardrobe/Frames/UI_Wardrobe_Img_BallColor1_png.UI_Wardrobe_Img_BallColor1_png'"
@@ -24,6 +27,9 @@ WardrobeDefine.StainedImg = "PaperSprite'/Game/UI/Atlas/Wardrobe/Frames/UI_Wardr
 -- 红点
 WardrobeDefine.RedDotList = {
 	QuickUnlock = 19002,
+	SuitUnlock = 19003,
+	SuitList = 19004,
+	WinList = 19005,
 }
 
 
@@ -117,6 +123,16 @@ WardrobeDefine.StainPartType = {
 	[EquipmentPartList.EQUIP_PART_FEET] = _G.UE.EAvatarPartType.FOOT_ARMOUR ,
 }
 
+WardrobeDefine.TraitTypeIcon = {
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_NONE] = "",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_SPRINT_TRAIL] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Trailing.UI_Wardrobe_Img_Tag_Trailing'",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_SPRINT_FOOTPRINT] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Footprint.UI_Wardrobe_Img_Tag_Footprint'",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_RANDOM_VARIANT] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Random-Pattern.UI_Wardrobe_Img_Tag_Random-Pattern'",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_FISHING_CHAIR] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Fishing-stool.UI_Wardrobe_Img_Tag_Fishing-stool'",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_TELEPORT_EFFECT] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Teleport.UI_Wardrobe_Img_Tag_Teleport'",
+	[ProtoRes.ClosetSuitSpecialEffectType.SPECIAL_EFFECT_TYPE_RANDOM_EFFECT] = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Img_Tag_Random-Features.UI_Wardrobe_Img_Tag_Random-Features'",
+}
+
 WardrobeDefine.ProfInfo = {
     [ProtoCommon.prof_type.PROF_TYPE_GLADIATOR] = { CollectIcon = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Icon_Job_GLA.UI_Wardrobe_Icon_Job_GLA'"}, --剑术师
     [ProtoCommon.prof_type.PROF_TYPE_MARAUDER] = { CollectIcon = "Texture2D'/Game/UI/Texture/Wardrobe/UI_Wardrobe_Icon_Job_MRD.UI_Wardrobe_Icon_Job_MRD'"},	-- 斧术师
@@ -157,7 +173,7 @@ WardrobeDefine.TxtColor = {
 
 WardrobeDefine.SuitTabList = {
 	{ID = 1, Name = 1080037, IconPathNormal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_All_Noraml.UI_Icon_Tab_Bag_Equip_All_Noraml'", IconPathSelect = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_All_Select.UI_Icon_Tab_Bag_Equip_All_Select'"},
-	{ID = 2, Name = 1080124, IconPathNormal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_Body_Noraml.UI_Icon_Tab_Bag_Equip_Body_Noraml'", IconPathSelect = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_Body_Select.UI_Icon_Tab_Bag_Equip_Body_Select'"},
+	{ID = 2, Name = 1080124, IconPathNormal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Personal_Equip_Normal.UI_Icon_Tab_Personal_Equip_Normal'", IconPathSelect = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Personal_Equip_Select.UI_Icon_Tab_Personal_Equip_Select'"},
 	{ID = 3, Name = 1080125, IconPathNormal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_Appearance_Noraml.UI_Icon_Tab_Bag_Equip_Appearance_Noraml'", IconPathSelect = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Bag_Equip_Appearance_Select.UI_Icon_Tab_Bag_Equip_Appearance_Select'"},
 }
 
@@ -181,5 +197,16 @@ WardrobeDefine.EquipOrCanPreviewErrorTips = {
 }
 
 WardrobeDefine.ColorTypeList = {2,3,4,5,6,7,1,8}
+-- 染色剂顺序
+WardrobeDefine.StainColorList = {
+	60500003, --红色染色剂
+	60500004,
+	60500005,
+	60500006,
+	60500007,
+	60500008,
+	60500002,
+	60500001,
+}
 
 return WardrobeDefine

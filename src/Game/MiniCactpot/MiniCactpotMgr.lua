@@ -18,6 +18,7 @@ local GoldSauserVM = require("Game/Gate/GoldSauserVM")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local GoldSauserGameClientType = ProtoRes.GoldSauserGameClientType
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
+local GoldSauserMapID = GoldSauserMainPanelDefine.GoldSauserMapID -- 12060
 local AsyncReqModuleType = GoldSauserMainPanelDefine.AsyncReqModuleType
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 
@@ -56,7 +57,6 @@ function MiniCactpotMgr:OnInit()
 	Utils.Init()
 	
 	--基本信息
-	self.JDMapID = 12060
     self.JDResID = 1008204
 	self.MiniCactpotIssuerNpc = 1010445 -- 微彩发放员ID
 	self.MiniCactpotInfo = {
@@ -160,7 +160,7 @@ end
 function MiniCactpotMgr:OnPWorldEnter(Parmas)
 	local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = Parmas.CurrMapResID
-    if Parmas.CurrMapResID == self.JDMapID then
+    if Parmas.CurrMapResID == GoldSauserMapID then
         if self.bEnterWrold then
             return
         end
@@ -173,7 +173,7 @@ end
 function MiniCactpotMgr:OnGameEventLoginRes(Params)
     local bReconnect = Params.bReconnect
     local BaseInfo = PWorldMgr.BaseInfo
-    if bReconnect and BaseInfo.CurrMapResID == self.JDMapID then
+    if bReconnect and BaseInfo.CurrMapResID == GoldSauserMapID then
 		self.bNeedScratch = true
         self:SendMiniCactpotInfoReq(false)
     end
@@ -183,7 +183,7 @@ end
 function MiniCactpotMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
 	local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = BaseInfo.CurrMapResID
-    if LeaveMapResID == self.JDMapID then
+    if LeaveMapResID == GoldSauserMapID then
         self.bEnterWrold = false
     end
 end
@@ -606,6 +606,11 @@ function MiniCactpotMgr:OnNetMsgFinishRsp(MsgBody)
 				UIViewMgr:ShowView(UIViewID.MiniCactpotRewardTip, FinishRsp.AwardCoins) --这其实就是个动效
 			end
 			GoldSauserMgr:ShowCommRewardPanel(ListVM, Title, nil)
+			-- 仙人微彩新增完成任务玩法节点
+			local Params = {
+				GameID = ProtoRes.Game.GameID.GameIDMiniCactpot
+			}
+			_G.EventMgr:SendEvent(EventID.QuestFinishGameplay, Params)
 		end
 		self.GetRewardTimer = self:RegisterTimer(OpenRewardPanel, 3, 0, 1, self)
 

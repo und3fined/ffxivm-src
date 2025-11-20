@@ -21,12 +21,13 @@ function MusicPerformanceUtil.IsMPMode()
 	return false
 end
 
--- 是否延迟自己的播放至与队友同步后
+-- 是否队伍全员可以听(队伍全员[Mode=1]、只听自己[Mode=2])
 function MusicPerformanceUtil.IsPerformanceSyncedWithParty()
 	return _G.UE.USaveMgr.GetInt(SaveKey.EnsembleMode, MPDefines.Ensemble.DefaultSettings.Mode, true)
 		== MPDefines.Ensemble.DefaultSettings.Mode
 end
 
+-- 保存合奏助手的Mode(队伍全员[Mode=1]、只怕自己[Mode=2])
 function MusicPerformanceUtil.SavePerformanceSyncedWithParty(Mode)
 	_G.UE.USaveMgr.SetInt(SaveKey.EnsembleMode, Mode, true)
 end
@@ -189,6 +190,10 @@ end
 
 function MusicPerformanceUtil.GetKeySize()
 	return _G.UE.USaveMgr.GetInt(SaveKey.PerformanceKeySize, MPDefines.CommonSettings.KeySize, true)
+end
+
+function MusicPerformanceUtil.GetMusicSheet()
+	return _G.UE.USaveMgr.GetInt(SaveKey.PerformanceMusicSheet, MPDefines.CommonSettings.MusicSheet, true)
 end
 
 function MusicPerformanceUtil.GetVolume()

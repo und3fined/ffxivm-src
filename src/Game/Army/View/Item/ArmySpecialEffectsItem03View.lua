@@ -37,7 +37,7 @@ end
 
 function ArmySpecialEffectsItem03View:OnInit()
     self.Binders = {
-		--{"Icon", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon)}, 
+		{"Icon", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon)}, 
 		{"Count", UIBinderSetText.New(self, self.TextCount)}, 
 		{"IsSelected", UIBinderSetIsVisible.New(self, self.ImgSelect)}, 
 		{"IsHave", UIBinderValueChangedCallback.New(self, nil, self.OnSetGrey)}, 
@@ -68,7 +68,15 @@ end
 function ArmySpecialEffectsItem03View:OnSetGrey(IsHave)
 	local IsGrey = not IsHave
 	if self.ImgIcon and self.ViewModel.Icon then
-		UIUtil.SetImageDesaturate(self.ImgIcon, self.ViewModel.Icon, IsGrey and 1 or 0, true)
+		local Color
+		if not IsGrey then
+			Color = "FFFFFFFF"
+		else
+			Color = "AEAEAEFF"
+		end
+		UIUtil.SetColorAndOpacityHex(self.ImgIcon, Color)
+		--UIUtil.SetImageDesaturate(self.ImgIcon, self.ViewModel.Icon, IsGrey and 1 or 0, true)
+		self.ImgIcon:SetIsEnabled(not IsGrey)
 	end
 end
 

@@ -32,6 +32,7 @@ local ClientVisionMgr = LuaClass(MgrBase)
 local UActorManager = nil
 local UWorldMgr = nil
 local MapEditorActorConfig = nil
+local FestivalContainer = {}
 
 function ClientVisionMgr:OnInit()
 	self.MapEditorIDToEntityID = {}
@@ -70,6 +71,8 @@ function ClientVisionMgr:OnBegin()
 	self.bNoTick = false
 
 	self.VisionWhitelist = nil
+
+	FestivalContainer = {}
 end
 
 function ClientVisionMgr:OnEnd()
@@ -101,7 +104,15 @@ end
 
 function ClientVisionMgr:ResetMap()
 	print("ClientVisionMgr:ResetMap")
+	if not MajorUtil.GetMajor() then
+		return 
+	end
+	
 	if not self.MajorTileX or not self.MajorTileY then
+		return
+	end
+
+	if not self.CurMapEditCfg then
 		return
 	end
 
@@ -112,15 +123,18 @@ function ClientVisionMgr:ResetMap()
 
 	for _, ActorConfig in pairs(MapEditorActorConfig) do
 		local VirtualTileOffset = math.ceil(ActorConfig.ViewSize / self.MapVirtualTileSize)
-		for X = self.MajorTileX - VirtualTileOffset, self.MajorTileX + VirtualTileOffset do
-			for Y = self.MajorTileY - VirtualTileOffset, self.MajorTileY + VirtualTileOffset do
-				if self[ActorConfig.TileDataKey][X] and self[ActorConfig.TileDataKey][X][Y] then
-					local ActorIdxList = self[ActorConfig.TileDataKey][X][Y]
-					for i = 1, #ActorIdxList do
-						local ActorData = self.CurMapEditCfg[ActorConfig.MapEditCfgKey][ActorIdxList[i]]
-						if ActorData then
-							local MapEditorID = ActorData[ActorConfig.MapEditorIDKey]
-							ClientVisionMgr:ClientActorLeaveVision(MapEditorID, ActorConfig.ActorType)
+		local ActorDataList = self.CurMapEditCfg[ActorConfig.MapEditCfgKey]
+		if ActorDataList then
+			for X = self.MajorTileX - VirtualTileOffset, self.MajorTileX + VirtualTileOffset do
+				for Y = self.MajorTileY - VirtualTileOffset, self.MajorTileY + VirtualTileOffset do
+					if self[ActorConfig.TileDataKey][X] and self[ActorConfig.TileDataKey][X][Y] then
+						local ActorIdxList = self[ActorConfig.TileDataKey][X][Y]
+						for i = 1, #ActorIdxList do
+							local ActorData = ActorDataList[ActorIdxList[i]]
+							if ActorData then
+								local MapEditorID = ActorData[ActorConfig.MapEditorIDKey]
+								ClientVisionMgr:ClientActorLeaveVision(MapEditorID, ActorConfig.ActorType)
+							end
 						end
 					end
 				end
@@ -128,6 +142,39 @@ function ClientVisionMgr:ResetMap()
 		end
 
 		self[ActorConfig.TileDataKey] = {}
+	end
+
+	local MapID = self.CurMapEditCfg.MapID
+	local FestivalCfgList = _G.MapEditDataMgr.FestivalCfgMap[MapID]
+	if FestivalCfgList then
+		local FestivalCfg = FestivalCfgList[1]
+		if FestivalCfg then
+			for _, ActorConfig in pairs(MapEditorActorConfig) do
+				local VirtualTileOffset = math.ceil(ActorConfig.ViewSize / self.MapVirtualTileSize)
+				for X = self.MajorTileX - VirtualTileOffset, self.MajorTileX + VirtualTileOffset do
+					for Y = self.MajorTileY - VirtualTileOffset, self.MajorTileY + VirtualTileOffset do
+						local TileData = FestivalContainer[ActorConfig.TileDataKey]
+						if TileData then
+							local TileDataX = TileData[X]
+							if TileDataX then
+								local ActorIdxList = TileDataX[Y]
+								if ActorIdxList then
+									for i = 1, #ActorIdxList do
+										local ActorData = FestivalCfg[ActorConfig.MapEditCfgKey][ActorIdxList[i]]
+										if ActorData then
+											local MapEditorID = ActorData[ActorConfig.MapEditorIDKey]
+											ClientVisionMgr:ClientActorLeaveVision(MapEditorID, ActorConfig.ActorType)
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+
+				FestivalContainer[ActorConfig.TileDataKey] = {}
+			end
+		end
 	end
 
 	self.CurMapEditCfg = nil
@@ -248,9 +295,50 @@ function ClientVisionMgr:OnMapLoaded()
 		-- FLOG_INFO("Gather IdxRange: (MinX:%d, MinY:%d, MaxX:%d, MaxY:%d)",
 		-- 	self.GatherTileMinX, self.GatherTileMinY, self.GatherTileMaxX, self.GatherTileMaxY)
 	end
-	
+
+	self:OnFestivalMapLoad(self.CurMapEditCfg.MapID) --季节相关的关卡数据从这里取
+
 	self:EnableTick(true)
 	self:VisionTick()
+end
+
+function ClientVisionMgr:OnFestivalMapLoad(MapID)
+	local CurMapEditCfg = self.CurMapEditCfg
+	if not CurMapEditCfg then
+		return
+	end
+	if CurMapEditCfg.MapID ~= MapID then
+		return
+	end
+	local FestivalCfgList = _G.MapEditDataMgr.FestivalCfgMap[MapID]
+	if not FestivalCfgList then
+		return
+	end
+	local FestivalCfg = FestivalCfgList[1]
+	if not FestivalCfg then
+		return
+	end
+
+	ClientActorFactory:OnFestivalMapLoaded(FestivalCfg)
+
+	for _, ActorConfig in pairs(MapEditorActorConfig) do
+		FestivalContainer[ActorConfig.TileDataKey] = FestivalContainer[ActorConfig.TileDataKey] or {}
+
+		if FestivalCfg[ActorConfig.MapEditCfgKey] then
+			for Index, ActorInfo in ipairs(FestivalCfg[ActorConfig.MapEditCfgKey]) do
+				--虚拟块索引动态生成
+				local X = math.floor(ActorInfo[ActorConfig.PointKey].X / self.MapVirtualTileSize)
+				local Y = math.floor(ActorInfo[ActorConfig.PointKey].Y / self.MapVirtualTileSize)
+
+				FestivalContainer[ActorConfig.TileDataKey][X] = FestivalContainer[ActorConfig.TileDataKey][X] or {}
+				FestivalContainer[ActorConfig.TileDataKey][X][Y] = FestivalContainer[ActorConfig.TileDataKey][X][Y] or {}
+
+				local TileDataTable = FestivalContainer[ActorConfig.TileDataKey][X][Y]
+
+				table.insert(TileDataTable, Index)
+			end
+		end
+	end
 end
 
 --private
@@ -292,6 +380,12 @@ function ClientVisionMgr:VisionTick()
 	self.MajorTileX = math.floor(MajorPos.X / self.MapVirtualTileSize)
 	self.MajorTileY = math.floor(MajorPos.Y / self.MapVirtualTileSize)
 	local bGatherProf = MajorUtil.IsGatherProf()
+
+	local FestivalCfg = nil
+	local FestivalCfgList = _G.MapEditDataMgr.FestivalCfgMap[self.CurMapEditCfg.MapID]
+	if FestivalCfgList then
+		FestivalCfg = FestivalCfgList[1]
+	end
 
 	--遍历该地图块上的所有 客户端视野管理的类型
 	for _, ActorConfig in pairs(MapEditorActorConfig) do
@@ -343,6 +437,32 @@ function ClientVisionMgr:VisionTick()
 							end
 						else
 							FLOG_ERROR("ClientVisionMgr ActorType(%d) index(%d) is error", ActorConfig.ActorType, i)
+						end
+					end
+				end
+				if FestivalCfg then
+					local TileData = FestivalContainer[ActorConfig.TileDataKey]
+					if TileData then
+						local TileDataX = TileData[X]
+						if TileDataX then
+							local FestivalActorIdxList = TileDataX[Y]
+							if FestivalActorIdxList then
+								for i=1, #FestivalActorIdxList do
+									local ActorData = FestivalCfg[ActorConfig.MapEditCfgKey][FestivalActorIdxList[i]]
+									if ActorData then
+										local MapEditorID = ActorData[ActorConfig.MapEditorIDKey]
+										if self:IsOutViewSquareDistance(MajorPos, ActorData[ActorConfig.PointKey], ViewSquareDistance) then
+											--离开视野
+											ClientVisionMgr:ClientActorLeaveVision(MapEditorID, ActorConfig.ActorType)
+										elseif not ActorData.bFutureVersion then --nil:要进行读表刷新为true/false   true：不创建  false：正常创建的
+											--进入视野
+											self:ClientActorEnterVision(ActorData, ActorConfig.ActorType)
+										end
+									else
+										FLOG_ERROR("ClientVisionMgr Festival ActorType(%d) index(%d) is error", ActorConfig.ActorType, i)
+									end
+								end
+							end
 						end
 					end
 				end
@@ -750,15 +870,21 @@ end
 
 function ClientVisionMgr:ReadVisionWhitelistForPWorld(PWorldResID)
 	local Result = VisionPworldMonsterWhitelistCfg:FindCfgByKey(PWorldResID)
+	local VisionWhitelist = {}
 	if Result then
-		self.VisionWhitelist = Result.MustShowMonsterResID
+		local MustShowMonsterResID = Result.MustShowMonsterResID
+		for i = 1, #MustShowMonsterResID do
+			VisionWhitelist[MustShowMonsterResID[i]] = true
+		end
 	end
+	self.VisionWhitelist = VisionWhitelist
 end
 
 function ClientVisionMgr:GetIsInMonsterWhitelist(ResID)
 	local bIn = false
-	if self.VisionWhitelist then
-		bIn = table.contain(self.VisionWhitelist,ResID)
+	local VisionWhitelist = self.VisionWhitelist
+	if VisionWhitelist then
+		bIn = VisionWhitelist[ResID] or false
 	end
 	return bIn
 end

@@ -32,6 +32,7 @@ local ItemDefine = require("Game/Item/ItemDefine")
 ---@field RewardPhase1 OpsNewbieStrategyRewardPhaseItemView
 ---@field RewardPhase2 OpsNewbieStrategyRewardPhaseItemView
 ---@field RewardPhase3 OpsNewbieStrategyRewardPhaseItemView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TextBird UFTextBlock
 ---@field TextHint URichTextBox
 ---@field TextQuantity2 UFTextBlock
@@ -61,6 +62,7 @@ function OpsNewBieStrategyRewardforCourageWinView:Ctor()
 	--self.RewardPhase1 = nil
 	--self.RewardPhase2 = nil
 	--self.RewardPhase3 = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextBird = nil
 	--self.TextHint = nil
 	--self.TextQuantity2 = nil
@@ -86,6 +88,7 @@ function OpsNewBieStrategyRewardforCourageWinView:OnRegisterSubView()
 	self:AddSubView(self.RewardPhase1)
 	self:AddSubView(self.RewardPhase2)
 	self:AddSubView(self.RewardPhase3)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

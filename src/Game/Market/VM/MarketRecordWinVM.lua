@@ -19,8 +19,8 @@ end
 
 function MarketRecordWinVM:SetType(Type)
     self.CurType = Type
-    self.PurchaseRecordVisible = Type == ProtoCS.MarketRecordType.MarketRecordType_Buy
-    self.SalesRecordVisible = Type == ProtoCS.MarketRecordType.MarketRecordType_Sell
+   -- self.PurchaseRecordVisible = Type == ProtoCS.MarketRecordType.MarketRecordType_Buy
+   -- self.SalesRecordVisible = Type == ProtoCS.MarketRecordType.MarketRecordType_Sell
 end
 
 function MarketRecordWinVM:UpdateListInfo(RecordInfo)
@@ -28,9 +28,12 @@ function MarketRecordWinVM:UpdateListInfo(RecordInfo)
 
     if self.CurType == ProtoCS.MarketRecordType.MarketRecordType_Buy then
         self.BuyRecordItemVMList:UpdateByValues(RecordList)
+        self.PurchaseRecordVisible = #RecordList > 0 
+        self.SalesRecordVisible = false
     elseif self.CurType == ProtoCS.MarketRecordType.MarketRecordType_Sell then
         self.SellRecordItemVMList:UpdateByValues(RecordList)
-
+        self.SalesRecordVisible = #RecordList > 0
+        self.PurchaseRecordVisible = false
         local RoleIDs = {}
         for _, Record in ipairs(RecordList) do
             table.insert(RoleIDs, Record.BuyerID)

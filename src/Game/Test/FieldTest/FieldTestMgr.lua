@@ -19,6 +19,11 @@ local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local AetherCurrentCfg = require("TableCfg/AetherCurrentCfg")
 local DiscoverNoteCfg = require("TableCfg/DiscoverNoteCfg")
 local WildBoxMoundCfg = require("TableCfg/WildBoxMoundCfg")
+local TouringBandTimelineCfg = require("TableCfg/TouringBandTimelineCfg")
+local TouringBandCfg = require("TableCfg/TouringBandCfg")
+local MerchantMapPointCfg = require("TableCfg/MysteryMerchantMapPointCfgCfg")
+local MerchantTaskCfg = require("TableCfg/MysteryMerchantTaskCfgCfg")
+local MerchantCfg = require("TableCfg/MysteryMerchantCfgCfg")
 
 local table_to_string = _G.table_to_string
 local GMMgr = _G.GMMgr
@@ -26,6 +31,7 @@ local UE = _G.UE
 local PWorldMgr = _G.PWorldMgr
 local GatherMgr = _G.GatherMgr
 local WildBoxMoundMgr = _G.WildBoxMoundMgr
+local TouringBandMgr
 local MapEditDataMgr = _G.MapEditDataMgr
 local DiscoverNoteMgr
 
@@ -47,6 +53,8 @@ function FieldTestMgr:OnInit()
 		Aether = 10,
 		DiscoverNote = 11,
 		WildBox = 12,
+		Band = 13,
+		Merchant = 14,
 	}
 	self:Reset()
 end
@@ -57,6 +65,7 @@ function FieldTestMgr:OnBegin()
 	GatherMgr = _G.GatherMgr
 	WildBoxMoundMgr = _G.WildBoxMoundMgr
 	MapEditDataMgr = _G.MapEditDataMgr
+	TouringBandMgr = _G.TouringBandMgr
 	DiscoverNoteMgr = _G.DiscoverNoteMgr
 end
 
@@ -66,6 +75,7 @@ function FieldTestMgr:OnEnd()
 	GatherMgr = nil
 	WildBoxMoundMgr = nil
 	MapEditDataMgr = nil
+	TouringBandMgr = nil
 end
 
 --切图的时候会清空的
@@ -106,6 +116,21 @@ function FieldTestMgr:OnGMReceiveRes(MsgBody)
 		local FieldTestPanelView = _G.UIViewMgr:FindView(_G.UIViewID.FieldTestPanel)
 		if FieldTestPanelView then
 			FieldTestPanelView:OnGMReceiveRes()
+		end
+	elseif MsgBody.Cmd == "band" then
+		local FieldTestPanelView = _G.UIViewMgr:FindView(_G.UIViewID.FieldTestPanel)
+		if FieldTestPanelView then
+			Result = MsgBody.Result
+			FieldTestPanelView:UpdateBandInfo(Result)
+
+			local Infos = string.split(Result, ",")
+			local PosStartIndex = string.find(Infos[2], ":")
+			if PosStartIndex then
+				local PosArray = string.split(string.sub(Infos[2], PosStartIndex + 1), " ")
+				if PosArray then
+					GMMgr:ReqGM(string.format("cell move pos %s %s %s", PosArray[1], PosArray[2], PosArray[3]))
+				end
+			end
 		end
 	end
 end
@@ -595,8 +620,8 @@ function FieldTestMgr:GetMapEditDataList()
 					local FishAreaID = GimmickData.GimmickKey
 					local FishLocation = FishLocationCfg:FindCfgByKey(FishAreaID)
 					Data.ID = FishAreaID
-					Data.Name = FishLocation.Name
-					Data.FishLocationTye = ProtoEnumAlias.GetAlias(ProtoRes.FISH_LOCATION_TYPE, FishLocation.LocationType)
+					Data.Name = FishLocation and FishLocation.Name or ""
+					Data.FishLocationTye = ProtoEnumAlias.GetAlias(ProtoRes.FISH_LOCATION_TYPE, FishLocation and FishLocation.LocationType or ProtoRes.FISH_LOCATION_TYPE.FISH_LOCATION_TYPE_NONE)
 					table.insert(FishDataList, Data)
         		end
 			end
@@ -742,6 +767,115 @@ function FieldTestMgr:GetWildBoxDataList()
 		table.insert(DataList, Data)
     end
 	
+	return DataList
+end
+
+--- 巡回乐团数据
+function FieldTestMgr:GetBandDataList()
+	local DataList = {}
+	local BandIDList = {}
+	local MapID = PWorldMgr:GetCurrMapResID()
+    local SearchCondition = string.format("MapID = %d", MapID)
+    local TouringBandTimelineFindCfgs = TouringBandTimelineCfg:FindAllCfg(SearchCondition)
+    for _, Cfg in ipairs(TouringBandTimelineFindCfgs or {}) do
+		if not table.contain(BandIDList, Cfg.BandID) then
+			table.insert(BandIDList, Cfg.BandID)
+		end
+	end
+
+	for _, BandID in pairs(BandIDList) do
+		local Data = {}
+		Data.ID = BandID
+		if TouringBandMgr:IsBandFansByID(BandID) then
+			Data.Name = "完美"
+		elseif TouringBandMgr:IsBandWaitStateByID(BandID) then
+			Data.Name = "相遇"
+		else
+			Data.Name = "未遇"
+		end
+		Data.Type = self.DataTypeDefine.Band
+		local BandCfg = TouringBandCfg:FindCfgByKey(BandID)
+		Data.EmotionID = BandCfg and BandCfg.EmotionID or 0
+		Data.CompanionID = BandCfg and BandCfg.PetID or 0
+		Data.AppearanceIDs = BandCfg and BandCfg.AppearanceIDs or {}
+		table.insert(DataList, Data)
+	end
+	return DataList
+end
+
+--- 冒险游商团数据
+function FieldTestMgr:GetMerchantDataList()
+	local DataList = {}
+	local MapID = PWorldMgr:GetCurrMapResID()
+    local SearchCondition = string.format("MapID = %d", MapID)
+    local MerchantMapFindCfgs = MerchantMapPointCfg:FindAllCfg(SearchCondition)
+	local MerchantAllData = nil
+	for _, MapCfg in ipairs(MerchantMapFindCfgs) do
+		if MerchantAllData == nil then
+			MerchantAllData = {}
+			local AllCfgs = MerchantCfg:FindAllCfg()
+			for _, Cfg in ipairs(AllCfgs) do
+				local TaskIDStrs = string.split(Cfg.TasksIDs, ",")
+				local TaskIDs = {}
+				for _, TaskIDStr in pairs(TaskIDStrs) do
+					table.insert(TaskIDs, tonumber(TaskIDStr))
+				end
+				MerchantAllData[Cfg.ID] = {
+					ID = Cfg.ID,
+					Type = Cfg.MerchantType,
+					TaskIDs = TaskIDs,
+				}
+			end
+		end
+		local Data = {}
+		Data.ID = MapCfg.TaskID
+		local MapPoint = _G.MapEditDataMgr:GetMapPoint(MapCfg.BirthID)
+		local Point = {
+			X = MapPoint.Point.X,
+			Y = MapPoint.Point.Y,
+			Z = MapPoint.Point.Z,
+		}
+
+		local MerchantData = nil
+		for ID, Data in ipairs(MerchantAllData) do
+			if table.contain(Data.TaskIDs, MapCfg.TaskID) then
+				MerchantData = {
+					MerchantID = Data.ID,
+					MerchantType = Data.Type
+				}
+				break
+			end
+		end
+		
+		Data.Name = ProtoEnumAlias.GetAlias(ProtoRes.Game.MysteryMerchantType, MerchantData.MerchantType)
+		
+		local TaskCfg = MerchantTaskCfg:FindCfgByKey(MapCfg.TaskID)
+		local InteractiveType = TaskCfg and TaskCfg.InteractiveType or 0
+		MerchantData.InteractiveType = ProtoEnumAlias.GetAlias(ProtoRes.Game.MerchantInteractiveType, InteractiveType)
+
+		if MerchantData.MerchantType == ProtoRes.Game.MysteryMerchantType.MysteryMerchantTypeShared then
+			Data.Children = {}
+			for Index = 1, 2 do
+				local ChildData = {}
+				ChildData.ID = MapCfg.TaskID
+				ChildData.Index = Index == 1 and "传送" or "传送并触发"
+				ChildData.Point = Point
+				ChildData.Type = self.DataTypeDefine.Merchant
+				
+				ChildData.MerchantData = TableTools.deepcopy(MerchantData)
+				ChildData.MerchantData.IsTrigger = Index == 2
+				table.insert(Data.Children, ChildData)
+			end
+
+			table.insert(DataList, Data)
+		elseif MerchantData.MerchantType == ProtoRes.Game.MysteryMerchantType.MysteryMerchantTypeExclusive then
+			Data.Point = Point
+			Data.Type = self.DataTypeDefine.Merchant
+			Data.MerchantData = TableTools.deepcopy(MerchantData)
+			table.insert(DataList, Data)
+		end
+	end
+
 	return DataList
 end
 

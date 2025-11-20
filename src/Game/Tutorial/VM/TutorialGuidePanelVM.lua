@@ -285,8 +285,8 @@ function TutorialGuidePanelVM:Search(SearchText, Length)
         return a.GuideID > b.GuideID 
     end)
 
+    self.NotTutorialGuideVisble = false
     if table.length(List) <= 0 then
-        self.NotTutorialGuideVisble = false
         self.NotSearchedVisible = true
         self.ContentVisible = false
         return 

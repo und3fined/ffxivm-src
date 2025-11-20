@@ -25,16 +25,14 @@ local LoginMapMgr = nil
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
 ---@field CommonTitleNew CommonTitleView
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelPreviewText UFCanvasPanel
 ---@field TableViewEnvironment UTableView
----@field TableViewList UTableView
 ---@field TableViewPreviewText UTableView
 ---@field TableViewTextTab UTableView
 ---@field TableViewWeather UTableView
 ---@field TextPreview UFTextBlock
 ---@field TextPreview1 UFTextBlock
----@field TextSubTitle UFTextBlock
----@field TextTitle UFTextBlock
 ---@field VerIconTabsNew CommVerIconTabsView
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -45,16 +43,14 @@ function HaircutPreviewPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
 	--self.CommonTitleNew = nil
+	--self.PanelMask3 = nil
 	--self.PanelPreviewText = nil
 	--self.TableViewEnvironment = nil
-	--self.TableViewList = nil
 	--self.TableViewPreviewText = nil
 	--self.TableViewTextTab = nil
 	--self.TableViewWeather = nil
 	--self.TextPreview = nil
 	--self.TextPreview1 = nil
-	--self.TextSubTitle = nil
-	--self.TextTitle = nil
 	--self.VerIconTabsNew = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -93,6 +89,7 @@ function HaircutPreviewPanelView:OnDestroy()
 end
 
 function HaircutPreviewPanelView:OnShow()
+	self:SetBackMask()
 	-- 音效
 	HaircutMgr:PlayBGM(true)
 	self.ViewModel:ClearSuit()
@@ -329,6 +326,11 @@ function HaircutPreviewPanelView:OnTableViewTextSelectChange(Index, ItemData, It
 		FLOG_INFO("Login SelectTime : index:%d", Index)
 		LoginMapMgr:SetWeatherTime(Index)
 	end
+end
+
+function HaircutPreviewPanelView:SetBackMask()
+	local bDarkMap = _G.LoginMapMgr:IsHaircutDefaultMap()
+	UIUtil.SetIsVisible(self.PanelMask3, bDarkMap)
 end
 
 return HaircutPreviewPanelView

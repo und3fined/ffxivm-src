@@ -118,6 +118,38 @@ function Helper.SetHeadByUrl(Widget, Url, Key)
     ImageDownloader:Start(Url, "", false)
 end
 
+---@param Key 调试Key
+function Helper.SetCommHeadByUrl(Widget, Url, Key)
+    -- _G.FLOG_INFO(string.format('[PersonHead][PersonPortraitHeadHelper][SetHeadByUrl] Widget = %s, Url = %s, Key = %s', tostring(Widget), tostring(Url), tostring(Key)))
+
+    if (not Widget) or string.isnilorempty(Url) then
+        return
+    end
+
+    UIUtil.SetIsVisible(Widget, false)
+
+    local ImageDownloader = _G.UE.UImageDownloader.MakeDownloader("HeadImage" .. tostring(Key), true, 200)
+    ImageDownloader.OnSuccess:Add(ImageDownloader,
+		function(_, texture)
+			if texture and Widget.IsValid and Widget:IsValid() then
+				-- _G.FLOG_INFO('[PersonHead][PersonPortraitHeadHelper][SetHeadByUrl] Download image success Key = ' .. tostring(Key))
+				-- UIUtil.ImageSetBrushResourceObject(Widget, texture)
+                UIUtil.SetIsVisible(Widget, true)
+                Widget:SetIconByTextureResource(texture)
+			end
+		end
+    )
+
+    ImageDownloader.OnFail:Add(ImageDownloader,
+		function()
+            UIUtil.SetIsVisible(Widget, true)
+			_G.FLOG_ERROR('[PersonHead][PersonPortraitHeadHelper][SetHeadByUrl] Download image failed Key = ' .. tostring(Key))
+		end
+	)
+	
+    ImageDownloader:Start(Url, "", false)
+end
+
 function Helper.GetHeadRace(Race, Gender, Tribe)
 
     local Cfg = RaceCfg:FindCfgByRaceIDGenderAndTribe(Race, Gender, Tribe)

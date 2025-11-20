@@ -34,6 +34,7 @@ function MapMgr:OnInit()
 	self.UpdateMapBit = 0
 	self.MapInfo = {}
     self.MapIconMappingByRes = {}
+	self.StreetID = 1
 end
 
 function MapMgr:OnBegin()
@@ -78,6 +79,8 @@ end
 function MapMgr:OnGameEventPWorldEnter(Params)
 	--print("MapMgr:OnGameEventPWorldEnter")
 	self:UpdateMapInfo()
+	local BaseInfo = PWorldMgr.BaseInfo
+	self.StreetID = BaseInfo.OwnerID & 0xFFFF --最低16位是小区
 end
 
 function MapMgr:OnGameEventMapRangeChanged(Params)
@@ -141,7 +144,6 @@ function MapMgr:UpdateMapInfo(UIMapID)
 
 	self.UIMapID = UIMapID
 	self.MapID = MapID
-
 	local MapInfo = self.MapInfo
 	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
 	if nil == Cfg then
@@ -252,6 +254,12 @@ end
 function MapMgr:GetMapID()
 	return PWorldMgr:GetCurrMapResID()
 end
+
+---主角当前所在房屋住宅区街区ID（小区）
+function MapMgr:GetStreetID()
+	return self.StreetID
+end
+
 
 ---获取npc头顶图标
 ---@param EntityID number

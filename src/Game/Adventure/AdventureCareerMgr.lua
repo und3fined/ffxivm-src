@@ -36,6 +36,7 @@ local CareerTaskIDMap = {}
 
 local CareerChapterCfg = {}
 local CareerQuestCfg = {}
+local CacheRoleDetail
 
 local TaskStateIcon = {
     [QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED] = "PaperSprite'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_Plus_Missed_png.UI_Icon_Hud_Plus_Missed_png'",
@@ -62,11 +63,13 @@ end
 function AdventureCareerMgr:OnEnd()
     self.ChildList = {}
     self.AllRedRecordData = {}
+    CacheRoleDetail = nil
 end
 
 function AdventureCareerMgr:OnShutdown()
     self.ChildList = {}
     self.AllRedRecordData = {}
+    CacheRoleDetail = nil
 end
 
 function AdventureCareerMgr:OnGameEventLoginRes(Params)
@@ -101,6 +104,8 @@ function AdventureCareerMgr:GetChapterCfgData(ChapterID)
 end
 
 function AdventureCareerMgr:GetQuestCfgData(QuestID)
+    if not QuestID then return end
+
     if not CareerQuestCfg[QuestID] then
         local Cfg = QuestCfg:FindCfgByKey(QuestID)
         CareerQuestCfg[QuestID] = Cfg or {}
@@ -148,8 +153,8 @@ end
 
 function AdventureCareerMgr:GetCurProfChangeProfData(Prof, IsAdvenTureJob)
     local Conditon = IsAdvenTureJob and ProtoRes.ProfCareerRewardType.ChangeProf or ProtoRes.ProfCareerRewardType.UnlockProf
-    if next(CareerTaskData) and CareerTaskData[Prof] then
-        local CurProfTaskData = CareerTaskData[Prof]
+    local CurProfTaskData = self:GetCurProfTaskData(Prof)
+    if next(CurProfTaskData) then
         for i, v in ipairs(CurProfTaskData) do
             if v.RewardType and v.RewardType == Conditon then
                 local ChapterCfg = self:GetChapterCfgData(v.ChapterID)
@@ -160,7 +165,6 @@ function AdventureCareerMgr:GetCurProfChangeProfData(Prof, IsAdvenTureJob)
                     AcceptUIMapID = StartQuestCfg.AcceptUIMapID,
                     StartQuestID = StartQuestCfg.id,
                 }
-
                 return Data
             end
         end
@@ -185,13 +189,19 @@ function AdventureCareerMgr:GetTaskDetailData(ChapterID)
     return CareerTaskIDMap[ChapterID] or {}
 end
 
+local function GetMajorRoleDetail()
+    local MajorRoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+    CacheRoleDetail = not table.is_nil_empty(MajorRoleDetail) and MajorRoleDetail or CacheRoleDetail
+    return CacheRoleDetail or {}
+end
+
 function AdventureCareerMgr:CheckTaskActivate(StartQuestID, ChapterID, TaskData)
     local ChapterCfg = self:GetChapterCfgData(ChapterID)
     if not ChapterCfg then return false end
     local QuestCfgItem = self:GetQuestCfgData(StartQuestID)
     if not QuestCfgItem then return false end
 
-    local MajorRoleData = _G.ActorMgr:GetMajorRoleDetail() or {}
+    local MajorRoleData = GetMajorRoleDetail()
     local ProfDetailList = MajorRoleData.Prof and MajorRoleData.Prof.ProfList or {}
     local ProfData = ProfDetailList[TaskData.Prof] or {}
     local CurLevel = ProfData and ProfData.Level or 0
@@ -262,11 +272,11 @@ local function MakeTaskStatusData(ChapterID, TaskData)
     end
 
     local ServerTime = TimeUtil.GetServerTime()
-    local CurDayZeroTime = TimeUtil.GetCurTimeStampZero(ServerTime)
+    local CurDayZeroTime = TimeUtil.GetCurTimeStampZeroLocal(ServerTime)
     if TaskData.RewardType == ProtoRes.ProfCareerRewardType.ChangeProf and Data.Activate and Data.Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED then
         local AdventureRedData = AdventureMgr:GetAdventureTaskSaveData()
         if AdventureRedData[string.format("SeenProf%dTime", TaskData.Prof)] then
-            local LastSeenZero = TimeUtil.GetCurTimeStampZero(tonumber(AdventureRedData[string.format("SeenProf%dTime", TaskData.Prof)]))
+            local LastSeenZero = TimeUtil.GetCurTimeStampZeroLocal(tonumber(AdventureRedData[string.format("SeenProf%dTime", TaskData.Prof)]))
             if CurDayZeroTime ~= LastSeenZero then
                 Data.ChangeProfTaskRed = true
             end
@@ -339,8 +349,12 @@ end
 function AdventureCareerMgr:GetAdventureCareerTaskDataByProf(ProfDetail)
     local FinalTaskData = {}
     local RoleSimple = MajorUtil.GetMajorRoleSimple()
-    local RegProf = RoleSimple.RegProf
+    if not RoleSimple then
+        FLOG_INFO("Zyh GetAdventureCareerTaskDataByProf GetMajorRoleSimple Empty")
+        return {}
+    end
 
+    local RegProf = RoleSimple.RegProf
     if ProfDetail then
         local TaskData = self:GetCurProfTaskData(ProfDetail.Prof)
         for i, v in ipairs(TaskData) do
@@ -368,7 +382,11 @@ function AdventureCareerMgr:InitProfCareerChildList()
     self.ClassTypeData = {}
     self:InitTaskData()
     local ChildTab = {}
-    local RoleDetail = _G.ActorMgr:GetMajorRoleDetail() or {}
+    local RoleDetail = GetMajorRoleDetail()
+    if not next(RoleDetail) then
+		FLOG_ERROR('AdventureCareerMgr:InitProfCareerChildList GetMajorRoleDetail Error')
+	end
+
     local ProfDetailList = RoleDetail.Prof and RoleDetail.Prof.ProfList or {}
     local HasUnlockSpecial = {}     -- 已经解锁了特职的基职集合
     if not next(ProfDetailList) then return {} end
@@ -408,7 +426,7 @@ function AdventureCareerMgr:InitProfCareerChildList()
 				    else
                         if ProfLevel > 0 and not ItemData.bActive and ProfCfg then
                         --未解锁的有基职的特职不显示
-                        elseif ItemData.AdvancedProf ~= 0 and EquipmentVM.lstProfDetail and EquipmentVM.lstProfDetail[ItemData.AdvancedProf] then
+                        elseif ItemData.AdvancedProf ~= 0 and (EquipmentVM.lstProfDetail[ItemData.AdvancedProf] or MajorUtil.GetMajorLevelByProf(ItemData.AdvancedProf)) then
                         --解锁特职的基职不显示
                             HasUnlockSpecial[ItemData.AdvancedProf] = ItemData.Prof
                         else
@@ -449,11 +467,11 @@ function AdventureCareerMgr:GetCurClassTypeData(ClassType)
         end
     end
 
-    return self.ClassTypeData[ClassType]
+    return self.ClassTypeData[ClassType] or {}
 end
 
 function AdventureCareerMgr:GetCurClassDropDownData(ClassType, ProfID)
-    local CurClassData = self:GetCurClassTypeData(ClassType) or {}
+    local CurClassData = AdventureCareerMgr:GetCurClassTypeData(ClassType) or {}
     local DropDownData = {}
 	local MajorProfID = MajorUtil.GetMajorProfID()
     local FirstSelectProfID = ProfID or MajorProfID
@@ -551,7 +569,7 @@ end
 
 --- 解锁特职时 特职基职任务合并 红点按照特职prof处理增删
 function AdventureCareerMgr:GetRealProfByTabProf(Prof)
-    local RoleDetail = _G.ActorMgr:GetMajorRoleDetail() or {}
+    local RoleDetail = GetMajorRoleDetail()
     local ProfDetailList = RoleDetail.Prof and RoleDetail.Prof.ProfList or {}
     local AdvanceProf = RoleInitCfg:FindProfAdvanceProf(Prof) or 0
     if AdvanceProf ~= 0 and ProfDetailList[AdvanceProf] then
@@ -625,7 +643,7 @@ function AdventureCareerMgr:OnLevelUpEvent(RoleDetail)
         self:UnRegisterTimer(self.LevelUpCheckTimer)
     end
 
-    self.LevelUpCheckTimer = self:RegisterTimer(CheckLevelUpRed, 2, 0, 1)
+    self.LevelUpCheckTimer = self:RegisterTimer(CheckLevelUpRed, 3, 0, 1)
 end
 
 function AdventureCareerMgr:IsCurTaskNeedRemindRed(ChapterID, Prof)
@@ -735,7 +753,7 @@ function AdventureCareerMgr:JumpChapterOnMap(ChapterID)
 		local WorldMapPanel = _G.UIViewMgr:FindView(_G.UIViewID.WorldMapPanel)
 		local MarkerView = WorldMapPanel.MapContent:GetMapMarkerByID(StartQuestCfg.id)
 		self:RegisterTimer(function()
-			if MarkerView then
+			if MarkerView and MarkerView.AnimNew then
 				MarkerView:playAnimation(MarkerView.AnimNew)
 			end
 		end, 0, 2.97, 3)
@@ -749,7 +767,21 @@ function AdventureCareerMgr:JumpChapterOnMap(ChapterID)
 				TargetQuestID = VM.QuestID
 				if (MapID == nil) or (MapID == 0) then return end
 				local UIMapID = MapUtil.GetUIMapID(MapID)
-				_G.WorldMapMgr:ShowWorldMapQuest(MapID, UIMapID, TargetQuestID)
+                local TrackTargetID = VM.TrackTargetID
+                if TrackTargetID then
+                    local QuestHelper = require("Game/Quest/QuestHelper")
+                    local TargetCfgItem = QuestHelper.GetTargetCfgItem(TargetQuestID, TrackTargetID)
+                    if TargetCfgItem then
+                        if TargetCfgItem.UIMapID > 0 then
+                            UIMapID = TargetCfgItem.UIMapID
+                        end
+                    end
+    
+                    _G.WorldMapMgr:ShowWorldMapQuest(MapID, UIMapID, TargetQuestID)
+                else
+                    _G.UIViewMgr:ShowView(_G.UIViewID.QuestLogMainPanel, { QuestID = ChapterID })
+                end
+
 				break
 			end
 		end

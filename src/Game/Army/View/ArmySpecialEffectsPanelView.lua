@@ -28,8 +28,8 @@ local TipsUtil = require("Utils/TipsUtil")
 ---@class ArmySpecialEffectsPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
----@field BtnHelp CommInforBtnView
 ---@field BtnPriceTips UFButton
+---@field CommonTitle CommonTitleView
 ---@field ImgArmyIcon UFImage
 ---@field ImgBG UFImage
 ---@field ImgMask UFImage
@@ -40,8 +40,6 @@ local TipsUtil = require("Utils/TipsUtil")
 ---@field TableViewSkillList UTableView
 ---@field TableViewWorking UTableView
 ---@field TextBuff UFTextBlock
----@field TextTitle UFTextBlock
----@field TextTitle02 UFTextBlock
 ---@field TextWorking UFTextBlock
 ---@field AnimBGID1 UWidgetAnimation
 ---@field AnimBGID2 UWidgetAnimation
@@ -54,8 +52,8 @@ local ArmySpecialEffectsPanelView = LuaClass(UIView, true)
 function ArmySpecialEffectsPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
-	--self.BtnHelp = nil
 	--self.BtnPriceTips = nil
+	--self.CommonTitle = nil
 	--self.ImgArmyIcon = nil
 	--self.ImgBG = nil
 	--self.ImgMask = nil
@@ -66,8 +64,6 @@ function ArmySpecialEffectsPanelView:Ctor()
 	--self.TableViewSkillList = nil
 	--self.TableViewWorking = nil
 	--self.TextBuff = nil
-	--self.TextTitle = nil
-	--self.TextTitle02 = nil
 	--self.TextWorking = nil
 	--self.AnimBGID1 = nil
 	--self.AnimBGID2 = nil
@@ -80,7 +76,7 @@ end
 function ArmySpecialEffectsPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
-	self:AddSubView(self.BtnHelp)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.MoneySlot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -106,7 +102,7 @@ function ArmySpecialEffectsPanelView:OnInit()
 		{"GainNum", UIBinderValueChangedCallback.New(self, nil, self.OnGainNumChanged)},
 		{"CurBonusStateGroupName", UIBinderSetText.New(self, self.TextBuff)}, 
 		{"CurBonusStateGroupDesc", UIBinderSetText.New(self, self.RichTextBuff)}, 
-		{"BonusStateNumStr", UIBinderSetText.New(self, self.TextTitle02)}, 
+		{"BonusStateNumStr", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)}, 
 		{"GrandTypeIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgBG)}, 
         {"GrandCompanyType", UIBinderValueChangedCallback.New(self, nil, self.OnGrandCompanyTypeChange)},
 		{"BGMaskColor", UIBinderSetColorAndOpacityHex.New(self, self.ImgMask) },
@@ -124,7 +120,7 @@ end
 
 function ArmySpecialEffectsPanelView:OnShow()
 	-- LSTR string:部队特效
-	self.TextTitle:SetText(LSTR(910257))
+	self.CommonTitle:SetTextTitleName(LSTR(910257))
 	-- LSTR string:当前生效
 	self.TextWorking:SetText(LSTR(910323))
 	--- 背景动画循环播放

@@ -15,6 +15,7 @@ local EventID = require("Define/EventID")
 local SkillBtnState = require("Game/Skill/SkillButtonStateMgr").SkillBtnState
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local SkillMainCfg = require("TableCfg/SkillMainCfg")
+local CombatPanelBuffCfg = require("TableCfg/CombatPanelBuffCfg")
 local PworldCfg = require("TableCfg/PworldCfg")
 local SceneSkillCfg = require("TableCfg/SceneSkillCfg")
 local MajorUtil = require("Utils/MajorUtil")
@@ -27,6 +28,7 @@ local ObjectGCType = require("Define/ObjectGCType")
 local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
 local SkillUtil = require("Utils/SkillUtil")
 local ActorUtil = require("Utils/ActorUtil")
+local SkillActionUtil = require("Game/Skill/SkillAction/SkillActionUtil")
 local ProfUtil = require("Game/Profession/ProfUtil")
 local MsgTipsID = require("Define/MsgTipsID")
 local CommonUtil = require("Utils/CommonUtil")
@@ -80,6 +82,7 @@ function SkillLogicMgr:OnInit()
     SkillCustomMgr = _G.SkillCustomMgr
     USelectEffectMgr = _G.UE.USelectEffectMgr.Get()
     GetCurrSelectedTarget = USelectEffectMgr.GetCurrSelectedTarget
+    SkillActionUtil.Init()
 
     self.ReqSkillListTimerID = 0
     self.bAutoGenSkillAttack = false    --这个只是记录设置，得用CanAutoGenSkillAttack这个接口判定能否自动工具生效
@@ -146,6 +149,8 @@ function SkillLogicMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MajorChangeSkillWeight, self.OnMajorChangeSkillWeight)
 
     self:RegisterGameEvent(EventID.AttackEffectChange, self.OnGameEventAttackEffectChange)
+
+    self:RegisterGameEvent(EventID.PWorldExit, self.OnGameEventPWorldExit)
 end
 
 function SkillLogicMgr:OnRegisterTimer()
@@ -236,9 +241,9 @@ function SkillLogicMgr:OnNetMsgCombatReviseSkill(MsgBody)
 end
 
 ---------------------技能列表初始化-----------------
-function SkillLogicMgr:RequireServerSkill()
+function SkillLogicMgr:RequireServerSkill(bResetTrigger)
     print("[SkillLogicMgr] RequireServerSkill")
-    _G.MajorTriggerSkillMgr:ReqTriggerSkillList()
+    _G.MajorTriggerSkillMgr:ReqTriggerSkillList(bResetTrigger)
     self:ReqSkillAttrSyncList()
     self:ReqSkillList()
 end
@@ -348,7 +353,9 @@ function SkillLogicMgr:PostMajorUnlockSkillQueue(ProfID, OldLevel, NewLevel, IsA
                 if ProfID == MajorUtil.GetMajorProfID()  then
                     table.insert(MajorLogicData.NotFirstSkillUnlockList, {SkillID = SkillID, ProfID = ProfID})
                 end
-                _G.ModuleOpenMgr:OnSkillUnlock(SkillCfg.Icon, SkillCfg.SkillName, value.IconJob, SkillID, ProfID)
+                if not _G.UpgradeMgr.IsOnDirectUpState then
+                    _G.ModuleOpenMgr:OnSkillUnlock(SkillCfg.Icon, SkillCfg.SkillName, value.IconJob, SkillID, ProfID)
+                end
             end      
         end
     end
@@ -498,7 +505,7 @@ function SkillLogicMgr:OnGameEventMajorCreate()
     MajorLogicData.ServerSkillSyncInfo = self.MajorServerSkillSyncInfo
 
     _G.MainProSkillMgr:ReqSpectrumData()
-    self:RequireServerSkill()
+    self:RequireServerSkill(true)
     
     _G.SkillSeriesMgr:ClearQueueSkillsCache()
 
@@ -524,10 +531,12 @@ function SkillLogicMgr:OnGameEventMajorCreate()
 
     -- init team skills
     _G.TeamMgr.InitMajorTeamSkills()
+    _G.MountMgr.InitMajorMountSkills()
 end
 
 function SkillLogicMgr:OnNetworkReconnected(Params)
 	if Params.bRelay == false then
+        self.MajorServerSkillSyncInfo.SkillCostList = {}    --断线重连时应当清空技能消耗修正(闪断不用)
         MainPanelVM:SetControlPanelAttrExist(false)
     end
     if self.bIsRequiringSkillList then
@@ -927,6 +936,10 @@ function SkillLogicMgr:OnNetMsgCombatSSyncSkillRes(MsgBody)
     end
 end
 
+function SkillLogicMgr:OnGameEventPWorldExit(_)
+    self.MajorServerSkillSyncInfo.SkillCostList = {}
+end
+
 function SkillLogicMgr:IsSkillLearned(EntityID, SkillID)
     local LogicData = self:GetSkillLogicData(EntityID)
     if LogicData then
@@ -1155,21 +1168,6 @@ function SkillLogicMgr:AddMajorDieMsg(Params)
     _G.ChatMgr:AddSysChatMsgBattle(Content)
 end
 
-function SkillLogicMgr:CanAutoGenSkillAttack()
-    if self.bAutoGenSkillAttack then
-        --Pvp区域
-        local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
-        local bPVP = PworldCfg:FindValue(CurrPWorldResID, "CanPK")
-        if bPVP ~= 0 then
-            return false
-        end
-
-        return true
-    end
-
-    return false
-end
-
 function SkillLogicMgr:PushSysChatMsgBattle(Params)
     -- local _ <close> = CommonUtil.MakeProfileTag("PushSysChatMsgBattle")
     if nil == Params then
@@ -1179,6 +1177,37 @@ function SkillLogicMgr:PushSysChatMsgBattle(Params)
     if nil == self.SysChatMsgBattleTimerID then
         self.SysChatMsgBattleTimerID = _G.TimerMgr:AddTimer(self, self.PopSysChatMsgBattle, 0, 0.5, 0, nil, "PopSysChatMsgBattle")
     end
+end
+
+function SkillLogicMgr:CanAutoGenSkillAttack()
+    if self.bAutoGenSkillAttack then
+        --Pvp区域
+        local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
+        local bPVP = PworldCfg:FindValue(CurrPWorldResID, "CanPK")
+        if bPVP ~= 0 then
+            return false
+        end
+
+        -- 是否存在禁用自动普攻的buff
+        local ForbidGenAttackBuffList = _G.SkillBuffMgr:GetBuffList(
+            function(_, Val)
+                local BuffID = Val.BuffID
+                local Cfg = CombatPanelBuffCfg:FindCfgByKey(BuffID)
+                if Cfg and Cfg.bForbidGenAttack then
+                    return true
+                end
+                return false
+            end
+        )
+
+        if not table.is_nil_empty(ForbidGenAttackBuffList) then
+            return false
+        end
+
+        return true
+    end
+
+    return false
 end
 
 function SkillLogicMgr:AddSysChatMsgBattleFromList()
@@ -1193,7 +1222,7 @@ function SkillLogicMgr:AddSysChatMsgBattleFromList()
         elseif ChatParams.ChatType == SYSCHATMSGBATTLETYPE_MAJORDIE then
             self:AddMajorDieMsg(ChatParams)
         elseif ChatParams.ChatType == SYSCHATMSGBATTLETYPE_MAJORREVIVE then
-            local Content = RichTextUtil.GetText(string.format("%s", LSTR(140091)), "d1ba8e", 0, nil)
+            local Content = RichTextUtil.GetText(string.format("%s", LSTR(140091)), "d1ba8e")
             _G.ChatMgr:AddSysChatMsgBattle(Content)
         elseif ChatParams.ChatType == SYSCHATMSGBATTLETYPE_USEITEM then
             _G.ChatMgr:ShowUseItemInSysChatMsgBattle(ChatParams.GID, ChatParams.ResID)

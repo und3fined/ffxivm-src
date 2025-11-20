@@ -13,10 +13,25 @@ local ChatGlobalCfg = {
     },
     DefaultValues = {
         ID = 1,
-        _Val = '[9999]',
+        _Val = '[6]',
     },
 	LuaData = {
         {
+            _Val = '[9999]',
+        },
+        {
+            ID = 3,
+        },
+        {
+            ID = 4,
+            _Val = '[14]',
+        },
+        {
+            ID = 5,
+        },
+        {
+            ID = 6,
+            _Val = '[40]',
         },
 	},
 }

@@ -453,6 +453,8 @@ function SceneMarkersMainPanelView:GetIgnoreObjects()
 	local MapResID = PWorldMgr:GetCurrMapResID()
 	_G.SignsMgr:ClearIgnoreActors()
 
+	--这里是一些查询时的需要忽略的ACTOR列表，这些ACTOR会影响查询射线打到地面，后面要整体解决，先用这个对象列表的方式解决
+
 	if MapResID == 2017 then
 		local Actors = TArray(AActor)
 		UGameplayStatics.GetAllActorsOfClass(_G.FWORLD(), AStaticMeshActor.StaticClass(), Actors)

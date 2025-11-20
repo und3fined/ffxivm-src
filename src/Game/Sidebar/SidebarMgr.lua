@@ -15,6 +15,7 @@ local SidebarVM = require("Game/Sidebar/VM/SidebarVM")
 local TimeUtil = require("Utils/TimeUtil")
 local SidebarCfg = require("TableCfg/SidebarCfg")
 
+local FLOG_WARNING = _G.FLOG_WARNING
 local DetailViewIDMap = SidebarDefine.DetailViewIDMap
 
 local SidebarMgr = LuaClass(MgrBase)
@@ -69,15 +70,26 @@ function SidebarMgr:OnTimer()
 
     local CurTime = TimeUtil.GetServerTime()
     local Items = ItemVMList:GetItems()
+    local ItemsToRemove = {}
 
     for _, v in ipairs(Items) do
         local StartTime = v.StartTime 
         local CountDown = v.CountDown
         if StartTime and CountDown and CountDown > 0 then
             if CurTime >= (StartTime + CountDown) then
-                EventMgr:SendEvent(EventID.SidebarItemTimeOut, v.Type, v.TransData)
+                if not v.bNotNotifyTimeout then
+                    EventMgr:SendEvent(EventID.SidebarItemTimeOut, v.Type, v.TransData)
+                end
+                if v.bTimeoutAutoRemove then
+                    table.insert(ItemsToRemove, v)
+                end
             end
         end
+    end
+
+
+    for _, v in  ipairs(ItemsToRemove) do
+        self:RemoveSidebarItem(v.Type)
     end
 end
 
@@ -92,8 +104,9 @@ end
 ---@param IsTryOpenWin boolean @是否尝试打开侧边栏界面
 ---@param Tips string @提示信息，默认 ""
 ---@param LoopAnimName string @待循环播放的动效名
-function SidebarMgr:AddSidebarItem( Type, StartTime, CountDown, TransData, IsTryOpenWin, Tips, LoopAnimName )
-    SidebarVM:AddItem(Type, StartTime or 0, CountDown or 0, TransData, Tips or "", LoopAnimName)
+---@param Desc string 第二行描述文本，默认""
+function SidebarMgr:AddSidebarItem( Type, StartTime, CountDown, TransData, IsTryOpenWin, Tips, LoopAnimName, Desc )
+    local Item = SidebarVM:AddItem(Type, StartTime or 0, CountDown or 0, TransData, Tips or "", LoopAnimName, Desc)
 
     local ItemNum = SidebarVM.ItemNum
     if ItemNum and ItemNum > 0 and nil == self.TimerID then
@@ -104,6 +117,28 @@ function SidebarMgr:AddSidebarItem( Type, StartTime, CountDown, TransData, IsTry
     if IsTryOpenWin ~= false and ItemNum == 1 then
         self:TryOpenSidebarMainWin()
     end
+
+    return Item
+end
+
+---添加侧边栏项 (新)
+---@param Params SidebarItemParam
+function SidebarMgr:AddOrUpdateSidebarItem(Params)
+    local Item = self:GetSidebarItemVM(Params.Type)
+    if Item == nil then
+       Item = self:AddSidebarItem(Params.Type,Params.StartTime, Params.CountDown, Params.TransData, false, Params.Tips, Params.LoopAnimName, Params.Desc) 
+    else
+        Item:UpdateVM(Params)
+    end
+
+    Item:SetTimeoutAutoRemove(Params.bTimeoutAutoRemove)
+    Item:SetNotNotifyTimeout(Params.bNotNotifyTimeout)
+
+    if Params.IsTryOpenWin then
+       self:TryOpenSidebarMainWin() 
+    end
+
+    return Item
 end
 
 --删除侧边栏项
@@ -171,20 +206,12 @@ end
 
 ---尝试打开侧边栏主界面
 function SidebarMgr:TryOpenSidebarMainWin( )
-    local IsShowing = function(VID)
-        if not VID then
-           return false
-        end
-
-        return UIViewMgr:IsViewVisible(VID) and (UIViewMgr:FindView(VID) or {}).IsHiding ~= true
-    end
-
-    if (SidebarVM.ItemNum or 0) <= 0 or IsShowing(UIViewID.SidebarMain) then
+    if (SidebarVM.ItemNum or 0) <= 0 or UIViewMgr:IsViewVisible(UIViewID.SidebarMain) then
         return
     end
 
     for VID in pairs(DetailViewIDMap) do
-        if IsShowing(VID) then
+        if UIViewMgr:IsViewVisible(VID) then
             return
         end
     end
@@ -199,6 +226,42 @@ function SidebarMgr:GetShowTimeByType(Type)
     if Cfg then
         return Cfg.ShowTime
     end
+end
+
+--- 显示通用侧边栏界面
+---@param Params table @透传参数
+function SidebarMgr:ShowCommonSidebarWin(Params)
+    if nil == Params then
+        return
+    end
+
+	local StartTime = Params.StartTime or 0
+	local CountDown = Params.CountDown or 0
+    local CurTime = TimeUtil.GetServerTime()
+	if (CurTime - StartTime) >= CountDown then
+		FLOG_WARNING("[SidebarMgr] ShowCommonSidebarWin, the countdown has ended.")
+        return
+    end
+
+    UIViewMgr:ShowView(UIViewID.SidebarCommon, Params)
+end
+
+---显示私聊侧边栏界面
+---@param Params table @透传参数
+function SidebarMgr:ShowPrivateChatSidebarWin(Params)
+    if nil == Params then
+        return
+    end
+
+	local StartTime = Params.StartTime or 0
+	local CountDown = Params.CountDown or 0
+    local CurTime = TimeUtil.GetServerTime()
+	if (CurTime - StartTime) >= CountDown then
+		FLOG_WARNING("[SidebarMgr] ShowPrivateChatSidebarWin, the countdown has ended.")
+        return
+    end
+
+    UIViewMgr:ShowView(UIViewID.SidebarPrivateChat, Params)
 end
 
 return SidebarMgr

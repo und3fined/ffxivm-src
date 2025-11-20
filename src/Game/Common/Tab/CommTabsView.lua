@@ -18,39 +18,46 @@ end
 ---@field BtnItem UFButton
 ---@field BtnItem2 UFButton
 ---@field BtnItem3 UFButton
+---@field BtnItem4 UFButton
 ---@field FHorizontalSlot UFHorizontalBox
 ---@field ImgBrightBG UFImage
 ---@field ImgBtnSelect UFImage
 ---@field ImgBtnSelect2 UFImage
 ---@field ImgBtnSelect3 UFImage
----@field ImgBtnSelectBright UFImage
----@field ImgBtnSelectBright2 UFImage
----@field ImgBtnSelectBright3 UFImage
+---@field ImgBtnSelect4 UFImage
 ---@field ImgIconNormal UFImage
 ---@field ImgIconNormal2 UFImage
 ---@field ImgIconNormal3 UFImage
+---@field ImgIconNormal4 UFImage
 ---@field ImgIconSelect UFImage
 ---@field ImgIconSelect2 UFImage
 ---@field ImgIconSelect3 UFImage
+---@field ImgIconSelect4 UFImage
 ---@field ImgLightBG UFImage
 ---@field PanelNormal UFCanvasPanel
 ---@field PanelNormal2 UFCanvasPanel
 ---@field PanelNormal3 UFCanvasPanel
+---@field PanelNormal4 UFCanvasPanel
 ---@field PanelSelect UFCanvasPanel
 ---@field PanelSelect2 UFCanvasPanel
 ---@field PanelSelect3 UFCanvasPanel
+---@field PanelSelect4 UFCanvasPanel
 ---@field PanelSlot UFCanvasPanel
 ---@field PanelSlot2 UFCanvasPanel
 ---@field PanelSlot3 UFCanvasPanel
+---@field PanelSlot4 UFCanvasPanel
 ---@field PanelTab UFCanvasPanel
 ---@field PanelTab2 UFCanvasPanel
 ---@field PanelTab3 UFCanvasPanel
+---@field PanelTab4 UFCanvasPanel
 ---@field RedDotSlot CommonRedDotView
 ---@field RedDotSlot2 CommonRedDotView
 ---@field RedDotSlot3 CommonRedDotView
+---@field RedDotSlot4 CommonRedDotView
 ---@field TextTabName UFTextBlock
 ---@field TextTabName2 UFTextBlock
 ---@field TextTabName3 UFTextBlock
+---@field TextTabName4 UFTextBlock
 ---@field TypeToggleBtn UFCanvasPanel
 ---@field ParamShowIcon bool
 ---@field ParamShowText bool
@@ -74,39 +81,46 @@ function CommTabsView:Ctor()
 	--self.BtnItem = nil
 	--self.BtnItem2 = nil
 	--self.BtnItem3 = nil
+	--self.BtnItem4 = nil
 	--self.FHorizontalSlot = nil
 	--self.ImgBrightBG = nil
 	--self.ImgBtnSelect = nil
 	--self.ImgBtnSelect2 = nil
 	--self.ImgBtnSelect3 = nil
-	--self.ImgBtnSelectBright = nil
-	--self.ImgBtnSelectBright2 = nil
-	--self.ImgBtnSelectBright3 = nil
+	--self.ImgBtnSelect4 = nil
 	--self.ImgIconNormal = nil
 	--self.ImgIconNormal2 = nil
 	--self.ImgIconNormal3 = nil
+	--self.ImgIconNormal4 = nil
 	--self.ImgIconSelect = nil
 	--self.ImgIconSelect2 = nil
 	--self.ImgIconSelect3 = nil
+	--self.ImgIconSelect4 = nil
 	--self.ImgLightBG = nil
 	--self.PanelNormal = nil
 	--self.PanelNormal2 = nil
 	--self.PanelNormal3 = nil
+	--self.PanelNormal4 = nil
 	--self.PanelSelect = nil
 	--self.PanelSelect2 = nil
 	--self.PanelSelect3 = nil
+	--self.PanelSelect4 = nil
 	--self.PanelSlot = nil
 	--self.PanelSlot2 = nil
 	--self.PanelSlot3 = nil
+	--self.PanelSlot4 = nil
 	--self.PanelTab = nil
 	--self.PanelTab2 = nil
 	--self.PanelTab3 = nil
+	--self.PanelTab4 = nil
 	--self.RedDotSlot = nil
 	--self.RedDotSlot2 = nil
 	--self.RedDotSlot3 = nil
+	--self.RedDotSlot4 = nil
 	--self.TextTabName = nil
 	--self.TextTabName2 = nil
 	--self.TextTabName3 = nil
+	--self.TextTabName4 = nil
 	--self.TypeToggleBtn = nil
 	--self.ParamShowIcon = nil
 	--self.ParamShowText = nil
@@ -126,6 +140,7 @@ function CommTabsView:OnRegisterSubView()
 	self:AddSubView(self.RedDotSlot)
 	self:AddSubView(self.RedDotSlot2)
 	self:AddSubView(self.RedDotSlot3)
+	self:AddSubView(self.RedDotSlot4)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -136,19 +151,19 @@ function CommTabsView:OnInit()
 	self.ColorNormal = nil
 	self.ColorSelect = nil
 	self:SetTabStyle(self.TabStyle)
-	self.ImgBtnSelectList = {[1] = self.ImgBtnSelect, [2] = self.ImgBtnSelect2, [3] = self.ImgBtnSelect3}
-	self.ImgIconNormalList = {[1] = self.ImgIconNormal, [2] = self.ImgIconNormal2, [3] = self.ImgIconNormal3}
-	self.ImgIconSelectList = {[1] = self.ImgIconSelect, [2] = self.ImgIconSelect2, [3] = self.ImgIconSelect3}
+	self.ImgBtnSelectList = {[1] = self.ImgBtnSelect, [2] = self.ImgBtnSelect2, [3] = self.ImgBtnSelect3, [4] = self.ImgBtnSelect4}
+	self.ImgIconNormalList = {[1] = self.ImgIconNormal, [2] = self.ImgIconNormal2, [3] = self.ImgIconNormal3, [4] = self.ImgIconNormal4}
+	self.ImgIconSelectList = {[1] = self.ImgIconSelect, [2] = self.ImgIconSelect2, [3] = self.ImgIconSelect3, [4] = self.ImgIconSelect4}
 
-	self.TextlList = {[1] = self.TextTabName, [2] = self.TextTabName2, [3] = self.TextTabName3}
-	self.PanelTabList = {[1] = self.PanelTab, [2] = self.PanelTab2, [3] = self.PanelTab3}
+	self.TextlList = {[1] = self.TextTabName, [2] = self.TextTabName2, [3] = self.TextTabName3, [4] = self.TextTabName4}
+	self.PanelTabList = {[1] = self.PanelTab, [2] = self.PanelTab2, [3] = self.PanelTab3, [4] = self.PanelTab4}
 	self:InitViewWithIcon()
 end
 
 function CommTabsView:InitViewWithIcon()
 	---根据蓝图中的参数默认显示图标
 	local ListData = {}
-	for i=1, self.ParamItems:Length() do
+	for i = 1, self.ParamItems:Length() do
 		local ParamItem = self.ParamItems[i]
 		if ParamItem then
 			local IconPath = {}
@@ -157,13 +172,10 @@ function CommTabsView:InitViewWithIcon()
 			table.insert(ListData, IconPath)
 		end
 	end
-	if #ListData >= 3 then
-		UIUtil.SetIsVisible(self.PanelSlot3, true)
-	else
-		UIUtil.SetIsVisible(self.PanelSlot3, false)
-	end
+	UIUtil.SetIsVisible(self.PanelSlot4, #ListData == 4)
+	UIUtil.SetIsVisible(self.PanelSlot3, #ListData == 3)
 	for i = 1, #ListData do
-		if i > 3 then
+		if i > 4 then
 			return
 		end
 		local ItemData = ListData[i]
@@ -177,7 +189,7 @@ function CommTabsView:InitViewWithIcon()
 		UIUtil.SetIsVisible(self.ImgIconNormalList[i], true)
 		UIUtil.SetIsVisible(self.ImgIconSelectList[i], true)
 	end
-	for i = #ListData + 1, 3 do
+	for i = #ListData + 1, 4 do
 		UIUtil.SetIsVisible(self.PanelTabList[i], false)
 	end
 end
@@ -194,9 +206,10 @@ function CommTabsView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnItem, self.SetSelectedIndex, 1)
 	UIUtil.AddOnClickedEvent(self, self.BtnItem2, self.SetSelectedIndex, 2)
 	UIUtil.AddOnClickedEvent(self, self.BtnItem3, self.SetSelectedIndex, 3)
+	UIUtil.AddOnClickedEvent(self, self.BtnItem4, self.SetSelectedIndex, 4)
 end
 
-function CommTabsView:SetSelectedIndex(Index)
+function CommTabsView:SetSelectedIndex(Index, bForceInvokeCallback)
 	--该处逻辑为所有未选中Tab的选中节点都设置未false.蓝图侧已经修改，只保留了一个节点用于在选中和未选中状态间切换
 	ProcessElements(self.ImgBtnSelectList, Index, function(Element)	
 		UIUtil.ImageSetBrushFromAssetPath(Element, self.ImageNormal) 
@@ -213,7 +226,7 @@ function CommTabsView:SetSelectedIndex(Index)
 	UIUtil.SetIsVisible(self.ImgBtnSelectList[Index], true)
 	local bSelectChanged = Index ~= self.SelectIndex
 	self.SelectIndex = Index
-	if self.CallBack ~= nil and  bSelectChanged then
+	if self.CallBack ~= nil and bSelectChanged or bForceInvokeCallback == true then
 		self.CallBack(self.View, Index)
 	end
 end
@@ -222,13 +235,10 @@ function CommTabsView:UpdateItemsByValue(ListData)
 	if nil == ListData then
 		return
 	end
-	if #ListData >= 3 then
-		UIUtil.SetIsVisible(self.PanelSlot3, true)
-	else
-		UIUtil.SetIsVisible(self.PanelSlot3, false)
-	end
+	UIUtil.SetIsVisible(self.PanelSlot3, #ListData == 3)
+	UIUtil.SetIsVisible(self.PanelSlot4, #ListData == 4)
 	for i = 1, #ListData do
-		if i > 3 then
+		if i > 4 then
 			return
 		end
 		local ItemData = ListData[i]
@@ -260,7 +270,7 @@ function CommTabsView:UpdateItemsByValue(ListData)
 			UIUtil.SetIsVisible(self.ImgIconSelectList[i], false)
 		end
 	end
-	for i = #ListData + 1, 3 do
+	for i = #ListData + 1, 4 do
 		UIUtil.SetIsVisible(self.PanelTabList[i], false)
 	end
 end
@@ -268,9 +278,9 @@ end
 ---UpdateItems
 ---@param ListData table @ 显示文字时：{ { Name = "Item1" }, { Name = "Item2" }} 显示图标时： { { IconPathNormal = "IconPathNormal1", IconPathSelect = "IconPathSelect1" }, { IconPathNormal = "IconPathNormal2", IconPathSelect = "IconPathSelect2" } }
 ---@private SelectedIndex number @当前选中索引 从 1 开始
-function CommTabsView:UpdateItems(ListData, SelectedIndex)
+function CommTabsView:UpdateItems(ListData, SelectedIndex, bForceInvokeCallback)
 	self:UpdateItemsByValue(ListData)
-	self:SetSelectedIndex(SelectedIndex or 1)
+	self:SetSelectedIndex(SelectedIndex or 1, bForceInvokeCallback)
 end
 
 function CommTabsView:OnDestroy()
@@ -282,7 +292,7 @@ function CommTabsView:OnDestroy()
 end
 
 function CommTabsView:OnHide()
-
+	-- self.SelectIndex = nil
 end
 
 function CommTabsView:GetSelectedIndex()
@@ -319,6 +329,18 @@ function CommTabsView:SetTabStyle(TabStyle)
 		self.ColorSelect = "#ffeebb"
 		UIUtil.SetIsVisible(self.ImgBrightBG, false)
 		UIUtil.SetIsVisible(self.ImgLightBG, true)
+	end
+end
+
+---外部设置字色,在UpdateItem之前调用
+---@param ColorNormal string 未选中状态下页签的字色，如"#d5d5d5"
+---@param ColorSelect string 选中状态下页签的字色，如"#d5d5d5"
+function CommTabsView:SetTextColor(ColorNormal, ColorSelect)
+	if ColorNormal then
+		self.ColorNormal = ColorNormal
+	end
+	if ColorSelect then
+		self.ColorSelect = ColorSelect
 	end
 end
 

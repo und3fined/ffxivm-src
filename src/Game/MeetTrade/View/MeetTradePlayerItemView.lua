@@ -7,16 +7,19 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-
+local LSTR = _G.LSTR
 ---@class MeetTradePlayerItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Check UFCanvasPanel
 ---@field ConfirmEffect UFCanvasPanel
 ---@field ImgState UFImage
----@field PlayerHeadSlot PersonInfoPlayerItemView
+---@field PlayerHeadSlot CommHeadView
 ---@field TextPlayerName UFTextBlock
+---@field TextPlayerName02 UFTextBlock
+---@field TextTips UFTextBlock
 ---@field WaitEffect UFCanvasPanel
 ---@field AnimCheck UWidgetAnimation
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MeetTradePlayerItemView = LuaClass(UIView, true)
 
@@ -27,8 +30,11 @@ function MeetTradePlayerItemView:Ctor()
 	--self.ImgState = nil
 	--self.PlayerHeadSlot = nil
 	--self.TextPlayerName = nil
+	--self.TextPlayerName02 = nil
+	--self.TextTips = nil
 	--self.WaitEffect = nil
 	--self.AnimCheck = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -73,6 +79,9 @@ function MeetTradePlayerItemView:UpdateAnimationEffect(IsReadyForTrade)
 	UIUtil.SetIsVisible(self.ConfirmEffect, IsReadyForTrade)
 	if IsReadyForTrade then
 		self:PlayAnimation(self.AnimCheck)
+		self.TextTips:SetText(LSTR(1490064))
+	else
+		self.TextTips:SetText(LSTR(1490015))
 	end
 end
 return MeetTradePlayerItemView

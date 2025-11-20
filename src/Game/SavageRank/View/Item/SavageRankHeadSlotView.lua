@@ -88,7 +88,9 @@ function SavageRankHeadSlotView:OnRegisterBinder()
 	if nil == ViewModel then return end
 	self.ViewModel = ViewModel
 	local RoleID = ViewModel.RoleID
-	if RoleID then
+	--小于10位的虚假ROLEID会触发Crash
+	local IDLen = #tostring(RoleID)
+	if RoleID and IDLen >= 10 then
 		_G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
 			PersonInfoVM:UpdateRoleInfo(RoleVM)
 		end, nil, false)

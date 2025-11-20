@@ -17,16 +17,26 @@ local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 local ObjectGCType = require("Define/ObjectGCType")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local DataReportUtil = require("Utils/DataReportUtil")
+local AudioUtil = require("Utils/AudioUtil")
+local UIViewID = require("Define/UIViewID")
 
 ---@class PerformanceAssistantNewPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field BlueAreaEffectBtn UFButton
 ---@field BtnPause UFButton
----@field CountDownItem PerformanceCountDownItemView
 ---@field FinishPage PerformanceFinishPageView
+---@field ImgBgBlue UFImage
+---@field ImgBgRed UFImage
 ---@field ImgBlueBg UFImage
+---@field ImgHighBlue UFImage
+---@field ImgHighBlueBg UFImage
+---@field ImgHighRed UFImage
+---@field ImgHighRedBg UFImage
 ---@field ImgRedBg UFImage
 ---@field ItemB PerformanceAssistNewItemView
 ---@field ItemB2 PerformanceAssistNewItemView
+---@field PanelHighBlue UFCanvasPanel
+---@field PanelHighRed UFCanvasPanel
 ---@field PanelItem UFCanvasPanel
 ---@field PanelKeyboard UFCanvasPanel
 ---@field PanelKeyboardBg UFCanvasPanel
@@ -38,22 +48,35 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field PanelTrack UFCanvasPanel
 ---@field PanelTrackAll UFCanvasPanel
 ---@field ProBarSToSPlus UProgressBar
+---@field RedAreaEffectBtn UFButton
+---@field TextBlue UFTextBlock
+---@field TextRed UFTextBlock
 ---@field TextScore UFTextBlock
 ---@field TextSongName UFTextBlock
 ---@field TinyMetronome PerformanceTinyMetronomeItemView
+---@field AnimBlueBgShow UWidgetAnimation
+---@field AnimRedBgShow UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceAssistantNewPanelView = LuaClass(UIView, true)
 
 --演奏助手界面相关
 function PerformanceAssistantNewPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.BlueAreaEffectBtn = nil
 	--self.BtnPause = nil
-	--self.CountDownItem = nil
 	--self.FinishPage = nil
+	--self.ImgBgBlue = nil
+	--self.ImgBgRed = nil
 	--self.ImgBlueBg = nil
+	--self.ImgHighBlue = nil
+	--self.ImgHighBlueBg = nil
+	--self.ImgHighRed = nil
+	--self.ImgHighRedBg = nil
 	--self.ImgRedBg = nil
 	--self.ItemB = nil
 	--self.ItemB2 = nil
+	--self.PanelHighBlue = nil
+	--self.PanelHighRed = nil
 	--self.PanelItem = nil
 	--self.PanelKeyboard = nil
 	--self.PanelKeyboardBg = nil
@@ -65,15 +88,19 @@ function PerformanceAssistantNewPanelView:Ctor()
 	--self.PanelTrack = nil
 	--self.PanelTrackAll = nil
 	--self.ProBarSToSPlus = nil
+	--self.RedAreaEffectBtn = nil
+	--self.TextBlue = nil
+	--self.TextRed = nil
 	--self.TextScore = nil
 	--self.TextSongName = nil
 	--self.TinyMetronome = nil
+	--self.AnimBlueBgShow = nil
+	--self.AnimRedBgShow = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function PerformanceAssistantNewPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.CountDownItem)
 	self:AddSubView(self.FinishPage)
 	self:AddSubView(self.ItemB)
 	self:AddSubView(self.ItemB2)
@@ -84,10 +111,13 @@ end
 function PerformanceAssistantNewPanelView:OnInit()
 	self:InitStaticText()
 	self.VM = PerformanceAssistantNewPanelVM.New()
+	self:OnSetRedBlueAreaSize()
 end
 
 function PerformanceAssistantNewPanelView:InitStaticText()
 	self.FinishPage:SetTextTitle(_G.LSTR(830088))
+	self.TextBlue:SetText(_G.LSTR(830138))
+	self.TextRed:SetText(_G.LSTR(830137))
 end
 
 function PerformanceAssistantNewPanelView:OnDestroy()
@@ -95,16 +125,15 @@ function PerformanceAssistantNewPanelView:OnDestroy()
 end
 
 function PerformanceAssistantNewPanelView:OnShow()
+	_G.MusicPerformanceMgr:ReqNetMsgPerformCmdAssist(true)
 	self:Clear()
 	self.AssistItems = {}
 	self.IsAllKey = MusicPerformanceUtil.GetKeybordMode() ~= 1
 	self.IsLargeKey = MusicPerformanceUtil.GetKeySize() ~= 1
 
 	self:UpdateKeyboard()
+	_G.MusicPerformanceMgr:OnShowCountDownTips(_G.LSTR(830037))
 
-	self.CountDownItem:SetText(_G.LSTR(830037))
-	self.CountDownItem:SetEndText(_G.LSTR(830076))
-	self.CountDownItem:StartCountDown()
 	self:RegisterTimer(self.OnStartAssistant, MPDefines.AssistantFallingDownConfig.StartDelayTime)
 	self.VM.TextSongName = self.Params.Data.Name
 	self.VM.TinyMetronomeVisible = self.Params.ToggleMetronome
@@ -117,25 +146,23 @@ end
 
 function PerformanceAssistantNewPanelView:UpdateKeyboard()
 	local NewKeyboard
-	local SizeToContent
 	local Size = _G.UE.FVector2D()
 	if self.IsAllKey and self.IsLargeKey then
 		NewKeyboard = self:CreateKeyboard("Performance/PerformanceFullLargeKey_UIBP")
 		Size.X = 1920
-		Size.Y = 245
+		Size.Y = 320
 	elseif not self.IsAllKey and self.IsLargeKey then
 		NewKeyboard = self:CreateKeyboard("Performance/PerformanceMonoLargeKey_UIBP")
 		Size.X = 1920
-		Size.Y = 245
+		Size.Y = 320
 	elseif self.IsAllKey and not self.IsLargeKey then
 		NewKeyboard = self:CreateKeyboard("Performance/PerformanceFullKey_UIBP")
 		Size.X = 1920
-		Size.Y = 194
+		Size.Y = 252
 	elseif not self.IsAllKey and not self.IsLargeKey then
 		NewKeyboard = self:CreateKeyboard("Performance/PerformanceMonoKey_UIBP")
-		SizeToContent = true
 		Size.X = 1920
-		Size.Y = 30
+		Size.Y = 252
 	end
 
 	if NewKeyboard then
@@ -147,7 +174,7 @@ function PerformanceAssistantNewPanelView:UpdateKeyboard()
 		Alignment.Y = 1
 
 		UIUtil.CanvasSlotSetAnchors(NewKeyboard, Anchor)
-		UIUtil.CanvasSlotSetAutoSize(NewKeyboard, SizeToContent or false)
+		UIUtil.CanvasSlotSetAutoSize(NewKeyboard, false)
 		UIUtil.CanvasSlotSetSize(NewKeyboard, Size)
 		UIUtil.CanvasSlotSetAlignment(NewKeyboard, Alignment)
 	end
@@ -155,9 +182,10 @@ function PerformanceAssistantNewPanelView:UpdateKeyboard()
 	self.VM.PanelTrackAllVisible = self.IsAllKey
 	self.VM.PanelTrackVisible = not self.IsAllKey
 
+	--添加掉落音符的容器
 	self.TargetPanel = self.IsLargeKey and self.PanelLong or self.PanelShort
 
-	-- 分界线的高度，区分高低按键
+	-- 黄色分界线的高度，区分高低按键
 	local BGSize = UIUtil.CanvasSlotGetSize(self.PanelKeyboardBg)
 	local BG1Size = UIUtil.CanvasSlotGetSize(self.PanelKeyboardBg1)
 	BGSize.Y = self.IsLargeKey and MPDefines.AssistantFallingDownConfig.KeybroadSize.LargeBGY or MPDefines.AssistantFallingDownConfig.KeybroadSize.BGY
@@ -168,6 +196,7 @@ function PerformanceAssistantNewPanelView:UpdateKeyboard()
 	self.KeyViewMap = MusicPerformanceUtil.GetKeybordKeyViewMap(self.KeyboardView)
 end
 
+--创建键盘
 function PerformanceAssistantNewPanelView:CreateKeyboard(BPName)
 	if self.KeyboardView and self.KeyboardView.BPName == BPName then
 		return
@@ -223,6 +252,9 @@ function PerformanceAssistantNewPanelView:OnAssistantDone()
 	end, DelayTime, 0, 1)
 	self.TinyMetronome:ResetMetronome()
 
+	--播放演奏完成的音效
+	AudioUtil.LoadAndPlay2DSound(MPDefines.CommonSettings.PerformanceAssistantDoneSoundPath)
+
     --演奏埋点(完成演奏)
 	DataReportUtil.ReportSystemFlowData("PerformanceAssistant", tostring(2), tostring(MusicPerformanceUtil.GetKeybordMode()), tostring(self.Params.Data.Name))
 end
@@ -234,6 +266,7 @@ end
 
 function PerformanceAssistantNewPanelView:OnHide()
 	self:Clear()
+	_G.MusicPerformanceMgr:ReqNetMsgPerformCmdAssist(false)
 end
 
 function PerformanceAssistantNewPanelView:Clear()
@@ -247,19 +280,22 @@ function PerformanceAssistantNewPanelView:Clear()
 		end
 	end
 	self.AssistItems = nil
+	self.LastNoteIndex = -1 --记录上一个音符索引
 	self:UpdatePercent(0)
 end
 
 function PerformanceAssistantNewPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnPause, self.OnBtnPauseClicked)
+
+	--高低八度20%侧边按键
+	UIUtil.AddOnLongClickedEvent(self, self.RedAreaEffectBtn, self.OnPressedRedAreaEffectBtn)
+    UIUtil.AddOnLongClickReleasedEvent(self, self.RedAreaEffectBtn, self.OnReleasedRedAreaEffectBtn)
+	UIUtil.AddOnLongClickedEvent(self, self.BlueAreaEffectBtn, self.OnPressedBlueAreaEffectBtn)
+    UIUtil.AddOnLongClickReleasedEvent(self, self.BlueAreaEffectBtn, self.OnReleasedBlueAreaEffectBtn)
 end
 
 --从暂停界面关闭后，继续演奏助手过程
 function PerformanceAssistantNewPanelView:ResumeAssistant()
-	-- self.CountDownItem:StartCountDown()
-	-- self.VM.BtnPauseVisible = false
-	-- self:RegisterTimer(self.OnResumeAssistantTimer, MPDefines.AssistantFallingDownConfig.StartDelayTime)
-	-- 直接继续
 	self:OnResumeAssistantTimer()
 end
 
@@ -294,14 +330,16 @@ end
 function PerformanceAssistantNewPanelView:RestartAssistant(Rate, ToggleMetronome)
 	self:Clear()
 	self.AssistItems = {}
-	self.CountDownItem:StartCountDown()
 	self.VM.BtnPauseVisible = false
 	self:SetToggleMetronome(ToggleMetronome)
 	self.TinyMetronome:ResetMetronome()
 	self.Params.Rate = Rate
 	self:RegisterTimer(self.OnStartAssistant, MPDefines.AssistantFallingDownConfig.StartDelayTime)
+
+	_G.MusicPerformanceMgr:OnShowCountDownTips(_G.LSTR(830037))
 end
 
+--创建掉落的音符Item
 function PerformanceAssistantNewPanelView:CreateItemView(UINote, VM)
 	local ItemView = _G.UIViewMgr:CreateView(_G.UIViewID.PerformanceAssistantItemView, self, true, true, {Data = VM})
 	self.TargetPanel:AddChildToCanvas(ItemView)
@@ -471,8 +509,8 @@ function PerformanceAssistantNewPanelView:DoFocus(Index, IsFocus)
 		return
 	end
 	
-	local UINote = Item.UINote
-	local KeyOffset = Item.VM.KeyOffset
+	local UINote = Item.UINote 			--所按的键值
+	local KeyOffset = Item.VM.KeyOffset --键类型(0普通白音符、-1为蓝色低音、1为红色高音)
 	local KeyState = self:GetKeyState(IsFocus, KeyOffset)
 	
 	-- 提示音符按键
@@ -480,7 +518,14 @@ function PerformanceAssistantNewPanelView:DoFocus(Index, IsFocus)
 	if KeyView and KeyView.KeyState then
 			UIUtil.SetIsVisible(KeyView.KeyState, IsFocus, false)
 			KeyView.KeyState:SetKeyState(KeyState)
+
+			if IsFocus then
+				KeyView:StartPromptKeyState()
+			else
+				KeyView:StopPromptKeyState()
+			end
 	end
+	self:CheckShowNoteKeyPromptTips(Index, IsFocus, KeyOffset)
 
 	-- 提示变阶按键
 	local OffsetKeyView = nil
@@ -503,6 +548,59 @@ function PerformanceAssistantNewPanelView:DoFocus(Index, IsFocus)
 	-- 	OffsetKeyView.KeyState:SetKeyState(KeyState)
 	-- end
 end
+
+-------------------------------------------音符按键消除提示------------------------------------------------------------------------
+-- 检测音符按键消除提示(当所要按的音符掉落时)
+function PerformanceAssistantNewPanelView:CheckShowNoteKeyPromptTips(Index, IsFocus, KeyOffset)
+	if self.LastNoteIndex == Index then
+		if not IsFocus then
+			self:HideNoteKeyTips()
+			self:ClearNoteKeyPromptTipsTimer()
+		end
+		return
+	end
+	self:ClearNoteKeyPromptTipsTimer() --防止出现未清timer的情况
+	self.NoteKeyPromptTimer = self:RegisterTimer(self.ShowNoteKeyTips, MPDefines.AssistantFallingDownConfig.AssistanNoteKeyTipsDelayTime)
+	self.LastNoteIndex = Index
+end
+
+function PerformanceAssistantNewPanelView:ClearNoteKeyPromptTipsTimer()
+	if self.NoteKeyPromptTimer ~= nil then
+		self:UnRegisterTimer(self.NoteKeyPromptTimer)
+		self.NoteKeyPromptTimer = nil
+	end
+end
+
+function PerformanceAssistantNewPanelView:ShowNoteKeyTips()
+	local Item = self.AssistItems and self.AssistItems[self.LastNoteIndex]
+	if Item == nil then
+		return
+	end
+	local KeyOffset = Item.VM.KeyOffset --键类型(0普通白音符、-1为蓝色低音、1为红色高音)
+	if KeyOffset == 0 then
+		_G.UIViewMgr:ShowView(_G.UIViewID.PerformanceYellowTipsView)
+	elseif KeyOffset > 0 then
+		_G.UIViewMgr:ShowView(_G.UIViewID.PerformanceRedTipsView)
+	elseif KeyOffset < 0 then
+		_G.UIViewMgr:ShowView(_G.UIViewID.PerformanceBlueTipsView)
+	end
+end
+
+function PerformanceAssistantNewPanelView:HideNoteKeyTips()
+	local Item = self.AssistItems and self.AssistItems[self.LastNoteIndex]
+	if Item == nil then
+		return
+	end
+	local KeyOffset = Item.VM.KeyOffset
+	if KeyOffset == 0 then
+		_G.UIViewMgr:HideView(_G.UIViewID.PerformanceYellowTipsView)
+	elseif KeyOffset > 0 then
+		_G.UIViewMgr:HideView(_G.UIViewID.PerformanceRedTipsView)
+	elseif KeyOffset < 0 then
+		_G.UIViewMgr:HideView(_G.UIViewID.PerformanceBlueTipsView)
+	end
+end
+-------------------------------------------音符按键消除提示------------------------------------------------------------------------
 
 function PerformanceAssistantNewPanelView:GetKeyState(IsFocus, KeyOffset)
 	local KeyStates = MPDefines.AssistantFallingDownConfig.KeyStates
@@ -529,9 +627,77 @@ function PerformanceAssistantNewPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.MusicPerformanceToneOffset, self.OnMusicPerformanceToneOffsetUpdate)
 end
 
+--设置二侧20%高底八底按键区域
+function PerformanceAssistantNewPanelView:OnSetRedBlueAreaSize()
+	local ViewportSize = UIUtil.GetViewportSize()
+
+	local BlueSize = UIUtil.CanvasSlotGetSize(self.BlueAreaEffectBtn)
+	local BlueViewportX = ViewportSize.X * 0.2
+	UIUtil.CanvasSlotSetSize(self.BlueAreaBtnEffect, _G.UE.FVector2D(BlueViewportX, BlueSize.Y))
+
+	local RedSize = UIUtil.CanvasSlotGetSize(self.RedAreaEffectBtn)
+	local RedViewportX = ViewportSize.X * 0.2
+	UIUtil.CanvasSlotSetSize(self.BlueAreaBtnEffect, _G.UE.FVector2D(RedViewportX, RedSize.Y))
+end
+
 function PerformanceAssistantNewPanelView:OnMusicPerformanceToneOffsetUpdate(Offset)
-	self.VM.ImgRedBgVisible = Offset > 0
-	self.VM.ImgBlueBgVisible = Offset < 0
+	local IsSingleMode = MusicPerformanceUtil.GetKeybordMode() == 1	-- 是否是单音阶
+	if not IsSingleMode then
+		return
+	end
+	
+	if Offset > 0 then
+		self:OnShowRedEffect()
+		self:OnHideBlueEffect()
+		self.RedAreaEffectBtn:SetIsEnabled(false)
+		self.BlueAreaEffectBtn:SetIsEnabled(false)
+	elseif Offset < 0 then
+		self:OnShowBlueEffect()
+		self:OnHideRedEffect()
+		self.RedAreaEffectBtn:SetIsEnabled(false)
+		self.BlueAreaEffectBtn:SetIsEnabled(false)
+	else
+		self:OnHideBlueEffect()
+		self:OnHideRedEffect()
+		self.RedAreaEffectBtn:SetIsEnabled(true)
+		self.BlueAreaEffectBtn:SetIsEnabled(true)
+	end
+end
+
+function PerformanceAssistantNewPanelView:OnPressedRedAreaEffectBtn()
+	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceToneOffset, MPDefines.KeyDefines.KEY_MAX)
+end
+function PerformanceAssistantNewPanelView:OnReleasedRedAreaEffectBtn()
+	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceToneOffset, 0)
+end
+
+function PerformanceAssistantNewPanelView:OnPressedBlueAreaEffectBtn()
+	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceToneOffset, -MPDefines.KeyDefines.KEY_MAX)
+end
+function PerformanceAssistantNewPanelView:OnReleasedBlueAreaEffectBtn()
+	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceToneOffset, 0)
+end
+
+--显示高八度效果
+function PerformanceAssistantNewPanelView:OnShowRedEffect()
+	self:PlayAnimation(self.AnimRedBgShow)
+	self.VM.ImgRedBgVisible = true
+end
+--隐藏高八度效果
+function PerformanceAssistantNewPanelView:OnHideRedEffect()
+	self:StopAnimLoop(self.AnimRedBgShow)
+	self.VM.ImgRedBgVisible = false
+end
+
+--显示低八度效果
+function PerformanceAssistantNewPanelView:OnShowBlueEffect()
+	self:PlayAnimation(self.AnimBlueBgShow)
+	self.VM.ImgBlueBgVisible = true
+end
+--隐藏低八度效果
+function PerformanceAssistantNewPanelView:OnHideBlueEffect()
+	self:StopAnimLoop(self.AnimBlueBgShow)
+	self.VM.ImgBlueBgVisible = false
 end
 
 function PerformanceAssistantNewPanelView:OnRegisterBinder()
@@ -544,8 +710,13 @@ function PerformanceAssistantNewPanelView:OnRegisterBinder()
 		{ "Percent", UIBinderSetPercent.New(self, self.ProBarSToSPlus)},
 		{ "PanelTrackVisible", UIBinderSetIsVisible.New(self, self.PanelTrack)},
 		{ "PanelTrackAllVisible", UIBinderSetIsVisible.New(self, self.PanelTrackAll)},
+
 		{ "ImgRedBgVisible", UIBinderSetIsVisible.New(self, self.ImgRedBg) },
 		{ "ImgBlueBgVisible", UIBinderSetIsVisible.New(self, self.ImgBlueBg) },
+		{ "ImgRedBgVisible", UIBinderSetIsVisible.New(self, self.ImgBgRed) },
+		{ "ImgBlueBgVisible", UIBinderSetIsVisible.New(self, self.ImgBgBlue) },
+		{ "ImgRedBgVisible", UIBinderSetIsVisible.New(self, self.PanelHighRed) },
+		{ "ImgBlueBgVisible", UIBinderSetIsVisible.New(self, self.PanelHighBlue) },
 	}
 
 	self:RegisterBinders(self.VM, Binders)

@@ -11,11 +11,11 @@ local LuaClass = require("Core/LuaClass")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field ImgIcon UFImage
 ---@field ImgIcon02 UFImage
----@field ImgPoint UFImage
 ---@field ImgSelect UFImage
 ---@field Panel01 UFCanvasPanel
 ---@field Panel02 UFCanvasPanel
 ---@field PanelGet UFCanvasPanel
+---@field RedDotSlot CommonRedDotView
 ---@field TextTitle UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ChocoboProbarNodeItemView = LuaClass(UIView, true)
@@ -24,17 +24,18 @@ function ChocoboProbarNodeItemView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgIcon = nil
 	--self.ImgIcon02 = nil
-	--self.ImgPoint = nil
 	--self.ImgSelect = nil
 	--self.Panel01 = nil
 	--self.Panel02 = nil
 	--self.PanelGet = nil
+	--self.RedDotSlot = nil
 	--self.TextTitle = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function ChocoboProbarNodeItemView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.RedDotSlot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

@@ -44,10 +44,6 @@ function ChocoboFeeDingTipsItemView:OnDestroy()
 end
 
 function ChocoboFeeDingTipsItemView:OnShow()
-    -- LSTR string: 获得加速效果
-    self.TextSucces:SetText(_G.LSTR(440004)) -- 获得加速效果
-    -- LSTR string: 未获得加速效果
-    self.TextFail:SetText(_G.LSTR(440005))  -- 未获得加速效果
 end
 
 function ChocoboFeeDingTipsItemView:OnHide()

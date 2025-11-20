@@ -23,6 +23,7 @@ local EmotionTargetType = ProtoCS.EmotionTargetType
 local EObjectGC = _G.UE.EObjectGC
 local AvatarPartType = _G.UE.EAvatarPartType
 local TimerMgr = nil
+
 local EmotionTaskBase = LuaClass()
 
 function EmotionTaskBase:Ctor()
@@ -43,6 +44,7 @@ function EmotionTaskBase:Ctor()
 	self.AnimResHandle = nil
 	self.CancelReason = nil		--取消动作的原因（EmotionDefines.CancelReason）
 	self.bIsLastHoldWeapon = false
+	self.bLoadObjectSync = false
 	TimerMgr = _G.TimerMgr
 end
 
@@ -63,11 +65,17 @@ function EmotionTaskBase:PlayEmotion()
 		PathArray:Add(self.AnimParam.BeginAnimPath)
 	end
 	local Callback = function() self:OnAnimLoad() end
-	self.AnimResHandle = _G.ObjectMgr:LoadObjectsAsync(PathArray, Callback, EObjectGC.NoCache, Callback)
+
+	if self.bLoadObjectSync == true then
+		self.AnimResHandle = _G.ObjectMgr:LoadObjectSync(PathArray, ObjectGCType.LRU)
+		Callback()
+	else
+		self.AnimResHandle = _G.ObjectMgr:LoadObjectsAsync(PathArray, Callback, EObjectGC.NoCache, Callback)
+		return
+	end
 end
 
 function EmotionTaskBase:OnAnimLoad()
-	self:SetLookAtTarget()
 	self:PlayEmotionAnim(self.bForceLoop and "Loop" or "")
 end
 
@@ -88,15 +96,10 @@ function EmotionTaskBase:PlayEmotionAnim(Section)
 		return
 	end
 	
-	-- if self:IsValidVelocity(FromActor, self.EmotionID, Emotion.MotionType) then
-	-- 	print(" [EmotionMgr] [EmotionTaskBase] Is Valid Velocity > 0 ")
-	-- 	self:CancleEmotion()
-	-- 	return
-	-- end
-
 	local AnimParam = self.AnimParam
 	local StateAnim = _G.ObjectMgr:LoadObjectSync(AnimParam.StateAnimPath, ObjectGCType.LRU)
-
+	
+	self:SetLookAtTarget()
 	self:SetEmotionStates()
 	AnimComp:SetCameraLookAtState(0)  --关闭镜头lookat
 
@@ -132,7 +135,7 @@ function EmotionTaskBase:PlayEmotionAnim(Section)
 			end
 		end
 
-		if self:IsLoopAnim() then
+		if self:IsLoopAnim() and not string.isnilorempty(AnimParam.StateAnimPath) and not string.isnilorempty(AnimParam.BeginAnimPath) then
 			local Animations = {
 				[1] = {AnimPath = AnimParam.BeginAnimPath, bStopAllMontages = StopAllMontages},
 				[2] = {AnimPath = AnimParam.StateAnimPath, bStopAllMontages = StopAllMontages},
@@ -173,21 +176,12 @@ function EmotionTaskBase:CancleEmotion()
 			AnimComp:StopMontage(self.MontageToPlay)
 		end
 	else
-		local EventParams = _G.EventMgr:GetEventParams()
-		EventParams.ULongParam1 = self.FromID
-		EventParams.ULongParam2 = self.ToID
-		EventParams.IntParam1 = self.EmotionID
-		EventParams.IntParam2 = self.CancelReason
-        EventParams.BoolParam1 = true
-		_G.EventMgr:SendEvent(EventID.CancelEmotion, EventParams)
-		_G.EventMgr:SendCppEvent(EventID.CancelEmotion, EventParams)
+		self:SendEventCancelEmotion()
 	end
 	if self.AnimationQueueID then
 		AnimMgr:StopAnimationMulti(self.FromID, self.AnimationQueueID)
 	end
 	
-	-- AnimComp:StopAnimation()  --停止所有动作
-
 	if self.AnimResHandle then
 		_G.ObjectMgr:CancelLoad(self.AnimResHandle)
 		self.AnimResHandle = nil
@@ -261,6 +255,16 @@ function EmotionTaskBase:ResetEmotionStates()
 
 	self:LockAttachmentTransform(FromActor, false)
 	FromActor:SetWeaponAttachmentSocketByState()
+
+	if _G.PhotoMgr.IsOnPhoto then
+		--bug=143972027 用完胜利欢呼的动作后，再使用其他动作拍照会保持手持武器的状态
+		local StateCom = ActorUtil.GetActorStateComponent(self.FromID)
+		if StateCom then
+			if self.IsBattleEmotion == 1 then
+				StateCom:ClearTempHoldWeapon(_G.UE.ETempHoldMask.Emote, false)
+			end
+		end
+	end
 
 	local AnimComp = FromActor:GetAnimationComponent()
 	local AnimInst = AnimComp and AnimComp:GetAnimInstance() or nil
@@ -440,6 +444,13 @@ function EmotionTaskBase:SetLookAtTarget()
 		return
 	end
 
+	--在坐骑状态不转身
+	local RideComp = FromActor and FromActor:GetRideComponent() or nil
+	local bIsRide = RideComp and RideComp:IsInRide() or nil
+	if bIsRide then
+		return
+	end
+
 	--若目标是宠物 IDType = 4  该类型由服务器在下发播放情感动作时确定
 	--(因宠物没有EntityID，而且宠物位置不同步,若转向同步,则会导致转向后其他玩家看到的方向不对)
 	if self.IDType == EmotionTargetType.EmotionTargetTypeListCompanion then
@@ -541,6 +552,17 @@ function EmotionTaskBase:RotationInterp(EntityID)
     end
 
     MajorUtil.LookAtActorByInterp(EntityID, _G.EmotionMgr.RotationInterpSpeed)
+end
+
+function EmotionTaskBase:SendEventCancelEmotion()
+	local EventParams = _G.EventMgr:GetEventParams()
+	EventParams.ULongParam1 = self.FromID
+	EventParams.ULongParam2 = self.ToID
+	EventParams.IntParam1 = self.EmotionID
+	EventParams.IntParam2 = self.CancelReason
+	EventParams.BoolParam1 = true
+	_G.EventMgr:SendEvent(EventID.CancelEmotion, EventParams)
+	_G.EventMgr:SendCppEvent(EventID.CancelEmotion, EventParams)
 end
 
 return EmotionTaskBase

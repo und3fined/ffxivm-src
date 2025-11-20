@@ -88,6 +88,12 @@ function FieldTestItemVM:UpdateVM(Value)
     self.AreaID = Value.AreaID
     self.FishLocationTye = Value.FishLocationTye
     
+    self.EmotionID = Value.EmotionID
+    self.CompanionID = Value.CompanionID
+    self.AppearanceIDs = Value.AppearanceIDs
+    
+    self.MerchantData = Value.MerchantData
+    
     self.ChildrenVM = {}
     if Value.Children and #Value.Children > 1 then
         for i=1, #Value.Children do

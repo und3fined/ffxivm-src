@@ -123,6 +123,13 @@ end
 
 function PWorldEntVM:UpdateTeach()
     local Cfg = ModuleOpenCfg:FindCfg(string.format("ModuleID=%d", ProtoCommon.ModuleID.ModuleIDSpecialTrain))
+    if not Cfg then
+        _G.FLOG_ERROR("PWorldEntVM:UpdateTeach() - ModuleOpenCfg not found for ModuleID %s", ProtoCommon.ModuleID.ModuleIDSpecialTrain)
+        self.bUnlockTeach = false
+        self.TextTeach = ""
+        return
+    end
+
     local bShowTeach = Cfg and #(Cfg.PreTask or {}) > 0
     for _, v in ipairs((Cfg or {}).PreTask or {}) do
         bShowTeach = bShowTeach and PolUtil.HasPreQuestFinish(v)
@@ -132,8 +139,8 @@ function PWorldEntVM:UpdateTeach()
     end
     self.bUnlockTeach = bShowTeach
 
-    local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
-    self.TextTeach = ProtoEnumAlias.GetAlias(ProtoCommon.ModuleID, ProtoCommon.ModuleID.ModuleIDSpecialTrain)
+    local PCfg = PworldCfg:FindCfgByKey(Cfg.SceneID)
+    self.TextTeach = PCfg and PCfg.PWorldName or ""
 end
 
 return PWorldEntVM

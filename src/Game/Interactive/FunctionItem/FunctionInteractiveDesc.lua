@@ -195,6 +195,25 @@ function FunctionInteractiveDesc:OnClick()
             return
         end
 
+        if ViewID == _G.UIViewID.HouseInfoLocationPanelView then
+            local HouseRegionID = self.FuncParams and self.FuncParams.HouseRegionID
+            if HouseRegionID == nil then
+                local MapUtil = require("Game/Map/MapUtil")
+		        HouseRegionID = MapUtil.GetCurrHouseRegionID()
+            end
+            if HouseRegionID > 0 then
+                _G.HouseLandMgr:OpenMapHouseListPanel(HouseRegionID, true)
+            end
+            self:ExitInteractive()
+            return
+        end
+
+         if ViewID == _G.UIViewID.HousePanelViewForOther then
+            self:ExitInteractive()
+            _G.EventMgr:SendEvent(_G.EventID.OpenHouseOrLandInfoPanel, Values[2] or 0)
+            return
+        end
+
         if (ViewID ~= nil) then
             if ViewID == _G.UIViewID.EmotionMainPanel then
                 local CurSelectedPlayerEntityID = InteractiveMgr:GetCurrSelectedPlayerEntityID()
@@ -206,6 +225,54 @@ function FunctionInteractiveDesc:OnClick()
                     _G.EmotionMgr:ShowEmotionMainPanel(Values)
                 end
             else
+                if ViewID == _G.UIViewID.OpsNightPrepareGiftPanel then
+                    if not _G.OpsSeasonActivityMgr:IsStarlightCelebration() then
+                        _G.MsgTipsUtil.ShowTips(_G.LSTR(1700064))
+                        self:ExitInteractive()
+                        return
+                    end
+                    local Num = _G.OpsSeasonActivityMgr:GetPutGiftNum()
+                    local OpsStarlightDefine = require("Game/StarlightCelebration/OpsStarlightDefine")
+                    if Num >= OpsStarlightDefine.GiftMaxNum then
+                        _G.MsgTipsUtil.ShowTips(_G.LSTR(1700012))
+                        self:ExitInteractive()
+                        return
+                    end
+    
+                elseif ViewID == _G.UIViewID.OpsNightGetGiftPanel then
+                    if not _G.OpsSeasonActivityMgr:IsStarlightCelebration() then
+                        _G.MsgTipsUtil.ShowTips(_G.LSTR(1700064))
+                        self:ExitInteractive()
+                        return
+                    end
+
+                    if not _G.OpsSeasonActivityMgr:IsStartGetGift() then
+                        _G.MsgTipsUtil.ShowTips(_G.LSTR(1700052))
+                        self:ExitInteractive()
+                        return
+                    end
+                    local PutGiftNum = _G.OpsSeasonActivityMgr:GetPutGiftNum()
+                    local Num = _G.OpsSeasonActivityMgr:GetGetGiftNum()
+                    if Num >= PutGiftNum then
+                        _G.MsgTipsUtil.ShowTips(_G.LSTR(1700013))
+                        self:ExitInteractive()
+                        return
+                    end
+
+                    --InteractiveMgr:ShowView(ViewID, true, Values)
+                    local OpsStarlightDefine = require("Game/StarlightCelebration/OpsStarlightDefine")
+                    _G.OpsActivityMgr:SendActivityNodeOperate(OpsStarlightDefine.GetGiftNodeID, ProtoCS.Game.Activity.NodeOpType.NodeOpTypeStarDayGetGift, {})
+                    self:ExitInteractive()
+                    return 
+                elseif ViewID == _G.UIViewID.MountSpeedPanel then
+                   if not _G.ModuleOpenMgr:CheckOpenState(101) then
+                        _G.NpcDialogMgr:PushDialog(_G.LSTR(200021), 8, _G.LSTR(10004), nil, function()
+                            self:ExitInteractive()
+                        end) --200021("完成5级主线任务后开放！")
+                        return
+                    end
+                end
+     
                 InteractiveMgr:ShowView(ViewID, true, Values)
                 self:ExitInteractive()
             end
@@ -253,7 +320,7 @@ function FunctionInteractiveDesc:OnClick()
             NormalID = tonumber(Values[1]),
             EasyID = tonumber(Values[2]),
             EasiestID = tonumber(Values[3]),
-            FromTargetID = self.FromTargetID
+            FromTargetID = self.FromTargetID or self.TargetID,
         }
         _G.UIViewMgr:ShowView(_G.UIViewID.PWorldMainlinePanel, Data)
         -- add by sammrli 单人副本需要上报
@@ -315,6 +382,7 @@ function FunctionInteractiveDesc:OnClick()
         _G.NpcDialogMgr:EndInteraction()
     elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_MYSTER_MERCHANT then
         --神秘商人交互
+        NeedSendMsg = true
         _G.MysterMerchantMgr:OnInteractiveClick(self.ResID, self.EntityID, InteractiveID, Values)
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_ENTERTAIN_GATE_SIGNUP) then --
         _G.GoldSauserMgr:InteractWithReleNpcs(self.ResID, self.EntityID)
@@ -329,12 +397,12 @@ function FunctionInteractiveDesc:OnClick()
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_GUIDE) then
         -- 0 指导认证  1 请辞指导者身份
         local SubFunID = tonumber(Values[1])
-          -- SubFunID = 0 时 Param值对应  MentorDefine.GuideType
+        -- Param值对应  MentorDefine.GuideType
         local Param = tonumber(Values[2])
         if  0 == SubFunID then
             _G.MentorMgr:OpenMentorConditionUI(Param)
         elseif 1 == SubFunID then
-            _G.MentorMgr:OpenResignMentorUI()
+            _G.MentorMgr:OpenResignMentorUI(Param)
         else
             FLOG_ERROR("Interactive Guide FuncValue[0]  is error!")
         end
@@ -379,7 +447,7 @@ function FunctionInteractiveDesc:OnClick()
         end
     elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_GOLDSAUCERGAME  then
         -- 金碟小游戏进入逻辑
-        local MiniGameType = Values[1] -- ProtoCS.ACTIVITY_TYPE
+        local MiniGameType = Values[1] -- 
         if  self.FuncParams and self.FuncParams.EntityID then
             _G.GoldSaucerMiniGameMgr:InteractEnterTheGoldSaucerMiniGame(MiniGameType, self.FuncParams.EntityID)
         end
@@ -495,6 +563,14 @@ function FunctionInteractiveDesc:OnClick()
         local TargetID = ActorUtil.GetRoleIDByEntityID(self.EntityID)
         _G.WolvesDenPierMgr:InviteDuel(TargetID)
         _G.InteractiveMgr:HideSelectedTargetFunctionPanel()
+    elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_INVITE_RIDE) or
+         (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_APPLY_RIDE) then
+        --邀请/申请骑乘
+         InteractiveMgr:CancelTargetInteractive()
+        local TargetRoleID = ActorUtil.GetRoleIDByEntityID(self.EntityID)
+        _G.MountMgr:SendMountApplyOn(TargetRoleID)
+        local PersonInfoDefine = require("Game/PersonInfo/PersonInfoDefine")
+        _G.PersonInfoMgr:ReportSystemFlowData(PersonInfoDefine.DataReportType.ClickRideInvite)
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_MAJOR_TRANSFORM) then
         --主角变身上buff
 
@@ -560,8 +636,8 @@ function FunctionInteractiveDesc:OnClick()
         -- 同一个位置种宝箱，土堆，空eobj，交互放在空eobj上。
         -- 最终表现就是，玩家和空的eobj交互，交互读条结束，空eobj回收，土堆裂开，宝箱出现自动打开，时间到了回收土堆
         if self.ListID and self.ListID > 0 then
-            InteractiveMgr:SetCurrentSingInteractionId(0)
-            _G.WildBoxMoundMgr:OpenBox(InteractiveID, self.EntityID, self.ListID)
+            InteractiveMgr:SetInteractionIDWithServer(0)
+            WildBoxMoundMgr:OpenBox(InteractiveID, self.EntityID, self.ListID)
         end
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_PLAY_LCUT) then
         local AudioUtil = require("Utils/AudioUtil")
@@ -585,6 +661,10 @@ function FunctionInteractiveDesc:OnClick()
         _G.StoryMgr:PlayDialogueSequence(Values[1], CallBack, nil, CallBack, PlaybackSettings)
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_TREASUREHUNT) then
         local RoleSimple = MajorUtil.GetMajorRoleSimple()
+        if nil == RoleSimple then
+            FLOG_ERROR("FunctionInteractiveDesc:OnClick() RoleSimple is nil")
+            return
+        end
         local CurrProf = RoleSimple.Prof
         local bCombatProf = _G.ProfMgr.CheckProfClass(CurrProf, ProtoCommon.class_type.CLASS_TYPE_COMBAT)
         if not bCombatProf then
@@ -605,7 +685,7 @@ function FunctionInteractiveDesc:OnClick()
         if BoxUserData then
             if BoxUserData.RoleID > 0 then
                 if BoxUserData.RoleID ~= MajorRoleID then
-                    _G.MsgTipsUtil.ShowTipsByID(109204)
+                    MsgTipsUtil.ShowTipsByID(109204)
                     return
                 end
             else
@@ -625,6 +705,28 @@ function FunctionInteractiveDesc:OnClick()
         _G.TreasureHuntMgr:OpenWildBoxReq(self.ResID, self.EntityID)
         InteractiveMgr:DelayShowEntrance(1)
         --NeedSendMsg = false
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_BOX or funcType == ProtoRes.interact_func_type.INTERACT_FUNC_AQUAPOLIS_DROP then
+        local MajorRoleID = MajorUtil.GetMajorRoleID()
+        local BoxUserData = ActorUtil.GetUserData(self.EntityID, UserDataID.TreasureHuntBox)
+        if BoxUserData then
+            if BoxUserData.RoleID > 0 then
+                if BoxUserData.RoleID ~= MajorRoleID then
+                    MsgTipsUtil.ShowTipsByID(40856)
+                    return
+                end
+            else
+                if _G.TreasureHuntMgr:IsTreasureHuntBoxOpened(self.EntityID) then
+                    MsgTipsUtil.ShowTipsByID(109217)    -- 已打开宝箱，淡出中不允许交互
+                    return
+                end
+            end
+        end
+        NeedSendMsg = true
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_ROULETTE_PASS_BOX then
+        local IsOpened = _G.TreasureHuntMgr:IsTreasureHuntBoxOpened(self.EntityID)
+        if IsOpened then return end
+
+        NeedSendMsg = true
     elseif (funcType == ProtoRes.interact_func_type.INTERACT_FUNC_ARMY_TRANSFER) then
         InteractiveMgr:SetNeedRecoveryInteractiveEntrance(true)
         local ViewID = Values[1] or 0 
@@ -713,6 +815,80 @@ function FunctionInteractiveDesc:OnClick()
         if InRolling then
             _G.MsgTipsUtil.ShowTipsByID(40866)
         end
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_GET_DETAIL_MAP then
+        --领取各大主城详细地图
+        if nil ~= self.FuncParams and nil ~= self.FuncParams.FuncValue then
+           InteractiveMgr:TryGetDetailMapItem(self.FuncParams.FuncValue, Values[2], self.EntityID)
+        else
+            FLOG_ERROR("Interactive Function Click GetDetailMap, but FuncParams is nil!")
+        end
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_STARLIGHT_RHYTHM_GAME then
+        self:ExitInteractive()
+        _G.RhythmGameMgr:EnterGame(Values[1])
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_SHOW_GUIDE_PANEL then
+        self:ExitInteractive()
+        _G.TutorialGuideMgr:OpenShowGuidePanel(Values[1])
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_HOUSING_TRANS then
+        -- 房屋传送, 根据传送类型发起不同的请求
+
+        if self.FuncParams then
+            if self.FuncParams.IsNpcFunc then
+                -- 房屋NPC的传送交互
+                local TransInteractiveID = self.FuncParams.FuncValue
+                if TransInteractiveID then
+                    if TransInteractiveID == _G.InteractiveMgr.TransToPersonalHouseID then
+                        -- 传送到自己的房屋
+                        _G.HouseLandMgr:TransToMajorPersonalHouse()
+                    elseif TransInteractiveID == _G.InteractiveMgr.TransToArmyHouseID then
+                        -- 传送到部队房屋
+                        _G.HouseLandMgr:TransToMajorArmyHouse()
+                    end
+                end
+            else
+                if self.FuncParams.TransAreaID then
+                    _G.PWorldMgr.GetPWorldDynDataMgr():TriggerTransArea(self.FuncParams.TransAreaID)
+                else
+                    local HouseLocalDef = require("Game/House/HouseLocalDef")
+                    _G.HouseLandMgr:SendLandTransmit(HouseLocalDef.LandTransmitType.Residence, self.FuncParams)
+                end
+            end
+        end
+
+        self:ExitInteractive()
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_HOUSING_FURNITURE_INTERACTION then
+        _G.FurnitureInteractionMgr:FurnitureInteractionByEntityID(self.EntityID)
+        self:ExitInteractive()
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_GOARMY_SELFROOM then
+        self:ExitInteractive()
+        if _G.HouseInfoMgr.MajorMemberHouseID ~= 0 then
+            local HouseLocalDef = require("Game/House/HouseLocalDef")
+            local Params = {
+                HouseID = _G.HouseInfoMgr.MajorMemberHouseID,
+            }
+            _G.HouseLandMgr:SendLandTransmit(HouseLocalDef.LandTransmitType.Room, Params)
+        else
+            _G.HouseInfoMgr:OpenSelectKeyPageInMineHouse(2,7)
+        end
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_SEE_ALL_ARMYROOM then
+        self:ExitInteractive()
+        _G.HouseInfoMgr:VisitGroupAllRoom()
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_LEAVE_HOUSE then
+        self:ExitInteractive()
+        _G.HouseLandMgr:LeaveHouse()
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_ENTER_HOUSE then
+        self:ExitInteractive()
+        local CurLandHouseID = _G.HouseLandMgr:GetCurLandHouseID()
+        if CurLandHouseID and CurLandHouseID ~= 0 then
+            local HouseLocalDef = require("Game/House/HouseLocalDef")
+            local Params = {
+                HouseID = CurLandHouseID,
+            }
+            _G.HouseLandMgr:SendLandTransmit(HouseLocalDef.LandTransmitType.Room, Params)
+        end
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_CRYSTALLINE_RANKING_REWARD then
+        _G.PVPInfoMgr:GetCrystallineRankingReward()
+    elseif funcType == ProtoRes.interact_func_type.INTERACT_FUNC_CRYSTALLINE_RANK_REWARD then
+        _G.PVPInfoMgr:GetCrystallineRankReward()
     else
         NeedSendMsg = true
         --没有处理的部分

@@ -13,13 +13,15 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIUtil = require("Utils/UIUtil")
 ---@class CommSideBarTabItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field CommAvatar CommPlayerHeadSlotView
+---@field CommAvatar CommHeadView
+---@field CommonRedDot CommonRedDotView
 ---@field Icon UFImage
 ---@field IconLock UFImage
 ---@field IconText UFImage
 ---@field ImgSelect UFImage
 ---@field PaneSingleIcon UScaleBox
 ---@field PanelAvatarPlusText UFCanvasPanel
+---@field PanelIcon UFCanvasPanel
 ---@field PanelIconPlusText UFCanvasPanel
 ---@field TextAvatar1 UFTextBlock
 ---@field TextAvatar2 UFTextBlock
@@ -32,12 +34,14 @@ local CommSideBarTabItemView = LuaClass(UIView, true)
 function CommSideBarTabItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.CommAvatar = nil
+	--self.CommonRedDot = nil
 	--self.Icon = nil
 	--self.IconLock = nil
 	--self.IconText = nil
 	--self.ImgSelect = nil
 	--self.PaneSingleIcon = nil
 	--self.PanelAvatarPlusText = nil
+	--self.PanelIcon = nil
 	--self.PanelIconPlusText = nil
 	--self.TextAvatar1 = nil
 	--self.TextAvatar2 = nil
@@ -50,6 +54,7 @@ end
 function CommSideBarTabItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CommAvatar)
+	self:AddSubView(self.CommonRedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -69,8 +74,7 @@ function CommSideBarTabItemView:OnRegisterBinder()
 	local Binders = {
 		{ "Icon", UIBinderSetImageBrush.New(self, self.Icon, true) },
 		{ "ScaleBoxIconVisibility", UIBinderSetVisibility.New(self,  self.PaneSingleIcon) },
-		{ "bSelect",
-		UIBinderValueChangedCallback.New(self, nil, self.OnUpdateToSelect)  },
+		{ "bSelect",UIBinderValueChangedCallback.New(self, nil, self.OnUpdateToSelect)  },
 		{ "IsLock", UIBinderSetIsVisible.New(self, self.IconLock)}
 	}
 
@@ -97,6 +101,22 @@ end
 function CommSideBarTabItemView:PlayAnimLoopOut()
 	self:PlayAnimation(self.AnimSelectOut)
 	self:StopAnimation(self.AnimSelectIn)
+end
+
+function CommSideBarTabItemView:UpdateRed()
+	if not self.ViewModel then return end
+
+	if self.ViewModel.RedDotID then
+		self.CommonRedDot:SetRedDotIDByID(self.ViewModel.RedDotID)
+	end
+
+	if self.ViewModel.RedDotStr then
+		self.CommonRedDot:SetRedDotNameByString(self.ViewModel.RedDotStr)
+	end
+end
+
+function CommSideBarTabItemView:OnShow()
+	self:UpdateRed()
 end
 
 return CommSideBarTabItemView

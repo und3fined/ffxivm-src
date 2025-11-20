@@ -15,6 +15,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 
 local TreasureHuntHouseWinVM = LuaClass(UIViewModel)
 function TreasureHuntHouseWinVM:Ctor()
+    self.RoleID = 0
     self.IsVisibleCloseBtn = false
     self.IsShowAbandon = false
     self.IsShowChallenge = false
@@ -33,6 +34,8 @@ end
 
 function TreasureHuntHouseWinVM:UpdateData(Params)
     if Params == nil then return end
+
+    self.RoleID = Params.RoleID
     
     -- 只有队长或者单人挑战者，现在改成宝图主人
     local IsCaptain  = true
@@ -51,7 +54,8 @@ function TreasureHuntHouseWinVM:UpdateData(Params)
     self.TextGet = string.format(LSTR(640052),Params.Guesstimes + 1 )
 
     self.Guesstimes = Params.Guesstimes
-    self:UpdateBaseReward(Params.PrivateItems,Params.RandItems,Params.RollItems)
+    local OwnerRewards = IsCaptain and Params.MasterItems or {}
+    self:UpdateBaseReward(Params.PrivateItems, Params.RandItems, Params.RollItems, OwnerRewards)
     -- 当前获得的奖励
     self:UpdateCurrReward()
     --下一次可能获得的奖励
@@ -86,11 +90,12 @@ function TreasureHuntHouseWinVM:GetRewardItems(RewardItems)
     end
 end
 
-function TreasureHuntHouseWinVM:UpdateBaseReward(PrivateItems,RandItems,RollItems)
+function TreasureHuntHouseWinVM:UpdateBaseReward(PrivateItems, RandItems, RollItems, OwnerItems)
     self.BaseRewardList = {}
     self:GetRewardItems(PrivateItems)
     self:GetRewardItems(RandItems)
     self:GetRewardItems(RollItems)
+    self:GetRewardItems(OwnerItems)
 end
 
 function TreasureHuntHouseWinVM:UpdateCurrReward()

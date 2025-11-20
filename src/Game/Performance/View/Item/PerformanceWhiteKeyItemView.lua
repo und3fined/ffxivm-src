@@ -17,6 +17,7 @@ local MPDefines = require("Game/MusicPerformance/MusicPerformanceDefines")
 ---@field ImgKey UFImage
 ---@field KeyState PerformanceKeyStateItemView
 ---@field TextKey UFTextBlock
+---@field TextKeyGao UFTextBlock
 ---@field AnimPressBlue UWidgetAnimation
 ---@field AnimPressRed UWidgetAnimation
 ---@field AnimPressWhite UWidgetAnimation
@@ -32,6 +33,7 @@ function PerformanceWhiteKeyItemView:Ctor()
 	--self.ImgKey = nil
 	--self.KeyState = nil
 	--self.TextKey = nil
+	--self.TextKeyGao = nil
 	--self.AnimPressBlue = nil
 	--self.AnimPressRed = nil
 	--self.AnimPressWhite = nil

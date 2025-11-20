@@ -12,9 +12,11 @@ local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
 local TimeUtil = require("Utils/TimeUtil")
 local MainPanelVM = require("Game/Main/MainPanelVM")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local ProtoRes = require("Protocol/ProtoRes")
 
 local GoldSauserEntertainState = ProtoCS.GoldSauserEntertainState
 local PlayerState = ProtoCS.GoldSauserPlayer
+local LSTR = _G.LSTR
 
 ---@class GateMainCountDownPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -125,36 +127,54 @@ function GateMainCountDownPanelView:UpdateByGoldSauserState()
     local bPlayerEnd = CurPlayerState == PlayerState.GoldSauserPlayer_End
 
     if (bEnd or bEarlyEnd or bPlayerEnd) then
-        -- 这里是游戏状态结束了，或者玩家玩完了，那么进入倒计时显示
-        local NextGameName = _G.GoldSauserMgr:GetNextActivityName(true) or ""
-        local FormatStr = LSTR(1270034)
-        self.TextTips:SetText(string.format(FormatStr, NextGameName))
-        UIUtil.SetIsVisible(self.TextContent, true)
-        local EndTimeMS = self:GetEndTimeMS()
-        self.UIAdapterCountDown:Start(EndTimeMS, 1, true, false)
-        -- 这里隐藏呼吸特效
-        self:PlayAnimation(self.AnimBoxEFFOut)
+        self:ShowNextGame()
         return
     end
 
+    local GameID = _G.GoldSauserMgr.Entertain.ID
+    local EntertainGameID = ProtoRes.Game.GameID
+    local bSharpeKnifeOrSpray = GameID == EntertainGameID.GameIDAnyWayWindBlows or GameID == EntertainGameID.GameIDSliceIsRight
     local bInProgress = StateValue == GoldSauserEntertainState.GoldSauserEntertainState_InProgress
     local bInSignUp = StateValue == GoldSauserEntertainState.GoldSauserEntertainState_SignUp
-    if (bInProgress or bInSignUp) then
-        -- 如果正在进行中，那么不显示时间，并且点击显示的文字是机遇临门进行中
-        self.UIAdapterCountDown:ManuallyStop()
-        UIUtil.SetIsVisible(self.TextContent, true)
-        self.TextContent:SetText(LSTR(1270036))
-        local CurGameName = _G.GoldSauserMgr:GetCurGameName() or ""
-        local FormatStr = LSTR(1270035)
-        self.TextTips:SetText(string.format(FormatStr, CurGameName))
-        if (bInSignUp) then
-            -- 这里播放呼吸特效
-            self:PlayAnimation(self.AnimBoxEFFIn)
+
+    -- 这里要区分一下，因为服务器没法在陆行鸟广场获取金碟游乐场的机遇临门数据，需要根据时间来做一下判断
+    if (bSharpeKnifeOrSpray) then
+        -- 这里，先判断一下，是否已经过了报名时间，如果过了，报名时间，那么认为已经结束失败，显示下一个
+        local _SignUpRemainTime = _G.GoldSauserMgr:GetRemainSignUpTime() * 0.001
+        if (_SignUpRemainTime > 0) then
+            self:ShowInProgress(StateValue)
+            self:RegisterTimer(
+                function()
+                    local bPlayerSignup = CurPlayerState == PlayerState.GoldSauserEntertainState_SignUp
+                    if (not bPlayerSignup) then
+                        self:ShowNextGame()
+                    else
+                        if (bInProgress or bInSignUp) then
+                            self:ShowInProgress(StateValue)
+                        end
+                    end
+                end,
+                _SignUpRemainTime,
+                0,
+                1
+            )
         else
-            -- 这里隐藏呼吸特效，后期接入
-            self:PlayAnimation(self.AnimBoxEFFOut)
+            local bPlayerSignup = CurPlayerState == PlayerState.GoldSauserEntertainState_SignUp
+            if (not bPlayerSignup) then
+                self:ShowNextGame()
+            else
+                if (bInProgress or bInSignUp) then
+                    self:ShowInProgress(StateValue)
+                    return
+                end
+            end
         end
         return
+    else
+        if (bInProgress or bInSignUp) then
+            self:ShowInProgress(StateValue)
+            return
+        end
     end
 
     do
@@ -170,6 +190,36 @@ function GateMainCountDownPanelView:UpdateByGoldSauserState()
     end
 
     _G.FLOG_ERROR("当前状态错误，将使用默认显示。请检，状态是：%s", StateValue)
+end
+
+function GateMainCountDownPanelView:ShowInProgress(InGameState)
+    local bInSignUp = InGameState == GoldSauserEntertainState.GoldSauserEntertainState_SignUp
+    -- 如果正在进行中，那么不显示时间，并且点击显示的文字是机遇临门进行中
+    self.UIAdapterCountDown:ManuallyStop()
+    UIUtil.SetIsVisible(self.TextContent, true)
+    self.TextContent:SetText(LSTR(1270036))
+    local CurGameName = _G.GoldSauserMgr:GetCurGameName() or ""
+    local FormatStr = LSTR(1270035)
+    self.TextTips:SetText(string.format(FormatStr, CurGameName))
+    if (bInSignUp) then
+        -- 这里播放呼吸特效
+        self:PlayAnimation(self.AnimBoxEFFIn)
+    else
+        -- 这里隐藏呼吸特效
+        self:PlayAnimation(self.AnimBoxEFFOut)
+    end
+end
+
+function GateMainCountDownPanelView:ShowNextGame()
+    -- 这里是游戏状态结束了，或者玩家玩完了，那么进入倒计时显示
+    local NextGameName = _G.GoldSauserMgr:GetNextActivityName(true) or ""
+    local FormatStr = LSTR(1270034)
+    self.TextTips:SetText(string.format(FormatStr, NextGameName))
+    UIUtil.SetIsVisible(self.TextContent, true)
+    local EndTimeMS = self:GetEndTimeMS()
+    self.UIAdapterCountDown:Start(EndTimeMS, 1, true, false)
+    -- 这里隐藏呼吸特效
+    self:PlayAnimation(self.AnimBoxEFFOut)
 end
 
 function GateMainCountDownPanelView:GetEndTimeMS()

@@ -104,7 +104,7 @@ function StoreBuyGoodsWinView:OnInit()
 		{ "PanelOriginalVisible", UIBinderSetIsVisible.New(self, self.PanelOriginal) },
 		{ "OriginalPriceText", UIBinderSetText.New(self, self.TextOriginalPrice) },
 		-- { "BuyGoodPriceType", UIBinderSetBrushFromAssetPath.New(self, self.ImgCrystal) },
-		{ "CurPriceTextColor", UIBinderSetColorAndOpacityHex.New(self, self.TextCurrentPrice) },
+		--{ "CurPriceTextColor", UIBinderSetColorAndOpacityHex.New(self, self.TextCurrentPrice) },
 
 		{ "ContainsItemList", UIBinderUpdateBindableList.New(self, self.ContainsItemListAdapter) },
 
@@ -170,9 +170,11 @@ function StoreBuyGoodsWinView:OnShow()
 
 			local ScoreValue = _G.ScoreMgr:GetScoreValueByID(self.Params.ScoreID)
 			if self.Params.BuyPrice > ScoreValue then
-				StoreMainVM.CurPriceTextColor = "DC5868FF"
+				UIUtil.TextBlockSetColorAndOpacityHex(self.TextCurrentPrice,  "DC5868FF")
+				--StoreMainVM.CurPriceTextColor = "DC5868FF"
 			else
-				StoreMainVM.CurPriceTextColor = "D2BA8EFF"
+				UIUtil.TextBlockSetColorAndOpacityHex(self.TextCurrentPrice,  "D2BA8EFF")
+				--StoreMainVM.CurPriceTextColor = "D2BA8EFF"
 			end
 			if self.Params.OriginalPrice then
 				StoreMainVM.OriginalPriceText = _G.ScoreMgr.FormatScore(self.Params.OriginalPrice)
@@ -187,7 +189,9 @@ function StoreBuyGoodsWinView:OnShow()
 		end
 		local TempCfg = self.Params.TempCfg
 		if TempCfg ~= nil then
-			self.TextItemDescription:SetText(ProtoEnumAlias.GetAlias(ProtoRes.Store_Label_Type, TempCfg.LabelMain))
+			local RichTextUtil = require("Utils/RichTextUtil")
+			local LabelRitchText = RichTextUtil.GetText(string.format("%s", ProtoEnumAlias.GetAlias(ProtoRes.Store_Label_Type, TempCfg.LabelMain)), "d5d5d5")
+			self.TextItemDescription:SetText(string.format("%s\n%s", LabelRitchText, TempCfg.Desc))
 			UIUtil.SetIsVisible(self.ImgGoods, true)
 			UIUtil.ImageSetBrushFromAssetPath(self.ImgGoods, TempCfg.Icon)
 		end

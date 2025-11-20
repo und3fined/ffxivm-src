@@ -9,8 +9,6 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local EventID = require("Define/EventID")
 
-local UUMGVideoPlayerUtil = _G.UE.UUMGVideoPlayerUtil
-
 ---@class UMGVideoPlayerView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BGButton UFButton
@@ -22,6 +20,7 @@ local UUMGVideoPlayerUtil = _G.UE.UUMGVideoPlayerUtil
 ---@field PauseButton UButton
 ---@field PlayButton UButton
 ---@field ResumeButton UButton
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TimeSpan UTextBlock
 ---@field VideoProgressBar UProgressBar
 ---@field VideoSlider USlider
@@ -39,6 +38,7 @@ function UMGVideoPlayerView:Ctor()
 	--self.PauseButton = nil
 	--self.PlayButton = nil
 	--self.ResumeButton = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TimeSpan = nil
 	--self.VideoProgressBar = nil
 	--self.VideoSlider = nil
@@ -47,6 +47,7 @@ end
 
 function UMGVideoPlayerView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -86,7 +87,7 @@ function UMGVideoPlayerView:OnShow()
 
 		if self.SeekValue then
 			self.VideoProgressBar:SetPercent(self.SeekValue)
-			UUMGVideoPlayerUtil.OnSeek(self.VideoPlayer, self.SeekValue)
+			_G.UE.UUMGVideoPlayerUtil.OnSeek(self.VideoPlayer, self.SeekValue)
 		end
 		self:ChangeVideoPlayState(true)
 		self:SwitchAudioPlay(false)
@@ -150,13 +151,13 @@ function UMGVideoPlayerView:InitVideoPlayer()
 	if self.VideoPath ~= "" then
 		if self.IsStandaloneMode then
 			UIUtil.ImageSetBrushFromAssetPath(self.MovieImage, "Material'/Game/Movies/MediaAssets/MiniUMGVideo_MP_Video_Mat.MiniUMGVideo_MP_Video_Mat'" )
-			self.VideoPlayer = UUMGVideoPlayerUtil.GetUMGVideoMediaPlayer(
+			self.VideoPlayer = _G.UE.UUMGVideoPlayerUtil.GetUMGVideoMediaPlayer(
 				"FileMediaSource'/Game/Movies/MediaAssets/MiniUMGVideo.MiniUMGVideo'",
 				--"./GameMovies/LayOut.mp4",
 				self.VideoPath,
 				"MediaPlayer'/Game/Movies/MediaAssets/MiniUMGVideo_MP.MiniUMGVideo_MP'")
 		else
-			self.VideoPlayer = UUMGVideoPlayerUtil.GetUMGVideoMediaPlayer(
+			self.VideoPlayer = _G.UE.UUMGVideoPlayerUtil.GetUMGVideoMediaPlayer(
 				"FileMediaSource'/Game/Movies/MediaAssets/UMGVideo.UMGVideo'",
 				self.VideoPath,
 				"MediaPlayer'/Game/Movies/MediaAssets/UMGVideo_MP.UMGVideo_MP'")
@@ -259,7 +260,7 @@ end
 
 function UMGVideoPlayerView:OnSliderValueChange(_, Value)
 	--_G.FLOG_INFO("UMGVideoPlayerView:OnSliderValueChange, Value = %s", tostring(Value))
-	UUMGVideoPlayerUtil.OnSeek(self.VideoPlayer, Value)
+	_G.UE.UUMGVideoPlayerUtil.OnSeek(self.VideoPlayer, Value)
 	--self.VideoSlider:SetValue(Value)
 	self.VideoProgressBar:SetPercent(Value)
 	if self.IsPaused == false then
@@ -277,7 +278,7 @@ end
 
 function UMGVideoPlayerView:StopTickTimer()
 	if nil ~= self.TickTimerID then
-		TimerMgr:CancelTimer(self.TickTimerID)
+		self:UnRegisterTimer(self.TickTimerID)
 		self.TickTimerID = nil
 	end
 end
@@ -310,11 +311,11 @@ function UMGVideoPlayerView:GetSeekValue()
 end
 
 function UMGVideoPlayerView:TickVideoPlay()
-	local IsVideoPlaying = UUMGVideoPlayerUtil.IsVideoPlaying(self.VideoPlayer)
+	local IsVideoPlaying = _G.UE.UUMGVideoPlayerUtil.IsVideoPlaying(self.VideoPlayer)
 	--_G.FLOG_INFO("UMGVideoPlayerView:TickVideoPlay, IsVideoPlaying = %s", tostring(IsVideoPlaying))
 	self.IsPaused = not IsVideoPlaying
 	self:ChangeVideoPlayState(IsVideoPlaying) 
-	UUMGVideoPlayerUtil.TickVideoPlay(self.VideoPlayer, self.VideoSlider, self.VideoProgressBar, self.TimeSpan)
+	_G.UE.UUMGVideoPlayerUtil.TickVideoPlay(self.VideoPlayer, self.VideoSlider, self.VideoProgressBar, self.TimeSpan)
 end
 
 function UMGVideoPlayerView:SetVolume(bIsOpen)
@@ -322,9 +323,9 @@ function UMGVideoPlayerView:SetVolume(bIsOpen)
 		bIsOpen = false
 	end
 	if bIsOpen == true then
-		UUMGVideoPlayerUtil.SetNativeVolume(self.VideoPlayer, _G.CgMgr.G_VideoVolume)
+		_G.UE.UUMGVideoPlayerUtil.SetNativeVolume(self.VideoPlayer, _G.CgMgr.G_VideoVolume)
 	else
-		UUMGVideoPlayerUtil.SetNativeVolume(self.VideoPlayer, 0)
+		_G.UE.UUMGVideoPlayerUtil.SetNativeVolume(self.VideoPlayer, 0)
 	end
 end
 
@@ -369,7 +370,7 @@ end
 
 function UMGVideoPlayerView:ClearUIFadeTimer()
 	if nil ~= self.UIFadeTimerID then
-		TimerMgr:CancelTimer(self.UIFadeTimerID)
+		self:UnRegisterTimer(self.UIFadeTimerID)
 		self.UIFadeTimerID = nil
 	end
 end
@@ -395,9 +396,13 @@ function UMGVideoPlayerView:PlayBGM(Flag)
 	if Flag then
 		_G.UE.UBGMMgr.Get():Resume()
 		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Ambient_Sound, 1)
+		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Instruments, 1)
+		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Sfx, 1)
 	else
 		_G.UE.UBGMMgr.Get():Pause()
 		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Ambient_Sound, 0)
+		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Instruments, 0)
+		_G.UE.UAudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Sfx, 0)
 	end
 end
 
@@ -425,7 +430,7 @@ end
 function UMGVideoPlayerView:OnGameEventAppEnterForeground(Params)
 	_G.FLOG_INFO("UMGVideoPlayerView:OnGameEventAppEnterForeground")
 	if self.IsPlayingWhenEnterBackgroud then
-		self:OnPlay()
+		self:OnResume()
 	end
 end
 

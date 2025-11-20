@@ -87,12 +87,12 @@ function SkillSystemRedDotNode:SetDataByNode(Node)
     end
     self.Type = Node.Type
     self.ChildNodeList = {}
+    self.ID = Node.ID or 0
+    self.NodeState = Node.NodeState or ENodeState.NonLeaf
+    self.UncheckedNum = 0
     for _, ChildNode in ipairs(Node.ChildNodeList) do
         self:AddChildNode(ChildNode)
     end
-    self.UncheckedNum = Node.UncheckedNum or 0
-    self.ID = Node.ID or 0
-    self.NodeState = Node.NodeState or ENodeState.NonLeaf
 end
 
 SkillSystemRedDotNode.ENodeType = ENodeType

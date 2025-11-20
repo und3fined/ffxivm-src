@@ -7,7 +7,6 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-
 local UIBinderSetText = require("Binder/UIBinderSetText")
 
 ---@class WardrobeTipsListItem2View : UIView

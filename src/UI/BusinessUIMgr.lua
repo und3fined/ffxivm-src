@@ -68,6 +68,7 @@ function BusinessUIMgr:ShowMainPanel(ViewID, NeedInputMode)
             return
         end
         UIViewMgr:ShowView(UIViewID.PVPColosseumMain)
+        _G.SkillHandleMgr:InitPVPSkillMainView()
 
     elseif ViewID == UIViewID.ChocoboRaceMainView then
         UIViewMgr:ShowView(UIViewID.ChocoboRaceMainView)

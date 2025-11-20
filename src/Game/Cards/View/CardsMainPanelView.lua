@@ -6,6 +6,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local ActorUtil = require("Utils/ActorUtil")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local CardsMainPanelViewVM = require("Game/Cards/VM/CardsMainPanelViewVM")
 local Async = require("Game/MagicCard/Module/AsyncUtils")
@@ -70,6 +71,7 @@ local MainPanelVM = require("Game/Main/MainPanelVM")
 ---@field ImgSelfTurn URadialImage
 ---@field MainLBottomPanel MainLBottomPanelView
 ---@field MainTeamPanel MainTeamPanelView
+---@field NewBieGuide CardGameNewBiePanelView
 ---@field OtherCard01 CardsBigCardItemView
 ---@field OtherCard02 CardsBigCardItemView
 ---@field OtherCard03 CardsBigCardItemView
@@ -119,10 +121,12 @@ local MainPanelVM = require("Game/Main/MainPanelVM")
 ---@field AnimDarkBG UWidgetAnimation
 ---@field AnimFirst UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimOtherDeal UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field AnimRedTurn UWidgetAnimation
 ---@field AnimRedTurnSpeed UWidgetAnimation
 ---@field AnimScoreChange UWidgetAnimation
+---@field AnimSelfDeal UWidgetAnimation
 ---@field AnimSelfTurn UWidgetAnimation
 ---@field AnimSelfTurnSpeed UWidgetAnimation
 ---@field AnimTableShake UWidgetAnimation
@@ -174,6 +178,7 @@ function CardsMainPanelView:OnRegisterSubView()
     self:AddSubView(self.SelfCard05)
     self:AddSubView(self.MainTeamPanel)
     self:AddSubView(self.MainLBottomPanel)
+    self:AddSubView(self.NewBieGuide)
     -- AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -373,11 +378,9 @@ end
 function CardsMainPanelView:OnIsPlayerMoveChange(NewValue, OldValue)
     -- 行动回合发生变化，后续的改变在 UpdateTimerForMove 里面
     if (NewValue) then
-        self.TextTime01:SetText("00:00")
-        self.ImgRedTurn:SetPercent(0)
+        self:PlayProgressAnim(0, 0, false)
     else
-        self.TextTime02:SetText("00:00")
-        self.ImgSelfTurn:SetPercent(0)
+        self:PlayProgressAnim(0, 0, true)
     end
 end
 
@@ -397,6 +400,12 @@ function CardsMainPanelView:OnClickBtnClose()
 end
 
 function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
+    if MagicCardMgr:IsTutorialGame() then
+        FLOG_INFO("幻卡 : 新手引导对局")
+        self:OnRecoverGame(FantasyCardEnterRsp)
+        return
+    end
+
     FLOG_INFO("幻卡 : OnGameEventDoRefresh")
     if (self.IsPlayEnterGameAnim) then
         _G.FLOG_ERROR("错误，请检查一下为什么已经开始播放动画了，又播放一次")
@@ -435,15 +444,17 @@ function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
             Utils.DelayAsync(LocalDef.FlipToExposeCardAnimTime * 2)
         end
 
-        print("【开局：显示规则】")
+        FLOG_INFO("【开局：显示规则】")
         for _, Rule in ipairs(self.ViewModel:GetAllRulesToShow()) do
             local RuleId = Rule.Rule
             _G.FLOG_INFO(string.format("当前规则， [%s]", Rule.RuleText))
-            self:PlayAnimation(self.AnimDarkBG)
+            if CommonUtil.IsObjectValid(self.AnimDarkBG) then
+                self:PlayAnimation(self.AnimDarkBG)
+            end
             self.CardsTextPrompt.PlayRuleAsyc(self.CardsTextPrompt, RuleId)
 
             if RuleId == RuleEnum.FANTASY_CARD_RULE_EXCHANGE then
-                print(
+                FLOG_INFO(
                     "交换规则额外处理: PlayerExchangedCard: [%d] EnemyExchangedCard: [%d]",
                     InGameService.PlayerExchangedCard, InGameService.EnemyExchangedCard
                 )
@@ -462,13 +473,13 @@ function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
                 _opponentVM.ExchangedCardId = _playerCardID
                 Utils.DelayAsync(LocalDef.ExchangeRuleDisplayAnimTime)
             elseif RuleId == RuleEnum.FANTASY_CARD_RULE_EXPOSE_THREE or RuleId == RuleEnum.FANTASY_CARD_RULE_EXPOSE_ALL then
-                print("全明牌、三明牌规则额外处理: ")
+                FLOG_INFO("全明牌、三明牌规则额外处理: ")
                 self:FlipCardToExpose()
                 Utils.DelayAsync(LocalDef.FlipToExposeCardAnimTime)
             end
         end
 
-        print("【开局：显示 开始】")
+        FLOG_INFO("【开局：显示 开始】")
         self:PlayAnimation(self.AnimDarkBG)
         --AudioUtil.LoadAndPlayUISound(self.BattleBegin_SoundEffect:ToString())
         self.CardsTextPrompt.PlayKeyTextAsyc(self.CardsTextPrompt, "Start")
@@ -482,13 +493,16 @@ function CardsMainPanelView:OnGameEventDoRefresh(FantasyCardEnterRsp)
         self:PlayAnimation(self.AnimFirst)
         Utils.DelayAsync(LocalDef.TimeWaitForShowWhosFirst)
         if (InGameService.IsPlayerCurrentMove) then
-            print("先手是蓝方")
+            FLOG_INFO("先手是蓝方")
         else
-            print("先手是红方")
+            FLOG_INFO("先手是红方")
         end
         self.BeginDisplayCoroutine = nil
         self.ViewModel:OnGameStarted()
         self.IsPlayEnterGameAnim = false
+        if InGameService.NewSvrNewMoveRsp then
+            InGameService:AsyncPostProcessForServerNewMove()
+        end
     end
 
     self.BeginDisplayCoroutine = coroutine.create(BeginDisplayCoroutine)
@@ -515,6 +529,9 @@ function CardsMainPanelView:OnRecoverGame(FantasyCardEnterRsp)
         self:FlipCardToExpose()
     end
     self.ViewModel:OnRecoverGameRsp(FantasyCardEnterRsp)
+    self:RegisterTimer(function ()
+        MagicCardMgr:TurnCamera(nil, 0, nil)
+    end, 0, 1, -1)
 end
 
 function CardsMainPanelView:FlipCardToExpose()
@@ -625,6 +642,10 @@ function CardsMainPanelView:OnShow()
     self:ResetCardsAndNamesPos()
 
     self:UpdateRemainTimeText(self.Params)
+
+    if MagicCardMgr:IsTutorialGame() then
+        UIUtil.SetIsVisible(self.NewBieGuide, true)
+    end
 end
 
 ---@type 刷新等待时间文本
@@ -765,7 +786,10 @@ function CardsMainPanelView:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MagicCardBattleRecover, self.OnMagicCardBattleRecover)
     self:RegisterGameEvent(EventID.PWorldExit, self.OnPWorldExit)
     self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
-
+    self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnGameEventStartFadeIn)
+    self:RegisterGameEvent(EventID.NPCCreate, self.OnNPCCreate)
+    self:RegisterGameEvent(EventID.MagicCardTutorialEnd, self.OnMagicCardTutorialEnd)
+    self:RegisterGameEvent(EventID.MagicCardTutorialCardNumHighlight, self.OnMagicCardTutorialCardNumHighlight)
 end
 
 -- 进入副本之前都会发退出前一个可以直接监听这个消息
@@ -875,7 +899,7 @@ function CardsMainPanelView:OnGameEventShowBoardEffectForSpecialRule(FlipCards)
     end
 end
 
-function CardsMainPanelView:OnGameEventDoPlayOneCard(IsPlayerMove, CardId, BoardLoc, ChangedCardsOnBoard)
+function CardsMainPanelView:OnGameEventDoPlayOneCard()
     -- stop progress anim
     self:StopAnimation(self.AnimGlow)
     self:StopAnimation(self.AnimProgress)
@@ -1039,6 +1063,38 @@ function CardsMainPanelView:RecoverHandCardsPos(CardVMList, CardItems, IsPlayerC
     end
 end
 
+function CardsMainPanelView:OnGameEventStartFadeIn(Params)
+    local EntityID = Params.ULongParam1
+    if EntityID == nil or EntityID == 0 then
+        return
+    end
+    local ResID = ActorUtil.GetActorResID(EntityID)
+    local IsCardNPC = MagicCardVMUtils.IsMagicCardNPC(ResID)
+    local CurNPCID = MagicCardMgr:GetPVENPCID()
+    local IsInCardGame = CurNPCID == ResID
+    -- 杀端重连
+    if IsCardNPC then
+        if IsInCardGame then
+            -- 针对杀端重连后，对手播放待机动作
+            ActorAnimService:PlayNpcIdleAnim()
+            MagicCardMgr:TurnCamera(nil, 1, nil)
+        end
+    end
+end
+
+function CardsMainPanelView:OnNPCCreate(Params)
+	local EntityID = Params.ULongParam1
+    local ResID = ActorUtil.GetActorResID(EntityID)
+    local IsCardNPC = MagicCardVMUtils.IsMagicCardNPC(ResID)
+    if IsCardNPC then
+        local CurNPCID = MagicCardMgr:GetPVENPCID()
+        local IsInCardGame = CurNPCID == ResID
+        if IsInCardGame then
+            -- 针对断线重连后，对手播放待机动作
+            ActorAnimService:PlayNpcIdleAnim()
+        end
+    end
+end
 
 function CardsMainPanelView:GetPlayingOffsetInfo(RemainCardNum, IsPlayerCards)
     if IsPlayerCards then
@@ -1053,7 +1109,12 @@ function CardsMainPanelView:OnMagicCardShowRulePanelInBattle()
 end
 
 function CardsMainPanelView:OnGameEventNewMove(FantasyCardNewMoveRsp)
-    InGameService:OnNewMoveRsp(FantasyCardNewMoveRsp, false)
+    -- 还在播放开场动画，就下发出牌数据，先保存起来，动画播完再处理
+    if self.IsPlayEnterGameAnim == true then
+        InGameService.NewSvrNewMoveRsp = FantasyCardNewMoveRsp
+    else
+        InGameService:OnNewMoveRsp(FantasyCardNewMoveRsp, false)
+    end
 end
 
 function CardsMainPanelView:OnGameEventUpdateTimer(RemainTime)
@@ -1062,6 +1123,10 @@ function CardsMainPanelView:OnGameEventUpdateTimer(RemainTime)
 end
 
 function CardsMainPanelView:OnGameEventShowNewTurn(IsPlayerMove, OnReadyCallback, IsRecover)
+    if MagicCardMgr.IsGameEnd or MagicCardMgr.IsReqEndGame then
+        return
+    end
+
     if (IsPlayerMove) then
         self.ViewModel:ClearClickVM() -- 清除选中幻卡，防止无法点击
         UIUtil.SetIsVisible(self.ImgSelfTurn, true)
@@ -1097,50 +1162,73 @@ function CardsMainPanelView:UpdateTimerForMove(TimeRemains)
     local _totalTime = InGameService:GetActualTimeOutForMove()
     if (InGameService.IsPlayerCurrentMove) then
         -- 自己的时间显示
-        if TimeRemains <= 0 then
-            self.TextTime02:SetText("00:00")
-            self.ImgSelfTurn:SetPercent(0)
-        else
-            self.ImgSelfTurn:SetPercent(TimeRemains / _totalTime)
-            local _min = 0
-            while (TimeRemains >= 60) do
-                TimeRemains = TimeRemains - 60
-                _min = _min + 1
-            end
-
-            self.TextTime02:SetText(string.format("%02d:%02d", _min, TimeRemains))
-            if TimeRemains == 5 then
-                self:PlayAnimation(self.AnimSelfTurnSpeed)
-            end
+        if TimeRemains == 5 then
+            self:PlayAnimation(self.AnimSelfTurnSpeed)
         end
+        self:PlayProgressAnim(TimeRemains, _totalTime, true)
     else
         -- 对面的时间显示
-        if TimeRemains <= 0 then
-            self.ImgRedTurn:SetPercent(0)
-            self.TextTime01:SetText("00:00")
-        else
-            self.ImgRedTurn:SetPercent(TimeRemains / _totalTime)
-            local _min = 0
-            while (TimeRemains >= 60) do
-                TimeRemains = TimeRemains - 60
-                _min = _min + 1
-            end
-            self.TextTime01:SetText(string.format("%02d:%02d", _min, TimeRemains))
-            if TimeRemains == 5 then
-                self:PlayAnimation(self.AnimRedTurnSpeed)
-            end
+        if TimeRemains == 5 then
+            self:PlayAnimation(self.AnimRedTurnSpeed)
         end
+        self:PlayProgressAnim(TimeRemains, _totalTime, false)
     end
 
     UIUtil.SetIsVisible(self.PanelSelfDeal, InGameService.IsPlayerCurrentMove)
     UIUtil.SetIsVisible(self.PanelOtherDeal, not InGameService.IsPlayerCurrentMove)
 end
 
+function CardsMainPanelView:PlayProgressAnim(TimeRemains, TotalTime, IsSelf)
+    local Percent = 0
+    if TimeRemains > 0 and TotalTime > 0 then
+        Percent = math.clamp(TimeRemains / TotalTime, 0, 1.0)
+    end
+
+    local Anim = nil
+    local _min = 0
+    while (TimeRemains >= 60) do
+        TimeRemains = TimeRemains - 60
+        _min = _min + 1
+    end
+
+    if IsSelf then
+        if Percent <= 0 then
+            self.TextTime02:SetText("00:00")
+        else
+            self.TextTime02:SetText(string.format("%02d:%02d", _min, TimeRemains))
+        end
+        Anim = self.AnimSelfDeal
+    else
+        if Percent <= 0 then
+            self.TextTime01:SetText("00:00")
+        else
+            self.TextTime01:SetText(string.format("%02d:%02d", _min, TimeRemains))
+        end
+        Anim = self.AnimOtherDeal
+    end
+
+    if Anim then
+        UIUtil.PlayAnimationTimePointPct(self, Anim, 1-Percent, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, false)
+    end
+end
+
+function CardsMainPanelView:GetProgressAnimDuration(IsSelf)
+    if IsSelf then
+        if self.AnimSelfDeal then
+            return self.AnimSelfDeal:GetEndTime()
+        end
+    else
+        if self.AnimOtherDeal then
+            return self.AnimOtherDeal:GetEndTime()
+        end
+    end
+	return 0
+end
+
 function CardsMainPanelView:ResetTimeProgress()
-    self.TextTime01:SetText("00:00")
-    self.ImgRedTurn:SetPercent(0)
-    self.TextTime02:SetText("00:00")
-    self.ImgSelfTurn:SetPercent(0)
+    self:PlayProgressAnim(0, 0, true)
+    self:PlayProgressAnim(0, 0, false)
+
     UIUtil.SetIsVisible(self.PanelSelfDeal, false)
     UIUtil.SetIsVisible(self.PanelOtherDeal, false)
 end
@@ -1170,6 +1258,7 @@ function CardsMainPanelView:OnGameEventGameFinish(GameFinishRsp)
 
     local BattleResult, ShouldRestart = GameFinishRsp.Result, GameFinishRsp.ShouldRestart
     self:ResetTimeProgress()
+    self.CardsTextPrompt:PlayAllAnimationsToEnd()
     if BattleResult == ProtoCS.BATTLE_RESULT.BATTLE_RESULT_WIN then
         self.CardsTextPrompt:PlayKeyText("BlueWins")
     elseif BattleResult == ProtoCS.BATTLE_RESULT.BATTLE_RESULT_FAIL then
@@ -1195,6 +1284,13 @@ function CardsMainPanelView:OnGameEventGameFinish(GameFinishRsp)
 end
 
 function CardsMainPanelView:OnMagicCardReadyNewMove()
+    if MagicCardMgr:IsTutorialGame() and InGameService.IsPlayerCurrentMove then
+        _G.EventMgr:SendEvent(EventID.PlayMagicCardTutorial, LocalDef.TutorialID_PlayerTurn, InGameService.CurrentRound)
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, 6, LocalDef.EnumCardNumberDir.Down) -- 棋盘目标位置上方卡牌
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, 9, LocalDef.EnumCardNumberDir.Up) -- 棋盘目标位置卡牌
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, 3, LocalDef.EnumCardNumberDir.Up, true) -- 手里卡牌
+    end
+
     -- 获取手牌
     local PlayingCardsItemView = InGameService.IsPlayerCurrentMove and self.BlueCardItems or self.RedCardItems
     if PlayingCardsItemView == nil then
@@ -1209,6 +1305,68 @@ end
 
 function CardsMainPanelView:OnRegisterBinder()
     self:RegisterBinders(self.ViewModel, self.Binders)
+end
+
+---@type 阶段引导结束
+function CardsMainPanelView:OnMagicCardTutorialEnd(TutorialID)
+    local WidgetInfo = LocalDef.TutorialWidgetRef[TutorialID]
+    if WidgetInfo == nil then
+        return
+    end
+    
+    local IsNeedResumeGame = WidgetInfo.IsEndNode
+    if IsNeedResumeGame then
+        MagicCardMgr:ResumeGame()
+    end
+
+    if TutorialID > 0 then
+        if TutorialID == LocalDef.TutorialID_PlayerTurn then
+            self.NewBieGuide:HideTutorialView(TutorialID)
+        end
+    end
+
+    -- 手里卡牌数字取消高亮
+    for i = 1, #self.BlueCardItems do
+        local CardItemView = self.BlueCardItems[i]
+        local CardItemVM = CardItemView.Params.Data
+        if CardItemVM then
+            CardItemVM:SetCardNumHighLightDir(0)
+        end
+    end
+
+    -- 棋盘卡牌数字取消高亮
+    for i = 1, #self.CardItemsOnBoard do
+        local CardItemView = self.CardItemsOnBoard[i]
+        local CardItemVM = CardItemView.Params.Data
+        if CardItemVM then
+            CardItemVM:SetCardNumHighLightDir(0)
+        end
+    end
+end
+
+-- 新手引导字体高亮
+function CardsMainPanelView:OnMagicCardTutorialCardNumHighlight(Loc, Dir, IsOnHandCard)
+    if IsOnHandCard then
+        -- 手里卡牌数字高亮
+        for i = 1, #self.BlueCardItems do
+            local CardItemView = self.BlueCardItems[i]
+            local CardItemVM = CardItemView.Params.Data
+            if i - 1 == Loc and CardItemVM then
+                CardItemVM:SetCardNumHighLightDir(Dir)
+            end
+        end
+    else
+        -- 棋盘卡牌数字高亮
+        for i = 1, #self.CardItemsOnBoard do
+            local CardItemView = self.CardItemsOnBoard[i]
+            local CardItemVM = CardItemView.Params.Data
+            local CurIndex = CardItemVM and CardItemVM:GetIndex() or 0
+            local IsPlayed = CardItemVM and CardItemVM.IsPlayed
+            if IsPlayed and Loc == CurIndex then
+                CardItemVM:SetCardNumHighLightDir(Dir)
+            end
+        end
+    end
 end
 
 return CardsMainPanelView

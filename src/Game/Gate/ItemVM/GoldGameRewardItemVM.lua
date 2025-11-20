@@ -7,6 +7,8 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local ItemCfg = require("TableCfg/ItemCfg")
+local ItemUtil = require("Utils/ItemUtil")
+
 ---@class GoldGameRewardItemVM : UIViewModel
 
 local GoldGameRewardItemVM = LuaClass(UIViewModel)
@@ -22,12 +24,15 @@ function GoldGameRewardItemVM:Ctor()
 end
 
 function GoldGameRewardItemVM:IsEqualVM(Value)
-    return true
+    if (Value == nil) then
+        return false
+    end
+
+    return Value.ID == self.ID
 end
 
 function GoldGameRewardItemVM:UpdateVM(Value)
     self.ID = Value.ID
-    self.Num = Value.Num
     if (Value.ResID ~= nil) then
         self.ResID = Value.ResID
     else
@@ -38,6 +43,12 @@ function GoldGameRewardItemVM:UpdateVM(Value)
     self.IncrementedNum = Value.IncrementedNum
     self.Value = Value.Value
     self.PlayAddEffect = Value.PlayAddEffect
+    if (self.PlayAddEffect) then
+        self.NumVisible = false
+    else
+        self.NumVisible = true
+        self.Num = ItemUtil.GetItemNumText(tonumber(Value.Num))
+    end
     self.IsSelect = Value.IsSelect or false
     self.IsMask = Value.IsMask or false
     self.IconChooseVisible = Value.IconChooseVisible or false

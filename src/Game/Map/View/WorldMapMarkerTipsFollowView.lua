@@ -78,7 +78,9 @@ function WorldMapMarkerTipsFollowView:OnShow()
 			local WorldMapPanel = _G.UIViewMgr:FindVisibleView(UIViewID.WorldMapPanel)
 			if WorldMapPanel then
 				WorldMapPanel.MapContent:MoveMapByOffect(OffSetVector2D, function (DeltaPostion)
-					UIUtil.CanvasSlotSetPosition(self.PanelTips, ViewportPosition + DeltaPostion)
+					if _G.CommonUtil.IsObjectValid(self.PanelTips) then
+						UIUtil.CanvasSlotSetPosition(self.PanelTips, ViewportPosition + DeltaPostion)
+					end
 				end)
 			end
 		end

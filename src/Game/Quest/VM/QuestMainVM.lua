@@ -56,6 +56,9 @@ function QuestMainVM:OnBegin()
 	self.QuestTrackVM = QuestTrackVMClass.New()
 
 	self.bShowEndLog = false
+
+	self.PermutationTable = {} --排列表
+	self:InitPermutationTable()
 end
 
 function QuestMainVM:OnEnd()
@@ -100,6 +103,8 @@ function QuestMainVM:UpdateDataVM()
 					--目标有变化才更新
 					self:UpdateChapter(ChapterID)
 				end
+			elseif NewStatus == CHAPTER_STATUS.FINISHED then
+				self:FinishChapter(ChapterID, true)
 			end
 
 		elseif NewStatus == CHAPTER_STATUS.FINISHED then
@@ -136,6 +141,33 @@ function QuestMainVM:UpdateDataVM()
 				self:FinishChapter(DisplayMainlineVM.ChapterID)
 				self:UpdateDisplayMainlineVMFromActivated()
 				FLOG_INFO("[QuestMainVM] UpdateDataVM UpdateDisplayMainlineVMFromActivated")
+			end
+		end
+	end
+end
+
+function QuestMainVM:InitPermutationTable()
+	local FinalMainlineCfg = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_CFG_FINAL_MAINLINE)
+	if FinalMainlineCfg then
+		local FinalMainlineID = FinalMainlineCfg.Value[1]
+		local QueueIndex = 1
+		self:FindPreTask(FinalMainlineID, QueueIndex)
+	end
+end
+
+function QuestMainVM:FindPreTask(QuestID, QueueIndex)
+	if QueueIndex == 10000 then
+		FLOG_ERROR("[QuestMainVM] FindPreTask Found Time > 10000, check!")
+		return
+	end
+	local QuestCfgItem = QuestHelper.GetQuestCfgItem(QuestID)
+	if QuestCfgItem then
+		self.PermutationTable[QuestCfgItem.ChapterID] = QueueIndex
+		if next(QuestCfgItem.PreTaskID) then
+			local PreQuestID = QuestCfgItem.PreTaskID[1]
+			if PreQuestID then
+				QueueIndex = QueueIndex + 1
+				self:FindPreTask(PreQuestID, QueueIndex)
 			end
 		end
 	end
@@ -415,7 +447,7 @@ function QuestMainVM:TryAddEndChapterVM(ChapterID)
 	}
 
 	local ViewModel = self.AllEndChapterVMs:AddByValue(Value)
-	self.AllEndChapterVMs:Sort(self.QuestVMSortByGenre)
+	self.AllEndChapterVMs:Sort(self.QuestVMSortByFinishTime)
 	return ViewModel
 end
 
@@ -638,6 +670,33 @@ function QuestMainVM.QuestVMSortByGenre(Left, Right)
 		local Time2 = Right.SubmitTime or 0
 		if Time1 == Time2 then --GM完成的任务
 			return Left.ChapterID < Right.ChapterID
+		end
+		return Time1 < Time2
+	end
+	return G1 < G2
+end
+
+---@param Left ChapterVM
+---@param Right ChapterVM
+---@return boolean
+function QuestMainVM.QuestVMSortByFinishTime(Left, Right)
+	local G1 = Left.GenreID and Left.GenreID // 100 or 0
+	local G2 = Right.GenreID and Right.GenreID // 100 or 0
+	if G1 == G2 then
+		local Time1 = Left.SubmitTime or 0
+		local Time2 = Right.SubmitTime or 0
+		if Time1 == Time2 then --直升的情况
+			local P1 = QuestMainVM.PermutationTable[Left.ChapterID] or 0
+			local P2 = QuestMainVM.PermutationTable[Right.ChapterID] or 0
+			if P1 == P2 then
+				local L1 = Left.MinLevel or 0
+				local L2 = Right.MinLevel or 0
+				if L1 == L2 then
+					return Left.ChapterID < Right.ChapterID
+				end
+				return L1 < L2
+			end
+			return P2 < P1
 		end
 		return Time1 < Time2
 	end

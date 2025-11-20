@@ -10,6 +10,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local FishNotesMgr = require("Game/FishNotes/FishNotesMgr")
 local FishNotesDefine = require("Game/FishNotes/FishNotesDefine")
 local ItemVM = require("Game/Item/ItemVM")
+local ItemUtil = require("Utils/ItemUtil")
 
 ---@class FishSlotItemVM: UIViewModel
 ---@field FishIcon string 鱼图标
@@ -85,11 +86,7 @@ function FishSlotItemVM:UpdateVM(Value)
     if ItemData then
         self.FishIcon = UIUtil.GetIconPath(ItemData.IconID)
         self.IsHQ = (1 == ItemData.IsHQ)
-        if self.IsHQ then
-            self.ItemQualityIcon = ItemVM.ItemHQColorType[ItemData.ItemColor]
-        else
-            self.ItemQualityIcon = ItemVM.ItemColorType[ItemData.ItemColor]
-        end
+        self.ItemQualityIcon = ItemUtil.GetItemColorIcon(self.ItemID)
     end
 end
 

@@ -8,12 +8,14 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderValueChangedCallback =  require("Binder/UIBinderValueChangedCallback")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 
 ---@class FashionEvaluationBulletinListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Icon UFImage
+---@field IconRound UFImage
+---@field IconSwitch UFWidgetSwitcher
 ---@field Icon_1 UFImage
 ---@field TextQuantity UFTextBlock
 ---@field TextTtile UFTextBlock
@@ -23,6 +25,8 @@ local FashionEvaluationBulletinListItemView = LuaClass(UIView, true)
 function FashionEvaluationBulletinListItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Icon = nil
+	--self.IconRound = nil
+	--self.IconSwitch = nil
 	--self.Icon_1 = nil
 	--self.TextQuantity = nil
 	--self.TextTtile = nil
@@ -36,7 +40,7 @@ end
 
 function FashionEvaluationBulletinListItemView:OnInit()
 	self.Binders = {
-		{"IsGetProgress", UIBinderSetIsVisible.New(self, self.Icon)},
+		{"IsGetProgress", UIBinderValueChangedCallback.New(self, nil, self.OnIsGetProgressChanged)},
 		{"ProgressName", UIBinderSetText.New(self, self.TextTtile)},
 		{"AwardIcon", UIBinderSetBrushFromAssetPath.New(self, self.Icon_1)},
 		{"AwardNum", UIBinderSetText.New(self, self.TextQuantity)},
@@ -74,6 +78,11 @@ function FashionEvaluationBulletinListItemView:OnRegisterBinder()
 		return
 	end
 	self:RegisterBinders(self.ViewModel, self.Binders)
+end
+
+function FashionEvaluationBulletinListItemView:OnIsGetProgressChanged(IsGetProgress)
+	local Index = IsGetProgress and 0 or 1
+	self.IconSwitch:SetActiveWidgetIndex(Index)
 end
 
 return FashionEvaluationBulletinListItemView

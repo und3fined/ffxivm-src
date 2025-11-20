@@ -17,6 +17,7 @@ local MapMarkerAetherCurrentVM = require("Game/Map/MarkerVM/MapMarkerAetherCurre
 local MapMarkerMineVM = require("Game/Map/MarkerVM/MapMarkerMineVM")
 local MapMarkerChocoboRacerVM = require("Game/Map/MarkerVM/MapMarkerChocoboRacerVM")
 local MapMarkerGameplayVM = require("Game/Map/MarkerVM/MapMarkerGameplayVM")
+local MapMarkerGSMiniGameVM = require("Game/Map/MarkerVM/MapMarkerGSMiniGameVM")
 
 local MapMarkerFixedPoint = require("Game/Map/Marker/MapMarkerFixedPoint")
 
@@ -56,6 +57,8 @@ local MapMarkerProviderPVPPlayer = require("Game/Map/MarkerProvider/MapMarkerPro
 local MapMarkerProviderDetectTarget = require("Game/Map/MarkerProvider/MapMarkerProviderDetectTarget")
 local MapMarkerProviderGameplay = require("Game/Map/MarkerProvider/MapMarkerProviderGameplay")
 local MapMarkerProviderTracking = require("Game/Map/MarkerProvider/MapMarkerProviderTracking")
+local MapMarkerProviderHouseLand = require("Game/Map/MarkerProvider/MapMarkerProviderHouseLand")
+local MapMarkerProviderGSMiniGame = require("Game/Map/MarkerProvider/MapMarkerProviderGSMiniGame")
 
 local MapMarkerType = MapDefine.MapMarkerType
 local ObjectPoolMgr = _G.ObjectPoolMgr
@@ -85,6 +88,8 @@ function MapMarkerFactory.CreateMarkerVM(MarkerType)
 		return MapMarkerQuestVM.New()
 	elseif MapMarkerType.Gameplay == MarkerType then
 		return MapMarkerGameplayVM.New()
+	elseif MapMarkerType.GSMiniGame == MarkerType then
+		return MapMarkerGSMiniGameVM.New()
 	else
 		return MapMarkerVM.New()
 		--local MarkerVM = ObjectPoolMgr:AllocObject(MapMarkerVM)
@@ -106,7 +111,8 @@ function MapMarkerFactory.ReleaseMarkerVM(ViewModel)
 		or MapMarkerType.AetherCurrent == MarkerType
 		or MapMarkerType.Fate == MarkerType
 		or MapMarkerType.TreasureMine == MarkerType
-		or MapMarkerType.ChocoboRacer == MarkerType then
+		or MapMarkerType.ChocoboRacer == MarkerType
+		or MapMarkerType.GSMiniGame == MarkerType then
 		ViewModel = nil
 	else
 		--ObjectPoolMgr:FreeObject(MapMarkerVM, ViewModel)
@@ -212,6 +218,10 @@ function MapMarkerFactory.CreateMarkerProvider(MarkerType)
 		return MapMarkerProviderGameplay.New()
 	elseif MapMarkerType.Tracking == MarkerType then
 		return MapMarkerProviderTracking.New()
+	elseif MapMarkerType.HouseLand == MarkerType then
+		return MapMarkerProviderHouseLand.New()
+	elseif MapMarkerType.GSMiniGame == MarkerType then
+		return MapMarkerProviderGSMiniGame.New()
 	end
 end
 

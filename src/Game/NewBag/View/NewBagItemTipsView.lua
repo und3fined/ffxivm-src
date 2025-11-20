@@ -88,7 +88,7 @@ function NewBagItemTipsView:OnInit()
 		{"BtnReadVisible", UIBinderSetIsVisible.New(self, self.BtnRead, false, true) },
 		{"BtnDropVisible", UIBinderSetIsVisible.New(self, self.BtnThrowAway,false,true) },
 
-		{ "EquipmentBtnEnabled", UIBinderSetIsEnabled.New(self, self.BtnGo) },
+		{ "EquipmentBtnEnabled", UIBinderSetIsEnabled.New(self, self.BtnGo,false,true) },
 		{ "UseBtnEnabled", UIBinderSetIsEnabled.New(self, self.BtnUse,false,true) },
 		{ "BtnReadEnabled", UIBinderSetIsEnabled.New(self, self.BtnRead,false,true) },
         { "BtnDropEnabled", UIBinderSetIsEnabled.New(self, self.BtnThrowAway,false,true) },
@@ -192,11 +192,19 @@ function NewBagItemTipsView:OnClickedBtn(ItemData)
 end
 
 function NewBagItemTipsView:OnClickedGoBtn()
+	if self.ViewModel.EquipmentBtnEnabled == false then
+		_G.MsgTipsUtil.ShowTips(LSTR(990131)) 
+		return
+	end
+
 	local Cfg = EquipmentCfg:FindCfgByEquipID(self.ViewModel.Value.ResID)
-	local Params = {}
-	Params.Part = Cfg.Part
-	Params.GID = self.ViewModel.Value.GID
-	_G.EquipmentMgr:ShowEquipDetail(Params)
+	if Cfg then
+		local Params = {}
+		Params.Part = Cfg.Part
+		Params.GID = self.ViewModel.Value.GID
+		_G.EquipmentMgr:ShowEquipDetail(Params)
+	end
+	
 end
 
 function NewBagItemTipsView:OnClickedUseBtn()
@@ -204,8 +212,12 @@ function NewBagItemTipsView:OnClickedUseBtn()
 	if Item == nil then return end
 
 	local Cfg = ItemCfg:FindCfgByKey(Item.ResID)
-	if self.ViewModel.UseBtnEnabled == false  and Cfg and Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.MISCELLANY_TASKONLY then
-		_G.MsgTipsUtil.ShowTips(LSTR(990128)) 
+	if self.ViewModel.UseBtnEnabled == false then
+		if Cfg.CantUseTipsID and Cfg.CantUseTipsID > 0 then
+			_G.MsgTipsUtil.ShowTipsByID(Cfg.CantUseTipsID)
+		else
+			_G.MsgTipsUtil.ShowTips(LSTR(990128)) 
+		end
 		return
 	end
 

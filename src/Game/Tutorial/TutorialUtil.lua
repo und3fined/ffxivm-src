@@ -9,6 +9,7 @@ local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local ProtoRes = require("Protocol/ProtoRes")
 local EventMgr = require("Event/EventMgr")
 local EventID = require("Define/EventID")
+local CommonUtil = require("Utils/CommonUtil")
 
 local TutorialUtil = {
 }
@@ -104,7 +105,7 @@ function TutorialUtil:HandleClickGuideWidget(Cfg, Widget)
     Params.FuncName = Cfg.EndFuncName
     Params.TutorialID = Cfg.TutorialID
 
-    if Widget == nil then
+    if Widget == nil or not CommonUtil.IsObjectValid(Widget) then
         FLOG_ERROR("HandleClickGuideWidget Widget is nil")
         _G.EventMgr:SendEvent(_G.EventID.TutorialEnd, Params)
         return

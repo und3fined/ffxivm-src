@@ -13,7 +13,7 @@ end
 
 function AdventureBaseVM:ClearItemList()
     if self.ItemList then
-        self.ItemList:Clear()
+        self.ItemList:EmptyItems()
     end
 end
 

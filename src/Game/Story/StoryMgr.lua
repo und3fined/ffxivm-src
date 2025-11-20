@@ -43,6 +43,7 @@ function SequenceCfgClass:Ctor(SequencePath)
 	self.bHasAnyDialog = true
 	self.bSkipLoadSubLevel = false
 	self.bIsNcut = false
+	self.bUseWeatherAfterChangeMap = false
 
 	self.bIsPlayMultiple = false
 	self.CurrentSequence = nil
@@ -98,7 +99,7 @@ function DialogueSequenceReporter:Init(SequenceID, VideoType, StopFlag)
 	self.StopFlag = StopFlag
 	self.bReportFinished = false
 	self.VideoType = VideoType --VideoType(0-视频， 1-sequence)
-	self.bIsCGMoviePlaying = false
+	self.bIsPlaying = false
 end
 
 function DialogueSequenceReporter:SetSequencePath(Path)
@@ -108,6 +109,24 @@ end
 function DialogueSequenceReporter:SetStopFlag(StopFlag)
 	self.StopFlag = StopFlag
 	self.SequencePlayerReport:RecordBreak()
+end
+
+-- 这里需要保证和StoryMgr的bIsPlaying状态一致, 避免因为和服务器状态不一致导致没通过OnlineStatusMgr的校验, 提前发Sequence结束的包
+-- 批量跳过之类的功能不会真正触发Sequence的播放状态，可以直接通过ReportSequenceFinished发结束的包
+function DialogueSequenceReporter:OnSequenceBeginPlay(SequenceID)
+	if self.bIsPlaying then
+		return
+	end
+	self.bIsPlaying = true
+	self:ReportSequenceBegin()
+end
+
+function DialogueSequenceReporter:OnSequenceEndPlay(SequenceID)
+	if not self.bIsPlaying then
+		return
+	end
+	self.bIsPlaying = false
+	self:ReportSequenceFinished()
 end
 
 function DialogueSequenceReporter:ReportSequenceBegin()
@@ -143,7 +162,9 @@ function StoryMgr:OnInit()
 	self.bPlayingEnterBackground = false
 	self.OuterStopCallbackWhenException = nil
 	self.SkipGroupSeqIDs = {}
+	self.SkipGroupEndSeqID = 0
 	self.bStayOriginalMap = true
+	self.bIsCGMoviePlaying = false
 
 	--杂项值，各种后面新增中间变量
 	self.MiscellaneousValue = {
@@ -268,8 +289,9 @@ function StoryMgr:OnGameEventVisionEnter(Params)
 		local Cfg = NpcCfg:FindCfgByKey(Params.IntParam2)
 		bIsQuestNpc = (Cfg ~= nil) and (Cfg.IsQuestObj == 1)
 	end
-	
-	if (Actor ~= nil and ((not Actor:IsClientActor()) or bIsQuestNpc)) then
+	local bIsCompanion = (Params.IntParam1 == _G.UE.EActorType.Companion)
+
+	if (Actor ~= nil and ((not Actor:IsClientActor()) or bIsQuestNpc or bIsCompanion)) then
 		local TargetType = Actor:GetActorType()
 		local SceneCharacterShowType = self.SequencePlayer:GetSceneCharacterShowType()
 
@@ -786,19 +808,6 @@ function StoryMgr:PlayDialogueSequence(SequenceID,
 
 	self.Reporter:SetSequencePath(SequencePath)
 
-	local bIsStoped = false
-	local bIsSendBegin = false
-	local function OnSequenceStoped()
-		bIsStoped = true
-		if (bIsSendBegin) then
-			self:ReportSequenceFinished()
-		end
-
-		if (SequenceStopCallback) then
-			SequenceStopCallback()
-		end
-	end
-
 	_G.InteractiveMgr:StopMajorMoveForFixedTime(2)
 
 	local FadeParamOnStop = {
@@ -808,14 +817,7 @@ function StoryMgr:PlayDialogueSequence(SequenceID,
 	}
 
 	self:DoPlaySequenceAfterFade(SequenceCfg, FadeParamOnStop,
-		OnSequenceStoped, SequencePauseCallback, SequenceFinishedCallback, PlaybackSettings)
-
-	if (not bIsStoped) then
-		if (self.Reporter) then
-			self.Reporter:ReportSequenceBegin()
-		end
-		bIsSendBegin = true
-	end
+		SequenceStopCallback, SequencePauseCallback, SequenceFinishedCallback, PlaybackSettings)
 end
 
 ---获取关卡过场Sequence路径
@@ -927,17 +929,10 @@ function StoryMgr:PlayCutSceneSequence(CutSceneSequence,
 	SequenceCfg.CheckNewbieForSkip = CutSceneSequence.CheckNewbieForSkip
 	SequenceCfg.SceneCharacterShowType = CutSceneSequence.SceneCharacterShowType
 
-	local bIsStoped = false
-	local bIsSendBegin = false
-
 	local function OnSequenceStoped()
-		bIsStoped = true
-		if (bIsSendBegin) then
-			self:ReportSequenceFinished()
-			if not SequenceCfg.bIsNcut --lcut没有EnableSkipStart轨道，避免出问题，先暂时不做判断。之后和策划沟通EnableSkipStart轨道导出规则
+		if not SequenceCfg.bIsNcut --lcut没有EnableSkipStart轨道，避免出问题，先暂时不做判断。之后和策划沟通EnableSkipStart轨道导出规则
 			or ( (self.SequencePlayer ~= nil) and self.SequencePlayer:HasEnableSkipStart() ) then
-				self.Setting.SendBrowsedSetup(CutSceneSequence.ID)
-			end
+			self.Setting.SendBrowsedSetup(CutSceneSequence.ID)
 		end
 
 		if (SequenceStopCallback) then
@@ -977,13 +972,6 @@ function StoryMgr:PlayCutSceneSequence(CutSceneSequence,
 		OnSequenceStoped, SequencePauseCallback, SequenceFinishedCallback, PlaybackSettings)
 	-- self:DoPlaySequence(SequenceCfg,
 	-- 	OnSequenceStoped, SequencePauseCallback, SequenceFinishedCallback, PlaybackSettings)
-
-	if (not bIsStoped) then
-		if (self.Reporter) then
-			self.Reporter:ReportSequenceBegin()
-		end
-		bIsSendBegin = true
-	end
 end
 
 ---sequence内部切换场景后调用重新播放sequence，(上报逻辑暂未加入)
@@ -1120,6 +1108,13 @@ function StoryMgr:PlayCutSceneSequenceByPathList(SequencePathList, SequenceStopC
 		CurrentIndex = CurrentIndex + 1
 		local InterruptMultiPlay = true
 		if self.SequencePlayer then
+			if self.SequencePlayer:IsSequenceStopedInException() then
+				local StoryMgrInstance = _G.UE.UStoryMgr:Get()
+				if StoryMgrInstance then
+					StoryMgrInstance:Finish() --异常退出再执行一次finish，天气切换一些逻辑放在finish处理
+				end
+				return
+			end
 			InterruptMultiPlay = self.SequencePlayer.bIsInterruptMultiPlay
 		end
 
@@ -1212,6 +1207,11 @@ function StoryMgr:PlayChocoboSequence(SequenceID, SequenceStopCallback, StainID1
 	self.CacheFuncOnPossessTarget = nil
 end
 
+function StoryMgr:PlayHousingSequence(SequenceID, SequenceStopCallback, BlockID)
+	_G.SeqDynParamsMgr:SetDynParams(StoryDefine.LcutDynParamType.PlayHousingCamera, tostring(BlockID))
+	self:PlayDialogueSequence(SequenceID, SequenceStopCallback)
+end
+
 function StoryMgr:DoPlaySequenceAfterFade(SequenceCfg, FadeParamOnStop,
 	SequenceStopCallback, SequencePauseCallback, SequenceFinishedCallback, PlaybackSettings)
 
@@ -1228,7 +1228,9 @@ function StoryMgr:DoPlaySequenceAfterFade(SequenceCfg, FadeParamOnStop,
 	end
 
 	local StopCallbackWithFade = function()
-		SequenceStopCallback()
+		if SequenceStopCallback then
+			SequenceStopCallback()
+		end
 
 		if UIViewMgr:IsViewVisible(FadeViewID) then
 			UIViewMgr:HideView(FadeViewID) -- 兜底保证界面隐藏
@@ -1280,16 +1282,26 @@ function StoryMgr:DoPlaySequence(SequenceCfg,
 		local SequenceID = SequenceCfg.SequenceID
 		self.SequenceID = SequenceID
 		_G.NpcDialogMgr:PreEndInteraction()
+		if self.Reporter then
+			self.Reporter:OnSequenceBeginPlay(SequenceID)
+		end
 		self:UpdatePlayingStatus(true, SequenceID)
 		--这个函数始终都会执行
 		local function OnSequenceStoped(bPlaySuccess)
 			self.SequenceID = nil
 			self:UpdatePlayingStatus(false, SequenceID)
+			if self.Reporter then
+				self.Reporter:OnSequenceEndPlay(SequenceID)
+			end
 			-- 需要提前记录一下，StopCallback的时候有可能把数据清掉了
 			local bIsSequenceWaitingToChangeMap = self:IsSequenceWaitingToChangeMap()
 			if (SequenceStopCallback ~= nil) then
 			    SequenceStopCallback()
 		    end
+
+			if self:IsSkipGroupEndSeq(SequenceID) then
+				self:ResetSkipGroup()
+			end
 
 			if (self.EnterVisionActors) then
 				for EntityID, _ in pairs(self.EnterVisionActors) do
@@ -1328,6 +1340,9 @@ function StoryMgr:DoPlaySequence(SequenceCfg,
 
 		local function OnSequenceFinished()
 			self:UpdatePlayingStatus(false, SequenceID)
+			if self.Reporter then
+				self.Reporter:OnSequenceEndPlay(SequenceID)
+			end
 			--bPauseAtEnd 为true的时候  会执行到Finish而不会执行到Stop，否则两个函数都会执行到
 			if (PlaybackSettings and PlaybackSettings.bPauseAtEnd == true) then
 				OnSequenceStoped(true)
@@ -1374,6 +1389,8 @@ function StoryMgr:DoPlaySequence(SequenceCfg,
 
 		local function ExecPlaySequence(SequenceObject)
 			SequenceCfg.SequenceObject = SequenceObject
+			SequenceCfg.bUseWeatherAfterChangeMap = false
+
 			self.UpdateVMTimerID = self:RegisterTimer(self.OnTimer, 0, 0.05, 0) -- 对话框滚动出字时间50ms
 
 			if (self.MiscellaneousValue ~= nil) then
@@ -1411,6 +1428,7 @@ function StoryMgr:DoPlaySequence(SequenceCfg,
 				local ChangeMapInfo = StoryMgrInstance:GetChangeMapInfo(SequenceObject)
 				--做个优化：如果在Sequence开始的时候（第0帧）就需要切地图，直接模拟BgSetup轨道切地图，不走后续sequence初始化流程
 				if (ChangeMapInfo.bExecuteImmediately and ChangeMapInfo.MapPath ~= "") then
+					SequenceCfg.bUseWeatherAfterChangeMap = ChangeMapInfo.bUseWeather
 					self.SequenceCacheInfoObj = SequenceCacheInfo.New()
 					self.SequenceCacheInfoObj.SequenceCfg = SequenceCfg
 					self.SequenceCacheInfoObj.SequenceStopedCallback = SequenceStopCallback
@@ -1505,11 +1523,21 @@ function StoryMgr:DoPlaySequence(SequenceCfg,
 		--levelsequence全部走动态加载的方式
 		if (SequenceCfg.bUseSyncLoad) then
 			local SequenceObject = _G.ObjectMgr:LoadObjectSync(SequencePath, ObjectGCType.LRU)
+			local MovieSceneSequence = SequenceObject:Cast(_G.UE.UMovieSceneSequence)
+			if MovieSceneSequence == nil then
+				OnSequenceStoped()
+				return
+			end
 			ExecPlaySequence(SequenceObject)
 		else
 			local function OnLoadSequenceComplete()
 				self.bIsLoadingSequence = false
 				local SequenceObject = _G.ObjectMgr:GetObject(SequencePath)
+				local MovieSceneSequence = SequenceObject:Cast(_G.UE.UMovieSceneSequence)
+				if MovieSceneSequence == nil then
+					OnSequenceStoped()
+					return
+				end
 				ExecPlaySequence(SequenceObject)
 			end
 
@@ -2037,19 +2065,47 @@ function StoryMgr:ClearWaitingSequenceCache()
 end
 
 function StoryMgr:IsSequenceInSkipGroup(SequenceID, bResetSkipGroup)
+	if self:IsSkipGroupEndSeq(SequenceID) then
+		if bResetSkipGroup then
+			self:ResetSkipGroup()
+		end
+		return true
+	end
+
     for _, SkipID in ipairs(self.SkipGroupSeqIDs) do
         if SequenceID == SkipID then
-            return true
+			return true
         end
     end
-	if bResetSkipGroup then
-		self.SkipGroupSeqIDs = {}
-	end
     return false
+end
+
+function StoryMgr:IsSkipGroupEndSeq(SequenceID)
+    return (SequenceID == self.SkipGroupEndSeqID)
+end
+
+function StoryMgr:SetSkipGroup(Cfgs)
+    if (nil == Cfgs) then
+        return
+    end
+
+	local bHasEndSeq = false
+    for _, Cfg in ipairs(Cfgs) do
+        table.insert(self.SkipGroupSeqIDs, Cfg.SequenceID)
+        if Cfg.IsEndSequence == 1 then
+            self.SkipGroupEndSeqID = Cfg.SequenceID
+			bHasEndSeq = true
+        end
+    end
+
+	if (not bHasEndSeq) and (next(Cfgs) ~= nil) then
+		_G.FLOG_WARNING("StoryMgr:SetSkipGroup SkipGroupID %d has no end sequence", Cfgs[1].SkipGroupID or -1)
+	end
 end
 
 function StoryMgr:ResetSkipGroup()
 	self.SkipGroupSeqIDs = {}
+	self.SkipGroupEndSeqID = 0
 end
 
 function StoryMgr:DoSequenceSkipGroup(SequenceID, SequenceStopCallback)
@@ -2084,5 +2140,15 @@ function StoryMgr:ShowLoadingAfterSequence()
 	-- 这里直接调用WorldMsgMgr的loading接口可以复用一下loading界面超时的逻辑
 	_G.WorldMsgMgr:ShowLoadingView(_G.WorldMsgMgr.CurWorldName, nil, true)
 end
+
+function StoryMgr:CurrentSequenceIsUseWeather()
+	--bUseWeatherAfterChangeMap maybe nil
+	if self.SequenceCacheInfoObj ~= nil and self.SequenceCacheInfoObj.SequenceCfg ~= nil then
+		return self.SequenceCacheInfoObj.SequenceCfg.bUseWeatherAfterChangeMap == true
+	end
+	
+	return false
+end
+
 
 return StoryMgr

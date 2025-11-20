@@ -3,19 +3,21 @@
 --- DateTime: 2023-10-08 10:53:13
 --- Description: 金蝶小游戏
 ---
+---NetworkImplMgr:OnTrySendMsg 进入协议额外判断，是因为 小游戏服务器不做重复进入判定，会导致额外扣除进入所需金碟币，所以需要客户端进行过滤，避免多次发送
+---
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local EffectUtil = require("Utils/EffectUtil")
 local MajorUtil = require("Utils/MajorUtil")
-local AudioUtil = require("Utils/AudioUtil")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local EobjCfg = require("TableCfg/EobjCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local ScoreType = ProtoRes.SCORE_TYPE
 -- local MiniGameCuffDefine = require("Game/GoldSaucerMiniGame/Cuff/MiniGameCuffDefine")
 local MiniGameCuffAudioDefine = require("Game/GoldSaucerMiniGame/Cuff/MiniGameCuffAudioDefine")
 local AudioUtil = require("Utils/AudioUtil")
+local TimeUtil = require("Utils/TimeUtil")
 local CrystalTowerAudioDefine = require("Game/GoldSaucerMiniGame/CrystalTower/CrystalTowerAudioDefine")
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.CS_ALONE_TREE_CMD
@@ -35,13 +37,22 @@ local ActorUtil = require("Utils/ActorUtil")
 local PWorldMgr = require("Game/PWorld/PWorldMgr")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local EobjLinktoSgAssetCfg = require("TableCfg/EobjLinktoSgAssetCfg")
+local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 
 local MiniGameRoundEndState = GoldSaucerMiniGameDefine.MiniGameRoundEndState
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
 local SettleEmotionID = GoldSaucerMiniGameDefine.SettleEmotionID
+local PreStageExtraParamType = GoldSaucerMiniGameDefine.PreStageExtraParamType
 local NormalAnimDelayChangeNumTime = GoldSaucerMiniGameDefine.NormalAnimDelayChangeNumTime
 local CriticalAnimDelayChangeNumTime = GoldSaucerMiniGameDefine.CriticalAnimDelayChangeNumTime
+local GoldSauserMapID = GoldSauserMainPanelDefine.GoldSauserMapID -- 12060
+local ChocoboMapID = GoldSauserMainPanelDefine.ChocoboMapID -- 12061
+local AcitvityType2MiniGameType = GoldSaucerMiniGameDefine.AcitvityType2MiniGameType
+local MiniGameType2AcitvityType = GoldSaucerMiniGameDefine.MiniGameType2AcitvityType
 local RaceType = ProtoCommon.race_type
+local BasketballType = ProtoCS.BasketballType
+local ACTIVITY_TYPE = ProtoCS.ACTIVITY_TYPE
+local GameID = ProtoRes.Game.GameID
 local UAudioMgr
 local FLOG_INFO = _G.FLOG_INFO
 local FLOG_ERROR = _G.FLOG_ERROR
@@ -53,6 +64,8 @@ local UIViewMgr
 local EmotionMgr
 local HUDMgr
 local LootMgr
+local GoldSaucerBlessingMgr
+local NetworkImplMgr
 --local PWorldMgr
 local ActorManager = _G.UE.UActorManager
 local EActorType = _G.UE.EActorType
@@ -60,8 +73,6 @@ local EActorType = _G.UE.EActorType
 ---@class GoldSaucerMiniGameMgr : MgrBase
 local GoldSaucerMiniGameMgr = LuaClass(MgrBase)
 function GoldSaucerMiniGameMgr:OnInit()
-    self.JDMapID = 12060
-    self.ChocoMapID = 12061
     self.JDResID = 1008204
 end
 
@@ -79,6 +90,7 @@ function GoldSaucerMiniGameMgr:OnRegisterNetMsg()
     --- 怪物投篮
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_BASKETBALL, BASKET_SUB_MSG_ID.CSMonsterBasketball_Enter, self.OnNetMsgNotifyMonsterTossEnterRsp)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_BASKETBALL, BASKET_SUB_MSG_ID.CSMonsterBasketball_Throw, self.OnNetMsgNotifyMonsterTossThrowRsp)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_BASKETBALL, BASKET_SUB_MSG_ID.CSMonsterBasketball_Blessed, self.OnNetMsgNotifyMonsterTossBlessEnterRsp)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_BASKETBALL, BASKET_SUB_MSG_ID.CSMonsterBasketball_Finish, self.OnNetMsgNotifyMonsterTossFinsihRsq)
     -- 重击吉尔伽美山
     local CUFF_SUB_CMD = ProtoCS.CSGilgameshCmd
@@ -101,8 +113,9 @@ function GoldSaucerMiniGameMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.PWorldExit, self.OnPWorldExit)
     self:RegisterGameEvent(EventID.UpdateScore, self.OnUpdateScoreValue)
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
-    self:RegisterGameEvent(EventID.RoleLoginRes, self.OnRoleLoginRsp)
     self:RegisterGameEvent(EventID.RoleLogoutRes, self.OnRoleLogoutRsp)
+    self:RegisterGameEvent(EventID.NetworkReconnected, self.OnGameEventNetworkReconnected)
+    self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
 end
 
 ---OnBegin
@@ -117,6 +130,8 @@ function GoldSaucerMiniGameMgr:OnBegin()
     HUDMgr = require("Game/HUD/HUDMgr")
     UAudioMgr = _G.UE.UAudioMgr.Get()
     LootMgr = _G.LootMgr
+    GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
+    NetworkImplMgr = _G.NetworkImplMgr
     --PWorldMgr = require("Game/PWorld/PWorldMgr")
 
     self.CurInteractEntityID = nil
@@ -135,8 +150,6 @@ function GoldSaucerMiniGameMgr:OnEnd()
     self:ClearMiniGameData()
     self.ActorPlayerInVision = nil
     self.CurInteractEntityID = nil
-    self.CurMiniGameInst = nil
-
     self.RestartLock = false
     self.bWaitForCatchResult = false
 end
@@ -146,7 +159,6 @@ function GoldSaucerMiniGameMgr:OnShutdown()
 end
 
 function GoldSaucerMiniGameMgr:ClearMiniGameData()
-    local GameInst = self.CurMiniGameInst
     self:RemoveMiniGameAfterGameEnd()
     self.CurMiniGameInst = nil
 end
@@ -189,6 +201,7 @@ function GoldSaucerMiniGameMgr:DealWithMiniGameReconnect(CurMiniGameInst)
             MsgTipsUtil.ShowActiveTips(LSTR(250010)) -- 进程异常请稍后再试
         end, DelayShowTipsTime)
     end
+   
     self:QuitMiniGame(GameType)
     self.bWaitForCatchResult = false
     self.RestartLock = false
@@ -198,8 +211,20 @@ function GoldSaucerMiniGameMgr:OnPWorldMapEnter(_)
 
 end
 
+--- 闪断情况重连逻辑
+function GoldSaucerMiniGameMgr:OnGameEventNetworkReconnected(Params)
+    if not Params or not Params.bRelay then
+        return
+    end
+  
+    self.BlockForEnterMsg = false  -- 额外增加闪断逻辑判断，因为服务器不会进行进入游戏验证，需客户端限制多次发送协议（可能只丢下行，导致多次扣除金碟币）
+end
+
+
 function GoldSaucerMiniGameMgr:OnGameEventLoginRes(Params)
+    self.bLoginOut = false
     if Params.bReconnect then
+        self.BlockForEnterMsg = false -- 因为重连默认会清除游戏界面，退出游戏，故需要重置变量保证不阻塞(不管是否有实例，走到重连则默认重置)
         -- 处理重连逻辑
         local CurMiniGameInst = self:GetTheCurMiniGameInst()
         if CurMiniGameInst == nil then
@@ -210,7 +235,7 @@ function GoldSaucerMiniGameMgr:OnGameEventLoginRes(Params)
         if not GameType then
             return
         end
-
+        CurMiniGameInst:SetIsForceEnd(true) -- for 赐福模式的达成目标但强制退出设定，认为未通关，客户端不会关闭赐福模式
         if GameType == MiniGameType.OutOnALimb or GameType == MiniGameType.MooglesPaw
         or GameType == MiniGameType.TheFinerMiner then
             self:DealWithMiniGameReconnect(CurMiniGameInst)
@@ -221,23 +246,41 @@ function GoldSaucerMiniGameMgr:OnGameEventLoginRes(Params)
                     local AudioName = MiniGameCuffAudioDefine.AudioName
                     CurMiniGameInst:PlaySoundWithPostEvent(AudioName.StopFistSwish)
                 end
-                self:QuitMiniGame(CurMiniGameInst:GetGameType(), false)
+                self:QuitMiniGame(GameType, false)
+                if GameType == MiniGameType.CrystalTower then
+                    self:SendMsgCrystalTowerExistReq(false)
+                elseif GameType == MiniGameType.Cuff then
+                    self:SendMsgCuffExistReq(false)
+                elseif GameType == MiniGameType.MonsterToss then
+                    self:SendMsgBaskMonsterFinishReq(false)
+                end
             end
+
+            local DelayShowTipsTime = 2
+            self:RegisterTimer(function()
+                MsgTipsUtil.ShowActiveTips(LSTR(250010)) -- 进程异常请稍后再试
+            end, DelayShowTipsTime)
+
             self:OnBegin()
             self:HideMiniGamePanel()
             FLOG_INFO("GoldSaucerMiniGameMgr:OnGameEventLoginRes(Params) self:OnBegin() bRelay = false")
         end
-        self.BlockForEnterMsg = false -- 因为重连默认会清除游戏界面，退出游戏，故需要重置变量保证不阻塞
     end
 end
 
-function GoldSaucerMiniGameMgr:OnRoleLoginRsp(_)
-    self.bLoginOut = false
-end
-
-
 function GoldSaucerMiniGameMgr:OnRoleLogoutRsp(_)
     self.bLoginOut = true
+end
+
+function GoldSaucerMiniGameMgr:OnGameEventAppEnterForeground()
+    local CurMiniGameInst = self:GetTheCurMiniGameInst()
+    if CurMiniGameInst == nil then
+        return
+    end
+    local bResultPanelShow = CurMiniGameInst:GetIsResultPanelShow()
+    if bResultPanelShow then
+        self:QuitMiniGame()
+    end
 end
 
 function GoldSaucerMiniGameMgr:OnGameEventMajorStartFadeIn(Params)
@@ -339,11 +382,16 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeEnterReq(GameType)
     local MsgID = CS_CMD.CS_CMD_ALONE_TREE
     local SubMsgID = SUB_MSG_ID.CS_ALONE_TREE_ENTER
 
+    --[[if not NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID) then
+        return
+    end--]]
+
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
-    --MsgBody.EnterReq = {}
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
+    
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+    self.BlockForEnterMsg = true
 end
 
 --- 服务器返回进入孤树无援
@@ -355,11 +403,14 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeEnterRsp(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
         self:QuitMiniGame()
+        self.BlockForEnterMsg = false
+        FLOG_INFO("GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeEnterRsp ErrorCode")
         return
     end
 
-    local GameType = MsgBody.ActivityType
-    self:OnMsgNotifyEnterTheMiniGame(GameType)
+   
+    local ActivityType = MsgBody.ActivityType
+    self:OnMsgNotifyEnterTheMiniGame(AcitvityType2MiniGameType(ActivityType))
 end
 
 --- 向服务器发送选择难度
@@ -369,7 +420,7 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeSelectDifficultyReq(GameType, Dif
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
     MsgBody.SelectDifficultyReq = {
         DifficultyLevel = Difficulty,
     }
@@ -382,7 +433,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeSelectDifficultyRsp(MsgBod
         return
     end
 
-    local GameType = MsgBody.ActivityType
+    local GameType = AcitvityType2MiniGameType(MsgBody.ActivityType)
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -409,7 +460,7 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeCutReq(GameType, ClientResult)
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
     MsgBody.EndCutReq = {
         AngelVal = math.floor(ClientResult),
     }
@@ -422,7 +473,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeCutRsp(MsgBody)
         return
     end
 
-    local GameType = MsgBody.ActivityType
+    local GameType = AcitvityType2MiniGameType(MsgBody.ActivityType)
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -452,7 +503,7 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeDoubleChanceReq(GameType, bRestar
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
     MsgBody.DoubleChanceReq = {
         Continue = bRestart,
     }
@@ -466,7 +517,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeDoubleChanceRsp(MsgBody)
         return
     end
 
-    local GameType = MsgBody.ActivityType
+    local GameType = AcitvityType2MiniGameType(MsgBody.ActivityType)
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -514,7 +565,7 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeExitReq(GameType)
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
     MsgBody.TreeExitReq = {
         UseTime = math.floor(PerfectChallengeTime * 1000 + 0.5), -- 完美挑战&新纪录 2024.5.22
         NormalExit = not bForceEnd
@@ -529,7 +580,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeExitRsp(MsgBody)
         return
     end
 
-    local GameType = MsgBody.ActivityType
+    local GameType = AcitvityType2MiniGameType(MsgBody.ActivityType)
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -540,7 +591,6 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeExitRsp(MsgBody)
     end
 
     if MiniGameInst:GetIsForceEnd() then
-        --self:QuitMiniGame(GameType) -- 强制退出由调用处处理
         return
     end
 
@@ -551,6 +601,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeExitRsp(MsgBody)
              -- 挑战成功展示界面
             local ViewModel = MiniGameVM:GetDetailMiniGameVM(GameType)
 		    UIViewMgr:ShowView(MiniGameInst.SettlementViewID, ViewModel)
+            MiniGameInst:SetIsResultPanelShow(true)
             --self:QuitMiniGame(GameType, false, self.bRewar)
         else -- 失败没有奖励，走此协议失败结算
             MiniGameInst:SetFailReasonPos(ObjCenterPos)
@@ -571,7 +622,7 @@ function GoldSaucerMiniGameMgr:SendMsgAloneTreeExitReward(GameType)
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.ActivityType = GameType
+    MsgBody.ActivityType = MiniGameType2AcitvityType(GameType)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
@@ -581,13 +632,19 @@ end
 function GoldSaucerMiniGameMgr:SendMsgCuffEnterReq(CurSgInstanceID)
     local MsgID = CS_CMD.CS_CMD_GILGAMESH
     local SubMsgID = ProtoCS.CSGilgameshCmd.CSGilgameshCmdENTER
-    -- local GoldCoinGameType = ProtoCS.GoldCoinGameType
+
+    --[[if not NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID) then
+        FLOG_INFO("GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeEnterRsp BlockForEnterMsg  Can not Send Msg")
+        return
+    end--]]
 
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.IsBlessed = _G.GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
-    -- MsgBody.GameType = GoldCoinGameType.GoldCoinGameTypeAttackGilgamesh
+    MsgBody.EnterReq = {
+        IsBlessed = GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    }
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+    self.BlockForEnterMsg = true
 end
 
 --- 进入重击吉尔加美什Rsq
@@ -598,6 +655,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyCuffEnterRsp(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
         self:QuitMiniGame()
+        self.BlockForEnterMsg = false
         return
     end
 
@@ -641,7 +699,7 @@ end
 function GoldSaucerMiniGameMgr:SendMsgCuffInteractionReq()
     local GameType = MiniGameType.Cuff
     local MiniGameInst = self:GetTheCurMiniGameInst()
-    self.UnusualTimer = self:RegisterTimer(function()
+    --[[self.UnusualTimer = self:RegisterTimer(function()
         if MiniGameInst ~= nil then
             MiniGameInst:StopWindEffect()
         end
@@ -649,7 +707,7 @@ function GoldSaucerMiniGameMgr:SendMsgCuffInteractionReq()
         self:SendMsgCuffExistReq(false)
 		self:QuitMiniGame(MiniGameType.Cuff, false)
         MsgTipsUtil.ShowActiveTips(LSTR(250010)) -- 进程异常请稍后再试
-    end, 5)
+    end, 5)--]]
     local MsgID = CS_CMD.CS_CMD_GILGAMESH
     local SubMsgID = ProtoCS.CSGilgameshCmd.CSGilgameshCmdInteraction
     if MiniGameInst == nil then
@@ -671,9 +729,9 @@ function GoldSaucerMiniGameMgr:OnNetMsgInteractionRsp(MsgBody)
     if MsgBody == nil then
         return
     end
-    if self.UnusualTimer ~= nil then
+    --[[if self.UnusualTimer ~= nil then
         self:UnRegisterTimer(self.UnusualTimer)
-    end
+    end--]]
     local GameType = MiniGameType.Cuff
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
@@ -691,10 +749,29 @@ function GoldSaucerMiniGameMgr:OnNetMsgInteractionRsp(MsgBody)
     if self:CheckShouldPunchOut(GameType, MiniGameInst, InteractionRsp.ApertureList) then
         return
     end
-    MiniGameInst:InitNextRoundCfgs(InteractionRsp.RoundID, InteractionRsp.ApertureList)
-    self:UpdateMiniGameVM(GameType)
-    if InteractionRsp.RoundID % 1000 == MiniGameInst:GetMaxRound() then --- 最后一轮
-        EventMgr:SendEvent(EventID.MiniGameCuffSubViewOnShow, true)
+   
+    local bBigBless = MiniGameInst:IsBigBlessMode()
+    local MaxRound = MiniGameInst:GetMaxRound()
+    local RoundID = InteractionRsp.RoundID or 0
+    local BigBlessStartRoundID = MiniGameInst:GetBigBlessLvID()
+    local RoundIndex = RoundID % 1000
+    if RoundIndex == MaxRound then --- 最后一轮
+        EventMgr:SendEvent(EventID.MiniGameCuffCenterLastPunchTipsShow)
+        self:RegisterTimer(function()
+            MiniGameInst:InitNextRoundCfgs(InteractionRsp.RoundID, InteractionRsp.ApertureList)
+            self:UpdateMiniGameVM(GameType)
+            EventMgr:SendEvent(EventID.MiniGameCuffSubViewOnShow, true)
+        end, 1)
+    elseif bBigBless and BigBlessStartRoundID == RoundID then
+         -- 赐福时间
+         EventMgr:SendEvent(EventID.MiniGameBigBlessStartTipsShow)
+         self:RegisterTimer(function()
+             MiniGameInst:InitNextRoundCfgs(InteractionRsp.RoundID, InteractionRsp.ApertureList)
+             self:UpdateMiniGameVM(GameType)
+         end, 2)
+    else
+        MiniGameInst:InitNextRoundCfgs(InteractionRsp.RoundID, InteractionRsp.ApertureList)
+        self:UpdateMiniGameVM(GameType)
     end
 end
 
@@ -829,22 +906,37 @@ function GoldSaucerMiniGameMgr:OnNetMsgExitRsp(MsgBody)
         return
     end
     
-    if bTimeOut then
-        ResultAnim = Anim.AnimTimesup
-        EndState = MiniGameRoundEndState.FailTime
-    elseif Power < RewardCfg[1].Score and not bNotNormal then
-        EndState = MiniGameRoundEndState.FailChance -- 失败
-        ResultAnim = Anim.AnimFail
-        FLOG_INFO("ResultAnim  is Fail")
+    local bBless = MiniGameInst:IsBless()
+    if not bBless then
+        if bTimeOut then
+            ResultAnim = Anim.AnimTimesup
+            EndState = MiniGameRoundEndState.FailTime
+        elseif Power < RewardCfg[1].Score and not bNotNormal then
+            EndState = MiniGameRoundEndState.FailChance -- 失败
+            ResultAnim = Anim.AnimFail
+            FLOG_INFO("ResultAnim  is Fail")
+        else
+            bCriticalHit = ExitRsp.CriticalHit
+            MiniGameInst:ConstructData(ExitRsp.Power, ExitRsp.AttractCount)
+            MiniGameInst:CuffSetCritical(bCriticalHit)
+            MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
+            bSuccess = true
+            EndState = MiniGameRoundEndState.Success
+            ResultAnim = Anim.AnimSuccess
+            FLOG_INFO("ResultAnim  is Success, Success Need Strength %s, CurStrength is %s", RewardCfg[1].Score, Power)
+        end
     else
-        bCriticalHit = ExitRsp.CriticalHit
-        MiniGameInst:ConstructData(ExitRsp.Power, ExitRsp.AttractCount)
-        MiniGameInst:CuffSetCritical(bCriticalHit)
-        MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
-        bSuccess = true
-        EndState = MiniGameRoundEndState.Success
-        ResultAnim = Anim.AnimSuccess
-        FLOG_INFO("ResultAnim  is Success, Success Need Strength %s, CurStrength is %s", RewardCfg[1].Score, Power)
+        bSuccess = MiniGameInst:IsBlessChallengeSuccess()
+        if bSuccess then
+            MiniGameInst:ConstructData(ExitRsp.Power, ExitRsp.AttractCount)
+            MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
+            EndState = MiniGameRoundEndState.Success
+            ResultAnim = Anim.AnimSuccess
+        else
+            MiniGameInst:ConstructData()
+            EndState = MiniGameRoundEndState.FailChance -- 失败
+            ResultAnim = Anim.AnimFail
+        end
     end
  
     MiniGameInst.RoundEndState = EndState
@@ -861,6 +953,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgExitRsp(MsgBody)
     local EndEmotionID = MiniGameInst:GetEndEmotionID()
     self:PlayEmotionActInSettlementStage(MiniGameType.Cuff, bSuccess, EndEmotionID)
     self:CuffGetReward(bCriticalHit)
+    MiniGameInst:SetIsResultPanelShow(true)
 end
 
 function GoldSaucerMiniGameMgr:CuffGetReward(bCriticalHit)
@@ -911,9 +1004,17 @@ function GoldSaucerMiniGameMgr:SendMsgMooglePawStartReq(CurSgInstanceID)
     local MsgID = CS_CMD.CS_CMD_CATCH_BALL
     local SubMsgID = SUB_MSG_ID_MooglePaw.CatchBallStart
 
+    --[[if not NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID) then
+        return
+    end--]]
+
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
+    MsgBody.StartReq = {
+        IsBlessed = GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    }
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+    self.BlockForEnterMsg = true
 end
 
 function GoldSaucerMiniGameMgr:OnNetMsgNotifyMooglePawStartRsp(MsgBody)
@@ -924,6 +1025,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMooglePawStartRsp(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
         self:QuitMiniGame()
+        self.BlockForEnterMsg = false
         return
     end
 
@@ -1023,19 +1125,36 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMooglePawDoubleRsp(MsgBody)
     local BallList = DoubleRsp.BallList
     local bCritical = DoubleRsp.VioletHit
     local RewardCount = DoubleRsp.RewardCount
+    if type(RewardCount) == "number" then
+        MooglesPawInst:SetResultRewardSev(RewardCount)
+    end
     if not BallList or not next(BallList) then
         MooglesPawInst:OnSyncParamsByGameState(MiniGameStageType.Reward, DoubleRsp)
         MooglesPawInst:SetRltCritical(bCritical) -- 设定是否结果翻倍
-        MooglesPawInst:SetResultRewardSev(RewardCount)
-        MooglesPawInst:GameReward() --不翻倍
+      
+        if not MooglesPawInst:IsBless() then
+            MooglesPawInst:GameReward() --不翻倍
+        else
+            -- 赐福模式结算不再走奖励阶段
+            local MoogleVM = MiniGameVM:GetDetailMiniGameVM(MiniGameType.MooglesPaw)
+            if MoogleVM then
+                MoogleVM.bShowGameOrSettlementPanel = false
+                MoogleVM.bShowObtainPanel = false
+            end
+        end
 
         local DelayTime = bCritical and CriticalAnimDelayChangeNumTime or NormalAnimDelayChangeNumTime
         self:RegisterTimer(function()
             _G.LootMgr:SetDealyState(false)
         end, DelayTime)
     else
-        MooglesPawInst:OnSyncParamsByGameState(MiniGameStageType.Restart, DoubleRsp)
-        MooglesPawInst:GameRestart() --翻倍
+        if MooglesPawInst:IsBigBlessMode() and MooglesPawInst:GetGameState() == MiniGameStageType.ExtraRound then
+            MooglesPawInst:OnSyncParamsByGameState(MiniGameStageType.ExtraRound, BallList)
+            MooglesPawInst:GameExtraRoundStart() --额外阶段正式开始
+        else
+            MooglesPawInst:OnSyncParamsByGameState(MiniGameStageType.Restart, DoubleRsp)
+            MooglesPawInst:GameRestart() --翻倍
+        end
     end
     self.RestartLock = false
 end
@@ -1084,11 +1203,17 @@ function GoldSaucerMiniGameMgr:SendMsgBaskMonsterEnterReq(CurSgInstanceID)
     local MsgID = CS_CMD.CS_CMD_BASKETBALL
     local SubMsgID = BASKET_SUB_MSG_ID.CSMonsterBasketball_Enter
 
+    --[[if not NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID) then
+        return
+    end--]]
+
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.IsBlessed = _G.GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    MsgBody.EnterReq = {
+        IsBlessed = _G.GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    }
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-    -- self:OnNetMsgNotifyMonsterTossEnterRsp()
+    self.BlockForEnterMsg = true
 end
 
 --- 成功进入游戏回包
@@ -1100,6 +1225,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossEnterRsp(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
         self:QuitMiniGame()
+        self.BlockForEnterMsg = false
         return
     end
     local EnterRsp = MsgBody.EnterRsp
@@ -1110,7 +1236,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossEnterRsp(MsgBody)
     end
     local MaxScore = EnterRsp.MaxScore
 
-    local GameType = 3
+    local GameType = MiniGameType.MonsterToss
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -1138,11 +1264,11 @@ end
 
 --- 怪物投篮玩家投篮请求
 function GoldSaucerMiniGameMgr:SendMsgBaskMonsterShootReq(bSuccessHit, bTimeOut)
-    self.UnusualTimer = self:RegisterTimer(function()
+    --[[self.UnusualTimer = self:RegisterTimer(function()
         GoldSaucerMiniGameMgr:SendMsgBaskMonsterFinishReq(false)
 		GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.MonsterToss, false)
         MsgTipsUtil.ShowActiveTips(LSTR(250010)) -- 进程异常请稍后再试
-    end, 5)
+    end, 5)--]]
 
     local MsgID = CS_CMD.CS_CMD_BASKETBALL
     local SubMsgID = BASKET_SUB_MSG_ID.CSMonsterBasketball_Throw
@@ -1164,9 +1290,9 @@ end
 
 --- 投篮返回请求
 function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossThrowRsp(MsgBody)
-    if self.UnusualTimer ~= nil then
+    --[[if self.UnusualTimer ~= nil then
         self:UnRegisterTimer(self.UnusualTimer)
-    end
+    end--]]
     local ThrowBallRsp = MsgBody.ThrowBallRsp
     if ThrowBallRsp == nil then
         return
@@ -1191,19 +1317,67 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossThrowRsp(MsgBody)
     end
     -- EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimResume)
     self:RegisterTimer(function()
+        local NextFirstBallType = BasketballType.BasketballType_Invalid
         if MiniGameInst then
             local MaxScore = MiniGameInst:GetMaxScore()
             if CurScore > MaxScore then
                 EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimRefreshHighestScore)
                 MiniGameInst:SetMaxScore(CurScore)
             end
-            MiniGameInst:UpdateAllBallData(NewBallType)
+            NextFirstBallType = MiniGameInst:UpdateAllBallData(NewBallType)
         end
 
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimNextBall)
+        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimNextBall, NextFirstBallType)
         MiniGameVM:UpdateDetailMiniGameVM(GameType)
         EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimProgressBar)
     end, 1)
+end
+
+--- 怪物投篮游戏进入赐福环节
+function GoldSaucerMiniGameMgr:SendMsgBaskMonsterEnterBlessReq()
+    local MsgID = CS_CMD.CS_CMD_BASKETBALL
+    local SubMsgID = BASKET_SUB_MSG_ID.CSMonsterBasketball_Blessed
+
+    local MsgBody = {}
+    MsgBody.SubCmd = SubMsgID
+    local MiniGameInst = self:GetTheCurMiniGameInst()
+    if not MiniGameInst then
+        return
+    end
+    local TimeLimit = MiniGameInst:GetRestartTime()
+    local ThrowTime = math.ceil((TimeLimit - MiniGameInst.RemainSeconds) * 1000)
+    MsgBody.BlessedReq = {
+        CurTime = ThrowTime,
+    }
+    GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossBlessEnterRsp(MsgBody)
+    if MsgBody == nil then
+        return
+    end
+
+    local ErrorCode = MsgBody.ErrorCode
+    if ErrorCode then
+        self:QuitMiniGame()
+        self.BlockForEnterMsg = false
+        return
+    end
+
+    local BlessRsp = MsgBody.BlessRsp
+    if not BlessRsp then
+        return
+    end
+
+    local NewBallList = BlessRsp.BlessedBall
+    local MiniGameInst = self.CurMiniGameInst
+    if not MiniGameInst then
+        return
+    end
+    MiniGameInst:InitAllBallData(NewBallList)
+    local GameType = MiniGameType.MonsterToss
+    MiniGameVM:UpdateDetailMiniGameVM(GameType)
+    EventMgr:SendEvent(EventID.MiniGameBigBlessEnterMsgRspSuccess)
 end
 
 --- 怪物投篮游戏结束请求
@@ -1229,21 +1403,22 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossFinsihRsq(MsgBody)
     local HitCount = FinishRsp.HitCount
     local bCriticalHit = FinishRsp.CriticalHit
     local Anim = MiniGameClientConfig[MiniGameType.MonsterToss].Anim
-    local GameType = 3
+    local GameType = MiniGameType.MonsterToss
     local ResultAnim
     local MiniGameInst = self.CurMiniGameInst
     if MiniGameInst then
-        local bSuccess = MiniGameInst:GetCurScore() >= MiniGameInst.RewardData[1].Score
+        if bCriticalHit and MiniGameInst:GetCurScore() ~= 0 then
+            MiniGameInst:MonsterTossSetCritical(bCriticalHit)
+        end
+        local bSuccess = MiniGameInst:ConstructAllResultData(CurScore, HitCount, FinishRsp.RewardCount)
         if CurScore ~= 0 then
             MiniGameInst:UpdateCurScoreAndGotReward(CurScore)
             -- EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.Critical)
         end
-        if bCriticalHit and MiniGameInst:GetCurScore() ~= 0 then
-            MiniGameInst:MonsterTossSetCritical(bCriticalHit)
-        end
-        MiniGameInst:ConstructAllResultData(CurScore, HitCount, FinishRsp.RewardCount)
         MiniGameInst:SetMoneySlotVisible(true)
         MiniGameInst:SetbResultQAndNormalVisible(true)
+        MiniGameInst:SetIsResultPanelShow(true)
+        FLOG_INFO("GoldSaucerMiniGameMgr:OnNetMsgNotifyMonsterTossFinsihRsq ShowResultPanel In FinishRsp")
         EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimResult)
         if bSuccess then
             ResultAnim = Anim.AnimSuccess
@@ -1280,13 +1455,21 @@ end
 
 --- 强袭水晶塔进入游戏请求
 function GoldSaucerMiniGameMgr:SendMsgCrystalTowerEnterReq(CurSgInstanceID)
-    self:RegisterCTNetError()
+    --self:RegisterCTNetError()
     local MsgID = CS_CMD.CS_CMD_CRYSTAL_TOWER
     local SubMsgID = CRTSTAL_TOWER_SUB_MSG_ID.CrystalTowerCmdEnter
+
+    --[[if not NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID) then
+        return
+    end--]]
+
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
-    MsgBody.IsBlessed = _G.GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    MsgBody.EnterReq = {
+        IsBlessed = GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgInstanceID)
+    }
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+    self.BlockForEnterMsg = true
 end
 
 --- 强袭水晶塔进入游戏返回
@@ -1297,14 +1480,15 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyCTEnterRsp(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
         self:QuitMiniGame()
+        self.BlockForEnterMsg = false
         return
     end
 
     local GameType = MiniGameType.CrystalTower
     local Anim = MiniGameClientConfig[GameType].Anim
-    if self.UnusualTimer ~= nil then
+    --[[if self.UnusualTimer ~= nil then
         self:UnRegisterTimer(self.UnusualTimer)
-    end
+    end--]]
     if not self:IsHaveTheGameInDefineCfg(GameType) then
         return
     end
@@ -1321,19 +1505,24 @@ function GoldSaucerMiniGameMgr:OnNetMsgNotifyCTEnterRsp(MsgBody)
     MiniGameInst:SetTextHint(LSTR(260003)) -- 请在晶体下落至线时点击
     MiniGameInst:SetRoundIntervalTimeAndRoundData(DifficultyLv)
     MiniGameInst:GameEnter()
-    MiniGameInst:CreateInteractionProvider()
+    --MiniGameInst:CreateInteractionProvider()
     local Items = EnterRsp.Items
     MiniGameInst:InitNextRoundCfgs(Items)
+    MiniGameInst:UnlockFirstRoundFalling()
     -- EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimTipsIn, true)
     MiniGameInst:UpdateHammerVfx(true)
     MiniGameInst:SetbShowMoneySlot(false)
 
-    local ViewModel = MiniGameVM:GetDetailMiniGameVM(GameType)
+    --[[local ViewModel = MiniGameVM:GetDetailMiniGameVM(GameType)
+    if not ViewModel then
+        -- 通用VM的创建在Enter内，这边特殊处理
+        ViewModel = MiniGameVM:CreateDetailMiniGameVM(GameType, MiniGameInst)
+    end
     ViewModel:InitVM()
     ViewModel:SetbInEndRound(false)
 
     local ResultListData = MiniGameInst:ConstructInteractResultListData()
-    ViewModel:UpdateResultVMList(ResultListData)
+    ViewModel:UpdateResultVMList(ResultListData)--]]
 
     self.BlockForEnterMsg = false
 end
@@ -1342,8 +1531,11 @@ function GoldSaucerMiniGameMgr:SendMsgCrystalTowerInteractionReq()
     self:RegisterCTNetError()
     local MsgID = CS_CMD.CS_CMD_CRYSTAL_TOWER
     local SubMsgID = CRTSTAL_TOWER_SUB_MSG_ID.CrystalTowerCmdInteraction
-    local GameType = MiniGameType.CrystalTower
     local MiniGameInst = self:GetTheCurMiniGameInst()
+    if not MiniGameInst then
+        FLOG_ERROR("GoldSaucerMiniGameMgr:SendMsgCrystalTowerInteractionReq CurMiniGameInst is not exist")
+        return
+    end
     local CurRewardGot = MiniGameInst:GetInteractRewarNum()
     local PowerValue = MiniGameInst:GetStrengthValue()
     local MsgBody = {}
@@ -1376,21 +1568,41 @@ function GoldSaucerMiniGameMgr:OnNetMsgCTInteractionRsp(MsgBody)
         return
     end
     local Items = InteractionRsp.Items
-    MiniGameInst:InitNextRoundCfgs(Items)
-    MiniGameInst:OnBeginFalling()
+   
     local CurRoundIndex = MiniGameInst:GetCurRoundIndex()
-    local MaxRound = MiniGameInst.DefineCfg.MaxRound
+    local MaxRound = MiniGameInst:GetMaxRound()
+    local RoundID = MiniGameInst:GetCurRoundID()
+    local BigBlessRoundStartID = MiniGameInst:GetBigBlessLvID()
     if CurRoundIndex > MaxRound then
+        MiniGameInst:InitNextRoundCfgs(Items)
+        MiniGameInst:OnBeginFalling()
         MiniGameInst.bImgMask2Visible = true
         self:CheckShouldSmash(GameType, MiniGameInst)
+        self:UpdateMiniGameVM(GameType)
     elseif CurRoundIndex == MaxRound then
-        local ViewModel = MiniGameVM:GetDetailMiniGameVM(GameType)
-        ViewModel:SetbInEndRound(true)
-        MiniGameInst:SetTextHint(LSTR(260004)) -- 看准时间, 最后一击
-        EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimTipsIn, true)
+        EventMgr:SendEvent(EventID.MiniGameCrystalTowerCenterLastPunchTipsShow)
+        self:RegisterTimer(function()
+            MiniGameInst:InitNextRoundCfgs(Items)
+            MiniGameInst:OnBeginFalling()
+            local ViewModel = MiniGameVM:GetDetailMiniGameVM(GameType)
+            ViewModel:SetbInEndRound(true)
+            MiniGameInst:SetTextHint(LSTR(260004)) -- 看准时间, 最后一击
+            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimTipsIn, true)
+            self:UpdateMiniGameVM(GameType)
+        end, 1)
+    elseif MiniGameInst:IsBigBlessMode() and BigBlessRoundStartID == RoundID then
+         -- 赐福时间
+         EventMgr:SendEvent(EventID.MiniGameBigBlessStartTipsShow)
+         self:RegisterTimer(function()
+            MiniGameInst:InitNextRoundCfgs(Items)
+            MiniGameInst:OnBeginFalling()
+            self:UpdateMiniGameVM(GameType)
+         end, 2)
+    else
+        MiniGameInst:InitNextRoundCfgs(Items)
+        MiniGameInst:OnBeginFalling()
+        self:UpdateMiniGameVM(GameType)
     end
-    self:UpdateMiniGameVM(GameType)
-
 end
 
 --- @type 检查是否需要用锤子砸水晶塔
@@ -1432,7 +1644,9 @@ function GoldSaucerMiniGameMgr:SendMsgCrystalTowerExistReq(bNormal)
     if MiniGameInst == nil then
         return
     end
-    MiniGameInst:TryHideHammerVfx()
+    if MiniGameInst.TryHideHammerVfx then
+        MiniGameInst:TryHideHammerVfx()
+    end
     local ContinueCount = MiniGameInst:GetMaxComboNum()
     local MsgBody = {}
     MsgBody.SubCmd = SubMsgID
@@ -1457,7 +1671,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgCTExitRsp(MsgBody)
         return
     end
     local Anim = MiniGameClientConfig[GameType].Anim
-    local ResultPower = MiniGameClientConfig[GameType].ResultPower
+    --local ResultPower = MiniGameClientConfig[GameType].ResultPower
     local ExitRsp = MsgBody.ExitRsp
     local bNewPower = ExitRsp.NewPower
     local bNewContinueHit = ExitRsp.NewContinueHit
@@ -1466,19 +1680,35 @@ function GoldSaucerMiniGameMgr:OnNetMsgCTExitRsp(MsgBody)
     local RewardCfg = MiniGameInst:GetRewardCfg()
     local bSuccess = false
     local EndState, ResultAnim
-    if Power < RewardCfg[1].Score then
-        EndState = MiniGameRoundEndState.FailChance -- 失败
-        ResultAnim = Anim.AnimInFail
-        FLOG_INFO("ResultAnim is AnimInTimeUp that is Fail")
+    local bBless = MiniGameInst:IsBless()
+    if not bBless then
+        if Power < RewardCfg[1].Score then
+            EndState = MiniGameRoundEndState.FailChance -- 失败
+            ResultAnim = Anim.AnimInFail
+            FLOG_INFO("ResultAnim is AnimInTimeUp that is Fail")
+        else
+            MiniGameInst:ConstructEndResultData(bNewPower, bNewContinueHit)
+            MiniGameInst:CTSetCritical(bCriticalHit)
+            MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
+            bSuccess = true
+            EndState = MiniGameRoundEndState.Success
+            ResultAnim = Anim.AnimVictory
+            FLOG_INFO("ResultAnim is AnimSuccess that is Fail")
+        end
     else
-        MiniGameInst:ConstructEndResultData(bNewPower, bNewContinueHit)
-        MiniGameInst:CTSetCritical(bCriticalHit)
-        MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
-        bSuccess = true
-        EndState = MiniGameRoundEndState.Success
-        ResultAnim = Anim.AnimVictory
-        FLOG_INFO("ResultAnim is AnimSuccess that is Fail")
+        bSuccess = MiniGameInst:IsBlessChallengeSuccess()
+        if bSuccess then
+            MiniGameInst:ConstructEndResultData(bNewPower, bNewContinueHit)
+            MiniGameInst:SetRewardGot(ExitRsp.RewardCount)
+            EndState = MiniGameRoundEndState.Success
+            ResultAnim = Anim.AnimVictory
+        else
+            MiniGameInst:ConstructEndResultData()
+            EndState = MiniGameRoundEndState.FailChance -- 失败
+            ResultAnim = Anim.AnimInFail
+        end
     end
+   
     MiniGameInst.RoundEndState = EndState
     -- MiniGameInst:SetPanelNormalVisible(false)
     EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimaNormalOut)
@@ -1491,6 +1721,7 @@ function GoldSaucerMiniGameMgr:OnNetMsgCTExitRsp(MsgBody)
     local EndEmotionID = MiniGameInst:GetEndEmotionID()
     self:PlayEmotionActInSettlementStage(MiniGameType.CrystalTower, bSuccess, EndEmotionID)
     self:CrystalTowerGetReward(bCriticalHit)
+    MiniGameInst:SetIsResultPanelShow(true)
 end
 
 function GoldSaucerMiniGameMgr:CrystalTowerGetReward(bCriticalHit)
@@ -1516,12 +1747,17 @@ end
 
 --- 创建小游戏实例
 ---@param GameType GoldSaucerMiniGameDefine.MiniGameType@小游戏类型
+---@param ExtraParams table@小游戏实例创建时额外赋予的变量
 ---@return MiniGameBase @小游戏实例类型
 function GoldSaucerMiniGameMgr:CreateMiniGameAfterInteract(GameType)
     local MiniGameInst = MiniGameFactory.CreateMiniGameInstance(GameType)
     if MiniGameInst then
         MiniGameInst.ID = self.CurInteractEntityID
         self.CurMiniGameInst = MiniGameInst
+        local PreSetParams = self:MakeThePreStageExtraParams({ PreStageExtraParamType.Bless })
+        MiniGameInst:OnSyncParamsByGameState(MiniGameStageType.PreSet, PreSetParams)
+        MiniGameInst:GamePreSet()
+        CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommGoldSauser, true) -- 因6个小游戏非相同进入逻辑，无法加在MiniGameBase内
         return MiniGameInst
     end
 end
@@ -1554,6 +1790,7 @@ function GoldSaucerMiniGameMgr:RemoveMiniGameAfterGameEnd(bRewar)
         self:UnRegisterAllTimer() -- 目前只有单一小游戏会在客户端存在，故移除小游戏时将Mgr内部的所有计时器停止
         if not bRewar then
             self.CurMiniGameInst = nil
+            CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommGoldSauser, false)
             EventMgr:SendEvent(EventID.MiniGameMajorEnterQuitMode)
 
             FLOG_INFO("GoldSaucerMiniGameMgr:RemoveMiniGameAfterGameEnd: CurMiniGameInst set nil")
@@ -1614,6 +1851,7 @@ end
 function GoldSaucerMiniGameMgr:OnDetailMiniGameStart(GameType, CurInteractEntityID)
     local BlockForEnterMsg = self.BlockForEnterMsg
     if BlockForEnterMsg then
+        FLOG_INFO("GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeEnterRsp BlockForEnterMsg = true and Pass")
         return
     end
     self.CurInteractEntityID = CurInteractEntityID
@@ -1641,7 +1879,7 @@ function GoldSaucerMiniGameMgr:OnDetailMiniGameStart(GameType, CurInteractEntity
         return
     end
 
-    _G.SkillBuffMgr:RemoveAllBuff(false)
+    --_G.SkillBuffMgr:RemoveAllBuff(false) 2025.5.30 移动迭代后已经不会同步位置了，且特效部分也已经做了统一处理，故去除此接口，避免客户端与服务器buff显示不同步
     if GameType == MiniGameType.MooglesPaw then
         self:SendMsgMooglePawStartReq(CurSgInstanceID)
     elseif GameType == MiniGameType.Cuff then
@@ -1653,7 +1891,7 @@ function GoldSaucerMiniGameMgr:OnDetailMiniGameStart(GameType, CurInteractEntity
     elseif GameType == MiniGameType.CrystalTower then
         self:SendMsgCrystalTowerEnterReq(CurSgInstanceID)
     end
-    self.BlockForEnterMsg = true
+    FLOG_INFO("GoldSaucerMiniGameMgr:OnNetMsgNotifyAloneTreeEnterRsp BlockForEnterMsg = %s GameType %s", self.BlockForEnterMsg, GameType)
 end
 
 function GoldSaucerMiniGameMgr:CheckIsSkilling()
@@ -1701,10 +1939,7 @@ function GoldSaucerMiniGameMgr:OnGameEventMooglePawsEndMove()
 end
 
 function GoldSaucerMiniGameMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
-    -- local BaseInfo = PWorldMgr.BaseInfo
-    -- self.CurrMapResID = BaseInfo.CurrMapResID
-    -- if BaseInfo.CurrMapResID == self.JDMapID or BaseInfo.CurrMapResID == self.JDResID then
-    if LeaveMapResID == self.JDMapID or LeaveMapResID == self.ChocoMapID then
+    if LeaveMapResID == GoldSauserMapID or LeaveMapResID == ChocoboMapID then
         local CurMiniGameInst = self:GetTheCurMiniGameInst()
         if CurMiniGameInst ~= nil then
             CurMiniGameInst:SetIsForceEnd(true)
@@ -1772,23 +2007,44 @@ function GoldSaucerMiniGameMgr:OnMsgNotifyEnterTheMiniGame(GameType, Params)
     end
 
     local MiniGameInst = self.CurMiniGameInst
-
     if MiniGameInst == nil then
         self:HidePlayerEnter()
         MiniGameInst = self:CreateMiniGameAfterInteract(GameType)
     end
 
-    if MiniGameInst then
+    if MiniGameInst and MiniGameInst.MiniGameType == GameType then
         if Params then
             MiniGameInst:OnSyncParamsByGameState(MiniGameStageType.Enter, Params)
         end
         MiniGameInst:GameEnter()
+    else
+        FLOG_ERROR("GoldSaucerMiniGameMgr:OnMsgNotifyEnterTheMiniGame MiniGameInst do not destroy correct")
     end
     self.BlockForEnterMsg = false
 end
 
-function GoldSaucerMiniGameMgr:Test()
-    _G.UE.UActorManager.Get():ResetVirtualJoystick()
+--- 创建小游戏实例使用的预处理数据
+---@param TypeList table<PreStageExtraParamType> 种类枚举
+function GoldSaucerMiniGameMgr:MakeThePreStageExtraParams(TypeList)
+    if not TypeList or not next(TypeList) then
+        return
+    end
+
+    local CurMiniInst = self.CurMiniGameInst
+    if not CurMiniInst then
+        return
+    end
+    local Rlt = {}
+    for _, Type in ipairs(TypeList) do
+        if PreStageExtraParamType.Bless == Type then
+            --Rlt.BlessKind = ProtoCS.Game.FairyBlessed.BLESSED_KIND.BLESSED_KIND_BIG
+            local CurSgId = CurMiniInst:GetSgDynaInstanceID()
+            if CurSgId and GoldSaucerBlessingMgr:GetSgIsInBlessing(CurSgId) then
+                Rlt.BlessKind = GoldSaucerBlessingMgr:GetBlessKind()
+            end--]]
+        end
+    end
+    return Rlt
 end
 
 --- end
@@ -1971,7 +2227,7 @@ function GoldSaucerMiniGameMgr:QuitMiniGame(GameType, bRewar)
     end
 
     -- 修复小游戏界面打开聊天框导致退出到主界面的状态错乱
-    local View = UIViewMgr:FindVisibleView(UIViewID.MainPanel)
+    --[[local View = UIViewMgr:FindVisibleView(UIViewID.MainPanel)
     if View then
         View:OnShow()
         local MainLBottomPanel = View.MainLBottomPanel

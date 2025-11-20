@@ -18,6 +18,7 @@ local MapMainCityCfg = require("TableCfg/MapMainCityCfg")
 
 local MapMarkerType = MapDefine.MapMarkerType
 local MapMarkerEventType = ProtoRes.MapMarkerEventType
+local MapContentType = MapDefine.MapContentType
 
 
 ---@class MapMarkerProviderFixPoint : MapMarkerProvider
@@ -53,7 +54,14 @@ function MapMarkerProviderFixPoint:OnCreateMarker(Params, IsRegion)
 	if IsRegion then
 		return self:CreateMarker(MapMarkerRegion, Params.ID, Params)
 	else
-		return self:CreateMarker(MapMarkerFixedPoint, Params.ID, Params)
+		local Marker = self:CreateMarker(MapMarkerFixedPoint, Params.ID, Params)
+
+		-- if self:GetContentType() == MapContentType.IndividualHouseMap then
+		-- 	-- 独立房屋地图，只允许点击房屋标记，其他类型标记屏蔽
+		-- 	Marker:SetIsEnableHitTest(false)
+		-- end
+
+		return Marker
 	end
 end
 
@@ -107,7 +115,7 @@ function MapMarkerProviderFixPoint:GetFixPointMarkers(MarkerID)
 	return MapMarkers
 end
 
----获取二级地图的标记
+---获取二级地图的传送大水晶标记
 function MapMarkerProviderFixPoint:GetRegionFixPointMarker(MapMarkers, UIMapID, PosX, PosY, PictureScale)
 	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
 	if nil == Cfg then
@@ -115,7 +123,7 @@ function MapMarkerProviderFixPoint:GetRegionFixPointMarker(MapMarkers, UIMapID, 
 	end
 
 	local EventType = MapMarkerEventType.MAP_MARKER_EVENT_TELEPO
-	local AllCfg = MapMarkerCfg:WorldMapGetAllMarkerCfgByEventType(Cfg.Marker, EventType)
+	local AllCfg = MapMarkerCfg:GetAllMarkerCfgByEventType(Cfg.Marker, EventType)
 	if nil == AllCfg then
 		return
 	end
@@ -143,7 +151,7 @@ function MapMarkerProviderFixPoint:GetTransDoorFixPointMarker(MapMarkers, UIMapI
 	end
 
 	local EventType = MapMarkerEventType.MAP_MARKER_EVENT_TRANS_DOOR
-	local AllCfg = MapMarkerCfg:WorldMapGetAllMarkerCfgByEventType(Cfg.Marker, EventType)
+	local AllCfg = MapMarkerCfg:GetAllMarkerCfgByEventType(Cfg.Marker, EventType)
 	if nil == AllCfg then
 		return
 	end

@@ -54,11 +54,11 @@ function FashionDecoSkillBtnView:OnDestroy()
 end
 
 function FashionDecoSkillBtnView:OnShow()
-
+	self:PlayAnimToEnd(self.AnimClick)
 end
 
 function FashionDecoSkillBtnView:OnHide()
-
+	self:PlayAnimToEnd(self.AnimClick)
 end
 
 function FashionDecoSkillBtnView:OnRegisterUIEvent()

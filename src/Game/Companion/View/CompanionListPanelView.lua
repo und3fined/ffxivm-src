@@ -113,6 +113,14 @@ function CompanionListPanelView:OnShow()
 
 	-- 防止弱网环境造成模型和数据不对应，打开界面时判断是否要修正显示
 	self:CheckCompanionSync()
+
+	local Index = self.CompanionAdapterTableView:GetSelectedIndex()
+	if Index and Index > 0 then
+		local Delay = 0.05
+		self:RegisterTimer(function()
+			self.CompanionAdapterTableView:ScrollToIndex(Index)
+		end, Delay)
+	end
 end
 
 function CompanionListPanelView:OnHide()
@@ -311,11 +319,11 @@ function CompanionListPanelView:OnCanCallCompanionUpdate(Param)
 	self.ViewModel.CanCallCompanion = CompanionMgr:CanCallCompanion()
 end
 
-function CompanionListPanelView:OnCompanionNewListUpdate()
+function CompanionListPanelView:OnCompanionNewListUpdate(Params)
 	self.ViewModel:UpdateVMData()
 end
 
-function CompanionListPanelView:OnCompanionFavouriteListUpdate()
+function CompanionListPanelView:OnCompanionFavouriteListUpdate(Params)
 	if self:GetSelectedCompanionID() ~= 0 then
     	self.ViewModel.ToggleFavourite = CompanionVM:IsCompanionFavourite(self:GetSelectedCompanionID())
 	end

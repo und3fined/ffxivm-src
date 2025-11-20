@@ -482,7 +482,8 @@ function FootPrintMgr:ShowNtfTip(RecordOne)
             --local RegionName = MapUtil.GetRegionName(RegionID)
             --local TitleContent = string.format(LSTR(320011), RegionName)
             --local ValueText = string.format(ItemCfg.CountName, TargetNum)
-            local SubTitleContent = string.format(ItemCfg.DetailText, TargetNum)
+            local ConfigDetailText = ItemCfg.DetailText or ""
+            local SubTitleContent = string.format(ConfigDetailText, TargetNum)
             --MsgTipsUtil.ShowInfoTextTips(1, TitleContent, SubTitleContent)
             MsgTipsUtil.ShowFootPrintTips(SubTitleContent)
         end
@@ -636,7 +637,11 @@ end
 ---@param CurValue number@当前获取的统计项数值
 ---@param Targets table<CsTargetOne>
 function FootPrintMgr:TargetAchieveIndexs(CurValue, Targets)
-    if not Targets then
+    if type(Targets) ~= "table" then
+        FLOG_ERROR("FootPrintMgr:TargetAchieveIndexs Targets is not table")
+        return
+    end
+    if not Targets or not next(Targets) then
         return {}
     end
     local Rlt = {}

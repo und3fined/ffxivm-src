@@ -206,6 +206,7 @@ function HaircutMainVM:UpdateSubMenuSelected(Index)
     self.SubType = self.ListSubMenuVM[Index].SubType
     -- 各个属性设置
     self:InitRightWidget()
+    self:UpdateLightState()
     self:DealTypeFunc()
 
     -- 相机镜头变化
@@ -219,7 +220,7 @@ function HaircutMainVM:DealTypeFunc()
     if SubType == LoginAvatarMgr.CustomizeSubType.Ear or SubType == LoginAvatarMgr.CustomizeSubType.Tail then
         self.bShowShortSwitch = true
     end
-    if self.MainType == LoginAvatarMgr.CustomizeMainMenu.Eye then
+    if self.MainType == LoginAvatarMgr.CustomizeMainMenu.Eye or SubType == LoginAvatarMgr.CustomizeSubType.Stripe then
         self:SelectFacialFeature()
         return
     end
@@ -305,7 +306,7 @@ function HaircutMainVM:UpdateParamSwitchSelected(bLeft)
         self.bLightColor = not bLeft
         local PartKey = LoginAvatarMgr.CustomizeSubMenu[self.SubType].Main
         local ColorValue = LoginAvatarMgr:GetCurCustomizeValue(PartKey)
-        if self.bLightColor and ColorValue > 0 then
+        if self.bLightColor and self.bParamNone == false then --ColorValue > 0
             ColorValue = ColorValue < 127 and (ColorValue + 128) or ColorValue
         else
             ColorValue = ColorValue > 127 and (ColorValue - 128) or ColorValue
@@ -385,6 +386,17 @@ function HaircutMainVM:UpdateHairItem(HairVM)
     end
 end
 
+-- 非发型界面更新
+function HaircutMainVM:IsUseLockHair()
+    -- local LockType = self:GetUnlockType()
+    -- if LockType ~= nil and LockType > 1 then
+    --     return true
+    -- else
+    --     return false
+    -- end
+    if self.HairFaceTableVM == nil then return false end
+    return self.HairFaceTableVM[self.HairTableIndex].bLocked
+end
 -- 勾选项
 function HaircutMainVM:SetDecalFlip()
     self.bFlip = not self.bFlip
@@ -524,6 +536,17 @@ function HaircutMainVM:GetPropertyKey()
         PartKey = LoginAvatarMgr.CustomizeSubMenu[self.SubType].Sub or LoginAvatarMgr.CustomizeSubMenu[self.SubType].Main
     end
     return PartKey
+end
+
+-- 浓淡特殊处理
+function HaircutMainVM:UpdateLightState()
+    if self.SubType ~= LoginAvatarMgr.CustomizeSubType.LipColor and
+       self.SubType ~= LoginAvatarMgr.CustomizeSubType.FaceDecalColor then
+        return
+    end
+    local PartKey = LoginAvatarMgr.CustomizeSubMenu[self.SubType].Main
+    local ColorValue = LoginAvatarMgr:GetCurCustomizeValue(PartKey)
+    self.bLightColor = ColorValue > 127
 end
 -------------------------------------   Deal  Property   ------------------------------------------
 -- 左右状态栏选颜色

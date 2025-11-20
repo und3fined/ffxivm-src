@@ -20,7 +20,7 @@ function Class:Ctor()
     self.Type       = nil
     self.TypeName   = ""
     self.Priority   = DefaultPriority 
-    self.StartTime  = 0 
+    self:SetStartTime(0)
     self.CountDown  = 0 
     self.Tips       = ""
     self.Text2      = ""
@@ -30,6 +30,7 @@ function Class:Ctor()
     self.TransData = nil --透传数据
 
     self.LoopAnimName = nil
+    self.bTimeoutAutoRemove = nil
 end
 
 function Class:IsEqualVM( Value )
@@ -40,8 +41,9 @@ function Class:UpdateVM( Value )
     local Type = Value.Type
 
     self.Type               = Type
-    self.StartTime          = Value.StartTime or 0
+    self:SetStartTime(Value.StartTime or 0)
     self.Tips               = Value.Tips or ""
+    self.Text2              = Value.Desc or ""
     self.LoopAnimName       = Value.LoopAnimName 
 
     local ShowTime = Value.CountDown or 0
@@ -63,8 +65,24 @@ function Class:SetTips( Tips )
     self.Tips = Tips
 end
 
+function Class:SetCountDown( t )
+    self.CountDown  = t 
+end
+
 function Class:SetLoopAnimName( Name )
     self.LoopAnimName = Name
+end
+
+function Class:SetTimeoutAutoRemove(bTimeoutAutoRemove)
+    self.bTimeoutAutoRemove = bTimeoutAutoRemove
+end
+
+function Class:SetNotNotifyTimeout(Value)
+    self.bNotNotifyTimeout = Value
+end
+
+function Class:SetStartTime(Value)
+    self.StartTime = Value
 end
 
 return Class

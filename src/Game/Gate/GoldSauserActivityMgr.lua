@@ -62,7 +62,7 @@ function GoldSauserActivityMgr:OnInit()
     self.JDMapID = 12060
     self.RecursionNum = 0
     self.RelateNpcData = {}
-    self.CurTimeFormat = TimeUtil.GetServerTimeFormat("%H:%M:%S")
+    self.CurTimeFormat = TimeUtil.GetServerLogicTimeFormat("%H:%M:%S")
     self.CanBehviorAngle = 60
     -- self.BehaviorTimers = {}
 end
@@ -438,6 +438,9 @@ function GoldSauserActivityMgr:GetActivityStateByType(ActivityType, ResID)
             return ActivityState.ACTIVITY_STATE_DEADLINE
         end
     elseif ActivityType == EnumActivityType.ACTIVITY_MAGICCARD then
+        if not MagicCardTourneyMgr:IsTourneyActive() then
+            return -- 2525.5.13 Alex 策划需求大赛未开启状态不做任何Npc行为表现
+        end
         if self:MagicCardNoInvolved() then
             return ActivityState.ACTIVITY_STATE_NOINVOLVED
         elseif self:MagicCardNoFinish() then
@@ -448,7 +451,7 @@ function GoldSauserActivityMgr:GetActivityStateByType(ActivityType, ResID)
             return ActivityState.ACTIVITY_STATE_DEADLINE
         elseif MagicCardTourneyMgr:IsCanGetReward() then
              return ActivityState.ACTIVITY_STATE_NOEXCHANGE
-         end
+        end
     elseif ActivityType == EnumActivityType.ACTIVITY_FASHIONCHECK then
         if not FashionEvaluationMgr:IsEvaluated() and not FashionEvaluationMgr:IsFinishedEvaluation() then          -- 未参与
             return ActivityState.ACTIVITY_STATE_NOINVOLVED
@@ -585,7 +588,7 @@ function GoldSauserActivityMgr:JDMapTick()
     -- local LastMin = LastTimeArr[2]
     -- local LastSec = LastTimeArr[3]
 
-    self.CurTimeFormat = TimeUtil.GetServerTimeFormat("%H:%M:%S")
+    self.CurTimeFormat = TimeUtil.GetServerLogicTimeFormat("%H:%M:%S")
     local TimeArr = string.split(self.CurTimeFormat, ":")
     local Hour = TimeArr[1]
     -- local Min = TimeArr[2]
@@ -606,6 +609,7 @@ function GoldSauserActivityMgr:TryPlayNpcBehaviorByData(NpcData)
         if self:CheckIsFinishNpcQuest(NpcData.ID) then
             local bSuccessPlay = self:PlayNpcBehaviorAndEnd(NpcData)
             if not bSuccessPlay then
+                self:UnRegistNpcBehaviorTimer() -- 先去除计时器才可以保证计时器的Handle不会丢失
                 self.NpcBehaviorTimerHandle = self:RegisterTimer(self.PlayNpcBehaviorAndEnd, 0, 0.3, 0, NpcData)            
             end
         end

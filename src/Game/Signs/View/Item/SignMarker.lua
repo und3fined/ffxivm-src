@@ -42,8 +42,9 @@ end
 -- function M:ReceiveBeginPlay()
 -- end
 
--- function M:ReceiveEndPlay()
--- end
+function SignMarkerEffectActor:ReceiveEndPlay()
+    _G.SignsMgr:OnSignMarkerEndPlay(self)
+end
 
 -- function M:ReceiveTick(DeltaSeconds)
 -- end

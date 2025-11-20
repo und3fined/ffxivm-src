@@ -28,7 +28,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---@field TextMultiple1 UFTextBlock
 ---@field TextPerfect UFTextBlock
 ---@field TextX UFTextBlock
----@field AnimIn UWidgetAnimation
+---@field AnimInManual UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerCrystalTowerStrikerScoreFeedbackItemView = LuaClass(UIView, true)
 
@@ -48,7 +48,7 @@ function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:Ctor()
 	--self.TextMultiple1 = nil
 	--self.TextPerfect = nil
 	--self.TextX = nil
-	--self.AnimIn = nil
+	--self.AnimInManual = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -67,7 +67,7 @@ function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:OnInit()
 		{"bMultipleVisible", UIBinderSetIsVisible.New(self, self.HorizontalMultiple)}, --
 		{"ComboNum", UIBinderSetText.New(self, self.TextMultiple1)},
 		-- {"ChooseVisibleIndex", UIBinderSetActiveWidgetIndex.New(self, self.FWidgetSwitcher_0)},
-		{"CallBackIndex", UIBinderValueChangedCallback.New(self, nil, self.PlayAnimIn)},
+		{"CallBackIndex", UIBinderValueChangedCallback.New(self, nil, self.PlayAnimInManual)},
 
 	}
 end
@@ -109,12 +109,13 @@ function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:OnRegisterBinder()
 	self:RegisterBinders(ViewModel, self.Binders)
 end
 
-function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:PlayAnimIn()
-	self:PlayAnimation(self.AnimIn)
+function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:PlayAnimInManual()
+	FLOG_INFO("GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:PlayAnimInManual")
+	self:PlayAnimation(self.AnimInManual)
 end
 
 function GoldSaucerCrystalTowerStrikerScoreFeedbackItemView:OnAnimationFinished(Animation)
-	if Animation == self.AnimIn then
+	if Animation == self.AnimInManual then
 		self.P_DX_CrystalTowerStriker_4:ResetParticle()
 		self.P_DX_CrystalTowerStriker_5:ResetParticle()
 		self.P_DX_CrystalTowerStriker_6:ResetParticle()

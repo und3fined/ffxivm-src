@@ -24,6 +24,8 @@ function EasyToUseSelectItemVM:Ctor( )
 	self.ModuleID = nil
 	self.HelpInfoID = nil
 	self.HelpInfoViewID = nil
+	self.RedDotStr = nil
+	self.RedDotID = nil
 end
 
 function EasyToUseSelectItemVM:IsEqualVM(Value)
@@ -40,6 +42,8 @@ function EasyToUseSelectItemVM:UpdateVM(Value, Param)
 	self.bSelect = _G.UE.ESlateVisibility.HitTestInvisible
 	self.ScaleBoxIconVisibility = 0
 	self.ModuleID = Value.ModuleID
+	self.RedDotStr = Value.RedDotStr
+	self.RedDotID = Value.RedDotID
 	self.IsLock = not _G.ModuleOpenMgr:CheckOpenState(Value.ModuleID)
 	if Value.CheckOpenFunc and not self.IsLock then
 		self.IsLock = not Value.CheckOpenFunc()

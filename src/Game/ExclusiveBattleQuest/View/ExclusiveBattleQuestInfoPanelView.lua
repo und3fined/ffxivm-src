@@ -27,13 +27,18 @@ local HelpTipsID = 0 -- 帮助按钮弹出对应的ID
 ---@field CommTextSlide CommTextSlideView
 ---@field ImgDown UFImage
 ---@field ImgUp UFImage
+---@field MI_DX_Circle_1_a UFImage
 ---@field PanelRegionClear UFCanvasPanel
 ---@field ProBar UProgressBar
 ---@field TextProgress UFTextBlock
----@field AnimHighlightIn UWidgetAnimation
+---@field AnimBtnFoldChecked UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimProBarControl UWidgetAnimation
+---@field AnimProBarFull UWidgetAnimation
 ---@field AnimProgressUpdate UWidgetAnimation
----@field AnimUnfold UWidgetAnimation
+---@field CurveAnimProgressBar CurveFloat
+---@field ValueAnimProBarStart float
+---@field ValueAnimProBarEnd float
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ExclusiveBattleQuestInfoPanelView = LuaClass(UIView, true)
 
@@ -44,13 +49,18 @@ function ExclusiveBattleQuestInfoPanelView:Ctor()
 	--self.CommTextSlide = nil
 	--self.ImgDown = nil
 	--self.ImgUp = nil
+	--self.MI_DX_Circle_1_a = nil
 	--self.PanelRegionClear = nil
 	--self.ProBar = nil
 	--self.TextProgress = nil
-	--self.AnimHighlightIn = nil
+	--self.AnimBtnFoldChecked = nil
 	--self.AnimIn = nil
+	--self.AnimProBarControl = nil
+	--self.AnimProBarFull = nil
 	--self.AnimProgressUpdate = nil
-	--self.AnimUnfold = nil
+	--self.CurveAnimProgressBar = nil
+	--self.ValueAnimProBarStart = nil
+	--self.ValueAnimProBarEnd = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -69,8 +79,7 @@ function ExclusiveBattleQuestInfoPanelView:OnInit()
         {"IsFold", UIBinderSetIsVisible.New(self, self.PanelRegionClear, true)},
         {"IsFold", UIBinderValueChangedCallback.New(self, nil, self.OnIsFoldChanged)},
 		{"IsFold", UIBinderSetIsChecked.New(self, self.BtnFold)},
-        {"Progress", UIBinderValueChangedCallback.New(self, nil, self.OnProgressChanged)},
-		{ "SliderPercent", UIBinderSetPercent.New(self, self.ProBar) },
+        {"NewProgress", UIBinderValueChangedCallback.New(self, nil, self.OnProgressChanged)},
 	}
 end
 
@@ -116,10 +125,22 @@ function ExclusiveBattleQuestInfoPanelView:OnIsFoldChanged(IsFold)
 end
 
 function ExclusiveBattleQuestInfoPanelView:OnProgressChanged(Progress)
-	local Str = string.format(_G.LSTR(410001), Progress, self.ViewModel:GetMaxProgress())
+	local OldProgress = self.ViewModel:GetOldProgress()
+	local NewProgress = self.ViewModel:GetNewProgress()
+	local MaxProgress = self.ViewModel:GetMaxProgress()
+	local Str = string.format(_G.LSTR(410001), NewProgress, MaxProgress)
 	self.TextProgress:SetText(Str)
 
-	self:PlayAnimation(self.AnimProgressUpdate)
+	if MaxProgress ~= 0 then
+		local OldPercent = OldProgress / MaxProgress
+		local NewPercent = NewProgress / MaxProgress
+		self.ProBar:SetPercent(NewPercent)
+		self:PlayAnimProBar(OldPercent, NewPercent)
+
+		if NewPercent == 1 then
+			self:PlayAnimation(self.AnimProBarFull)
+		end
+	end
 end
 
 return ExclusiveBattleQuestInfoPanelView

@@ -31,6 +31,8 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnConfirm CommBtnLView
 ---@field BtnSound UFButton
+---@field CommonTitle CommonTitleView
+---@field PanelTitle UFCanvasPanel
 ---@field TableViewSpecific UTableView
 ---@field TableViewSpecificCruves UTableView
 ---@field TextPercussion UFTextBlock
@@ -51,6 +53,8 @@ function PerformanceSelectPanelView:Ctor()
 	--self.BtnClose = nil
 	--self.BtnConfirm = nil
 	--self.BtnSound = nil
+	--self.CommonTitle = nil
+	--self.PanelTitle = nil
 	--self.TableViewSpecific = nil
 	--self.TableViewSpecificCruves = nil
 	--self.TextPercussion = nil
@@ -70,6 +74,7 @@ function PerformanceSelectPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.BtnConfirm)
+	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -88,7 +93,7 @@ function PerformanceSelectPanelView:OnInit()
 end
 
 function PerformanceSelectPanelView:InitStaticText()
-	self.TextTitle:SetText(_G.LSTR(830091))
+	self.CommonTitle:SetTextTitleName(LSTR(830091))
 	self.TextString:SetText(_G.LSTR(830050))
 	self.TextWind:SetText(_G.LSTR(830051))
 	self.TextPercussion:SetText(_G.LSTR(830052))
@@ -159,6 +164,8 @@ function PerformanceSelectPanelView:OnHide()
 
 		--停止静音
 		_G.TouringBandMgr:ExitTouringBandSilentMode()
+		--恢复背景音乐
+		_G.UE.UBGMMgr.Get():Resume()
 	end
 end
 

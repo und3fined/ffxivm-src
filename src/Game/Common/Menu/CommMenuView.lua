@@ -71,9 +71,8 @@ function CommMenuView:OnShow()
 end
 
 function CommMenuView:OnHide()
-	self.LastMainSelectedKey = nil
-	self.LastSubSelectKey = nil
 	self.ListData = {}
+	self:CancelSelected()
 end
 
 function CommMenuView:OnRegisterUIEvent()

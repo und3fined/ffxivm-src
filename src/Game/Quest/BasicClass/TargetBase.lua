@@ -48,6 +48,8 @@ function TargetBase:Ctor(CtorParams, _)
     self.FinishClientBehavior = {}
     self.bTeleportAfterTarget = QuestHelper.CheckTeleportAfterTarget(self)
 
+    self.IsAlreadyFinish = false --临时,排查任务目标重复激活问题
+
     QuestMgr = _G.QuestMgr
 end
 
@@ -62,6 +64,10 @@ function TargetBase:UpdateTargetInfo(NewStatus, Count)
     self.Count = Count
 
     if Func then Func(self) end
+
+    if NewStatus == STATUS_FINISHED then
+        self.IsAlreadyFinish = true
+    end
 end
 
 function TargetBase:AddStatusChange(NewStatus)
@@ -90,6 +96,11 @@ function TargetBase:StartTarget(bRevert)
     do
         local _ <close> = CommonUtil.MakeProfileTag("StartTarget_PostStartTarget")
         self:PostStartTarget()
+    end
+
+    if self.IsAlreadyFinish then
+        -- 已经完成过，正常只有revert的情况会执行到这，打印堆栈帮助排查
+        FLOG_WARNING(string.format("[QuestTargetBase] ReStartTarget %s \n%s", tostring(self.TargetID), debug.traceback()))
     end
 end
 

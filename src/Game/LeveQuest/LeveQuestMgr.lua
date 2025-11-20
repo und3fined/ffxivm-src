@@ -78,7 +78,8 @@ end
 
 function LeveQuestMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LEVE_QUEST, SUB_MSG_ID.LeveQuestQuery, self.OnGetLeveQuestData)
-    self:RegisterGameNetMsg(CS_CMD.CS_CMD_LEVE_QUEST, SUB_MSG_ID.LeveQuestBatchSubmit, self.OnLeveQuestSubmitTaskRsp)
+    -- self:RegisterGameNetMsg(CS_CMD.CS_CMD_LEVE_QUEST, SUB_MSG_ID.LeveQuestBatchSubmit, self.OnLeveQuestSubmitTaskRsp)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_LEVE_QUEST, SUB_MSG_ID.LeveQuestSubmitTask, self.OnLeveQuestSubmitTaskRsp)
 end
 
 function LeveQuestMgr:OnRegisterGameEvent()
@@ -219,7 +220,9 @@ function LeveQuestMgr:GetMarkedItemByProfID(ProfID)
         return
     end
     local ProfID = tostring(ProfID)
-    return self.MarkedItemList[ProfID] and self.MarkedItemList[ProfID].ItemID
+    if self.MarkedItemList[ProfID] and self.MarkedItemList[ProfID].ItemID then
+        return self.MarkedItemList[ProfID].ItemID
+    end
 end
 
 -- 是否职业标记
@@ -230,6 +233,14 @@ function LeveQuestMgr:IsProfMarkedItem(ProfID, LeveQuestID)
     end
 
     return self.MarkedItemList[ProfID].ID and self.MarkedItemList[ProfID].ID == LeveQuestID
+end
+
+function LeveQuestMgr:IsEmptyProfMarkedItem(ProfID)
+    local ProfID = tostring(ProfID)
+    if self.MarkedItemList[ProfID] == nil then
+        return true
+    end
+    return false
 end
 
 -- 设置职业标记
@@ -334,17 +345,17 @@ function LeveQuestMgr:OnGetLeveQuestData(MsgBody)
     EventMgr:SendEvent(EventID.LeveQuestInfoUpdate)
 end
 
---理符委托提交任务
-function LeveQuestMgr:SendLeveQuestSubmitTaskReq(QuestID, ItemID, ItemNum, GIDList)
+function LeveQuestMgr:SendLeveQuestSubmitTaskReq(QuestID, Items)
     local MsgID = CS_CMD.CS_CMD_LEVE_QUEST
-    local SubMsgID = SUB_MSG_ID.LeveQuestBatchSubmit
+    local SubMsgID = SUB_MSG_ID.LeveQuestSubmitTask
 
     local MsgBody = {}
 	MsgBody.Cmd = SubMsgID
-    MsgBody.BatchSubmit = {TaskID = QuestID, ItemID = ItemID, Num = ItemNum , GIDs = GIDList}
+    MsgBody.SubmitTask  = {TaskID = QuestID, Items = Items}
     self.CurQuestID = QuestID
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
+
 
 --提交委托回调
 function LeveQuestMgr:OnLeveQuestSubmitTaskRsp(MsgBody)
@@ -352,33 +363,27 @@ function LeveQuestMgr:OnLeveQuestSubmitTaskRsp(MsgBody)
         return
     end
 
-    local Data = MsgBody.BatchSubmit
+    local Data = MsgBody.SubmitTask
 
     local AwardList = Data.AwardList
-    local QuestID = Data.TaskID
-    local FinishNum = Data.FinishNum
+    local QuestID = Data.TaskID --任务ID
+    local FinishNum = Data.FinishNum  -- 完成数量
+    local IsHq = Data.IsHQ or false -- 是否是HQ
+    local HQExtraExp = Data.HQExtraExp or 0
     -- 奖励道具弹窗
     local Params = {}
 	Params.ItemList = {}
     Params.Title = _G.LSTR(880010)
 
-    local IsDouble = false
-    local ExtraExp = 0
-
-    for _, v in ipairs(AwardList) do
-        if v.IsExtra then
-            IsDouble = true
-            local Cfg = LevequestCfg:FindCfgByKey(QuestID)
-            if Cfg ~= nil then
-                for _, value in ipairs(Cfg.RewardItems) do
-                    if value.ID == ProtoRes.SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP then
-                        ExtraExp = v.Count * (value.Rate / 100)
-                    end
-                end
-            end
-            break
+    local Cfg = LevequestCfg:FindCfgByKey(QuestID)
+    if Cfg ~= nil then
+        local ProfID = Cfg.ProfType
+        local Level = LeveQuestMgr:GetProfCurLevel(ProfID)
+        if Level - Cfg.Level > 10 then
+            MsgTipsUtil.ShowTips(LSTR(880023))
         end
     end
+
 
     local ItemList = {}
     local TempList = {}
@@ -422,8 +427,8 @@ function LeveQuestMgr:OnLeveQuestSubmitTaskRsp(MsgBody)
     end	
 
 
-    if IsDouble then
-        MsgTipsUtil.ShowTips(string.format(LSTR(880011), ExtraExp))
+    if IsHq and HQExtraExp > 0 then
+        MsgTipsUtil.ShowTips(string.format(LSTR(880011), HQExtraExp))
     end
 
 
@@ -769,78 +774,89 @@ end
 
 -- 查找奖励物品
 function LeveQuestMgr:GetCfgbyJumpItemID(ItemID)
-    local CareerList = LeveQuestDefine.TabList
+    local currentProfID = MajorUtil.GetMajorProfID()  -- 缓存当前职业ID
     local NeedCareerList = {}
-    for _, profID in ipairs(CareerList) do
-        local ProfListIndex = LeveQuestMgr:GetProfListIndex(profID)
-        if  ProfListIndex ~= -1 then
+    
+    -- 预处理有效职业列表
+    for _, profID in ipairs(LeveQuestDefine.TabList) do
+        if self:GetProfListIndex(profID) ~= -1 then
             table.insert(NeedCareerList, profID)
         end
     end
 
+    -- 构建配置列表（已自动去重）
     local CfgList = {}
     for _, profID in ipairs(NeedCareerList) do
-        local Cfg = LevequestCfg:FindAllCfg(string.format("ProfType == %d", profID))
-        for _, value in ipairs(Cfg) do
-            for _, v in ipairs(value.ExtraItems) do
-                if v.ID == ItemID then
-                    table.insert(CfgList, value)
+        for _, cfg in ipairs(LevequestCfg:FindAllCfg("ProfType == "..profID)) do
+            for _, item in ipairs(cfg.ExtraItems) do
+                if item.ID == ItemID then
+                    table.insert(CfgList, cfg)
+                    break  -- 避免同一配置重复添加
                 end
             end
         end
     end
 
+    -- 构建排序特征表
     local TempList = {}
-    for _, v in ipairs(CfgList) do
-        local Temp = {}
-        local ItemID = v.RequireItem.ID
-        local IsEnough = LeveQuestMgr:GetMostPayNum(v, ItemID) > 1
-        if not ItemUtil.IsHQ(ItemID) then
-			local Cfg = ItemCfg:FindCfgByKey(ItemID)
-			if Cfg ~= nil then
-				if Cfg.NQHQItemID ~= 0 and not IsEnough then
-                    IsEnough = LeveQuestMgr:GetMostPayNum(v, Cfg.NQHQItemID) > 1
-                end
+    for _, cfg in ipairs(CfgList) do
+        local itemID = cfg.RequireItem.ID
+        local isEnough = self:GetMostPayNum(cfg, itemID) > 0
+        
+        -- 检查NQ物品的HQ版本
+        if not ItemUtil.IsHQ(itemID) then
+            local itemCfg = ItemCfg:FindCfgByKey(itemID)
+            if itemCfg and itemCfg.NQHQItemID ~= 0 and not isEnough then
+                isEnough = self:GetMostPayNum(cfg, itemCfg.NQHQItemID) > 0
             end
         end
-        Temp.CanSubmit = IsEnough
-        Temp.IsLevel = v.Level < LeveQuestMgr:GetProfCurLevel(v.ProfType)
-        Temp.IsCurProfID = MajorUtil.GetMajorProfID() == v.ProfType
-        Temp.ProfID = v.ProfType
-        Temp.ID = v.ID
-        Temp.Level = v.Level
 
-        table.insert(TempList, Temp)
+        -- 预存等级判断结果
+        local isLevelMet = cfg.Level <= self:GetProfCurLevel(cfg.ProfType)
+        
+        table.insert(TempList, {
+            CanSubmit   = isEnough,
+            IsLevel     = isLevelMet,
+            IsCurProfID = cfg.ProfType == currentProfID,
+            ProfID      = cfg.ProfType,
+            ID          = cfg.ID,
+            Level       = cfg.Level,
+        })
     end
 
+    -- 优化排序算法
     table.sort(TempList, function(a, b)
+        -- 优先级1：可提交状态（可提交在前）
         if a.CanSubmit ~= b.CanSubmit then
             return a.CanSubmit
         end
 
-        if a.IsLevel ~=  b.IsLevel then
+        -- 优先级2：等级满足状态（满足在前）
+        if a.IsLevel ~= b.IsLevel then
             return a.IsLevel
         end
 
-        if a.Level ~=  b.Level then
-            return a.Level > b.Level
-        end
-
+        -- 优先级3：当前职业优先
         if a.IsCurProfID ~= b.IsCurProfID then
             return a.IsCurProfID
         end
 
+        -- 优先级4：等级升序排列
+        if a.Level ~= b.Level then
+            return a.Level < b.Level
+        end
+
+        -- 优先级5：职业ID升序
         if a.ProfID ~= b.ProfID then
             return a.ProfID < b.ProfID
         end
 
+        -- 优先级6：委托ID升序
         return a.ID < b.ID
     end)
 
-    return #TempList > 0 and TempList[1] or nil
-
+    return TempList[1]  -- 直接返回首元素或nil
 end
-
 
 function LeveQuestMgr:GetMostPayNum(Cfg, ItemID)
 	local NeededItem = Cfg.RequireItem
@@ -927,9 +943,13 @@ function LeveQuestMgr:GetCanPayItemNum(ItemResID)
     for key, value in pairs(RoleDetail.Prof.ProfList) do
         local  Equipscheme = value.EquipScheme
         if key ~= ProfID then
-            for _, data in pairs(Equipscheme)do
-                if not table.contain(EquipGIDs, data.GID) then
-                    table.insert(EquipGIDs,  data.GID)
+            if Equipscheme and next(Equipscheme) then
+                for _, data in pairs(Equipscheme)do
+                    if data then
+                        if not table.contain(EquipGIDs, data.GID) then
+                            table.insert(EquipGIDs,  data.GID)
+                        end
+                    end
                 end
             end
         end

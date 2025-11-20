@@ -21,6 +21,7 @@ local ParentRedDotName = "Root/Menu/Mount"
 local HandBookParentRedDotName = "Root/Menu/AtlasEntrance/Mount"
 
 local MountMgr = _G.MountMgr
+local ClientVisionMgr = _G.ClientVisionMgr
 ---@class MountCustomMadeVM : UIViewModel
 local MountCustomMadeVM = LuaClass(UIViewModel)
 
@@ -43,12 +44,14 @@ function MountCustomMadeVM:Ctor()
     self.CurPriceTextColor = nil
 
     self.bIsShowPlayer = nil
+    self.bIsFlying = false
     self.CustomMadeCfgMap = {}
     self.DefaultCustomMadeIDMap = {}
     self.NewMap = {}
     self.MountNewMap = {}
     self.RedDotNameMap = {}
     self.HandBookRedDotNameMap = {}
+    self.MountActionList = nil
     setmetatable(self.NewMap, { __jsontype = 'table' })
     setmetatable(self.MountNewMap, { __jsontype = 'table' })
 end
@@ -56,6 +59,7 @@ end
 function MountCustomMadeVM:OnEnd()
     self.MountID = nil
     self.CustomData = nil
+    self.UnlockList = nil
 end
 
 function MountCustomMadeVM:UpdateCustomList(MountID)
@@ -63,7 +67,7 @@ function MountCustomMadeVM:UpdateCustomList(MountID)
     if MountID == nil or self.MountID == MountID then
         -- 不用重建，只用更新
         if self.UnlockList ~= nil and self.CustomData ~= nil then
-            for _, CustomSlotVM in ipairs(self.CustomData) do
+            for _, CustomSlotVM in pairs(self.CustomData) do
                 local UnlockInfo = self.UnlockList[CustomSlotVM.ID]
                 CustomSlotVM:UpdateOwnState(UnlockInfo)
                 CustomSlotVM.bIsNew = self:IsNew(CustomSlotVM.ID)
@@ -79,7 +83,7 @@ function MountCustomMadeVM:UpdateCustomList(MountID)
     elseif self.UnlockList ~= nil then
         self.MountID = MountID
         local NewCustomData = {}
-        for _, Cfg in ipairs(self.CustomMadeCfgMap) do
+        for _, Cfg in pairs(self.CustomMadeCfgMap) do
             if Cfg.MountID == MountID then
                 local CustomSlotVM = MountCustomMadeSlotVM.New()
                 local UnlockInfo = self.UnlockList[Cfg.ID]
@@ -101,7 +105,7 @@ function MountCustomMadeVM:UpdateCustomList(MountID)
 
     local NewCustomList = {}
     if self.CustomData ~= nil then
-        for _, CustomSlot in ipairs(self.CustomData) do
+        for _, CustomSlot in pairs(self.CustomData) do
             -- unlock show   Launch  |  insert
             -- true   true   true    |  true
             -- true   true   false   |  true
@@ -113,7 +117,7 @@ function MountCustomMadeVM:UpdateCustomList(MountID)
             -- false  false  false   |  false
             if CustomSlot.bIsUnlocked or (not self.bShowUnlockedOnly and self:IsLaunched(CustomSlot.ID)) then
                 table.insert(NewCustomList, CustomSlot)
-        end
+            end
         end
     end
     table.sort(NewCustomList, function(A, B) return A.Order > B.Order end)
@@ -170,6 +174,20 @@ function MountCustomMadeVM:IsCustomMadeEnabled(MountID)
     return false
 end
 
+--- (该函数暂未使用)通过坐骑ID 、纹理变体ID 和 模型ID 来获取坐骑定制外观表的ID
+function MountCustomMadeVM:GetCustomMadeID(MountID, ImeChanID, PatternID)
+    if self.CustomMadeCfgMap == nil then
+        _G.FLOG_ERROR("MountCustomMadeVM.CustomMadeCfgMap is nil")
+        return nil
+    end
+    for _, Cfg in pairs(self.CustomMadeCfgMap) do
+        if Cfg.MountID == MountID and Cfg.ImeChanID == ImeChanID and Cfg.PatternID == PatternID then
+            return Cfg.ID
+        end
+    end
+    return nil
+end
+
 function MountCustomMadeVM:OnMountMgrBegin()
     -- 加载所有cfg，用于读取上架时间判断是否已上架
     local AllCfg = MountCustomCfg:FindAllCfg()
@@ -191,9 +209,26 @@ function MountCustomMadeVM:IsLaunched(CustomMadeID)
     if self.CustomMadeCfgMap == nil then return false end
     local Cfg = self.CustomMadeCfgMap[CustomMadeID]
     if Cfg == nil then return false end
-    local LaunchTime = TimeUtil.GetTimeFromString(Cfg.LaunchTime)
+    local LaunchTime = nil
+    if not string.isnilorempty(Cfg.LaunchTime) then
+        LaunchTime = TimeUtil.GetTimeFromString(Cfg.LaunchTime)
+    end
     local CurrentTime = TimeUtil.GetServerLogicTime()
-    return LaunchTime ~= nil and CurrentTime > LaunchTime
+    local CanTime = LaunchTime ~= nil and CurrentTime > LaunchTime     --上线时间
+
+    if string.isnilorempty(Cfg.VersionName)then     --版本号
+        return CanTime
+    end
+    local CanVersion = ClientVisionMgr:CheckVersionByGlobalVersion(Cfg.VersionName)
+
+    return CanTime and CanVersion
+end
+
+function MountCustomMadeVM:GetActionList(CustomMadeID)
+    if self.CustomMadeCfgMap == nil then return false end
+    local Cfg = self.CustomMadeCfgMap[CustomMadeID]
+    if Cfg == nil then return {} end
+    return Cfg.PlayAction
 end
 
 function MountCustomMadeVM:AddNew(CustomMadeID, bIgnoreUpdateVM)
@@ -289,7 +324,7 @@ end
 
 function MountCustomMadeVM:GetDefaultCustomMadeID(MountID)
     if self.DefaultCustomMadeIDMap[MountID] ~= nil then return self.DefaultCustomMadeIDMap[MountID] end
-    local RideCfgRow = RideCfg:FindCfgByKey(MountID)
+    local RideCfgRow = _G.MountMgr:GetRideCfg(MountID)
     if RideCfgRow == nil then return end
     for ID, CustomMadeCfgRow in pairs(self.CustomMadeCfgMap) do
         if CustomMadeCfgRow.MountID == MountID and RideCfgRow.ImeChanId == CustomMadeCfgRow.ImeChanID then

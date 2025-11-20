@@ -117,9 +117,9 @@ end
 
 function CompanionCallingSettingItemView:OnOnlineAutoCallingChange(NewValue, OldValue)
 	if NewValue then
-		self.Text:SetColorAndOpacity(self.CheckBox.CheckedColor)
+		UIUtil.SetColorAndOpacityHex(self.Text, "D5D5D5FF")
 	else
-		self.Text:SetColorAndOpacity(self.CheckBox.UnCheckedColor)
+		UIUtil.SetColorAndOpacityHex(self.Text, "828282FF")
 	end
 end
 

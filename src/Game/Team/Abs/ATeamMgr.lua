@@ -173,7 +173,7 @@ function ATeamMgr:OnRescure(Info)
 	local VM = self:GetTeamMemberVMByRoleID(Info.RoleID)
 	if VM then
 		if Deadline <= 0 then
-			VM:SetReviving(VM.bDead)
+			VM:SetReviving(VM.bDead and Info.Reason == 1)
 		end
 		VM:SetRescureDeadline(Deadline)
 		self:UpdateRescureInfo()
@@ -216,8 +216,8 @@ function ATeamMgr.FindRoleVM(RoleID, bUseCache)
 end
 
 local CachedMajorProf = nil
-local function SingeUpdateProf(ProfID)
-	if ProfID == CachedMajorProf then
+local function SingeUpdateProf(ProfID, bForce)
+	if ProfID == CachedMajorProf and not bForce then
 		return
 	end
 
@@ -238,7 +238,7 @@ local function SingeUpdateProf(ProfID)
 end
 
 function ATeamMgr.InitMajorTeamSkills()
-	SingeUpdateProf(MajorUtil.GetMajorProfID())
+	SingeUpdateProf(MajorUtil.GetMajorProfID(), true)
 end
 
 ---@private
@@ -688,6 +688,7 @@ function ATeamMgr:SetTeamID(V)
 		self:LogInfo("team id change %s => %s", self.TeamID, V)
 		self:QutiVoiceRoom()
 	end
+	local OldTeamID = self.TeamID
 	-- set team id
 	self.TeamID = V
 	-- set team status
@@ -705,6 +706,10 @@ function ATeamMgr:SetTeamID(V)
 			_G.TeamVoiceMgr:TryJoinRoom(self)
 		end
 		_G.EventMgr:SendEvent(EventID.TeamIDUpdate, self, self.TeamID)
+	end
+	-- team destroy
+	if not self:IsInTeam() then
+		_G.EventMgr:SendEvent(EventID.TeamDestroy, OldTeamID, self)
 	end
 end
 
@@ -1028,6 +1033,22 @@ function ATeamMgr:SendQueryTeamMemberPosition()
 	if #RoleIDList > 0 then
 		self:_SendQueryTeamMemberPosition(RoleIDList)
 	end
+end
+
+function ATeamMgr:UpdateTeamMemberPosition()
+end
+
+function ATeamMgr:ForceUpdatePWorldLocation()
+	if not self:IsInTeam() or not self.TeamVM then
+        return
+    end
+
+    local MapResID = _G.PWorldMgr:GetCurrMapResID()
+    for _, RoleID in self:IterTeamMembers() do
+        if RoleID and RoleID ~= 0 then
+            self.TeamVM:UpdateMemberPostion(RoleID, {MapResID=MapResID})
+        end
+    end
 end
 
 --- Private

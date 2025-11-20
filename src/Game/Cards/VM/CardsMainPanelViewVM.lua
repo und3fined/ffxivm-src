@@ -202,6 +202,11 @@ function CardsMainPanelViewVM:OnDrop(DropOnCardItemVM)
         return
     end
 
+    if InGameSrv.HasSentAutoPlay then
+        self:OnDragCancelled()
+        return
+    end
+
     local _dropType = DropOnCardItemVM:GetCardType()
     if (_dropType == LocalDef.CardItemType.OnBoard) then
         self:PlayerChooseBoardPos(DropOnCardItemVM:GetIndex())

@@ -37,12 +37,14 @@ local RichTextUtil = require("Utils/RichTextUtil")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
 local LoginMgr = require("Game/Login/LoginMgr")
+local SidebarDefine = require("Game/Sidebar/SidebarDefine")
+local AudioUtil = require("Utils/AudioUtil")
 
 local CS_CMD = ProtoCS.CS_CMD
 local PERFORM_CMD = ProtoCS.PerformCmd
 
-local EnsembleErrorCode1 = 168011 -- 后台定义的错误码，附近有一场景合奏正在进行，不能发起合奏
-local EnsembleErrorCode2 = 101065 --后台异常，比如合奏中出现异常
+local PerformanceErrorCode2 = 101065 -- 后台出现异常：无法正常演奏系统了，需要强制要退出演奏系统，比如合奏中出现异常等
+local EnsembleErrorCode1 = 168011 -- 后台定义的错误码：附近有一场景合奏正在进行，不能发起合奏
 
 local MusicPerformanceMgr = LuaClass(MgrBase)
 
@@ -65,13 +67,13 @@ function MusicPerformanceMgr:OnInit()
 	self.PerformCommand = MPPerformBuffer.New()
 	self.EnsembleCommand = MPEnsembleBuffer.New()
 
-	self.Timbre        = 0
+	self.Timbre = 0
 	self.TimelineCount = 0
-	self.ModeTimer     = 0.0
-	self.PrepareTimer  = 0.0
-	self.ReadyFlag     = false
-	self.ModeFlag      = false
-	self.EnsembleFlag  = false
+	self.ModeTimer = 0.0
+	self.PrepareTimer = 0.0
+	self.ReadyFlag = false
+	self.ModeFlag = false
+	self.EnsembleFlag = false
 	self.EnsemblePartyID = 0
 	self.IsSwitchSelectPanel = false
 
@@ -85,13 +87,17 @@ function MusicPerformanceMgr:OnInit()
 
 	self.Assistant = nil
 	self.TeamPlayerList = {}
+	self.TeamPlayerAssistList = {}  --记录队伍中处于演奏助手中的队员
 	self.CharacterEndAnimData = {}  --记录退出演奏的动作
+	self.IsShowMainPanelExitMsgBox = false --是否显示退出演奏的确认提示弹出框
 
 	self.bShortReconnect = false --是否闪断情况
+	-- self.MajorPerformID = 0 --断线重连后角色的乐器ID
 
 	-- Debug
 	self.DebugValue = 0
 	self.bOpenEnsembleGM = false
+	self.PressedPlayTimeMs = 0
 end
 
 function MusicPerformanceMgr:GetMajorSound()
@@ -166,11 +172,12 @@ function MusicPerformanceMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.PerformCmdExit, self.OnNetMsgPerformCmdExitNotify)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.PerformCmdPerform, self.OnNetMsgPerformCmdPerform)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdEnsemble, self.OnNetMsgEnsembleCmdEnsemble)
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdAskConfirm, self.OnNetMsgEnsembleCmdAskConfirm)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdAskConfirm, self.OnNetMsgEnsembleCmdAskConfirm) --合奏准备确认
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdNotifyReady, self.OnNetMsgEnsembleCmdNotifyReady)
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdConfirm, self.OnNetMsgEnsembleCmdConfirm)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdConfirm, self.OnNetMsgEnsembleCmdConfirm) -- 开始合奏
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdExit, self.OnNetMsgEnsembleCmdExit)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.EnsembleCmdQuery, self.OnNetMsgEnsembleCmdQuery)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PERFORM, PERFORM_CMD.PerformCmdAssist, self.OnNetMsgPerformCmdAssist)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ERR, 0, self.OnNetMsgError)
 end
 
@@ -202,8 +209,8 @@ end
 
 --进入副本时，退出演奏
 function MusicPerformanceMgr:OnVoteEnterSceneEnd(ModuleID)
-	self:ReqAbortPerform()
 	self:ExitPerformance(MajorUtil.GetMajorEntityID())
+	self:ReqAbortPerform()
 end
 
 function MusicPerformanceMgr:OnGameEventMajorProfSwitch(Params)
@@ -240,7 +247,7 @@ function MusicPerformanceMgr:GetToneOffset()
 	return self.ToneOffset
 end
 
-------------------------------------------------------断线重连-----------------------------------------------------------------
+------------------------------------------------------断线重连 start-----------------------------------------------------------------
 -- function MusicPerformanceMgr:OnGameEventRoleLoginRes(Params)
 -- 	--bReconnect=true是断线重连 false是正常从登陆进来的
 -- 	self.bReconnect = Params.bReconnect
@@ -258,7 +265,7 @@ end
 --断线重连，重连/重登时， PWorldEnterRsp 协议通知主角是否在演奏状态，乐器
 function MusicPerformanceMgr:OnNotityMajorPerformanceState(PerformID)
     self.MajorPerformID = PerformID
-	local EntityID = MajorUtil.GetMajorEntityID()
+	local EntityID = MajorUtil.GetMajorEntityID() or 0
 	FLOG_INFO("MusicPerformance Reconnected OnNotityMajorPerformanceState, EntityID=%d  PerformID=%d", EntityID, self.MajorPerformID)
 	
 	--此时的self.MajorPerformID为0时，服务器说表示不在演奏状态了，比如断线超过5分钟服务器就自动退出并清空演奏数据
@@ -270,7 +277,7 @@ function MusicPerformanceMgr:OnNotityMajorPerformanceState(PerformID)
 end
 
 function MusicPerformanceMgr:OnGameEventMajorCreate()
-    local EntityID = MajorUtil.GetMajorEntityID()
+    local EntityID = MajorUtil.GetMajorEntityID() or 0
 	FLOG_INFO("MusicPerformance Reconnected OnGameEventMajorCreate, EntityID=%d  PerformID=%d", EntityID, self.MajorPerformID)
 	if self.MajorPerformID ~= 0 then
 		self:OnMajorCharacterVisionEnter(EntityID, self.MajorPerformID)
@@ -298,6 +305,7 @@ function MusicPerformanceMgr:OnMajorCharacterVisionEnter(EntityID, PerformID)
 		self:Start(EntityID, PerformID)
 
 		self:GetAssistantInst():Stop()	
+		_G.MusicPerformanceVM:Reset()
 		-- 显示演奏主界面
 		self:SetSelectedPerformData(InstrumentCfg:FindCfgByKey(PerformID))
 		_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceMainPanelView,{ IsFromSelectPanel = false } )
@@ -311,6 +319,7 @@ function MusicPerformanceMgr:OnMajorCharacterVisionEnter(EntityID, PerformID)
 		GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 
 	else
+		self:ReqNetMsgPerformCmdAssist(false)
 		self:ReqAbortEnsemble()
 		self:ReqAbortPerform()
 		if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceMainPanelView) then
@@ -326,8 +335,9 @@ function MusicPerformanceMgr:OnOtherCharacterVisionEnter(Params)
 	FLOG_INFO("MusicPerformance Reconnected OtherCharacterVisonEnter, EntityID=%d PerformID=%d", EntityID, PerformID)
 	self:Start(EntityID, PerformID)
 end
-------------------------------------------------------断线重连-----------------------------------------------------------------
+------------------------------------------------------断线重连 end-----------------------------------------------------------------
 
+--合奏准备确认界面-队员点拒绝时
 function MusicPerformanceMgr:OnNetMsgEnsembleCmdNotifyReady(MsgBody)
 	FLOG_INFO("MusicPerformance Reconnected OnNetMsgEnsembleCmdNotifyReady, Status=%d", MsgBody.Ready.Status)
 	if MsgBody.Ready.Status ~= ProtoCS.EnsembleStatus.EnsembleStatusEnsemble then
@@ -359,7 +369,16 @@ function MusicPerformanceMgr:EnterEnsembleStatus(Status, BeginTimeMS, Owner)
 	end
 end
 
+--合奏准备确认界面中(队员点确认、队长点开始合奏)
 function MusicPerformanceMgr:OnNetMsgEnsembleCmdConfirm(MsgBody)
+	if MsgBody.ErrorCode then
+		FLOG_INFO("OnNetMsgError.Performance(EnsembleCmdConfirm), ErrCode=%s", tostring(MsgBody.ErrorCode))
+		if MsgBody.ErrorCode == PerformanceErrorCode2 then
+			self:OnEnsembleErrorCodeToMainPanel()
+		end
+        return 
+    end
+
 	local Confirm = MsgBody.Confirm or {}
 	local EntityID = Confirm.EntityID
 	local IsAgree = Confirm.IsAgree
@@ -379,7 +398,7 @@ function MusicPerformanceMgr:OnNetMsgEnsembleCmdConfirm(MsgBody)
 			--全部同意完毕后，需要打开隐藏的组队确认界
 			if self:GetTeamConfirmResult() == MPDefines.TeamConfirmResult.AllAgree then
 				if not _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceEnsembleConfirmView) then
-					_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceEnsembleConfirmView)
+					_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceEnsembleConfirmView, {bFromSidebar = true})
 				end
 			elseif self:GetTeamConfirmResult() == MPDefines.TeamConfirmResult.SomeoneRefused then
 				self:EnsembleTeamFail()
@@ -391,12 +410,19 @@ function MusicPerformanceMgr:OnNetMsgEnsembleCmdConfirm(MsgBody)
 end
 
 function MusicPerformanceMgr:OnNetMsgEnsembleCmdExit(MsgBody)
+	if MsgBody.ErrorCode then
+		FLOG_INFO("OnNetMsgError.Performance(EnsembleCmdExit), ErrCode=%s", tostring(MsgBody.ErrorCode))
+		if MsgBody.ErrorCode == PerformanceErrorCode2 then
+			self:OnEnsembleErrorCode()
+		end
+        return 
+    end
+
 	local ExitEnsemble = MsgBody.ExitEnsemble or {}
 	local EntityID = ExitEnsemble.EntityID
 	local IsCaptain = _G.TeamMgr:IsCaptainByRoleID(ActorUtil.GetRoleIDByEntityID(EntityID))
 	local IsMajor = MajorUtil.IsMajor(EntityID)
-
-	FLOG_INFO("MusicPerformance Ensemble: OnNetMsgEnsembleCmdExit, EntityID=%s  IsCaptain=%s  IsMajor=%s", tostring(EntityID), IsCaptain and "true" or "false", IsMajor and "true" or "false")
+	FLOG_INFO("MusicPerformance Ensemble: OnNetMsgEnsembleCmdExit, EntityID=%s  IsCaptain=%s  IsMajor=%s  Status=%d", tostring(EntityID), IsCaptain and "true" or "false", IsMajor and "true" or "false",_G.MusicPerformanceVM.Status)
 	if IsMajor then
 		self:AbortEnsemble()
 	end
@@ -518,22 +544,39 @@ function MusicPerformanceMgr:OnNetMsgError(MsgBody)
 		return
 	end
 	local SubCmd = Msg.SubCmd or 0
-
 	FLOG_INFO("OnNetMsgError, ErrCode=%s, Cmd=%s, SubCmd=%s", tostring(Msg.ErrCode), tostring(Cmd), tostring(SubCmd))
+end
 
-	-- if Msg.ErrCode == EnsembleErrorCode1 then
-    --     self:EnsembleTeamFail()
-	-- elseif Msg.ErrCode == EnsembleErrorCode2 then
-	-- 	self:ReqAbortEnsemble()
-    -- end
+-- 处理服务器发的101065异常的情况，需要强制退出演奏系统，否则无法再进行演奏
+function MusicPerformanceMgr:OnEnsembleErrorCode()
+	self:AbortEnsemble()
+	self:ExitPerformance(MajorUtil.GetMajorEntityID())
+end
+
+-- 处理服务器发的101065异常的情况二，返回演奏主界面
+function MusicPerformanceMgr:OnEnsembleErrorCodeToMainPanel()
+	FLOG_INFO("MusicPerformance SwitchToPerformance, EntityID=%s", tostring(EntityID))
+	self:AbortEnsemble()
+	-- 清空VM数据
+	_G.MusicPerformanceVM:Reset()
+	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceEnsembleConfirmView) then
+		_G.UIViewMgr:HideView(_G.UIViewID.MusicPerformanceEnsembleConfirmView)
+	end
+	if _G.TeamMgr:IsCaptain() then
+		_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceMainPanelView)
+	end
+	-- 清除确认状态
+	_G.MusicPerformanceVM.EnsembleConfirmStatus = {}
 end
 
 -- 队长-发起合奏准备确认
 function MusicPerformanceMgr:OnNetMsgEnsembleCmdAskConfirm(MsgBody)
 	if MsgBody.ErrorCode then
-		FLOG_INFO("OnNetMsgError(EnsembleCmdAskConfirm), ErrCode=%s", tostring(MsgBody.ErrorCode))
+		FLOG_INFO("OnNetMsgError.Performance(EnsembleCmdAskConfirm), ErrCode=%s", tostring(MsgBody.ErrorCode))
 		if MsgBody.ErrorCode == EnsembleErrorCode1 then
 			self:EnsembleTeamFail()
+		elseif MsgBody.ErrorCode == PerformanceErrorCode2 then
+			self:OnEnsembleErrorCode()
 		end
         return 
     end
@@ -548,6 +591,10 @@ function MusicPerformanceMgr:OnNetMsgEnsembleCmdAskConfirm(MsgBody)
 	_G.MusicPerformanceVM.EnsembleConfirmStatus = {}
 
 	_G.UIViewMgr:HideView(_G.UIViewID.MusicPerformanceEnsembleMetronmeView)
+	if self.IsShowMainPanelExitMsgBox then
+		MsgBoxUtil.CloseMsgBox() -- 关闭退出演奏系统的弹框
+		self.IsShowMainPanelExitMsgBox = false
+	end
 	_G.UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceEnsembleConfirmView)
 end
 
@@ -570,6 +617,121 @@ function MusicPerformanceMgr:CancelEnsembleCmdConfirm()
 	_G.MusicPerformanceVM.Status = ProtoCS.EnsembleStatus.EnsembleStatusPerform
 end
 
+-- 合奏侧边栏显隐
+function MusicPerformanceMgr:SetEnsembleConfirmSidebarVisible(IsVisible)
+	local ConfirmSideBarType = SidebarDefine.SidebarType.EnsembleConfirm
+    local IsExist = _G.SidebarMgr:GetSidebarItemVM(ConfirmSideBarType) ~= nil
+    if IsVisible then
+        if IsExist then
+            return
+        end
+		local StartTime = _G.MusicPerformanceVM.StartTime
+		local CD = MPDefines.Ensemble.DefaultSettings.ReadyTime
+		local SideBarTipText = self:GetEnsembleConfirmSidebarTipsText()
+        _G.SidebarMgr:AddSidebarItem(ConfirmSideBarType, StartTime, CD, nil, false, SideBarTipText)
+    else
+        if not IsExist then
+            return
+        end
+        _G.SidebarMgr:RemoveSidebarItem(ConfirmSideBarType)
+    end
+end
+
+-- 更新合奏侧边栏数据
+function MusicPerformanceMgr:UpdateEnsembleConfirmSidebarData()
+	local ConfirmSideBarType = SidebarDefine.SidebarType.EnsembleConfirm
+	local SidebarItem = _G.SidebarMgr:GetSidebarItemVM(ConfirmSideBarType)
+	if SidebarItem ~= nil then
+		local SideBarTipText = self:GetEnsembleConfirmSidebarTipsText()
+		SidebarItem:SetTips(SideBarTipText)
+
+		--当所有人确认后，隐藏进度条
+		if _G.MusicPerformanceMgr:GetTeamConfirmResult() == MPDefines.TeamConfirmResult.AllAgree then
+			SidebarItem:SetCountDown(0)
+		end
+	end
+end
+
+function MusicPerformanceMgr:GetEnsembleConfirmSidebarTipsText()
+	local MajorRoleID = MajorUtil.GetMajorRoleID()
+	local IsSelfConfirm = _G.MusicPerformanceVM.EnsembleConfirmStatus[MajorRoleID] == MPDefines.ConfirmStatus.ConfirmStatusConfirm
+	if _G.TeamMgr:IsCaptainByRoleID(MajorRoleID) then
+		IsSelfConfirm = true
+	end
+	local Text = IsSelfConfirm and LSTR(830042) or LSTR(830039)
+	return Text
+end
+
+---------------------------------------------------演奏助手----------------------------------------------------
+--发送服务器-进入/退出演奏助手状态
+function MusicPerformanceMgr:ReqNetMsgPerformCmdAssist(IsEnterAssist)
+	local MsgID = CS_CMD.CS_CMD_PERFORM
+	local SubID = PERFORM_CMD.PerformCmdAssist
+	local MsgBody = {
+		Cmd = SubID,
+		Assist = {
+			State = IsEnterAssist
+		}
+	}
+	MusicPerformanceUtil.Log(table.tostring(MsgBody))
+	GameNetworkMgr:SendMsg(MsgID, SubID, MsgBody)
+end
+
+--收到服务器-进入/退出演奏助手状态
+function MusicPerformanceMgr:OnNetMsgPerformCmdAssist(MsgBody)
+	if MsgBody.AssistNotify == nil then
+		return
+	end
+	local AssistEntityID = MsgBody.AssistNotify.EntityID
+	local AssistState = MsgBody.AssistNotify.State
+	if _G.TeamMgr:GetTeamMemberCount() <= 0 then
+		return
+	end
+	
+	for _, RoleID in _G.TeamMgr:IterTeamMembers() do
+		local EntityID = ActorUtil.GetEntityIDByRoleID(RoleID)
+		if EntityID ~= nil and EntityID == AssistEntityID then
+			if AssistState then
+				table.insert(self.TeamPlayerAssistList, EntityID)
+			else
+				table.remove_item(self.TeamPlayerAssistList, EntityID)
+			end
+		end
+	end
+end 
+
+--队员是否在演奏助手中
+function MusicPerformanceMgr:IsTeamMembersInPerformanceAssist()
+	if #self.TeamPlayerAssistList <= 0 then
+		return false
+	end
+	local TeamMemberCount = _G.TeamMgr:GetTeamMemberCount()
+	local AssistTeamMemberCount = #self.TeamPlayerAssistList
+	--二种情况：除队长外其他队员全在演奏助手中、部分队员在演奏助手中
+	if AssistTeamMemberCount == TeamMemberCount - 1  then
+		--队长弹出：其他玩家正在使用演奏助手，无法收到合奏准备确认，合奏准备确认结束。
+		_G.MsgTipsUtil.ShowTipsByID(168018)
+	else
+		--队长弹出：<playername>、<playername>、<playername>正在使用演奏助手中，无法收到合奏准备确认。
+		local NameListStr = ""
+		for index, EntityID in ipairs(self.TeamPlayerAssistList) do
+			local AttrCom = ActorUtil.GetActorAttributeComponent(EntityID)
+			if AttrCom then
+				local ActorNameStr = ""
+				if index == #self.TeamPlayerAssistList then
+					ActorNameStr = string.format("%s", AttrCom.ActorName)
+				else
+					ActorNameStr = string.format("%s、", AttrCom.ActorName)
+				end
+				NameListStr = NameListStr..""..ActorNameStr
+			end
+		end
+		_G.MsgTipsUtil.ShowTipsByID(168019, nil, NameListStr)
+	end
+	return true
+end
+---------------------------------------------------演奏助手----------------------------------------------------
+
 --服务器通知进入乐器演奏(切换乐器成功)
 function MusicPerformanceMgr:OnNetMsgPerformCmdEnterNotify(MsgBody)
 	local EntityID = MsgBody.EnterNotify.EntityID
@@ -585,6 +747,7 @@ function MusicPerformanceMgr:OnNetMsgPerformCmdExitNotify(MsgBody)
 	self:ExitPerformance(EntityID)
 end
 
+--退出演奏系统
 function MusicPerformanceMgr:ExitPerformance(EntityID)
 	FLOG_INFO("MusicPerformance ExitPerformance, EntityID=%s", tostring(EntityID))
 	self:Exit(EntityID)
@@ -609,6 +772,14 @@ end
 
 function MusicPerformanceMgr:OnNetMsgEnsembleCmdEnsemble(MsgBody)
 	--MusicPerformanceUtil.Log(string.format("MusicPerformanceMgr:OnNetMsgEnsembleCmdEnsemble EntityID : %d", EntityID))
+	if MsgBody.ErrorCode then
+		FLOG_INFO("OnNetMsgError.Performance(EnsembleCmdEnsemble), ErrCode=%s", tostring(MsgBody.ErrorCode))
+		if MsgBody.ErrorCode == PerformanceErrorCode2 then
+			self:OnEnsembleErrorCode()
+		end
+        return 
+    end
+
 	if MsgBody.Ensemble then
 		self:Receive(MsgBody.Ensemble)
 	end
@@ -967,16 +1138,14 @@ function MusicPerformanceMgr:Play(EntityID, Chara, MsgBody)
 	end
 end
 
+-- 是否使用合奏助手（合奏面板设置）
 function MusicPerformanceMgr:IsOpenEnsembleAssistant()
 	return _G.MusicPerformanceVM.EnsembleMetronome.Assistant
 end
 
+
 function MusicPerformanceMgr:IsInEnsembleWithAssistant()
 	return self.EnsembleFlag and self:IsOpenEnsembleAssistant()
-end
-
-function MusicPerformanceMgr:IsInEnsembleWithoutAssistant()
-	return self.EnsembleFlag and not self:IsOpenEnsembleAssistant()
 end
 
 -- IsSelf 是指是否是本地指令调用过来的 如果经由服务器 即使是自己的指令 IsSelf也是false
@@ -1061,9 +1230,11 @@ function MusicPerformanceMgr:PlayKey(EntityID, Sound, Key, Timbre, IsSelf, IsKey
 					end
 				end
 
-				--当播放其他人演奏时，如果当前的按键key已经在播放，就不要再重复播放，否则会出现不连贯音效
-				if Work.KeySet and Work.KeySet[Key] then
-					IsSound = false
+				--当播放其他人演奏时，如果当前的按键key已经在播放，而且不是停止播放时(IsKeyOff==true)，就不要再重复播放，否则会出现不连贯音效
+				if not IsKeyOff then
+					if Work.KeySet and Work.KeySet[Key] then
+						IsSound = false
+					end
 				end
 			end
 		end
@@ -1075,6 +1246,9 @@ function MusicPerformanceMgr:PlayKey(EntityID, Sound, Key, Timbre, IsSelf, IsKey
 	end
 
 	if IsSound then
+		--按键响应时间记录--结束
+		MusicPerformanceUtil.Log(string.format("MusicPerformanceKey:OnPressed %d,  IntervalTime=%d", TimeUtil.GetGameTimeMS(), TimeUtil.GetGameTimeMS() - _G.MusicPerformanceMgr.PressedPlayTimeMs))
+
 		Sound:Play(EntityID, TimbreData, Key, IsKeyOff)
 	end
 end
@@ -1480,13 +1654,15 @@ function MusicPerformanceMgr:Exit(EntityID)
 
 	if Work:IsValid() then
 		local TimbreData = Work:End(EntityID)
-		self.CharacterEndAnimData[EntityID] = TimbreData.EndTimeline
-		_G.EventMgr:SendEvent(EventID.MusicPerformanceEntityEnd, EntityID)
+		if TimbreData then
+			self.CharacterEndAnimData[EntityID] = TimbreData.EndTimeline
+			_G.EventMgr:SendEvent(EventID.MusicPerformanceEntityEnd, EntityID)
 
-		--正在移动中，则停止退出演奏动作；否则延迟清理等退出演奏时的动作播放完毕
-		if self:IsMoveing(EntityID) then
-			Work:StopMotion(EntityID, TimbreData.EndTimeline)
-			self.CharacterEndAnimData[EntityID] = nil
+			--正在移动中，则停止退出演奏动作；否则延迟清理等退出演奏时的动作播放完毕
+			if self:IsMoveing(EntityID) then
+				Work:StopMotion(EntityID, TimbreData.EndTimeline)
+				self.CharacterEndAnimData[EntityID] = nil
+			end
 		end
 	end
 
@@ -1514,14 +1690,19 @@ end
 
 --清理数据-检测退出演奏时的动作是否播放完毕
 function MusicPerformanceMgr:CheckPlayOverForEndTimeLine()
+	local RemoveList = {}
 	for EntityID, value in pairs(self.CharacterEndAnimData) do
 		local TimeLine = self.CharacterEndAnimData[EntityID]
 		local Work = self:GetWork(EntityID)
 		if Work ~= nil and TimeLine ~= nil  then
 			if not Work:IsPlayingTimeline(EntityID, TimeLine) then
-				self.CharacterEndAnimData[EntityID] = nil
+				table.insert(RemoveList, EntityID)
 			end
 		end
+	end
+	-- 遍历结束后再删除
+	for _, EntityID in ipairs(RemoveList) do
+		self.CharacterEndAnimData[EntityID] = nil
 	end
 end
 
@@ -1553,12 +1734,14 @@ function MusicPerformanceMgr:UpdateCharacter(DeltaTime)
 	
 	-- todo 让主角异步加载timeline
 	local InvalidWorks = nil
-	for Key, Work in pairs(self.CharacterBuffer) do
-		if ActorUtil.GetActorByEntityID(Key) ~= nil then
-			Work:Update(DeltaTime, self.ReadyFlag)
-		else
-			InvalidWorks = InvalidWorks or {}
-			table.insert(InvalidWorks, Key)
+	if type(self.CharacterBuffer) == "table" then
+		for Key, Work in pairs(self.CharacterBuffer) do
+			if ActorUtil.GetActorByEntityID(Key) ~= nil then
+				Work:Update(DeltaTime, self.ReadyFlag)
+			else
+				InvalidWorks = InvalidWorks or {}
+				table.insert(InvalidWorks, Key)
+			end
 		end
 	end
 
@@ -1608,6 +1791,24 @@ function MusicPerformanceMgr:ReqAbortPerform(IsSwitchSelectPanel)
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
+-- 请求服务器退出合奏
+function MusicPerformanceMgr:ReqAbortEnsemble()
+	FLOG_INFO("MusicPerformance ReqAbortEnsemble, EnsembleFlag=%s",  (self.EnsembleFlag and "true" or "false"))
+	if self.EnsembleFlag == false then
+		return
+	end
+
+	-- Send Abort Ensemble to Server
+	local MsgID = CS_CMD.CS_CMD_PERFORM
+	local SubMsgID = PERFORM_CMD.EnsembleCmdExit
+	local MsgBody = {
+		Cmd = SubMsgID
+	}
+	
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+--退出合奏
 function MusicPerformanceMgr:AbortEnsemble()
 	FLOG_INFO("MusicPerformance Ensemble: AbortEnsemble")
 	self:AbortCommand()
@@ -1641,23 +1842,6 @@ function MusicPerformanceMgr:AbortEnsemble()
 		_G.EventMgr:SendCppEvent(EventID.MusicPerformanceAbortEnsemble, EventParams)
 		_G.MusicPerformanceVM.Status = ProtoCS.EnsembleStatus.EnsembleStatusPerform
 	end
-end
-
---退出合奏
-function MusicPerformanceMgr:ReqAbortEnsemble()
-	FLOG_INFO("MusicPerformance ReqAbortEnsemble, EnsembleFlag=%s",  (self.EnsembleFlag and "true" or "false"))
-	if self.EnsembleFlag == false then
-		return
-	end
-
-	-- Send Abort Ensemble to Server
-	local MsgID = CS_CMD.CS_CMD_PERFORM
-	local SubMsgID = PERFORM_CMD.EnsembleCmdExit
-	local MsgBody = {
-		Cmd = SubMsgID
-	}
-	
-	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
 function MusicPerformanceMgr:Receive(EnsembleData)
@@ -1724,6 +1908,7 @@ function MusicPerformanceMgr:InitRedDotData()
 	end
 end
 
+--是否能进入演奏系统
 function MusicPerformanceMgr:CanPerformance()
 	local ErrMsg = self:CheckState()
 	if not string.isnilorempty(ErrMsg) then
@@ -1740,6 +1925,11 @@ function MusicPerformanceMgr:CanPerformance()
 	-- 再检查职业
 	if not self:CheckProf() then
 		-- _G.UIViewMgr:HideView(self.ViewID, true)
+		return false
+	end
+	-- 若正在播放情感动作，比如坐着等状态，则不能进入演奏系统
+	if _G.EmotionMgr:IsSitState(MajorUtil.GetMajorEntityID()) then
+		_G.MsgTipsUtil.ShowTipsByID(109700)
 		return false
 	end
 	return true
@@ -1796,7 +1986,7 @@ function MusicPerformanceMgr:CheckProf()
 				end,
 				function(_, Params)
 				end,
-				_G.LSTR(830014), _G.LSTR(830038),
+				_G.LSTR(10003), _G.LSTR(10002),
 				{
 					bUseNever = true,	-- 不再提醒
 					TipsText =  string.format("%s %s",
@@ -1822,6 +2012,32 @@ function MusicPerformanceMgr:TrySwitchProf()
 	end
 end
 
+--开始显示演奏助手和合奏即将开始Tips提示
+function MusicPerformanceMgr:OnShowCountDownTips(InfoText)
+	_G.MsgTipsUtil.ShowInfoTextTips(3, InfoText, "", 1) --演奏即将开始
+	AudioUtil.LoadAndPlay2DSound(MPDefines.CommonSettings.StartSoundPath)
+	self:RegisterTimer(self.OnConnectTwoCountDownTips, 2)
+end
+--连接第二段倒计时321 Tips提示
+function MusicPerformanceMgr:OnConnectTwoCountDownTips()
+	local function OnCountDownEnd()
+		self:RegisterTimer(function()
+			_G.MsgTipsUtil.ShowTipsByID(168015) -- 开始
+			AudioUtil.LoadAndPlay2DSound(MPDefines.CommonSettings.StartTwoSoundPath)
+		end, 0)
+	end
+	local Params = {}
+	Params.BeginTime = 4
+	Params.TimeInterval = 1
+	Params.TimeDelay = 0
+	Params.StartTitleText = ""
+	Params.EndShowType = 1
+	Params.EndTime = 0
+	Params.CountDownLoopSound = MPDefines.CommonSettings.CountDownSoundPath
+	Params.FinishCallback = OnCountDownEnd
+	_G.UIViewMgr:ShowView(_G.UIViewID.InfoCountdownTipsViewNormal, Params)
+end
+
 --主角受到攻击关闭演奏系统的所有界面
 function MusicPerformanceMgr:OnGameEventAttackEffectChange(Params)
 	local BehitObjID = Params.BehitObjID
@@ -1844,6 +2060,7 @@ function MusicPerformanceMgr:OnGameEventAttackEffectChange(Params)
 
 	self:CancelEnsembleCmdConfirm()
 	self:GetAssistantInst():Stop()
+	self:ReqNetMsgPerformCmdAssist(false)
 	self:ReqAbortEnsemble()
 	self:ReqAbortPerform()
 	_G.MsgTipsUtil.ShowTipsByID(168013)
@@ -1894,6 +2111,17 @@ function MusicPerformanceMgr:CloseAllPerformancePanel()
 	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceMainPanelView) then
 		_G.UIViewMgr:HideView(_G.UIViewID.MusicPerformanceMainPanelView)
 	end
+end
+
+-- 当前客户端角色是否在演奏系统中(包括选择乐器面板)
+function MusicPerformanceMgr:IsMajorPerformanceSystem()
+	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MusicPerformanceSelectPanelView) then
+		return true
+	end
+	if CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatPerform) then
+		return true
+	end
+	return false
 end
 
 --GM开启合奏

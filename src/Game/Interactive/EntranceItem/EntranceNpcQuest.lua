@@ -49,7 +49,7 @@ function EntranceNpcQuest:OnClick()
     end
 end
 
-function EntranceNpcQuest:CheckInterative(EnableCheckLog)
+function EntranceNpcQuest:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     return true
 end
 

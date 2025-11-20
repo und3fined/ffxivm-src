@@ -37,12 +37,12 @@ local LSTR = _G.LSTR
 ---@field BtnBuff UFButton
 ---@field BtnBuy UFButton
 ---@field BtnClick UFButton
----@field BtnHelp_1 CommInforBtnView
 ---@field BtnResume UFButton
 ---@field BtnTips UFButton
 ---@field CloseBtn CommonCloseBtnView
 ---@field CommCurrency01_1 CommMoneySlotView
 ---@field CommCurrency02_1 CommMoneySlotView
+---@field CommonTitle CommonTitleView
 ---@field EFF_GridsCoverGlow UHorizontalBox
 ---@field FBtn_Key0 UFButton
 ---@field FBtn_Key1 UFButton
@@ -89,7 +89,6 @@ local LSTR = _G.LSTR
 ---@field TextResidualNumber UFTextBlock
 ---@field TextResume UFTextBlock
 ---@field TextTime UFTextBlock
----@field TextTitle UFTextBlock
 ---@field ToggleGroupInput UToggleGroup
 ---@field AnimAgain UWidgetAnimation
 ---@field AnimBoughtIn UWidgetAnimation
@@ -112,12 +111,12 @@ function JumboCactpotNewMainView:Ctor()
 	--self.BtnBuff = nil
 	--self.BtnBuy = nil
 	--self.BtnClick = nil
-	--self.BtnHelp_1 = nil
 	--self.BtnResume = nil
 	--self.BtnTips = nil
 	--self.CloseBtn = nil
 	--self.CommCurrency01_1 = nil
 	--self.CommCurrency02_1 = nil
+	--self.CommonTitle = nil
 	--self.EFF_GridsCoverGlow = nil
 	--self.FBtn_Key0 = nil
 	--self.FBtn_Key1 = nil
@@ -164,7 +163,6 @@ function JumboCactpotNewMainView:Ctor()
 	--self.TextResidualNumber = nil
 	--self.TextResume = nil
 	--self.TextTime = nil
-	--self.TextTitle = nil
 	--self.ToggleGroupInput = nil
 	--self.AnimAgain = nil
 	--self.AnimBoughtIn = nil
@@ -183,10 +181,10 @@ end
 
 function JumboCactpotNewMainView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.BtnHelp_1)
 	self:AddSubView(self.CloseBtn)
 	self:AddSubView(self.CommCurrency01_1)
 	self:AddSubView(self.CommCurrency02_1)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.InputItem01)
 	self:AddSubView(self.InputItem02)
 	self:AddSubView(self.InputItem03)
@@ -292,7 +290,7 @@ function JumboCactpotNewMainView:OnShow()
 end
 
 function JumboCactpotNewMainView:InitLSTRText()
-    self.TextTitle:SetText(LSTR(240060)) -- 仙人仙彩
+    self.CommonTitle:SetTextTitleName(LSTR(240060)) -- 仙人仙彩
     self.TextBought:SetText(LSTR(240078)) -- 已购：
     self.TextNoTime:SetText(LSTR(240079)) -- 购买次数耗尽\n请耐心等待开奖
     self.TextBuy:SetText(LSTR(240080)) -- 购 买

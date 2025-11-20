@@ -80,6 +80,7 @@ local LSTR = _G.LSTR
 ---@field ProbarBlue UProgressBar
 ---@field ProbarPanel UFCanvasPanel
 ---@field SavePanel UFCanvasPanel
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field T_DX_Pariticle_MusicPlayer_1 UUIParticleEmitter
 ---@field T_DX_Pariticle_MusicPlayer_2 UUIParticleEmitter
 ---@field T_DX_Pariticle_MusicPlayer_3 UUIParticleEmitter
@@ -103,6 +104,7 @@ local LSTR = _G.LSTR
 ---@field AnimLoop UWidgetAnimation
 ---@field AnimOut_1 UWidgetAnimation
 ---@field AnimPlayingLoop UWidgetAnimation
+---@field AnimProBar UWidgetAnimation
 ---@field AnimRefresh UWidgetAnimation
 ---@field AnimStop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -157,6 +159,7 @@ function MusicPlayerMainPanelView:Ctor()
 	--self.ProbarBlue = nil
 	--self.ProbarPanel = nil
 	--self.SavePanel = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.T_DX_Pariticle_MusicPlayer_1 = nil
 	--self.T_DX_Pariticle_MusicPlayer_2 = nil
 	--self.T_DX_Pariticle_MusicPlayer_3 = nil
@@ -180,6 +183,7 @@ function MusicPlayerMainPanelView:Ctor()
 	--self.AnimLoop = nil
 	--self.AnimOut_1 = nil
 	--self.AnimPlayingLoop = nil
+	--self.AnimProBar = nil
 	--self.AnimRefresh = nil
 	--self.AnimStop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -193,6 +197,7 @@ function MusicPlayerMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.MusicDropDownListNew)
 	--self:AddSubView(self.PopUpBG)
 	--self:AddSubView(self.PopUpBG1)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -253,14 +258,28 @@ function MusicPlayerMainPanelView:OnShow()
 	UIUtil.SetIsVisible(self.SavePanel, false)
 	UIUtil.SetIsVisible(self.CancelPanel, false)
 	UIUtil.SetIsVisible(self.OpenListPanel, false, true)
-	UIUtil.SetIsVisible(self.EFFPanel, false)
 	UIUtil.SetIsVisible(self.BtnEmpty, false, true)
 	UIUtil.SetIsVisible(self.EditListPanel, true)
 	
 	self:UpdateMusicInfo()
+	self:SetDropDownPlayingIcon()
+
+	if MusicPlayerMgr.PlayerPlayState then
+		UIUtil.SetIsVisible(self.EFFPanel, true)
+	else
+		UIUtil.SetIsVisible(self.EFFPanel, false)
+	end
+
 	if MusicPlayerMgr.CurPlayerPlayingMusicID ~= nil then
 		local Name = MusicPlayerCfg:FindCfgByKey(MusicPlayerMgr.CurPlayerPlayingMusicID).MusicName
 		self.ViewModel:UpdateMusicName(Name)
+		
+		local Time = {}
+		Time.CurTime = MusicPlayerMgr.CurPlayTime
+		Time.TotalTime = MusicPlayerMgr.MusicTotalTime
+		local ElapsedTime = math.min(math.ceil(Time.CurTime), Time.TotalTime) --经过的时间
+		local RemainingTime = math.max(0, Time.TotalTime - math.ceil(Time.CurTime)) --剩余的时间
+		self:SetBarAnimState(false, Time, ElapsedTime, RemainingTime)
 	end
 
 	--延迟防止误点击
@@ -404,26 +423,23 @@ end
 
 function MusicPlayerMainPanelView:UpdateAfterSave()
 	MsgTipsUtil.ShowTipsByID(MsgTipsID.MusicSaveList)
-	if MusicPlayerMgr.CurPlayerPlayingMusicID ~= nil and self.ViewModel.CurPlayState then
+	if MusicPlayerMgr.CurPlayerPlayingMusicID ~= nil and MusicPlayerMgr.PlayerPlayState then
 		MsgTipsUtil.ShowTipsByID(MsgTipsID.MusicSaveListTips)
 		MusicPlayerMgr.PlayerPlayState = false
-		MusicPlayerMgr.CurPlayerPlayingMusicID = nil
-		MusicPlayerMgr.CurPlayIndex = 0
 		MusicPlayerMgr.CurPlayTime = 0
 		self.ViewModel:StopPlayMusic()
 		MusicPlayerMgr:StopCurPlayerMusic()
-		MusicPlayerMgr:RecoverBGM()
-		self.ViewModel:UpdatePlayState(1)
-		self.ViewModel:UpdateMusicName("")
-		self.ViewModel:UpdateTimeInfo("")
-		self.ViewModel:SetPercentScale(0)
-	else
-		MusicPlayerMgr.CurPlayIndex = 0
-		MusicPlayerMgr.CurPlayerPlayingMusicID = nil
-		self.ViewModel:SetPercentScale(0)
-		self.ViewModel:UpdateTimeInfo("")
-		self.ViewModel:UpdateMusicName("")
+		self.ViewModel.PlayEffState = false
+		--self.ViewModel:UpdatePlayState(1)
 	end
+
+	MusicPlayerMgr.CurPercent = 0
+	self.ViewModel.Percent = 0
+	MusicPlayerMgr.CurPlayIndex = 0
+	MusicPlayerMgr.CurPlayerPlayingMusicID = nil
+	self.ViewModel:SetPercentScale(0)
+	self.ViewModel:UpdateTimeInfo("")
+	self.ViewModel:UpdateMusicName("")
 
 	if self.ViewModel.PlayTestSoundID ~= nil then
 		self.ViewModel:StopPlayTestMusic()
@@ -445,6 +461,7 @@ function MusicPlayerMainPanelView:UpdateAfterSave()
 
 	UIUtil.SetIsVisible(self.EFFPanel, false)
 	self.ViewModel.CurPlayState = false
+	MusicPlayerMgr:RecoverBGM()
 	self:AfterCancelOrSaveClick()
 	self:SetImgStateBar()
 	self:SetDropDownPlayingIcon()
@@ -482,7 +499,11 @@ function MusicPlayerMainPanelView:UpdateMusicInfo()
 		self.MusicItemList:SetSelectedIndex(Index)
 	end
 	if self.ViewModel.CurPlayState then
-		self.ProbarBlue:SetPercent(1)
+		local Time = {}
+		Time.CurTime = MusicPlayerMgr.CurPlayTime
+		Time.TotalTime = MusicPlayerMgr.MusicTotalTime
+		self:SetTimeTextAndBar(Time)
+	elseif MusicPlayerMgr.CurPlayerPlayingMusicID and MusicPlayerMgr.CurPercent > 0 then
 		local Time = {}
 		Time.CurTime = MusicPlayerMgr.CurPlayTime
 		Time.TotalTime = MusicPlayerMgr.MusicTotalTime
@@ -564,8 +585,18 @@ end
 --PlayType 1 点击播放按钮播放 2 点击TableviewItem播放 IsClick true 通过点击TableviewItem切歌 false 通过下方按钮切歌
 function MusicPlayerMainPanelView:PlayMusic(PlayType, IsClick)
 	self.ViewModel:PlayMusic(PlayType, IsClick)
+	local Time = {}
+	Time.CurTime = MusicPlayerMgr.CurPlayTime
+	Time.TotalTime = MusicPlayerMgr.MusicTotalTime
 	if self.ViewModel.CurPlayState then
-		self.ProbarBlue:SetPercent(1)
+		--self.ProbarBlue:SetPercent(1)
+		if PlayType ~= 1 then
+			self:PlayAnimationTimeRange(self.AnimProBar, 0, 0.001, 1, nil, 1, false)
+		end
+	else
+		local ElapsedTime = math.min(math.ceil(Time.CurTime), Time.TotalTime) --经过的时间
+		local RemainingTime = math.max(0, Time.TotalTime - math.ceil(Time.CurTime)) --剩余的时间
+		self:SetBarAnimState(false, Time, ElapsedTime, RemainingTime)
 	end
 	self:SetImgStateBar()
 	self:SetDropDownPlayingIcon()
@@ -705,19 +736,32 @@ function MusicPlayerMainPanelView:SetTimeTextAndBar(Time)
         return
     end
 
+	self:SetBarAnimState(true, Time, ElapsedTime, RemainingTime)
+end
+
+function MusicPlayerMainPanelView:SetBarAnimState(Value, Time, ElapsedTime, RemainingTime)
+	local ProgressAnimDuration = self:GetProgressAnimDuration()
+	local Speed = ProgressAnimDuration / Time.TotalTime
+	local StartTime
+	local EndAnimTime
+	local OldPercent = MusicPlayerMgr.CurPercent or 0
 	local Percent = ElapsedTime / Time.TotalTime
-	self.ViewModel:SetTimeTextAndBar(RemainingTime, Percent)
-	local EffVisible = UIUtil.IsVisible(self.EFFPanel)
-	if not self.EditState and not EffVisible and self.IsCanClick then
-		UIUtil.SetIsVisible(self.EFFPanel, true)
+	if Value then
+		self.ViewModel:SetTimeTextAndBar(RemainingTime, Percent)
+		StartTime = ProgressAnimDuration * OldPercent
+		EndAnimTime = ProgressAnimDuration * Percent
+
+		if EndAnimTime > 0 and MusicPlayerMgr.CurPercent ~= Percent then
+			self:PlayAnimationTimeRange(self.AnimProBar, StartTime, EndAnimTime, 1, nil, Speed, false)--0.025
+		end
+	
+		MusicPlayerMgr.CurPercent = Percent
+	else
+		StartTime = ProgressAnimDuration * Percent
+		EndAnimTime = ProgressAnimDuration * Percent
+		UIUtil.PlayAnimationTimePoint(self, self.AnimProBar, EndAnimTime - 0.01, 1, _G.UE.EUMGSequencePlayMode.Forward, 0.001, true)
+		self.ViewModel.Percent = Percent
 	end
-
-	UIUtil.CanvasSlotSetPosition(self.EFFPanel, _G.UE4.FVector2D(-438 + (876 / 100) * Percent * 100, 273.38))
-
-	-- if ElapsedTime % 2 == 0 then
-	-- 	self:PlayAnimation(self.AnimPlayingLoop)
-	-- end
-
 end
 
 function MusicPlayerMainPanelView:GoOnPlaye()
@@ -821,6 +865,9 @@ function MusicPlayerMainPanelView:AfterCancelOrSaveClick()
 	Data.Name = MusicPlayerMgr.AllPlayListInfo[MusicPlayerMgr.CurPlayListIndex].Name
 	self.MusicDropDownListNew:SetSelectedIndex(MusicPlayerMgr.CurPlayListIndex, Data)
 	self.UpdateBySave = false
+	if not MusicPlayerMgr.CurPlayerPlayingMusicID and not MusicPlayerMgr.PlayerPlayState then
+		MusicPlayerMgr:RecoverBGM()
+	end
 end
 
 function MusicPlayerMainPanelView:ClickBtnSave()
@@ -1052,8 +1099,18 @@ function MusicPlayerMainPanelView:ClickBtnEmpty()
 	UIUtil.SetIsVisible(self.BtnEmpty, false, true)
 end
 
+function MusicPlayerMainPanelView:GetProgressAnimDuration()
+	if self.AnimProBar then
+		return self.AnimProBar:GetEndTime()
+	end
+	return 0
+end
+
 function MusicPlayerMainPanelView:RestByClose()
-	self.ListPanel:ClearIndex()
+	if _G.CommonUtil.IsObjectValid(self.ListPanel) then
+		self.ListPanel:ClearIndex()
+	end
+
 	EventMgr:SendEvent(EventID.UpdateMainPlayerState, nil, false)
 	if self.IsOpenRightList then
 		self:PlayAnimation(self.AnimClose)

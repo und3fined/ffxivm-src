@@ -272,7 +272,8 @@ function ArmyMainVM:SetMenuSelectedIndex(ParentKey, ChildKey)
                 if self.IsOpenPanel then
                     self:SetIsOpenPanel(false)
                 else
-                    _G.ArmyMgr:SendArmySearchByInputMsg()
+                    ---重新切换/进入回来刷新为不显示满员部队
+                    _G.ArmyMgr:SendArmySearchByInputMsg(nil, false)
                 end
 
                 self.ArmyJoinPanelVM:ShowView(ArmyOutUIType.ArmyJoin)
@@ -315,6 +316,10 @@ function ArmyMainVM:SetMenuSelectedIndex(ParentKey, ChildKey)
     elseif self.bSignInvitePanel and self.SkipPanelID == ArmyDefine.ArmySkipPanelID.InviteSignPanel and self.SkipParams then
         self.ArmySignPanelVM:SetInviteSkipRoleID(self.SkipParams.RoleID, self.SkipParams.FailTipsID)
         self:SetSkipPanelData()
+    end
+    ---防止走跳转进来，状态未更新
+    if self.IsOpenPanel then
+        self:SetIsOpenPanel(false)
     end
 end
 

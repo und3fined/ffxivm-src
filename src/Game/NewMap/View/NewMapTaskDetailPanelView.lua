@@ -161,6 +161,7 @@ end
 
 function NewMapTaskDetailPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.WorldMapFinishChanged, self.OnWorldMapFinishChanged)
+	self:RegisterGameEvent(EventID.WorldMapSelectChanged, self.OnWorldMapSelectChanged)
 end
 
 function NewMapTaskDetailPanelView:OnRegisterBinder()
@@ -280,6 +281,11 @@ function NewMapTaskDetailPanelView:OnWorldMapFinishChanged()
 			UIViewMgr:ShowView(UIViewID.NewMapTaskTrackingTips, { QuestID = self.Params.QuestID, TargetID = self.Params.TargetID })
 		end
 	end
+end
+
+function NewMapTaskDetailPanelView:OnWorldMapSelectChanged()
+	UIViewMgr:HideView(UIViewID.NewMapTaskTrackingTips)
+	UIViewMgr:HideView(UIViewID.WorldMapMarkerFocusItem)
 end
 
 function NewMapTaskDetailPanelView:UpdateBackCloseBtn(Mode)

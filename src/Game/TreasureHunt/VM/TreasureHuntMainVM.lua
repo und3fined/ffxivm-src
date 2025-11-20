@@ -74,22 +74,25 @@ function TreasureHuntMainVM:InitMap()
 	local MultiIndex = 2
 	local Cfgs = InterpretTreasureMapCfg:FindAllCfg()
 	if Cfgs ~= nil then
-		for _,V in pairs(Cfgs) do
-			local mapData = {}
-			mapData.UnDecodeMapID = V.UnReadID
-			mapData.ID = V.ID
-			mapData.mapTitle = V.MapTitle
-			mapData.mapLevel = V.Level
-			mapData.LootID = V.LootID
-			mapData.Opened = 1
-			mapData.Number = V.Number
-			mapData.PosID = 0
-			if mapData.Number > 1 then
-				self.MapDatas[MultiIndex] = mapData
-				MultiIndex = MultiIndex + 2
-			else
-				self.MapDatas[Index] = mapData
-				Index = Index + 2
+		for _, Cfg in pairs(Cfgs) do
+			local Version = Cfg.Version
+			if not string.isnilorempty(Version) and _G.ClientVisionMgr:CheckVersionByGlobalVersion(Version) then
+				local mapData = {}
+				mapData.UnDecodeMapID = Cfg.UnReadID
+				mapData.ID = Cfg.ID
+				mapData.mapTitle = Cfg.MapTitle
+				mapData.mapLevel = Cfg.Level
+				mapData.LootID = Cfg.LootID
+				mapData.Opened = 1
+				mapData.Number = Cfg.Number
+				mapData.PosID = 0
+				if mapData.Number > 1 then
+					self.MapDatas[MultiIndex] = mapData
+					MultiIndex = MultiIndex + 2
+				else
+					self.MapDatas[Index] = mapData
+					Index = Index + 2
+				end
 			end
 		end
 	end

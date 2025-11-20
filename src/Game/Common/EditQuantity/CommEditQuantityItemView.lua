@@ -28,18 +28,27 @@ local UIViewMgr = _G.UIViewMgr
 ---@field FCanvasPanel_1 UFCanvasPanel
 ---@field FCanvasPanel_2 UFCanvasPanel
 ---@field IconMost UFImage
+---@field IconMostDisab UFImage
 ---@field ImgAdd UFImage
 ---@field ImgAddDisable UFImage
+---@field ImgAddTenDisab UFImage
 ---@field ImgAddTenNormal UFImage
+---@field ImgBG1 UFImage
+---@field ImgMaxDisab UFImage
 ---@field ImgMaxNormal UFImage
 ---@field ImgSubtract UFImage
 ---@field ImgSubtractDisable UFImage
+---@field ImgSubtractTenDisab UFImage
 ---@field ImgSubtractTenNormal UFImage
 ---@field TextAddTen UFTextBlock
 ---@field TextAmount UFTextBlock
 ---@field TextSubtractTen UFTextBlock
 ---@field AddSubtract10 bool
 ---@field Max bool
+---@field Btn bool
+---@field Type CommEditQuantityType
+---@field TextNormalColorHex string
+---@field TextGreyColorHex string
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommEditQuantityItemView = LuaClass(UIView, true)
 
@@ -55,18 +64,27 @@ function CommEditQuantityItemView:Ctor()
 	--self.FCanvasPanel_1 = nil
 	--self.FCanvasPanel_2 = nil
 	--self.IconMost = nil
+	--self.IconMostDisab = nil
 	--self.ImgAdd = nil
 	--self.ImgAddDisable = nil
+	--self.ImgAddTenDisab = nil
 	--self.ImgAddTenNormal = nil
+	--self.ImgBG1 = nil
+	--self.ImgMaxDisab = nil
 	--self.ImgMaxNormal = nil
 	--self.ImgSubtract = nil
 	--self.ImgSubtractDisable = nil
+	--self.ImgSubtractTenDisab = nil
 	--self.ImgSubtractTenNormal = nil
 	--self.TextAddTen = nil
 	--self.TextAmount = nil
 	--self.TextSubtractTen = nil
 	--self.AddSubtract10 = nil
 	--self.Max = nil
+	--self.Btn = nil
+	--self.Type = nil
+	--self.TextNormalColorHex = nil
+	--self.TextGreyColorHex = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -130,7 +148,11 @@ end
 
 function CommEditQuantityItemView:SetTextAmountText(ConfirmValue)
 	if CommonUtil.IsObjectValid(self.TextAmount) then
-		self.TextAmount:SetText(ItemUtil.GetItemNumText(tonumber(ConfirmValue)))
+		if self.TextAmountTextFun then
+			self.TextAmount:SetText(self.TextAmountTextFun(tonumber(ConfirmValue)))
+		else
+			self.TextAmount:SetText(ItemUtil.GetItemNumText(tonumber(ConfirmValue)))
+		end
 	end
 end
 
@@ -148,7 +170,7 @@ function CommEditQuantityItemView:OnBtnCurValueClick()
 		end
 		self:SetTextAmountText(CutValue)
 	end
-	local CutValue = tonumber(self.TextAmount:GetText())
+	local CutValue = self.CurValue or 0
 	local Params = { CutValue = CutValue, ConfirmCallback = ConfirmCallback , 
 					ShowCallback = ShowCallback, LowerLimit = self.LowerLimit, UpperLimit = self.UpperLimit, UpperLimitHintText = self.UpperLimitHint, LowerLimitHintText = self.LowerLimitHint}
 	local View = UIViewMgr:ShowView(UIViewID.CommMiniKeypadWin, Params)
@@ -358,6 +380,7 @@ end
 ---@param IsEnabled bool @fasle 置灰  true 点亮
 function CommEditQuantityItemView:SetBtnSubtractTenIsEnabled(IsEnabled)
 	UIUtil.SetIsVisible(self.ImgSubtractTenNormal, IsEnabled == true)
+	UIUtil.SetColorAndOpacityHex(self.TextSubtractTen, IsEnabled == true and self.TextNormalColorHex or self.TextGreyColorHex)
 end
 
 -- 设置 置灰增加按钮
@@ -370,6 +393,7 @@ end
 ---@param IsEnabled bool @fasle 置灰  true 点亮
 function CommEditQuantityItemView:SetBtnAddTenIsEnabled(IsEnabled)
 	UIUtil.SetIsVisible(self.ImgAddTenNormal, IsEnabled == true)
+	UIUtil.SetColorAndOpacityHex(self.TextAddTen, IsEnabled == true and self.TextNormalColorHex or self.TextGreyColorHex)
 end
 
 -- 设置是否置灰所有按钮并且关闭 点击提示
@@ -394,4 +418,8 @@ function CommEditQuantityItemView:ShowRangeMode(NewState)
 	UIUtil.SetIsVisible(self.BtnAddTen, IsShow, IsShow)
 end
 
+-- 设置输入框内文本的格式的函数
+function CommEditQuantityItemView:SetTextAmountTextFun(Fun)
+	self.TextAmountTextFun = Fun
+end
 return CommEditQuantityItemView

@@ -50,7 +50,7 @@ function LoginRoleShowPageVM:Ctor()
 
     --该阶段的数据 begin
     --试穿界面
-    self.CurLoginShowType = _G.LoginShowType.Suit
+    self.CurLoginShowType = _G.LoginShowType and _G.LoginShowType.Suit or 1
     self.CurrentSuitIndex = 0       --默认装
 
     --动作界面

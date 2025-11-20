@@ -6,7 +6,7 @@
 
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
-
+local MainPanelVM = require("Game/Main/MainPanelVM")
 local PworldStepCfg = require("TableCfg/PworldStepCfg")
 
 ---@class PWorldStageMgr : MgrBase
@@ -46,6 +46,27 @@ function PWorldStageMgr:UpdateProcess(PWorldResID, NewStage, NewProcess)
     _G.EventMgr:SendEvent(_G.EventID.PWorldStageInfoUpdate)
 end
 
+function PWorldStageMgr:SetPWorldStageVisible(IsInDungeon)
+    if IsInDungeon then
+        -- 这里显示冒险游商团独有的任务情报栏
+        if _G.PWorldMgr:CurrIsInMerchant() then
+            MainPanelVM:SetMysterMerchantTaskVisible(true)
+        else
+            MainPanelVM:SetPWorldStageVisible(true)
+        end
+    else
+        MainPanelVM:SetPWorldStageVisible(false)
+        MainPanelVM:SetMysterMerchantTaskVisible(false)
+    end
+end
+
+function PWorldStageMgr:SetHouseStageVisible(IsInHouse)
+    if IsInHouse then
+        MainPanelVM:SetHouseStageVisible(true)
+    else
+        MainPanelVM:SetHouseStageVisible(false)
+    end
+end
 
 function PWorldStageMgr:InitPWorldStageInfo(PWorldResID)
     local PworldStepTableCfg = PworldStepCfg:FindCfgByKey(PWorldResID)

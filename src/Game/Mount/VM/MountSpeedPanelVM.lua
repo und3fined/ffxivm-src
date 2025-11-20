@@ -23,7 +23,13 @@ function MountSpeedPanelVM:Ctor()
     self.CurMapID = 0
     self.SpeedLevelOne = 0
     self.SpeedLevelTwo = 0
+    self.SpeedLevelThere = 0
+    self.MaxSpeedLevel = 0
+    self.SpeedLevelThereVisible = true
     self.ImgBG = ""
+    self.PanelGear4 = true
+    self.PanelGearInfo2Visible = false
+    self.PanelGearInfo3Visible = false
 end
 
 function MountSpeedPanelVM:OnShutdown()
@@ -35,13 +41,24 @@ function MountSpeedPanelVM:OnShutdown()
     self.CurMapID = 0
     self.SpeedLevelOne = 0
     self.SpeedLevelTwo = 0
+    self.SpeedLevelThere = 0
+    self.MaxSpeedLevel = 0
+    self.SpeedLevelThereVisible = true
     self.ImgBG = ""
+    self.PanelGear4 = true
+    self.PanelGearInfo2Visible = false
+    self.PanelGearInfo3Visible = false
 end
 
 function MountSpeedPanelVM:SetSelectMapContent(Value)
     self.CurMapID = Value.MapID
     self.CurMapSpeedLevel = Value.MapSpeedLevel
     self:SetSpeedLevelIcon()
+    self.MaxSpeedLevel = Value.MaxSpeedLevel
+    self.SpeedLevelThereVisible = self.MaxSpeedLevel >= 3
+    self.PanelGear4 = self.MaxSpeedLevel >= 3
+    self.PanelGearInfo2Visible = self.MaxSpeedLevel == 2
+    self.PanelGearInfo3Visible = self.MaxSpeedLevel == 3
     self.TextCity = Value.MapName
     self.QuestID = Value.QuestID
     self:SetQuestInfo(Value.QuestInfoList)
@@ -73,12 +90,19 @@ function MountSpeedPanelVM:SetSpeedLevelIcon()
     if self.CurMapSpeedLevel == 0 then
         self.SpeedLevelOne = 0
         self.SpeedLevelTwo = 0
+        self.SpeedLevelThere = 0
     elseif self.CurMapSpeedLevel == 1 then
         self.SpeedLevelOne = 1
         self.SpeedLevelTwo = 0
+        self.SpeedLevelThere = 0
+    elseif self.CurMapSpeedLevel == 2 then
+        self.SpeedLevelOne = 1
+        self.SpeedLevelTwo = 1
+        self.SpeedLevelThere = 0
     else
         self.SpeedLevelOne = 1
         self.SpeedLevelTwo = 1
+        self.SpeedLevelThere = 1
     end
 end
 

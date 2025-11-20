@@ -77,14 +77,17 @@ function Class:Reset()
 
     self.UnreadRedDotIDMap = {} 
     self.ReadRedDotIDs = {} 
-    self.SaveImgUrlStrategy = ImgSaveStrategy.CurProf
+    self.SaveImgUrlStrategy = ImgSaveStrategy.AllProf
 
     self.ShowingResItemVMList = self:ResetBindableList(self.ShowingResItemVMList, PersonPortraitResItemVM)
 end
 
 function Class:Clear()
     self.CurTab = nil 
-    self.AppearUpdateProfIDs = {}
+    ---不能清理外观/装备更新，此数据只会在第一次打开请求，后续靠推送维护
+    if self.AppearUpdateProfIDs == nil then 
+        self.AppearUpdateProfIDs = {}
+    end
 
     self.ListPanelVisible = false
     self.DecoratePanelVisible = false

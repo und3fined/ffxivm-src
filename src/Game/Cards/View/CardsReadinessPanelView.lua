@@ -42,19 +42,24 @@ local RaceTypeEnum = ProtoCommon.race_type
 ---@field BtnRule CommBtnLView
 ---@field BtnSure CommBtnXLView
 ---@field CommCurrency CommMoneySlotView
+---@field CommonTitle CommonTitleView
 ---@field DecksCard01 CardsBigCardItemView
 ---@field DecksCard02 CardsBigCardItemView
 ---@field DecksCard03 CardsBigCardItemView
 ---@field DecksCard04 CardsBigCardItemView
 ---@field DecksCard05 CardsBigCardItemView
 ---@field DrawReward CommBackpack96SlotView
----@field HeadSlot CommPlayerHeadSlotView
+---@field HeadSlot CommHeadView
 ---@field HorizontalCurrency UFHorizontalBox
+---@field IconTitle UFImage
 ---@field ImgBigBG UFImage
 ---@field ImgBoard UFImage
 ---@field ImgLeftBG UFImage
+---@field ImgNameLine UFImage
 ---@field LoseReward CommBackpack96SlotView
+---@field NewBieGuide CardGameNewBiePanelView
 ---@field PanelCard UFCanvasPanel
+---@field PanelIcon UFCanvasPanel
 ---@field PanelOdds UFCanvasPanel
 ---@field PanelRewardInfo UFCanvasPanel
 ---@field PanelRules UFCanvasPanel
@@ -78,7 +83,7 @@ local RaceTypeEnum = ProtoCommon.race_type
 ---@field TextRuleTitle02 UFTextBlock
 ---@field TextStage01 UFTextBlock
 ---@field TextStage02 UFTextBlock
----@field TextStage03 UFTextBlock
+---@field TextStage03 URichTextBox
 ---@field TextSubtitle UFTextBlock
 ---@field TextTimes UFTextBlock
 ---@field TextTitle UFTextBlock
@@ -154,6 +159,7 @@ function CardsReadinessPanelView:OnRegisterSubView()
     self:AddSubView(self.PopUpBG)
     self:AddSubView(self.Sidebar)
     self:AddSubView(self.WinReward)
+    self:AddSubView(self.NewBieGuide)
     -- AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -264,8 +270,9 @@ function CardsReadinessPanelView:OnTimeWaitForMatchStartChanged(NewValue, OldVal
 end
 
 function CardsReadinessPanelView:SetLSTR()
-    self.TextTitle:SetText(_G.LSTR(1130083))--("幻卡挑战")
-	self.TextSubtitle:SetText(_G.LSTR(1130084))--("倒计时结束自动开启挑战")
+    self.CommonTitle:SetTextTitleName(_G.LSTR(1130083))--("幻卡挑战")
+    self.CommonTitle:SetTextSubtitle(_G.LSTR(1130084))--("倒计时结束自动开启挑战")
+    self.CommonTitle:SetCommInforBtnIsVisible(false)
 	self.TextOdds:SetText(_G.LSTR(1130085))--("概率获得:")
 	self.TextDecksDefault:SetText(_G.LSTR(1130086))--("默认卡组")
     self.BtnDecks:SetButtonText(_G.LSTR(1130087)) --卡组一览
@@ -279,7 +286,6 @@ end
 
 function CardsReadinessPanelView:OnShow()
     self:SetLSTR()
-    self:CheckEditTutorial()
     self.HasClickChallengeBtn = false
     self.ViewModel:RefreshData()
     AudioUtil.LoadAndPlayUISound(self.PanelShow_SoundEffect:ToString())
@@ -315,36 +321,45 @@ function CardsReadinessPanelView:OnShow()
 
     UIUtil.ImageSetBrushFromAssetPath(self.ImgBigBG, self.ViewModel.BigBGPath)
     UIUtil.ImageSetBrushFromAssetPath(self.ImgLeftBG, self.ViewModel.RuleBGPath)
+
+    self:CheckGameTutorial()
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgNameLine, self.ViewModel.LineIconPath)
+    
+    -- 幻卡对局涉及镜头切换与角色隐藏/显示，所以直接关闭商城界面，避免角色预览问题
+    if _G.UIViewMgr:IsViewVisible(_G.UIViewID.StoreNewMainPanel) then
+        _G.UIViewMgr:HideView(_G.UIViewID.StoreNewMainPanel)
+    end
 end
 
----@type 幻卡编辑新手指引
-function CardsReadinessPanelView:CheckEditTutorial()
-    --解锁幻卡数量>= 8
-	if MagicCardCollectionMgr:GetUnlockCardNum() >= 8 then
-        local function ShowEditCheckRecptTutorial(Params)
-            local EventParams = _G.EventMgr:GetEventParams()
-            EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
-            EventParams.Param1 = TutorialDefine.GameplayType.FantasyCard
-            EventParams.Param2 = TutorialDefine.GamePlayStage.FantasyCardCardGroup
-            _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+---@type 幻卡新手指引
+function CardsReadinessPanelView:CheckGameTutorial()
+    -- 幻卡大师新手对局任务引导（定制，非通用引导）
+    if MagicCardMgr:IsTutorialGame() then
+        local function ShowTutorialView()
+            UIUtil.SetIsVisible(self.NewBieGuide, true)
+            _G.EventMgr:SendEvent(_G.EventID.PlayMagicCardTutorial, LocalDef.TutorialID_Ready)
         end
-        local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowEditCheckRecptTutorial, Params = {}}
-        _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig) --玩法节点
-	end
-
-    --对局的目标是NPC，且不是幻卡大师。
-    local NPCID = MagicCardMgr:GetPVENPCID()
-    if not MagicCardMgr:IsPVPMode() and NPCID ~= 1011060 then
-        local function ShowEditCheckRecptTutorial(Params)
-            local EventParams = _G.EventMgr:GetEventParams()
-            EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
-            EventParams.Param1 = TutorialDefine.GameplayType.FantasyCard
-            EventParams.Param2 = TutorialDefine.GamePlayStage.FantasyCardRuleGuide
-            _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+        local AnimInEndTime = self:GetAnimInTime() * 0.3
+        self:RegisterTimer(ShowTutorialView, AnimInEndTime)
+        -- 隐藏不用信息
+        UIUtil.SetIsVisible(self.TextTimes, false) -- 场次
+        UIUtil.SetIsVisible(self.PanelStage, false) -- 阶段信息
+        UIUtil.SetIsVisible(self.PanelOdds, false) -- 奖励
+        UIUtil.SetIsVisible(self.BtnDecks, false) -- 卡组一览
+        UIUtil.SetIsVisible(self.HorizontalCurrency, false) -- 花费
+    else
+        -- 其它NPC对局引导
+        --解锁幻卡数量>= 8
+        if MagicCardCollectionMgr:GetUnlockCardNum() >= 8 then
+            MagicCardMgr:CheckTutorial(TutorialDefine.GamePlayStage.FantasyCardCardGroup) -- 卡组编辑
         end
-        local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowEditCheckRecptTutorial, Params = {}}
-        _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig) --玩法节点
-	end
+    
+        --对局的目标是NPC，且不是幻卡大师。
+        local NPCID = MagicCardMgr:GetPVENPCID()
+        if not MagicCardMgr:IsPVPMode() and NPCID ~= LocalDef.TutorialNPCID then
+            MagicCardMgr:CheckTutorial(TutorialDefine.GamePlayStage.FantasyCardRuleGuide) -- 规则引导
+        end
+    end
 end
 
 function CardsReadinessPanelView:OnClickCoinItem(TargetItemView)
@@ -454,6 +469,7 @@ function CardsReadinessPanelView:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MagicCardOnSvrCreateAutoGroup, self.OnGameEventCreateAutoGroup)
     self:RegisterGameEvent(EventID.MagicCardGameFinish, self.OnGameEventGameFinish)
     self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
+    self:RegisterGameEvent(EventID.PWorldExit, self.OnPWorldExit)
 end
 
 function CardsReadinessPanelView:OnGameEventCreateAutoGroup(CardList)
@@ -485,6 +501,12 @@ function CardsReadinessPanelView:OnGameEventGameFinish(GameFinishRsp)
             MagicCardMgr:EndGame(GameFinishRsp)
         end
     )
+end
+
+-- 进入副本之前都会发退出前一个可以直接监听这个消息
+function CardsReadinessPanelView:OnPWorldExit()
+    self:Hide()
+    MagicCardMgr:QuitBeforeEnterGame()
 end
 
 function CardsReadinessPanelView:OnMoneyUpdate()

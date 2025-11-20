@@ -16,6 +16,8 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
 local ProfessionToggleJobVM = require("Game/Profession/VM/ProfessionToggleJobVM")
 
+local RoleInitCfg = require("TableCfg/RoleInitCfg")
+
 local TextColorSelected = "FFF4D0FF"
 local TextColorUnselected = "828282FF"
 
@@ -114,6 +116,20 @@ function ProfessionToggleJobPageView:OnShow()
 	if nil ~= MajorRoleDetail then
 		EquipmentVM.lstProfDetail = MajorRoleDetail.Prof.ProfList
 	end
+
+	self.ViewModel.QuestStrictionProf = nil
+	local Params = self.Params
+	if Params then
+		local QuestStrictionProf = Params.QuestStrictionProf
+		if QuestStrictionProf then
+			self.ViewModel.QuestStrictionProf = QuestStrictionProf
+			local RoleInitCfgItem = RoleInitCfg:FindCfgByKey(QuestStrictionProf)
+			if RoleInitCfgItem then
+				self.ViewModel.ProfSpecialization = RoleInitCfgItem.Specialization
+				self.ViewModel:UpdateProfList(EquipmentVM.lstProfDetail)
+			end
+		end
+	end
 end
 
 function ProfessionToggleJobPageView:PostShowView()
@@ -126,6 +142,13 @@ function ProfessionToggleJobPageView:PostShowView()
 		IsCombatProf = _G.EquipmentMgr:GetEquipmentProfSpecialization() == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT
 	else
 		IsCombatProf = MajorUtil.GetMajorProfSpecialization() == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT
+	end
+	-- 如果有任务限制职业信息
+	if self.ViewModel.QuestStrictionProf then
+		local RoleInitCfgItem = RoleInitCfg:FindCfgByKey(self.ViewModel.QuestStrictionProf)
+		if RoleInitCfgItem then
+			IsCombatProf = RoleInitCfgItem.Specialization == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT
+		end
 	end
 	self.CommHorTabsSwitchNew:UpdateSelect(IsCombatProf and 1 or 2, true)
 	self.CommHorTabsSwitchNew:SetSelectedIndex(IsCombatProf and 1 or 2)

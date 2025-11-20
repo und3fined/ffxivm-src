@@ -116,7 +116,7 @@ function SingSkillObject:BreakSkill()
 
     if _G.SkillLogicMgr:IsSkillSystem(self.OwnerEntityID) then
         local AllEffectIDList = self.AllEffectIDList
-        for _, ID in pairs(AllEffectIDList) do
+        for ID, _ in pairs(AllEffectIDList) do
             EffectUtil.StopVfx(ID, 0, 0)
         end
     end
@@ -127,10 +127,7 @@ function SingSkillObject:GetDamageCellData()
 end
 
 function SingSkillObject:RecordEffectID(EffectID)
-    local AllEffectIDList = self.AllEffectIDList
-    if table.find_item(AllEffectIDList, EffectID) == nil then
-        table.insert(AllEffectIDList, EffectID)
-    end
+    self.AllEffectIDList[EffectID] = true
 end
 
 function SingSkillObject:AddEffectID()

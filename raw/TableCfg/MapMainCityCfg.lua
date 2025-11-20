@@ -12,6 +12,7 @@ local MapMainCityCfg = {
         Config = {}
     },
     DefaultValues = {
+        HousingMapID = 12008,
         ID = 1,
         MainCityMapID = 12001,
         _MapIDList = '[12001,12002,2006,2009]',
@@ -21,12 +22,14 @@ local MapMainCityCfg = {
         {
         },
         {
+            HousingMapID = 11007,
             ID = 2,
             MainCityMapID = 11001,
             _MapIDList = '[11001,11002,11009,2005]',
             _UIMapIDList = '[2,3]',
         },
         {
+            HousingMapID = 13008,
             ID = 3,
             MainCityMapID = 13001,
             _MapIDList = '[13001,13002,13009,13010]',

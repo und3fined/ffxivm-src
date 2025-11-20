@@ -18,7 +18,18 @@ function GoldSaucerCuffGameResultItemVM:Ctor()
     self.Value = ""
     self.bIsNewRecord = false
     self.bIsPerfectChallenge = false
-    self.bShowUnfinished = false 
+    self.bShowUnfinished = false
+    -- 赐福显示
+    self.bBless = false
+    self.BlessTitle = "" -- 赐福条目文本
+    self.BlessTitleIcon = "" --赐福标题Icon路径
+    self.BlessBg = "" -- 赐福背景图片路径
+    self.bShowNumOrCheckIcon = true -- 显示为交互数量文本还是是否达成图标
+    self.CheckIconPath = "" -- CheckIcon路径
+    self.GetRewardNumText = "" -- 条目获取奖励数量
+    self.ScoreGotNumText = "" -- 获取货币奖励数量
+    self.bPlayBlessSuccessAnim = false -- 是否播放赐福挑战成功动画
+    self.bBigBless = false -- 是否为赐福模式（false 送福，true 赐福）
 end
 
 function GoldSaucerCuffGameResultItemVM:IsEqualVM(_)
@@ -34,6 +45,16 @@ function GoldSaucerCuffGameResultItemVM:UpdateVM(Data)
     self.bIsNewRecord = Data.bIsNewRecord
     self.bIsPerfectChallenge = Data.bIsNewRecord
     self.bShowUnfinished = Data.bShowUnfinished
+    self.bBless = Data.bBless
+    self.BlessTitle = Data.BlessTitle
+    self.BlessTitleIcon = Data.BlessTitleIcon
+    self.BlessBg = Data.BlessBg
+    self.bShowNumOrCheckIcon = Data.bShowNumOrCheckIcon
+    self.CheckIconPath = Data.CheckIconPath
+    self.GetRewardNumText = Data.GetRewardNumText
+    self.ScoreGotNumText = Data.ScoreGotNumText
+    self.bPlayBlessSuccessAnim = Data.bPlayBlessSuccessAnim
+    self.bBigBless = Data.bBigBless
     -- if self:CheckNeedPlayAnim() then
     --     self.AnimNum = self.AnimNum + 1
     -- end

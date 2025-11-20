@@ -31,24 +31,20 @@ function PWorldTeamMemExpelVM:UpdateVM(Value)
     self:UpdMVPVoteEnable()
 
     self.Prof = _G.PWorldTeamMgr:GetTeamMemberProf(Value)
+    self.ProfID = self.Prof
 end
 
 function PWorldTeamMemExpelVM:IsEqualVM(Value)
-    -- print("zhg PWorldTeamMemExpelVM:IsEqualVM " .. tostring(Value))
-    -- print("zhg PWorldTeamMemExpelVM:IsEqualVM " .. table_to_string_block(Value))
     return self.MemRoleID == Value
 end
 
 function PWorldTeamMemExpelVM:SetSelected(V)
-    if V and (V == self.Selected) then
-        self.Selected = false
-    end
     self.Selected = V
 end
 
 function PWorldTeamMemExpelVM:SetMVPVoteEnable(V)
     self.MVPVoteEnable = V
-    self.Opacity = V and 1 or 0.5
+    self:SetOpacity(V and 1 or 0.5)
 end
 
 function PWorldTeamMemExpelVM:UpdMVPVoteEnable()
@@ -56,6 +52,10 @@ function PWorldTeamMemExpelVM:UpdMVPVoteEnable()
     local Enable = (not _G.PWorldTeamMgr:HasVoteMvpMemGone(self.MemRoleID)) and (not IsMajor) -- and (not InMyTeam)
 
     self:SetMVPVoteEnable(Enable)
+end
+
+function PWorldTeamMemExpelVM:SetOpacity(Opacity)
+    self.Opacity = Opacity
 end
 
 return PWorldTeamMemExpelVM

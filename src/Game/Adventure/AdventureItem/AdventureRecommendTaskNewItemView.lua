@@ -74,6 +74,7 @@ function AdventureRecommendTaskNewItemView:OnInit()
 		-- {"TextBtnGo", UIBinderSetText.New(self, self.BtnGo.TextContent)},
 		{"ImgTaskIcon",UIBinderSetImageBrush.New(self, self.ImgTaskIcon)},
 		{"ImgTask",UIBinderSetImageBrush.New(self, self.ImgTask)},
+		{"ImgTaskVisible",UIBinderSetIsVisible.New(self, self.ImgTask)},
 		{"IsNew", UIBinderSetIsVisible.New(self, self.RedDot2)},
 		{"GoBtnStyle", UIBinderCommBtnUpdateImage.New(self, self.BtnGo)},
 		{"StartVisible", UIBinderSetIsVisible.New(self, self.BtnGo)},

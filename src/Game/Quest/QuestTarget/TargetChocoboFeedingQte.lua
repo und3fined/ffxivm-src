@@ -44,14 +44,21 @@ function TargetChocoboFeedingQte:DoStartTarget()
     local SureCallBack = function(_, Params)
         local IsNeverAgain = Params.IsNeverAgain
         if IsNeverAgain then
-            ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect = 1
+            -- 设置确认不再提示状态
+            ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect = ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelectType.CONFIRM
         end
 
         self:RegisterEvent(EventID.ChocoboFeedingQteFinishNotify, self.OnChocoboFeedingQteFinishNotifyHandle)
         --self:RegisterEvent(EventID.ChocoboFeedingQteRevert, self.OnChocoboFeedingQteRevert)
         UIViewMgr:ShowView(UIViewID.ChocoboFeeDingMainPanelView, {GameID = self.GameID})
     end
-    local CancleCallBack = function()
+    local CancleCallBack = function(_, Params)
+        local IsNeverAgain = Params.IsNeverAgain
+        if IsNeverAgain then
+            -- 设置取消不再提示状态
+            ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect = ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelectType.CANCEL
+        end
+        
         _G.EventMgr:SendEvent(EventID.ChocoboFeedingQteFinishNotify, {
             GameID = self.GameID,
             GameResult = ChocoboDefine.CHOCOBO_FEE_QTE_RESULT.SKIP
@@ -75,11 +82,16 @@ function TargetChocoboFeedingQte:DoStartTarget()
     end
     
     local Content = string.format(_G.LSTR(440006), Name)
-    if ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect == 1 then
+    if ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect == ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelectType.CONFIRM then
+        -- 自动进入游戏
         self:RegisterEvent(EventID.ChocoboFeedingQteFinishNotify, self.OnChocoboFeedingQteFinishNotifyHandle)
         UIViewMgr:ShowView(UIViewID.ChocoboFeeDingMainPanelView, {GameID = self.GameID})
+    elseif ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelect == ChocoboTransportDefine.TargetChocoboFeeNeverMindTipSelectType.CANCEL then
+        -- 自动执行取消逻辑
+        CancleCallBack(nil, {IsNeverAgain = false})
     else
-        MsgBoxUtil.ShowMsgBoxTwoOp(nil, "", Content, SureCallBack, CancleCallBack, nil, nil,
+        -- 正常显示提示框
+        MsgBoxUtil.ShowMsgBoxTwoOp(nil, _G.LSTR(440008), Content, SureCallBack, CancleCallBack, nil, nil,
                 {
                     CloseClickCB = CancleCallBack,
                     bUseNever = true,

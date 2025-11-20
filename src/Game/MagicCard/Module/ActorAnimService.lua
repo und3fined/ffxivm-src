@@ -145,16 +145,22 @@ function ActorAnimService:__PlayMajorAnim(AnimAsset, bStopAllMontages)
     local RealAnimAsset = type(AnimAsset) == "string" and AnimAsset or ""
     if Log.Check(RealAnimAsset ~= "" and MajorAnimComponent, "PlayMajorAnim Param error") then
         Log.I("PlayMajorAnim: bStopAllMontages? [%s] [%s]", bStopAllMontages, AnimAsset)
-        local Montage = MajorAnimComponent:PlayAnimation(RealAnimAsset, 1.0, 0.25, 0.25, bStopAllMontages)
-        return self:GetMontageLength(Montage)
+        if _G.UE.UCommonUtil.IsObjectValid(MajorAnimComponent) then
+            local Montage = MajorAnimComponent:PlayAnimation(RealAnimAsset, 1.0, 0.25, 0.25, bStopAllMontages)
+            return self:GetMontageLength(Montage)
+        end
     end
+    return 0
 end
 
 function ActorAnimService:PlayMajorAnimByTimeline(TimelineID, bStopAllMontages)
     if Log.Check(MajorAnimComponent, "MajorAnimComponent is nil") then
-        local Montage = MajorAnimComponent:PlayActionTimeline(TimelineID, 1.0, 0.25, 0.25, bStopAllMontages)
-        return self:GetMontageLength(Montage, 0.7) --实际时间更短，因为混合0.25会减少时长
+        if _G.UE.UCommonUtil.IsObjectValid(MajorAnimComponent) then
+            local Montage = MajorAnimComponent:PlayActionTimeline(TimelineID, 1.0, 0.25, 0.25, bStopAllMontages)
+            return self:GetMontageLength(Montage, 0.7) --实际时间更短，因为混合0.25会减少时长
+        end
     end
+    return 0
 end
 
 --- 播放设置好的情感动作 EmoIndex 是 LocalDef.SettedEmoTypeDefine
@@ -220,17 +226,19 @@ function ActorAnimService:PlayPVPPlayerAnimByAnimEnum(AnimAssetEnum, bStopAllMon
     local Montage = nil
     local Percent = 1
     local NpcAnimComponent = self:GetNpcNpcAnimComponent()
-    if TimelineID and TimelineID > 0 then  --打牌相关动作
-        Montage = NpcAnimComponent:PlayActionTimeline(TimelineID, 1.0, 0.25, 0.25, bStopAllMontages)
-        Percent = 0.7
-    else  --情感相关动作
-        NewAnimEnum = self:ConvertNPCAnimEnum2EmoIndex(AnimAssetEnum)
-        local AnimPath = self:GetPVPAnimAsset(NewAnimEnum)
-        local RealAnimAsset = type(AnimPath) == "string" and AnimPath or ""
-        if RealAnimAsset ~= "" and NpcAnimComponent then
-            Montage = NpcAnimComponent:PlayAnimation(RealAnimAsset, 1.0, 0.25, 0.25, bStopAllMontages)
-        else
-            Log.W(string.format("PlayPVPPlayerAnim [%s] not exit", Log.EnumValueToKey(NpcAnimEnum, AnimAssetEnum)))
+    if NpcAnimComponent ~= nil and _G.UE.UCommonUtil.IsObjectValid(NpcAnimComponent) then
+        if TimelineID and TimelineID > 0 then  --打牌相关动作
+            Montage = NpcAnimComponent:PlayActionTimeline(TimelineID, 1.0, 0.25, 0.25, bStopAllMontages)
+            Percent = 0.7
+        else  --情感相关动作
+            NewAnimEnum = self:ConvertNPCAnimEnum2EmoIndex(AnimAssetEnum)
+            local AnimPath = self:GetPVPAnimAsset(NewAnimEnum)
+            local RealAnimAsset = type(AnimPath) == "string" and AnimPath or ""
+            if RealAnimAsset ~= "" and NpcAnimComponent then
+                Montage = NpcAnimComponent:PlayAnimation(RealAnimAsset, 1.0, 0.25, 0.25, bStopAllMontages)
+            else
+                Log.W(string.format("PlayPVPPlayerAnim [%s] not exit", Log.EnumValueToKey(NpcAnimEnum, AnimAssetEnum)))
+            end
         end
     end
 
@@ -312,7 +320,7 @@ function ActorAnimService:PlayNpcAnimByActionTimelineID(AnimAssetEnum, bStopAllM
     end
 
     local AnimComp = self:GetNpcNpcAnimComponent()
-    if (AnimComp == nil) then
+    if (AnimComp == nil or not _G.UE.UCommonUtil.IsObjectValid(AnimComp)) then
         _G.FLOG_WARNING("没有获取到对方的 AnimComp ，请检查")
         return false, 0
     end

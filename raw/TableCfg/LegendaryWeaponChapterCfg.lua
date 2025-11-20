@@ -9,7 +9,11 @@ local LegendaryWeaponChapterCfg = {
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'SpecialItemsHelp',
+            },
+		}
     },
     DefaultValues = {
         ChapterID = 1,
@@ -17,7 +21,6 @@ local LegendaryWeaponChapterCfg = {
         MajorVersion = 2,
         MinorVersion = 0,
         PatchVersion = 0,
-        SpecialItemsHelp = '',
         TopicID = 1,
         Version = '2.0.1',
     },
@@ -29,7 +32,6 @@ local LegendaryWeaponChapterCfg = {
             ChapterID = 2,
             ID = 2,
             PatchVersion = 5,
-            SpecialItemsHelp = '使用第一章上古武器进行指定的危命战斗后获得',
             Version = '2.0.5',
         },
         {
@@ -49,7 +51,6 @@ local LegendaryWeaponChapterCfg = {
             ID = 5,
             MinorVersion = 2,
             PatchVersion = 5,
-            SpecialItemsHelp = '使用第一章黄道武器进行指定的副本战斗后获得',
             TopicID = 2,
             Version = '2.2.5',
         },

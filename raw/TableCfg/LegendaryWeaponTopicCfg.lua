@@ -32,6 +32,7 @@ local LegendaryWeaponTopicCfg = {
         FinishMotion = '',
         FirstType = 400101,
         Logo = 'Texture2D\'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_LightWeapon_Antiquity_Select.UI_Icon_Tab_LightWeapon_Antiquity_Select\'',
+        LogoNormal = 'Texture2D\'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_LightWeapon_Antiquity_Normal.UI_Icon_Tab_LightWeapon_Antiquity_Normal\'',
         OpenMotion = '',
         PreImg = '',
         PrePV = '',
@@ -47,6 +48,7 @@ local LegendaryWeaponTopicCfg = {
         },
         {
             Logo = 'Texture2D\'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_LightWeapon_Ecliptic_Select.UI_Icon_Tab_LightWeapon_Ecliptic_Select\'',
+            LogoNormal = 'Texture2D\'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_LightWeapon_Ecliptic_Normal.UI_Icon_Tab_LightWeapon_Ecliptic_Normal\'',
             TopicID = 2,
             Version = '2.2.0',
         },

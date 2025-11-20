@@ -39,10 +39,30 @@ function DynDataLineVfx:OnGameUpdateInDialogOrSeq(Params)
 end
 
 function DynDataLineVfx:CreateBox(Box)
-    self.Extent = _G.UE.FVector(Box.Extent.X, Box.Extent.Y, Box.Extent.Z)
-    self.Location = _G.UE.FVector(Box.Center.X, Box.Center.Y, Box.Center.Z)
-    self.Rotator = _G.UE.FRotator(Box.Rotator.Y, Box.Rotator.Z, Box.Rotator.X)
+    Box = Box or {}
+    
+    local DefaultVector = _G.UE.FVector(0, 0, 0)
+    local DefaultRotator = _G.UE.FRotator(0, 0, 0)
+
+    self.Extent = Box.Extent and _G.UE.FVector(
+            Box.Extent.X or 0,
+            Box.Extent.Y or 0,
+            Box.Extent.Z or 0
+    ) or DefaultVector
+
+    self.Location = Box.Center and _G.UE.FVector(
+            Box.Center.X or 0,
+            Box.Center.Y or 0,
+            Box.Center.Z or 0
+    ) or DefaultVector
+
+    self.Rotator = Box.Rotator and _G.UE.FRotator(
+            Box.Rotator.Y or 0,  -- Pitch
+            Box.Rotator.Z or 0,  -- Yaw
+            Box.Rotator.X or 0   -- Roll
+    ) or DefaultRotator
 end
+
 
 function DynDataLineVfx:UpdateState(NewState)
     self.Super:UpdateState(NewState)

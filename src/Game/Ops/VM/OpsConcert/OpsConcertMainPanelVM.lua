@@ -15,7 +15,7 @@ local CS_CMD = ProtoCS.CS_CMD
 local GameNetworkMgr = require("Network/GameNetworkMgr")
 local ActivityNodeType = ProtoRes.Game.ActivityNodeType
 local LSTR = _G.LSTR
-local TimeUtil = _G.TimeUtil
+local TimeUtil = require("Utils/TimeUtil")
 
 local VoucherIcon = "Texture2D'/Game/UI/Texture/Ops/OpsConcert/UI_OpsConcert_Icon_Voucher.UI_OpsConcert_Icon_Voucher'"
 ---@class OpsConcertMainPanelVM : UIViewModel

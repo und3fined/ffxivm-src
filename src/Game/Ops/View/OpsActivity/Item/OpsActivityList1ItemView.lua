@@ -18,6 +18,7 @@ local EventID = require("Define/EventID")
 local TimeUtil = require("Utils/TimeUtil")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local DataReportUtil = require("Utils/DataReportUtil")
+local ProtoCS = require("Protocol/ProtoCS")
 
 ---@class OpsActivityList1ItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -75,8 +76,7 @@ end
 
 function OpsActivityList1ItemView:OnShow()
 	if not self.ViewModel then return end
-	self:SetBtnState()
-	self:SetBtnRed()
+	self:UpdateItemState()
 end
 
 function OpsActivityList1ItemView:OnHide()
@@ -132,15 +132,14 @@ function OpsActivityList1ItemView:SetBtnState()
 	self.ViewModel:SetBtnState(self.BtnSlot)
 end
 
-function OpsActivityList1ItemView:SetBtnRed()
-	if self.ViewModel.RedDotName then
-		self.RedDot:SetRedDotNameByString(self.ViewModel.RedDotName)
-	end
-end
-
 function OpsActivityList1ItemView:UpdateItemState()
 	if not self.ViewModel then return end
-	self:SetBtnState()
+	self.ViewModel:SetBtnState(self.BtnSlot)
+	if self.ViewModel.RedDotName then
+		if self.RedDot then
+			self.RedDot:SetRedDotNameByString(self.ViewModel.RedDotName)
+		end
+	end
 end
 
 return OpsActivityList1ItemView

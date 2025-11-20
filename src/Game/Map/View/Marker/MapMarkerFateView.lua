@@ -116,10 +116,10 @@ function MapMarkerFateView:OnProgressChange(NewValue, OldValue)
                 end
             else
                 Percentage = NewValue * 0.01
-            end            
+            end
         end
         self.ProbarFate:SetPercent(Percentage)
-        
+
         UIUtil.SetIsVisible(self.PanelProbar, true)
     else
         UIUtil.SetIsVisible(self.PanelProbar, false)
@@ -162,6 +162,9 @@ function MapMarkerFateView:OnRegisterBinder()
 end
 
 function MapMarkerFateView:OnScaleChanged(Scale)
+    if (not self:IsValid()) then
+        return
+    end
     self.Scale = Scale
     local ViewModel = self.Params
     if nil == ViewModel then

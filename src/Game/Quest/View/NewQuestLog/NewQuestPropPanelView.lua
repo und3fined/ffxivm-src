@@ -11,8 +11,10 @@ local UIUtil = require("Utils/UIUtil")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 
+local ItemCfg = require("TableCfg/ItemCfg")
 local EventID = require("Define/EventID")
-local ItemDefine = require("Game/Item/ItemDefine")
+local CommonUtil = require("Utils/CommonUtil")
+local MsgBoxUtil = require("Utils/MsgBoxUtil")
 
 local LSTR = _G.LSTR
 
@@ -62,6 +64,7 @@ end
 function NewQuestPropPanelView:OnInit()
 	self.OwnedItemsAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewList)
 	self.OwnedItemsAdapter:SetOnClickedCallback(self.OnOwnedItemClicked)
+	self.OwnedItemsAdapter:SetOnDoubleClickedCallback(self.OnOwnedItemClicked)
 end
 
 function NewQuestPropPanelView:OnDestroy()
@@ -111,6 +114,8 @@ function NewQuestPropPanelView:OnShow()
 	end
 
 	self:UpdateSelectedCont()
+
+	self.IsSecondSure = false
 end
 
 function NewQuestPropPanelView:OnHide(Params)
@@ -166,9 +171,11 @@ function NewQuestPropPanelView:UpdateSelectedCont()
 	end
 	local SubmitNum = 0
 	local VM = self.Params.ViewModel
-	for _, ItemVM in pairs(VM.ItemToSubmit) do
-		if ItemVM.SubmitNum and ItemVM.SubmitNum > 0 then
-			SubmitNum = SubmitNum + 1
+	if VM.ItemToSubmit then
+		for _, ItemVM in pairs(VM.ItemToSubmit) do
+			if ItemVM.SubmitNum and ItemVM.SubmitNum > 0 then
+				SubmitNum = SubmitNum + 1
+			end
 		end
 	end
 	local SubmitTip = LSTR(596002)..string.format(" %d/%d", SubmitNum, VM.RequiredItemVMList:Length()) --596002("请选择提交道具")
@@ -185,7 +192,14 @@ function NewQuestPropPanelView:OnClickedSubmit()
 	if self.Params == nil or self.Params.ViewModel == nil then return end
 	local VM = self.Params.ViewModel
 
-	local HQSubmitNQList, CollectItem = VM:GetSubmitItemInfo()
+	local MagicsparSubmitList, CollectItem = VM:GetSubmitItemMagicsparInfo()
+
+	if not VM.IsMagicsparNeed and MagicsparSubmitList ~= nil and next(MagicsparSubmitList) then
+		if not self.IsSecondSure then
+			self:ShowMagicsparConfirmMsgBox(MagicsparSubmitList)
+			return
+		end
+	end
 
 	VM:SubmitItem(CollectItem)
 	if self.Params and self.Params.DialogOrSequenceID then
@@ -201,6 +215,27 @@ function NewQuestPropPanelView:OnClickedSubmit()
 	end
 	--_G.NpcDialogMgr:EndInteraction()
 	self:Hide()
+end
+
+function NewQuestPropPanelView:ShowMagicsparConfirmMsgBox(MagicsparSubmitList)
+	local MagicsparNameListStr = nil
+	for _, ResID in ipairs(MagicsparSubmitList) do
+		local Name = ItemCfg:FindValue(ResID, "ItemName") or "None"
+		MagicsparNameListStr = (MagicsparNameListStr == nil)
+			and Name
+			or string.format("%s, %s", MagicsparNameListStr, Name)
+	end
+	MagicsparNameListStr = CommonUtil.GetTextFromStringWithSpecialCharacter(MagicsparNameListStr)
+
+	local function ConfirmCallback()
+		self.IsSecondSure = true
+	end
+	local function CancelCallback()
+		self:OnClickedCancel()
+	end
+	MsgBoxUtil.ShowMsgBoxTwoOp(self, nil,
+		string.format(LSTR(596009), MagicsparNameListStr), --596009("提交的道具%s镶嵌有魔晶石，是否继续提交？")
+		ConfirmCallback, CancelCallback)
 end
 
 function NewQuestPropPanelView:OnClickedDelete()

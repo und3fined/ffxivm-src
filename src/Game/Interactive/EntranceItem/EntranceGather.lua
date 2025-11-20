@@ -50,7 +50,7 @@ function EntranceGather:OnInit()
     end
 end
 
-function EntranceGather:CheckInterative(EnableCheckLog)
+function EntranceGather:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     if self.IsSelectOtherGatherPoint then
         return false
     end
@@ -77,13 +77,27 @@ function EntranceGather:OnClick()
         return true
     end
 
-    local MoveComp = MajorUtil.GetMajor():GetMovementComponent()
+    local Major = MajorUtil.GetMajor()
+    if not Major then
+        return true
+    end
+
+    local MoveComp = Major:GetMovementComponent()
     if MoveComp then
        if MoveComp:IsFalling() then
             -- 在空中时无法
             _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.CurPosCannotGather)
             return true
        end
+    end
+
+	local MajorController = MajorUtil.GetMajorController()
+    if MajorController then
+        local InputVec = MajorController:GetCurrentInputVelocity()
+        if InputVec.X ~= 0 or InputVec.Y ~= 0 or InputVec.Z ~= 0 then
+            _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.GatherCurStateInvalid)
+            return true
+        end
     end
 
     if self.GatherType == nil then

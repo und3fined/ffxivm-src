@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local PVPColosseumHeaderVM = require("Game/PVP/Colosseum/VM/PVPColosseumHeaderVM")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local MainPanelVM = require("Game/Main/MainPanelVM")
+local PVPMapVM = require("Game/PVP/Map/VM/PVPMapVM")
 
 
 ---@class PVPColosseumMainView : UIView
@@ -52,13 +53,27 @@ function PVPColosseumMainView:OnRegisterSubView()
 end
 
 function PVPColosseumMainView:OnInit()
-	self.Binders =
-	{
-		{ "HeaderPanelVisible", UIBinderSetIsVisible.New(self, self.PVPColosseumHeader) },
-	}
+	self.MultiBinders = {
+		{
+			ViewModel = PVPColosseumHeaderVM,
+			Binders = {
+				{ "HeaderPanelVisible", UIBinderSetIsVisible.New(self, self.PVPColosseumHeader) },
+			},
+		},
 
-	self.MainPanelBinders = {
-		{ "ControlPanelVisible", UIBinderSetIsVisible.New(self, self.MainControlPanel) },
+		{
+			ViewModel = MainPanelVM,
+			Binders = {
+				{ "ControlPanelVisible", UIBinderSetIsVisible.New(self, self.MainControlPanel) },
+			},
+		},
+
+		{
+			ViewModel = PVPMapVM,
+			Binders = {
+				{ "MapDragScale", UIBinderSetIsVisible.New(self, self.PVPColosseumTeamEnemy, true) },
+			},
+		}
 	}
 end
 
@@ -83,8 +98,7 @@ function PVPColosseumMainView:OnRegisterGameEvent()
 end
 
 function PVPColosseumMainView:OnRegisterBinder()
-	self:RegisterBinders(PVPColosseumHeaderVM, self.Binders)
-	self:RegisterBinders(MainPanelVM, self.MainPanelBinders)
+	self:RegisterMultiBinders(self.MultiBinders)
 end
 
 return PVPColosseumMainView

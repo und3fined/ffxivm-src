@@ -40,6 +40,13 @@ local MajorState = {
     NotSuitableForTrade = 2,
 }
 
+local MeetTradeRefuseReason = {
+    ---没有特殊原因
+    NoReason = 0,
+    ---对方被拉黑
+    InviterInBlackList = 1,
+}
+
 local MeetTradeCancelReason = {
     ---取消交易
     CancelTrade = 1,
@@ -57,6 +64,9 @@ function MeetTradeMgr:OnInit()
     self.DistanceLimit = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_ApplyDis).Value[1]
     self.GoldNumLimit = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_ScoreMax).Value[1]
     self.SelectListCapacity = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_ItemTypeNum).Value[1]
+    self.LockDelayTime = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_LockDelayTime).Value[1] / 1000
+    self.FinalDelayTime = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_FinalDelayTime).Value[1] / 1000
+    self.TradeLastTime = MeettradeParamCfg:FindCfgByKey(MeetTradeParamsID.MeetTradeParamsID_TradeLastTime).Value[1]
 end
 
 function MeetTradeMgr:ReSet()
@@ -67,6 +77,8 @@ function MeetTradeMgr:ReSet()
     --当前交易的交易ID，也可用于判断当前是否处于交易状态
     self.TradeID = nil
     self.GoldForTrade = 0
+    self.CountDownCallbackList = {}
+    self.TradeStartTime = self.TradeLastTime
 end
 function MeetTradeMgr:OnBegin()
 
@@ -144,12 +156,14 @@ function MeetTradeMgr:SendNetMsgMeetTrade(MsgBody)
 	_G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
-function MeetTradeMgr:SendMeetTradeReply(InviterID, IsAccept)
+function MeetTradeMgr:SendMeetTradeReply(InviterID, IsAccept, Reason)
+    Reason = Reason or ""
     local MsgBody = {
 		Cmd = ProtoCS.CS_MEET_TRADE_CMD.CS_MEET_TRADE_CMD_Reply,
 		Reply = {
 			InviterID = InviterID,
             Accept = IsAccept,
+            Reason = Reason,
 		}
 	}
 	self:SendNetMsgMeetTrade(MsgBody)
@@ -298,16 +312,15 @@ function MeetTradeMgr:OnRecieveMeetTradeRequestReply(MsgBody)
     if not Entry then
         _G.FLOG_ERROR("MeetTradeMgr:OnRecieveMeetTradeRequestReply", "MeetTradeEntry is nil")
         return
-    end 
+    end
     ---如果自己是邀请者，收到拒绝回复弹出提示Tips
     ---如果收到接受回复，则校验自身状态，如果状态不对则取消交易，若状态正确，则拉起交易面板
     local InviterID = Entry.InviterID
     if MajorUtil.GetMajorRoleID() == InviterID then
         ---对方拒绝了交易
         if Data.Accept == false then
-            _G.RoleInfoMgr:QueryRoleSimple(Entry.InviteeID, function(_, RoleVM)
-                MsgTipsUtil.ShowTips(string.format(LSTR(1490051),RoleVM.Name))
-            end, nil, true)
+            local Reason = Data.Reason
+            self:ProcessMeetTradeRefuse(tonumber(Reason), Entry.InviteeID)
             return
         end
         ---否则对方同意了交易
@@ -324,7 +337,8 @@ function MeetTradeMgr:OnRecieveMeetTradeRequestReply(MsgBody)
                 end
             end
             --- 注册计时器，发送保活信息
-            self.TimerID = self:RegisterTimer(self.SendMeetTradeKeep, 60, 60, 0, nil)
+            self.TradeStartTime = self.TradeLastTime
+            self.TimerID = self:RegisterTimer(self.MeetTradeCountDown, 0, 1, self.TradeLastTime + 1, nil)
             self:OpenMeetTradeMainView(Entry.InviteeID)
             return
         else
@@ -349,7 +363,8 @@ function MeetTradeMgr:OnRecieveMeetTradeRequestReply(MsgBody)
                 end
             end
             --- 注册计时器，发送保活信息
-            self.TimerID = self:RegisterTimer(self.SendMeetTradeKeep, 60, 60, 0, nil)
+            self.TradeStartTime = self.TradeLastTime
+            self.TimerID = self:RegisterTimer(self.MeetTradeCountDown, 0, 1, self.TradeLastTime + 1, nil)
             self:OpenMeetTradeMainView(Entry.InviterID)
             return
         ---拒绝请求不用处理
@@ -367,9 +382,12 @@ function MeetTradeMgr:OnRecieveOtherCancelTrade(MsgBody)
     ---如果取消交易的是自己
     if Data.RoleID == MajorUtil.GetMajorRoleID() then
         if tonumber(Data.Reason) == MeetTradeCancelReason.CancelTrade then
+            if self.OtherIsSureForTrade and self.MajorIsSureForTrade then
+                return
+            end
             MsgTipsUtil.ShowTips(LSTR(1490049)) --"您已取消交易"
             ---由取消方发送交易取消消息
-            self:MeetTradeEnd()
+            self:MeetTradeEnd({TradeIsEnd = false})
         else
             self:MeetTradeEnd({TradeIsEnd = true})
         end
@@ -397,9 +415,9 @@ function MeetTradeMgr:OnRecieveOtherUpdateSelectItem(MsgBody)
     for _, Member in ipairs(Entry.Members) do
         ---更新对方交易面板
         if Member.RoleID  and Member.RoleID ~= MajorUtil.GetMajorRoleID() then
-            if MeetTradeVM:CheckRoleItemListChange(Member.Items) then
+            local NewState = Member.State == 1
+            if MeetTradeVM:MarkRoleItemListChange(Member.Items) then
                 MeetTradeVM:UpdateRoleTradeItemListParams(Member.Items)
-                local NewState = Member.State == 1
                 MsgTipsUtil.ShowTips(LSTR(1490057)) --"对方修改了物品"
             end
             if self.OtherIsReadyForTrade ~= NewState then
@@ -439,12 +457,6 @@ function MeetTradeMgr:OnRecieveOtherLockItem(MsgBody)
             end
         end
     end
-    --- 如果双方都准备好了，拉起确认面板
-    if self.OtherIsReadyForTrade and self.MajorIsReadyForTrade then
-        if not UIViewMgr:IsViewVisible(UIViewID.MeetTradeConfirmationView) then
-            UIViewMgr:ShowView(UIViewID.MeetTradeConfirmationView)
-        end
-    end
 end
 
 
@@ -472,11 +484,7 @@ function MeetTradeMgr:OnRecieveOtherConfirmTrade(MsgBody)
         end
     end
     if self.OtherIsSureForTrade and self.MajorIsSureForTrade then
-        if UIViewMgr:IsViewVisible(UIViewID.MeetTradeConfirmationView) then
-            UIViewMgr:HideView(UIViewID.MeetTradeConfirmationView)
-        end
-        self:MeetTradeEnd()
-        self:OpenRewardPanel(ItemList)
+        EventMgr:SendEvent(EventID.MeetTradeConfirmLock, ItemList)
     end
 end
 --收到保活消息的回包
@@ -509,11 +517,25 @@ function MeetTradeMgr:OnNetMsgError(MsgBody)
     end
 end
 -----------------------------------其他功能函数
+---
+---处理交易被拒绝
+function MeetTradeMgr:ProcessMeetTradeRefuse(Reason, RoleID)
+    if Reason == MeetTradeRefuseReason.InviterInBlackList then
+        MsgTipsUtil.ShowTips(LSTR(1490062)) --"对方已加入黑名单，请稍后再试试吧"
+        return
+    else
+        _G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
+            MsgTipsUtil.ShowTips(string.format(LSTR(1490051), RoleVM.Name))
+        end, nil, true)
+        return
+    end
+end
+
 --- 处理取消交易
-function MeetTradeMgr:ProcessMeetTradeCancel(Reason,RoleID)
+function MeetTradeMgr:ProcessMeetTradeCancel(Reason, RoleID)
     if Reason == MeetTradeCancelReason.CancelTrade then
         _G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
-            MsgTipsUtil.ShowTips(string.format(LSTR(1490044),RoleVM.Name))
+            MsgTipsUtil.ShowTips(string.format(LSTR(1490044), RoleVM.Name))
         end, nil, true)
     elseif Reason == MeetTradeCancelReason.EnterCombat then
         MsgTipsUtil.ShowTips(LSTR(1490045)) --"对方进入了战斗状态,交易已取消"
@@ -548,13 +570,14 @@ function MeetTradeMgr:OpenRewardPanel(ItemList)
 	for _, V in pairs(NewItemList) do
 		VMList:AddByValue({GID = 1, ResID = V.ResID, Num = V.Num, IsValid = true, NumVisible = true, ItemNameVisible = true, IsShowNum = true }, nil, true)
 	end
-    _G.UIViewMgr:ShowView(UIViewID.CommonRewardPanel, { Title = LSTR(740015), ItemVMList = VMList })
-    -- local BtnRightCB = function()
-    --     if UIViewMgr:IsViewVisible(UIViewID.CommonRewardPanel) then
-    --         UIViewMgr:HideView(UIViewID.CommonRewardPanel)
-    --     end
-    -- end
-	-- _G.UIViewMgr:ShowView(UIViewID.CommonRewardPanel, { Title = LSTR(1490059), ItemVMList = VMList, ShowBtn = true, ShowBtnRight = true, BtnRightCB = BtnRightCB, BtnRightText = LSTR(10065)})
+    local BtnRightCB = function()
+        if UIViewMgr:IsViewVisible(UIViewID.CommonRewardPanel) then
+            UIViewMgr:HideView(UIViewID.CommonRewardPanel)
+        end
+    end
+    _G.UIViewMgr:ShowView(UIViewID.CommonRewardPanel,
+        { Title = LSTR(1490059), ItemVMList = VMList, ShowBtn = true, ShowBtnRight = true, BtnRightCB = BtnRightCB, BtnRightText =
+        LSTR(10065), HideBGCloseBC = true })
 end
 
 function MeetTradeMgr:CheckSelfIsSuitableForTrade(bShowTips)
@@ -612,7 +635,7 @@ function MeetTradeMgr:CheckOtherIsSuitableForTrade(RoleID)
             return false
         elseif _G.FriendMgr:IsInBlackList(RoleID) then
             MsgTipsUtil.ShowTips(LSTR(1490042)) --"对方已加入黑名单，请稍后再试试吧"
-            return false
+            return false, MeetTradeRefuseReason.InviterInBlackList
         ---否则通过校验
         else
             return true
@@ -623,6 +646,9 @@ end
 function MeetTradeMgr:CheckOtherIsTooFarForTrade(RoleID)
     ---目标距离过远
     local MajorActor = MajorUtil.GetMajor()
+    if nil == MajorActor then
+        return true
+    end
     local MajorPos = MajorActor:FGetActorLocation()
     local TargetActor = ActorUtil.GetActorByRoleID(RoleID)
     if nil == TargetActor then
@@ -631,7 +657,8 @@ function MeetTradeMgr:CheckOtherIsTooFarForTrade(RoleID)
     local TargetActorPos = TargetActor:FGetActorLocation()
     local TargetActorToMajor = ((TargetActorPos.X - MajorPos.X) ^ 2) + ((TargetActorPos.Y - MajorPos.Y) ^ 2) + ((TargetActorPos.Z - MajorPos.Z) ^ 2)
     --- 距离大于交易距离
-    if TargetActorToMajor > self.DistanceLimit * 10000 then
+    local TempLimit = self.DistanceLimit * 10000
+    if TargetActorToMajor > TempLimit * TempLimit then
         return true
     end
     return false
@@ -642,15 +669,14 @@ function MeetTradeMgr:AcceptMeetTradeRequest(TransData)
     ---校验自身状态
     local State = self:CheckSelfIsSuitableForTrade(true)
     ---校验对方状态
-    local InviterState = self:CheckOtherIsSuitableForTrade(TransData.InviterID)
-    ---校验对方状态
+    local InviterState, Reason = self:CheckOtherIsSuitableForTrade(TransData.InviterID)
     ---状态校验通过
     if State == MajorState.SuitableForTrade and InviterState == true then
         ---发送接受交易的回复
         self:SendMeetTradeReply(TransData.InviterID, true)
     ---否则校验失败,发送拒绝消息
     else
-        self:RejectMeetTradeRequest(TransData)
+        self:SendMeetTradeReply(TransData.InviterID, false, tostring(Reason))
     end
     ---关闭侧边栏
     SidebarMgr:RemoveSidebarItemByParam(TransData.InviterID, "InviterID")
@@ -716,11 +742,27 @@ function MeetTradeMgr:MeetTradeEnd(Params)
     end
     ---选择面板关闭
     if UIViewMgr:IsViewVisible(UIViewID.MeetTradeExchangeChoosePanel) then
-        UIViewMgr:HideView(UIViewID.MeetTradeExchangeChoosePanel, nil, Params)
+        UIViewMgr:HideView(UIViewID.MeetTradeExchangeChoosePanel, nil)
     end
     ---确认面板关闭
     if UIViewMgr:IsViewVisible(UIViewID.MeetTradeConfirmationView) then
-        UIViewMgr:HideView(UIViewID.MeetTradeConfirmationView, nil, Params)
+        UIViewMgr:HideView(UIViewID.MeetTradeConfirmationView, nil)
+    end
+    ---Tips面板关闭
+    if UIViewMgr:IsViewVisible(UIViewID.HelpInfoMidWinView) then
+        UIViewMgr:HideView(UIViewID.HelpInfoMidWinView, nil)
+    end
+    if UIViewMgr:IsViewVisible(UIViewID.CommHelpInfoTitleTipsView) then
+        UIViewMgr:HideView(UIViewID.CommHelpInfoTitleTipsView, nil)
+    end
+    if UIViewMgr:IsViewVisible(UIViewID.CommonMsgBox) then
+        UIViewMgr:HideView(UIViewID.CommonMsgBox)
+    end
+    if UIViewMgr:IsViewVisible(UIViewID.CurrencyTips) then
+        UIViewMgr:HideView(UIViewID.CurrencyTips)
+    end
+    if UIViewMgr:IsViewVisible(UIViewID.ItemTips) then
+        UIViewMgr:HideView(UIViewID.ItemTips)
     end
 end
 
@@ -733,6 +775,29 @@ function MeetTradeMgr:OnMeetTradeEnd()
     self:UnRegisterTimer(self.TimerID)
 end
 
+--- 其他界面在这里注册计时器回调函数
+function MeetTradeMgr:RegisterMeetTradeCountDownCallback(ViewID, Widget, Callback)
+    table.insert(self.CountDownCallbackList, {ViewID = ViewID, Callback = Callback, Widget = Widget})
+end
+
+function MeetTradeMgr:UnRegisterMeetTradeCountDownCallback(ViewID)
+    for i, Callback in ipairs(self.CountDownCallbackList) do
+        if Callback.ViewID == ViewID then
+            table.remove(self.CountDownCallbackList, i)
+            break
+        end
+    end
+end
+function MeetTradeMgr:MeetTradeCountDown()
+    self.TradeStartTime = self.TradeStartTime - 1
+    for _, Callback in ipairs(self.CountDownCallbackList) do
+        Callback.Callback(Callback.Widget, self.TradeStartTime)
+    end
+    if self.TradeStartTime <= 0 then
+        self:MeetTradeEnd({TradeIsEnd = false})
+        MsgTipsUtil.ShowTips(LSTR(1490067))
+    end
+end
 function MeetTradeMgr:GetOtherIsReadyForTrade()
     return self.OtherIsReadyForTrade
 end
@@ -766,10 +831,15 @@ function MeetTradeMgr:OpenMeetTradeRequestSidebar(StartTime, CountDown, TransDat
         self:RejectMeetTradeRequest(Params)
     end
 
+    local CurNickName = _G.FriendMgr:GetFriendNickname(TransData.InviterID)
+    local InviterName = TransData.InviterName
+    if CurNickName and CurNickName ~= "" then
+        InviterName = InviterName .. "(" .. CurNickName .. ")"
+    end
+
     local Params = {
         Title       = LSTR(1490038), --"交易申请"
-        Desc1       = string.format('<span color="#8FBDD5FF">%s</>', TransData.InviterName), --"玩家"
-        Desc2       = LSTR(1490039), --"向你发起交易"
+        Desc1       = string.format('%s<span color="#6FB1E9FF">%s</>%s', LSTR(10005), InviterName, LSTR(1490039)), --"玩家" "向你发起交易"
         StartTime   = StartTime,
         CountDown   = CountDown,
         CBFuncLeft  = RefuseCallBack,
@@ -780,7 +850,7 @@ function MeetTradeMgr:OpenMeetTradeRequestSidebar(StartTime, CountDown, TransDat
         TransData = TransData,
     }
 
-    _G.UIViewMgr:ShowView(_G.UIViewID.SidebarCommon, Params)
+    SidebarMgr:ShowCommonSidebarWin(Params)
 end
 
 function MeetTradeMgr:OnMeetTradeSidebarItemTimeOut(Type, TransData)

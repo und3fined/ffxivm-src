@@ -16,6 +16,9 @@ local RideTextCfg = {
             {
                 Name = 'Cry',
             },
+            {
+                Name = 'RideSpeedText',
+            },
 		}
     },
     DefaultValues = nil,

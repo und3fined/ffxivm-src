@@ -12,6 +12,7 @@ local TriggerGamePlayType = {
     ["MysterMerchant"] = 4, -- 神秘商人
     ["DiscoverNoteTutorial"] = 5, -- 探索笔记引导
     ["AetherCurrentTutorial"] = 6, -- 风脉泉引导
+    ["GoldSauserBlessMachineCheck"] = 7, -- 金碟赐福设施距离检测
 }
 
 local AuthenticationType = {

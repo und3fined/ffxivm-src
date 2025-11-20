@@ -115,11 +115,11 @@ function ChocoboNewBornPanelVM:UpdateChildDetail()
     local Count = #Data.Attr.Attr
     for i = 1, Count do  
     	local TempData = {}
+        TempData.AttrID = i
         TempData.AttrName = ChocoboDefine.CHOCOBO_ATTR_TYPE_NAME[i]
-    	TempData.AttrIconPath = self.AttrIconPathCfg[i]
-		TempData.AttrValue = Data.Attr.Attr[i]
-		TempData.MaxAttrValue = Data.Attr.Max[i]
-
+        TempData.AttrValue = Data.Attr.Attr[i]
+        TempData.MaxAttrValue = Data.Attr.Max[i]
+        
 	   	table.insert(AttrInfoList, TempData);
     end
     self.ChildDetailList:UpdateByValues(AttrInfoList) 

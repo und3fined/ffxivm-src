@@ -88,6 +88,7 @@ function QuestLogVM:PreInit()
 	self:TryAddQuestTypeVM(QUEST_TYPE.QUEST_TYPE_IMPORTANT, false)
 	self:TryAddQuestTypeVM(QUEST_TYPE.QUEST_TYPE_BRANCH, true)
 	self:TryAddQuestTypeVM(QUEST_TYPE.QUEST_TYPE_BRANCH, false)
+	--self:TryAddQuestTypeVM(QUEST_TYPE.QUEST_TYPE_REPEAT, true) --2.2.0暂不开放
 end
 
 function QuestLogVM:PostInit()

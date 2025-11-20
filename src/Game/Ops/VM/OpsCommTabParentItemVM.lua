@@ -57,6 +57,25 @@ function OpsCommTabParentItemVM:UpdateVM(Value)
 	self.Classcify = Value.Classcify
 	self.CanExpanded = true
 	local ActivityList = OpsActivityMgr:GetActivityListByClassify(Value.Classcify)
+
+	if Value.Classcify == 2 then
+		local FatherActivities = {}
+		for i = #ActivityList, 1, -1 do
+			local Activity = ActivityList[i].Activity
+			if Activity and Activity.ActivityID == Activity.FatherID then
+				table.insert(FatherActivities, Activity)
+			end
+		end
+		for i = #ActivityList, 1, -1 do
+			local Activity = ActivityList[i].Activity
+			local bFound = table.find_by_predicate(FatherActivities, function(a)
+				return a.ActivityID == Activity.FatherID
+			end)
+			if bFound and Activity.ActivityID ~= Activity.FatherID then
+				table.remove(ActivityList, i)
+			end
+		end
+	end
 	self.BindableActivityList:UpdateByValues(ActivityList)
 
 	local Cfg = ActivityPageCfg:FindCfgByKey(Value.Classcify)

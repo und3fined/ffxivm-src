@@ -1,33 +1,24 @@
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local JumboCactpotDefine = require("Game/JumboCactpot/JumboCactpotDefine")
+local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local PWorldDynDataMgr = require("Game/PWorld/DynData/PWorldDynDataMgr")
 local PWorldMgr = _G.PWorldMgr
 local EventID = _G.EventID
 local MapDynType = ProtoCommon.MapDynType
 local EffectType = MapDynType.MAP_DYNAMIC_DATA_TYPE_DYN_INSTANCE
+local CenterPoleState = JumboCactpotDefine.CenterPoleState
+local GoldSauserMapID = GoldSauserMainPanelDefine.GoldSauserMapID -- 12060
 local UpAnimTime = 6 -- 上升的动画时间为6s
 local WheelIntervalTime = 4 -- 第四个轮子先转 4s后第三个轮子转 然后 4s后第二个转....
 local WheelRotatingTime = 20 -- 轮子转动动画为20s
--- local EndWaitTime = 5 -- 轮子旋转完成后等待多久开始回到地底下
--- local EDynaIndex = {
---     ["CenterDynItem"] = 1, ["LottoryWheel4"] = 2, ["LottoryWheel3"] = 3, ["LottoryWheel2"] = 4, ["LottoryWheel1"] = 5, ["LastStageOrnament"] = 6,
---     ["StageOrnament2"] = 7, ["StageOrnament1"] = 8, ["StagePole3"] = 9, ["StagePole4"] = 10, ["StagePole5"] = 11, ["StagePole6"] = 12,
---     ["StagePole1"] = 13, ["StagePole2"] = 14, ["CenterPole"] = 15
--- }
--- local WheelIndex = {
---     Wheel1 = 1,
---     Wheel2 = 2,
---     Wheel3 = 3,
---     Wheel4 = 4,
--- }
+local CenterPoleSlowMoveTime = JumboCactpotDefine.CenterPoleSlowMoveTime
 
 ---@class JumboCactpotDynaMgr : MgrBase
 local JumboCactpotDynaMgr = LuaClass(MgrBase)
 
 function JumboCactpotDynaMgr:OnInit()
-    self.JDMapID = 12060
     self.JDResID = 1008204
     self.bEnterWrold = false
     self.DelayCeremonyTime = UpAnimTime + WheelRotatingTime + WheelIntervalTime * 3
@@ -72,39 +63,18 @@ end
 function JumboCactpotDynaMgr:OnPWorldReady()
     local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = BaseInfo.CurrMapResID
-    if BaseInfo.CurrMapResID == self.JDMapID then
+    if BaseInfo.CurrMapResID == GoldSauserMapID then
         if self.bEnterWrold then
             return
         end
         self.bEnterWrold = true
-        local JDMapEditData = _G.MapEditDataMgr:GetMapEditCfg()
-        local MapDynamicAssetList = JDMapEditData.MapDynamicAssetList
-        if #MapDynamicAssetList > 0 then
-            -- self.DynItemID = {                  -- 15个相关动态物件ID LottoryWheel开奖转动的转轮 StagePole达到阶段升起的柱子
-            --     CenterDynItem = MapDynamicAssetList[EDynaIndex.CenterDynItem].ID, StagePole1 = MapDynamicAssetList[EDynaIndex.StagePole1].ID, StagePole6 = MapDynamicAssetList[EDynaIndex.StagePole6].ID,  
-            --     LottoryWheel1 = MapDynamicAssetList[EDynaIndex.LottoryWheel1].ID, StagePole2 = MapDynamicAssetList[EDynaIndex.StagePole2].ID, StageOrnament2 = MapDynamicAssetList[EDynaIndex.StageOrnament2].ID,
-            --     LottoryWheel2 = MapDynamicAssetList[EDynaIndex.LottoryWheel2].ID, StagePole3 = MapDynamicAssetList[EDynaIndex.StagePole3].ID, LastStageOrnament = MapDynamicAssetList[EDynaIndex.LastStageOrnament].ID,
-            --     LottoryWheel3 = MapDynamicAssetList[EDynaIndex.LottoryWheel3].ID, StagePole4 = MapDynamicAssetList[EDynaIndex.StagePole4].ID, StageOrnament1 = MapDynamicAssetList[EDynaIndex.StageOrnament1].ID,
-            --     LottoryWheel4 = MapDynamicAssetList[EDynaIndex.LottoryWheel4].ID, StagePole5 = MapDynamicAssetList[EDynaIndex.StagePole5].ID, CenterPole = MapDynamicAssetList[EDynaIndex.CenterPole].ID,
-            -- }
-        end
-       
-        -- local DynItemID = self.DynItemID
-        -- local LottoryWheelState = JumboCactpotDefine.LottoryWheelState
-        -- for i = 1, 4 do
-        --     local Index = string.format("LottoryWheel%s", i)
-        --     local LottoryWheelID = DynItemID[Index] 
-        --     PWorldMgr:LocalUpdateDynData(EffectType, LottoryWheelID, LottoryWheelState.Down)
-        -- end
-
-        --- 如果不存在基础数据则请求基础数据，如果存在就直接更新动态物件
     end
 end
 
 function JumboCactpotDynaMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
     local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = BaseInfo.CurrMapResID
-    if LeaveMapResID == self.JDMapID then
+    if LeaveMapResID == GoldSauserMapID then
         self.bEnterWrold = false
     end
 end
@@ -113,9 +83,10 @@ end
 --- @type 根据当前处于什么阶段和是否是进入金碟游乐场更新动态物件的状态
 --- @param CurrStage number
 --- @param bIsEnterWrold boolean
-function JumboCactpotDynaMgr:UpdateDynItemByCurrStage(CurrStage, bIsEnterWrold)
+--- @param IsInLottery boolean@是否在开奖过程中
+function JumboCactpotDynaMgr:UpdateDynItemByCurrStage(CurrStage, bIsEnterWrold, IsInLottery)
     self:UpdateSixPoleState(CurrStage, bIsEnterWrold)
-    self:UpdateCenterPoleState(CurrStage, bIsEnterWrold)
+    self:UpdateCenterPoleState(CurrStage, bIsEnterWrold, IsInLottery)
     self:UpdateCenterItemState(CurrStage, false)
     self:UpdateStageOrnamentState(CurrStage, _G.JumboCactpotMgr.LastStage)
 end
@@ -161,64 +132,83 @@ function JumboCactpotDynaMgr:UpdateSixPoleState(CurrStage, bIsEnterWrold)
     end
 end
 
----@type 更新中心柱子的状态
-function JumboCactpotDynaMgr:UpdateCenterPoleState(CurrStage, bIsEnterWorld)
+--- 更改中心柱的动态物件状态
+function JumboCactpotDynaMgr:ChangeCenterPoleState(PoleState)
     local DynItemID = self.DynItemID
     if DynItemID == nil then
         _G.FLOG_WARNING("DynItemID == nil Wait Load DynItemID")
         return
     end
-    local MaxCurrStage = 7
     local CenterPoleData = PWorldDynDataMgr:GetDynData(EffectType, DynItemID.CenterPole)
     if CenterPoleData == nil then
         _G.FLOG_WARNING("Do not get dyndata ID: %s", DynItemID.CenterPole)
         return
     end
-    local CPCurState = CenterPoleData.State
-    local CenterPoleState = JumboCactpotDefine.CenterPoleState
+    local ExistState = CenterPoleData.State
+    if ExistState == PoleState then -- 相同状态不需要播放
+        return
+    end
+    if PoleState == CenterPoleState.Down and ExistState == CenterPoleState.Default then -- 缓慢向下时若已处于最低状态不需要播放
+        return
+    end
 
-    local NeedState
-    if CurrStage == MaxCurrStage then
+    if PoleState == CenterPoleState.Up and ExistState == CenterPoleState.UpIm then -- 缓慢向上时若已处于最高状态不需要播放
+        return
+    end
+
+    if ExistState == CenterPoleState.UpRotate and PoleState ~= CenterPoleState.UpIm then
+        PWorldMgr:LocalUpdateDynData(EffectType, DynItemID.CenterPole, CenterPoleState.UpIm) -- 当原本状态位于高处旋转时，且下个状态不是高处静止时，先转换为高处静止，防止播放显示错误
+    end
+
+    if ExistState == CenterPoleState.DownRotate and PoleState ~= CenterPoleState.Default then
+        PWorldMgr:LocalUpdateDynData(EffectType, DynItemID.CenterPole, CenterPoleState.Default) -- 当原本状态位于低处旋转时，且下个状态不是低处静止时，先转换为低处静止，防止播放显示错误
+    end
+
+    PWorldMgr:LocalUpdateDynData(EffectType, DynItemID.CenterPole, PoleState)
+end
+
+---@type 更新中心柱子的状态
+function JumboCactpotDynaMgr:UpdateCenterPoleState(CurrStage, bIsEnterWorld, IsInLottery)
+    local MaxCurrStage = 7
+    local bUp = CurrStage == MaxCurrStage
+    if IsInLottery then
         if bIsEnterWorld then
-            NeedState = CenterPoleState.UpIm    -- 立即升上来，用于刚进入世界
+            if bUp then
+                self:ChangeCenterPoleState(CenterPoleState.UpRotate)
+            else
+                self:ChangeCenterPoleState(CenterPoleState.DownRotate)
+            end
         else
-            NeedState = CenterPoleState.Up
+            local MoveTime = bUp and (CenterPoleSlowMoveTime[CenterPoleState.Up] or 0) or (CenterPoleSlowMoveTime[CenterPoleState.Down] or 0)
+            if bUp then
+                self:ChangeCenterPoleState(CenterPoleState.Up)
+                self:RegisterTimer(function()
+                    self:ChangeCenterPoleState(CenterPoleState.UpRotate)
+                end, MoveTime)
+            else
+                self:ChangeCenterPoleState(CenterPoleState.Down)
+                self:RegisterTimer(function()
+                    self:ChangeCenterPoleState(CenterPoleState.DownRotate)
+                end, MoveTime)
+            end
         end
     else
         if bIsEnterWorld then
-            NeedState = CenterPoleState.Default -- 立即下来，用于刚进入世界
+            if bUp then
+                self:ChangeCenterPoleState(CenterPoleState.UpIm)
+            else
+                self:ChangeCenterPoleState(CenterPoleState.Default)
+            end
         else
-            NeedState = CenterPoleState.Down
+            if bUp then
+                self:ChangeCenterPoleState(CenterPoleState.Up)
+            else
+                self:ChangeCenterPoleState(CenterPoleState.Down)
+            end
         end
     end
-    if NeedState == CenterPoleState.Down then
-        if CPCurState == CenterPoleState.Down or CPCurState == CenterPoleState.Default then
-            return
-        end
-        if CPCurState == CenterPoleState.DownRotate then
-            NeedState = CenterPoleState.Default
-        end
-    end
-
-    if NeedState == CenterPoleState.Up then
-        if CPCurState == CenterPoleState.UpIm or CPCurState == CenterPoleState.Up then
-            return
-        end
-    end
-    PWorldMgr:LocalUpdateDynData(EffectType, DynItemID.CenterPole, NeedState)
-    -- PWorldMgr:PlaySharedGroupTimeline(5498894, NeedState)
 end
 
-function JumboCactpotDynaMgr:UpdateCenterPoleWhenCeremony(CurStage)
-    local CenterPoleState = JumboCactpotDefine.CenterPoleState
-    local DynItemID = self.DynItemID
-
-    local NewState = CenterPoleState.DownRotate
-    if CurStage >= JumboCactpotDefine.MaxStage then
-        NewState = CenterPoleState.UpRotate
-    end
-    PWorldMgr:LocalUpdateDynData(EffectType, DynItemID.CenterPole, NewState)
-end
 
 --- @type 开奖是播放开奖仪式实则播放动态物件
 function JumboCactpotDynaMgr:PlayDynItemWhenLottory()

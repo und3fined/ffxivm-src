@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local EventID = require("Define/EventID")
 local DiscoverNoteVM = require("Game/SightSeeingLog/DiscoverNoteVM")
 local DiscoverNoteMgr = require("Game/SightSeeingLog/DiscoverNoteMgr")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
@@ -22,19 +23,26 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local DiscoverNoteDefine = require("Game/SightSeeingLog/DiscoverNoteDefine")
 local DiscoverNoteCfg = require("TableCfg/DiscoverNoteCfg")
 local NoteClueType = DiscoverNoteDefine.NoteClueType
+local RegionTabRedDotUpdateReason = DiscoverNoteDefine.RegionTabRedDotUpdateReason
+
+local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 
 local LSTR = _G.LSTR
 
 ---@class SightSeeingLogMainView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
+---@field BtnClockInfo CommInforBtnView
+---@field BtnClockSetting UFButton
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnSkip UFButton
 ---@field CommonBkg02_UIBP CommonBkg02View
 ---@field CommonBkgMask_UIBP CommonBkgMaskView
 ---@field CommonGuideBG CommonGuideBkgView
+---@field CommonTitle CommonTitleView
 ---@field FImagePhoto UFImage
 ---@field FImagePhotoDark UFImage
+---@field FTextBlock_116 UFTextBlock
 ---@field ImgAct UFImage
 ---@field ImgLock01 UFImage
 ---@field ImgLock02 UFImage
@@ -52,6 +60,7 @@ local LSTR = _G.LSTR
 ---@field PanelRecord UFCanvasPanel
 ---@field PanelRightEmpty UFCanvasPanel
 ---@field PanelTime UFCanvasPanel
+---@field PanelTitle UFCanvasPanel
 ---@field PanelUnlock01 UFCanvasPanel
 ---@field PanelUnlock02 UFCanvasPanel
 ---@field PanelUnlock03 UFCanvasPanel
@@ -68,10 +77,8 @@ local LSTR = _G.LSTR
 ---@field TextRecord02 UFTextBlock
 ---@field TextRecord03 UFTextBlock
 ---@field TextServer UFTextBlock
----@field TextSubtitle UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTime_1 UFTextBlock
----@field TextTitleName UFTextBlock
 ---@field TextUnlock01 UFTextBlock
 ---@field TextUnlock02 UFTextBlock
 ---@field TextUnlock03 UFTextBlock
@@ -79,7 +86,6 @@ local LSTR = _G.LSTR
 ---@field ToggleButton_57 UToggleButton
 ---@field VerIconTabs CommVerIconTabsView
 ---@field AnimIn UWidgetAnimation
----@field AnimIn_0 UWidgetAnimation
 ---@field AnimRefresh UWidgetAnimation
 ---@field AnimUnlock1 UWidgetAnimation
 ---@field AnimUnlock2 UWidgetAnimation
@@ -90,13 +96,17 @@ local SightSeeingLogMainView = LuaClass(UIView, true)
 function SightSeeingLogMainView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
+	--self.BtnClockInfo = nil
+	--self.BtnClockSetting = nil
 	--self.BtnClose = nil
 	--self.BtnSkip = nil
 	--self.CommonBkg02_UIBP = nil
 	--self.CommonBkgMask_UIBP = nil
 	--self.CommonGuideBG = nil
+	--self.CommonTitle = nil
 	--self.FImagePhoto = nil
 	--self.FImagePhotoDark = nil
+	--self.FTextBlock_116 = nil
 	--self.ImgAct = nil
 	--self.ImgLock01 = nil
 	--self.ImgLock02 = nil
@@ -114,6 +124,7 @@ function SightSeeingLogMainView:Ctor()
 	--self.PanelRecord = nil
 	--self.PanelRightEmpty = nil
 	--self.PanelTime = nil
+	--self.PanelTitle = nil
 	--self.PanelUnlock01 = nil
 	--self.PanelUnlock02 = nil
 	--self.PanelUnlock03 = nil
@@ -130,10 +141,8 @@ function SightSeeingLogMainView:Ctor()
 	--self.TextRecord02 = nil
 	--self.TextRecord03 = nil
 	--self.TextServer = nil
-	--self.TextSubtitle = nil
 	--self.TextTime = nil
 	--self.TextTime_1 = nil
-	--self.TextTitleName = nil
 	--self.TextUnlock01 = nil
 	--self.TextUnlock02 = nil
 	--self.TextUnlock03 = nil
@@ -141,7 +150,6 @@ function SightSeeingLogMainView:Ctor()
 	--self.ToggleButton_57 = nil
 	--self.VerIconTabs = nil
 	--self.AnimIn = nil
-	--self.AnimIn_0 = nil
 	--self.AnimRefresh = nil
 	--self.AnimUnlock1 = nil
 	--self.AnimUnlock2 = nil
@@ -152,17 +160,19 @@ end
 function SightSeeingLogMainView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
+	self:AddSubView(self.BtnClockInfo)
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommonBkg02_UIBP)
 	self:AddSubView(self.CommonBkgMask_UIBP)
 	self:AddSubView(self.CommonGuideBG)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.SingleBox)
 	self:AddSubView(self.VerIconTabs)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function SightSeeingLogMainView:InitConstStringInfo()
-	self.TextTitleName:SetText(LSTR(330015))
+	self.CommonTitle:SetTextTitleName(LSTR(330015))
 	self.TextLeftEmpty:SetText(LSTR(330016))
 	self.TextServer:SetText(LSTR(330019))
 	self.TextNone:SetText(LSTR(330020))
@@ -176,7 +186,7 @@ function SightSeeingLogMainView:OnInit()
 	self.TableViewListAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewList, self.OnSelectedLocationIconChanged, true)
 	self.Binders = {
 		{"NoteIconItems", UIBinderUpdateBindableList.New(self, self.TableViewListAdapter)},
-		{"RegionName", UIBinderSetText.New(self, self.TextSubtitle)},
+		{"RegionName", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)},
 		{"NoteMapName", UIBinderSetText.New(self, self.TextPlace)},
 		{"TypeTitle", UIBinderSetText.New(self, self.TextRecord)},
 		{"NoteTitle", UIBinderSetText.New(self, self.TextRecord02)},
@@ -244,7 +254,7 @@ end
 
 function SightSeeingLogMainView:OnHide()
 	DiscoverNoteMgr:ClearRegionTabUnlockRedDot()
-	DiscoverNoteMgr:ClearNoteItemUnlockRedDot()
+	--DiscoverNoteMgr:ClearNoteItemUnlockRedDot()
 	DiscoverNoteMgr:StopUpdatePerfectCondTimer()
 	DiscoverNoteVM:ClearSelectedNoteID()
 	self.LastSelectedNote = nil
@@ -259,11 +269,36 @@ function SightSeeingLogMainView:OnRegisterUIEvent()
 end
 
 function SightSeeingLogMainView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(EventID.RegionTabUIRedDotUpdate, self.OnRegionTabUIRedDotUpdate)
 end
 
 function SightSeeingLogMainView:OnRegisterBinder()
 	self:RegisterBinders(DiscoverNoteVM, self.Binders)
+end
+
+function SightSeeingLogMainView:OnRegionTabUIRedDotUpdate(RegionID, bShow, Reason)
+	if not RegionID or not Reason then
+		return
+	end
+
+	local VerIconTabs = self.VerIconTabs
+	if not VerIconTabs then
+		return
+	end
+
+	if bShow then
+		-- 显示不需要额外判定
+		VerIconTabs:SetCustomRedDotVisibleByPred(function(Item)
+			return Item.ID == RegionID
+		end, true)
+	else
+		-- 隐藏需要判定是否还有其他原因的红点保留
+		if not DiscoverNoteMgr:IsRegionTabRedDotActiveByNoteItem(RegionID) then
+			VerIconTabs:SetCustomRedDotVisibleByPred(function(Item)
+				return Item.ID == RegionID
+			end, false)
+		end
+	end
 end
 
 function SightSeeingLogMainView:OnSelectedNoteIDChanged(NoteID, OldNoteID)

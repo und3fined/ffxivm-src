@@ -8,8 +8,10 @@
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
+local UIViewID = require("Define/UIViewID")
 local UIUtil = require("Utils/UIUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText =  require("Binder/UIBinderSetText")
 local UIBinderValueChangedCallback =  require("Binder/UIBinderValueChangedCallback")
@@ -61,6 +63,19 @@ function CommRewardItemView:OnInit()
 		{ "RewardItemPlayAnimIn", UIBinderValueChangedCallback.New(self, nil, self.OnRewardItemPlayAnimInChanged) }, 
 	}
 	UIUtil.SetIsVisible(self.Comm152Slot.RichTextQuantity, false)
+	self.Comm152Slot:SetClickButtonCallback(self, self.OnClickedBtnSlot)
+end
+
+function CommRewardItemView:OnClickedBtnSlot(ItemView)
+	local HideClickItem = false
+	local RewardPanel = _G.UIViewMgr:FindView(UIViewID.CommonRewardPanel)
+	if RewardPanel ~= nil then
+		HideClickItem = RewardPanel.HideClickItem == true
+	end
+	local ViewModel = self.ViewModel 
+	if ViewModel ~= nil and not HideClickItem then
+		ItemTipsUtil.ShowTipsByResID(ViewModel.ResID, ItemView)
+	end
 end
 
 function CommRewardItemView:OnDestroy()
@@ -85,7 +100,8 @@ function CommRewardItemView:PanelUpSetupAnimation(PlayBackCompletion)
 end
 
 function CommRewardItemView:OnShow()
-	local RewardPanel = _G.UIViewMgr:FindView(_G.UIViewID.CommonRewardPanel)
+	local RewardPanel = _G.UIViewMgr:FindView(UIViewID.CommonRewardPanel)
+	local RewardPanel2 = _G.UIViewMgr:FindView(UIViewID.BattlePassRewardPanel)
 	if RewardPanel ~= nil then
 		if RewardPanel.PlayedAnimFirstIn then
 			UIUtil.SetRenderOpacity(self.FCanvasPanel_60, 0)
@@ -93,6 +109,26 @@ function CommRewardItemView:OnShow()
 		else
 			self:PanelUpSetupAnimation(true)
 		end
+	end
+	if RewardPanel2 ~= nil then
+		if RewardPanel2.PlayedAnimFirstIn then
+			UIUtil.SetRenderOpacity(self.FCanvasPanel_60, 0)
+			if self.ViewModel and self.ViewModel.IsShow then
+				if self.ViewModel.IsShow then
+					UIUtil.SetRenderOpacity(self.FCanvasPanel_60, 100)
+					self:PanelUpSetupAnimation(true)
+				else
+					self:PanelUpSetupAnimation(false)
+				end
+			else
+				self:PanelUpSetupAnimation(false)
+			end
+		else
+			self:PanelUpSetupAnimation(true)
+		end
+	end
+	if (self.Params and self.Params.Data and self.Params.Data.ForcePlayAnim) then
+		self:PanelUpSetupAnimation(false)
 	end
 end
 
@@ -127,7 +163,7 @@ function CommRewardItemView:OnRegisterBinder()
 	end
 	local ViewModel = Params.Data
 	if ViewModel == nil then
-			return
+		return
 	end
 	self.ViewModel = ViewModel
 	self:RegisterBinders(ViewModel, self.Binders)

@@ -26,7 +26,8 @@ local EasyToUseTabType = {
     ItemUse = 2,
     Companion = 3,
     FashionDeco = 4,
-    Mount = 5
+    Mount = 5,
+    Toy = 6
 }
 -- TabItemEx:
 -- {
@@ -40,6 +41,8 @@ local EasyToUseTabType = {
 --         ModuleID =  ProtoCommon.ModuleID.ModuleIDDailyRand, -- 用来控制解锁 默认解锁
 --         CheckOpenFunc = function() .... end     -- return boolean -- 额外解锁条件 控制页签解锁(页签显示) 默认解锁
 --         TabIsShowFunc = function() .... end     -- return boolean -- 页签是否显示在侧边栏 默认展示
+--         RedDotID = 123
+--         RedDotStr = "123"
 --     },
 -- }
 
@@ -76,7 +79,8 @@ local EasyToUseSelectData= {
         SelectedIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_FashionDeco_Select.UI_Icon_FashionDeco_Select'",
         ChildWidget = "FashionDeco/FashionDecoSideFrameWin_UIBP",
         ModuleID = ProtoCommon.ModuleID.ModuleIDFashionDecorate,
-        HelpInfoID = 11093
+        HelpInfoID = 11093,
+        RedDotID = 32001
     },
     {
         Type = EasyToUseTabType.Mount,
@@ -85,6 +89,14 @@ local EasyToUseSelectData= {
         SelectedIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_Mount_Select.UI_Icon_Mount_Select'",
         ChildWidget = "Mount/MountMainPanel_UIBP",
         ModuleID = ProtoCommon.ModuleID.ModuleIDMount,
+    },
+    {
+        Type = EasyToUseTabType.Toy,
+        Title = LSTR(1690001),
+        NormalIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Chat_ShellNormal.UI_Icon_SideTab_Chat_ShellNormal'",
+        SelectedIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Chat_ShellSelect.UI_Icon_SideTab_Chat_ShellSelect'",
+        ChildWidget = "Toy/ToyMainPanel_UIBP",
+        ModuleID = ProtoCommon.ModuleID.ModuleIDToy,
     },
 }
 
@@ -98,15 +110,15 @@ local MapSettingSelectData = {
     {
         Type = MapSettingTabType.Basic,
         Title = LSTR(700049),
-        NormalIcon = "PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_SetWin_tab01_png.UI_Map_Icon_SetWin_tab01_png'",
-        SelectedIcon = "PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_SetWin_tab01_Select_png.UI_Map_Icon_SetWin_tab01_Select_png'",
+        NormalIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Map_SetWin01_Normal.UI_Icon_SideTab_Map_SetWin01_Normal'",
+        SelectedIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Map_SetWin01_Select.UI_Icon_SideTab_Map_SetWin01_Select'",
         ChildWidget = "Map/WorldMapSettingPanel_UIBP",
     },
     {
         Type = MapSettingTabType.Gameplay,
         Title = LSTR(700050),
-        NormalIcon = "PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_SetWin_tab02_png.UI_Map_Icon_SetWin_tab02_png'",
-        SelectedIcon = "PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_SetWin_tab02_Select_png.UI_Map_Icon_SetWin_tab02_Select_png'",
+        NormalIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Map_SetWin02_Normal.UI_Icon_SideTab_Map_SetWin02_Normal'",
+        SelectedIcon = "Texture2D'/Game/UI/Texture/Icon/SideFrame/UI_Icon_SideTab_Map_SetWin02_Select.UI_Icon_SideTab_Map_SetWin02_Select'",
         ChildWidget = "Map/WorldMapSettingPanel_UIBP",
         TabIsShowFunc = function()
             if _G.AetherCurrentsMgr:IsAetherCurrentSysOpen()

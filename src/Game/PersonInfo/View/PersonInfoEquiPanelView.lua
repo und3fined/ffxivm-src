@@ -83,8 +83,8 @@ function PersonInfoEquiPanelView:OnInit()
 		{ "OnEquipList", UIBinderValueChangedCallback.New(self, nil, self.OnOnEquipListChanged) },
 		{ "EquipScore", UIBinderSetText.New(self, self.Text_EquipScore) },
 		{ "bIsHoldWeapon", 	UIBinderSetIsChecked.New(self, self.BtnPose) },
-		{ "bIsShowHead", 	UIBinderSetIsChecked.New(self, self.BtnHat) },
-		{ "IsMajor", 	UIBinderSetIsVisible.New(self, self.BtnPose, nil, true) },
+		{ "bIsShowHead", 	UIBinderSetIsChecked.New(self, self.BtnHat, false, true) },
+		-- { "IsMajor", 	UIBinderSetIsVisible.New(self, self.BtnPose, nil, true) },
 		{ "IsMajor", 	UIBinderSetIsVisible.New(self, self.BtnHat, nil, true) },
 	}
 end
@@ -138,10 +138,13 @@ function PersonInfoEquiPanelView:OnShow()
 	UIUtil.SetIsVisible(self.TextName, false)
 	self:CancelSeltItem()
 
-	local Prof = PersonInfoVM.RoleVM.Prof
+	local Prof
+	if PersonInfoVM.RoleVM then
+		Prof = PersonInfoVM.RoleVM.Prof
+	end
 	if Prof then
 		local IsSpe = ProfUtil.IsProductionProf(Prof)
-		UIUtil.SetIsVisible(self.BtnPose, not IsSpe, true)
+		UIUtil.SetIsVisible(self.BtnPose, PersonInfoVM.IsMajor and not IsSpe, true)
 	end
 
 end
@@ -218,9 +221,9 @@ end
 
 -- hat
 function PersonInfoEquiPanelView:OnBtnHatClick(ToggleButton, ButtonState)
-	local IsShow = ButtonState == _G.UE.EToggleButtonState.Checked 
-	PersonInfoVM.bIsShowHead = IsShow
-	self:ShowHatTips(IsShow)
+	local IsHide = ButtonState == _G.UE.EToggleButtonState.Checked 
+	PersonInfoVM.bIsShowHead = not IsHide
+	self:ShowHatTips(IsHide)
 end
 
 function PersonInfoEquiPanelView:ShowHatTips(bHideHead)
@@ -245,7 +248,7 @@ message Gem {
 
 ]]
 
-function PersonInfoEquiPanelView:UpdateSlotByItem(Part, ResID, GID)
+function PersonInfoEquiPanelView:UpdateSlotByItem(Part, ResID, GID, IsDye)
 	local Slot = self["EquipSlotItem" .. Part]
 	if nil == Slot then
 		return
@@ -255,9 +258,10 @@ function PersonInfoEquiPanelView:UpdateSlotByItem(Part, ResID, GID)
 	if nil == ViewModel then
 		return
 	end
-
+	
 	ViewModel:SetPart(Part, ResID, GID, PersonInfoVM.IsShowFacade)
 	ViewModel.bShowProgress = false
+	ViewModel.WardrobeStainTagColorVsisble = IsDye
 	ViewModel.OnClick = function (VM)
 		if not ResID or ResID == -1 then
 			return
@@ -342,7 +346,13 @@ function PersonInfoEquiPanelView:UpdateEuipList()
 		end
 	end
 
-	self.ItemList = EquipItemList 
+	self.ItemList = EquipItemList
+	local AvatarList
+	if PersonInfoVM.RoleVM then
+		AvatarList = PersonInfoVM.RoleVM.RoleSimple.Avatar.EquipList
+	else
+		AvatarList = {}
+	end
 	for _, v in pairs(ProtoCommon.equip_part) do
 		local Item = table.find_item(EquipItemList, v, 'Part') or {}
 		local ResID = Item.EquipID
@@ -360,8 +370,13 @@ function PersonInfoEquiPanelView:UpdateEuipList()
 		if (not ResID) or ResID == 0 then
 			ResID = -1
 		end
-
-		self:UpdateSlotByItem(v, ResID, Item.GID)
+		local IsDye = false
+		for _, data in pairs(AvatarList) do
+			if v == data.Part then
+				IsDye = data.RegionDyes and next(data.RegionDyes)
+			end
+		end
+		self:UpdateSlotByItem(v, ResID, Item.GID, IsDye)
 	end
 end
 

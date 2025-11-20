@@ -84,8 +84,11 @@ function BagSlotVM:Ctor()
 	self.IsLimitedTime = nil
 	self.IsExpired = nil
 
+	self.IsCollections = nil
+
 	rawset(self, "OtherProfWearableVisible", false)
 	rawset(self, "UnwearableVisible", false)
+	rawset(self, "IsMaskClose", false)
 end
 
 function BagSlotVM:IsEqualVM(Value)
@@ -142,6 +145,8 @@ function BagSlotVM:UpdateVM(Value, Param)
 	--套装
 	self.IsInScheme = self:UpdateEquipIsInScheme(Value)
 	
+	--收藏
+	self.IsCollections = Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.MISCELLANY_COLLECTION
 	--设置左下角图标
 	self:UpdateLeftCornerFlag(ValueResID)
 
@@ -153,6 +158,11 @@ function BagSlotVM:UpdateVM(Value, Param)
 			self.IsMask = true
 		end
 	end
+
+	if self.IsMaskClose then
+		self.IsMask = false
+	end
+
 	
 	self.IsCD = BagMgr.FreezeCDTable[self.FreezeGroup] ~= nil
 
@@ -188,6 +198,7 @@ function BagSlotVM:UpdateByParam(Param)
 	rawset(self, "ProfID", nil)
 	rawset(self, "IsShowCanRecovery", false)
 	rawset(self, "IsShowNewFlag", true)
+	rawset(self, "IsMaskClose", false)
 	self.IsAllowDoubleClick = false
 	if Param == nil then
 		return
@@ -203,6 +214,10 @@ function BagSlotVM:UpdateByParam(Param)
 
 	if Param.IsShowCanRecovery ~= nil then
 		rawset(self, "IsShowCanRecovery", Param.IsShowCanRecovery)
+	end
+
+	if Param.IsMaskClose ~= nil then
+		rawset(self, "IsMaskClose", Param.IsMaskClose)
 	end
 
 	if Param.IsAllowDoubleClick ~= nil then

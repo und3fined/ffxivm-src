@@ -17,9 +17,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local ProtoRes = require("Protocol/ProtoRes")
-local ItemVM = require("Game/Item/ItemVM")
 local CommercializationRandCfg = require("TableCfg/CommercializationRandCfg")
-local HairUnlockCfg = require("TableCfg/HairUnlockCfg")
 local StoreMgr = require("Game/Store/StoreMgr")
 local UIBinderSetTextFormatForScore = require("Binder/UIBinderSetTextFormatForScore")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
@@ -35,7 +33,6 @@ local StoreMainVM = _G.StoreMainVM
 ---@class StoreNewBuyWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBuy CommBtnLView
----@field BtnCancel CommBtnLView
 ---@field BtnCoupons UFButton
 ---@field BtnGift UFButton
 ---@field Comm2FrameM_UIBP Comm2FrameMView
@@ -62,7 +59,6 @@ local StoreNewBuyWinView = LuaClass(UIView, true)
 function StoreNewBuyWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBuy = nil
-	--self.BtnCancel = nil
 	--self.BtnCoupons = nil
 	--self.BtnGift = nil
 	--self.Comm2FrameM_UIBP = nil
@@ -89,7 +85,6 @@ end
 function StoreNewBuyWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBuy)
-	self:AddSubView(self.BtnCancel)
 	self:AddSubView(self.Comm2FrameM_UIBP)
 	self:AddSubView(self.Comm96Slot)
 	self:AddSubView(self.Commodity)
@@ -125,7 +120,6 @@ function StoreNewBuyWinView:OnInit()
 		{ "CouponedNum", UIBinderValueChangedCallback.New(self, nil, self.OnCouponedNumChanged) },
 		{ "BuyPriceTextColor", UIBinderSetColorAndOpacityHex.New(self, self.TextPrice) },
 	}
-	self.MysteryBoxItemVM = ItemVM.New({IsCanBeSelected = true, IsShowNum = false, IsShowSelectStatus = false})
 	self.BuyPriceVM = StoreMgr:GetBuyPriceVM()
 end
 
@@ -137,47 +131,17 @@ function StoreNewBuyWinView:OnShow()
 	self.GoodsCfgData = StoreCfg:FindCfgByKey(StoreBuyWinVM.GoodsID) or StoreMainVM.SkipTempData
 	self.Comm2FrameM_UIBP:SetTitleText(LSTR(StoreDefine.BuyTipTittleText))
 	local GoodsData = nil
-	if StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
-		local TempGoodsData = table.deepcopy(StoreMainVM.SkipTempData)
-		self.Params = self.Params or {}
-		self.Params.IsShowGiftBtn = false
-		--- 盲盒的购买界面图片用单独的
-		TempGoodsData.Icon = TempGoodsData.BuyIcon
-		GoodsData = {Cfg = TempGoodsData}
-		self.TextSlotList:SetText(LSTR(950084))		--- 随机获得
-		self.TextSlot:SetText(LSTR(950085))	--- 必得
-		UIUtil.SetIsVisible(self.BtnGift, false)
-		if StoreMainVM.SkipTempData ~= nil and StoreMainVM.SkipTempData.PrizePoolID ~= nil then
-			local TempRandCfg = CommercializationRandCfg:FindAllCfg(string.format("PrizePoolID=%d and ProbMode=%d", StoreMainVM.SkipTempData.PrizePoolID, ProtoRes.PROBABILITY_TYPE.PROBABILITY_TYPE_GUARANTEED))[1]
-			self.MysteryBoxItemVM:UpdateVM({ResID = TempRandCfg.DropID})
-		end
-		self.Comm96Slot:SetParams({ Data = self.MysteryBoxItemVM})
-
-		local Items = StoreMainVM.ContainsItemList:GetItems()
-		for _, value in ipairs(Items) do
-			local TempCfg = HairUnlockCfg:FindCfgByItemID(value.ResID)
-			if TempCfg ~= nil then
-				value.Icon = _G.StoreMgr:GetHairIconByHairID(TempCfg.HairID)
-			end
-		end
-		-- self.TextPrice:SetText(StoreMainVM.BuyGoodPriceText)
-		--self.TextOriginalPrice:SetText(StoreMainVM.OriginalPriceText)
-		self.TextType:SetText(ProtoEnumAlias.GetAlias(ProtoRes.StoreMall, ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX))
-		--UIUtil.SetIsVisible(self.PanelOriginalPrice, StoreMainVM.PanelOriginalVisible)
-	else
-		if nil ~= self.GoodsCfgData then
-			StoreBuyWinVM:UpdateByGoodsID(self.GoodsCfgData.ID)
-			GoodsData = StoreMgr:GetProductDataByID(self.GoodsCfgData.ID)
-		end
-		self.TextSlotList:SetText(LSTR(950058))		--- 包含以下物品
-		StoreMgr:ChooseBestCoupon(self.GoodsCfgData)
-		StoreMainVM:UpdateCouponsSelectedState(self.GoodsCfgData)
-		if nil ~= self.GoodsCfgData then
-			self.TextType:SetText(ProtoEnumAlias.GetAlias(ProtoRes.Store_Label_Type, self.GoodsCfgData.LabelMain))
-		end
+	if nil ~= self.GoodsCfgData then
+		StoreBuyWinVM:UpdateByGoodsID(self.GoodsCfgData.ID)
+		GoodsData = StoreMgr:GetProductDataByID(self.GoodsCfgData.ID)
+	end
+	self.TextSlotList:SetText(LSTR(950058))		--- 包含以下物品
+	StoreMgr:ChooseBestCoupon(self.GoodsCfgData)
+	StoreMainVM:UpdateCouponsSelectedState(self.GoodsCfgData)
+	if nil ~= self.GoodsCfgData then
+		self.TextType:SetText(ProtoEnumAlias.GetAlias(ProtoRes.Store_Label_Type, self.GoodsCfgData.LabelMain))
 	end
 	self.BtnBuy:SetBtnName(LSTR(StoreDefine.LSTRTextKey.ConfirmPurchaseText))
-	self.BtnCancel:SetBtnName(LSTR(StoreDefine.LSTRTextKey.CancleText))
 
 	if nil ~= GoodsData then
 		self.CommodityVM:UpdateVM({GoodData = GoodsData})
@@ -194,11 +158,45 @@ function StoreNewBuyWinView:OnShow()
 	end
 	local CurrentCfgData = self.GoodsCfgData
 	if nil ~= CurrentCfgData then
-		UIUtil.SetIsVisible(self.BtnGift, StoreMgr:CanGift(CurrentCfgData.ID), true)
+		bShowGiftBtn = bShowGiftBtn and StoreMgr:CanGift(CurrentCfgData.ID)
 	end
 	UIUtil.SetIsVisible(self.BtnGift, bShowGiftBtn, true)
 	if _G.CommonDefine.bPreLoadCommRewardPannel then
 		_G.StoreMgr:PreLoadCommRewardPannel()
+	end
+
+	--处理活动沙漠炎火特殊显示
+	if self.Params then
+		if self.Params.BuyPrice and self.Params.ScoreID then
+			self.TextPrice:SetText(_G.ScoreMgr.FormatScore(self.Params.BuyPrice))
+
+			local ScoreValue = _G.ScoreMgr:GetScoreValueByID(self.Params.ScoreID)
+			if self.Params.BuyPrice > ScoreValue then
+				UIUtil.TextBlockSetColorAndOpacityHex(self.TextPrice,  "DC5868FF")
+			else
+				UIUtil.TextBlockSetColorAndOpacityHex(self.TextPrice,  "D2BA8EFF")
+			end
+
+			if self.Params.OriginalPrice then
+				self.TextOriginalPrice:SetText(_G.ScoreMgr.FormatScore(self.Params.OriginalPrice))
+				self.BuyPriceVM.bShowRawPrice = true
+			else
+				self.BuyPriceVM.bShowRawPrice = false
+			end
+		end
+
+		if not string.isnilorempty(self.Params.ShopDesc) then
+			self.TextDetails:SetText(self.Params.ShopDesc)
+		else
+			local TempCfg = self.Params.TempCfg
+			if TempCfg ~= nil then
+				self.TextDetails:SetText(TempCfg.Desc)
+			end
+		end
+	end
+
+	if StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
+		self.CommodityVM.DiscountPanelVisible = _G.StoreMysteryBoxVM.IsOnCountTime
 	end
 end
 
@@ -225,20 +223,21 @@ function StoreNewBuyWinView:OnHide()
 end
 
 function StoreNewBuyWinView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.BtnCancel, self.Hide)
 	UIUtil.AddOnClickedEvent(self, self.BtnBuy, self.OnClickBtnBuy)
 	UIUtil.AddOnClickedEvent(self, self.BtnCoupons, self.OnClickBtnCoupons)
 	UIUtil.AddOnClickedEvent(self, self.BtnGift, self.OnClickBtnGift)
-	UIUtil.AddOnClickedEvent(self, self.Comm96Slot.Btn, self.OnClickMysteryBoxItem)
+	-- UIUtil.AddOnClickedEvent(self, self.Comm96Slot.Btn, self.OnClickMysteryBoxItem)
 end
 
 function StoreNewBuyWinView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.UpdateScore, self.OnScoreUpdate)
 end
 
-function StoreNewBuyWinView:OnClickMysteryBoxItem()
-	ItemTipsUtil.ShowTipsByResID(self.MysteryBoxItemVM.ResID, self.Comm96Slot, {X = 0, Y = 0})
-end
+-- function StoreNewBuyWinView:OnClickMysteryBoxItem()
+	-- if self.MysteryBoxItemVM.ResID ~= nil then
+	-- 	ItemTipsUtil.ShowTipsByResID(self.MysteryBoxItemVM.ResID, self.Comm96Slot, {X = 0, Y = 0})
+	-- end
+-- end
 
 function StoreNewBuyWinView:OnEquipPartSelectChanged(Index, ItemData, ItemView)
 	ItemData.IsSelect = false
@@ -251,6 +250,13 @@ function StoreNewBuyWinView:OnEquipPartSelectChanged(Index, ItemData, ItemView)
 end
 
 function StoreNewBuyWinView:OnClickBtnBuy()
+
+	if self.Params and self.Params.ClickedBuyCallBack then
+		self.Params.ClickedBuyCallBack()
+		self:Hide()
+		return
+	end
+
 	_G.StoreMgr:CheckPurchasePreconditions(self.GoodsCfgData)
 	if nil ~= StoreMainVM.CurrentSelectedItem then
 		StoreUtil.ReportPurchaseClickFlow(StoreMainVM.CurrentSelectedItem.GoodID,

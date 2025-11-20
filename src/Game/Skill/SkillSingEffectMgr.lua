@@ -143,6 +143,10 @@ function SkillSingEffectMgr:PlaySingEffect(EntityID, SingID, TargetIDs, PlayRate
     if CurrentEntityIDEffect == nil then
         self.CurrentEntityIDEffects[EntityID] = {}
     end
+    
+    if self.CurrentEntityIDEffects[EntityID] == nil then
+        self.CurrentEntityIDEffects[EntityID] = {}
+    end
     self.CurrentEntityIDEffects[EntityID][SingEffectID] = true
     self.SingEffectMap[SingEffectID] = SingCellObject
 

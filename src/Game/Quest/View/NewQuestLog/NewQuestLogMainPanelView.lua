@@ -44,11 +44,13 @@ local UIViewMgr = _G.UIViewMgr
 ---@field BtnScreener UFButton
 ---@field BtnScreenerHighlight UFButton
 ---@field BtnSearcher UFButton
----@field BtnTaskCompleted UFButton
+---@field CommScreenerBtn CommScreenerBtnView
+---@field CommonBkg02_UIBP CommonBkg02View
+---@field CommonBkgMask_UIBP CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field ImgPen UFImage
 ---@field PanelRibbon UFCanvasPanel
 ---@field PanelScreener UFCanvasPanel
----@field PanelTaskCompleted UFCanvasPanel
 ---@field PaneldRecommendBtn UFCanvasPanel
 ---@field QuestList UTableView
 ---@field QuestTypeTabs CommVerIconTabsView
@@ -60,15 +62,11 @@ local UIViewMgr = _G.UIViewMgr
 ---@field TaskList UFCanvasPanel
 ---@field TextGoTask UFTextBlock
 ---@field TextNo UFTextBlock
----@field TextPageName UFTextBlock
 ---@field TextTaskTitle UFTextBlock
----@field TextTitleName UFTextBlock
 ---@field ToggleBtnSorting UToggleButton
 ---@field WidgetSwitcher UFWidgetSwitcher
 ---@field AnimIn UWidgetAnimation
----@field AnimQuestListSelectionChanged UWidgetAnimation
 ---@field AnimSwitcherChange UWidgetAnimation
----@field AnimUpdateTitle UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local NewQuestLogMainPanelView = LuaClass(UIView, true)
 
@@ -80,11 +78,13 @@ function NewQuestLogMainPanelView:Ctor()
 	--self.BtnScreener = nil
 	--self.BtnScreenerHighlight = nil
 	--self.BtnSearcher = nil
-	--self.BtnTaskCompleted = nil
+	--self.CommScreenerBtn = nil
+	--self.CommonBkg02_UIBP = nil
+	--self.CommonBkgMask_UIBP = nil
+	--self.CommonTitle = nil
 	--self.ImgPen = nil
 	--self.PanelRibbon = nil
 	--self.PanelScreener = nil
-	--self.PanelTaskCompleted = nil
 	--self.PaneldRecommendBtn = nil
 	--self.QuestList = nil
 	--self.QuestTypeTabs = nil
@@ -96,15 +96,11 @@ function NewQuestLogMainPanelView:Ctor()
 	--self.TaskList = nil
 	--self.TextGoTask = nil
 	--self.TextNo = nil
-	--self.TextPageName = nil
 	--self.TextTaskTitle = nil
-	--self.TextTitleName = nil
 	--self.ToggleBtnSorting = nil
 	--self.WidgetSwitcher = nil
 	--self.AnimIn = nil
-	--self.AnimQuestListSelectionChanged = nil
 	--self.AnimSwitcherChange = nil
-	--self.AnimUpdateTitle = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -112,6 +108,10 @@ function NewQuestLogMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnClose)
+	self:AddSubView(self.CommScreenerBtn)
+	self:AddSubView(self.CommonBkg02_UIBP)
+	self:AddSubView(self.CommonBkgMask_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.QuestTypeTabs)
 	self:AddSubView(self.ScreenerBar)
 	self:AddSubView(self.SearchBar)
@@ -189,6 +189,11 @@ function NewQuestLogMainPanelView:OnShow()
 	self.SearchBar:SetHintText(LSTR(390041))
 
 	--UIUtil.SetIsVisible(self.BtnTaskCompleted, false)
+
+	-- 替换新版Screener
+	UIUtil.SetIsVisible(self.CommScreenerBtn, true)
+	UIUtil.SetIsVisible(self.BtnScreener, false)
+	UIUtil.SetIsVisible(self.BtnScreenerHighlight, false)
 end
 
 function NewQuestLogMainPanelView:OnHide()
@@ -203,6 +208,7 @@ function NewQuestLogMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnSelectionChangedEvent(self, self.QuestTypeTabs, self.OnTypeTabSelectChanged)
 	UIUtil.AddOnClickedEvent(self, self.BtnScreener, self.OnClickButtonScreener)
 	UIUtil.AddOnClickedEvent(self, self.BtnScreenerHighlight, self.OnClickButtonScreener)
+	UIUtil.AddOnStateChangedEvent(self, self.CommScreenerBtn, self.OnClickButtonScreener)
 	UIUtil.AddOnClickedEvent(self, self.BtnGoRecommendTask, self.OnClickButtonGoRecommendTask)
 	self.SearchBar:SetCallback(self, nil, self.OnSearchTextCommitted, self.OnClickCancelSearchBar)
 end
@@ -248,7 +254,7 @@ function NewQuestLogMainPanelView:OnTypeTabSelectChanged(Index, _, _, IsByClick)
 
 	local QuestType = ItemData:GetType()
 	local Name = QuestDefine.QuestTypeNames[QuestType]
-	self.TextPageName:SetText(Name)
+	self.CommonTitle:SetTextSubtitle(Name)
 	QuestLogVM:ChangeType(QuestType, true)
 
 	self:CheckSwitchToEmpty()
@@ -272,23 +278,35 @@ function NewQuestLogMainPanelView:OnBtnBackClicked()
 	self:SwitchLog(true)
 	UIUtil.SetIsVisible(self.BtnBack, false)
 	UIUtil.SetIsVisible(self.BtnClose, true, true)
-	--UIUtil.SetIsVisible(self.PanelTaskCompleted, true)
-	self:PlayAnimation(self.AnimUpdateTitle)
 end
 
 function NewQuestLogMainPanelView:OnBtnTaskCompletedClicked()
 	self:ResetFilterAndSearch()
 	self:SwitchLog(false)
 	UIUtil.SetIsVisible(self.BtnBack, true, true)
-	--UIUtil.SetIsVisible(self.PanelTaskCompleted, false)
 	UIUtil.SetIsVisible(self.BtnClose, false)
-	self:PlayAnimation(self.AnimUpdateTitle)
 	_G.QuestMgr.QuestReport:ReportTaskLog(5)
 end
 
 function NewQuestLogMainPanelView:OnClickButtonScreener()
 	local SystemRelated = self.CurrentTabSelectIndex or 1
-	_G.UIViewMgr:ShowView(UIViewID.ScreenerWin, {RelatedSystem = ProtoRes.ScreenerRelatedSystem.QUEST_SYSTEM, SystemRelatedValue = SystemRelated})
+	_G.UIViewMgr:ShowView(UIViewID.ScreenerWin,
+		{
+			RelatedSystem = ProtoRes.ScreenerRelatedSystem.QUEST_SYSTEM,
+			SystemRelatedValue = SystemRelated,
+			ScreenerSelectedInfo = self.ScreenerSelectedInfo
+		}
+	)
+	self:UpdateCommScreenerToggleStatus()
+end
+
+function NewQuestLogMainPanelView:UpdateCommScreenerToggleStatus()
+	local ScreenerSelectedInfo = self.ScreenerSelectedInfo
+	if ScreenerSelectedInfo and next(ScreenerSelectedInfo) then
+		self.CommScreenerBtn:SetChecked(true)
+	else
+		self.CommScreenerBtn:SetChecked(false)
+	end
 end
 
 function NewQuestLogMainPanelView:OnClickButtonGoRecommendTask()
@@ -333,6 +351,8 @@ function NewQuestLogMainPanelView:OnSearchTextCommitted(SearchText, Type)
 		QuestLogVM:SetFilterList(ScreenerList, FilterTypeDefine.Search)
 		QuestLogVM:SetSearchText(SearchText)
 		_G.QuestMgr.QuestReport:ReportTaskLog(6, nil, nil, QuestLogVM.bLogInProgress and 1 or 2)
+		self.ScreenerSelectedInfo = {}
+		self:UpdateCommScreenerToggleStatus()
 	end
 
 	self:SwitchLog(QuestLogVM.bLogInProgress)
@@ -346,25 +366,30 @@ function NewQuestLogMainPanelView:OnScreenerResult(Param)
 	if not QuestLogVM then
 		return
 	end
+	self.ScreenerSelectedInfo = Param and Param.ScreenerList or {}
+	self:UpdateCommScreenerToggleStatus()
 
 	if not Param or (not Param.Result and not Param.ScreenerList) then
-		UIUtil.SetIsVisible(self.ScreenerBar, false)
-		UIUtil.SetIsVisible(self.SearchBar, true)
+		--UIUtil.SetIsVisible(self.ScreenerBar, false)
+		--UIUtil.SetIsVisible(self.SearchBar, true)
 
 		QuestLogVM:SetFilterList(nil)
 	else
-		UIUtil.SetIsVisible(self.ScreenerBar, true)
-		UIUtil.SetIsVisible(self.SearchBar, false)
+		--UIUtil.SetIsVisible(self.ScreenerBar, true)
+		--UIUtil.SetIsVisible(self.SearchBar, false)
 
 		self.SearchBar:SetText("")
-		self.ScreenerBar:OnScreenerAction(Param) --特殊处理,避免ScreenerBar注册时机晚了没处理ScreenerResult事件
+		--self.ScreenerBar:OnScreenerAction(Param) --特殊处理,避免ScreenerBar注册时机晚了没处理ScreenerResult事件
 
 		local ScreenerList = {}
 		if Param.Result then
 			for i = 1, #Param.Result do
 				---@type c_quest_chapter_cfg
 				local ScreenerResult = Param.Result[i]
-				ScreenerList[ScreenerResult.id] = true
+				local id = ScreenerResult.id
+				if id ~= nil then
+					ScreenerList[id] = true
+				end
 			end
 		end
 		QuestLogVM:SetFilterList(ScreenerList, FilterTypeDefine.Filter)
@@ -388,10 +413,13 @@ local SEARCH_TOO_MUCH_TEXT	 	= LSTR(390003)
 ---判断是否显示空界面
 function NewQuestLogMainPanelView:CheckSwitchToEmpty()
 	-- 1. 检索结果太多，也当作空状态处理
+	-- 去掉50条限制
+	--[[
 	if QuestLogVM.FilterList and QuestLogVM.CurrTypeChapterVMs:Length() > 50 then
 		self:SetEmptyStateDisplay(SEARCH_EMPTY_PATH, SEARCH_TOO_MUCH_TEXT)
 		return
 	end
+	]]
 
 	-- 2. 当前类型有任务
 	if QuestLogVM.CurrTypeChapterVMs:Length() > 0 then
@@ -522,7 +550,7 @@ function NewQuestLogMainPanelView:UpdateQuestTitle(NewValue, OldValue)
 		TitleText = LSTR(390005)
 	end
 
-	self.TextTitleName:SetText(TitleText)
+	self.CommonTitle:SetTextTitleName(TitleText)
 end
 
 function NewQuestLogMainPanelView:OnFilterTypeChanged(NewValue, OldValue)
@@ -536,6 +564,8 @@ function NewQuestLogMainPanelView:SwitchLog(bLogInProgress, ChapterID, QuestType
 
 	self:UpdateCategoryInfo(bLogInProgress)
 	QuestLogVM:SwitchLogData(bLogInProgress, ChapterID, QuestType)
+
+	--self.QuestTypeTabs:UpdateItems(QuestLogVM.QuestTypeVMList)
 
 	local SelectedType = QuestLogVM:GetSelectedType(bLogInProgress)
 	self:UpdateQuestTypeSelection(SelectedType)
@@ -595,7 +625,7 @@ function NewQuestLogMainPanelView:UpdateQuestTypeSelection(QuestType)
 		return v:GetType() == QuestType
 	end)
 	local Name = QuestDefine.QuestTypeNames[QuestType]
-	self.TextPageName:SetText(Name)
+	self.CommonTitle:SetTextSubtitle(Name)
 
 	self.QuestTypeTabs:SetSelectedIndex(Index or 1)
 

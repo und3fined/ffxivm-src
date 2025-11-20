@@ -141,7 +141,7 @@ function PersonPortraitModelEditPanelView:OnInit()
 		end
 	end
 
-	local MoveStep = 0.5 
+	local MoveStep = 0.2
 	local MoveCBFunc = function(NormalVector)
 		local CurMove = PersonPortraitVM.CurModelEditVM.Move
 		if nil == CurMove then
@@ -354,6 +354,10 @@ end
 function PersonPortraitModelEditPanelView:OnStateChangedToggleFace(ToggleButton, State)
 	local IsChecked = UIUtil.IsToggleButtonChecked(State)
 	self:UpdateFaceState(IsChecked)
+
+
+	-- "已开启面向镜头"、"已关闭面向镜头"
+	MsgTipsUtil.ShowTips(IsChecked and LSTR(60021) or LSTR(60022))
 end
 
 function PersonPortraitModelEditPanelView:UpdateFaceState(IsChecked)
@@ -370,14 +374,15 @@ function PersonPortraitModelEditPanelView:UpdateFaceState(IsChecked)
 	end
 
 	self:UpdateLookAtType()
-
-	-- "已开启面向镜头"、"已关闭面向镜头"
-	MsgTipsUtil.ShowTips(IsChecked and LSTR(60021) or LSTR(60022))
 end
 
 ---看向镜头/取消看向镜头(视线)
 function PersonPortraitModelEditPanelView:OnStateChangedToggleLook(ToggleButton, State)
-	self:UpdateLookState(UIUtil.IsToggleButtonChecked(State))
+	local IsChecked = UIUtil.IsToggleButtonChecked(State)
+	self:UpdateLookState(IsChecked)
+
+	-- "已开启看向镜头" 、"已关闭看向镜头"
+	MsgTipsUtil.ShowTips(IsChecked and LSTR(60024) or LSTR(60025))
 end
 
 function PersonPortraitModelEditPanelView:UpdateLookState(IsChecked)
@@ -394,9 +399,6 @@ function PersonPortraitModelEditPanelView:UpdateLookState(IsChecked)
 	end
 
 	self:UpdateLookAtType()
-
-	-- "已开启看向镜头" 、"已关闭看向镜头"
-	MsgTipsUtil.ShowTips(IsChecked and LSTR(60024) or LSTR(60025))
 end
 
 ---重置面向设置
@@ -406,7 +408,7 @@ function PersonPortraitModelEditPanelView:OnClickButtonFaceReset()
 	end
 
 	self.IsFaceReset = true
-	self.ToggleBtnFace:SetChecked(false)
+	self.ToggleBtnFace:SetChecked(false, false)
 	self:UpdateFaceState(false)
 
 	self:ResetLookAtType()
@@ -420,7 +422,7 @@ function PersonPortraitModelEditPanelView:OnClickButtonLookReset()
 	end
 
 	self.IsLookReset = true
-	self.ToggleBtnLook:SetChecked(false)
+	self.ToggleBtnLook:SetChecked(false, false)
 	self:UpdateLookState(false)
 
 	self:ResetLookAtType()

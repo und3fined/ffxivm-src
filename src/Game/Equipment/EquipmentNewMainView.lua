@@ -4,35 +4,27 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local ProtoCS = require("Protocol/ProtoCS")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local EquipmentMgr = _G.EquipmentMgr
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
-local UIAdapterToggleGroup = require("UI/Adapter/UIAdapterToggleGroup")
 local CommonUtil = require("Utils/CommonUtil")
-local USaveMgr = _G.UE.USaveMgr
-local SaveKey = require("Define/SaveKey")
 local EffectUtil = require("Utils/EffectUtil")
 local TeamDefine = require("Game/Team/TeamDefine")
 local ProfUtil = require("Game/Profession/ProfUtil")
 local ProfMgr = require("Game/Profession/ProfMgr")
 local PersonInfoMgr = require("Game/PersonInfo/PersonInfoMgr")
-local ScoreMgr = require("Game/Score/ScoreMgr")
-local TipsUtil = require("Utils/TipsUtil")
-local ProfModelCfg = require("TableCfg/ProfModelCfg")
 local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local ProfIdleCfg = require("TableCfg/CharasysProfIdleCfg")
 local ClientSetupID = require("Game/ClientSetup/ClientSetupID")
-local SettingsTabRole = require("Game/Settings/SettingsTabRole")
 local CameraControlDefine = require("Game/Common/Render2D/CameraControlDefine")
 local EquipmentCameraControlDataLoader = require("Game/Equipment/EquipmentCameraControlDataLoader")
 local ModelDefine = require("Game/Model/Define/ModelDefine")
-local LightDefine = require("Game/Light/LightDefine")
 local SystemLightCfg = require("TableCfg/SystemLightCfg")
+local CommStatAnimCfg = require("TableCfg/CommStatAnimCfg")
+local AnimationUtil = require("Utils/AnimationUtil")
 
 --@ViewModel
 local EquipmentMainVM = require("Game/Equipment/VM/EquipmentMainVM")
-local EquipmentJobBtnItemVM = require("Game/Equipment/VM/EquipmentJobBtnItemVM")
 local EquipmentPageTabVM = require("Game/Equipment/VM/EquipmentPageTabVM")
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
 local CameraFocusCfgMap = require("Game/Equipment/VM/CameraFocusCfgMap")
@@ -51,12 +43,6 @@ local ObjectGCType = require("Define/ObjectGCType")
 local LSTR = _G.LSTR
 
 local EquipmentNewMainView = LuaClass(UIView, true)
-
-local CommBtnColorType = {
-	Normal = 0, -- 普通 灰色
-	Recommend = 1, -- 推荐 绿色
-	Disable = 2, -- 禁用状态
-}
 
 local PageType =
 {
@@ -89,6 +75,7 @@ function EquipmentNewMainView:OnRegisterSubView()
 	self:AddSubView(self.CloseBtn)
 	self:AddSubView(self.CommonRedDot)
 	self:AddSubView(self.CommonRedDotPersonInfo)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Common_Render2D_UIBP)
 	self:AddSubView(self.ProfTableViewNew)
 	self:AddSubView(self.RoleProfPage)
@@ -188,7 +175,7 @@ function EquipmentNewMainView:UpdateProfList()
 	if self.CurProfID == self.ViewModel.ProfID  then 
 		return
 	end
-
+	local MajorRoleDetail = _G.ActorMgr:GetMajorRoleDetail()
 	---初始化左边职业列表
 	local ProfList = {}
 	if EquipmentVM.lstProfDetail ~= nil then
@@ -219,6 +206,7 @@ function EquipmentNewMainView:UpdateProfList()
 						ProfVM.IconPath = ProfUtil.GetProfIconBySelected(ItemData.Prof, false)
 						ProfVM.SelectIcon = ProfUtil.GetProfIconBySelected(ItemData.Prof, true)
 						ProfVM.ID = ItemData.Prof
+						ProfVM.IsLock = nil == MajorRoleDetail or nil == MajorRoleDetail.Prof.ProfList[ItemData.Prof]
 						ProfVM.ConditionData = ItemData.Prof
 						ProfVM.ConditionFunc = function(Data)
 							if not _G.ProfMgr:CanChangeProf(Data, true, false)then
@@ -242,6 +230,7 @@ function EquipmentNewMainView:UpdateProfList()
 							ProfVM.IconPath = ProfUtil.GetProfIconBySelected(ItemData.Prof, false)
 							ProfVM.SelectIcon = ProfUtil.GetProfIconBySelected(ItemData.Prof, true)
 							ProfVM.ID = ItemData.Prof
+							ProfVM.IsLock = nil == MajorRoleDetail or nil == MajorRoleDetail.Prof.ProfList[ItemData.Prof]
 							if not IsAdvancedProf then
 								ProfVM.RedDotData = {}
 								ProfVM.RedDotType = "Equipment"
@@ -286,6 +275,7 @@ function EquipmentNewMainView:UpdateProfList()
 	self.CurProfID = self.ViewModel.ProfID
 
 	self.ProfTableViewNew:UpdateItems(ProfList, MajorIndex > 0 and MajorIndex or 1)
+	self.ProfTableViewNew:ScrollIndexIntoView(MajorIndex)
 end
 
 function EquipmentNewMainView:InitText()
@@ -297,19 +287,19 @@ function EquipmentNewMainView:OnShow()
 	if nil ~= self.Params and nil ~= self.Params.bPlayAnimIn then
 		bPlayAnimIn = self.Params.bPlayAnimIn
 	end
-	self.TextTitle:SetText(LSTR(1050155))
-	if bPlayAnimIn then		
+	UIUtil.SetIsVisible(self.PanelMask3, true)
+	self.CommonTitle.TextTitleName:SetText(LSTR(1050155))
+	if bPlayAnimIn then
 		self:PlayAnimation(self.AnimIn0)
 		self.IsInAnimation = true
 		local EndTime = self.AnimIn0:GetEndTime()
+		self.TabList:SetVisibility(_G.UE.ESlateVisibility.HitTestInvisible)
 		self:RegisterTimer(function()
 			self.IsInAnimation = false
-			_G.EventMgr:SendEvent(_G.EventID.EquipmentAnimFinish)
+			self.TabList:SetVisibility(_G.UE.ESlateVisibility.Visible)
 		end, EndTime + 0.1, 0, 1)
-	else
-		_G.EventMgr:SendEvent(_G.EventID.EquipmentAnimFinish)
 	end
-
+	CommonUtil.DisableShowJoyStick(true)
 	self:ExecuteAllCallbacks()
 	self.Common_Render2D_UIBP.bCreateNewBackground = true
 	self.Common_Render2D_UIBP.bCreateShandowActor = true
@@ -350,11 +340,15 @@ function EquipmentNewMainView:OnShow()
 
 	---初始化左边职业列表	
 	local RoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+	local InitPage = PageType.Attribute
 	if self.Params and not self.Params.bPreviewIn then
 		_G.EquipmentMgr:SetPreviewProfID(false, MajorUtil.GetMajorProfID())
+	elseif self.Params and self.Params.bPreviewIn then
+		self.ViewModel.bUnlockProf = true
+		InitPage = PageType.SimpleMain
 	end
 	if RoleDetail and RoleDetail.Prof and RoleDetail.Prof.ProfList then
-		EquipmentVM.lstProfDetail = RoleDetail.Prof.ProfList		
+		EquipmentVM.lstProfDetail = RoleDetail.Prof.ProfList
 	end
 	self:UpdateProfList(true)
 
@@ -363,7 +357,7 @@ function EquipmentNewMainView:OnShow()
 	self.ActivePage = PageType.None
 
 	-- 初始化页面
-	self:SwitchPage(PageType.Attribute, true)
+	self:SwitchPage(InitPage, true)
 
 	--根据种族取对应的RenderActor
 	local RenderActorPathForRace = string.format(ModelDefine.StagePath.Universe, self.ViewModel.AttachType, self.ViewModel.AttachType)
@@ -452,8 +446,11 @@ function EquipmentNewMainView:OnHide()
 	-- local LightLevelID = LightDefine.LightLevelID.LIGHT_LEVEL_ID_EQUIP
 	-- _G.LightMgr:UnLoadLightLevel(LightLevelID)
 	_G.EquipmentMgr:SetPreviewProfID(false, nil)
+	CommonUtil.DisableShowJoyStick(false)
 	UIViewMgr:HideView(UIViewID.CommGetWayTipsView)
 	self.EquipDetailPageShow = false
+	self.HoldLoopAnimProf = nil
+	UIUtil.SetIsVisible(self.PanelMask3, false)
 end
 
 function EquipmentNewMainView:OnRegisterUIEvent()
@@ -473,6 +470,7 @@ function EquipmentNewMainView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.StrongestEquipUpdate, self.OnStrongestEquipUpdate)
 	self:RegisterGameEvent(_G.EventID.SwitchLockProf, self.OnLockProfSelect)
     self:RegisterGameEvent(_G.EventID.SkillSystemProfRedDotChange, self.OnSkillSystemProfRedDotChange)
+	self:RegisterGameEvent(_G.EventID.UIStateChange, self.ActiveRenderActor)
 	self:RegisterGameEvent(_G.EventID.HideUI, self.OnViewHide)
 	self:RegisterGameEvent(_G.EventID.StartDialog, self.Hide)
 	self:RegisterGameEvent(_G.EventID.WorldPostLoad, self.Hide)
@@ -612,10 +610,87 @@ function EquipmentNewMainView:OnBtnPoseClick(ToggleButton, ButtonState)
 	self:ShowPoseStyleTips(IsShow)
 end
 
-function EquipmentNewMainView:PoseStyleSwitch(ButtonState)
+function EquipmentNewMainView:PoseStyleSwitch(ButtonState, Inpart)
 	self.ViewModel.bIsHoldWeapon = ButtonState == _G.UE.EToggleButtonState.Checked
-	self.Common_Render2D_UIBP:HoldOnWeapon(self.ViewModel.bIsHoldWeapon)
+	local ProfClass = ProfUtil.GetProfClass(self.ViewModel.ProfID)
+	if self.Common_Render2D_UIBP and self.Common_Render2D_UIBP.UIComplexCharacter then
+		if ProfClass == ProtoCommon.class_type.CLASS_TYPE_CARPENTER then
+			self.Common_Render2D_UIBP:HoldOnWeapon(false)
+			local Comp = self.Common_Render2D_UIBP.UIComplexCharacter:GetAnimationComponent()
+			if self.ViewModel.bIsHoldWeapon then
+				self.HoldLoopAnimProf = self:PlayEnterAnimByProf(Comp, Inpart)
+			else
+				if self.HoldLoopAnimProf and CommonUtil.IsObjectValid(self.HoldLoopAnimProf) then
+					self.HoldLoopAnimProf = nil
+					self:PlayExitAnimByProf(self.ViewModel.ProfID, Comp, Inpart)
+				end
+			end
+		else
+			if self.HoldLoopAnimProf and CommonUtil.IsObjectValid(self.HoldLoopAnimProf)then
+				local Comp = self.Common_Render2D_UIBP.UIComplexCharacter:GetAnimationComponent()
+				if Comp then
+					Comp:StopMontage(self.HoldLoopAnimProf)
+					self.HoldLoopAnimProf = nil
+				end
+			end
+			self.Common_Render2D_UIBP:HoldOnWeapon(self.ViewModel.bIsHoldWeapon)
+		end
+	end
 	self:UpdateWeaponHideState()
+end
+
+function EquipmentNewMainView:PlayEnterAnimByProf(Comp, Inpart)
+	local Section = ""
+	local RecipeAnimDataTable = CommStatAnimCfg:FindAllCfg("ProfID = "..tostring(self.ViewModel.ProfID))
+	if RecipeAnimDataTable == nil then
+		_G.FLOG_ERROR("[EquipmentNewMainView]PoseStyleSwitch Cant Find Anim, Prof =" .. self.ViewModel.ProfID)
+		return
+	end
+	local RecipeAnimData = RecipeAnimDataTable[1]
+	if Inpart then
+		if Inpart == ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND then
+			RecipeAnimData = RecipeAnimDataTable[1]
+		elseif Inpart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND then
+			RecipeAnimData = RecipeAnimDataTable[2]
+		end
+	end
+	local EnterAnimStr = AnimationUtil.ConvertToTruePath(RecipeAnimData and RecipeAnimData.EnterAnim or "")
+	local EnterAnim = _G.ObjectMgr:LoadObjectSync(EnterAnimStr, ObjectGCType.LRU)
+	local LoopAnimStr = AnimationUtil.ConvertToTruePath(RecipeAnimData and RecipeAnimData.LoopAnim or "")
+	local LoopAnim = _G.ObjectMgr:LoadObjectSync(LoopAnimStr, ObjectGCType.LRU)
+	if not EnterAnim or not LoopAnim then
+		FLOG_ERROR("[EquipmentNewMainView] Can not Find Anim[%s] or Anim[%s]", EnterAnimStr, LoopAnimStr)
+		return 
+	end
+	local DynamicMontage = AnimationUtil.CreateLoopDynamicMontage(EnterAnim, LoopAnim, "WholeBody")
+	return AnimationUtil.PlayMontage(Comp, DynamicMontage, "WholeBody", nil, nil, Section)
+end
+
+function EquipmentNewMainView:PlayExitAnimByProf(Prof, Comp, Inpart)
+	local RecipeAnimDataTable = CommStatAnimCfg:FindAllCfg("ProfID = "..tostring(self.ViewModel.ProfID))
+	if RecipeAnimDataTable == nil then
+		FLOG_ERROR("[EquipmentNewMainView:PlayExitAnim] AnimID is invalid ProfID = " .. Prof)
+		return
+	end
+
+	local RecipeAnimData = RecipeAnimDataTable[1]
+	if Inpart then
+		if Inpart == ProtoCommon.equip_part.EQUIP_PART_MASTER_HAND then
+			RecipeAnimData = RecipeAnimDataTable[1]
+		elseif Inpart == ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND then
+			RecipeAnimData = RecipeAnimDataTable[2]
+		end
+	end
+
+	local ExitAnimStr = AnimationUtil.ConvertToTruePath(RecipeAnimData.ExitAnim)
+	local ExitAnim = _G.ObjectMgr:LoadObjectSync(ExitAnimStr, ObjectGCType.LRU)
+
+	if not ExitAnim then
+		FLOG_ERROR("[EquipmentNewMainView:PlayExitAnim] Can not Find Anim[%s]", ExitAnimStr)
+		return 
+	end
+
+	AnimationUtil.PlayMontage(Comp, ExitAnim, "WholeBody", nil, nil, "")
 end
 
 function EquipmentNewMainView:ShowPoseStyleTips()
@@ -658,21 +733,20 @@ function EquipmentNewMainView:OnMajorProfSwitch(Params)
 		self.Common_Render2D_UIBP:ReSetFovTarget()
 		self.SkillMainPanel:OnSelectedProfChange(Params.ProfID)
 	end
-
 	self.ViewModel:SetProfSpecialization(RoleInitCfg:FindProfSpecialization(Params.ProfID))
 	self.ViewModel.bUnlockProf = false
 	local VfxParameter = _G.UE.FVfxParameter()
 	local ChildActor = self.Common_Render2D_UIBP:GetCharacter()
-	VfxParameter.VfxRequireData.VfxTransform = ChildActor:GetTransform()
-    VfxParameter.VfxRequireData.EffectPath = TeamDefine.ProfChgEffect
-    local AttachPointType_Body = _G.UE.EVFXAttachPointType.PlaySourceType_Equip
-    VfxParameter:SetCaster(ChildActor, 0, AttachPointType_Body, 0)
-    _G.ProfMgr.ProfChgEffectID = EffectUtil.PlayVfx(VfxParameter)
+	if ChildActor then
+		VfxParameter.VfxRequireData.VfxTransform = ChildActor:GetTransform()
+		VfxParameter.VfxRequireData.EffectPath = TeamDefine.ProfChgEffect
+		local AttachPointType_Body = _G.UE.EVFXAttachPointType.PlaySourceType_Equip
+		VfxParameter:SetCaster(ChildActor, 0, AttachPointType_Body, 0)
+		_G.ProfMgr.ProfChgEffectID = EffectUtil.PlayVfx(VfxParameter)
+	end
 	EquipmentVM.bShowProfDetail = false
 	--更新红点
-	local RoleRedTable = _G.EquipmentMgr:GetRoleRedDotData()
-	local HasRolePoint  = RoleRedTable[self.ViewModel.ProfID]
-	_G.EquipmentMgr:SetRedDot(7010, HasRolePoint)
+	self:UpdateTabListRedPoint()
 end
 
 function EquipmentNewMainView:SetAssembleCallBack(Function)
@@ -765,10 +839,14 @@ function EquipmentNewMainView:OnSkillSystemProfRedDotChange(Param)
 	_G.EquipmentMgr:SetRedDot(7201, Param.bRedDotVisible)
 end
 
-function EquipmentNewMainView:OnViewHide(ViewID)
-	if ViewID == UIViewID.CurrencySummary or ViewID == UIViewID.PersonInfoMainPanel or ViewID == UIViewID.MagicsparInlayMainPanel then
+function EquipmentNewMainView:ActiveRenderActor(Params)
+	if Params.ViewID == UIViewID.EquipmentMainPanel and Params.Visible then
 		self.Common_Render2D_UIBP:OnActive()
-	elseif ViewID == UIViewID.LegendaryWeaponPanel then
+	end
+end
+
+function EquipmentNewMainView:OnViewHide(ViewID)
+	if ViewID == UIViewID.LegendaryWeaponPanel then
 		local CameraMgr = _G.UE.UCameraMgr.Get()
 		if CameraMgr ~= nil then
 			CameraMgr:SwitchCamera(self.Common_Render2D_UIBP.RenderActor, 0)
@@ -782,7 +860,7 @@ function EquipmentNewMainView:OnLockProfSelect(Data)
 	self.Common_Render2D_UIBP:HidePlayer(Data.IsUnlock)
 	_G.EquipmentMgr:SetPreviewProfID(self.IsPreview, Data.ProfID)
 	self.ViewModel:SetProf(Data.ProfID)
-	if self.SkillMainPanel and UIUtil.IsVisible(self.SkillMainPanel) then
+	if Data.IsUnlock and self.SkillMainPanel and UIUtil.IsVisible(self.SkillMainPanel) then
 		self.Common_Render2D_UIBP:ReSetFovTarget()
 		self.SkillMainPanel:OnSelectedProfChange(Data.ProfID)
 	end
@@ -805,10 +883,8 @@ function EquipmentNewMainView:OnLockProfSelect(Data)
 		end
 		self:InitTabList(Data.IsUnlock, PageIndex, true)
 	end
+	self:PoseStyleSwitch(0)
 	self.ViewModel.bUnlockProf = Data.IsUnlock
-	if Data.IsUnlock then
-		--改成图片等设计，模型暂时注释提前开发
-	end
 end
 
 
@@ -844,6 +920,15 @@ function EquipmentNewMainView:InitTabList(isUnlock, SelectIndex, ReCreate)
 	self.ViewModel.TabList = TabList
 	self.AdapterTabTableView:ScrollToTop()
 	self.AdapterTabTableView:SetSelectedIndex(SelectIndex or 1)
+end
+
+function EquipmentNewMainView:UpdateTabListRedPoint()
+	local SkillRedDotNum = _G.SkillSystemMgr:GetProfRedDotNum(self.ViewModel.ProfID)
+	_G.EquipmentMgr:SetRedDot(7201, SkillRedDotNum > 0)
+	--装备红点
+	_G.EquipmentMgr:SetRedDot(7002, not self.ViewModel.bStrongest)
+	--职业红点
+	_G.EquipmentMgr:UpdateRoleRedDot()
 end
 ---------- 其他 ----------
 
@@ -1102,10 +1187,12 @@ end
 function EquipmentNewMainView:ShowSkillPage()
 	self.Common_Render2D_UIBP:SetActiveFlag(false)
 	self.Common_Render2D_UIBP:ShowRenderActor(false)
+	UIUtil.SetIsVisible(self.PanelMask3, false)
 	self:SetVisibilityOfPage(PageType.Skill, true)
 end
 
 function EquipmentNewMainView:HideSkillPage()
+	UIUtil.SetIsVisible(self.PanelMask3, true)
 	self:SetVisibilityOfPage(PageType.Skill, false)
 	_G.HUDMgr:SetIsDrawHUD(false)
 end
@@ -1113,6 +1200,7 @@ end
 function EquipmentNewMainView:ShowEquipDetailPage()
 	UIUtil.SetIsVisible(self.BackBtn, true, true)
 	self.EquipDetailPageShow = true
+	self:SafePlayAnimation(self.AnimSpacer1)
 	if self.ActivePage == PageType.Equipment then
 		self.CurrrentEquipList:PlayAnimation(self.CurrrentEquipList.AnimListPanelIn)
 		self.ActivePage = PageType.EquipmentDetail
@@ -1130,6 +1218,7 @@ end
 function EquipmentNewMainView:HideEquipDetailPage()
 	UIUtil.SetIsVisible(self.BackBtn, false, true)
 	self.EquipDetailPageShow = false
+	self:SafePlayAnimation(self.AnimSpacer2)
 	self.CurrrentEquipList:SetEquipmentDetailVsible(false)
 	self:SetVisibilityOfPage(PageType.EquipmentDetail, false, self.AnimListPanelOut)
 
@@ -1185,6 +1274,7 @@ function EquipmentNewMainView:ModelMoveToLeft(bShowAllModel, Tag)
 		if CameraFocusCfg == nil then return end
 		self:ModelMoveToLeftByCameraFocusCfg(CameraFocusCfg)
 	end
+	self.CommonTitle.IconBlankShow = false
 end
 
 function EquipmentNewMainView:ModelMoveToLeftByCameraFocusCfg(CameraFocusCfg)
@@ -1195,9 +1285,9 @@ function EquipmentNewMainView:ModelMoveToLeftByCameraFocusCfg(CameraFocusCfg)
 		self:ShowAllModel(true)
 		self.Common_Render2D_UIBP:SetModelRotation(0, CameraFocusCfg.Yaw , 0, true)
 		self.Common_Render2D_UIBP:SetCameraFOV(self.CameraFocusCfgMap:GetLeftDefaultFOV(self.ViewModel.AttachType))
-		self:PoseStyleSwitch(CameraFocusCfg.HoldWeapon and 1 or 0)
+		self:PoseStyleSwitch(CameraFocusCfg.HoldWeapon and 1 or 0, self.SelectSlotPart)
 	else
-		self:PoseStyleSwitch(CameraFocusCfg.HoldWeapon and 1 or 0)
+		self:PoseStyleSwitch(CameraFocusCfg.HoldWeapon and 1 or 0, self.SelectSlotPart)
 		self.Common_Render2D_UIBP:SetModelRotation(0, CameraFocusCfg.Yaw , 0, true)
 		local DPIScale = _G.UE.UWidgetLayoutLibrary.GetViewportScale(self)
 		local ViewportSize = UIUtil.GetViewportSize()/DPIScale
@@ -1236,6 +1326,7 @@ function EquipmentNewMainView:OnSlotClick(Part)
 end
 
 function EquipmentNewMainView:OnListPageBackClick()
+	self.CommonTitle.IconBlankShow = true
 	self.Common_Render2D_UIBP:EnableZoom(true)
 	if self.ActivePage == PageType.AttributeDetail then
 		self:SwitchPage(PageType.Attribute)
@@ -1301,6 +1392,7 @@ end
 
 function EquipmentNewMainView:ShowAttrDetailPage()
 	UIUtil.SetIsVisible(self.BackBtn, true, true)
+	self:SafePlayAnimation(self.AnimSpacer1)
 	self:SetVisibilityOfPage(PageType.AttributeDetail, true, self.AnimAttributeDetailIn)
 
 	self.ViewModel.bHasSubtitle = true
@@ -1312,6 +1404,7 @@ end
 
 function EquipmentNewMainView:HideAttrDetailPage()
 	UIUtil.SetIsVisible(self.BackBtn, false, true)
+	self:SafePlayAnimation(self.AnimSpacer2)
 	self:SetVisibilityOfPage(PageType.AttributeDetail, false, self.AnimAttributeDetailOut)
 
 	self.ViewModel.bHasSubtitle = false
@@ -1437,9 +1530,6 @@ function EquipmentNewMainView:UpdateWeaponHideState()
 	local bHideSlaveHand = self:IsHideSlaveHand()
 	self.Common_Render2D_UIBP:HideMasterHand(bHideMasterHand)
 	self.Common_Render2D_UIBP:HideSlaveHand(bHideSlaveHand)
-
-	self.Common_Render2D_UIBP:HideAttachMasterHand(self:IsHideAttachMasterHand())
-	self.Common_Render2D_UIBP:HideAttachSlaveHand(self:IsHideAttachSlaveHand())
 end
 
 function EquipmentNewMainView:UpdateMajorWeaponHideState()
@@ -1540,6 +1630,21 @@ function EquipmentNewMainView:OnReSelectMajorProf()
 		end
 	end
 	self.ProfTableViewNew:SetSelectedIndex(Index)
+end
+
+function EquipmentNewMainView:SafePlayAnimation(Animation, QuickPlay)
+	if Animation then
+		local DelayTime = Animation:GetEndTime() or 0
+		local CallBack = function()
+			self:PlayAnimation(Animation, DelayTime, 1, 0, 1.0, false)
+		end
+		if not QuickPlay then
+			self:PlayAnimation(Animation)
+			self:RegisterTimer(CallBack, DelayTime, 0, 1)
+		else
+			CallBack()
+		end
+	end
 end
 
 function EquipmentNewMainView:OnStrongestViewHide(bEnter)

@@ -5,13 +5,15 @@
 --
 
 local LuaClass = require("Core/LuaClass")
+local AudioUtil = require("Utils/AudioUtil")
 local MiniGameBaseVM = require("Game/GoldSaucerMiniGame/MiniGameBaseVM")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
+local JumboCactpotDefine = require("Game/JumboCactpot/JumboCactpotDefine")
 local GoldSaucerMonsterTossBallItemVM = require("Game/GoldSaucerGame/View/MonsterToss/ItemVM/GoldSaucerMonsterTossBallItemVM")
 local CommInteractionResultTipVM = require("Game/GoldSaucerMiniGame/CommInteractionResultTipVM")
 local MiniGameMonsterTossResultVM = require("Game/GoldSaucerMiniGame/MonsterToss/MiniGameMonsterTossResultVM")
-local MiniGameState = GoldSaucerMiniGameDefine.MiniGameStageType --
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
+local JumboCeremoneyAudioAssetPath = JumboCactpotDefine.JumboCeremoneyAudioAssetPath
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local Anim = MiniGameClientConfig[MiniGameType.MonsterToss].Anim
 
@@ -35,7 +37,6 @@ function MiniGameMonsterTossVM:Ctor()
     self.MaxScore = 0       -- 历史最高得分
     self.CurScore = 0
     self.RewardGot = "0" -- 获取奖励数量
-    self.RewardGotEnd = "+0"
     self.AddRewardGot = "0"
     self.bResultVisible = false
     self.bNormalVisible = true
@@ -57,13 +58,16 @@ function MiniGameMonsterTossVM:Ctor()
     self.PurpleProportOrder = 0
     self.BlueProportOrder = 0
     self.RedProportOrder = 0
+    self.GreenProportOrder = 0
     self.BluePercent = 0
     self.PurplePercent = 0
     self.RedPercent = 0
+    self.GreenPercent = 0
 
     self.TextScore1Text = ""
     self.bTextScore1TipVisible = false
     self.bTextScore2TipVisible = false
+    self.bBlessScoreTextVisible = false
 
     self.PointerAngle = -90
     self.ShootingResultTipVM = CommInteractionResultTipVM.New()
@@ -74,6 +78,8 @@ function MiniGameMonsterTossVM:Ctor()
     -- 结算界面
     self.ResultVM = MiniGameMonsterTossResultVM.New()
     self:CreateBallVM()
+
+    self.AudioHandle = nil -- 倒计时循环音效记录id
 end
 
 --- 更新小游戏VM
@@ -87,8 +93,8 @@ function MiniGameMonsterTossVM:OnUpdateVM()
     self.MaxScore = GameInst.MaxScore
     self.MaxScoreColor = tonumber(GameInst.MaxScore) > 0 and "#FFFFFF" or "#828282"
 
-    self.RewardGot = GameInst.RewardGot
-    self.RewardGotEnd = "+"..self.RewardGot
+    self.RewardGot = GameInst:GetMainPanelRewardGot()
+    
     if tonumber(GameInst.AddRewardGot) ~= 0 then
         self.AddRewardGot = GameInst.AddRewardGot
         EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimObtainNumberIn)
@@ -100,13 +106,14 @@ function MiniGameMonsterTossVM:OnUpdateVM()
     self.bCriticalVisible = GameInst.bCriticalVisible
     self.ComboNum = GameInst.ComboNum
     self.AddScoreText = GameInst.AddScoreText
-    self.bAddScoreTextVisible = GameInst.bAddScoreTextVisible
+    --self.bAddScoreTextVisible = GameInst.bAddScoreTextVisible
     self.AddScoreColor = GameInst.AddScoreColor
     self.AddScoreOutLineColor = GameInst.AddScoreOutLineColor
     self.AddScorePos = GameInst.AddScorePos
     self.TextScore1Text = GameInst.TextScore1Text
     self.bTextScore1TipVisible = GameInst.bTextScore1TipVisible
     self.bTextScore2TipVisible = GameInst.bTextScore2TipVisible
+    self.bBlessScoreTextVisible = GameInst.bBlessScoreTextVisible
     self.bResultMoneyVisible = GameInst.bResultMoneyVisible
     self.bGameTipVisible = GameInst.bGameTipVisible
     self.ShootingResultTipVM:UpdateVM(GameInst.ShootResultData)
@@ -181,6 +188,7 @@ function MiniGameMonsterTossVM:UpdateProportLayOut()
         self.PurpleProportOrder = ZOrderCfg.PurpleProportOrder
         self.BlueProportOrder = ZOrderCfg.BlueProportOrder
         self.RedProportOrder = ZOrderCfg.RedProportOrder
+        self.GreenProportOrder = ZOrderCfg.GreenProportOrder or 0
     end
 
     local ColorCfg = CurStageDiffParams.ColorCfg
@@ -188,6 +196,7 @@ function MiniGameMonsterTossVM:UpdateProportLayOut()
         self.BluePercent = ColorCfg.BluePercent
         self.PurplePercent = ColorCfg.PurplePercent
         self.RedPercent = ColorCfg.RedPercent
+        self.GreenPercent = ColorCfg.GreenPercent or 0
     end
 end
 
@@ -197,8 +206,8 @@ function MiniGameMonsterTossVM:UpdateRewardGotSingle()
     if GameInst == nil then
         return
     end
-    -- self.RewardGot = GameInst.RewardGot
-    self.ResultVM.RewardGot = GameInst.RewardGot
+   
+    self.ResultVM.RewardGot = GameInst:GetRewardGot()
 end
 
 function MiniGameMonsterTossVM:UpdatePointerAngle(PointerAngle)
@@ -207,7 +216,8 @@ end
 
 function MiniGameMonsterTossVM:SetTimeText(GameInst)
     local TimeSeconds
-    if GameInst.RemainSeconds > 10 then
+    local GameInstRemainSeconds = GameInst.RemainSeconds or 0
+    if GameInstRemainSeconds > 10 then
         local bTenthsVisible = self.bTenthsVisible
         TimeSeconds = GameInst:GetRemainSecondsInteger()
         self.TimeTextColor = "#FFFFFF"
@@ -216,11 +226,19 @@ function MiniGameMonsterTossVM:SetTimeText(GameInst)
         end
     else
         self.bTenthsVisible = true
-        TimeSeconds = math.ceil(GameInst.RemainSeconds * 10)
+        TimeSeconds = math.ceil(GameInstRemainSeconds * 10)
         TimeSeconds = TimeSeconds / 10
         self.TimeTextColor = "#dc5868"
         self.TenthsText = "."..tostring(math.floor((TimeSeconds - math.floor(TimeSeconds)) * 10))
     end
+
+    if GameInstRemainSeconds <= 5 and GameInstRemainSeconds > 0 and not self.AudioHandle then
+        self.AudioHandle = AudioUtil.LoadAndPlayUISound(JumboCeremoneyAudioAssetPath.CountDown)
+    elseif self.AudioHandle and GameInstRemainSeconds <= 0 then
+        AudioUtil.StopAsyncAudioHandle(self.AudioHandle)
+        self.AudioHandle = nil
+    end
+
     self.MonsterTossTimeText = tostring(math.floor(TimeSeconds))
 
 end
@@ -321,9 +339,11 @@ function MiniGameMonsterTossVM:Reset()
     self.PurpleProportOrder = 0
     self.BlueProportOrder = 0
     self.RedProportOrder = 0
+    self.GreenProportOrder = 0
     self.BluePercent = 0
     self.PurplePercent = 0
     self.RedPercent = 0
+    self.GreenPercent = 0
 
     self.TextScore1Text = ""
     self.bTextScore1TipVisible = false

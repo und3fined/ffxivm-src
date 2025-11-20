@@ -9,10 +9,32 @@ local HeaderFrameTabCfg = {
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'Name',
+            },
+		}
     },
-    DefaultValues = nil,
-	LuaData = nil,
+    DefaultValues = {
+        ID = 1,
+        Priority = 1,
+    },
+	LuaData = {
+        {
+        },
+        {
+            ID = 2,
+            Priority = 2,
+        },
+        {
+            ID = 3,
+            Priority = 3,
+        },
+        {
+            ID = 4,
+            Priority = 4,
+        },
+	},
 }
 
 setmetatable(HeaderFrameTabCfg, { __index = CfgBase })

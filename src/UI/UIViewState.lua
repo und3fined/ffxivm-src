@@ -64,6 +64,15 @@ function UIViewState:GetVisible()
 	return self.bVisible
 end
 
+function UIViewState:GetIsFullScreen()
+	local View = self.View
+	if nil == View or not View:IsValid() then
+		return false
+	end
+
+	return nil ~= View.GetIsFullScreen and View:GetIsFullScreen()
+end
+
 function UIViewState:CalculateVisible()
 	if #self.SetVisibleViewIDs > 0 then
 		return true

@@ -20,6 +20,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local ItemUtil = require("Utils/ItemUtil")
 local GlobalCfg = require("TableCfg/GlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
+local FishCfg = require("TableCfg/FishCfg")
 
 local ChatMsgType = ChatDefine.ChatMsgType
 local ChatChannelConfig = ChatDefine.ChatChannelConfig
@@ -43,6 +44,11 @@ function ChatUtil.GetChannelName(Channel)
 	end
 
 	return Config.Name
+end
+
+function ChatUtil.GetChatChannelMsgMaxLength(Channel)
+	local Config = ChatUtil.FindChatChannelConfig(Channel) or {}
+	return Config.MsgLength or 999 
 end
 
 function ChatUtil.FindChatChannelConfig(Channel)
@@ -274,6 +280,10 @@ function ChatUtil.GetTeamRecruitMacro()
 	return ChatMacros.TeamRecruit
 end
 
+function ChatUtil.GetFishShareMacro()
+	return ChatMacros.FishShare
+end
+
 function ChatUtil.GetChatSimpleDesc(MsgItemVM)
 	if nil == MsgItemVM then
 		return
@@ -314,6 +324,9 @@ function ChatUtil.GetChatSimpleDesc(MsgItemVM)
 
 			elseif MsgType == ChatMsgType.TaskShare then -- 任务分享
 				Content = ChatUtil.GetTaskShareDesc(MsgItemVM.TaskMsg)
+
+			elseif MsgType == ChatMsgType.FishShare then -- 鱼类分享
+				Content = ChatUtil.GetFishShareHrefDesc(MsgItemVM.FishMsg)
 			end
 
 			local Extend = nil 
@@ -321,15 +334,25 @@ function ChatUtil.GetChatSimpleDesc(MsgItemVM)
 			if Sender and Sender > 0 then
 				local RoleVM = _G.RoleInfoMgr:FindRoleVM(Sender)
 				if RoleVM then
+					local RawName = RoleVM.Name
+					do
+						local NickName = _G.FriendMgr:GetFriendNickname(Sender)
+						if NickName and NickName ~= "" then
+							RawName = NickName
+						end
+					end
+					RawName = string.gsub(RawName, "<", "&lt;")
+					RawName = string.gsub(RawName, ">", "&gt;")
+					
 					if RoleVM.IsMajor or Channel == ChatChannel.Person then
-						RoleName = string.format("%s:", RoleVM.Name)
+						RoleName = string.format("%s:", RawName)
 					else
 						Extend = ChatUtil.ParseMsgExtendData(MsgItemVM.Extend) or {}
 						local CurWorldID = Extend.CurWorldID
 						if CurWorldID and CurWorldID > 0 and CurWorldID ~= _G.PWorldMgr:GetCurrWorldID() then
-							RoleName = string.format("%s%s:", RoleVM.Name, ChatUtil.GetDiffServerIconRichText())
+							RoleName = string.format("%s%s:", RawName, ChatUtil.GetDiffServerIconRichText())
 						else
-							RoleName = string.format("%s:", RoleVM.Name)
+							RoleName = string.format("%s:", RawName)
 						end
 					end
 				end
@@ -380,6 +403,9 @@ function ChatUtil.GetChatContent(MsgItemVM)
 
 			elseif MsgType == ChatMsgType.TaskShare then -- 任务分享
 				Content = ChatUtil.GetTaskShareDesc(MsgItemVM.TaskMsg)
+
+			elseif MsgType == ChatMsgType.FishShare then -- 鱼类分享
+				Content = ChatUtil.GetFishShareHrefDesc(MsgItemVM.FishMsg)
 			end
 		end
 
@@ -390,7 +416,7 @@ function ChatUtil.GetChatContent(MsgItemVM)
 end
 
 --- 获取队伍招募超链接文本描述
----@param Data cschatc.TeamRecruitMessage @队伍招募超链接数据信息
+---@param Data href.TeamRecruitMessage @队伍招募超链接数据信息
 function ChatUtil.GetTeamRecruitHrefDesc(Data)
 	if nil == Data then
 		return ""
@@ -409,7 +435,7 @@ function ChatUtil.GetTeamRecruitHrefDesc(Data)
 end
 
 --- 获取任务分享描述
----@param Data cschatc.TaskHrefMessage @任务分享超链接数据信息
+---@param Data href.TaskHrefMessage @任务分享超链接数据信息
 function ChatUtil.GetTaskShareDesc(Data)
 	local Ret = ""
 	if nil == Data then
@@ -456,6 +482,20 @@ function ChatUtil.GetLocationShareDesc(Content, Map)
 	end)
 
 	return Content
+end
+
+--- 获取鱼类分享超链接文本描述
+---@param Data href.FishMessage @鱼类分享超链接数据信息
+function ChatUtil.GetFishShareHrefDesc(Data)
+	if nil == Data then
+		return ""
+	end
+
+	local Path = "/Game/UI/Texture/ChatNew/UI_Chat_Icon_Fish.UI_Chat_Icon_Fish"
+	local RichText = RichTextUtil.GetTexture(Path, 40, 40, -10) or ""
+	local Cfg = FishCfg:FindCfgByKey(Data.ID)
+	local Ret = string.format('%s<span color="#A1E9E9FF">%s</>', RichText, Cfg.Name or "")
+	return Ret
 end
 
 --- 获取物品聊天功能中的描述（含超链)

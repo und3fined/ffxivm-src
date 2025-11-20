@@ -71,6 +71,10 @@ function CardsSingleCardOnBoardVM:SetCardId(TargetValue)
     self:ChangeNotify()
 end
 
+function CardsSingleCardOnBoardVM:SetCardNumHighLightDir(Dir)
+    self.SingleCardVM:SetCardNumHighLightDir(Dir)
+end
+
 function CardsSingleCardOnBoardVM:GetCardId()
     return self.SingleCardVM:GetCardId()
 end

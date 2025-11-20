@@ -6,8 +6,8 @@ local CS = {
     _1_2 = 'Texture2D\'/Game/Assets/Icon/071000HUD/UI_Icon_071321.UI_Icon_071321\'',
     _2_1 = 'Texture2D\'/Game/Assets/Icon/071000/UI_Icon_071101.UI_Icon_071101\'',
     _2_2 = 'Texture2D\'/Game/Assets/Icon/071000/UI_Icon_071121.UI_Icon_071121\'',
-    _2_3 = 'Texture2D\'/Game/Assets/Icon/MapIconSnap/GoldSaucer/UI_Map_Icon_GoldSaucer_XYX.UI_Map_Icon_GoldSaucer_XYX\'',
-    _2_4 = 'Texture2D\'/Game/Assets/Icon/MapIconSnap/UI_Icon_060582.UI_Icon_060582\'',
+    _2_3 = 'Texture2D\'/Game/Assets/Icon/MapIconSnap/UI_Icon_060582.UI_Icon_060582\'',
+    _2_4 = 'Texture2D\'/Game/Assets/Icon/MapIconSnap/GoldSaucer/UI_Map_Icon_GoldSaucer_LXNJS.UI_Map_Icon_GoldSaucer_LXNJS\'',
 }
 
 ---@class MapNpcIconCfg : CfgBase
@@ -327,6 +327,19 @@ local MapNpcIconCfg = {
         },
         {
             HudIcon = '',
+            ID = 1010464,
+            MapIcon = CS._2_4,
+            NPCIconType = 0,
+        },
+        {
+            HudIcon = '',
+            ID = 1010472,
+            InDiscovery = 5,
+            MapIcon = CS._2_4,
+            NPCIconType = 0,
+        },
+        {
+            HudIcon = '',
             ID = 1010479,
             MapIcon = 'Texture2D\'/Game/Assets/Icon/MapIconSnap/GoldSaucer/UI_Map_Icon_GoldSaucer_HKDS.UI_Map_Icon_GoldSaucer_HKDS\'',
             NPCIconType = 0,
@@ -334,13 +347,13 @@ local MapNpcIconCfg = {
         {
             HudIcon = '',
             ID = 1011038,
-            MapIcon = CS._2_4,
+            MapIcon = CS._2_3,
             NPCIconType = 0,
         },
         {
             HudIcon = '',
             ID = 1011039,
-            MapIcon = CS._2_4,
+            MapIcon = CS._2_3,
             NPCIconType = 0,
         },
         {
@@ -382,19 +395,19 @@ local MapNpcIconCfg = {
         {
             HudIcon = '',
             ID = 1011080,
-            MapIcon = CS._2_4,
+            MapIcon = CS._2_3,
             NPCIconType = 0,
         },
         {
             HudIcon = '',
             ID = 1011084,
-            MapIcon = CS._2_4,
+            MapIcon = CS._2_3,
             NPCIconType = 0,
         },
         {
             HudIcon = '',
             ID = 1011093,
-            MapIcon = CS._2_4,
+            MapIcon = CS._2_3,
             NPCIconType = 0,
         },
         {
@@ -520,6 +533,18 @@ local MapNpcIconCfg = {
             NPCIconType = 0,
         },
         {
+            HudIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_StarLight_RhythmGame_png.UI_Icon_Hud_StarLight_RhythmGame_png\'',
+            ID = 1026630,
+            MapIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_StarLight_RhythmGame_png.UI_Icon_Hud_StarLight_RhythmGame_png\'',
+            NPCIconType = 0,
+        },
+        {
+            HudIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_StarLight_RhythmGame02_png.UI_Icon_Hud_StarLight_RhythmGame02_png\'',
+            ID = 1026631,
+            MapIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_StarLight_RhythmGame02_png.UI_Icon_Hud_StarLight_RhythmGame02_png\'',
+            NPCIconType = 0,
+        },
+        {
             HudIcon = '',
             ID = 2006190,
             MapIcon = 'Texture2D\'/Game/Assets/Icon/900000/UI_Icon_900195.UI_Icon_900195\'',
@@ -623,7 +648,7 @@ local MapNpcIconCfg = {
         },
         {
             ID = 29041586,
-            InDiscovery = 6,
+            InDiscovery = 5,
         },
         {
             ID = 29041588,
@@ -678,39 +703,9 @@ local MapNpcIconCfg = {
             InDiscovery = 14,
         },
         {
-            HudIcon = '',
-            ID = 29100002,
-            MapIcon = CS._2_3,
-            NPCIconType = 0,
-        },
-        {
-            HudIcon = '',
-            ID = 29100003,
-            MapIcon = CS._2_3,
-            NPCIconType = 0,
-        },
-        {
-            HudIcon = '',
-            ID = 29100004,
-            MapIcon = CS._2_3,
-            NPCIconType = 0,
-        },
-        {
-            HudIcon = '',
-            ID = 29100005,
-            MapIcon = CS._2_3,
-            NPCIconType = 0,
-        },
-        {
-            HudIcon = '',
-            ID = 29100006,
-            MapIcon = CS._2_3,
-            NPCIconType = 0,
-        },
-        {
-            HudIcon = '',
-            ID = 29100007,
-            MapIcon = CS._2_3,
+            HudIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_Main_GoldSaucerMentor_png.UI_Icon_Hud_Main_GoldSaucerMentor_png\'',
+            ID = 29100200,
+            MapIcon = 'PaperSprite\'/Game/UI/Atlas/HUDQuest/Frames/UI_Icon_Hud_Main_GoldSaucerMentor_png.UI_Icon_Hud_Main_GoldSaucerMentor_png\'',
             NPCIconType = 0,
         },
 	},

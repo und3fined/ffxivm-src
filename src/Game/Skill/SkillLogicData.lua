@@ -13,6 +13,7 @@ local TimeUtil = require("Utils/TimeUtil")
 local ActorUtil = require("Utils/ActorUtil")
 local CommonUtil = require("Utils/CommonUtil")
 local SkillSystemSeriesCfg = require("TableCfg/SkillSystemSeriesCfg")
+local SkillSystemReplaceCfg = require("TableCfg/SkillSystemReplaceCfg")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local SkillUtil = require("Utils/SkillUtil")
 local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
@@ -65,19 +66,19 @@ function SkillLogicData:Ctor(EntityID, bMajor)
 end
 
 function SkillLogicData:GetReviseSkillSing(SkillID)
-    if self.ServerSkillSyncInfo.ReviseSkillSingList then
+    if self.ServerSkillSyncInfo and self.ServerSkillSyncInfo.ReviseSkillSingList then
         return self.ServerSkillSyncInfo.ReviseSkillSingList[SkillID]
     end
 end
 
 function SkillLogicData:GetReviseSkillAction(SkillID)
-    if self.ServerSkillSyncInfo.ReviseSkillActionList then
+    if self.ServerSkillSyncInfo and self.ServerSkillSyncInfo.ReviseSkillActionList then
         return self.ServerSkillSyncInfo.ReviseSkillActionList[SkillID]
     end
 end
 
 function SkillLogicData:GetSkillCost(SkillID)
-    if self.ServerSkillSyncInfo.SkillCostList then
+    if self.ServerSkillSyncInfo and self.ServerSkillSyncInfo.SkillCostList then
         return self.ServerSkillSyncInfo.SkillCostList[SkillID]
     end
 end
@@ -160,6 +161,7 @@ function SkillLogicData:InitSkillMap(Index, SkillID)
             for _, value in ipairs(SeriesList) do
                 -- GlobalMaxLevel
                 local SeriesID = tonumber(value)
+                SeriesID = SkillSystemReplaceCfg:FindValue(SeriesID, "ReplaceSkillID") or SeriesID
                 local UnLockLevel = SkillUtil.GetSkillLearnLevel(SeriesID, self.ProfID)
                 if UnLockLevel <= GlobalMaxLevel then
                     table.insert(NewSeriesList, SeriesID)
@@ -837,7 +839,6 @@ function SkillLogicData:CanCastSkill(Index, ShowTips, ...)
 		return false
 	end
     if _G.MountMgr:IsRequestingMount() or _G.MountMgr:IsMajorAssembling() then
-        _G.MountMgr:ReleaseRideComponentAssembleState()
         return false
     end
 
@@ -940,7 +941,7 @@ function SkillLogicData:CanCastSkill(Index, ShowTips, ...)
     local Major = MajorUtil.GetMajor()
     if Major and Major.CharacterMovement:IsFalling() then
         local SkillClass = SkillMainCfg:GetSkillClass(SkillID)
-        if (SkillClass & ProtoRes.skill_class.SKILL_CLASS_MOVE) ~= 0 then
+        if SkillClass and (SkillClass & ProtoRes.skill_class.SKILL_CLASS_MOVE) ~= 0 then
             _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.SkillLimitMoveFallingTips)
             return false
         end

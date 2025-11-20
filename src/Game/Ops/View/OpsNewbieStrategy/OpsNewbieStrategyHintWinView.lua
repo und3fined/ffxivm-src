@@ -19,8 +19,10 @@ local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 ---@field BtnGoto UFButton
 ---@field Comm2FrameS_UIBP Comm2FrameSView
 ---@field Icon UFImage
+---@field IconArrow UFImage
 ---@field PanelGoto UFCanvasPanel
 ---@field Text UFTextBlock
+---@field TextCondition UFTextBlock
 ---@field TextHint1 UFTextBlock
 ---@field TextHint2 UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -31,8 +33,10 @@ function OpsNewbieStrategyHintWinView:Ctor()
 	--self.BtnGoto = nil
 	--self.Comm2FrameS_UIBP = nil
 	--self.Icon = nil
+	--self.IconArrow = nil
 	--self.PanelGoto = nil
 	--self.Text = nil
+	--self.TextCondition = nil
 	--self.TextHint1 = nil
 	--self.TextHint2 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -45,7 +49,8 @@ function OpsNewbieStrategyHintWinView:OnRegisterSubView()
 end
 
 function OpsNewbieStrategyHintWinView:OnInit()
-
+	self.bCanProceed = false
+	self.bCanAccept = false
 end
 
 function OpsNewbieStrategyHintWinView:OnDestroy()
@@ -75,17 +80,28 @@ function OpsNewbieStrategyHintWinView:OnShow()
 			Cfg = QuestHelper.GetChapterCfgItem(self.ChapterID)
 		end
 		if Cfg then
-			local Icon = QuestMgr:GetChapterIconAtLog(self.ChapterID , nil, false) -- 任务图标
-			self:SetIcon(Icon)
-			self.Text:SetText(Cfg.QuestName)
-			StartQuest = Cfg.StartQuest
-			if StartQuest then
-				local QuestStatus = _G.QuestMgr:GetQuestStatus(StartQuest)
-				--任务已接取/由于是使用的开始任务ID，任务完成情况也加入判断
-				if QuestStatus == QUEST_STATUS.CS_QUEST_STATUS_FINISHED or QuestStatus == QUEST_STATUS.CS_QUEST_STATUS_IN_PROGRESS   then 
-					self.bCanProceed =  QuestHelper.CheckCanProceed(StartQuest)
-				else
-					self.bCanProceed = QuestHelper.CheckCanActivate(StartQuest)
+			--type为2表示是显示【不可接取】的任务tips排版样式
+			if Params.Type == 2 then
+				UIUtil.SetIsVisible(self.Icon, false)
+				UIUtil.SetIsVisible(self.IconArrow, false)
+				self.Text:SetText(Params.ForbiddenTips)
+				self.bCanProceed = false
+			else
+				local Icon = QuestMgr:GetChapterIconAtLog(self.ChapterID , nil, false) -- 任务图标
+				self:SetIcon(Icon)
+				self.Text:SetText(Cfg.QuestName)
+				StartQuest = Cfg.StartQuest
+				if StartQuest then
+					local QuestStatus = _G.QuestMgr:GetQuestStatus(StartQuest)
+					--任务已接取/由于是使用的开始任务ID，任务完成情况也加入判断
+					if QuestStatus == QUEST_STATUS.CS_QUEST_STATUS_FINISHED or QuestStatus == QUEST_STATUS.CS_QUEST_STATUS_IN_PROGRESS   then 
+						self.bCanProceed =  QuestHelper.CheckCanProceed(StartQuest)
+					else
+						self.bCanProceed = QuestHelper.CheckCanActivate(StartQuest)
+
+						--是否可接取
+						self.bCanAccept = QuestHelper.CheckCanAccept(StartQuest)
+					end
 				end
 			end
 		end
@@ -115,6 +131,9 @@ end
 function OpsNewbieStrategyHintWinView:OnClickedGo()
 	if self.bCanProceed then
 		self:JumpTask(self.ChapterID)
+		self:Hide()
+	elseif self.bCanAccept then
+		self:JumpTaskToCanAccept(self.ChapterID)
 		self:Hide()
 	else
 		-- LSTR string:任务未开放，请继续探索
@@ -162,6 +181,25 @@ function OpsNewbieStrategyHintWinView:JumpTask(ChapterID)
 				break
 			end
 		end
+    end
+end
+
+--跳转到任务能接取的表现
+function OpsNewbieStrategyHintWinView:JumpTaskToCanAccept(ChapterID)
+	local ChapterCfg = QuestHelper.GetChapterCfgItem(ChapterID)
+	if ChapterCfg == nil then
+		return
+	end
+    local StartQuestCfg = QuestHelper.GetQuestCfgItem(ChapterCfg.StartQuest)
+	if StartQuestCfg == nil then
+		return
+	end
+    local Status = QuestMgr:GetQuestStatus(StartQuestCfg.id)
+    local MapDefine = require("Game/Map/MapDefine")
+
+	--能接取的状态是 任务还未开始，预判断一层
+    if Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED then
+        _G.WorldMapMgr:ShowWorldMapQuest(StartQuestCfg.AcceptMapID, nil, StartQuestCfg.id, MapDefine.MapOpenSource.RecommendTask)
     end
 end
 

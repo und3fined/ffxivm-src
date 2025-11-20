@@ -125,7 +125,7 @@ function WorldMapSendMarkPanelView:OnClickedBtnOK2()
 		return
 	end
 	local PosX, PosY = Marker:GetPosition()
-	ChatMgr:AddLocationHref(MapUtil.GetMapID(Marker:GetUIMapID()), { X = PosX, Y = PosY })
+	ChatMgr:AddLocationHref(MapUtil.GetMapID(Marker:GetUIMapID()), { X = PosX, Y = PosY }, Marker:GetUIMapID())
 	WorldMapVM:CloseWorldMapPanel()
 end
 
@@ -134,15 +134,21 @@ function WorldMapSendMarkPanelView:OnClickedBtnOK1()
 		WorldMapVM:CloseWorldMapPanel()
 		return
 	end
-	ChatMgr:AddLocationHref(self.SelectedMapID, self.SelectedPosition)
+	ChatMgr:AddLocationHref(self.SelectedMapID, self.SelectedPosition, self.SelectedUIMapID or _G.MapMgr:GetUIMapID())
 	WorldMapVM:CloseWorldMapPanel()
 end
 
 function WorldMapSendMarkPanelView:SetSelectedPosition(UIMapID, Pos)
 	local MapID = MapUtil.GetMapID(UIMapID)
 	self.SelectedMapID = MapID
+	self.SelectedUIMapID = UIMapID
 	self.SelectedPosition = { X = Pos.X , Y = Pos.Y }
-	local ShowText = string.format("%s(%.1f,%.1f)", MapUtil.GetChatHyperlinkMapName(MapID), (Pos.X) or 0 , (Pos.Y) or 0 )
+	local MapFloorName = MapUtil.GetMapFloorName(UIMapID)
+	if MapFloorName == nil or MapFloorName == "" then
+		MapFloorName = MapUtil.GetMapName(UIMapID)
+	end
+
+	local ShowText = string.format("%s(%.1f,%.1f)", MapFloorName, (Pos.X) or 0 , (Pos.Y) or 0 )
 	self.TextLoction:SetText(string.format(LSTR(700014), RichTextUtil.GetText(ShowText, "D1BA8EFF"))) -- "确认发送%s？"
 	self.BtnOK1:SetIsEnabled(true)
 end

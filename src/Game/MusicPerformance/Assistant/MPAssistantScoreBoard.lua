@@ -5,8 +5,6 @@ LastEditors: moody
 local LuaClass = require("Core/LuaClass")
 local MPDefines = require("Game/MusicPerformance/MusicPerformanceDefines")
 local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanceUtil")
-local MusicScoreCfg = require("TableCfg/MusicScoreCfg")
-local MusicTotalScoreCfg = require("TableCfg/MusicTotalScoreCfg")
 local MathUtil = require("Utils/MathUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 
@@ -19,47 +17,6 @@ end
 
 function MPAssistantScoreBoard:InitScoreCfg()
 	self.CheckTimeRange = 0
-	local ScoreCfg = MusicScoreCfg:FindAllCfg("ID > 0")
-	self.ScoreLevels = {}
-	for _, ScoreLevel in pairs(ScoreCfg) do
-		self.ScoreLevels[ScoreLevel.ID] = ScoreLevel
-		self.CheckTimeRange = math.max(self.CheckTimeRange, ScoreLevel.Time[2])
-	end
-	
-	self.TotalScoreLevels = {}
-	local TotalScoreCfg = MusicTotalScoreCfg:FindAllCfg("Level > 0")
-	for _, TotalScoreLevel in pairs(TotalScoreCfg) do
-		self.TotalScoreLevels[TotalScoreLevel.Level] = TotalScoreLevel
-	end
-end
-
-function MPAssistantScoreBoard:GetMaxScore(SongCfg, IsLongClick)
-	if SongCfg then
-		local SingleMaxScore = self.ScoreLevels[MPDefines.AssistantScoreType.Perfect].BaseScore or 0
-		print(table.tostring( SongCfg.NoteShort, SongCfg.NoteLong))
-		return (IsLongClick and SongCfg.NoteShort or SongCfg.NoteLong) * SingleMaxScore
-	end
-	return nil
-end
-
----@return number 返回总分类型及到下一个类型的进度百分比
-function MPAssistantScoreBoard:GetTotalScore(CurScore, MaxScore)
-	local Prog = CurScore / MaxScore
-	if MathUtil.IsNearlyEqual(1, Prog) then
-		return ProtoRes.MusicAwardRank.MusicAwardRank_SPP, 1.0
-	end
-
-	for Level = ProtoRes.MusicAwardRank.MusicAwardRank_SP, ProtoRes.MusicAwardRank.MusicAwardRank_LAST - 1 do
-		local RangeMin = self.TotalScoreLevels[Level].Coefficient
-		
-		if Prog >= RangeMin then
-			local RangeMax = self.TotalScoreLevels[Level - 1].Coefficient
-			local CurLevelPercent = (Prog - RangeMin) / (RangeMax - RangeMin)
-			return Level, CurLevelPercent
-		end
-	end
-
-	return nil
 end
 
 function MPAssistantScoreBoard:GetCheckTimeRange()

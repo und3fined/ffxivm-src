@@ -545,22 +545,24 @@ function ArmyInfoEditorWinView:CheckNameRules(TextType, Min, Max, Text)
     end
     ---查询文本是否合法（敏感词）
 	ArmyMgr:CheckSensitiveText(Text, function( IsLegal )
-        self.IsWaitCheck = false
-		if IsLegal then
-            if TextType == ArmyDefine.ArmyEditTextType.ArmyName then
-                --UIUtil.SetIsVisible(self.TextTipsName1, false)
-                bNormArmyName = true
-            elseif TextType == ArmyDefine.ArmyEditTextType.ShortName then
-                --UIUtil.SetIsVisible(self.TextTipsTime1, false)
-                bNormShortName = true
-            elseif TextType == ArmyDefine.ArmyEditTextType.Notice then
-                bNormNotice = true
+        if self:IsValid() then
+            self.IsWaitCheck = false
+            if IsLegal then
+                if TextType == ArmyDefine.ArmyEditTextType.ArmyName then
+                    --UIUtil.SetIsVisible(self.TextTipsName1, false)
+                    bNormArmyName = true
+                elseif TextType == ArmyDefine.ArmyEditTextType.ShortName then
+                    --UIUtil.SetIsVisible(self.TextTipsTime1, false)
+                    bNormShortName = true
+                elseif TextType == ArmyDefine.ArmyEditTextType.Notice then
+                    bNormNotice = true
+                end
+                self:CheckedSaveBtnState()
+            else
+                --输入的内容包含敏感词汇
+                self:SetErrorTip(TextType)
+                return
             end
-            self:CheckedSaveBtnState()
-        else
-            --输入的内容包含敏感词汇
-            self:SetErrorTip(TextType)
-            return
         end
     end)
 end
@@ -1035,7 +1037,7 @@ end
 --- 重置
 function ArmyInfoEditorWinView:OnClickedBadgeReset()
 	-- LSTR string:提示
-	MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910144), LSTR(910190), self.Reset, nil, LSTR(910083), LSTR(910182))
+	MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910144), LSTR(910190), self.Reset, nil, LSTR(910081), LSTR(910182))
 end
 
 function ArmyInfoEditorWinView:Reset()

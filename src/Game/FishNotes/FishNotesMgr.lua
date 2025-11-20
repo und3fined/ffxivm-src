@@ -46,6 +46,7 @@ local SUB_MSG_ID = ProtoCS.CS_NOTE_CMD
 local AozyTimeDefine = TimeDefine.AozyTimeDefine
 local FLOG_WARNING = _G.FLOG_WARNING
 local LSTR = _G.LSTR
+local FLOG_ERROR = _G.FLOG_ERROR
 
 ---@class FishNotesMgr : MgrBase
 ---@field FishList table @鱼的信息列表
@@ -73,7 +74,7 @@ function FishNotesMgr:OnBegin()
     --self:InitFishInfo() --FishList储存时对鱼Cfg中的数据直接引用原始配置表
     --self:InitFishingholeData() --去除FishingholeList对钓场的储存，钓场数据根据ID查表，只储存钓场解锁数据FishLocationUnlockList
     --self:InitFishingholeInfo()
-    _G.BagMgr:RegisterItemUsedFun(ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FISH, self.CheckFishUnLock)
+    _G.BagMgr:RegisterItemUsedFun(ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FISH, self.CheckFishUnLockByResID)
 end
 
 function FishNotesMgr:OnEnd()
@@ -112,6 +113,7 @@ function FishNotesMgr:InitData()
     self.MaxClockNum = self:GetMaxClockNum()
     self.ClockListSorted = {}
     self.NearestWindowList = {}
+    self.FishClockSetting = nil
 end
 
 function FishNotesMgr:OnRegisterNetMsg()
@@ -238,13 +240,24 @@ function FishNotesMgr:AddFishList(Data)
 end
 
 function FishNotesMgr:GetFishDataByItemID(ItemID)
-    local FishList = FishCfg:FindAllCfg()
-    if not table.is_nil_empty(FishList) then
-        for _, value in pairs(FishList) do
-            if value.ItemID == ItemID then
-                return self:GetFishData(value.ID)
-            end
+    local Data = FishCfg:FindCfg("ItemID = ".. ItemID)
+    if Data ~= nil then
+        self.FishList = self.FishList or {}
+        if table.is_nil_empty(self.FishList) or not self.FishList[Data.ID] then
+            self:AddFishList(Data)
         end
+    else
+        FLOG_ERROR(string.format("GetFishDataByItemID Data is nil, ItemID = %d", ItemID))
+    end
+    return self.FishList[Data.ID]
+end
+
+function FishNotesMgr:GetFishIDByItemID(ItemID)
+    local Data = FishCfg:FindCfg("ItemID = ".. ItemID)
+    if Data ~= nil then
+        return Data.ID
+    else
+        FLOG_ERROR(string.format("GetFishIDByItemID Data is nil, ItemID = %d", ItemID))
     end
 end
 
@@ -577,14 +590,6 @@ function FishNotesMgr:GetUnlockFishData(ID)
     return self.FishUnlockList[ID]
 end
 
-function FishNotesMgr.CheckFishUnLock(ResID)
-    local FishData = FishNotesMgr:GetFishDataByItemID(ResID)
-    if FishData then
-        return FishNotesMgr:GetUnlockFishData(FishData.Cfg.ID)
-    end
-    return false
-end
-
 ---@type 鱼类图鉴是否全部激活_true表示全激活
 function FishNotesMgr:GetFishGuideIsAllUnLock()
     local FishDataList = self:GetFishDataListByVersion()
@@ -604,6 +609,14 @@ function FishNotesMgr:CheckFishbUnLock(ID)
         return true
     end
 
+    return false
+end
+
+function FishNotesMgr.CheckFishUnLockByResID(ResID)
+    local FishID = FishNotesMgr:GetFishIDByItemID(ResID)
+    if FishID then
+        return FishNotesMgr:CheckFishbUnLock(FishID)
+    end
     return false
 end
 
@@ -907,11 +920,13 @@ function FishNotesMgr:GetAllBaitData(FishData, LocationID)
                 if Bait ~= 0 then
                     BaitData = FishBaitCfg:FindCfgByKey(Bait)
                     --平均钓饵存第一阶段
-                    table.insert(SaveList[StageIndex], {
-                        ID = BaitData.ID,
-                        ItemID = BaitData.ItemID,
-                        LiftRate = NormalLiftRate[i],
-                    })
+                    if BaitData ~= nil then
+                        table.insert(SaveList[StageIndex], {
+                            ID = BaitData.ID,
+                            ItemID = BaitData.ItemID,
+                            LiftRate = NormalLiftRate[i],
+                        })
+                    end
                 end
             end
             table.insert(TotalSaveList, SaveList)
@@ -1004,6 +1019,22 @@ function FishNotesMgr:GetFishBaitList(SaveList, FishData, LocationID)
                 end
             end
         end
+        if FishData.NormalBait ~= nil then
+            for i, Bait in ipairs(FishData.NormalBait) do
+                if Bait ~= 0 then
+                    local BaitData = FishBaitCfg:FindCfgByKey(Bait)
+                    --平均钓饵存第一阶段
+                    if BaitData ~= nil then
+                        table.insert(AllBaitList, {
+                            ID = BaitData.ID,
+                            BaitID = BaitData.ID,
+                            ItemID = BaitData.ItemID,
+                            LiftRate = FishData.NormalLiftRate[i],
+                        })
+                    end
+                end
+            end
+        end
         if #AllBaitList > 1 then
             table.sort(AllBaitList, function (a,b)
                 if a.LiftRate == b.LiftRate then
@@ -1013,7 +1044,7 @@ function FishNotesMgr:GetFishBaitList(SaveList, FishData, LocationID)
             end)
         end
     else
-         --平均钓饵阶段的每个钓饵 （所有）
+            --平均钓饵阶段的每个钓饵 （所有）
         for _, Data in ipairs(SaveList[1]) do
             local BaitData = {
                 ID =Data.ID,
@@ -1030,13 +1061,8 @@ end
 function FishNotesMgr:GetFishIDByBaitID(BaitID)
     self.Bait2FishID = self.Bait2FishID or {}
     if not self.Bait2FishID[BaitID] then
-        local FishList = FishCfg:FindAllCfg()
-        for FishID, value in pairs(FishList) do
-            if value.BaitID == BaitID then
-                self.Bait2FishID[BaitID] = FishID
-                return FishID
-            end
-        end
+        local FishData = FishCfg:FindCfg("BaitID = ".. BaitID)
+        self.Bait2FishID[BaitID] = FishData and FishData.ID
     end
     return self.Bait2FishID[BaitID]
 end
@@ -1349,6 +1375,7 @@ end
 ---@type 是否满足开启闹钟计时条件
 function FishNotesMgr:IsNeedStartClockTimer()
     if self.FishClockSetting == nil then
+        self:SendMsgGetClockList()
         return false
     end
 
@@ -1659,11 +1686,16 @@ function FishNotesMgr:OnNetMsgGetUnlockFishList(MsgBody)
         local Data
         for i = 1, #DataList do
             Data = DataList[i]
-            self.FishUnlockList[Data.FishID] = {
-                Count = Data.Count,
-                Size = Data.Size,
-                SizeTime = Data.SizeTime
-            }
+            if Data.Count > 0 then
+                self.FishUnlockList[Data.FishID] = {
+                    Count = Data.Count,
+                    Size = Data.Size,
+                    SizeTime = Data.SizeTime,
+                    HistoryPercent = Data.HistoryPercent, --历史尺寸排名
+                    CurrPercent = Data.CurrPercent, --当前尺寸排名
+                    TotalNum = Data.TotalNum, --钓起该鱼达到金牌总人数
+                }
+            end
         end
     end
 
@@ -1688,6 +1720,12 @@ function FishNotesMgr:OnEnterFishAreaSendUnlock(GroundID)
     local ProfID = MajorUtil.GetMajorProfID()
     if not _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDFisherNote) and ProfID ~= ProtoCommon.prof_type.PROF_TYPE_FISHER then --捕鱼人解锁时，笔记解锁慢职业一步
         _G.FLOG_INFO("FishNotesMgr:OnEnterFishAreaSendUnlock FishNote is Lock")
+        return
+    end
+    --如果钓场解锁数据还未拉取到，拉取到后再触发
+    if self.IsGetClockInfo == false then
+        self.SendUnlockFishArea = self.SendUnlockFishArea or {}
+        table.insert(self.SendUnlockFishArea, GroundID)
         return
     end
     if GroundID == nil or not self:CheckFishLocationbLock(GroundID) then
@@ -1728,6 +1766,13 @@ function FishNotesMgr:OnNetMsgGetFishGroundList(MsgBody)
     self.IsGetClockInfo = true
     EventMgr:SendEvent(EventID.FishNoteRefreshLocationList)
     _G.FLOG_INFO("SendEvent EventID.FishNoteRefreshLocationList")
+
+    if not table.is_nil_empty(self.SendUnlockFishArea) then
+        for _, value in pairs(self.SendUnlockFishArea) do
+            self:OnEnterFishAreaSendUnlock(value)
+        end
+        self.SendUnlockFishArea = nil
+    end
 end
 
 ---@type 发送添加闹钟信息
@@ -1783,6 +1828,7 @@ function FishNotesMgr:OnUpdateClock(FishID, GroundID, IsSubscribe)
     self:OnClockTimerUpdate()
     FishNotesClockSetWindVM:UpdateVM(self:GetFishNoteClockSetting())
     EventMgr:SendEvent(EventID.FishNoteClockSubscribeChanged, FishID, IsSubscribe)
+    _G.FishIngholeVM:RefreshTextClockNum()
 end
 
 ---@type 请求修改闹钟设置
@@ -1808,6 +1854,10 @@ function FishNotesMgr:OnNetMsgClockSettingInfo(MsgBody)
     end
 
     if MsgBody.set == nil then
+        return
+    end
+
+    if MsgBody.set.NoteType ~= FishNotesDefine.FishNoteType then
         return
     end
 
@@ -1879,17 +1929,49 @@ function FishNotesMgr:OnNetMsgFishUpdate(MsgBody)
     local Data = Msg.UpdateBook
     local FishID = Data.FishID
     self.FishUnlockList = self.FishUnlockList or {}
-    self.FishUnlockList[FishID] = {
-        Count = Data.Count,
-        Size = Data.Size,
-        SizeTime = Data.SizeTime
-    }
+    local SaveData = self.FishUnlockList[FishID] or {}
+    SaveData.Count = Data.Count
+    SaveData.Size = Data.Size
+    SaveData.SizeTime = Data.SizeTime
+    self.FishUnlockList[FishID] = SaveData
 
+    self:UpdateRank(Data, SaveData)
     EventMgr:SendEvent(EventID.FishNoteRefreshFishData, FishID)
 
     local FishData = self:GetFishCfg(FishID)
     if FishData then 
         DataReportUtil.ReportSystemFlowData("FishingNotesInfo", 3, FishID, FishData.Rarity, FishData.VersionName, _G.FishGuideVM.TotalFishUnLock, _G.FishGuideVM.FishKingUnlock, _G.FishGuideVM.FishQueenUnlock)
+    end
+end
+
+function FishNotesMgr:UpdateRank(CurData, SaveData)
+    local Params = {}
+    local CurrPercent = CurData.CurrPercent
+    --当前尺寸未上榜（只要上榜了排名就不为0）
+    if CurrPercent == 0 then
+        Params.bShowRank = false
+    else
+        --之前未上榜时表现为0%
+        local OldPercent = SaveData.CurrPercent or 0
+        local OldRank = math.floor(OldPercent * 100)
+        local CurRank = math.floor(CurrPercent * 100) 
+        if CurRank > OldRank then
+            Params.bShowRank = true
+            Params.OldRankText = string.format("%d%%", OldRank)
+            Params.CurRankText = string.format("%d%%", CurRank)
+            Params.OldRankColor = _G.FishGuideVM:GetRankingColor(OldPercent, true)
+            Params.CurRankColor = _G.FishGuideVM:GetRankingColor(CurrPercent, true)
+        else
+            Params.bShowRank = false
+        end
+    end
+    EventMgr:SendEvent(EventID.FishNoteUpdateRank, Params)
+
+    --除了初始化鱼数据，只有钓到的这条上榜时，才更新笔记保存的排名数据
+    if CurrPercent ~= 0 or SaveData.CurrPercent == nil then
+        SaveData.HistoryPercent = CurData.HistoryPercent --历史尺寸排名
+        SaveData.CurrPercent = CurData.CurrPercent --当前尺寸排名
+        SaveData.TotalNum = CurData.TotalNum --钓起该鱼达到金牌总人数
     end
 end
 --endregion
@@ -2254,12 +2336,12 @@ end
 ---@type 首次钓鱼经验的提示
 function FishNotesMgr:FirstFishEXPBonus(Name, Score)
     local EXPBonus = Score.Value
-    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e", 0, nil)--70029获得了
+    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e")--70029获得了
     local ScoreInfo = ScoreCfg:FindCfgByKey(19000099)
     local IconRichText = RichTextUtil.GetTexture(ScoreInfo.IconName, 40, 40, -10)
-    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF", 0, nil)
+    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF")
     local SoceNumRichText =
-        RichTextUtil.GetText(string.format("×%s", _G.LootMgr.FormatCurrency(EXPBonus)), "d1ba8e", 0, nil)
+        RichTextUtil.GetText(string.format("×%s", _G.LootMgr.FormatCurrency(EXPBonus)), "d1ba8e")
     local Content =
         string.format("%s[%s]%s%s%s%s", LSTR(180007), Name, GetRitchText, IconRichText, ScoreRichText, SoceNumRichText) --180007首次钓起了
     if Score.Percent ~= 0 then

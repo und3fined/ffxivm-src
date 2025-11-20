@@ -24,10 +24,11 @@ local ScoreMgr = LuaClass(MgrBase)
 
 
 ---@field MajorRoleID number
----@field ScoreValueList luatable
+---@field ScoreValueMap luatable
 function ScoreMgr:OnInit()
 	self.MajorRoleID = nil
-    self.ScoreValueList = {}
+    self.ScoreValueMap = {}
+    self.ScoreWeekValueMap = {} -- 本周已获取的积分
 	self.ScoreConvertMap = {}
 	self.IterationConvertInfos = {}     -- 用于保存货币转化协议数据
 end
@@ -48,7 +49,7 @@ function ScoreMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_SCORE, ScoreSubCmd.SCORE_CONVERT_CMD, self.OnNetMsgScoreConvert)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_SCORE, ScoreSubCmd.SCORE_UPDATE_CMD, self.OnNetMsgScoreUpdate)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_SCORE, ScoreSubCmd.SCORE_ITERATION_CONVERT_CMD, self.OnNetMsgScoreIterationConvert)
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_SCORE, ScoreSubCmd.SCORE_LIMIT_INFO, self.OnNetMsgGetScoreLimitInfo)
+	-- self:RegisterGameNetMsg(CS_CMD.CS_CMD_SCORE, ScoreSubCmd.SCORE_LIMIT_INFO, self.OnNetMsgGetScoreLimitInfo)
 end
 
 function ScoreMgr:OnRegisterGameEvent()
@@ -89,12 +90,13 @@ end
 
 function ScoreMgr:OnGameEventRoleLoginRes(Params)
 	self.MajorRoleID = MajorUtil.GetMajorRoleID()
-	if not Params.bReconnect then   --- 如果是重连就不要重置积分列表了，解决挂机重连后没有积分的问题
-		self.ScoreValueList = {}
+
+	-- 刷新全部积分数据
+	local RoleDetail = MajorUtil.GetMajorRoleDetail()
+	if RoleDetail ~= nil then
+		self:RefreshScore(RoleDetail.Score.ScoreList)
 	end
 
-	-- 请求全部积分数据
-	self:SendSelectScore()
 	--- 登陆时请求转化数据
 	self:SendScoreIterationConvert()
 end
@@ -124,20 +126,7 @@ end
 ---@param MsgBody ScoreRsp
 function ScoreMgr:OnNetMsgScoreSelect(MsgBody)
 	local ScoreSelectRsp = MsgBody.ScoreSelect
-	local ScoreList = ScoreSelectRsp.ScoreList
-
-	for ScoreID, ScoreValue in pairs(ScoreList) do
-		if ScoreValue >= 0 then
-			self:SetScoreValueByIDInternal(ScoreID, ScoreValue)
-			if ScoreID == SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP then
-				self:SendExpUpdateEvent()
-			end
-		end
-	end
-	_G.EventMgr:SendEvent(EventID.ScoreUpdate)
-	-- 积分一览
-	EquipmentCurrencyVM:LoadAllScore()
-	EquipmentCurrencyVM:UpdateScorePossesNum(ScoreList)
+	self:RefreshScore(ScoreSelectRsp.ScoreDatas)
 end
 
 ---收到积分兑换消息
@@ -150,8 +139,8 @@ function ScoreMgr:OnNetMsgScoreConvert(MsgBody)
 		and ScoreConvertRsp.TargetIdTotal ~= -1
 
 	if bIsValidScoreConvert then
-		self:SetScoreValueByIDInternal(ScoreConvertRsp.DeductID, ScoreConvertRsp.DeductIdTotal)
-		self:SetScoreValueByIDInternal(ScoreConvertRsp.TargetID, ScoreConvertRsp.TargetIdTotal)
+		self:SetScoreValueByID(ScoreConvertRsp.DeductID, ScoreConvertRsp.DeductIdTotal)
+		self:SetScoreValueByID(ScoreConvertRsp.TargetID, ScoreConvertRsp.TargetIdTotal)
 	end
 
 	MarketMgr:ShowSysChatObtainScoreMsg(ScoreConvertRsp.TargetID, ScoreConvertRsp.Delta)
@@ -162,19 +151,20 @@ end
 ---收到积分更新消息
 ---@param MsgBody ScoreRsp
 function ScoreMgr:OnNetMsgScoreUpdate(MsgBody)
-	local ScoreData = MsgBody.ScoreUpdate.Score
-	local ScoreID = ScoreData.ID
-	local ScoreValue = ScoreData.Value
-	self:GetScorePlayAni(ScoreID, ScoreValue)
-	self:SetScoreValueByIDInternal(ScoreID, ScoreValue)
+	local ScoreDatas = MsgBody.ScoreUpdate.ScoreDatas
+	for ScoreID, ScoreData in pairs(ScoreDatas) do
+		self:GetScorePlayAni(ScoreID, ScoreData.Value)
+		self:SetScoreValueByID(ScoreID, ScoreData.Value, ScoreData.WeekValue)
 
-	if ScoreID == SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP then
-		self:SendExpUpdateEvent(ScoreData)
-	else
-		_G.EventMgr:SendEvent(EventID.UpdateScore, ScoreID)
+		if ScoreID == SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP then
+			self:SendExpUpdateEvent(ScoreData)
+		else
+			_G.EventMgr:SendEvent(EventID.UpdateScore, ScoreID)
+		end
 	end
+
 	-- 积分一览
-	EquipmentCurrencyVM:UpdateScorePossesNum(self.ScoreValueList)
+	EquipmentCurrencyVM:UpdateScorePossesNum(self.ScoreValueMap)
 
 	_G.EventMgr:SendEvent(EventID.ScoreUpdate)
 end
@@ -198,15 +188,15 @@ function ScoreMgr:OnNetMsgScoreIterationConvert(MsgBody)
 	end
 end
 
--- 收到积分周获取量回包消息
-function ScoreMgr:OnNetMsgGetScoreLimitInfo(MsgBody)
-	if MsgBody == nil then
-		return
-	end
-	if MsgBody.LimitInfo ~= nil then
-		EquipmentCurrencyVM:UpdateScoreWeekUpper(MsgBody.LimitInfo.Limits)
-	end
-end
+-- 收到积分周获取量回包消息-已弃用
+-- function ScoreMgr:OnNetMsgGetScoreLimitInfo(MsgBody)
+-- 	if MsgBody == nil then
+-- 		return
+-- 	end
+-- 	if MsgBody.LimitInfo ~= nil then
+-- 		EquipmentCurrencyVM:UpdateScoreWeekUpper(MsgBody.LimitInfo.Limits)
+-- 	end
+-- end
 --------------- 网络：发送请求 ---------------
 
 ---向服务器发送积分相关请求
@@ -258,25 +248,65 @@ function ScoreMgr:SendScoreIterationConvert(IsDel)
 	self:SendNetMsgScore(MsgBody)
 end
 
----请求积分限制获取情况
-function ScoreMgr:SendGetScoreLimitInfo(ScoreIDList)
-	local MsgBody = {
-		Cmd = ScoreSubCmd.SCORE_LIMIT_INFO,
-		ScoreSelect = {
-			RoleID = self.MajorRoleID,
-			ScoreIdList = ScoreIDList
-		}
-	}
-	self:SendNetMsgScore(MsgBody)
-end
+---请求积分限制获取情况-已弃用
+-- function ScoreMgr:SendGetScoreLimitInfo(ScoreIDList)
+-- 	local MsgBody = {
+-- 		Cmd = ScoreSubCmd.SCORE_LIMIT_INFO,
+-- 		ScoreSelect = {
+-- 			RoleID = self.MajorRoleID,
+-- 			ScoreIdList = ScoreIDList
+-- 		}
+-- 	}
+-- 	self:SendNetMsgScore(MsgBody)
+-- end
 --------------- 内部接口 ---------------
 
----@param ScoreID int64
----@param ScoreValue int64
-function ScoreMgr:SetScoreValueByIDInternal(ScoreID, ScoreValue)
-	if ScoreValue ~= nil then
-		self.ScoreValueList[ScoreID] = ScoreValue
+---@param ScoreDatas map< int32, ScoreData >
+function ScoreMgr:RefreshScore(ScoreDatas)
+	for ScoreID, ScoreData in pairs(ScoreDatas) do
+		self:SetScoreValueByID(ScoreID, ScoreData.Value, ScoreData.WeekValue)
+		if ScoreID == SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP then
+			self:SendExpUpdateEvent()
+		end
 	end
+	_G.EventMgr:SendEvent(EventID.ScoreUpdate)
+	-- 积分一览
+	EquipmentCurrencyVM:LoadAllScore()
+	EquipmentCurrencyVM:UpdateScorePossesNum(self.ScoreValueMap)
+end
+
+---@param ScoreID int32
+---@param ScoreValue int64
+function ScoreMgr:SetScoreValueByID(ScoreID, ScoreValue, WeekValue)
+	if ScoreValue ~= nil then
+		self.ScoreValueMap[ScoreID] = ScoreValue
+	end
+
+	if WeekValue == 0 then
+		self.ScoreWeekValueMap[ScoreID] = nil
+	elseif WeekValue ~= nil then
+		self.ScoreWeekValueMap[ScoreID] = WeekValue
+	end
+end
+
+local function IsFloatCondValid(CondType, CondValues)
+	local FCT = ProtoRes.FloatCondType
+	if (CondType == FCT.None) or (CondValues == nil) or (#CondValues == 0) then
+		return false
+	elseif (CondType == FCT.BattlePassLv) then
+        return (_G.BattlePassMgr:GetBattlePassGrade() == CondValues[1])
+	else
+		return false
+	end
+end
+
+local function GetEmptyWeekUpper()
+	return {
+		Fixed = 0, -- 固定上限 0不设上限
+		Float = 0, -- 浮动上限 0没有浮动上限
+		CondType = ProtoRes.FloatCondType.None, -- 浮动条件类型
+		CondValues = nil, -- 浮动条件值
+	}
 end
 
 --------------- 外部接口 ---------------
@@ -284,23 +314,34 @@ end
 ---获取积分列表
 ---@return table
 function ScoreMgr:GetScoreValueList()
-	return self.ScoreValueList
+	return self.ScoreValueMap
 end
 
 ---根据积分ID获取或初始化对应积分值
----@param ScoreID int64
----@return int64 | nil
+---@param ScoreID int32
+---@return number
 function ScoreMgr:GetScoreValueByID(ScoreID)
 	if ScoreID == nil then
 		_G.FLOG_ERROR("ScoreMgr:GetScoreValueByID receive ScoreID=nil")
 		return 0
 	end
-	local ScoreValue = self.ScoreValueList[ScoreID]
+	local ScoreValue = self.ScoreValueMap[ScoreID]
 	if ScoreValue == nil then
-		self.ScoreValueList[ScoreID] = 0
+		self.ScoreValueMap[ScoreID] = 0
 		return 0
 	end
 	return ScoreValue
+end
+
+---@param ScoreID int32
+---@return number
+function ScoreMgr:GetScoreWeekValueByID(ScoreID)
+	if ScoreID == nil then
+		_G.FLOG_ERROR("ScoreMgr:GetScoreWeekValueByID receive ScoreID=nil")
+		return 0
+	end
+	local WeekValue = self.ScoreWeekValueMap[ScoreID]
+	return WeekValue or 0
 end
 
 ---@param RoleDetail RoleDetail
@@ -308,9 +349,9 @@ function ScoreMgr:SetExpByRoleDetail(RoleDetail)
 	local ProfID = RoleDetail.Simple.Prof
 	local ProfData = RoleDetail.Prof.ProfList[ProfID]
 	if ProfData ~= nil then
-		self:SetScoreValueByIDInternal(SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP, ProfData.Exp)
+		self:SetScoreValueByID(SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP, ProfData.Exp)
 	else
-		self:SendSelectScore({SCORE_TYPE.SCORE_TYPE_UPGRADE_EXP})
+		_G.FLOG_WARNING("ScoreMgr:SetExpByRoleDetail ProfData is nil for ProfID: %d", ProfID)
 	end
 end
 
@@ -347,7 +388,7 @@ function ScoreMgr:ConvertScoreByID(DeductID, DeductNumTotal, TargetID)
 	self:SendConvertScore(DeductID, DeductNumTotal, TargetID, TargetNumTotal)
 end
 
----@param ScoreID int64
+---@param ScoreID int32
 ---@return string
 function ScoreMgr:GetScoreName(ScoreID)
 	local Name = ScoreCfg:FindValue(ScoreID, "Name") or "Nil"
@@ -366,13 +407,46 @@ function ScoreMgr:GetScoreMaxValue(ScoreID)
 	return MaxValue
 end
 
----未完成
----@param ScoreID int64
-function ScoreMgr:GetScoreIconSet(ScoreID)
+function ScoreMgr:GetScoreWeekUpperValue(ScoreID)
+	local ScoreCfgItem = ScoreCfg:FindCfgByKey(ScoreID)
+	if not ScoreCfgItem then
+		_G.FLOG_WARNING("ScoreMgr:GetScoreWeekUpperValue ScoreCfg %d not found", ScoreID or 0)
+		return 0
+	end
+	local WeekUpper = ScoreCfgItem.WeekUpper or GetEmptyWeekUpper()
 
+	local bUseFloatUpper = IsFloatCondValid(WeekUpper.CondType, WeekUpper.CondValues)
+	return bUseFloatUpper and WeekUpper.Float or WeekUpper.Fixed
 end
 
----@param ScoreID int64
+---积分到达上限前，剩余可获取的积分值
+function ScoreMgr:GetScoreResidualValue(ScoreID)
+	local MaxValue = self:GetScoreMaxValue(ScoreID)
+	local Value = self:GetScoreValueByID(ScoreID)
+	local MaxResidual = MaxValue - Value
+	if (MaxResidual < 0) then
+		_G.FLOG_ERROR("ScoreMgr:GetScoreResidualValue found negative max residual, %d, %d/%d", ScoreID, Value, MaxValue)
+		return 0
+	end
+
+	local WeekUpperValue = self:GetScoreWeekUpperValue(ScoreID)
+	if WeekUpperValue == 0 then
+		return MaxResidual
+	end
+
+	local WeekValue = self:GetScoreWeekValueByID(ScoreID)
+	local WeekResidual = WeekUpperValue - WeekValue
+	if (WeekResidual < 0) then
+		_G.FLOG_ERROR("ScoreMgr:GetScoreResidualValue found negative week residual, %d, %d/%d", ScoreID, WeekValue, WeekUpperValue)
+		return 0
+	end
+
+	return math.min(MaxResidual, WeekResidual)
+end
+
+
+
+---@param ScoreID int32
 ---@return string
 function ScoreMgr:GetScoreIconName(ScoreID)
 	local IconName = ScoreCfg:FindValue(ScoreID, "IconName")
@@ -382,7 +456,7 @@ function ScoreMgr:GetScoreIconName(ScoreID)
 	return IconName
 end
 
----@param ScoreID int64
+---@param ScoreID int32
 ---@return string
 function ScoreMgr:GetScoreDesc(ScoreID)
 	local Desc = ScoreCfg:FindValue(ScoreID, "Desc") or "No score description found"

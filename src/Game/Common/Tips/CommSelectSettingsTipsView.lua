@@ -10,6 +10,8 @@ local UIUtil = require("Utils/UIUtil")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderSetCheckedState = require("Binder/UIBinderSetCheckedState")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+
 ---@class CommSelectSettingsTipsView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field CommSingleBox CommSingleBoxView
@@ -67,11 +69,11 @@ function CommSelectSettingsTipsView:OnAutoUseStateChange(ToggleButton, State)
 	local IsChecked = UIUtil.IsToggleButtonChecked(State)
 	if IsChecked then
 		if self.ViewModel:GetCurrentChooseType() == 0  then
-			self.CommSingleBox:UpdateColor(IsChecked)
+			--self.CommSingleBox:UpdateColor(IsChecked)
 			self.ViewModel:SelectDefaultElem()
 		end
 	else
-		self.CommSingleBox:UpdateColor(IsChecked)
+		--self.CommSingleBox:UpdateColor(IsChecked)
 		self.ViewModel:CancelAllSelected()
 		self.ViewModel:CallSettingFunction(self.ViewModel:GetEmptyIndexDefaultElem())
 	end
@@ -88,7 +90,7 @@ function CommSelectSettingsTipsView:OnRegisterBinder()
 	self.CustomBinders = {
 		{ "ListSettingTipsItemVM", UIBinderUpdateBindableList.New(self, self.TableView) },
 		{ "bAutoUseSelect", UIBinderSetCheckedState.New(self, self.CommSingleBox, true) },
-
+		{ "AutoUseSelectColor", UIBinderSetColorAndOpacityHex.New(self, self.CommSingleBox.TextContent) },
 	}
 	self.CommSingleBox:SetText(self.ViewModel.AutoUseInRainTitle)
 

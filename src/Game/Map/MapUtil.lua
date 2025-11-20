@@ -251,6 +251,58 @@ function MapUtil.IsMiniMapContentType(ContentType)
 	return MapContentType.MiniMap == ContentType
 end
 
+
+---给定UIMapID是否是房屋UI地图
+---@return boolean
+function MapUtil.IsHouseUIMap(UIMapID)
+	local AreaMapID = MapUtil.GetMapID(UIMapID)
+	return MapUtil.IsHouseMap(AreaMapID)
+end
+
+---给定MapID是否是房屋地图。由住宅区配置决定
+---@return boolean
+function MapUtil.IsHouseMap(MapID)
+	local HouseRegionID = MapUtil.GetHouseRegionID(MapID)
+	return HouseRegionID > 0
+end
+
+---根据MapID获取住宅区ID。地图和房屋交互时换算
+---@return number 住宅区ID，对应后台定义ResidenceNumber
+function MapUtil.GetHouseRegionID(MapID)
+    local EstateInfo = _G.HouseLandMianPanelVM:GetEstateCfg()
+    for _, EstateInfoCfgData in pairs(EstateInfo) do
+        if EstateInfoCfgData.MapID == MapID then
+            return EstateInfoCfgData.ID
+        end
+    end
+
+	return 0
+end
+
+function MapUtil.GetCurrHouseRegionID()
+	local MapID = _G.PWorldMgr:GetCurrMapResID()
+	local EstateInfo = _G.HouseLandMianPanelVM:GetEstateCfg()
+    for _, EstateInfoCfgData in pairs(EstateInfo) do
+        if EstateInfoCfgData.MapID == MapID or string.find(EstateInfoCfgData.BelongMapStr, MapID) then
+            return EstateInfoCfgData.ID
+        end
+    end
+	return 0
+end
+
+---根据参数获取住宅区初始区/扩建区ID。地图和房屋交互时换算
+---@return number
+function MapUtil.GetHouseAreaID(MapID, UIMapID)
+	local ConfigUIMapID = MapUtil.GetUIMapID(MapID)
+	-- 判断依据：地图表里配的默认UIMapID是初始区，否则是扩建区
+	if ConfigUIMapID == UIMapID then
+		return 1
+	else
+		return 2
+	end
+end
+
+
 ---GetIconPath
 ---@param Icon number  @MapIconCfg表中的ID 表格复用端游字段名Icon
 function MapUtil.GetIconPath(Icon)
@@ -396,7 +448,7 @@ end
 ---@param UIMapID number @地图UIMapID
 ---@return number, number
 function MapUtil.ConvertMapPos2UI(X, Y, MapCenterOffsetX, MapCenterOffsetY, MapScale, IsLeftTop, UIMapID)
-	if MapCenterOffsetX == nil or  MapCenterOffsetY == nil or MapScale == nil then
+	if MapCenterOffsetX == nil or  MapCenterOffsetY == nil or MapScale == nil or X == nil or Y == nil then
 		return 0, 0
 	end
 
@@ -514,7 +566,7 @@ function MapUtil.ConvertUIPos2Map(X, Y, MapCenterOffsetX, MapCenterOffsetY, MapS
 	--return X, Y
 end
 
----ConvertAreaPos2Region
+---三级地图UI坐标转二级地图UI坐标
 ---@param X number
 ---@param Y number
 ---@param RegionPosX number
@@ -534,48 +586,58 @@ end
 ---@return string
 function MapUtil.GetMapFullName()
 	local MajorUIMapID = _G.MapMgr:GetUIMapID()
+	local parts = {}  -- 使用表格存储字符串部分
 
 	local MapName = MapUtil.GetMapName(MajorUIMapID) or LSTR(700009) -- "未知地图"
-	local MapFullName = MapName
+	table.insert(parts, MapName)
 
 	local MapFloorName = MapUtil.GetMapFloorName(MajorUIMapID)
 	if MapFloorName and MapFloorName ~= "" then
-		MapFullName = MapName .. "·" ..MapFloorName
+		-- 楼层名
+		table.insert(parts, "·")
+		if MapUtil.IsHouseUIMap(MajorUIMapID) then
+			-- 如果是房屋地图，要求显示房屋住宅区街区ID
+			table.insert(parts, string.format(LSTR(700054), _G.MapMgr:GetStreetID()))
+		end
+		table.insert(parts, MapFloorName)
 	else
-		-- 区域名称
+		-- 地名
 		local MapAreaName
 		local MapAreaMgr = _G.MapAreaMgr
 		if MapAreaMgr.CurrSpot > 0 then
+			-- 地名(场所)
 			MapAreaName = MapUtil.GetPlaceName(MapAreaMgr.CurrSpot)
 		elseif MapAreaMgr.CurrBlock > 0 then
+			-- 地名(街道)
 			MapAreaName = MapUtil.GetPlaceName(MapAreaMgr.CurrBlock)
 		end
 		if MapAreaName and MapAreaName ~= "" then
-			MapFullName = MapName .. "·" ..MapAreaName
+			table.insert(parts, "·")
+			table.insert(parts, MapAreaName)
 		end
 	end
 
-	return MapFullName
+	return table.concat(parts)
 end
 
----获取给定UI坐标的显示坐标
+---获取给定UI坐标的显示坐标文本
 ---@param TopLeftPosition table UI坐标
-function MapUtil.GetCoordinateText(TopLeftPosition)
-	--print("[MapUtil.GetCoordinateText] TopLeftPosition ", TopLeftPosition.X, TopLeftPosition.Y)
-
+---@param UIMapID number
+---@return string
+function MapUtil.GetCoordinateText(TopLeftPosition, UIMapID)
 	--[[
 	需求：手游的显示坐标计算需要同端游保持一致
-	以地图左上角作为坐标起始点x=1,y=1，右下角坐标为x=42,y=42，且坐标都是正数
+	地图左上角UI坐标(0,0)对应显示x=1,y=1，右下角UI坐标(2048,2048)对应显示x=42,y=42，且坐标都是正数
 	等于将UI地图宽度MAP_PANEL_WIDTH分成41格Grid，每个格子大小约50*50
 
 	端游有些地图（如主城）右下角是21.4，等于每个格子大小约100*100
 	端游有些地图（如8人本）右下角是11.2，等于每个格子大小约200*200
 	端游有些地图（如旅馆）右下角是6.1，等于每个格子大小约400*400
-	具体表格地图比例Scale字段决定
+	具体由表格地图比例Scale字段决定
 	--]]
 	local UIGridSize = 50
-	local MajorUIMapID = _G.MapMgr:GetUIMapID()
-	local Scale = MapUtil.GetMapScale(MajorUIMapID)
+	UIMapID = UIMapID or _G.MapMgr:GetUIMapID()
+	local Scale = MapUtil.GetMapScale(UIMapID)
 	if Scale and Scale > 0 then
 		UIGridSize = Scale / 2
 	end
@@ -583,8 +645,23 @@ function MapUtil.GetCoordinateText(TopLeftPosition)
 	local X = TopLeftPosition.X / UIGridSize
 	local Y = TopLeftPosition.Y / UIGridSize
 	return string.format("(%.1f, %.1f)", X + 1, Y + 1)
-	--return string.format("(%.1f, %.1f)", TopLeftPosition.X * 0.01 + 1, TopLeftPosition.Y * 0.01 + 1)
 end
+
+---获取主角的显示坐标文本
+function MapUtil.GetMajorCoordinateText()
+	local Position = _G.MapVM:GetMajorLeftTopPosition()
+	local InfoText = string.format("%s  %s", MapUtil.GetCoordinateText(Position), MapUtil.GetMapFullName())
+
+	if _G.PWorldMgr:IsShowPWorldLine() then
+		local CurrLineID = _G.PWorldMgr:GetCurrPWorldLineID()
+		if CurrLineID > 0 then
+			InfoText = string.format("%s（%02d）", InfoText, CurrLineID)
+		end
+	end
+
+	return InfoText
+end
+
 
 function MapUtil.GetRegionUIMapID(UIMapID)
 	local CategoryNameUI = MapUtil.GetMapCategoryNameUI(UIMapID)
@@ -796,7 +873,7 @@ end
 ---判断给定地图是否有传送大水晶，一般对应大主城和野外
 function MapUtil.MapHasAcrossMapCrystal(UIMapID)
 	local MarkerID = MapUtil.GetMapMarkerID(UIMapID)
-	local AllCfg = MapMarkerCfg:WorldMapGetAllMarkerCfgByEventType(MarkerID, MapMarkerEventType.MAP_MARKER_EVENT_TELEPO)
+	local AllCfg = MapMarkerCfg:GetAllMarkerCfgByEventType(MarkerID, MapMarkerEventType.MAP_MARKER_EVENT_TELEPO)
 	if nil == AllCfg then
 		return false, nil
 	end
@@ -814,7 +891,7 @@ end
 ---判断给定地图是否只有传送小水晶，一般对应小主城
 function MapUtil.MapHasOnlyCurrentMapCrystal(UIMapID)
 	local MarkerID = MapUtil.GetMapMarkerID(UIMapID)
-	local AllCfg = MapMarkerCfg:WorldMapGetAllMarkerCfgByEventType(MarkerID, MapMarkerEventType.MAP_MARKER_EVENT_TELEPO)
+	local AllCfg = MapMarkerCfg:GetAllMarkerCfgByEventType(MarkerID, MapMarkerEventType.MAP_MARKER_EVENT_TELEPO)
 	if nil == AllCfg then
 		return false
 	end
@@ -863,7 +940,7 @@ end
 --根据MapID获取聊天系统中地图超链接中显示的地图名称
 ---@param MapID number
 function MapUtil.GetChatHyperlinkMapName(MapID)
-	local UIMapID = MapUtil.GetUIMapID(MapID)
+	local UIMapID = _G.MapMgr:GetUIMapID() or MapUtil.GetUIMapID(MapID)
 	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
 	if nil == Cfg then
 		return
@@ -932,10 +1009,10 @@ function MapUtil.GetAllAreaMapList(UIMapID)
 	return MapList
 end
 
----获取三级地图下面的细分地图（分层）列表
+---获取三级地图下面的楼层/分层地图列表
 ---@param UIMapID number
 ---@return table
-function MapUtil.GetAreaDownMapList(UIMapID)
+function MapUtil.GetAreaFloorMapList(UIMapID)
 	local NameUI = MapUtil.GetMapNameUI(UIMapID)
 	if NameUI == 0 then
 		return {}
@@ -1070,6 +1147,8 @@ function MapUtil.GetActorUIPosByRoleID(UIMapID, RoleID, IsPVPPlayer)
 end
 
 
+--region 地图、地区、地域三者关联
+
 ---获取地域ID到地区ID列表、地区ID到地图ID列表的两个table
 function MapUtil.GetRegionAndAreaTable()
 	local AllCfg = MapRegionIconCfg:GetAllValidRegion()
@@ -1103,7 +1182,8 @@ function MapUtil.GetRegionAndAreaTable()
 	return Region2AreaTable, Area2MapTable
 end
 
----获取给定地图的地区ID
+---获取给定地图所属的地区ID
+---@return number
 function MapUtil.GetMapAreaID(MapID)
 	local Map2area = MapMap2areaCfg:FindCfgByKey(MapID)
 	if not Map2area then
@@ -1112,7 +1192,8 @@ function MapUtil.GetMapAreaID(MapID)
 	return Map2area.AreaID
 end
 
----获取给定地图的地域ID
+---获取给定地图所属的地域ID
+---@return number
 function MapUtil.GetMapRegionID(MapID)
 	local AreaID = MapUtil.GetMapAreaID(MapID)
 	if not AreaID then
@@ -1125,6 +1206,18 @@ function MapUtil.GetMapRegionID(MapID)
 	end
 	return Area2region.RegionID
 end
+
+---获取对应地域的名字
+---@return string
+function MapUtil.GetRegionName(RegionID)
+	local RegionCfg = MapRegionIconCfg:FindCfgByKey(RegionID)
+    if not RegionCfg then
+        return
+    end
+	return RegionCfg.Name
+end
+
+--endregion
 
 
 ---二级地图大图标，同一个RegionIcon上的图标位置要排列显示（参考一级地图图标做法）
@@ -1441,6 +1534,14 @@ function MapUtil.ShowWorldMapMarkerFollowTips(Marker, EventParams)
 	UIViewMgr:ShowView(UIViewID.WorldMapMarkerTipsFollow, Params)
 end
 
+---显示地图标记金碟小游戏tips界面
+---@param Marker MapMarker 地图标记
+---@param EventParams table 屏幕坐标等各类参数
+function MapUtil.ShowWorldMapGoldSaucerMarkerTips(Marker, EventParams)
+	local Params = { MapMarker = Marker, ScreenPosition = EventParams.ScreenPosition }
+	UIViewMgr:ShowView(UIViewID.WorldMapGoldSaucerMarkerTips, Params)
+end
+
 
 ---获取对应地图是否有飞行条件
 function MapUtil.IsMapHaveFlyRight(MapID)
@@ -1465,14 +1566,6 @@ function MapUtil.IsSpecialUIMap(UIMapID)
 	return Cfg ~= nil
 end
 
----获取对应地域的名字
-function MapUtil.GetRegionName(RegionID)
-	local RegionCfg = MapRegionIconCfg:FindCfgByKey(RegionID)
-    if not RegionCfg then
-        return
-    end
-	return RegionCfg.Name
-end
 
 --- 根据任务节点转换地图ID
 function MapUtil.ConvertMapID(WorldID, MapID)
@@ -1511,7 +1604,7 @@ function MapUtil.GetMapNpcPosByResID(MapID, NpcResID)
 
 	local NpcData = _G.MapEditDataMgr:GetNpc(NpcResID, MapEditCfg)
 	if NpcData then
-		return NpcData.BirthPoint
+		return NpcData.BirthPoint, NpcData
 	else
 		FLOG_INFO("[MapUtil.GetMapNpcPosByResID] cannot find npc config, MapID=%d, NpcResID=%d", MapID, NpcResID)
 		return
@@ -1527,7 +1620,7 @@ function MapUtil.GetMapNpcPosByListID(MapID, NpcListID)
 
 	local NpcData = _G.MapEditDataMgr:GetNpcByListID(NpcListID, MapEditCfg)
 	if NpcData then
-		return NpcData.BirthPoint
+		return NpcData.BirthPoint, NpcData
 	else
 		FLOG_INFO("[MapUtil.GetMapNpcPosByListID] cannot find npc config, MapID=%d, NpcListID=%d", MapID, NpcListID)
 		return
@@ -1543,7 +1636,7 @@ function MapUtil.GetMapEObjPosByResID(MapID, EObjResID)
 
 	local EObjData = _G.MapEditDataMgr:GetEObjByResID(EObjResID, MapEditCfg)
 	if EObjData then
-		return EObjData.Point
+		return EObjData.Point, EObjData
 	else
 		FLOG_INFO("[MapUtil.GetMapEObjPosByResID] cannot find eobj config, MapID=%d, EObjResID=%d", MapID, EObjResID)
 		return
@@ -1559,10 +1652,25 @@ function MapUtil.GetMapEObjPosByListID(MapID, EObjListID)
 
 	local EObjData = _G.MapEditDataMgr:GetEObjByListID(EObjListID, MapEditCfg)
 	if EObjData then
-		return EObjData.Point
+		return EObjData.Point, EObjData
 	else
 		FLOG_INFO("[MapUtil.GetMapEObjPosByListID] cannot find eobj config, MapID=%d, EObjListID=%d", MapID, EObjListID)
 		return
+	end
+end
+
+---@return table | nil
+function MapUtil.GetMapPointPosByID(MapID, PointID)
+	local MapEditCfg = _G.MapEditDataMgr:GetMapEditCfgByMapIDEx(MapID)
+    if MapEditCfg == nil then
+        return
+    end
+
+	local MapPoint = _G.MapEditDataMgr:GetMapPoint(PointID, MapEditCfg)
+	if MapPoint then
+		return MapPoint.Point, MapPoint
+	else
+		FLOG_INFO("[MapUtil.GetMapPointPosByID] cannot find point config, MapID=%d, PointID=%d", MapID, PointID)
 	end
 end
 
@@ -1575,7 +1683,7 @@ function MapUtil.GetMapGatherPos(MapID, GatherResID)
 
 	local MapPickItem = MapUtil.GetValidGatherInSameGroup(GatherResID, MapEditCfg)
 	if MapPickItem then
-		return MapPickItem.Point
+		return MapPickItem.Point, MapPickItem
 	else
 		FLOG_INFO("[MapUtil.GetMapGatherPos] cannot find gatherpoint config, MapID=%d, GatherResID=%d", MapID, GatherResID)
 		return

@@ -217,6 +217,9 @@ function SkillStorageMgr:PrepareCastSkill(EntityID, SkillID, SkillIndex, X, Y)
 			else
                 MsgTipsUtil.ShowTipsByID(MsgTipsID.SkillNoTargetOrFar)-- 没有有效目标或目标距离过远
 			end
+			--蓄力技能无目标时需要显示技能Tips
+			local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
+			_G.EventMgr:SendEvent(EventID.SkillLongClickTips, SkillID)
 			return
 		end
 
@@ -292,6 +295,11 @@ function SkillStorageMgr:PrepareCastSkill(EntityID, SkillID, SkillIndex, X, Y)
 		if StateComponent ~= nil then
 			StateComponent:SetActorControlState(_G.UE.EActorControllStat.CanTurn, false, StorageStateTag)
 		end
+	end
+
+	local MountMgr = _G.MountMgr
+	if MountMgr:IsInRide() and not MountMgr:IsMountSkill(SkillID) then
+		MountMgr:SendMountCancelCall(nil, true)
 	end
 
 	self:UnRegisterAllTimer()

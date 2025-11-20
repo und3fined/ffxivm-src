@@ -323,7 +323,7 @@ end
 --- 重置
 function ArmySelectBadgeWinView:OnClickedBadgeReset()
 	-- LSTR string:提示
-	MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910144), LSTR(910190), self.Reset, nil, LSTR(910083), LSTR(910182))
+	MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(910144), LSTR(910190), self.Reset, nil, LSTR(910081), LSTR(910182))
 end
 
 function ArmySelectBadgeWinView:Reset()

@@ -27,8 +27,6 @@ local LSTRTextKey = {
 	StoreTittleText = 950048,
 	--- 赠礼
 	GiftTittleText = 950049,
-	--- 外观预览
-	PreviewTittleText = 950051,
 	--- 适度娱乐，理性消费
 	TittleHintText = 950052,
 	--- 确认购买
@@ -133,7 +131,9 @@ local TimeLimitText = {
 --- SoldOut 已售罄
 local SecondScreenType = {
     Owned = 950022,
-    SoldOut = 950021
+    SoldOut = 950021,
+	GoCutHair = 950105,
+	GoWardrobe = 950104
 }
 
 -- TipsID
@@ -206,6 +206,13 @@ local LightPath = {
 	["c1201"] = "LightPreset'/Game/UI/Render2D/LightPresets/Login/TODUI_Store/Store_c1101.Store_c1101",
 }
 
+--商品ImgColor
+local BuyItemBgColor = {
+    "Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorWhite.UI_Comm_Shop_Img_ColorWhite'",
+    "Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorGreen.UI_Comm_Shop_Img_ColorGreen'",
+    "Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorBlue.UI_Comm_Shop_Img_ColorBlue'",
+    "Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorPurple.UI_Comm_Shop_Img_ColorPurple'",
+}
 --- 当前主角异性的模型 key为当前主角的
 local StoreNPCID = {
 	["c0201"] = 1001374, 	-- 人男
@@ -342,6 +349,7 @@ local StoreDefine = {
 	PurchaseOperationType = PurchaseOperationType,
 	GiftOperationType = GiftOperationType,
 	MailTabType = MailTabType,
+	BuyItemBgColor = BuyItemBgColor,
 }
 
 return StoreDefine

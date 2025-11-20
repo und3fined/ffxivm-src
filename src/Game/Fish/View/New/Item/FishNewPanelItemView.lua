@@ -83,8 +83,8 @@ function FishNewPanelItemView:OnShow()
 	local Params = self.Params
 	if Params then
 		local AreaID = Params.AreaID or 0
-		self.FishAreaPanelItemVM:SetFishAreaID(AreaID)
-		self.FishAreaID = AreaID
+		FLOG_INFO("[FishNewPanelItemView]:FishMainPanel OnShow AreaID = "..AreaID)
+		self:SetFishAreaID(AreaID)
 	end
 end
 
@@ -97,9 +97,7 @@ function FishNewPanelItemView:OnRegisterUIEvent()
 end
 
 function FishNewPanelItemView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.FishNoteRefreshGuideList, self.OnRefreshFishData)
-	self:RegisterGameEvent(EventID.FishNoteRefreshFishData, self.OnRefreshFishData)
-	self:RegisterGameEvent(EventID.FishNoteRefreshLocationList, self.OnRefreshFishArea)
+
 end
 
 function FishNewPanelItemView:OnRegisterBinder()

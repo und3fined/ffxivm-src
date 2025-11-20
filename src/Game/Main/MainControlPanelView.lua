@@ -34,6 +34,8 @@ local MainControlPanelVM = require("Game/Main/VM/MainControlPanelVM")
 local UIBinderSetBrushFromAssetPath =  require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetIsVisibleByBit = require("Binder/UIBinderSetIsVisibleByBit")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local SwitchPeaceSkillTime = 5 --5秒后切换回非战斗状态技能组
 local FindGatherPointRealIndex = SkillCommonDefine.FindGatherPointRealIndex
@@ -41,16 +43,13 @@ local FindGatherPointRealIndex = SkillCommonDefine.FindGatherPointRealIndex
 ---@class MainControlPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Anim_song_screen_particle UFCanvasPanel
----@field BtnSwitch_1 UFButton
 ---@field ButtonTarget UFButton
 ---@field ExtraSkillBtn ExtraSkillBtnView
 ---@field FightPanel UCanvasPanel
 ---@field FindGather SkillAbleBtnView
 ---@field IconTarget UFImage
 ---@field IconTargetBg UFImage
----@field ImgSwitch_1 UFImage
 ---@field MainProSkill_UIBP MainProSkillView
----@field NewMainSkill_UIBP NewMainSkillView
 ---@field PanelBookBtn UFCanvasPanel
 ---@field PanelSprint UFCanvasPanel
 ---@field PanelTarget UFCanvasPanel
@@ -58,6 +57,7 @@ local FindGatherPointRealIndex = SkillCommonDefine.FindGatherPointRealIndex
 ---@field Schedule FishNewTimeItemView
 ---@field SkillGenAttackBtn_UIBP SkillGenAttackBtnView
 ---@field SkillMountBtn SkillMountBtnView
+---@field SkillPanelSlot UFCanvasPanel
 ---@field SkillSprintDownBtn SkillSprintDownBtnView
 ---@field SkillSprintUpBtn SkillSprintUpBtnView
 ---@field SkillSwithcer UWidgetSwitcher
@@ -74,16 +74,13 @@ local MainControlPanelView = LuaClass(UIView, true)
 function MainControlPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Anim_song_screen_particle = nil
-	--self.BtnSwitch_1 = nil
 	--self.ButtonTarget = nil
 	--self.ExtraSkillBtn = nil
 	--self.FightPanel = nil
 	--self.FindGather = nil
 	--self.IconTarget = nil
 	--self.IconTargetBg = nil
-	--self.ImgSwitch_1 = nil
 	--self.MainProSkill_UIBP = nil
-	--self.NewMainSkill_UIBP = nil
 	--self.PanelBookBtn = nil
 	--self.PanelSprint = nil
 	--self.PanelTarget = nil
@@ -91,6 +88,7 @@ function MainControlPanelView:Ctor()
 	--self.Schedule = nil
 	--self.SkillGenAttackBtn_UIBP = nil
 	--self.SkillMountBtn = nil
+	--self.SkillPanelSlot = nil
 	--self.SkillSprintDownBtn = nil
 	--self.SkillSprintUpBtn = nil
 	--self.SkillSwithcer = nil
@@ -109,7 +107,6 @@ function MainControlPanelView:OnRegisterSubView()
 	self:AddSubView(self.ExtraSkillBtn)
 	self:AddSubView(self.FindGather)
 	self:AddSubView(self.MainProSkill_UIBP)
-	self:AddSubView(self.NewMainSkill_UIBP)
 	self:AddSubView(self.Schedule)
 	self:AddSubView(self.SkillGenAttackBtn_UIBP)
 	self:AddSubView(self.SkillMountBtn)
@@ -200,7 +197,6 @@ function MainControlPanelView:OnInit()
     self.SwitchPeaceTimer = 0
     --self.FightState = false
 
-    self.KeepSwitchFight = false
 
     self.MajorEntityID = 0
 end
@@ -229,7 +225,7 @@ function MainControlPanelView:OnShow()
 
     self:CheckButtonTargetShow()
 
-    self.BtnSwitch_1:SetIsDisabledState(true)
+    self:OnHandleAttached()
 
     self:CheckIsMountPanelVisible()
 end
@@ -243,8 +239,6 @@ end
 function MainControlPanelView:OnRegisterUIEvent()
     UIUtil.AddOnClickedEvent(self, self.ButtonTarget, self.OnClickButtonTarget)
     SkillUtil.RegisterPressScaleEvent(self, self.ButtonTarget, SkillCommonDefine.SkillBtnClickFeedback)
-    UIUtil.AddOnClickedEvent(self, self.BtnSwitch_1, self.OnClickBtnSwitch)
-    SkillUtil.RegisterPressScaleEvent(self, self.BtnSwitch_1, SkillCommonDefine.SkillBtnClickFeedback)
 end
 
 function MainControlPanelView:OnRegisterGameEvent()
@@ -293,6 +287,12 @@ function MainControlPanelView:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MajorUpdateBuff, self.OnMajorUpdateBuff)
     self:RegisterGameEvent(EventID.MajorRemoveBuff, self.OnMajorRemoveBuff)
     
+    --手柄
+    self:RegisterGameEvent(EventID.GamePadSwitchTarget, self.OnClickButtonTarget)
+    self:RegisterGameEvent(EventID.InputActionTypeChange, self.OnHandleAttached)
+    
+    --手动重置战斗技能面板状态（如在传送带附近切地图时）
+    self:RegisterGameEvent(EventID.PWorldExit, self.OnManualSwitchSkillPanel)
 end
 
 function MainControlPanelView:RegisterGameEventByProf(ProfID)
@@ -327,14 +327,17 @@ function MainControlPanelView:OnRegisterBinder()
     self:RegisterBinders(MountVM, MountBinders)
 
     local Binders = {
-        { "bLimitCastState",  UIBinderSetIsVisible.New(self, self.BtnSwitch_1, false, true)},
         { "bLimitCastState",  UIBinderSetIsVisibleByBit.New(self, self.PanelSprint, UIBinderSetIsVisibleByBitData)},
-        { "BtnSwitchIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgSwitch_1)},
         { "SkillSprintVisible",  UIBinderSetIsVisibleByBit.New(self, self.PanelSprint, UIBinderSetIsVisibleByBitData)},
         { "LimitGenAttackVisible",  UIBinderSetIsVisibleByBit.New(self, self.SkillGenAttackBtn_UIBP, UIBinderSetGenAttackIsVisibleByBitData)},
         { "BGIcon_1", UIBinderSetBrushFromAssetPath.New(self, self.SkillGenAttackBtn_UIBP.ImgBtnBase)},
         { "BGIcon_2", UIBinderSetBrushFromAssetPath.New(self, self.SkillSprintUpBtn.ImgUp)},
         { "BGIcon_3", UIBinderSetBrushFromAssetPath.New(self, self.SkillSprintDownBtn.ImgUp)},
+        { "HandleSkillViewFight", UIBinderValueChangedCallback.New(self, nil, self.OnHandleSkillViewFight)},
+        { "bLimitCastState",  UIBinderValueChangedCallback.New(self, nil, self.SetBtnSwitch_1Visible)},
+        { "BtnSwitchIcon",  UIBinderValueChangedCallback.New(self, nil, self.SetBtnSwitch_1Brush)},
+        { "HandleSkillViewFight", UIBinderSetIsVisibleByBit.New(self, self.SkillGenAttackBtn_UIBP, UIBinderSetGenAttackIsVisibleByBitData, true)},
+        { "HandleSkillViewFight",  UIBinderSetIsVisibleByBit.New(self, self.PanelSprint, UIBinderSetIsVisibleByBitData, true)},
     }
 
     if _G.FishMgr:IsInFishState() then
@@ -349,21 +352,6 @@ function MainControlPanelView:OnRegisterBinder()
     end
 
     self:RegisterBinders(MainControlPanelVM, Binders)
-end
-
-function MainControlPanelView:OnClickBtnSwitch()
-    local TipsID = MainControlPanelVM:GetBtnSwitchTips()
-    if TipsID > 0 then
-        MsgTipsUtil.ShowTipsByID(TipsID)
-        return
-    end
-
-    self:ResetSwitchPeaceTimer()
-    if self.FightState then
-        self:OnSwitchPeaceSkill()
-    else
-        self:OnSwitchFightSkill()
-    end
 end
 
 function MainControlPanelView:OnEnterGatherState()
@@ -507,11 +495,9 @@ function MainControlPanelView:OnNetStateUpdate(Params)
     self:ResetSwitchPeaceTimer()
     if State == true then
         self:OnSwitchFightSkill()
-        self.KeepSwitchFight = true
     else
         local function SwitchFightTimeFinish()
             self:OnSwitchPeaceSkill()
-            self.KeepSwitchFight = false
             if self.FightState == false then
                 _G.EventMgr:SendEvent(EventID.CombatStateChanged, { IsFight = false } )
             end
@@ -574,19 +560,30 @@ function MainControlPanelView:OnSwitchPeaceSkill(bShowImmediately)
     end
     self:SubViewSwitchPeace()
 end
+
+--
+function MainControlPanelView:GetFightState()
+    return self.FightState
+end
+
 --
 function MainControlPanelView:SkillUnLockViewShow()
     --当处于战斗状态时不触发
-    if self.KeepSwitchFight == false then
+    local StateCmp = MajorUtil.GetMajorStateComponent()
+    if StateCmp and StateCmp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT) == false then
         self:ResetSwitchPeaceTimer()
         self:RegisterTimer(self.OnSwitchFightSkill, 0.3, 1, 1)
         --self:OnSwitchFightSkill()
-        self.SwitchPeaceTimer = self:RegisterTimer(self.OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+        if not _G.SkillHandleMgr:IsInHandleMode() then
+            self.SwitchPeaceTimer = self:RegisterTimer(self.OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+        end
     end
 end
 function MainControlPanelView:SubViewSwitchFight()
-    self.NewMainSkill_UIBP:ViewSwitchFight()
-
+    local SkillPanel = self.SkillPanelSlot:GetChildAt(0)
+    if SkillPanel then
+        SkillPanel:ViewSwitchFight()
+    end
     if MajorUtil.IsGatherProf() then
         _G.UIViewMgr:ShowView(_G.UIViewID.GatherDrugSkillPanel)
         local ProfConfig = _G.GatherMgr.ProfConfig
@@ -603,8 +600,10 @@ function MainControlPanelView:SubViewSwitchFight()
 end
 
 function MainControlPanelView:SubViewSwitchPeace()
-    self.NewMainSkill_UIBP:ViewSwitchPeace()
-
+    local SkillPanel = self.SkillPanelSlot:GetChildAt(0)
+    if SkillPanel then
+        SkillPanel:ViewSwitchPeace()
+    end
     if MajorUtil.IsFishingProf() then
         _G.UIViewMgr:HideView(_G.UIViewID.GatherDrugSkillPanel)
     elseif MajorUtil.IsGatherProf() then
@@ -623,7 +622,7 @@ function MainControlPanelView:Fish_ViewShow()
     if _G.FishMgr:IsInFishState() then
         self:OnSwitchFightSkill()
     else
-        self:OnSwitchPeaceSkill()
+        self:OnSwitchPeaceSkill(true)
     end
 end
 
@@ -641,7 +640,10 @@ function MainControlPanelView:Fish_SkillBtnClick(Params)
     Params.UIState = self.FightState or false
     if not _G.FishMgr:IsInFishState() then
         self:OnSwitchFightSkill()
-        self.SwitchPeaceTimer = self:RegisterTimer(self.Fish_ViewHide, SwitchPeaceSkillTime, 1, 1)
+          --手柄技能界面暂时不做定时关闭
+        if _G.SkillHandleMgr:IsInHandleMode() == false then
+            self.SwitchPeaceTimer = self:RegisterTimer(self.Fish_ViewHide, SwitchPeaceSkillTime, 1, 1)
+        end
     end
 end
 
@@ -653,21 +655,17 @@ function MainControlPanelView:Combat_ViewShow(bShowImmediately)
     local CombatState = self:DefaultCombatState()
     if CombatState == ProtoRes.c_combat_state_type.COMBAT_STATE_FIGHTING then
         self:OnSwitchFightSkill(bShowImmediately)
-        self.KeepSwitchFight = true
         return
     elseif CombatState == ProtoRes.c_combat_state_type.COMBAT_STATE_PEACE then
         self:OnSwitchPeaceSkill(bShowImmediately)
-        self.KeepSwitchFight = false
         return
     end
     if MajorUtil and MajorUtil.GetMajorStateComponent() then
         local State = MajorUtil.GetMajorStateComponent():IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT)
         if State == true then
             self:OnSwitchFightSkill(bShowImmediately)
-            self.KeepSwitchFight = true
         else
             self:OnSwitchPeaceSkill(bShowImmediately)
-            self.KeepSwitchFight = false
         end
     end
 end
@@ -692,16 +690,19 @@ function MainControlPanelView:Combat_SkillBtnClick(Params)
     self:OnSwitchFightSkill()
     local StateCmp = MajorUtil.GetMajorStateComponent()
     if StateCmp and StateCmp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT) == false then
-        self.SwitchPeaceTimer = self:RegisterTimer(self.OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+        --手柄技能界面暂时不做定时关闭
+        if _G.SkillHandleMgr:IsInHandleMode() == false then
+            self.SwitchPeaceTimer = self:RegisterTimer(self.OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+        end
     end
 end
 
 function MainControlPanelView:GP_ViewShow(Params)
-    if _G.GatherMgr:IsGatherState() then--and _G.UIViewMgr:IsViewVisible(_G.UIViewID.GatheringJobPanel) then
+    if _G.GatherMgr.IsRealGathering then--and _G.UIViewMgr:IsViewVisible(_G.UIViewID.GatheringJobPanel) then
         self:OnSwitchFightSkill()
         _G.UIViewMgr:ShowView(_G.UIViewID.GatherDrugSkillPanel)
     else
-        self:OnSwitchPeaceSkill()
+        self:OnSwitchPeaceSkill(true)
         _G.UIViewMgr:HideView(_G.UIViewID.GatherDrugSkillPanel)
     end
 end
@@ -716,7 +717,10 @@ function MainControlPanelView:GP_SkillBtnClick(Params)
     self:OnSwitchFightSkill()
 
     _G.UIViewMgr:ShowView(_G.UIViewID.GatherDrugSkillPanel)
-    self.SwitchPeaceTimer = self:RegisterTimer(self.GP_OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+    --手柄技能界面暂时不做定时关闭
+    if _G.SkillHandleMgr:IsInHandleMode() == false then
+        self.SwitchPeaceTimer = self:RegisterTimer(self.GP_OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+    end
 end
 
 function MainControlPanelView:GP_OnSwitchPeaceSkill()
@@ -733,7 +737,7 @@ function MainControlPanelView:GP_ForceFight(Params)
 end
 
 function MainControlPanelView:Crafter_ViewShow(Params)
-    self:OnSwitchPeaceSkill()
+    self:OnSwitchPeaceSkill(true)
 end
 
 function MainControlPanelView:Crafter_SwitchProf(Params)
@@ -932,8 +936,13 @@ function MainControlPanelView:OnFixedFunctionPanelShowed(Params)
     end
 end
 
-function MainControlPanelView:CheckButtonTargetShow()
+function MainControlPanelView:CheckButtonTargetShow(IsEnterHandleMode)
     local IsShow = true
+     if nil ~= IsEnterHandleMode then
+        IsShow = IsEnterHandleMode == false
+    else
+        IsShow = _G.SkillHandleMgr:IsInHandleMode() == false
+    end
     if MajorUtil.IsGpProf() then
         IsShow = false
         
@@ -945,7 +954,6 @@ function MainControlPanelView:CheckButtonTargetShow()
     else
         UIUtil.SetIsVisible(self.FindGather, false)
     end
-
     UIUtil.SetIsVisible(self.ButtonTarget, IsShow, true)
 end
 
@@ -996,11 +1004,9 @@ function MainControlPanelView:OnMajorUpdateBuff(Params)
         if CombatState == ProtoRes.c_combat_state_type.COMBAT_STATE_FIGHTING then
             self:ResetSwitchPeaceTimer()
             self:OnSwitchFightSkill()
-            self.KeepSwitchFight = true
             return
         elseif CombatState == ProtoRes.c_combat_state_type.COMBAT_STATE_PEACE then
             self:OnSwitchPeaceSkill()
-            self.KeepSwitchFight = false
             return
         end
     end
@@ -1028,6 +1034,80 @@ function MainControlPanelView:OnMajorRemoveBuff(Params)
     if DefaultCombatState > 0 then
         self:Combat_ViewShow(true)
     end
+end
+
+---------NewMainSkillView------------------------
+function MainControlPanelView:SetBtnSwitch_1Visible(Value)
+    local SkillPanel = self.SkillPanelSlot:GetChildAt(0)
+    if SkillPanel and _G.SkillHandleMgr:IsInHandleMode() == false then
+        UIUtil.SetIsVisible(SkillPanel.BtnSwitch_1, Value, Value)
+    end
+end
+
+function MainControlPanelView:SetBtnSwitch_1Brush(Value)
+    local SkillPanel = self.SkillPanelSlot:GetChildAt(0)
+    if SkillPanel and _G.SkillHandleMgr:IsInHandleMode() == false then
+        UIUtil.ImageSetBrushFromAssetPath(SkillPanel.ImgSwitch_1, Value)
+    end
+end
+
+function MainControlPanelView:ExecuteClickBtnSwitch_1()
+    local TipsID = MainControlPanelVM:GetBtnSwitchTips()
+    if TipsID > 0 then
+        MsgTipsUtil.ShowTipsByID(TipsID)
+        return
+    end
+
+    self:ResetSwitchPeaceTimer()
+    if self.FightState then
+        self:OnSwitchPeaceSkill()
+    else
+        self:OnSwitchFightSkill()
+    end
+end
+
+function MainControlPanelView:OnManualSwitchSkillPanel()
+    if MountVM.IsInRide then
+        self:ResetSwitchPeaceTimer()
+        if self.FightState then
+            self:OnSwitchPeaceSkill()
+        end
+    end
+end
+
+function MainControlPanelView:OnExecuteHandleMode(bEnter)
+    if bEnter then
+        self:ResetSwitchPeaceTimer()
+    else
+        local StateCmp = MajorUtil.GetMajorStateComponent()
+        if StateCmp and StateCmp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT) == false then
+            if MajorUtil.IsFishingProf() and _G.FishMgr:IsInFishState() then
+                return
+            end
+            self:ResetSwitchPeaceTimer()
+            self.SwitchPeaceTimer = self:RegisterTimer(self.OnSwitchPeaceSkill, SwitchPeaceSkillTime, 1, 1)
+        end
+    end
+    self:CheckButtonTargetShow(bEnter)
+end
+------------------------------------------------
+---
+---
+function MainControlPanelView:OnHandleSkillViewFight(Value)
+    if Value then
+        self:PlayAnimationToEndTime(self.AnimAttackSprintHide)
+    else
+        self:PlayAnimationToEndTime(self.AnimAttackSprintShow)
+    end
+end
+
+function MainControlPanelView:OnHandleAttached(IsHandleAttached)
+    if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+    UIUtil.SetIsVisible(self.SkillGenAttackBtn_UIBP.HandleState, IsHandleAttached == true)
+    UIUtil.SetIsVisible(self.SkillSprintDownBtn.HandleState, IsHandleAttached == true)
+    UIUtil.SetIsVisible(self.SkillSprintUpBtn.HandleState, IsHandleAttached == true)
 end
 
 --刷新下UI，不然按钮默认是显示的

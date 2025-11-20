@@ -23,6 +23,9 @@ local FLOG_ERROR = _G.FLOG_ERROR
 ---@field ImgChoose UFImage
 ---@field P_DX_OutOnALimbChooseItem_1 UUIParticleEmitter
 ---@field P_DX_OutOnALimbChooseItem_2 UUIParticleEmitter
+---@field Spine_GoldSaucerGame_Monster1 USpineWidget
+---@field Spine_GoldSaucerGame_Monster2 USpineWidget
+---@field Spine_GoldSaucerGame_Monster3 USpineWidget
 ---@field TextChoose UFTextBlock
 ---@field AnimShow UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -34,6 +37,9 @@ function OutOnALimbChooseItemView:Ctor()
 	--self.ImgChoose = nil
 	--self.P_DX_OutOnALimbChooseItem_1 = nil
 	--self.P_DX_OutOnALimbChooseItem_2 = nil
+	--self.Spine_GoldSaucerGame_Monster1 = nil
+	--self.Spine_GoldSaucerGame_Monster2 = nil
+	--self.Spine_GoldSaucerGame_Monster3 = nil
 	--self.TextChoose = nil
 	--self.AnimShow = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -98,16 +104,9 @@ function OutOnALimbChooseItemView:UpdateMainPanel(ViewModel, CallBack)
 		return
 	end
 
-	local DifficultyIconPathDef = ClientDef.DifficultyIconPath
-	if DifficultyIconPathDef == nil then
-		FLOG_ERROR("OutOnALimbChooseItemView:UpdateMainPanel  DifficultyIconPathDef is nil")
-		return
-	end
-
-	local ShowIconPath = DifficultyIconPathDef[Difficulty]
-	if ShowIconPath then
-		UIUtil.ImageSetBrushFromAssetPath(self.ImgChoose, ShowIconPath)
-	end
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster1, Difficulty == MiniGameDifficulty.Sabotender)
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster2, Difficulty == MiniGameDifficulty.Morbol)
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster3, Difficulty == MiniGameDifficulty.Titan)
 
 	local DifficultyText = self.TextChoose
 	if MiniGameDifficulty.Sabotender == Difficulty then

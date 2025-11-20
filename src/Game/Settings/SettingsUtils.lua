@@ -26,6 +26,7 @@ local SettingsTabsConfig = {
     ["SettingsTabOthers"] = "Game/Settings/SettingsTabOthers",      --角色设置
     ["SettingsTabNameplate"] = "Game/Settings/SettingsTabNameplate",
     ["SettingsTabLanguages"] = "Game/Settings/SettingsTabLanguages", -- 语言设置
+    ["SettingsTabHandle"] = "Game/Settings/SettingsTabHandle", -- 手柄设置
 }
 
 ---@class SettingsUtils

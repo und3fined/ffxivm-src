@@ -58,6 +58,7 @@ function BandCmdCreate:OnStart()
             local Location = _G.UE.FVector(xOffset, yOffset, zOffset)
             local Rotation = _G.UE.FRotator(0, (Item.Param[5] or 0) + (self.Param[5] or 0), 0)
             local EntityID = _G.UE.UActorManager.Get():CreateClientActor(Type, self.TimelineID, NpcResID, Location, Rotation)
+            _G.FLOG_INFO("[TB] Created EntityID:%d for ResID:%d", EntityID, NpcResID)
             Member[Index] = EntityID or 0
             
             if Item.Event == ProtoRes.TOURING_BAND_TIMELINE_EVENT_SUB_TYPE.TB_SUB_CREATE_EOBJ then
@@ -92,8 +93,8 @@ function BandCmdCreate:OnStart()
             if _G.UE.UCommonUtil.IsObjectValid(AttributeCom) then
                 local Index = Item.Target or 0
                 Member[Index] = AttributeCom.EntityID or 0
+                _G.FLOG_INFO("[TB] Actor already exists ResID:%d EntityID:%d", NpcResID, Member[Index])
             end
-            TouringBandUtil.Err("BandCmdCreate.OnStart NpcActor Has Created NpcResID =  : " .. NpcResID)
         end
     end
     _G.EventMgr:SendEvent(EventID.TouringBandStatesChange, { TimelineID = self.TimelineID, Key = TouringBandDefine.STATES_TYPE.CREATE , Value = true })
@@ -121,7 +122,7 @@ function BandCmdCreate:OnStart()
                 --    end
                 --end
 
-                EobjActor:SetSharedGroupTimelineState(4)
+                EobjActor:SetSharedGroupTimelineState(13)
             end
         end
     end

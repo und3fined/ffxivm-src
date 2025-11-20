@@ -113,13 +113,9 @@ function MonsterRender2DView:OnDestroy()
 end
 
 function MonsterRender2DView:OnShow()
-	-- 禁用关卡流送，避免主视角切换导致子关卡被卸载
-	UILevelMgr:SwitchLevelStreaming(false)
 end
 
 function MonsterRender2DView:OnHide()
-	-- 恢复关卡流送
-	UILevelMgr:SwitchLevelStreaming(true)
     self:ReleaseActor()
 end
 

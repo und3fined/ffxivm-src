@@ -8,6 +8,7 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local TipsUtil = require("Utils/TipsUtil")
+local EventID = require("Define/EventID")
 local UIViewID = require("Define/UIViewID")
 local UIViewMgr = require("UI/UIViewMgr")
 local FriendMgr = require("Game/Social/Friend/FriendMgr")
@@ -18,6 +19,9 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local PersonInfoDefine = require("Game/PersonInfo/PersonInfoDefine")
 local MajorUtil = require("Utils/MajorUtil")
 local FriendDefine = require("Game/Social/Friend/FriendDefine")
+local TeamRecruitVM = require("Game/TeamRecruit/VM/TeamRecruitVM")
+local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
+local TeamRecruitMgr = require("Game/TeamRecruit/TeamRecruitMgr")
 
 local FVector2D = _G.UE.FVector2D
 local MaxGameStyleCount = PersonInfoDefine.MaxGameStyleCount
@@ -27,9 +31,10 @@ local MaxGameStyleCount = PersonInfoDefine.MaxGameStyleCount
 ---@field BtnAddFriend UFButton
 ---@field BtnChat UFButton
 ---@field BtnTeamInvite UFButton
+---@field BtnTeamRecruitShare UFButton
 ---@field CommPlayerItem CommPlayerItemView
 ---@field HorOptBtns UFHorizontalBox
----@field ImgInvited UFImage
+---@field ImgSuc UFImage
 ---@field ProfSlot CommPlayerSimpleJobSlotView
 ---@field TableViewStyle UTableView
 ---@field TextSignature UFTextBlock
@@ -42,9 +47,10 @@ function FriendAddListItemView:Ctor()
 	--self.BtnAddFriend = nil
 	--self.BtnChat = nil
 	--self.BtnTeamInvite = nil
+	--self.BtnTeamRecruitShare = nil
 	--self.CommPlayerItem = nil
 	--self.HorOptBtns = nil
-	--self.ImgInvited = nil
+	--self.ImgSuc = nil
 	--self.ProfSlot = nil
 	--self.TableViewStyle = nil
 	--self.TextSignature = nil
@@ -85,12 +91,14 @@ end
 
 function FriendAddListItemView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnChat, self.OnClickButtonChat)
-	UIUtil.AddOnClickedEvent(self, self.BtnAddFriend, 	self.OnClickButtonAddFriend)
+	UIUtil.AddOnClickedEvent(self, self.BtnAddFriend, self.OnClickButtonAddFriend)
 	UIUtil.AddOnClickedEvent(self, self.BtnTeamInvite, self.OnClickButtonTeamInvite)
+	UIUtil.AddOnClickedEvent(self, self.BtnTeamRecruitShare, self.OnClickButtonRecruitShare)
 end
 
 function FriendAddListItemView:OnRegisterGameEvent()
-
+    self:RegisterGameEvent(EventID.TeamRecruitStateChanged, self.OnEventMsgTeamRecruitStateChanged)
+    self:RegisterGameEvent(EventID.TeamRecruitShareToPlayerSuc, self.OnEventMsgShareTeamRecruitToPlayerSuc)
 end
 
 function FriendAddListItemView:OnRegisterBinder()
@@ -135,22 +143,33 @@ function FriendAddListItemView:OnUpdateBtnsVisible()
 		return
 	end
 
+	local BtnAddFriendVisible = false 
+	local BtnInvitedVisible = false 
+	local BtnRecruitVisible = false
+	local ImgSucVisible = false 
+
 	local IsFriend = VM.IsFriend
 	if IsFriend then
-		local IsInvited = false
-		if RoleID then
-			IsInvited = table.contain(TeamInviteVM.CurInvitedRoleIDs, RoleID) 
+		if VM.IsOnline then
+			if TeamRecruitMgr:IsRecruiting() then -- 招募中
+				local IsShared = RoleID and table.contain(TeamRecruitVM.CurSharedRoleIDs, RoleID) 
+				BtnRecruitVisible = not IsShared
+				ImgSucVisible = IsShared
+
+			else
+				local IsInvited = RoleID and table.contain(TeamInviteVM.CurInvitedRoleIDs, RoleID) 
+				BtnInvitedVisible = not IsInvited 
+				ImgSucVisible = IsInvited
+			end
 		end
-
-		UIUtil.SetIsVisible(self.BtnTeamInvite, not IsInvited, true)
-		UIUtil.SetIsVisible(self.ImgInvited, IsInvited)
-		UIUtil.SetIsVisible(self.BtnAddFriend, false)
-
 	else
-		UIUtil.SetIsVisible(self.BtnAddFriend, true, true)
-		UIUtil.SetIsVisible(self.BtnTeamInvite, false)
-		UIUtil.SetIsVisible(self.ImgInvited, false)
+		BtnAddFriendVisible = true 
 	end
+
+	UIUtil.SetIsVisible(self.BtnAddFriend, BtnAddFriendVisible, BtnAddFriendVisible)
+	UIUtil.SetIsVisible(self.BtnTeamInvite, BtnInvitedVisible, BtnInvitedVisible)
+	UIUtil.SetIsVisible(self.BtnTeamRecruitShare, BtnRecruitVisible, BtnRecruitVisible)
+	UIUtil.SetIsVisible(self.ImgSuc, ImgSucVisible)
 
 	UIUtil.SetIsVisible(self.HorOptBtns, true)
 end
@@ -174,6 +193,17 @@ function FriendAddListItemView:OnSelectChangedStyle(Index, ItemData, ItemView)
 end
 
 -------------------------------------------------------------------------------------------------------
+---Client Event CallBack 
+
+function FriendAddListItemView:OnEventMsgTeamRecruitStateChanged()
+	self:OnUpdateBtnsVisible()
+end
+
+function FriendAddListItemView:OnEventMsgShareTeamRecruitToPlayerSuc()
+	self:OnUpdateBtnsVisible()
+end
+
+-------------------------------------------------------------------------------------------------------
 ---Component CallBack
 
 function FriendAddListItemView:OnClickButtonChat()
@@ -187,6 +217,10 @@ end
 function FriendAddListItemView:OnClickButtonTeamInvite()
 	local ProtoCS = require("Protocol/ProtoCS")
 	_G.TeamMgr:InviteJoinTeam(self.RoleID, ProtoCS.Team.Team.ReqSource.ReqSourceFriend)
+end
+
+function FriendAddListItemView:OnClickButtonRecruitShare()
+	TeamRecruitUtil.ShareSelfRecruitToPlayer(self.RoleID)
 end
 
 return FriendAddListItemView

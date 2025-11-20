@@ -163,6 +163,7 @@ end
 function TravelLogMainPanelView:OnCommittedCallback(SearchText)
 	self.TravelLogMainPanelVM:SetFilterText(SearchText)
 	UIUtil.SetIsVisible(self.CommonTitle.TextSubTitle, false)
+	self.CommVerIconTab.AdapterTabs:CancelSelected()
 	--默认选第一个
 	self:SetSelectFirstItem()
 end
@@ -173,6 +174,7 @@ function TravelLogMainPanelView:OnClickCancelBtnCallback()
 	UIUtil.SetIsVisible(self.DropDownList, true)
 	self.TravelLogMainPanelVM:SetFilterText("")
 	UIUtil.SetIsVisible(self.CommonTitle.TextSubTitle, true)
+	self.CommVerIconTab:SetSelectedIndex(self.CurrentTabIndex)
 	--默认选第一个
 	self:SetSelectFirstItem()
 end
@@ -208,8 +210,8 @@ function TravelLogMainPanelView:OnClickedSearchHandle()
 	UIUtil.SetIsVisible(self.SearchBtn, false)
 	UIUtil.SetIsVisible(self.DropDownList, false)
 
-	self.SearchBar:SetFocus()
 	self.SearchBar:SetText('')
+	self.SearchBar:SetFocus()
 end
 
 function TravelLogMainPanelView:OnRegisterGameEvent()

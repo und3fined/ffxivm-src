@@ -43,7 +43,6 @@ function MapMarkerFate:GetAreaMapPos()
         Point.X = self.WorldPosX
         Point.Y = self.WorldPosY
         return MapUtil.GetUIPosByLocation(Point, self.UIMapID)
-        --return MapUtil.ConvertMapPos2UI(self.WorldPosX, self.WorldPosY, 0, 0, 100, true)
     else
         return 0, 0
     end
@@ -55,7 +54,6 @@ function MapMarkerFate:GetFateNpcMapPos()
         Point.X = self.FateNpcPosX
         Point.Y = self.FateNpcPosY
         return MapUtil.GetUIPosByLocation(Point, self.UIMapID)
-        --return MapUtil.ConvertMapPos2UI(self.FateNpcPosX, self.FateNpcPosY, 0, 0, 100, true)
     else
         return 0, 0
     end
@@ -117,7 +115,14 @@ function MapMarkerFate:UpdateMarker(Params)
     local FateMainCfg = FateMainCfgTable:FindCfgByKey(self.FateID)
     if FateMainCfg then
         local RangeString = FateMainCfg.Range
-        local NPCLocationString = FateMainCfg.TriggerNPCLocation
+        local NPCLocationString = nil
+
+        if (not string.isnilorempty(FateMainCfg.TriggerNPCLocation)) then
+            NPCLocationString = FateMainCfg.TriggerNPCLocation
+        else
+            NPCLocationString = FateMainCfg.ExTriggerNPC[1].Location
+        end
+
         NpcCfgCfg = NpcCfgTable:FindCfgByKey(FateMainCfg.TriggerNPC)
         Level = FateMainCfg.Level
         local bWaitTrigger = self.State == ProtoCS.FateState.FateState_WaitNPCTrigger

@@ -14,7 +14,6 @@ local ScaleParams = {0.8, 1.0, 1.5}     --缩放系数
 local Priority = 0x01000000
 local PriorityConsole = 0x09000000
 
-
 local SettingsTabPicture = {}
 
 function SettingsTabPicture:OnInit()
@@ -154,7 +153,7 @@ function SettingsTabPicture:SetQualityLevel( Value, IsSave , IsLoginInit, IsBySe
         end
 
         self.bSelectQualityLevelChanging = false
-        
+
         if IsSave then
             --存的是Index 1-6，而不是0-4，-1
             _G.UE.USaveMgr.SetInt(SaveKey[FieldName], Value, false)
@@ -873,18 +872,18 @@ end
 --- 16
 --AmbientOcclusion
 function SettingsTabPicture:SetAO(Value, IsSave, IsLoginInit, IsBySelect)
-    return true
-    -- self:CachePictureFeatures()
-    -- _G.UE.USettingUtil.SetMobileAmbientOcclusion(Value == 2)
-    -- self:OnOneFeatureChanged(16, IsLoginInit, IsBySelect)
+    self:CachePictureFeatures()
+    _G.UE.USettingUtil.SetMobileAmbientOcclusion(Value == 2)
+    self:OnOneFeatureChanged(16, IsLoginInit, IsBySelect)
     
-    -- if self.bSelectQualityLevelChanging then
-    --     local FieldName = SettingsUtils.CurSetingCfg.SaveKey
-    --     self[FieldName] = -1
-    --     _G.UE.USaveMgr.SetInt(SaveKey[FieldName], -1, false)
+    if self.bSelectQualityLevelChanging then
+        local FieldName = SettingsUtils.CurSetingCfg.SaveKey
+        self[FieldName] = -1
+        _G.UE.USaveMgr.SetInt(SaveKey[FieldName], -1, false)
 
-    --     return true
-    -- end
+        return true
+    else
+    end
 end
 
 function SettingsTabPicture:SwitchAOCheck(Value)
@@ -1208,8 +1207,9 @@ function SettingsTabPicture:SetOtherPlayerEffectSwitch( Value, IsSave , IsLoginI
     if IsSave then
         _G.UE.USaveMgr.SetInt(SaveKey[FieldName], Value, false)
     end
-
+    
     self:OnOneFeatureChanged(21, IsLoginInit, IsBySelect)
+    _G.EventMgr:SendEvent(_G.EventID.SettingsOtherPlayerEffectChanged)
     return true
 end
 
@@ -1232,18 +1232,17 @@ end
 --22
 --HighqualityBRDFds
 function SettingsTabPicture:SetHighqualityBRDFds(Value, IsSave, IsLoginInit, IsBySelect)
-    return true
-    -- self:CachePictureFeatures()
-    -- _G.UE.USettingUtil.SetMobileHighqualityBRDFds(Value == 2)
-    -- self:OnOneFeatureChanged(22, IsLoginInit, IsBySelect)
+    self:CachePictureFeatures()
+    _G.UE.USettingUtil.SetMobileHighqualityBRDFds(Value == 2)
+    self:OnOneFeatureChanged(22, IsLoginInit, IsBySelect)
 
-    -- if self.bSelectQualityLevelChanging then
-    --     local FieldName = SettingsUtils.CurSetingCfg.SaveKey
-    --     self[FieldName] = -1
-    --     _G.UE.USaveMgr.SetInt(SaveKey[FieldName], -1, false)
+    if self.bSelectQualityLevelChanging then
+        local FieldName = SettingsUtils.CurSetingCfg.SaveKey
+        self[FieldName] = -1
+        _G.UE.USaveMgr.SetInt(SaveKey[FieldName], -1, false)
 
-    --     return true
-    -- end
+        return true
+    end
 end
 
 --23
@@ -1628,6 +1627,12 @@ function SettingsTabPicture:EnablePerformanceParams(bEnable, bRecordCurValue)
                 local CmdFmt = string.format("%s%s", Config.Cmd, Config.Fmt)
                 local CmdStr = string.format( CmdFmt, LastValue)
                 print(CmdStr)   --todel 日志
+                
+                if Config.LstID == SaveKey.Lst_Maxfps then
+                    LastValue = _G.SettingsMgr:GetMaxFPSValue()
+                    FLOG_WARNING("------setting AfterSet Cur_Maxfps:%d", LastValue)
+                end
+
                 if Config.IsFloat then
                     ---- 就不还原了，始终以性能模式的设置为准，除非再次启动客户端;   目前只有ViewDistanceScale才会这样
                     -- UKismetSystemLibrary.ExecuteConsoleCommand(CurWorld, CmdStr, nil)   

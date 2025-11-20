@@ -108,10 +108,6 @@ function EquipmentCurrencyListNewItemView:OnShow()
 			UIUtil.ImageSetBrushFromAssetPath(self.FImage_445, self.ViewModel.TargetIcon)
 		end
 	end
-	if self.ViewModel ~= nil then
-		local TempItemVisible = self.ViewModel.WeekUpperNum ~= 0 or self.ViewModel.WeekUpperFixedNum ~= 0 or #(self.ViewModel.ScoreTableCfg.WeekUpper.CondValues or {}) > 0 
-		UIUtil.SetIsVisible(self.HorizontalItem2, TempItemVisible)
-	end
 end
 
 function EquipmentCurrencyListNewItemView:OnHide()

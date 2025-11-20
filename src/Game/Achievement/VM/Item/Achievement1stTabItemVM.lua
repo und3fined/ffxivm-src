@@ -24,7 +24,7 @@ function Achievement1stTabItemVM:Ctor()
 	self.TypeID = 0
 	self.TextContent = ""
 	self.ToggleBtnState = EToggleButtonState.Unchecked
-	self.ArrowUp = true
+	self.ArrowUp = true   -- 主界面也有用这个来判断是否需要展开队列
 
 	self.TableView2ndTabDataList = {}
 	self.TableView2ndTabVMList = {}

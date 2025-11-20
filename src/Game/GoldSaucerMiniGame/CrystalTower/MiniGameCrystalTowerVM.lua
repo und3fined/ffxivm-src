@@ -12,6 +12,7 @@ local CrystalTowerParamCfg = require("TableCfg/CrystalTowerParamCfg")
 
 local CrystalTowerInteractionVM = require("Game/GoldSaucerGame/View/CrystalTowerStriker/ItemVM/CrystalTowerInteractionVM")
 local CrystalTowerResultItemVM = require("Game/GoldSaucerGame/View/CrystalTowerStriker/ItemVM/CrystalTowerResultItemVM")
+local GoldSaucerCuffGameResultItemVM = require("Game/GoldSaucerGame/View/Cuff/ItemVM/GoldSaucerCuffGameResultItemVM")
 local CrystalTowerInteractResultVM = require("Game/GoldSaucerMiniGame/CrystalTower/CrystalTowerInteractResultVM")
 local CrystalTowerInteractResultItemVM = require("Game/GoldSaucerGame/View/CrystalTowerStriker/ItemVM/CrystalTowerInteractResultItemVM")
 local ProtoRes = require("Protocol/ProtoRes")
@@ -48,6 +49,7 @@ function MiniGameCrystalTowerVM:Ctor()
     self.bFailed = false
     self.bSuccessed = false
     self.RewardGot = "0" -- 获取奖励数量
+    self.MainPanelRewardGot = "0" -- 奖励面板奖励数量显示
     local CoinID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE -- 金碟币ID
 	local IconPath = _G.ScoreMgr:GetScoreIconName(CoinID)
     self.AwardIconPath = IconPath
@@ -67,7 +69,7 @@ function MiniGameCrystalTowerVM:Ctor()
     self.bCriticalVisible = false
     -- self.TextTipsTitle = "" -- 界面功能提示
 
-    self.EndResultVMList = UIBindableList.New(CrystalTowerResultItemVM)
+    self.EndResultVMList = UIBindableList.New(GoldSaucerCuffGameResultItemVM)
     -- self:CreateAllInteractionVM()
     self.InteractResultVM = CrystalTowerInteractResultVM.New()
     self.InteractionResultTipVM = CommInteractionResultTipVM.New()
@@ -76,6 +78,10 @@ function MiniGameCrystalTowerVM:Ctor()
     self.CenterInteractResultVM = CrystalTowerInteractResultItemVM.New()
     self.bShootingTipVisible = false
     self.bInEndRound = false
+
+    self.bRecordListPanelShow = false
+    self.bRecordFailPanelShow = false
+    self.bRltFailPanelShow = false
 end
 
 function MiniGameCrystalTowerVM:InitVM()
@@ -138,9 +144,16 @@ function MiniGameCrystalTowerVM:UpdateData()
     
     self.bPanelNormalVisible = GameInst.bPanelNormalVisible
     self.bPanelResultVisible = GameInst.bPanelResultVisible
-    self.bFailed = GameInst.bFailed
-    self.bSuccessed = GameInst.bSuccessed
-    self.RewardGot = GameInst.RewardGot
+    local RltFail = GameInst.bFailed
+    local RltSuc = GameInst.bSuccessed
+    self.bFailed = RltFail
+    self.bSuccessed = RltSuc
+    local bBless = GameInst:IsBless()
+    self.bRecordListPanelShow = bBless or RltSuc
+    self.bRecordFailPanelShow = bBless and RltFail
+    self.bRltFailPanelShow = not bBless and RltFail
+    self.MainPanelRewardGot = GameInst:GetMainPanelRewardGot()
+    self.RewardGot = GameInst:GetRewardGot()
     if tonumber(GameInst.CTAddRewardGot) ~= 0 then
         self.CTAddRewardGot = GameInst.CTAddRewardGot
         -- EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimObtainNumberIn)
@@ -177,7 +190,7 @@ function MiniGameCrystalTowerVM:UpdateRewardGotSingle()
     if GameInst == nil then
         return
     end
-    self.RewardGot = GameInst.RewardGot
+    self.RewardGot = GameInst:GetRewardGot()
 end
 
 
@@ -227,30 +240,32 @@ end
 --- @type 在某位置插入元素
 function MiniGameCrystalTowerVM:UpdateListItemByPos(Value, Pos)
     local InteractResultVMList = self.InteractResultVMList
-    local AllItems = InteractResultVMList:FindAll(function() return true end)
-    if Pos > #AllItems then -- 对应中间的结果
+    --local AllItems = InteractResultVMList:FindAll(function() return true end)
+    local FeedBackItemVM = InteractResultVMList:Get(Pos)
+    if FeedBackItemVM then
+        FLOG_INFO("CrystalTowerInteractResultItemVM:UpdateVM  trackIndex %s", Pos)
+        FeedBackItemVM:UpdateVM(Value)
+    else
+        FLOG_INFO("CrystalTowerInteractResultItemVM:UpdateVM  CenterIndex %s", Pos)
         self:UpdateCenterInteractResultVM(Value)
+    end
+    --[[if Pos > #AllItems then -- 对应中间的结果
+        
         return
     end
     local VM = AllItems[Pos]
-    VM:UpdateVM(Value)
+    
+    VM:UpdateVM(Value)--]]
 end
 
 -- --- @type 加载tableviews
 function MiniGameCrystalTowerVM:UpdateResultVMList(Data)
     local List = self.InteractResultVMList
-    if List == nil or Data == nil then
+    if List == nil then
         return
     end
 
-    if Data[1] == nil then
-        List:Clear()
-        return
-    end
-
-    if nil ~= List and List:Length() > 0 then
-        List:Clear()
-    end
+    List:Clear()
 
     List:UpdateByValues(Data)
 end
@@ -303,7 +318,11 @@ function MiniGameCrystalTowerVM:UpdateAddScore(ReasonIsInteracte)
             
             self:UpdateAddScorePos(GameInst)                -- 更新位置
         
-            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AddScoreAnimIn)
+            if AccruedScore > 0 then
+                EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimScoreAdd)
+            else
+                EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimScoreSubtract)
+            end
 
             if self.HideTimer ~= nil then
                 TimerMgr:CancelTimer(self.HideTimer)
@@ -314,8 +333,9 @@ function MiniGameCrystalTowerVM:UpdateAddScore(ReasonIsInteracte)
             end, 1)
         end
     end
-    if tonumber(self.AccruedScore) ~= 0 and GameInst.CurRoundIndex < GameInst.DefineCfg.MaxRound and GameInst.IsBegin then
+    if tonumber(self.AccruedScore) ~= 0 and GameInst.CurRoundIndex < GameInst.DefineCfg.MaxRound and GameInst.IsBegin then -- 最后的红色不出现加分动效
         self.ShowAddScoreTimer = TimerMgr:AddTimer(self, ShowAddScore, UpdateTime)
+        print("AccruedScore = %s add Timer", self.AccruedScore)
     end
 
 end

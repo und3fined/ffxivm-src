@@ -158,7 +158,7 @@ end
 function ArmyMemberPageView:OnClickedSelectMemberItem(Index, ItemData, ItemView)
     --- 选中成员弹个人信息面板
     local IsChecked = UIUtil.IsToggleButtonChecked(ItemView.ToggleBtn:GetCheckedState())
-    if IsChecked then
+    if IsChecked and ItemData then
         --self:PopupMenu(ItemData.RoleID, ItemData.CategoryID, ItemView)
         ---替换为个人信息面板
         PersonInfoMgr:ShowPersonalSimpleInfoView(ItemData.RoleID)
@@ -226,7 +226,7 @@ function ArmyMemberPageView:OnTransferLeaer()
         Callback,
         nil,
         -- LSTR string:取消
-        LSTR(910083),
+        LSTR(910081),
         -- LSTR string:转让
         LSTR(910236)
     )
@@ -303,6 +303,7 @@ function ArmyMemberPageView:OnRegisterUIEvent()
 end
 
 function ArmyMemberPageView:OnRegisterGameEvent()
+	self:RegisterGameEvent(_G.EventID.HousePullMajorMemberRoom, self.OnHouseMajorMemberInfoUpdate)
 end
 
 function ArmyMemberPageView:OnRegisterBinder()
@@ -338,6 +339,12 @@ end
 --- 退出部队
 function ArmyMemberPageView:OnClickedQuitArmy()
     if ArmyMemberPageVM.bLeader then
+        ---土地拦截判断
+        local GroupHasLandNoBuild, GroupLand = _G.HouseLandMgr.GroupHasLandNoBuild()
+        if GroupLand and GroupLand.LandInfo and GroupLand.LandInfo.GroupID == ArmyMgr:GetArmyID() then
+            _G.MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.NoDisbandArmyByLand)
+            return
+        end
         if #ArmyMemberPageVM.Members == ArmyDefine.One then
             MsgBoxUtil.ShowMsgBoxTwoOp(
                 self,
@@ -348,7 +355,7 @@ function ArmyMemberPageView:OnClickedQuitArmy()
                 ArmyMgr.SendArmyDisbandMsg,
                 nil,
                 -- LSTR string:取消
-                LSTR(910083),
+                LSTR(910081),
                 -- LSTR string:解散
                 LSTR(910215)
             )
@@ -357,19 +364,16 @@ function ArmyMemberPageView:OnClickedQuitArmy()
             MsgBoxUtil.ShowMsgBoxOneOpRight(self, LSTR(910144), LSTR(910217))
         end
     else
-        MsgBoxUtil.ShowMsgBoxTwoOp(
-            self,
-            -- LSTR string:提示
-            LSTR(910144),
-            -- LSTR string:确认要退出部队?
-            LSTR(910191),
-            ArmyMgr.SendArmyQuitMsg,
-            nil,
-            -- LSTR string:取消
-            LSTR(910083),
-            -- LSTR string:退出
-            LSTR(910240)
-        )
+        if self.IsWaitHouseByQuitArmy then
+            ---正在等房屋回包，防阻塞用定时器置空
+            if self.QuitArmyTimer == nil then
+                self.QuitArmyTimer = self:RegisterTimer(self.OnTimerQuitArmy, 2)
+            end
+            return 
+        end
+        ---获取一次房屋数据，用于退出判断
+        _G.HouseInfoMgr:SendPullMajorMemberRoom(ArmyMgr:GetArmyID())
+        self.IsWaitHouseByQuitArmy = true
     end
 end
 
@@ -388,6 +392,55 @@ end
 --- 等级排序
 function ArmyMemberPageView:OnClickedSwitchLevelSort()
     ArmyMemberPageVM:MembersLevelSort()
+end
+
+---房屋数据获取回包事件
+function ArmyMemberPageView:OnHouseMajorMemberInfoUpdate(MsgBody)
+    if self.IsWaitHouseByQuitArmy then
+        local Params = {}
+        if MsgBody and MsgBody.RoomDetail and MsgBody.RoomDetail.Basic and MsgBody.RoomDetail.Basic.HouseID  then
+            Params.TipsText = RichTextUtil.GetText(LSTR(910446),  ArmyTextColor.NoEnoughRedHex)
+        end
+        MsgBoxUtil.ShowMsgBoxTwoOp(
+            self,
+            -- LSTR string:提示
+            LSTR(910144),
+            -- LSTR string:确认要退出部队?
+            LSTR(910191),
+            ArmyMgr.SendArmyQuitMsg,
+            nil,
+            -- LSTR string:取消
+            LSTR(910081),
+            -- LSTR string:退出
+            LSTR(910240),
+            Params
+        )
+        self.IsWaitHouseByQuitArmy = nil
+    end
+end
+
+--- 清理等待状态，防止阻塞
+function ArmyMemberPageView:OnTimerQuitArmy()
+    if self.QuitArmyTimer then
+        self:UnRegisterTimer(self.QuitArmyTimer)
+        self.QuitArmyTimer = nil
+    end
+    -- if self.IsWaitHouseByQuitArmy then
+    --     MsgBoxUtil.ShowMsgBoxTwoOp(
+    --         self,
+    --         -- LSTR string:提示
+    --         LSTR(910144),
+    --         -- LSTR string:确认要退出部队?
+    --         LSTR(910191),
+    --         ArmyMgr.SendArmyQuitMsg,
+    --         nil,
+    --         -- LSTR string:取消
+    --         LSTR(910081),
+    --         -- LSTR string:退出
+    --         LSTR(910240)
+    --     )
+    -- end
+    self.IsWaitHouseByQuitArmy = nil
 end
 
 return ArmyMemberPageView

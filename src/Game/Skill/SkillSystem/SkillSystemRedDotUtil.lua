@@ -132,8 +132,7 @@ local function BuildSkillButtonNode(EntityID, SkillInfo)
 	if BaseSkillID <= 0 then
 		return
 	end
-
-	local ButtonNode = SkillSystemRedDotNode.New(ENodeType.Button, SkillInfo.Index)
+	
 	if SkillIndex >= ButtonIndex_Limit_Start and
 	   SkillIndex <= ButtonIndex_Spectrum_End or
 	   SkillIndex == ButtonIndex_Normal then
@@ -141,6 +140,7 @@ local function BuildSkillButtonNode(EntityID, SkillInfo)
 		return nil
 	end
 
+	local ButtonNode = SkillSystemRedDotNode.New(ENodeType.Button, SkillInfo.Index)
 	-- 高级技能
 	local SkillLogicMgr = _G.SkillLogicMgr
 	local LogicData = SkillLogicMgr:GetSkillLogicData(EntityID)
@@ -224,6 +224,9 @@ local function TraverseTreeNode(RootNode, NodeTypeMask, Func)
 	end
 
 	local ChildNodeList = RootNode.ChildNodeList
+	if table.is_nil_empty(ChildNodeList) then
+		return
+	end
 	for _, ChildNode in ipairs(ChildNodeList) do
 		TraverseTreeNode(ChildNode, NodeTypeMask, Func)
 	end
@@ -370,7 +373,6 @@ local function RebuildLocalSavedButtonType(EntityID, RootNode, ReBuildIndexData)
 					break
 				end
 			end
-			-- 重新构建
 			if SkillID > 0 then
 				local NewButtonNode = BuildSkillButtonNode(EntityID, RebuildSkillData.SkillInfo)
 				SkillSystemRedDotNode.SetDataByNode(ButtonNode, NewButtonNode)
@@ -484,12 +486,12 @@ function SkillSystemRedDotUtil.InitAllNodes(RootNode, bChangeVisibility)
 	TraverseTreeNode(RootNode, NodeTypeMask_All, function(Node)
 		if Node.Type == ENodeType.Skill then
 			local SkillID = Node.ID
-			local Status = SkillUtil.GetSkillLearnValid(SkillID, CachedMajorProfID, CachedMajorLevel)
-
+		
 			-- 这里只需要关注之前是Unlearned, 但是现在学会了的节点
 			if Node.NodeState ~= ENodeState.Unlearned then
 				return
 			end
+			local Status = SkillUtil.GetSkillLearnValid(SkillID, CachedMajorProfID, CachedMajorLevel)
 			if Status == SkillLearnStatus.Learned then
 				Node.NodeState = ENodeState.Unchecked
 				BubbleUp(Node, false)

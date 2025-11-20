@@ -9,6 +9,9 @@ local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local AchievementUtil = require("Game/Achievement/AchievementUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local ItemDefine = require("Game/Item/ItemDefine")
+local ProtoRes = require("Protocol/ProtoRes")
+local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
 
 ---@class AchieveCommRewardsSlotVM : UIViewModel
 local AchieveCommRewardsSlotVM = LuaClass(UIViewModel)
@@ -55,13 +58,18 @@ end
 ---@param Value table @common.Item
 ---@param Params table @可以在UIBindableList.New函数传递参数，
 function AchieveCommRewardsSlotVM:UpdateVM(Value, Params)
-	self.ResID = Value.ResID
 	local IsTitle = Value.RewardType == 2
+	if IsTitle then
+		self.ResID = nil
+		self.TitleID = Value.ResID
+	else
+		self.ResID = Value.ResID
+		self.TitleID = nil
+	end
 	self.NumVisible = not IsTitle
-	self.IsQualityVisible = true
-	self.ImgEmptyVisible = self.IsQualityVisible
 	self.RewardType = Value.RewardType
 	self.Icon = AchievementUtil.GetAwardIconPath(Value.ResID, self.RewardType)
+	self.ItemQualityIcon = IsTitle and ItemDefine.Item96SlotColotType[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] or ItemUtil.GetSlotColorIcon(Value.ResID, ItemDefine.ItemSlotType.Item96Slot)
 	if self.NumVisible then
 		self.Num = ItemUtil.GetItemNumText(Value.Num)
 	end

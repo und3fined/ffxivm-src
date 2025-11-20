@@ -92,6 +92,10 @@ function TeamRecruitVM:Reset()
     self:ClearFilter()
     self.FilterRecruitItemVMList.Items = {}
     self.ViewingRecruitItemVMList = self.RecruitItemVMList
+
+    --- 招募分享 (分享给玩家)
+    --- add by xingcaicao 
+	self.CurSharedRoleIDs = {} 
 end
 
 function TeamRecruitVM:Clear()
@@ -374,8 +378,8 @@ function TeamRecruitVM:UpdateRecruitItem( TeamRecruit )
 
     if Item then
         if TeamRecruit.State == RECRUIT_STATE.RECRUIT_STATE_OPEN then
+            TeamRecruitUtil.RestoreRecruitProfs(TeamRecruit)
             Item:UpdateVM(TeamRecruit)
-
         else
             self.RecruitItemVMList:Remove(Item)
             self:UpdateIsRecruitListEmpty()
@@ -462,28 +466,7 @@ function TeamRecruitVM:ResetEditProfVMList(InData)
 	for k, v in ipairs(DefaultProf) do
 		local Info = {}
 		Info.Loc = k
-        -- Info.Prof = v
-        -- if k == 1 then
-        --     Info.RoleID = MajorUtil.GetMajorRoleID()
-        -- end
-
-            -- Info.Prof = { MajorUtil.GetMajorProfID() }
-
-        -- else
-            if v == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_GUARD then -- 防护
-                Info.Prof = TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_GUARD)
-
-            elseif v == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_ATTACK then -- 进攻
-                Info.Prof = TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_ATTACK)
-
-            elseif v == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_RECOVER then -- 回复 
-                Info.Prof = TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_RECOVER)
-
-            elseif v == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_ALL then -- 所有人
-                Info.Prof = TeamRecruitUtil.GetAllOpenProf() 
-            end
-        -- end
-
+        Info.Prof = TeamRecruitUtil.GetRecruitProfsByDefault(v)
         table.insert(Data, Info)
 	end
 
@@ -605,6 +588,8 @@ function TeamRecruitVM:UpdateFilter(TypeID)
     else
         self.ViewingRecruitItemVMList = self.RecruitItemVMList
     end
+    
+    self:UpdateIsRecruitListEmpty()
 end
 
 function TeamRecruitVM:SetFilterOp(TypeID, Op)
@@ -721,6 +706,35 @@ function TeamRecruitVM:UpdateEditText(Text)
 	-- -- end
 
 	self.EditMessage = Text
+end
+
+-------------------------------------------------------------------------------------------------
+--- 招募分享 (分享给玩家) @add by xingcaicao 
+
+function TeamRecruitVM:AddSharedRole( RoleID )
+	if nil == RoleID then
+		return
+	end
+
+	table.insert(self.CurSharedRoleIDs, RoleID)
+	_G.EventMgr:SendEvent(_G.EventID.TeamRecruitShareToPlayerSuc)
+end
+
+function TeamRecruitVM:ClearSharedRoleInfo()
+	self.CurSharedRoleIDs = {} 
+end
+
+-------------------------------------------------------------------------------------------------
+
+function TeamRecruitVM:GetCreateProfsParam()
+    local Profs = {}
+    for _, v in ipairs(self:GetEditProfs()) do
+        if v.Prof and #(v.Prof) > 0 then
+           table.insert(Profs, v) 
+        end
+    end
+
+    return Profs
 end
 
 return TeamRecruitVM

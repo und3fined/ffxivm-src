@@ -22,6 +22,8 @@ local RollMgr = require("Game/Roll/RollMgr")
 local UIViewMgr = require("UI/UIViewMgr")
 local MainPanelVM = require("Game/Main/MainPanelVM")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local ProtoCS = require("Protocol/ProtoCS")
+local ProtoRes = require("Protocol/ProtoRes")
 local ModuleOpenMgr = require("Game/ModuleOpen/ModuleOpenMgr")
 local TeamVoiceMgr = require("Game/Team/TeamVoiceMgr")
 local PWorldMgr = require("Game/PWorld/PWorldMgr")
@@ -32,7 +34,14 @@ local ActorUtil = require("Utils/ActorUtil")
 local TeamDefine = require("Game/Team/TeamDefine")
 local TeamRecruitDefine = require("Game/TeamRecruit/TeamRecruitDefine")
 local CommonUtil = require("Utils/CommonUtil")
+local RichTextUtil = require("Utils/RichTextUtil")
+local ItemUtil = require("Utils/ItemUtil")
+local TeamHelperMgr = require("Game/Team/Abs/TeamHelperMgr")
+
 local FLinearColor = _G.UE.FLinearColor
+
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
+local SCORE_TYPE = ProtoRes.SCORE_TYPE
 
 local LSTR = _G.LSTR
 ---@deprecated
@@ -231,6 +240,7 @@ local DefPol = {
 ---@field CardsStageInfo CardsStageInfoPanelView
 ---@field FunctionBar UFCanvasPanel
 ---@field HorizontalGold UFHorizontalBox
+---@field HorizontalGold_1 UFHorizontalBox
 ---@field HorizontalObtain UFHorizontalBox
 ---@field HorizontalObtain1 UFHorizontalBox
 ---@field HorizontalTitle UFHorizontalBox
@@ -238,9 +248,11 @@ local DefPol = {
 ---@field IconCheck UFImage
 ---@field IconCountDown UFImage
 ---@field IconGame UFImage
+---@field IconGold_1 UFImage
 ---@field IconInvite UFImage
 ---@field IconMicOff UFImage
 ---@field IconMicOn UFImage
+---@field IconNeed UFImage
 ---@field IconQuit UFImage
 ---@field IconRecruit UFImage
 ---@field IconScene UFImage
@@ -271,9 +283,11 @@ local DefPol = {
 ---@field MainQuestPanel MainQuestPanelView
 ---@field PWorldStageInfo PWorldStageInfoPanelView
 ---@field PanelAddMember UFCanvasPanel
----@field PanelChatTips UFCanvasPanel
+---@field PanelChallengeInfo UFCanvasPanel
 ---@field PanelCheck UFCanvasPanel
 ---@field PanelCountdown UFCanvasPanel
+---@field PanelExpand UFCanvasPanel
+---@field PanelExpandMic UFCanvasPanel
 ---@field PanelFunction UFCanvasPanel
 ---@field PanelGuide UFCanvasPanel
 ---@field PanelLeader UFCanvasPanel
@@ -292,10 +306,13 @@ local DefPol = {
 ---@field TextAdd UFTextBlock
 ---@field TextAdding UFTextBlock
 ---@field TextBeginsCD UFTextBlock
----@field TextChatTips UFTextBlock
 ---@field TextExpand UFTextBlock
+---@field TextExpandMic UFTextBlock
 ---@field TextGameName UFTextBlock
 ---@field TextGameName_1 UFTextBlock
+---@field TextGameName_2 UFTextBlock
+---@field TextGameName_3 UFTextBlock
+---@field TextGameName_4 URichTextBox
 ---@field TextInvite UFTextBlock
 ---@field TextNumber UFTextBlock
 ---@field TextNumber1 UFTextBlock
@@ -344,6 +361,7 @@ function MainTeamPanelView:Ctor()
 	--self.CardsStageInfo = nil
 	--self.FunctionBar = nil
 	--self.HorizontalGold = nil
+	--self.HorizontalGold_1 = nil
 	--self.HorizontalObtain = nil
 	--self.HorizontalObtain1 = nil
 	--self.HorizontalTitle = nil
@@ -351,9 +369,11 @@ function MainTeamPanelView:Ctor()
 	--self.IconCheck = nil
 	--self.IconCountDown = nil
 	--self.IconGame = nil
+	--self.IconGold_1 = nil
 	--self.IconInvite = nil
 	--self.IconMicOff = nil
 	--self.IconMicOn = nil
+	--self.IconNeed = nil
 	--self.IconQuit = nil
 	--self.IconRecruit = nil
 	--self.IconScene = nil
@@ -384,9 +404,11 @@ function MainTeamPanelView:Ctor()
 	--self.MainQuestPanel = nil
 	--self.PWorldStageInfo = nil
 	--self.PanelAddMember = nil
-	--self.PanelChatTips = nil
+	--self.PanelChallengeInfo = nil
 	--self.PanelCheck = nil
 	--self.PanelCountdown = nil
+	--self.PanelExpand = nil
+	--self.PanelExpandMic = nil
 	--self.PanelFunction = nil
 	--self.PanelGuide = nil
 	--self.PanelLeader = nil
@@ -405,10 +427,13 @@ function MainTeamPanelView:Ctor()
 	--self.TextAdd = nil
 	--self.TextAdding = nil
 	--self.TextBeginsCD = nil
-	--self.TextChatTips = nil
 	--self.TextExpand = nil
+	--self.TextExpandMic = nil
 	--self.TextGameName = nil
 	--self.TextGameName_1 = nil
+	--self.TextGameName_2 = nil
+	--self.TextGameName_3 = nil
+	--self.TextGameName_4 = nil
 	--self.TextInvite = nil
 	--self.TextNumber = nil
 	--self.TextNumber1 = nil
@@ -494,7 +519,8 @@ function MainTeamPanelView:OnPostInit()
 	self.BinderShowPanelVoice = UIBinderValueChangedCallback.New(self, nil, function()
 		local bTeam = (self.PolTy and self.PolTy.TeamVM and self.PolTy.TeamVM.IsTeam)
 		local bShow =  bTeam and self.ToggleBtnTeam:GetChecked() and self.ToggleBtnPackUp:GetChecked() and (self.PolTy.TeamVM.MemberNumber or 0) > 1 and self.PolTy ~= DefPol.EntourageTeam
-		UIUtil.SetIsVisible(self.PanelTeamVoice, bShow, false, not self.ToggleBtnPackUp:GetChecked() and self.ToggleBtnTeam:GetChecked() and bTeam and self.PolTy ~= DefPol.EntourageTeam)
+		UIUtil.SetIsVisible(self.PanelTeamVoice, bShow, false, not self.ToggleBtnPackUp:GetChecked() and self.ToggleBtnTeam:GetChecked() and bTeam and self.PolTy ~= DefPol.EntourageTeam 
+			and (self.PolTy.TeamVM.MemberNumber or 0) > 1)
 	end)
 
 	local function IsShowInviteOrRecruit()
@@ -565,10 +591,16 @@ function MainTeamPanelView:OnPostInit()
 		end)},
 	}
 
+	self.CountDownBinder = UIBinderSetIsVisiblePred.NewByPred(function()
+		return MainPanelVM.bSignsCountDown or MainPanelVM.bTeamReadyConfirming
+	end, self, self.ImgCDOn)
+
 	self.MainBinders = {
 		{ "QuestTrackVisible", UIBinderSetIsVisible.New(self, self.MainQuestPanel) },
 		---{ "PWorldStageVisible", UIBinderSetIsVisible.New(self, self.PWorldStageInfo) },
 		{ "bPackupToggleChecked", self.BinderShowPanelVoice},
+		{ "bTeamReadyConfirming", self.CountDownBinder},
+		{ "bSignsCountDown", self.CountDownBinder},
 	}
 
 	self.PWorldTeamBinders = {
@@ -590,7 +622,6 @@ end
 function MainTeamPanelView:OnShow()
 	self:OnChangeBtnOpenState()
 	self:OnTeamBtnStateChanged()
-	UIUtil.SetIsVisible(self.PanelChatTips, false)
 	self.PrevToggleIdx = nil
 
 	self:UpdateToggleBtnPackup()
@@ -627,13 +658,49 @@ function MainTeamPanelView:SetShowQuest()
 end
 
 -- 显示小游戏相关，包括GameInfo， 组队
-function MainTeamPanelView:SetShowGameInfo()
+---@param Params table @额外参数，目前为赐福信息
+function MainTeamPanelView:SetShowGameInfo(Params)
 	self:InitToggleVisibleState(Tab.GameInfo)
 	self.ToggleBtnGameInfo:SetChecked(true, true)
 	self.ToggleBtnTeam:SetChecked(false, false)
 	self:SwitchTab(Tab.GameInfo)
 	self.ParentViewType = ParentViewType.GameInfo
 	self.ToggleGroup:SetCheckedIndex(2)
+
+	UIUtil.SetIsVisible(self.ToggleTeamNormal, true)
+	UIUtil.SetIsVisible(self.ToggleTeamSelect, false)
+
+	if not Params then
+		return
+	end
+
+	local bBless = Params.bBless
+	UIUtil.SetIsVisible(self.PanelChallengeInfo, bBless)
+	local BlessKind = Params.BlessKind
+	if BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+		self.TextGameName_2:SetText(LSTR(1660003)) -- 仙人送福挑战
+	elseif BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+		self.TextGameName_2:SetText(LSTR(1660004)) -- 仙人赐福挑战
+	end
+	local ChallengeTarget = Params.ChallengeTarget or ""
+	self.TextGameName_3:SetText(ChallengeTarget)
+	local ExtraReward = Params.ExtraReward or 0
+	local RewardNumText = string.formatint(ExtraReward)
+
+	local ItemIconID = ItemUtil.GetItemIcon(SCORE_TYPE.SCORE_TYPE_KING_DEE)
+	local IconPath = UIUtil.GetIconPath(ItemIconID)
+	local IconTextFormat = RichTextUtil.GetTexture(IconPath, 40, 40, -8) or ""
+	local RewardText = string.format(LSTR(1660005), IconTextFormat, RewardNumText)
+	self.TextGameName_4:SetText(RewardText)
+end
+
+function MainTeamPanelView:SetShowHalloween()
+	self:InitToggleVisibleState(Tab.Halloween)
+	self.ToggleBtnHelloween:SetChecked(true, true)
+	self.ToggleBtnTeam:SetChecked(false, false)
+	self:SwitchTab(Tab.Halloween)
+	self.ParentViewType = ParentViewType.Halloween
+	self.ToggleGroup:SetCheckedIndex(3)
 
 	UIUtil.SetIsVisible(self.ToggleTeamNormal, true)
 	UIUtil.SetIsVisible(self.ToggleTeamSelect, false)
@@ -679,7 +746,7 @@ function MainTeamPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnSceneMark, 		self.OnClickBtnScenMark)
 	
 	UIUtil.AddOnClickedEvent(self, self.BtnBeginsCD, 		self.OnClickBtnBeginsCD)
-	UIUtil.AddOnClickedEvent(self, self.BtnCD, 				self.OnClickBtnBeginsCD)
+	UIUtil.AddOnClickedEvent(self, self.BtnCD, 				self.OnClickFunctionBarBeginCD)
 
 	UIUtil.AddOnStateChangedEvent(self, self.ToggleGroup, function()
 		self.BinderShowPanelVoice:OnValueChanged()
@@ -792,7 +859,6 @@ function MainTeamPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.ModuleOpenNotify, 			self.OnModuleOpenNotify)
 	self:RegisterGameEvent(EventID.ModuleOpenGMBtnEvent, 		self.OnChangeBtnOpenState)
 	self:RegisterGameEvent(EventID.TeamBtnStateChanged, 		self.OnTeamBtnStateChanged)
-	self:RegisterGameEvent(EventID.NetStateUpdate, 				self.OnCombatStateUpdate)
 	self:RegisterGameEvent(EventID.SelectMainTeamPanelQuest,    self.OnSelectMainTeamPanelQuest)
 	self:RegisterGameEvent(EventID.TeamMemberMicSyncStateChanged, self.OnMicSyncChanged)
 end
@@ -967,13 +1033,6 @@ end
 
 --- 场景标记点击回调
 function MainTeamPanelView:OnClickBtnScenMark()
-	local MajorEntityID = MajorUtil.GetMajorEntityID()
-    local bIsCombat = ActorUtil.IsCombatState(MajorEntityID)
-	if bIsCombat then
-		local MsgTipsUtil = require("Utils/MsgTipsUtil")
-		MsgTipsUtil.ShowTipsByID(103049)
-		return
-	end
 	SignsMgr:ShowSceneMarkersPanel()
 end
 
@@ -982,6 +1041,11 @@ function MainTeamPanelView:OnClickBtnBeginsCD()
 	-- 狼狱停船场禁用
 	if _G.PWorldMgr:CurrIsWolvesDenPierStage() then
 		_G.MsgTipsUtil.ShowTipsByID(338038) -- 当前场景无法进行此操作
+		return
+	end
+
+	if TeamHelperMgr:IsTeamReadyConfirming() then
+		_G.MsgTipsUtil.ShowTipsByID(103121)
 		return
 	end
 	
@@ -1005,6 +1069,47 @@ function MainTeamPanelView:OnClickBtnBeginsCD()
 		UIViewMgr:ShowView(UIViewID.TeamBeginsCDWin)
 		SignsMgr.LastClickedCDTimeMS = ServerTime
 	end
+end
+
+--- function bar 倒计时点击回调
+function MainTeamPanelView:OnClickFunctionBarBeginCD()
+	local bEnableSignCountDown = SignsMgr:GetIsEnableCountDown()
+	local bEnableTeamReady = TeamHelperMgr:IsEnableTeamReady()
+
+	if not bEnableTeamReady and not bEnableSignCountDown then
+		_G.MsgTipsUtil.ShowTips(_G.LSTR(1300098))
+		return
+	end
+
+	local Items = {}
+	local MakeLSTRAttrKey = require("Common/StringTools").MakeLSTRAttrKey
+	local MakeLSTRDict = require("Common/StringTools").MakeLSTRDict
+
+	if bEnableSignCountDown then
+		table.insert(Items, MakeLSTRDict({ [MakeLSTRAttrKey("Name")] = 1240043, Callback = function()
+			if not bEnableSignCountDown then
+				return
+			end
+			self:OnClickBtnBeginsCD()
+			end, Object = self , bGrey = TeamHelperMgr:IsTeamReadyConfirming(), TimerCheckGrey = function()
+				return TeamHelperMgr:IsTeamReadyConfirming()
+			end}))
+	end
+	
+	if bEnableTeamReady then
+		table.insert(Items, MakeLSTRDict({ [MakeLSTRAttrKey("Name")] = 1300081, Callback = function()
+			TeamHelperMgr:TryConfirmReady()
+		end, Object = self , bGrey = SignsMgr.IsDuringCountDown, TimerCheckGrey = function()
+			return SignsMgr.IsDuringCountDown or TeamHelperMgr:IsTeamReadyConfirming()
+		end}))
+	end
+		
+
+	-- 计算位置
+	local Size = UIUtil.GetLocalSize(self.BtnCD)
+	local ViewportPos = UIUtil.WidgetLocalToViewport(self.BtnCD)
+	local Params = { Items = Items, Pos = _G.UE.FVector2D(ViewportPos.X + Size.X / 2 ,ViewportPos.Y + Size.Y + 20)}
+	UIViewMgr:ShowView(UIViewID.TeamMenu, Params)
 end
 
 function MainTeamPanelView:OnTeamFull(bFull)
@@ -1081,37 +1186,32 @@ function MainTeamPanelView:StopVoiceTipsTimerID()
 end
 
 function MainTeamPanelView:ShowChatTips( TextTips, AnchorWidget )
-	UIViewMgr:HideView(UIViewID.MainTeamChatTip)
-
-	if string.isnilorempty(TextTips) then
-		return
+	local TextWidget
+	if self.BtnVoice == AnchorWidget then
+		UIUtil.SetIsVisible(self.PanelExpand, true)
+		UIUtil.SetIsVisible(self.PanelExpandMic, false)
+		TextWidget = self.TextExpand
+	elseif self.BtnMic == AnchorWidget then
+		UIUtil.SetIsVisible(self.PanelExpand, false)
+		UIUtil.SetIsVisible(self.PanelExpandMic, true)
+		TextWidget = self.TextExpandMic
+	else
+		UIUtil.SetIsVisible(self.PanelExpand, false)
+		UIUtil.SetIsVisible(self.PanelExpandMic, false)
 	end
 
-	local Pos = UIUtil.CanvasSlotGetPosition(AnchorWidget)
-	UIUtil.CanvasSlotSetPosition(self.PanelChatTips, Pos)
+	if TextWidget == nil then
+		return
+	end
 	
-	--提示文本
-	self.TextChatTips:SetText(TextTips)
-	-- UIUtil.SetIsVisible(self.PanelChatTips, true)
-
-	-- 
-	local Params = {
-		Anchor = AnchorWidget,
-		Text = TextTips,
-		Offset = {X = 90, Y = 15}
-	}
-
-	-- first uses a simple method 
-	UIViewMgr:ShowView(UIViewID.MainTeamChatTip, Params)
-
+	TextWidget:SetText(TextTips)
 	self:StopVoiceTipsTimerID()
-	self.VoiceTipsTimerID  = self:RegisterTimer(self.OnVoiceTipsTimer, 2)
+	self.VoiceTipsTimerID  = self:RegisterTimer(self.OnVoiceTipsTimer, 5)
 end
 
 function MainTeamPanelView:OnVoiceTipsTimer(  )
-	self.TextChatTips:SetText("")
-	-- UIUtil.SetIsVisible(self.PanelChatTips, false)
-	UIViewMgr:HideView(UIViewID.MainTeamChatTip)
+	UIUtil.SetIsVisible(self.PanelExpand, false)
+	UIUtil.SetIsVisible(self.PanelExpandMic, false)
 	self:StopVoiceTipsTimerID()
 end
 
@@ -1147,8 +1247,7 @@ function MainTeamPanelView:OnTeamBtnStateChanged()
 	-- 战斗状态下置灰
 	--倒计时
 	UIUtil.SetIsVisible(self.BtnBeginsCD, SignsMgr:GetIsEnableCountDown(), true)
-	UIUtil.SetIsVisible(self.BtnCD, SignsMgr:GetIsEnableCountDown(), true)
-	UIUtil.SetIsVisible(self.ImgCDOn, SignsMgr.IsDuringCountDown)
+	UIUtil.SetIsVisible(self.BtnCD, SignsMgr:GetIsEnableCountDown() or TeamHelperMgr:IsEnableTeamReady(), true)
 end
 
 --- 赋值蓝图多语言文本
@@ -1156,15 +1255,6 @@ function MainTeamPanelView:UpdateBPText_LocalStr()
 	self.TextTargetSigns:SetText(LSTR(1240019))	---	目标标记
 	self.TextScenMark:SetText(LSTR(1240001))	---	场景标记
 	self.TextBeginsCD:SetText(LSTR(1240043))	---	战斗开始倒计时
-end
-
-function MainTeamPanelView:OnCombatStateUpdate(Params)
-	if MajorUtil.IsMajor(Params.ULongParam1) and Params.IntParam1 == ProtoCommon.CommStatID.COMM_STAT_COMBAT then
-		local MajorEntityID = MajorUtil.GetMajorEntityID()
-		local bIsCombat = ActorUtil.IsCombatState(MajorEntityID)
-		UIUtil.SetIsVisible(self.ImgSceneMarkDisabled, bIsCombat)
-		UIViewMgr:HideView(UIViewID.SceneMarkersMainPanel)
-	end
 end
 
 function MainTeamPanelView:OnSelectMainTeamPanelQuest(Params)
@@ -1179,7 +1269,9 @@ function MainTeamPanelView:OnMicSyncChanged(_, RoleID, Value)
 		if Mgr:IsTeamMemberByRoleID(RoleID) and RoleID ~= MajorUtil.GetMajorRoleID() then
 			if self.LastTipOpenMicTeamID ~= Mgr:GetTeamID() then
 				self.LastTipOpenMicTeamID = Mgr:GetTeamID()
-				self:ShowChatTips(LSTR(1300067), self.BtnVoice)
+				if not UIUtil.IsNotVisible(self.PanelTeamVoice) then
+					self:ShowChatTips(LSTR(1300067), self.BtnVoice)
+				end
 				_G.MsgTipsUtil.ShowTipsByID(103100)
 			end
 		end

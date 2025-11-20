@@ -137,6 +137,9 @@ function ChocoboRaceResultPanelView:OnTableViewRewardsAdapterChange(Index, ItemD
 end
 
 function ChocoboRaceResultPanelView:OnClickedBtnExit()
+    if _G.UIViewMgr:IsViewVisible(_G.UIViewID.ChocoboRaceGMTargetInfoView) then
+        _G.UIViewMgr:HideView(_G.UIViewID.ChocoboRaceGMTargetInfoView)
+    end
     _G.PWorldMgr:SendLeavePWorld()
     self:Hide()
 end

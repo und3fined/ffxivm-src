@@ -23,6 +23,8 @@ function ChocoboInfoAttrItemVM:Ctor()
     self.IsRent = false
     self.AttrName = ""
     self.AttrValue = ""
+    self.AttrIconPath = ""
+    self.AttrValuePercent = 0
     self.BlueStarTableView = UIBindableList.New(ChocoboInfoAttrItemStarVM)
     self.RedStarTableView = UIBindableList.New(ChocoboInfoAttrItemStarVM)
 

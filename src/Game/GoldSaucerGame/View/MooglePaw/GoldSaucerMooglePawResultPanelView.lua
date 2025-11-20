@@ -6,12 +6,15 @@
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
+local EventID = require("Define/EventID")
 local UIUtil = require("Utils/UIUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local ItemVM = require("Game/Item/ItemVM")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
+local GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local MooglePawParamsCfg = require("TableCfg/MooglePawParamsCfg")
 local LoopControlCfg = require("TableCfg/MooglePawRoundCfg")
@@ -31,6 +34,7 @@ local LSTR = _G.LSTR
 ---@field Award GoldSaucerGameCuffAwardItemView
 ---@field Btn1 CommBtnMView
 ---@field Btn2 CommBtnMView
+---@field Btn3 CommBtnLView
 ---@field BtnGo CommBtnMView
 ---@field ChallengeResults GoldSaucerMoogglePawChallengeResultsItemView
 ---@field Critical GoldSaucerGameCommCriticalItemView
@@ -38,6 +42,7 @@ local LSTR = _G.LSTR
 ---@field MoneySlot CommMoneySlotView
 ---@field PanelBtncontinue UFCanvasPanel
 ---@field PanelChallengeFailurePrompt UFCanvasPanel
+---@field PanelChallengeFailurePrompt_1 UFCanvasPanel
 ---@field PanelChallengeRecordList UFVerticalBox
 ---@field PanelCold UFCanvasPanel
 ---@field PanelResult UFCanvasPanel
@@ -45,6 +50,7 @@ local LSTR = _G.LSTR
 ---@field TextAward UFTextBlock
 ---@field TextGo UFTextBlock
 ---@field TextHint1 UFTextBlock
+---@field TextHint1_1 UFTextBlock
 ---@field TextQuantity_1 UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -57,6 +63,7 @@ function GoldSaucerMooglePawResultPanelView:Ctor()
 	--self.Award = nil
 	--self.Btn1 = nil
 	--self.Btn2 = nil
+	--self.Btn3 = nil
 	--self.BtnGo = nil
 	--self.ChallengeResults = nil
 	--self.Critical = nil
@@ -64,6 +71,7 @@ function GoldSaucerMooglePawResultPanelView:Ctor()
 	--self.MoneySlot = nil
 	--self.PanelBtncontinue = nil
 	--self.PanelChallengeFailurePrompt = nil
+	--self.PanelChallengeFailurePrompt_1 = nil
 	--self.PanelChallengeRecordList = nil
 	--self.PanelCold = nil
 	--self.PanelResult = nil
@@ -71,6 +79,7 @@ function GoldSaucerMooglePawResultPanelView:Ctor()
 	--self.TextAward = nil
 	--self.TextGo = nil
 	--self.TextHint1 = nil
+	--self.TextHint1_1 = nil
 	--self.TextQuantity_1 = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -83,6 +92,7 @@ function GoldSaucerMooglePawResultPanelView:OnRegisterSubView()
 	self:AddSubView(self.Award)
 	self:AddSubView(self.Btn1)
 	self:AddSubView(self.Btn2)
+	self:AddSubView(self.Btn3)
 	self:AddSubView(self.BtnGo)
 	self:AddSubView(self.ChallengeResults)
 	self:AddSubView(self.Critical)
@@ -95,12 +105,14 @@ function GoldSaucerMooglePawResultPanelView:InitConstStringInfo()
 	self.TextGo:SetText(LSTR(360031))
 	self.TextQuantity_1:SetText("1")
 	self.TextHint1:SetText(LSTR(360036))
+	self.TextHint1_1:SetText(LSTR(360036))
 end
 
 function GoldSaucerMooglePawResultPanelView:InitSubViewConstStringInfo()
 	self.Btn1:SetButtonText(LSTR(360034))
 	self.BtnGo:SetButtonText(LSTR(360029))
 	self.Btn2:SetButtonText(LSTR(360035))
+	self.Btn3:SetButtonText(LSTR(360034))
 end
 
 function GoldSaucerMooglePawResultPanelView:OnInit()
@@ -131,12 +143,14 @@ end
 
 function GoldSaucerMooglePawResultPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.Btn1, self.OnBtn1Click)
+	UIUtil.AddOnClickedEvent(self, self.Btn3, self.OnBtn1Click)
 	UIUtil.AddOnPressedEvent(self, self.Btn2.Button, self.OnBtnRewarClick)
 	UIUtil.AddOnClickedEvent(self, self.BtnGo, self.OnBtnGoClick)
 end
 
 function GoldSaucerMooglePawResultPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
+	self:RegisterGameEvent(EventID.MiniGameMarkerBlessStateChange, self.OnResultPanelBtnChange)
 end
 
 function GoldSaucerMooglePawResultPanelView:OnRegisterBinder()
@@ -146,6 +160,10 @@ function GoldSaucerMooglePawResultPanelView:OnRegisterBinder()
 	if BackpackSlot then
 		BackpackSlot:SetParams({Data = self.ScoreItem})
 	end
+end
+
+function GoldSaucerMooglePawResultPanelView:OnResultPanelBtnChange(_)
+    self:UpdateNextRoundGamePanel(self.VM)
 end
 
 function GoldSaucerMooglePawResultPanelView:OnMoneyUpdate()
@@ -198,26 +216,44 @@ function GoldSaucerMooglePawResultPanelView:UpdateSettlementView(ViewModel)
 
 	self.MoneySlot:UpdateView(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE, true, nil, true)
 
-	local EndState = MiniGameInst:GetRoundEndState()
-	local bShowSuccessPanel = EndState == MiniGameRoundEndState.Success
+	UIUtil.SetIsVisible(self.Award, true)
+	local bShowSuccessPanel = false
+	local bBless = MiniGameInst:IsBless()
 	local ChallengeResults = self.ChallengeResults
-	if ChallengeResults then
-		ChallengeResults:UpdateChallengeResult(EndState)
+	if not bBless then
+		local EndState = MiniGameInst:GetRoundEndState()
+		bShowSuccessPanel = EndState == MiniGameRoundEndState.Success
+		if ChallengeResults and CommonUtil.IsObjectValid(ChallengeResults) then
+			ChallengeResults:UpdateChallengeResult(EndState)
+		end
+		UIUtil.SetIsVisible(self.PanelChallengeRecordList, bShowSuccessPanel)
+		UIUtil.SetIsVisible(self.PanelChallengeFailurePrompt_1, false)
+		UIUtil.SetIsVisible(self.PanelChallengeFailurePrompt, not bShowSuccessPanel)
+	else
+		UIUtil.SetIsVisible(self.PanelChallengeRecordList, true)
+		UIUtil.SetIsVisible(self.PanelChallengeFailurePrompt, false)
+		bShowSuccessPanel = MiniGameInst:IsBlessChallengeSuccess()
+		UIUtil.SetIsVisible(self.PanelChallengeFailurePrompt_1, not bShowSuccessPanel)
+		UIUtil.SetIsVisible(self.Award, bShowSuccessPanel)
+		if ChallengeResults and CommonUtil.IsObjectValid(ChallengeResults) then
+			if bShowSuccessPanel then
+				ChallengeResults:UpdateChallengeResult(MiniGameRoundEndState.Success)
+			else
+				ChallengeResults:UpdateChallengeResult(MiniGameRoundEndState.FailTime)
+			end
+		end
 	end
-	UIUtil.SetIsVisible(self.PanelChallengeRecordList, bShowSuccessPanel)
-	UIUtil.SetIsVisible(self.PanelChallengeFailurePrompt, not bShowSuccessPanel)
 
 	local CriticalWidget = self.Critical
 	if CriticalWidget then
 		UIUtil.SetIsVisible(CriticalWidget, false)
 	end
-
+	local RoundIndex = MiniGameInst:GetRoundIndex() + 1
 	if bShowSuccessPanel then
 		local RoundId = MiniGameInst:GetCurRoundId()
 		local LoopCfg = LoopControlCfg:FindCfgByKey(RoundId)
 		local EmotionIDToPlay = LoopCfg and LoopCfg.EmotionID or 0
 		GoldSaucerMiniGameMgr:PlayEmotionActInSettlementStage(MiniGameType.MooglesPaw, true, EmotionIDToPlay)
-		local RoundIndex = MiniGameInst:GetRoundIndex() + 1
 		ViewModel:UpdateResultList(RoundIndex)
 		local AwardBP = self.Award
 		if AwardBP then
@@ -240,42 +276,84 @@ function GoldSaucerMooglePawResultPanelView:UpdateSettlementView(ViewModel)
 							UIUtil.SetIsVisible(CriticalWidget, true)
 							CriticalWidget:ShowCriticalTips(string.format(LSTR(360038), tostring(CriticalMutiply)))
 						end
-						ValueText:SetText(tostring(math.floor(RewardGot / CriticalMutiply)))
+						ValueText:SetText(string.formatint(math.floor(RewardGot / CriticalMutiply)))
 						local CriticalAnim = AwardBP.AnimCriticalIn
 						if CriticalAnim then
 							AwardBP:PlayAnimation(CriticalAnim)
 						end
 						self:RegisterTimer(function()
-							ValueText:SetText(tostring(RewardGot))
+							ValueText:SetText(string.formatint(RewardGot))
 						end, CriticalAnimDelayChangeNumTime)
 					end
 				else
-					ValueText:SetText(tostring(RewardGot))
+					ValueText:SetText(string.formatint(RewardGot))
 				end
 			end
 		end
 	else
+		ViewModel:UpdateResultList(RoundIndex)
 		GoldSaucerMiniGameMgr:PlayEmotionActInSettlementStage(MiniGameType.MooglesPaw, false)
 	end
 
-	self:UpdateNextRoundGamePanel()
+	self:UpdateNextRoundGamePanel(ViewModel)
 end
 
 
 --- 更新再战和获取途径面板切换
-function GoldSaucerMooglePawResultPanelView:UpdateNextRoundGamePanel()
-	-- 货币是否充足的不同显示
-	local ReplayCost
-	local ClientCfg = MiniGameClientConfig[MiniGameType.MooglesPaw]
-	if ClientCfg then
-		ReplayCost = ClientCfg.Cost or 1
-	else
-		ReplayCost = 0
+function GoldSaucerMooglePawResultPanelView:UpdateNextRoundGamePanel(ViewModel)
+	if not ViewModel then
+		return
 	end
-	local PlayerHaveScore = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)
-	local bShowReplayPanel = PlayerHaveScore >= ReplayCost
-	UIUtil.SetIsVisible(self.PanelBtncontinue, bShowReplayPanel)
-	UIUtil.SetIsVisible(self.GoPanel, not bShowReplayPanel)
+
+	local MiniGameInst = ViewModel.MiniGame
+	if MiniGameInst == nil then
+		return
+	end
+
+	local function UpdateRightBottomBtnPanelByScoreEnoughOrNot()
+		-- 货币是否充足的不同显示
+		local ReplayCost
+		local ClientCfg = MiniGameClientConfig[MiniGameType.MooglesPaw]
+		if ClientCfg then
+			ReplayCost = ClientCfg.Cost or 1
+		else
+			ReplayCost = 0
+		end
+		local PlayerHaveScore = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)
+		local bShowReplayPanel = PlayerHaveScore >= ReplayCost
+		UIUtil.SetIsVisible(self.PanelBtncontinue, bShowReplayPanel)
+		UIUtil.SetIsVisible(self.GoPanel, not bShowReplayPanel)
+		UIUtil.SetIsVisible(self.Btn1, true, true)
+		UIUtil.SetIsVisible(self.Btn3, false)
+	end
+
+	local bBless = MiniGameInst:IsBless()
+	if not bBless then
+		local SgInstanceID = MiniGameInst:GetInstanceID()
+		if SgInstanceID then
+			local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+			if bCurMachineInBless then
+				UIUtil.SetIsVisible(self.PanelBtncontinue, false)
+				UIUtil.SetIsVisible(self.GoPanel, false)
+				UIUtil.SetIsVisible(self.Btn1, false)
+				UIUtil.SetIsVisible(self.Btn3, true, true)
+				return
+			end
+		end
+		-- 货币是否充足的不同显示
+		UpdateRightBottomBtnPanelByScoreEnoughOrNot()
+	else
+		local bChallengeSuccess = MiniGameInst:IsBlessChallengeSuccess()
+		if bChallengeSuccess then
+			UIUtil.SetIsVisible(self.PanelBtncontinue, false)
+			UIUtil.SetIsVisible(self.GoPanel, false)
+			UIUtil.SetIsVisible(self.Btn1, false)
+			UIUtil.SetIsVisible(self.Btn3, true, true)
+		else
+			-- 货币是否充足的不同显示
+			UpdateRightBottomBtnPanelByScoreEnoughOrNot()
+		end
+	end
 end
 
 return GoldSaucerMooglePawResultPanelView

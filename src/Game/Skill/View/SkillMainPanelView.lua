@@ -49,7 +49,6 @@ local TipsID_DisableCombatCustom <const> = 106044
 
 local TabIndex_PVE      <const> = 1
 local TabIndex_PVP      <const> = 2
-local ProfClassType_PVP <const> = 22
 
 local TabIndex_MapType_Map = {
 	[TabIndex_PVE] = EMapType.PVE,
@@ -196,7 +195,6 @@ function SkillMainPanelView:OnShow()
 		VM.IndependentView = Params.IndependentView
 		MapType = Params.MapType
 		if Params.IndependentView then
-			UILevelMgr:SwitchLevelStreaming(false)
 		end
 	else
 		VM.IndependentView = false
@@ -228,8 +226,12 @@ function SkillMainPanelView:OnHide()
 
 	self.SkillTouchEvent_UIBP:Detach()
 
+	local EquipmentMainView = self.EquipmentMainView
+	if EquipmentMainView then
+		UIUtil.SetIsVisible(EquipmentMainView.CloseBtn, true)
+	end
+
 	if self.Params and self.Params.IndependentView then
-		UILevelMgr:SwitchLevelStreaming(true)
 	end
 
 	table.clear(self.PageTextTypeTextMap)
@@ -286,6 +288,7 @@ function SkillMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.SkillEditingIndexSwap, self.OnCustomIndexChanged)
 	self:RegisterGameEvent(EventID.AppEnterBackground, self.OnAppEnterBackground)
 	self:RegisterGameEvent(EventID.HideUI, self.OnViewHide)
+	self:RegisterGameEvent(EventID.SkillMultiChoicePanelShowed, self.OnSkillMultiChoicePanelShowed)
 end
 
 function SkillMainPanelView:OnRegisterBinder()
@@ -356,9 +359,8 @@ function SkillMainPanelView:OnMapTypeChanged(Index)
 
 	if Index == TabIndex_PVP then
 		local ProfID = VM.ProfID  -- ProfUtil.GetAdvancedProf(VM.ProfID)
-		local bSupportPVP = ProfMgr.CheckProfClass(ProfID, ProfClassType_PVP)
+		local bSupportPVP = SkillSystemMgr:CanShowPVPTab(ProfID, true)
 		if not bSupportPVP then
-			MsgTipsUtil.ShowTipsByID(MsgTipsID.ProfPVPUnable)
 			self:RegisterTimer(self.ResetMapTypeTabs, 0, 0, 1)
 			return
 		end
@@ -446,11 +448,14 @@ function SkillMainPanelView:OnSelectedProfChange(NewProfID)
 end
 
 function SkillMainPanelView:UpdateMainDetail(bVisible, OldValue)
-	if self.EquipmentMainView then
+	local EquipmentMainView = self.EquipmentMainView
+	if EquipmentMainView then
 		if bVisible then
-			self.EquipmentMainView:PlayAnimation(self.EquipmentMainView.AnimLeftOut)
+			EquipmentMainView:PlayAnimation(EquipmentMainView.AnimLeftOut)
+			UIUtil.SetIsVisible(EquipmentMainView.CloseBtn, false)
 		elseif nil ~= OldValue then
-			self.EquipmentMainView:PlayAnimation(self.EquipmentMainView.AnimLeftIn)
+			EquipmentMainView:PlayAnimation(EquipmentMainView.AnimLeftIn)
+			UIUtil.SetIsVisible(EquipmentMainView.CloseBtn, true)
 		end
 	end
 	if bVisible == false then
@@ -548,6 +553,9 @@ function SkillMainPanelView:FoldUpChildPanels()
 end
 
 function SkillMainPanelView:OnBtnBlankClick()
+	if SkillSystemMgr.PressedButtonIndex ~= nil then
+		return
+	end
 	EventMgr:PostEvent(EventID.SkillSystemClickBlank)
 end
 
@@ -930,7 +938,7 @@ function SkillMainPanelView:OnTabLabelListChanged(TabLabelList, _)
 		end
 	end
 
-	CommTabs:UpdateItems(ListData)
+	CommTabs:UpdateItems(ListData, nil, true)
 
 	local FVector2D = _G.UE.FVector2D
 	if #TabLabelList == 3 then
@@ -1012,6 +1020,20 @@ function SkillMainPanelView:OnViewHide(ViewID)
 	if (ViewID == UIViewID.PersonInfoMainPanel or ViewID == UIViewID.CurrencySummary) and self.SkillSystemVM then
 		self.SkillSystemVM:OnActive()
 	end
+end
+
+function SkillMainPanelView:OnSkillMultiChoicePanelShowed(Params)
+	if Params.bMajor or (Params.SelectIndex or 0) > 0 or Params.IsDisplayed or not Params.bActive then
+		return
+	end
+
+	local VM = self.SkillSystemVM
+	local LogicData = SkillLogicMgr:GetSkillLogicData(VM.CasterEntityID)
+	if not LogicData then
+		return
+	end
+	local SkillID = LogicData:GetBtnSkillID(Params.BaseSkillIndex)
+	VM:SetSkillDetailVisible(true, SkillID, Params.BaseSkillIndex, false, false)
 end
 
 ------------------------------战斗职业-----------------------------------------

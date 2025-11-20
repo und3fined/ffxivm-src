@@ -27,6 +27,7 @@ function OpsNewBieStrategyListItemVM:Ctor()
     self.JumpData = nil
     self.Icon = nil
     self.IconColor = nil
+    self.RedDotName = nil
 end
 
 -- // 活动节点
@@ -74,6 +75,8 @@ function OpsNewBieStrategyListItemVM:UpdateVM(Value)
                  DayValue = 0,
             }
         end
+        ---红点id设置
+        self.RedDotName = _G.OpsNewbieStrategyMgr:GetRedDotNameByNodeID(self.NodeID)
         ---没有ID
         if self.NodeID == nil then
             return

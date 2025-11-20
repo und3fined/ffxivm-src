@@ -30,7 +30,7 @@ local LSTR = _G.LSTR
 ---@field TipsText						string	@遮罩提示
 ---@field GoodsId						number	@道具ID
 ---@field LimitPanelVisible				boolean	@限购panel显隐
----@field HotSaleVisible 				bool @是否显示热卖
+---@field bSaleTagVisible 				bool @是否显示推销标签
 ---@field IsCanBuy 						bool @是否可以购买
 local StorePropsItemVM = LuaClass(UIViewModel)
 
@@ -58,10 +58,12 @@ function StorePropsItemVM:Ctor()
 
 	self.MoneyVisible2 = false
 	self.MoneyVisible3 = false
+	self.bSaleTagVisible = false
+	self.BtnVisible = false
 end
 
 function StorePropsItemVM:IsEqualVM(Value)
-	return nil ~= Value
+	return Value.GoodsId == self.GoodsId
 end
 
 function StorePropsItemVM:UpdateVM(Value)
@@ -71,6 +73,11 @@ function StorePropsItemVM:UpdateVM(Value)
 	end
 	
 	local PropsData = Value.PropsData
+	if not PropsData or not next(PropsData) then
+		FLOG_WARNING("PropsData is nil")
+		return
+	end
+	self.BtnVisible = Value.BtnVisible
 	local PropsCfgData = Value.PropsData.Cfg
 	self.GoodsId = PropsCfgData.ID
 	local TempScoreCfg = ScoreCfg:FindCfgByKey(PropsCfgData.Price[1].ID)
@@ -83,9 +90,9 @@ function StorePropsItemVM:UpdateVM(Value)
 		return
 	end
 	self.Icon = TempItem.IconID
-	self.HQImage = PropsCfgData.PropQualityIconPath
-	self.Name = PropsCfgData.Name
-	self.HotSaleVisible = false
+	self.HQImage = StoreUtil.GetGoodsQualityImagePath(PropsCfgData.ID)
+	self.Name = StoreUtil.GetGoodsName(PropsCfgData.ID)
+	self.bSaleTagVisible = false
 	local TempItemCfg = ItemCfg:FindCfgByKey(PropsCfgData.Items[1].ID)
 	if TempItemCfg ~= nil then
 		self.HQVisible = TempItemCfg.IsHQ == 1
@@ -114,7 +121,6 @@ function StorePropsItemVM:UpdateVM(Value)
 		self.TipsText = CanNotReason
 	end
 	self:SetPrice(PropsCfgData)
-	self.IsBringEquip = PropsCfgData.IsBringEquip
 end
 
 function StorePropsItemVM:SetPrice(PropsData)
@@ -143,7 +149,7 @@ function StorePropsItemVM:UpdateSaleRule(AdvType)
 		return
 	end
 
-	self.HotSaleVisible = true
+	self.bSaleTagVisible = true
 	self.SaleRuleText = RuleText
 end
 

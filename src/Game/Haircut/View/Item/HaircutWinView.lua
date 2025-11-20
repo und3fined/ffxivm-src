@@ -142,7 +142,7 @@ function HaircutWinView:OnRegisterBinder()
 		{ "MoneyIcon", UIBinderSetBrushFromAssetPath.New(self, self.Icon1, true) }, -- 消耗货币图标
 
 		{ "bShowCancleBtn", UIBinderSetIsVisible.New(self, self.BtnNormal) },
-		{ "bEnableSureBtn", UIBinderSetIsEnabled.New(self, self.BtnRecommend.Button)}, -- 解锁按钮
+		{ "bEnableSureBtn", UIBinderSetIsEnabled.New(self, self.BtnRecommend)}, -- 解锁按钮
 
 	}
 

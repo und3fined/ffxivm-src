@@ -37,6 +37,7 @@ function ChatHyperlinkHistoryTextItemVM:UpdateVM(Value)
 
 	local TeamRecruit = nil
 	local Map = nil
+	local Fish = nil
 
 	local ParamList = Value.ParamList -- 超链内容
 
@@ -44,11 +45,13 @@ function ChatHyperlinkHistoryTextItemVM:UpdateVM(Value)
 		local Type = v.Type
 		if Type == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT	-- 队伍招募
 			or Type == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_MAP 			-- 位置
+			or Type == PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH 		-- 	鱼类分享 
 		then
 			local SimpleHref = _G.ChatMgr:DecodeChatParams(v.Param)
 			if SimpleHref then
 				TeamRecruit = TeamRecruit or SimpleHref.TeamRecruit
 				Map = Map or SimpleHref.Map
+				Fish = Fish or SimpleHref.Fish
 			end
 		end
 	end
@@ -61,6 +64,9 @@ function ChatHyperlinkHistoryTextItemVM:UpdateVM(Value)
 		if MapID > 0 then
 			Content = ChatUtil.GetLocationShareDesc(Content, Map)
 		end
+
+	elseif Fish then -- 鱼类分享
+		Content = ChatUtil.GetFishShareHrefDesc(Fish)
 	end
 
 	-- Emoji表情

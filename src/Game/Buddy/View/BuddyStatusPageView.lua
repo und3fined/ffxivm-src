@@ -24,6 +24,7 @@ local MajorUtil = require ("Utils/MajorUtil")
 local BuddyDefine = require("Game/Buddy/BuddyDefine")
 local EventID = require("Define/EventID")
 local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
+local TimeUtil = require("Utils/TimeUtil")
 
 local BagMgr = nil
 local BuddyMgr = nil
@@ -362,6 +363,7 @@ function BuddyStatusPageView:OnBtnSupplement()
 		self:RegisterGameEvent(EventID.MajorSingBarOver, self.OnMajorSingBarOverHandleOnce)
 		_G.InteractiveMgr:SendInteractiveStartReqWithoutObj(Cfg.InteractiveID)
 	end
+	self.SupplementTime = TimeUtil.GetServerTime()
 end
 
 function BuddyStatusPageView:OnMajorSingBarOverHandleOnce(EntityID, IsBreak, SingStateID)
@@ -388,6 +390,12 @@ function BuddyStatusPageView:OnMajorSingBarOverHandleOnce(EntityID, IsBreak, Sin
 end
 
 function BuddyStatusPageView:OnBtnBreakup()
+	if self.SupplementTime and TimeUtil.GetServerTime() - self.SupplementTime < 3  then
+		_G.MsgTipsUtil.ShowTips(LSTR(1000067))
+		return
+	end
+	self.SupplementTime = 0
+
 	if MajorUtil.IsMajorDead() then
 		_G.MsgTipsUtil.ShowTipsByID(308012)
 	else

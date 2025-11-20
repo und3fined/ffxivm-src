@@ -27,10 +27,10 @@ local GatheringJobSkillPanelVM = LuaClass(UIViewModel)
 
 function GatheringJobSkillPanelVM:Ctor()
     --头顶相关
-    self.GatherPointName = ""
-    self.GatherLevel = ""
-    self.LeftTimesInfo = ""
-    self.GatherHPBarPercent = 0
+    --self.GatherPointName = ""
+    --self.GatherLevel = ""
+    --self.LeftTimesInfo = ""
+    --self.GatherHPBarPercent = 0
 
     --GatherCollection界面头顶Item
     self.QualityIcon = ""
@@ -67,7 +67,7 @@ function GatheringJobSkillPanelVM:Ctor()
     self.bCanCollect = false
     self.bCanScour = true
     self.Scrutiny = false
-    self.LastLeftTimes = -1
+    --self.LastLeftTimes = -1
 end
 
 --公有，初始化模块自身数据，其他同级模块在其OnInit之后可以访问到
@@ -138,7 +138,7 @@ end
 --进入收藏品采集状态，初始化网络数据=============================================================================================1**
 function GatheringJobSkillPanelVM:EnterCollection(CollectionRsp)
     self.CollectionRsp = CollectionRsp
-    self.LastLeftTimes = self.CollectionRsp.LeftTimes
+    --self.LastLeftTimes = self.CollectionRsp.LeftTimes
     --Get采集产出物ID——采集笔记配置**——收藏品模板ID————收藏品最大价值**
     --采集点的数据记录在GatherMgr，采集产出物的数据记录在CollectionMgr
     self.GatherResID = _G.CollectionMgr:GetGatherItem().ResID
@@ -150,7 +150,7 @@ function GatheringJobSkillPanelVM:EnterCollection(CollectionRsp)
     local CollectionCfg = CollectInfoCfg:FindCfgByKey(self.GatherResID)
     if CollectionCfg then
         local CollectValue = CollectionCfg.CollectValue
-        self.CollectionValueMax = CollectValue[3]
+        self.CollectionValueMax = CollectValue[3] or 0
     else
         self.CollectionValueMax = 0
         FLOG_ERROR("GatheringJobSkillPanelVM:EnterCollection CollectionCfg is nil")
@@ -168,7 +168,7 @@ function GatheringJobSkillPanelVM:OnExitCollection()
     self.AttributeComponent = nil
     self.CollectionValueMax = nil
     self.GatherItemID = nil
-    self.GatherPointItemCfg = nil
+    --self.GatherPointItemCfg = nil
     self.GatherResID = nil
     self.CurrentVal = 0
 end
@@ -194,10 +194,10 @@ function GatheringJobSkillPanelVM:InitPanel(CollectionRsp)
 
     --耐久条
     self.GatherItemID = ActorUtil.GetActorResID(_G.GatherMgr.CurActiveEntityID) --采集点ID
-    self.GatherPointItemCfg = GatherPointCfg:FindCfgByKey(self.GatherItemID)
-    self.GatherPointName = self.GatherPointItemCfg.Name
-    local TotalCount = _G.GatherMgr:GetMaxGatherCount(self.GatherItemID, _G.GatherMgr.CurGatherListID)
-    self.TotalCount = TotalCount
+    --self.GatherPointItemCfg = GatherPointCfg:FindCfgByKey(self.GatherItemID)
+    --self.GatherPointName = self.GatherPointItemCfg.Name
+    --local TotalCount = _G.GatherMgr:GetMaxGatherCount(self.GatherItemID, _G.GatherMgr.CurGatherListID)
+    --self.TotalCount = TotalCount
 
     self:OnRreshSkillGroup()
     _G.EventMgr:SendEvent(_G.EventID.OnCastSkillUpdateMask, false)
@@ -205,6 +205,9 @@ end
 
 --刷新收藏面板中间的环&值(是初始化，或技能回包后，或长按松了后 直接赋值)
 function GatheringJobSkillPanelVM:OnRefreshCollectionPanel()
+    if self.CollectionRsp == nil then
+        return
+    end
     self.CurrentVal = self.CollectionRsp.CurrentVal
     --换中间的收藏价值（不是长按,显示当前值）
     self.CollectionVal = self.CurrentVal
@@ -234,8 +237,8 @@ function GatheringJobSkillPanelVM:OnRefreshProBar(PickCountLeft)
     
     self.LeftTimes = PickCountLeft or self.CollectionRsp.LeftTimes
     self.AttributeComponent.PickTimesLeft = self.LeftTimes
-    self.LeftTimesInfo = self.LeftTimes .. "/" .. self.TotalCount
-    self.GatherHPBarPercent = self.LeftTimes / self.TotalCount
+    --self.LeftTimesInfo = self.LeftTimes .. "/" .. self.TotalCount
+    --self.GatherHPBarPercent = self.LeftTimes / self.TotalCount
 
     --同步给属性组件
     _G.GatherMgr:OnGatherAttrChange(_G.GatherMgr.CurActiveEntityID, self.CollectionRsp.LeftTimes, true)
@@ -306,12 +309,11 @@ function GatheringJobSkillPanelVM:OnCollectionScourSkill(CollectionRsp)
         MsgTipsUtil.ShowTipsByID(MsgTipsID.CollectionMax)
     end
 
-    if self.LastLeftTimes and self.LastLeftTimes > CollectionRsp.LeftTimes then
+    --if self.LastLeftTimes and self.LastLeftTimes > CollectionRsp.LeftTimes then
         self:OnDurationChange(CollectionRsp.LeftTimes)
-    end
+    --end
 
-    --保存上一次的耐久
-    self.LastLeftTimes = self.CollectionRsp and self.CollectionRsp.LeftTimes
+    --self.LastLeftTimes = CollectionRsp.LeftTimes
     self.CollectionRsp = CollectionRsp
 
     --增加收藏价值
@@ -337,6 +339,7 @@ function GatheringJobSkillPanelVM:OnCollectionScourSkill(CollectionRsp)
 end
 
 function GatheringJobSkillPanelVM:OnDurationChange(Duration)
+    self.LeftTimes = Duration
     local TotalCount = _G.GatherMgr:GetMaxGatherCount(self.GatherItemID, _G.GatherMgr.CurGatherListID)
     if TotalCount <= Duration then
         self.bHighYield = false
@@ -347,16 +350,22 @@ end
 
 --长按主动技能显示：文本+环 动态显示预测值~最大值，+显示技能tip
 function GatheringJobSkillPanelVM:LongClickedScour(index)
+    if self.CollectionRsp == nil then
+        return
+    end
     --如果是提纯，动效显示预测值~最大值
     local RadialYellowVal = self.CurrentVal
     local RadialRedVal = self.CurrentVal
-    if index == 5 then
-        RadialYellowVal = RadialYellowVal + self.CollectionRsp.ScourVal
-    elseif index == 4 then
-        RadialYellowVal = RadialYellowVal + self.CollectionRsp.BrazenMinval
-        RadialRedVal = RadialRedVal + self.CollectionRsp.BrazenMaxval
-    elseif index == 3 then
-        RadialYellowVal = RadialYellowVal + self.CollectionRsp.MetiVal
+    local CollectionRsp = self.CollectionRsp
+    if CollectionRsp ~= nil then
+        if index == 5 then
+            RadialYellowVal = RadialYellowVal + CollectionRsp.ScourVal
+        elseif index == 4 then
+            RadialYellowVal = RadialYellowVal + CollectionRsp.BrazenMinval
+            RadialRedVal = RadialRedVal + CollectionRsp.BrazenMaxval
+        elseif index == 3 then
+            RadialYellowVal = RadialYellowVal + CollectionRsp.MetiVal
+        end
     end
     RadialYellowVal = math.min(RadialYellowVal, self.CollectionValueMax)
     RadialRedVal = math.min(RadialRedVal, self.CollectionValueMax)

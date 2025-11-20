@@ -70,6 +70,7 @@ function AdventureRecommendTaskNewVM:GetCurTypeListData()
                 ImgTaskIcon = QuestMgr:GetChapterIconAtLog(ChapterID, Cfg.QuestType, false), -- 任务图标
 
                 ImgTask = Cfg.LogImage,
+                ImgTaskVisible = Cfg.LogImage ~= "",
                 -- ViewModel.StartVisible = Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED
                 StartVisible = true,
                 GoText = Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED and _G.LSTR(860012) or _G.LSTR(860013),

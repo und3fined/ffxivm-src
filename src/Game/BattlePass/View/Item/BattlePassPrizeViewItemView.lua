@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
@@ -37,6 +38,7 @@ end
 function BattlePassPrizeViewItemView:OnInit()
 	self.Binders = {
 		{ "ItemName", UIBinderSetText.New(self, self.TextName)},
+		{ "IsPreview", UIBinderSetIsVisible.New(self, self.BtnView, false, true)},
 		{ "Icon", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon)},
 	}
 end

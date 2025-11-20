@@ -77,7 +77,7 @@ function SettingsVoiceResVM:RefreshLanguageList(bResetIdx)
             if CurLanguageName == CfgName then
                 local NameStr = string.format(_G.LSTR(110014)
                     , SettingsDefine.LanguagesDesc[LanguageType]
-                    , SettingsDefine.UsingDesc[index])
+                    , SettingsDefine.UsingDesc[LanguageType])
 
                 table.insert(NameList, {Text = NameStr, IsUsing = bExist, IsExist = bExist, Idx = index
                                         , LanguageName = CfgName, LanguageType = LanguageType

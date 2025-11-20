@@ -100,7 +100,8 @@ function OpsCeremonyMainPanelView:OnShow()
 		self:PlayAnimation(self.AnimShow)
 	end
 	if not IsAutoPlayVideo then
-		_G.UIViewMgr:ShowView(UIViewID.CommonVideoPlayerView, {VideoPath = self.ViewModel.VideoShowNodeInfo.StrParam})
+		local VideoPath = self.ViewModel.VideoShowNodeInfo and self.ViewModel.VideoShowNodeInfo.StrParam or ""
+		_G.UIViewMgr:ShowView(UIViewID.CommonVideoPlayerView, {VideoPath = VideoPath})
 		DataReportUtil.ReportActivityFlowData("CeremonyActionTypeClickFlow", tostring(self.Params.ActivityID), tostring(OpsSeasonActivityDefine.CeremonyActionType.AutoPlayAnim))
 		_G.UE.USaveMgr.SetInt(SaveKey.OpenLightCeremonyAutoPlayVideo, 1, true)
 	end

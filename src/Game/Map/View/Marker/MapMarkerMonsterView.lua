@@ -100,14 +100,8 @@ function MapMarkerMonsterView:InitMarkerView()
 		return
 	end
 
-	if MapMarker.IsColosseumCrystal then
-		-- PVP地图水晶图标，将标记缩小显示
-		ViewScale.X = 0.3
-		ViewScale.Y = 0.3
-	else
-		ViewScale.X = 1
-		ViewScale.Y = 1
-	end
+	ViewScale.X = 1
+	ViewScale.Y = 1
 	self.PanelIcon:SetRenderScale(ViewScale)
 end
 

@@ -21,6 +21,7 @@ local UILayer = require("UI/UILayer")
 
 ---@class FishTipsView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field BtnBait UFButton
 ---@field CommBtnS CommBtnSView
 ---@field FishNotesSlot1 FishNotesSlotItemView
 ---@field FishNotesSlot5 FishNotesSlotItemView
@@ -39,11 +40,13 @@ local UILayer = require("UI/UILayer")
 ---@field TextState UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTitle UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local FishTipsView = LuaClass(UIView, true)
 
 function FishTipsView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.BtnBait = nil
 	--self.CommBtnS = nil
 	--self.FishNotesSlot1 = nil
 	--self.FishNotesSlot5 = nil
@@ -62,6 +65,7 @@ function FishTipsView:Ctor()
 	--self.TextState = nil
 	--self.TextTime = nil
 	--self.TextTitle = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -74,7 +78,7 @@ function FishTipsView:OnRegisterSubView()
 end
 
 function FishTipsView:OnInit()
-	self.BaitListAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSlot, self.TableViewBaitSelected)
+	self.BaitListAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSlot, self.TableViewBaitSelected, true)
 	self.FishReleaseTipVM = FishReleaseTipVM.New()
 	self.FishID = nil
 	self.ItemView = nil
@@ -142,6 +146,7 @@ end
 
 function FishTipsView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.CommBtnS, self.OnClickBtnRelease)
+	UIUtil.AddOnClickedEvent(self, self.BtnBait, self.OnClickBtnBait)
 end
 
 function FishTipsView:OnRegisterGameEvent()
@@ -158,6 +163,13 @@ end
 function FishTipsView:OnClickBtnRelease()
 	self.FishReleaseTipVM:UpdateAutoRelease()
 	_G.UIViewMgr:FindView(_G.UIViewID.FishMainPanel):StorageReleaseFishData(self.FishID)
+end
+
+function FishTipsView:OnClickBtnBait()
+	if self.FishID ~= nil then
+		local Fish = _G.FishNotesMgr:GetFishDataByItemID(self.FishID)
+		_G.UIViewMgr:ShowView(_G.UIViewID.FishNotesOtherBait, Fish)
+	end
 end
 
 function FishTipsView:UpdateItem(Item,PosData,ItemView)

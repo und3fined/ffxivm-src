@@ -7,7 +7,6 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local CollectablesMgr = require("Game/Collectables/CollectablesMgr")
-
 ---@class CollectablesTransactionItemVM : UIViewModel
 ---@field CollectValue string @收藏品价值
 ---@field TicketIcon string @工票图标
@@ -25,6 +24,7 @@ function CollectablesTransactionItemVM:Ctor()
     self.ExperienceReward = 0
     self.LowTicketReward = 0
     self.HighTicketReward = 0
+    self.bIsMaxLevelCollect = 0
 end
 
 function CollectablesTransactionItemVM:Init()

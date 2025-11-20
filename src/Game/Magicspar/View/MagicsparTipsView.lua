@@ -51,6 +51,7 @@ end
 
 function MagicsparTipsView:OnShow()
 	self.MateID = nil
+	self.bNormal = true
 	self.TextGetWay:SetText(_G.LSTR(1060020))
 	self.TextContent:SetText(_G.LSTR(1060031))
 end
@@ -87,13 +88,13 @@ function MagicsparTipsView:OnMagicsparGetWaySelect(Index, ItemData, ItemView)
 	ItemUtil.JumpGetWayByItemData(ItemData)
 end
 
-function MagicsparTipsView:UpdateTipsData(MateID, bNomal)
-	if bNomal == false then
+function MagicsparTipsView:UpdateTipsData(MateID, bNormal)
+	if bNormal == false then
 		self.TextGetWay:SetText(_G.LSTR(1060046))
 	else
 		self.TextGetWay:SetText(_G.LSTR(1060020))
 	end
-	if MateID == self.MateID then
+	if MateID == self.MateID and self.bNormal == bNormal then
 		return
 	end
 	local GetwayContent = ""
@@ -114,7 +115,11 @@ function MagicsparTipsView:UpdateTipsData(MateID, bNomal)
 		local ClientGlobal = nil
 		if EquipProperty == ProtoCommon.equip_property.EQUIP_PROPERTY_BATTLE then
 			-- 战斗职业装备
-			ClientGlobal = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY)
+			if bNormal then
+				ClientGlobal = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY)
+			else
+				ClientGlobal = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_BATTLE_PROF_BANMAGICSPAR_GETWAY)
+			end
 		elseif EquipProperty == ProtoCommon.equip_property.EQUIP_PROPERTY_PRODUCT and
 		       ClassLimit == ProtoCommon.class_type.CLASS_TYPE_EARTHMESSENGER then
 			-- 采集职业装备
@@ -157,6 +162,7 @@ function MagicsparTipsView:UpdateTipsData(MateID, bNomal)
 		end
 	end
 	self.MateID = MateID
+	self.bNormal = bNormal
 end
 
 return MagicsparTipsView

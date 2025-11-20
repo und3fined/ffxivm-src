@@ -71,6 +71,7 @@ function CommRewardsSlotView:OnInit()
 		{ "ShowFunc", 			UIBinderSetIsVisible.New(self, self.PanelFunction) },
 		{ "ShowTipDaily", 		RewardTypeBinder },
 		{ "bWeekly", 			RewardTypeBinder },
+		{ "bPropDrop", 			RewardTypeBinder },
 		{ "ShowTipFirst", 		UIBinderSetIsVisible.New(self, self.TextFristPass) },
 		{ "ShowNum", 		    UIBinderSetIsVisible.New(self, self.RichTextNum) },
 		{ "Num",                UIBinderSetTextFormat.New(self, self.RichTextNum, "%d") },
@@ -201,12 +202,19 @@ function CommRewardsSlotView:OnRewardTypeChanged()
 		return
 	end
 
-	local bShow = self.VM.ShowTipDaily or self.VM.bWeekly
+	local bShow = self.VM.ShowTipDaily or self.VM.bWeekly or self.VM.bPropDrop
 	UIUtil.SetIsVisible(self.TextDaily, bShow)
+
+	if not bShow then
+		return
+	end
+
 	if self.VM.ShowTipDaily then
 		self.TextDaily:SetText(_G.LSTR(1320142))
 	elseif self.VM.bWeekly then
 		self.TextDaily:SetText(_G.LSTR(1320231))
+	elseif self.VM.bPropDrop then
+		self.TextDaily:SetText(_G.LSTR(1320273))
 	end	
 end
 

@@ -121,8 +121,19 @@ end
 function DepartureMainPanelView:OnShow()
 	self:SetLSTR()
 	self.CurActivityIndex = 0
-	self.ActivityTableViewAdapter:SetSelectedIndex(1)
+	self:SetSelectedIndex()
 	AudioUtil.LoadAndPlayUISound(DepartOfLightDefine.UISoundPath.MainPanel)
+end
+
+function DepartureMainPanelView:SetSelectedIndex()
+	if self.Params and self.Params.ItemID then
+		local Index = self:GetGameIndexByRewardID(self.Params.ItemID)
+		if Index then
+			self.ActivityTableViewAdapter:SetSelectedIndex(Index)
+		end
+	else
+		self.ActivityTableViewAdapter:SetSelectedIndex(1)
+	end
 end
 
 function DepartureMainPanelView:OnHide()
@@ -174,7 +185,7 @@ function DepartureMainPanelView:OnBtnGotoClicked()
 end
 
 function DepartureMainPanelView:OnDepartOfLightBaseInfoUpdate()
-	self.ActivityTableViewAdapter:SetSelectedIndex(1)
+	self:SetSelectedIndex()
 end
 
 function DepartureMainPanelView:OnRecycleViewVisibleChange(IsVisible)
@@ -193,6 +204,32 @@ function DepartureMainPanelView:OnGameEventHideUI(Params)
 	local ActivityDescInfo = DepartOfLightVMUtils.GetActivityDescInfoByActivityID(ActivityID)
     local GameID = ActivityDescInfo and ActivityDescInfo.GameID
 	DepartOfLightMgr:SendGetTaskProgressReq(GameID)
+end
+
+---@type 通过节点奖励ID获取玩法模块索引
+function DepartureMainPanelView:GetGameIndexByRewardID(RewardID)
+	local ActivityList = DepartOfLightVM:GetActivityInfoList()
+	for _, ActivityInfo in ipairs(ActivityList) do
+		local ActivityID = ActivityInfo.ActivityID
+		local Nodes = ActivityInfo.Nodes
+		if Nodes then
+			for _, NodeInfo in ipairs(Nodes) do
+				local NodeID = NodeInfo.NodeID
+				local NodeDetail = DepartOfLightVMUtils.GetActivityNodeDetail(NodeID)
+				local Rewards = NodeDetail and NodeDetail.Rewards
+				if Rewards then
+					for _, Reward in ipairs(Rewards) do
+						if RewardID == Reward.ItemID then
+							local ActivityDescInfo = DepartOfLightVMUtils.GetActivityDescInfoByActivityID(ActivityID)
+							if ActivityDescInfo then
+								return ActivityDescInfo.GameID
+							end
+						end
+					end
+				end
+			end
+		end
+	end
 end
 
 return DepartureMainPanelView

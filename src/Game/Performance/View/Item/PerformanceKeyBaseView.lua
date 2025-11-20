@@ -8,6 +8,10 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local MPDefines = require("Game/MusicPerformance/MusicPerformanceDefines")
+local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanceUtil")
+local CommonUtil = require("Utils/CommonUtil")
+local CommonDefine = require("Define/CommonDefine")
+local TimeUtil = require("Utils/TimeUtil")
 
 ---@class PerformanceKeyBaseView : UIView
 local PerformanceKeyBaseView = LuaClass(UIView, true)
@@ -25,6 +29,10 @@ function PerformanceKeyBaseView:Ctor()
 end
 
 function PerformanceKeyBaseView:OnPressed()
+	--按键响应时间记录
+	_G.MusicPerformanceMgr.PressedPlayTimeMs = TimeUtil.GetGameTimeMS()
+	MusicPerformanceUtil.Log(string.format("MusicPerformanceKey:OnPressed %d", _G.MusicPerformanceMgr.PressedPlayTimeMs))
+
 	-- 长按时不处理逻辑
 	if self.Key == nil or self.Btn.IsAllowLongClick then
 		return
@@ -57,10 +65,61 @@ end
 
 function PerformanceKeyBaseView:UpdateUI()
 	if self.Key then
-		if self.Key == MPDefines.KeyEnd or self.IsKeyi then
-			self.TextKey:SetText("i")
-		else
-			local KeyName = MPDefines.KeyName[self.Key % MPDefines.KeyDefines.KEY_MAX]
+		--初始高低音的"."全部隐藏
+		if self.TextKeyGao ~= nil then
+			UIUtil.SetIsVisible(self.TextKeyGao, false)
+		end
+		if self.TextKeyGao1 ~= nil then
+			UIUtil.SetIsVisible(self.TextKeyGao1, false)
+		end
+		if self.TextKeyDi ~= nil then
+			UIUtil.SetIsVisible(self.TextKeyDi, false)
+		end
+
+		local MusicSheet = MusicPerformanceUtil.GetMusicSheet()
+		local IsSingleMode = MusicPerformanceUtil.GetKeybordMode() == 1	-- 是否是单音阶
+		if MusicSheet == MPDefines.MusicSheetType.Jp then
+			--简谱
+			local KeyName = MPDefines.KeyNameJp[self.Key % MPDefines.KeyDefines.KEY_MAX]
+			self.TextKey:SetText(KeyName or "")
+
+			if self.Key == MPDefines.KeyEnd or self.IsKeyi then
+				--处理键盘末尾键位高低音
+				if self.TextKeyGao ~= nil then
+					UIUtil.SetIsVisible(self.TextKeyGao, true)
+				end
+				if self.TextKeyGao1 ~= nil then
+					if not IsSingleMode then
+						UIUtil.SetIsVisible(self.TextKeyGao1, true)
+					end
+				end
+			else
+				--低八度是KEY_MAX的2倍、中间是KEY_MAX的3倍、高八度是KEY_MAX的4倍
+				local KeySection, Decimal = math.modf(self.Key / MPDefines.KeyDefines.KEY_MAX)
+				if KeySection == 2 then
+					if self.TextKeyDi ~= nil then
+						UIUtil.SetIsVisible(self.TextKeyDi, true)
+					end
+				elseif KeySection == 4 then
+					if self.TextKeyGao ~= nil then
+						UIUtil.SetIsVisible(self.TextKeyGao, true)
+					end
+				end
+			end
+		elseif MusicSheet == MPDefines.MusicSheetType.Ym then
+			--音名
+			local CurCultureName = CommonUtil.GetCurrentCultureName()
+			if CurCultureName == CommonDefine.CultureName.German then
+				--德语的显示有所不同
+				local KeyName = MPDefines.KeyNameYmGerman[self.Key % MPDefines.KeyDefines.KEY_MAX]
+				self.TextKey:SetText(KeyName or "")
+			else
+				local KeyName = MPDefines.KeyNameYm[self.Key % MPDefines.KeyDefines.KEY_MAX]
+				self.TextKey:SetText(KeyName or "")
+			end
+		elseif MusicSheet == MPDefines.MusicSheetType.Cm then
+			--唱名
+			local KeyName = MPDefines.KeyNameCm[self.Key % MPDefines.KeyDefines.KEY_MAX]
 			self.TextKey:SetText(KeyName or "")
 		end
 	else
@@ -166,6 +225,36 @@ function PerformanceKeyBaseView:OnPerformDataChanged(PerformData)
 	self.Btn.IsAllowLongClick = PerformData.Loop == 1
 	if LastIsAllowLongClick == false and self.Btn.IsAllowLongClick == true then
 		self.Btn:SetIsAllowLongClick(true)
+	end
+end
+
+--开始按键提示
+function PerformanceKeyBaseView:StartPromptKeyState()
+	if self.AnimTipsHide then
+		if self:IsAnimationPlaying(self.AnimTipsHide) then
+			self:StopAnimation(self.AnimTipsHide)
+		end
+	end
+
+	if self.AnimTipsLoop then
+		if not self:IsAnimationPlaying(self.AnimTipsLoop) then
+			self:PlayAnimation(self.AnimTipsLoop,0,0)
+		end
+	end
+end
+
+--结束按键提示
+function PerformanceKeyBaseView:StopPromptKeyState()
+	if self.AnimTipsLoop then
+		if self:IsAnimationPlaying(self.AnimTipsLoop) then
+			self:StopAnimation(self.AnimTipsLoop)
+		end
+	end
+
+	if self.AnimTipsHide then
+		if not self:IsAnimationPlaying(self.AnimTipsHide) then
+			self:PlayAnimation(self.AnimTipsHide)
+		end
 	end
 end
 

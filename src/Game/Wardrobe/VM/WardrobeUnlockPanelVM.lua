@@ -62,7 +62,7 @@ end
 function WardrobeUnlockPanelVM:ClearList()
 	self.AppearanceTabList:Clear()
 	self.AppearanceList:Clear()
-	self.AppearancePageVM:ClearBindList()
+	self.AppearancePageVM:ClearAllList()
 end
 
 -- 更新左边菜单栏
@@ -128,7 +128,7 @@ function WardrobeUnlockPanelVM:UpdateAppearanceList(PartID, AppearanceList, IsQu
 	local DataList = {}
 	for _, v in ipairs(AppearanceList) do
 		local AppID = v
-		local Part = WardrobeUtil.GetPartIDByAppearanceID(AppID)
+		local Part = WardrobeUtil.GetPartByAppearanceID(AppID)
 		if Part == ProtoCommon.equip_part.EQUIP_PART_FINGER then
 			Part = ProtoCommon.equip_part.EQUIP_PART_LEFT_FINGER   
 		end

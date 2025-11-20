@@ -7,24 +7,20 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-
-local PhotoActionItemVM = require("Game/Photo/VM/Item/PhotoActionItemVM")
+local PhotoDefine = require("Game/Photo/PhotoDefine")
+local ActorUtil = require("Utils/ActorUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local PhotoActorUtil = require("Game/Photo/Util/PhotoActorUtil")
 local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
-local ActorUtil = require("Utils/ActorUtil")
-local PhotoDefine = require("Game/Photo/PhotoDefine")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 
 local PhotoActionVM
 local PhotoVM
-local TipsUtil = require("Utils/TipsUtil")
-local PhotoActorUtil = require("Game/Photo/Util/PhotoActorUtil")
-
-
-local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local PhotoMgr
 local ShowTips = MsgTipsUtil.ShowTips
 
 ---@class PhotoActionPanelView : UIView
@@ -86,12 +82,14 @@ function PhotoActionPanelView:OnRegisterSubView()
 end
 
 function PhotoActionPanelView:OnInit()
-	PhotoActionVM			= _G.PhotoActionVM
+	PhotoActionVM = _G.PhotoActionVM
 	PhotoVM = _G.PhotoVM
+	PhotoMgr = _G.PhotoMgr
+
 	self.TableViewActionAdapter = UIAdapterTableView.CreateAdapter(self, self.TableView_76)
 	self.TableViewActionAdapter:SetOnClickedCallback(self.OnActionItemClicked)
 
-	self.BinderAction = 
+	self.BinderAction =
 	{
 		{ "CurSeltItemIdx",   UIBinderValueChangedCallback.New(self, nil, self.OnSeltItem) },
 		{ "CurSeltItemIdx",   UIBinderSetSelectedIndex.New(self, self.TableViewActionAdapter, true)},
@@ -112,18 +110,20 @@ function PhotoActionPanelView:OnSeltItem(Idx)
 end
 
 function PhotoActionPanelView:OnTabs(Idx)
-
 	PhotoActionVM:SetActionType(Idx - 1)
-	self.LastIdx = nil
+	self.LastIdx = PhotoActionVM.Type and PhotoActionVM.ItemIdxMap[PhotoActionVM.Type] or nil
 end
 
 function PhotoActionPanelView:OnDestroy()
-
+	PhotoActionVM:ClearVMData()
 end
 
 local ListData = { { Name = _G.LSTR(630049) }, { Name = _G.LSTR(630050) }}
 function PhotoActionPanelView:OnShow()
+	self.CommTabs:SetTextColor("#d5d5d5")
 	self.CommTabs:UpdateItems(ListData, 1)
+	PhotoActionVM:UpdateListVM()
+	PhotoActionVM:UpdateCurIdx(true)
 end
 
 function PhotoActionPanelView:OnHide()
@@ -139,49 +139,9 @@ function PhotoActionPanelView:OnTimer()
 		return
 	end
 
-	local Pct = _G.PhotoMgr:GetCurMontagePct()
+	local Pct = PhotoMgr:GetPlayingActionMontagePct() or 0
 	PhotoActionVM.CurAniPct = Pct
-	
 end
-
--- 	-- 动作
--- 	local Montage = self.ActionMontage
--- 	if Montage then
--- 		local AnimInst = self:GetAnimInstance()
--- 		if nil == AnimInst then
--- 			return
--- 		end
-
--- 		local CurPos = AnimationUtil.GetMontagePosition(AnimInst, Montage) 
--- 		if CurPos <= 0 then
--- 			self.ActionMontage = self:PlayAnim(self.ActionMotageResPath) 
--- 		end
-
--- 		if CurPos ~= self.LastMontagePosition and PersonPortraitVM.CurTab == TabTypes.Action then
--- 			self.LastMontagePosition = CurPos
--- 			self:SetPlaySliderValue(CurPos)
--- 		end
--- 	end
-
--- 	-- 表情
--- 	Montage = self.EmotinoMontage
--- 	if Montage then
--- 		local AnimInst = self:GetAnimInstance()
--- 		if nil == AnimInst then
--- 			return
--- 		end
-
--- 		local CurPos = AnimationUtil.GetMontagePosition(AnimInst, Montage) 
--- 		if CurPos <= 0 then
--- 			self.EmotinoMontage = self:PlayAnim(self.EmotionMotageResPath) 
--- 		end
-
--- 		if CurPos ~= self.LastMontagePosition and PersonPortraitVM.CurTab == TabTypes.Emotion then
--- 			self.LastMontagePosition = CurPos
--- 			self:SetPlaySliderValue(CurPos)
--- 		end
--- 	end
--- end
 
 function PhotoActionPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnValueChangedEvent(self, 		self.Slider, 				self.OnValueChangedScale)
@@ -191,10 +151,7 @@ end
 
 function PhotoActionPanelView:OnTogPlay(Tog, Stat)
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
-
-
 	PhotoActionVM:SetAmimIsPause(IsChecked)
-
 	-- -- 暂停取消同步个人暂停
 	if not IsChecked then
 		PhotoVM:SetIsPauseSelect(false)
@@ -202,21 +159,30 @@ function PhotoActionPanelView:OnTogPlay(Tog, Stat)
 end
 
 function PhotoActionPanelView:OnRegisterGameEvent()
-    self:RegisterGameEvent(_G.EventID.EmotionRefreshItemUI,                   self.OnEveEmotionRefreshItemUI)
-    self:RegisterGameEvent(_G.EventID.PhotoSeltEntChg,                   self.OnEvePhotoSeltChg)
+    self:RegisterGameEvent(_G.EventID.EmotionRefreshItemUI, self.OnEveEmotionRefreshItemUI)
+    self:RegisterGameEvent(_G.EventID.PhotoSeltEntChg, self.OnEvePhotoSeltChg)
 end
 
 function PhotoActionPanelView:OnEveEmotionRefreshItemUI()
-	PhotoActionVM:UpdateVM()
+	if PhotoMgr:IsCurSeltMajor() then
+		PhotoActionVM:UpdateListVM()
+		PhotoActionVM:UpdateCurIdx(true)
+	else
+		PhotoActionVM:ChangedSelecteActor()
+	end
 end
 
 function PhotoActionPanelView:OnEvePhotoSeltChg()
-	PhotoActionVM:UpdateVM()
+	if PhotoMgr:IsCurSeltMajor() then
+		PhotoActionVM:UpdateListVM()
+		PhotoActionVM:UpdateCurIdx(true)
+	else
+		PhotoActionVM:ChangedSelecteActor()
+	end
 end
 
 function PhotoActionPanelView:OnRegisterBinder()
 	self:RegisterBinders(PhotoActionVM, 		self.BinderAction)
-
 end
 
 ---
@@ -226,33 +192,27 @@ function PhotoActionPanelView:OnActionItemClicked(Index, ItemData, ItemView)
 	end
 
 	if Index == self.LastIdx then
+		PhotoActionVM:ResetRoleActAni()
 		return
 	end
 
-	local EntID = _G.PhotoMgr.SeltEntID
+	local EntID = PhotoMgr.SeltEntID
 	if PhotoActorUtil.IsActorMoving(EntID) then
-		_G.MsgTipsUtil.ShowTips(_G.LSTR(630060))
-		return 
+		ShowTips(_G.LSTR(630060))
+		return
 	end
 
-	if ItemData.Type == PhotoActionItemVM.ItemType.Movement then
-		local EntID = _G.PhotoMgr.SeltEntID
-		if not EntID then return end
-		local Actor = ActorUtil.GetActorByEntityID(EntID)
-		if not Actor then return end
-		local RideCom = Actor:GetRideComponent()
-		if RideCom == nil then return end
-		local bIsRiding = RideCom:IsInRide()			--坐骑中
+	if ItemData.Type == PhotoDefine.AnimType.Movement then
+		local bIsRiding = ActorUtil.IsInRide(EntID)	--坐骑中
 		if bIsRiding then
-			_G.MsgTipsUtil.ShowTips(_G.LSTR(630045))
+			ShowTips(_G.LSTR(630045))
 			return
 		end
 	end
 
 	self.LastIdx = Index
-
 	PhotoVM:SetIsPauseSelect(false)
-	PhotoVM:SetIsPauseAll(false)
+	--PhotoVM:SetIsPauseAll(false)
 	PhotoActionVM:SetSelectedActionItem(Index, ItemData.ID)
 end
 
@@ -264,12 +224,11 @@ function PhotoActionPanelView:OnAniPctChg(Pct)
 end
 
 function PhotoActionPanelView:OnValueChangedScale(_, Value)
-	PhotoActionVM:SetAmimIsPause(true)
-	_G.PhotoMgr:SetCurMontagePct(Value)
+	PhotoMgr:SetPlayingActionMontagePct(Value)
 	self.ProbarAct:SetPercent(Value)
 	_G.FLOG_INFO('[Photo][PhotoActionPanelView] AnimPct = ' .. tostring(Value))
 	-- if (not _G.PhotoMgr:CurRoleInPlayingAni()) PhotoActionVM.IsPauseAnim then
-		
+
 	-- end
 end
 

@@ -160,18 +160,19 @@ function BattlePassTaskPanelView:InitWeekDropdownList()
 		return
 	end
 	local StartTime = BattlePassMgr:GetBattlePassStartTime()
-
-	local CurTime =TimeUtil.GetServerLogicTime()
-	local Len = (CurTime - TimeUtil.GetTimeFromString(StartTime)) / (60 * 60 * 24 * 7)
-	local ItemList = {}
-	for index = 0, math.ceil(Len) do
-		local Item = {}
-		Item.ID = index
-		Item.Name = index == 0 and _G.LSTR(850047) or numberToChinese(index)
-		table.insert(ItemList, Item)
+	if StartTime ~= nil then
+		local CurTime =TimeUtil.GetServerLogicTime()
+		local Len = (CurTime - TimeUtil.GetTimeFromString(StartTime)) / (60 * 60 * 24 * 7)
+		local ItemList = {}
+		for index = 0, math.ceil(Len) do
+			local Item = {}
+			Item.ID = index
+			Item.Name = index == 0 and _G.LSTR(850047) or numberToChinese(index)
+			table.insert(ItemList, Item)
+		end
+		self.CommDropDownList4:UpdateItems(ItemList, 1) 
 	end
 
-	self.CommDropDownList4:UpdateItems(ItemList, 1) 
 end
 
 -- 每日签到
@@ -213,12 +214,14 @@ function BattlePassTaskPanelView:OnClickedToggleBtnWeek(ToggleButton, State)
 	-- 更新时间
 	local EndTime = BattlePassMgr:GetBattlePassEndTime()
 	local Timestamp1 = self:Get_seconds_until_next_update_time(EndTime)
-	local Timestamp = TimeUtil.GetTimeFromString(EndTime)
-	local Servertime = TimeUtil.GetServerLogicTime()
-	local TempTime =  Timestamp - Servertime
-	if TempTime > 0 then
-		local Str = string.format("%s%s", _G.LSTR(850048), LocalizationUtil.GetCountdownTimeForSimpleTime(Timestamp1, self:GetTimeFormat(Timestamp1)))
-		self.ViewModel.NextWeekCountDown = Str
+	if EndTime ~= "" then
+		local Timestamp = TimeUtil.GetTimeFromString(EndTime)
+		local Servertime = TimeUtil.GetServerLogicTime()
+		local TempTime =  Timestamp - Servertime
+		if TempTime > 0 then
+			local Str = string.format("%s%s", _G.LSTR(850048), LocalizationUtil.GetCountdownTimeForSimpleTime(Timestamp1, self:GetTimeFormat(Timestamp1)))
+			self.ViewModel.NextWeekCountDown = Str
+		end
 	end
 end
 
@@ -256,8 +259,8 @@ end
 
 function BattlePassTaskPanelView:OnBattlePassRemainWeekCountDown()
 	local EndTime = BattlePassMgr:GetBattlePassEndTime()
-	local Timestamp1 = self:Get_seconds_until_next_update_time(EndTime)
-	local Timestamp = TimeUtil.GetTimeFromString(EndTime)
+	local Timestamp1 = EndTime ~= nil and self:Get_seconds_until_next_update_time(EndTime) or 0
+	local Timestamp = EndTime ~= nil and TimeUtil.GetTimeFromString(EndTime) or 0
 	local Servertime =TimeUtil.GetServerLogicTime()
 	local TempTime =  Timestamp - Servertime
 	if TempTime > 0 then

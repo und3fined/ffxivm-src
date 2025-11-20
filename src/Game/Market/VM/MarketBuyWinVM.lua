@@ -44,6 +44,9 @@ end
 
 function MarketBuyWinVM:SetSelectedStallBrief(StallBrief)
     self.StallBrief = StallBrief
+    if StallBrief.Attr then
+        self.SellItemMV:SetItemMaker(StallBrief.Attr.Maker)
+    end
     for i = 1, self.SaleStallVMList:Length() do
         local SaleStallVM = self.SaleStallVMList:Get(i)
         SaleStallVM:UpdateSelectedStatus(StallBrief.SellID)
@@ -92,6 +95,8 @@ function MarketBuyWinVM:UpdateStallBriefList(StallBriefInfo)
             end
             self.StallBriefEnd = self.StallBriefEnd - #Stalls
             self.StallBriefBegin = Begin
+        else
+            self.SaleStallVMList:UpdateByValues(Stalls)
         end
     end
 

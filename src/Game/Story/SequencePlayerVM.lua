@@ -15,6 +15,7 @@ local CommonUtil = require("Utils/CommonUtil")
 local StoryDefine = require("Game/Story/StoryDefine")
 local ClientGlobalCfg = require("TableCfg/ClientGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local StoryMgr = nil
 local QuestMgr = nil
@@ -60,6 +61,7 @@ function SequencePlayerVM:ResetVM()
 	-- === info ===
 
 	self.bIsCanSkip = false --确定当前sequence能否跳过，关卡编辑器配置
+	self.bShowJumpOverBtn = true -- 是否显示跳过按钮
 	self.SkipType = 0 -- 跳过类型，0: 单人， 1组队，sequence轨道里配置
 	self.FadeColorType = 0
 	self.bTouchIgnore = false
@@ -123,6 +125,13 @@ function SequencePlayerVM:ResetVM()
 	self.TextVideoNum = ""
 	self.bForbidSkipWhenHasNewbieInTeam = false --一些副本配置了不可跳过的条件：队伍有未通关此副本的队友
 	
+	self.CurHandleSelectItemIndex = 1
+	self.IsHandleAttached = false
+	self.bHandleBtnContinue = false
+	self.HandleBtnContinue = ""
+	self.bHandleBtnJumpOver = false
+	self.HandleBtnJumpOver = ""
+	self.ItemListNum = 0
 
 	self:ClearDialogueMenu()
 end
@@ -206,6 +215,25 @@ function SequencePlayerVM:UpdateSkipInfo(bIsCanSkip, SkipType, FadeColorType)
 	self.bIsCanSkip = bIsCanSkip
 	self.SkipType = SkipType
 	self.FadeColorType = FadeColorType
+	self.bShowJumpOverBtn = bIsCanSkip --能跳过：默认显示，不能跳过：默认不显示
+
+	--不能跳过
+	if not self.bIsCanSkip then
+		local CurrPWorldType = _G.PWorldMgr:GetCurrPWorldType()
+		if CurrPWorldType == ProtoRes.pworld_type.PWORLD_CATEGORY_DUNGEON then
+			--副本：不能跳过的剧情都显示跳过按钮
+			self.bShowJumpOverBtn = true
+
+			local CurWorldSubType = _G.PWorldMgr:GetCurrPWorldSubType()
+			--PVP副本不显示跳过按钮
+			if CurWorldSubType == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_COLOSSEUM then
+				self.bShowJumpOverBtn = false
+			end
+		else
+			self.bShowJumpOverBtn = false --副本外：不能跳过的剧情都不显示跳过按钮
+        end
+    end
+	self:UpdateHandlebtn()
 end
 
 function SequencePlayerVM:ResetActualSpeedLevel()
@@ -315,14 +343,16 @@ end
 
 function SequencePlayerVM:OnClickButtonJumpOver()
 	if (not self.bIsCanSkip) then
-		if (self.bForbidSkipWhenHasNewbieInTeam) then
-			--队伍中有初见冒险者，无法跳过当前动画
-			_G.MsgTipsUtil.ShowStoryTips(LSTR(1280016))
-		else
-			--当前动画不可跳过
-			_G.MsgTipsUtil.ShowStoryTips(LSTR(1280014))
+		--按钮显示出来才提示
+		if (self.bShowJumpOverBtn) then
+			if (self.bForbidSkipWhenHasNewbieInTeam) then
+				--队伍中有初见冒险者，无法跳过当前动画
+				_G.MsgTipsUtil.ShowStoryTips(LSTR(1280016))
+			else
+				--当前动画不可跳过
+				_G.MsgTipsUtil.ShowStoryTips(LSTR(1280014))
+			end
 		end
-		
 		return
 	end
 
@@ -408,7 +438,7 @@ function SequencePlayerVM:UpdateDialogueInfo(DialogueSentenceInfo)
 	if (self.bForbidSkipWhenHasNewbieInTeam) then
 		self.bTouchWaitCfg = false
 	end
-
+	self:UpdateHandlebtn()
 	if DialogueSentenceInfo.bScrollContent then
 		self.TalkContent = ""
 		self:SetupDialogContentScroll(DialogueSentenceInfo)
@@ -540,15 +570,13 @@ function SequencePlayerVM:OpenMenu(MenuInfo)
 	end
 
 	self.ChoiceUnitList = TempUnitList
+	self:OnChoiceUnitListNumChange()
 	self.DialogueBranchID = MenuInfo.DialogueBranchID
 	self.bTouchIgnore = true
 	self.bChoicePanelVisible = true
 
 	self:ResetActualSpeedLevel()
-	if self.CachedIsCanSkip == nil then
-		self.CachedIsCanSkip = self.bIsCanSkip
-	end
-	self.bIsCanSkip = false
+	self:UpdateHandlebtn()
 	if self.CachedHasAnyDialog == nil then
 		self.CachedHasAnyDialog = self.bHasAnyDialog
 	end
@@ -566,10 +594,6 @@ function SequencePlayerVM:ChooseMenuChoice(Index)
 	self:ClearDialogueMenu()
 
 	self:ResetActualSpeedLevel()
-	if self.CachedIsCanSkip ~= nil then
-		self.bIsCanSkip = self.CachedIsCanSkip
-		self.CachedIsCanSkip = nil
-	end
 	if self.CachedHasAnyDialog ~= nil then
 		self.bHasAnyDialog = self.CachedHasAnyDialog
 		self.CachedHasAnyDialog = nil
@@ -612,5 +636,55 @@ function SequencePlayerVM:ShowStaffScroll(StaffTable, ScrollTime)
 end
 
 -- ---------------------------------------------------- --------------------------------------------------
+function SequencePlayerVM:UpdateHandlebtn(IsHandleAttached, IsUpdateButtonText)
+	if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+	self.IsHandleAttached = IsHandleAttached
+	if IsHandleAttached then
+		if IsUpdateButtonText then
+			local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.Jump)
+			if HandleButtonText then
+				self.HandleBtnJumpOver = HandleButtonText
+			end
+			HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+			if HandleButtonText then
+				self.HandleBtnContinue = HandleButtonText
+			end
+		end
+		self.bHandleBtnJumpOver = self.bShowJumpOverBtn or self.bIsCanSkip
+		self.bHandleBtnContinue = self.bTouchWaitCfg
+	else
+		self.bHandleBtnContinue = false
+	end
+end
+
+function SequencePlayerVM:SwitchCurSelectItem(IsDown)
+    local ItemList  = self.ChoiceUnitList
+    local ItemNum = #ItemList
+    if IsDown then
+        if self.CurHandleSelectItemIndex + 1 <= ItemNum then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex + 1
+        else
+            self.CurHandleSelectItemIndex = 1
+        end
+    else
+        if self.CurHandleSelectItemIndex - 1 >= 1 then
+            self.CurHandleSelectItemIndex = self.CurHandleSelectItemIndex - 1
+        else
+            self.CurHandleSelectItemIndex = #ItemList
+        end
+    end
+end
+
+function SequencePlayerVM:OnChoiceUnitListNumChange()
+	if self.IsHandleAttached then
+		 if self.CurHandleSelectItemIndex ~= 1 then
+			self.CurHandleSelectItemIndex = 1
+			_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+		end
+		self.CurHandleSelectItemIndex = 1
+	end
+end
 
 return SequencePlayerVM

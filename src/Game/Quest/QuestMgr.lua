@@ -32,6 +32,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local FuncCfg = require("TableCfg/FuncCfg")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local PworldCfg = require("TableCfg/PworldCfg")
+local QuestTimeControllerCfg = require("TableCfg/QuestTimeControllerCfg")
 
 -- Proto
 local ProtoCS = require("Protocol/ProtoCS")
@@ -51,12 +52,11 @@ local BEHAVIOR_TYPE =   ProtoRes.QUEST_CLIENT_ACTION_TYPE
 local ITEM_UPDATE_TYPE = ProtoCS.ITEM_UPDATE_TYPE
 local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
 
+local ErrorCodeType = QuestDefine.ErrorCodeType
+
 local LSTR = _G.LSTR
 local EActorType = _G.UE.EActorType
 local CommonUtil = require("Utils/CommonUtil")
-
--- 后台定义的错误码
-local ErrorCodeFarDistance = 125002
 
 ---@class QuestMgr : MgrBase
 local QuestMgr = LuaClass(MgrBase)
@@ -109,6 +109,8 @@ function QuestMgr:InitQuestData()
 	-- 跳过任务剧情动画和单人本过场计数
     self.SequenceSkipCount = 0
 	self.bInQuestSequence = false
+
+	self.bQuestSeqInSkipGroup = false
 end
 
 ---任务系统初始化所需的前置事件
@@ -126,6 +128,12 @@ function QuestMgr:OnBegin()
     self.OfferSequenceCollector = OfferSequenceCollector.New()
     QuestFactory.Init()
     QuestHelper.Init()
+
+    self.AutoSkipQuestSeqWhitelist = {}
+	local AutoSkipWhitelistCfg = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_CFG_AUTO_SKIP_WHITELIST)
+	if AutoSkipWhitelistCfg then
+        self.AutoSkipQuestSeqWhitelist = AutoSkipWhitelistCfg.Value or {}
+	end
 
     -- 15ms左右
     self.PreloadChapterCfgs = QuestChapterCfg:FindAllCfg("QuestGenreID > 20000 AND QuestGenreID < 30000")
@@ -174,7 +182,7 @@ function QuestMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.BagUpdate, self.OnGameEventBagUpdate)
     self:RegisterGameEvent(EventID.OpsActivityUpdate, self.OnGameEventOpsActivityUpdate)
     self:RegisterGameEvent(EventID.EnterMapFinish, self.OnGameEventEnterMapFinish)
-    self:RegisterGameEvent(EventID.PlayerSkipSequence, self.OnGameEventStopSequenceHalfway)
+    self:RegisterGameEvent(EventID.StopSequenceHalfway, self.OnGameEventStopSequenceHalfway)
     self:RegisterGameEvent(EventID.QuestLimitTimeOver, self.OnGameEventQuestLimitTimeOver)
 end
 
@@ -454,6 +462,11 @@ function QuestMgr:OnGameEventQuestLimitTimeOver()
                 end
             end
         end
+
+        -- 检查需要移除的过期任务
+        self:CheckNeedRemoveQuest()
+
+        -- 更新
         do
             local _ <close> = CommonUtil.MakeProfileTag("QuestMgr:OnGameEventQuestLimitTimeOver")
             local co = coroutine.create(self.OnQuestConditionUpdate)
@@ -857,6 +870,10 @@ function QuestMgr:OnNetMsgQuestUpdateNotify(MsgBody)
             -- 正在交互中,打断
             _G.NpcDialogMgr:EndInteraction()
         end
+        if ErrorCode == ErrorCodeType.StatusNotMatch then
+            -- 收到任务状态不匹配的错误码,重新拉取任务列表
+            self:SendReqQuestList()
+        end
         return
     end
     local QuestUpdateRsp = MsgBody.QuestUpdate
@@ -870,6 +887,9 @@ function QuestMgr:OnNetMsgQuestUpdateNotify(MsgBody)
 
     -- 只在任务回退时收到数据
     self:OnNetMsgQuestClientData(QuestUpdateRsp)
+
+    -- 某些任务回退时特殊处理，目前只有搬运
+    QuestHelper.CheckQuestRevertAction(QuestUpdateRsp.Quests)
 
     if QuestUpdateRsp.Counters ~= nil then
         for CounterID, QuestCounterValue in pairs(QuestUpdateRsp.Counters) do
@@ -981,7 +1001,7 @@ function QuestMgr:OnNetMsgError(MsgBody)
 		return
 	end
 
-	if MsgBody.ErrCode == ErrorCodeFarDistance then
+	if MsgBody.ErrCode == ErrorCodeType.InvalidDistance then
         _G.EventMgr:SendEvent(EventID.QuestErrorFarDistance)
     end
 end
@@ -1068,7 +1088,7 @@ end
 ---发送完成任务目标请求
 ---@param QuestID int32
 ---@param TargetID int32
-function QuestMgr:SendFinishTarget(QuestID, TargetID, ResID, CollectItem, ActorType, BranchUniqueID, ChoiceIndex)
+function QuestMgr:SendFinishTarget(QuestID, TargetID, ResID, CollectItem, ActorType, BranchUniqueID, ChoiceIndex, TargetIDList)
     local MsgBody = {
         Cmd = QUEST_CMD.QUEST_TARGET_FINISH_CMD,
         TargetFinish = {
@@ -1078,6 +1098,7 @@ function QuestMgr:SendFinishTarget(QuestID, TargetID, ResID, CollectItem, ActorT
             CollectItem = CollectItem,
             DialogID = BranchUniqueID,
             Branch = ChoiceIndex,
+            NodeIDs = TargetIDList,
         }
     }
     self.SendQuestMsg(MsgBody)
@@ -1116,6 +1137,48 @@ function QuestMgr:SendFinishTargetWithBranchCheck(QuestID, TargetID, ResID, Coll
         self:SetDialogBranchInfo(0, 0)
     end
     self:SendFinishTarget(QuestID, TargetID, ResID, CollectItem, ActorType, BranchUniqueID, ChoiceIndex)
+end
+
+---组合目标内，分组批量跳过sequence情况，也批量完成任务目标
+---假设：
+---1. 分组跳过的sequence都在同一组合目标内，且连续
+---2. sequence里面不会放影响任务进度的选项
+---@param QuestID number
+function QuestMgr:SendMultipleFinishTarget(QuestID, TargetID, ResID)
+    if not self.bQuestSeqInSkipGroup then -- 先判断一次，限制应用范围，不依赖外部判断
+        return
+    end
+    self:SetQuestSeqInSkipGroup(false)
+
+    local Quest = self.QuestMap[QuestID]
+    if not Quest then return end
+    local Target = Quest.Targets[TargetID]
+    if not Target then return end
+        
+    local NextTarget = Target:GetNextTarget()
+    if (not QuestHelper.CheckTargetPlaySeq(Target)) or (NextTarget == nil) then
+        self:SendFinishTarget(QuestID, TargetID, ResID)
+        return
+    end
+
+    local TargetIDList = { TargetID }
+        
+    local StoryMgr = _G.StoryMgr
+    Target = NextTarget
+    while Target ~= nil do
+        local bTargetPlaySeq = QuestHelper.CheckTargetPlaySeq(Target)
+        if not bTargetPlaySeq then break end
+
+        local SequenceID = Target:GetDialogID()
+        local bInSkipGroup = StoryMgr:IsSequenceInSkipGroup(SequenceID)
+        if not bInSkipGroup then break end
+        
+        table.insert(TargetIDList, Target.TargetID)
+        Target = Target:GetNextTarget()
+    end
+
+    StoryMgr:ResetSkipGroup()
+    self:SendFinishTarget(QuestID, TargetID, ResID, nil, nil, nil, nil, TargetIDList)
 end
 
 ---发送提交任务请求
@@ -1437,7 +1500,7 @@ function QuestMgr:TryActivateQuest(QuestCfgItem, ChapterCfgItem)
     if QuestCfgItem then
         local QuestID = QuestCfgItem.id
         if _G.ClientVisionMgr:CheckVersionByGlobalVersion(ChapterCfgItem.VersionName)
-            and (self.ActivatedCfgPakMap[QuestID] == nil) then
+        and (self.ActivatedCfgPakMap[QuestID] == nil) then
             local _ <close> = CommonUtil.MakeProfileTag("QuestMgr_TryActivateQuest")
 
             if (QuestCfgItem.id == ChapterCfgItem.StartQuest) and (ChapterCfgItem.HasOfferSequence == 1)
@@ -1482,6 +1545,13 @@ function QuestMgr:UpdateEndQuests(RspEndQuests, RspEndChapters)
             if self.EndChapterMap[ChapterID] == nil and self.ChapterMap[ChapterID] == nil then --如果完成列表里和进行列表都没有数据
                 local Chapter = QuestFactory.CreateChapter(ChapterID, ChapterCfgItem, true)
                 Chapter:InitEndChapterStatus(ChapterCfgItem.EndQuest, RspEndChapter.Status, RspEndChapter.SubmitTimeMS)
+
+                local QuestTrackVM = QuestMainVM.QuestTrackVM
+                if QuestTrackVM and QuestTrackVM.CurrTrackQuestVM then
+                    if QuestTrackVM.CurrTrackQuestVM.ChapterID == ChapterID then --追踪的是未接取的任务,但已经完成,取消追踪
+                        QuestTrackVM:TrackQuest(nil)
+                    end
+                end
             end
         end
         self.EndChapterSubmitTimeMap[ChapterID] = RspEndChapter.SubmitTimeMS
@@ -1928,7 +1998,11 @@ function QuestMgr:OnQuestInteractionFinished(Params)
         if  _G.QuestFaultTolerantMgr:IsFaultTolerantQuest(QuestID) then
             self:SendFaultTolerant(Params.TargetID)
         else
-            self:SendFinishTargetWithBranchCheck(QuestID, Params.TargetID, Params.ResID)
+            if self.bQuestSeqInSkipGroup then
+                self:SendMultipleFinishTarget(QuestID, Params.TargetID, Params.ResID)
+            else
+                self:SendFinishTargetWithBranchCheck(QuestID, Params.TargetID, Params.ResID)
+            end
         end
     elseif Quest.Status == QUEST_STATUS.CS_QUEST_STATUS_CAN_SUBMIT then
         QuestHelper.PreFinish(QuestID, Params.ResID)
@@ -2079,7 +2153,11 @@ function QuestMgr:PlayQuestMapSequence(MapID)
 
     local function SequenceStoppedCallback(_)
         _G.NpcDialogMgr:CheckNeedEndInteraction()
-        self:SendFinishTarget(SequenceInfo.QuestID, SequenceInfo.TargetID)
+        if self.bQuestSeqInSkipGroup then
+            self:SendMultipleFinishTarget(SequenceInfo.QuestID, SequenceInfo.TargetID)
+        else
+            self:SendFinishTarget(SequenceInfo.QuestID, SequenceInfo.TargetID)
+        end
     end
 
     -- print("test PlayQuestMapSequence bSeqWaitLoading = false")
@@ -2160,6 +2238,19 @@ function QuestMgr:GetQuestName(QuestID)
 end
 
 ---@param QuestID int32
+---@return string|nil
+function QuestMgr:GetQuestLevel(QuestID)
+    local QuestCfgItem = QuestHelper.GetQuestCfgItem(QuestID)
+    if QuestCfgItem == nil then
+        return ""
+    end
+    local ChapterCfgItem = QuestHelper.GetChapterCfgItem(QuestCfgItem.ChapterID)
+    if ChapterCfgItem == nil then return nil end
+    local Level = string.format(LSTR(596303), ChapterCfgItem.MinLevel)
+    return Level
+end
+
+---@param QuestID int32
 ---@return ProtoRes.QUEST_TYPE|nil
 function QuestMgr:GetQuestType(QuestID)
 	return QuestHelper.GetQuestTypeByQuestID(QuestID)
@@ -2220,6 +2311,16 @@ function QuestMgr:CheckNeedRemoveQuest()
             if Cfg.Activity > 0 then
                 if not self.QuestRegister:IsActivityOpen(Cfg.Activity) then
                     table.insert(GiveUpList, ChapterID)
+                end
+            end
+            -- 超时的任务
+            local TimeController = Cfg.TimeController
+            if TimeController ~= 0 then
+                local TimeCfg = QuestTimeControllerCfg:GetCacheCfgByKey(TimeController)
+                if TimeCfg and TimeCfg.EndTime ~= 0 then
+                    if TimeUtil.GetExceedingTime(TimeCfg.EndTime) then --超过EndTime，过期
+                        table.insert(GiveUpList, ChapterID)
+                    end
                 end
             end
         end
@@ -2487,10 +2588,17 @@ end
 ---@param ItemResID number
 ---@return boolean
 function QuestMgr:IsQuestGoods(ItemResID)
+    local IsShipping = CommonUtil.IsShipping()
     for _, Target in ipairs(self.QuestRegister.QuestOwnItemList) do
         if Target:IsNeed(ItemResID) then
+            if not IsShipping then
+               FLOG_INFO(string.format("[QuestMgr] IsQuestGoods ItemResID=%s IsNeed=true", tostring(ItemResID)))
+            end
             return true
         end
+    end
+    if not IsShipping then
+        FLOG_INFO(string.format("[QuestMgr] IsQuestGoods ItemResID=%s IsNeed=false", tostring(ItemResID)))
     end
     return false
 end
@@ -2529,10 +2637,23 @@ function QuestMgr:SetDialogBranchInfo(Index, ID)
 	self.QuestRegister:SetDialogBranchInfo(Index, ID)
 end
 
+function QuestMgr:ShouldSkipQuestSequence(SeqID)
+    local bAutoSkip = _G.StoryMgr.Setting.GetAutoSkipQuestSequence()
+    if bAutoSkip then
+        local Whitelist = self.AutoSkipQuestSeqWhitelist or {}
+        for i = 1, #Whitelist do
+            if Whitelist[i] == SeqID then
+                return false
+            end
+        end
+    end
+    return bAutoSkip
+end
+
 ---@param DialogOrSeqID number
 ---@return boolean
 function QuestMgr:IsBlackScreenOnStopDialogOrSeq(DialogOrSeqID)
-    if _G.StoryMgr.Setting.GetAutoSkipQuestSequence() then
+    if self:ShouldSkipQuestSequence(DialogOrSeqID) then
         return false
     end
     return self.QuestRegister:IsBlackScreenOnStopDialogOrSeq(DialogOrSeqID)
@@ -2554,12 +2675,17 @@ function QuestMgr:SetInQuestSequence(bValue)
     self.bInQuestSequence = bValue
 end
 
+function QuestMgr:SetQuestSeqInSkipGroup(bValue)
+    self.bQuestSeqInSkipGroup = bValue
+end
+
 ---@return table table { DialogID, Callback }
-function QuestMgr:GetHintTalk(NpcID, EObjID)
-	return self.QuestRegister:GetHintTalk(NpcID, EObjID)
+function QuestMgr:GetHintTalk(NpcID, EObjID, MapAreaID64)
+	return self.QuestRegister:GetHintTalk(NpcID, EObjID, MapAreaID64)
 end
 
 function QuestMgr:GetQuestSetEObjState(EObjID)
+    if not self.QuestRegister then return -1 end
     local EObjState = self.QuestRegister.EObjState
     local State = EObjState[EObjID] or -1
     return State

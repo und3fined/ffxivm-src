@@ -123,8 +123,8 @@ function GuideAwardWinView:OnShow()
 		if (self.Params.ItemClickCallback ~= nil) then
 			local ClickCallback = self.Params.ItemClickCallback
 			for Index = 1, #self.AwardList do
-				self.AwardList[Index].ItemClickCallback = function(InCallbackView, InItemView)
-					ClickCallback(Index, self.AwardList[Index], InItemView)
+				self.AwardList[Index].ItemClickCallback = function(InCallbackView, InItemView, InIndex)
+					ClickCallback(InIndex, self.AwardList[InIndex], InItemView)
 				end
 			end
 		end
@@ -161,7 +161,7 @@ function GuideAwardWinView:OnHide()
 end
 
 function GuideAwardWinView:OnRegisterUIEvent()
-	
+	UIUtil.AddOnScrolledEvent(self, self.AwardAdapterTableView, self.OnAwardAdapterTableScrolled)	
 end
 
 function GuideAwardWinView:OnRegisterGameEvent()
@@ -207,6 +207,11 @@ function GuideAwardWinView:UpdateEffect()
 			self:PlayAnimation(self.AnimMainLoop, 0, 0)
 		end,
 	EndTime, 0, 1)
+end
+
+function GuideAwardWinView:OnAwardAdapterTableScrolled()
+	_G.UIViewMgr:HideView(UIViewID.CurrencyTips)
+	_G.UIViewMgr:HideView(UIViewID.ItemTips)
 end
 
 return GuideAwardWinView

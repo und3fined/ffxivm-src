@@ -9,10 +9,7 @@ local UIUtil = require("Utils/UIUtil")
 ---@class CommBackpackEmptyView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn UFButton
----@field ImgBright UFImage
----@field ImgBrightM UFImage
----@field ImgDark UFImage
----@field ImgDarkM UFImage
+---@field Img UFImage
 ---@field NonePanel UFCanvasPanel
 ---@field PanelBtn UFCanvasPanel
 ---@field PanelBtnBright UFCanvasPanel
@@ -28,16 +25,14 @@ local UIUtil = require("Utils/UIUtil")
 ---@field IsBrightText bool
 ---@field IsBtn bool
 ---@field IsBirghtBtn bool
+---@field IsImgeS bool
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommBackpackEmptyView = LuaClass(UIView, true)
 
 function CommBackpackEmptyView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Btn = nil
-	--self.ImgBright = nil
-	--self.ImgBrightM = nil
-	--self.ImgDark = nil
-	--self.ImgDarkM = nil
+	--self.Img = nil
 	--self.NonePanel = nil
 	--self.PanelBtn = nil
 	--self.PanelBtnBright = nil
@@ -53,6 +48,7 @@ function CommBackpackEmptyView:Ctor()
 	--self.IsBrightText = nil
 	--self.IsBtn = nil
 	--self.IsBirghtBtn = nil
+	--self.IsImgeS = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -70,31 +66,26 @@ function CommBackpackEmptyView:OnDestroy()
 end
 
 function CommBackpackEmptyView:OnShow()
-	---设置各个状态
-	--- 设置亮图标可见，暗图标不可见
-	if self.IsBrightImg then
-		---选择与设置大小相符的图标显示
-		if self.IsImgeM then
-			UIUtil.SetIsVisible(self.ImgBright, false)
-			UIUtil.SetIsVisible(self.ImgBrightM, true, false)
-		else
-			UIUtil.SetIsVisible(self.ImgBright, true, false)
-			UIUtil.SetIsVisible(self.ImgBrightM, false)
-		end
-		UIUtil.SetIsVisible(self.ImgDark, false)
-		UIUtil.SetIsVisible(self.ImgDarkM, false)
-	--- 设置暗图标可见，亮图标不可见
-	else
-		---选择与设置大小相符的图标显示
-		if self.IsImgeM then
-			UIUtil.SetIsVisible(self.ImgDark, false)
-			UIUtil.SetIsVisible(self.ImgDarkM, true, false)
-		else
-			UIUtil.SetIsVisible(self.ImgDark, true, false)
-			UIUtil.SetIsVisible(self.ImgDarkM, false)
-		end
-		UIUtil.SetIsVisible(self.ImgBright, false)
-		UIUtil.SetIsVisible(self.ImgBrightM, false)
+	---设置各个状态，IsImageM的优先级大于IsImageS
+	---“Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty.UI_Com_Img_Empty'”  Dark
+	---"Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty2.UI_Com_Img_Empty2'" Bright
+	---"Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty3.UI_Com_Img_Empty3'" DarkM
+	---"Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty4.UI_Com_Img_Empty4'" BrightM
+	---"Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty5.UI_Com_Img_Empty5'" DarkS
+	---"Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty6.UI_Com_Img_Empty6'" BrightS
+	--- 设置图片节点
+	if not self.IsBrightImg and not self.IsImgeM and not self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty.UI_Com_Img_Empty'")
+	elseif self.IsBrightImg and not self.IsImgeM and not self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty2.UI_Com_Img_Empty2'")
+	elseif not self.IsBrightImg and self.IsImgeM and not self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty3.UI_Com_Img_Empty3'")
+	elseif self.IsBrightImg and self.IsImgeM and not self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty4.UI_Com_Img_Empty4'")
+	elseif not self.IsBrightImg and not self.IsImgeM and self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty5.UI_Com_Img_Empty5'")
+	elseif self.IsBrightImg and not self.IsImgeM and self.IsImgeS then
+		UIUtil.ImageSetBrushFromAssetPath(self.Img, "Texture2D'/Game/UI/Texture/CommPic/UI_Com_Img_Empty6.UI_Com_Img_Empty6'")
 	end
 	---设置暗、亮文本的可见性
 	if self.IsBrightText then

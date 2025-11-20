@@ -17,31 +17,40 @@ local FLOG_WARNING = _G.FLOG_WARNING
 ---@field BindableProperties table<string, UIBindableProperty>
 local UIViewModel = {}
 
----Ctor
-function UIViewModel:Ctor()
-	self.BindableProperties = {}
+local KEY_BIND_PROPS <const> = "BindableProperties"
+local KEY_FISRT_META_INDEX <const> = {}
 
-	local ObjectMetaTable = getmetatable(self)
-	local ObjectIndex = ObjectMetaTable.__index
+local MetaTable = {
+	__index = function(Table, Key)
+		local BindableProperties = rawget(Table, KEY_BIND_PROPS)
+		if BindableProperties == nil then
+			rawset(Table, KEY_BIND_PROPS, {})
+			BindableProperties = rawget(Table, KEY_BIND_PROPS)
+		end
 
-	local MetaTable = {}
-
-	function MetaTable.__index(_, Key)
-		local BindableProperty = self.BindableProperties[Key]
+		local BindableProperty = BindableProperties[Key]
 		if nil ~= BindableProperty then
 			return BindableProperty:GetValue()
 		end
 
-		return ObjectIndex[Key]
-	end
+		local ObjectIndex = Table[KEY_FISRT_META_INDEX]
+		if ObjectIndex then
+			return ObjectIndex[Key]
+		end
+	end,
 
-	function MetaTable.__newindex(Table, Key, Value)
+	__newindex = function(Table, Key, Value)
 		if nil ~= string.find(Key, "^__") then
 			rawset(Table, Key, Value)
 			return
 		end
 
-		local BindableProperties = self.BindableProperties
+		local BindableProperties = rawget(Table, KEY_BIND_PROPS)
+		if BindableProperties == nil then
+			rawset(Table, KEY_BIND_PROPS, {})
+			BindableProperties = rawget(Table, KEY_BIND_PROPS)
+		end
+
 		local BindableProperty = BindableProperties[Key]
 		if nil == BindableProperty then
 			BindableProperty = UIBindableProperty.New()
@@ -53,8 +62,16 @@ function UIViewModel:Ctor()
 		if CommonUtil.IsA(Value, UIBindableObject) then
 			Value:SetBindableProperty(BindableProperty)
 		end
-	end
+	end,
+}
 
+---Ctor
+function UIViewModel:Ctor()
+	local ObjectMetaTable = getmetatable(self)
+	local ObjectIndex = ObjectMetaTable.__index
+	if ObjectIndex then
+		rawset(self, KEY_FISRT_META_INDEX, ObjectIndex)
+	end
 	setmetatable(self, MetaTable)
 end
 

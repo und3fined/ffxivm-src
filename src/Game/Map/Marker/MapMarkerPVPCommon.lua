@@ -14,7 +14,7 @@ local MapMarkerType = MapDefine.MapMarkerType
 local MapMarkerBPType = MapDefine.MapMarkerBPType
 
 
----@class MapMarkerPVPCommon
+---@class MapMarkerPVPCommon : MapMarker
 local MapMarkerPVPCommon = LuaClass(MapMarker)
 
 function MapMarkerPVPCommon:Ctor()
@@ -22,8 +22,6 @@ function MapMarkerPVPCommon:Ctor()
 
 	self.TeamIndex = 0 -- 队伍索引，决定所属红蓝方
     self.LayoutType = 0 -- 地图标记SG类型
-
-	self.IconResize = 0.5 -- 将标记缩小显示
 end
 
 function MapMarkerPVPCommon:GetType()
@@ -31,7 +29,7 @@ function MapMarkerPVPCommon:GetType()
 end
 
 function MapMarkerPVPCommon:GetBPType()
-    return MapMarkerBPType.CommIconTop
+	return MapMarkerBPType.PVPCommon
 end
 
 function MapMarkerPVPCommon:InitMarker(Params)

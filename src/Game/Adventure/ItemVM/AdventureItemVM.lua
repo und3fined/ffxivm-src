@@ -80,7 +80,15 @@ function AdventureItemVM:SetRewardData(RewardList)
 end
 
 function AdventureItemVM:IsEqualVM(Value)
-	return self.Type == Value.Type
+    if self.Type then
+        return self.Type == Value.Type
+    end
+	
+    if self.ID then
+        return self.ID == Value.ID
+    end
+
+    return false
 end
 
 return AdventureItemVM

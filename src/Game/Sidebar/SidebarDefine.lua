@@ -24,14 +24,25 @@ local SidebarType = {
     ChocoboBabyClaim        = 22,  -- 陆行鸟子鸟领取提醒
     ArmySignInvite          = 23,  -- 部队署名邀请
     PrivateChat             = 24,  -- 私聊
+    EnsembleConfirm         = 25,  -- 合奏组队确认
+    HouseInvite             = 26,  -- 房屋室友邀请
+    TeamReadyConfirm        = 27,  -- 组队准备确认
+    HouseLandAward          = 28,  -- 房屋土地中选 
 }
 
---侧边栏详情界面ViewID
+--侧边栏详情界面ViewID，用于在关闭详情界面后恢复侧边栏
 local DetailViewIDMap = {
-    [UIViewID.SidebarCommon]        = true, -- 通用详情
-    [UIViewID.SidebarTeamInvite]    = true, -- 组队邀请详情
-    [UIViewID.SidebarPrivateChat]   = true, -- 私聊详情
+    [UIViewID.SidebarCommon]            = true, -- 通用详情
+    [UIViewID.SidebarTeamInvite]        = true, -- 组队邀请详情
+    [UIViewID.SidebarPrivateChat]       = true, -- 私聊详情(SidebarType.PrivateChat)
     [UIViewID.ChatInvitationWinPanel]   = true, -- 新人频道邀请
+    [UIViewID.PWorldConfirm]            = true, -- 副本进入确认(SidebarType.PWorldEnterConfirm)
+    [UIViewID.BeReviveView]             = true, -- 他人救助(SidebarType.Revive)
+    [UIViewID.EntourageConfirm]         = true, -- 随从副本确认(SidebarType.EntourageEnterConfirm)
+    [UIViewID.PWorldMatchDetail]        = true, -- 副本匹配(SidebarType.PWorldMatch)
+    [UIViewID.PWorldVoteBest]           = true, -- 副本MVP(SidebarType.PWorldQuestMVP)
+    [UIViewID.SidebarGiveUpTaskWin]     = true, -- 副本放弃任务(SidebarType.PWorldQuestGiveUp、SidebarType.PWorldQuestKick)
+    [UIViewID.MusicPerformanceEnsembleConfirmView]     = true, -- 合奏组队确认(SidebarType.EnsembleConfirm)
 }
 
 -- 注意保持ID连续，因为用在了table里面做逻辑

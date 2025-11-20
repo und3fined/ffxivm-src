@@ -13,6 +13,7 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIUtil = require("Utils/UIUtil")
 
 local PWorldMatchVM
@@ -60,6 +61,10 @@ function PWorldMatchDetailWinView:OnPostInit()
 		end)},
 	}
 
+	self.TeamBinders = {
+		{"IsTeam", UIBinderSetIsVisible.New(self, self.FHorizontalBox_0, true)},
+	}
+
 	self.CommSingleBoxAll:SetStateChangedCallback(self, self.OnClickCheckAll)
 
 	self.BG:SetTitleText(_G.LSTR(1320148))
@@ -75,10 +80,10 @@ end
 
 function PWorldMatchDetailWinView:OnHide()
 	_G.PWorldMatchMgr:TryResumeSideBar()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
 end
 function PWorldMatchDetailWinView:OnRegisterBinder()
 	self:RegisterBinders(PWorldMatchVM, self.Binders)
+	self:RegisterBinders(_G.TeamVM, self.TeamBinders)
 end
 
 function PWorldMatchDetailWinView:OnShow()

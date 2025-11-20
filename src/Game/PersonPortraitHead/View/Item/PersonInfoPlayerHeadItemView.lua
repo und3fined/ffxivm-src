@@ -18,38 +18,27 @@ local UIBinderSetMaterialTextureFromAssetPath = require("Binder/UIBinderSetMater
 
 ---@class PersonInfoPlayerHeadItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field BtnDelete UFButton
 ---@field BtnPlayer UFButton
----@field DeleteNode UFCanvasPanel
+---@field CommHead CommHeadView
 ---@field IconCheck UFImage
----@field ImgAdd UFImage
----@field ImgBkg UFImage
----@field ImgBlack UFImage
----@field ImgFrame UFImage
----@field ImgPlayer UFImage
 ---@field ImgSelect UFImage
----@field PanelAdd UFCanvasPanel
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PersonInfoPlayerHeadItemView = LuaClass(UIView, true)
 
 function PersonInfoPlayerHeadItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.BtnDelete = nil
 	--self.BtnPlayer = nil
-	--self.DeleteNode = nil
+	--self.CommHead = nil
 	--self.IconCheck = nil
-	--self.ImgAdd = nil
-	--self.ImgBkg = nil
-	--self.ImgBlack = nil
-	--self.ImgFrame = nil
-	--self.ImgPlayer = nil
 	--self.ImgSelect = nil
-	--self.PanelAdd = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function PersonInfoPlayerHeadItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.CommHead)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -57,7 +46,9 @@ function PersonInfoPlayerHeadItemView:OnInit()
 	self.Binders = {
 		{ "IsSelt", 	UIBinderSetIsVisible.New(self, self.ImgSelect) },
 		{ "IsInUse", 	UIBinderSetIsVisible.New(self, self.IconCheck) },
-		{ "HeadIcon", 	UIBinderSetMaterialTextureFromAssetPath.New(self, self.ImgPlayer, "Texture") },
+		--{ "HeadIcon", 	UIBinderSetMaterialTextureFromAssetPath.New(self, self.ImgPlayer, "Texture") },
+		{ "HeadIcon", 	UIBinderValueChangedCallback.New(self, nil, self.OnHeadIconChanged) },
+
 	}
 end
 
@@ -103,6 +94,10 @@ function PersonInfoPlayerHeadItemView:OnSelectChanged(IsSelected)
 	end
 
 	VM.IsSelt = IsSelected
+end
+
+function PersonInfoPlayerHeadItemView:OnHeadIconChanged(HeadIcon)
+	self.CommHead:SetIcon(HeadIcon)
 end
 
 return PersonInfoPlayerHeadItemView

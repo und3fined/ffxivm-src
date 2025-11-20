@@ -56,11 +56,14 @@ function BattlePassMgr:OnInit()
     self.PayFinished = false
     self.ReceivedGoods = false
     self.CurrentProductID = ""
+    self.OrderToken = ""
 
     self.Cfg = {}
     self.StartTimer = nil       -- 战令开启定时器
     self.EndTimer = nil         -- 战令结束时间定时器
     self.IsBattlePassOpen = false --战令开放
+
+    self.CurrentRequestOrder = 0
 end
 
 ---OnBegin
@@ -117,6 +120,7 @@ function BattlePassMgr:OnGameEventLoginRes(Params)
 		_G.FLOG_INFO("BattlePassMgr:OnGameEventLoginRes, bReconnect is true")
 		if self.CurrentProductID ~= "" then
 			-- 断线重连时，可能有未收到完成通知的订单，需要重新查询状态
+            _G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, true, self.OrderToken)
 		end
 	end
 end
@@ -464,6 +468,10 @@ function BattlePassMgr:OnSendBattlePassTaskRsp(MsgBody)
 
     local Data = MsgBody.ListByID
 
+    if Data == nil then
+        return
+    end
+
     local List = Data.Details
 
     local ChallenegTaskList = {}
@@ -558,21 +566,6 @@ function BattlePassMgr:OnNetMsgNodeGetReward(MsgBody)
         end
     end
 
-    --- 展示奖励道具(自己读表)
-    -- if RewardNodeID ~= nil then
-    --     local Params = {}
-    --     Params.ItemList = {}
-    --     local NodeCfg = ActivityNodeCfg:FindCfgByKey(RewardNodeID)
-    --     if NodeCfg ~= nil then
-    --         for _, value in ipairs(NodeCfg.Rewards) do
-    --             if value.ItemID ~= 0 then
-    --                 table.insert(Params.ItemList, {ResID = value.ItemID, Num = value.Num})
-    --             end
-    --         end
-    --     end
-    --     UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
-    -- end
-
     self:SendBattlePassLevelRewardReq()
     self:SetBattlePassTaskRedDot()
 
@@ -604,37 +597,6 @@ function BattlePassMgr:OnSendGetAllTaskReward(MsgBody)
     if table.is_nil_empty(Details) then
         return
     end
-
-    -- 
-    -- local Params = {}
-    -- Params.ItemList = {}
-    -- local ItemMap = {}
-    -- 解析领取的任务节点，把奖励放在里面
-    -- for _, v in ipairs(Details) do
-    --     for _, node in ipairs(v.Nodes) do
-    --         local NodeCfg = ActivityNodeCfg:FindCfgByKey(node.Head.NodeID)
-    --         if NodeCfg ~= nil and NodeCfg.NodeSort == 1 then
-    --             for _, value in ipairs(NodeCfg.Rewards) do
-    --                 if value.ItemID ~= 0 then
-    --                     if table.contain(ItemMap, value.ItemID) then
-    --                         ItemMap[value.ItemID].Num = value.Num + value.Num
-    --                     else
-    --                         ItemMap[value.ItemID] = {}
-    --                         ItemMap[value.ItemID].ItemID = value.ItemID
-    --                         ItemMap[value.ItemID].Num = value.Num
-    --                     end 
-    --                 end
-    --             end
-    --         end
-    --     end
-    -- end
-
-    -- 
-    -- for _, item in pairs(ItemMap) do
-    --     table.insert(Params.ItemList, {ResID = item.ItemID, Num = item.Num})    
-    -- end
-
-    -- UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
 
     -- 更新任务节点数据
     for _, detail in ipairs(Details) do
@@ -839,7 +801,7 @@ function BattlePassMgr:OnNetTaskNodesChange(MsgBody)
         return
     end
 
-    local List = NodesChange.Nodes
+    local List = NodesChange.Nodes or {}
 
     -- 更新任务节点数据
     for _, v in ipairs(List) do
@@ -1098,24 +1060,32 @@ end
 function BattlePassMgr:Recharge(Order, Crystas, Bonus, View)
 	FLOG_INFO("Recharge amount: "..tostring(Crystas))
 	FLOG_INFO("Recharge bonus: "..tostring(Bonus))
-
+    self.CurrentRequestOrder = Order
 	PayUtil.BuyCoins(Order,
 	function(_, BillData) self:OnBillReceived(BillData) end,
 	function(_) self:OnLoginExpired() end,
-	nil, ---- 切后台可能导致米大师回调丢失，不再使用
+	function(_, PayReturnData) self:OnPayFinished(PayReturnData) end,
 	function(_, GoodsData) self:OnGoodsReceived(GoodsData) end,
 	View)
+
+    self.CurrentProductID = PayUtil.GetProductID(Order)
 end
 
 
 function BattlePassMgr:OnBillReceived(BillData)
 	if BillData == nil then
-		FLOG_ERROR("Cannot get pay bill data")
+		FLOG_ERROR("BattlePassMgr:OnBillReceived, Cannot get pay bill data")
 		return
 	end
 
+    if string.isnilorempty(BillData.Token) then
+		FLOG_ERROR("BattlePassMgr:OnBillReceived, Pay token is empty")
+	else
+		self.OrderToken = BillData.Token
+	end
+
 	if BillData.URL == "" then
-		FLOG_ERROR("Pay bill is empty")
+		FLOG_ERROR("BattlePassMgr:OnBillReceived, Pay bill is empty")
 	end
 end
 
@@ -1124,24 +1094,27 @@ function BattlePassMgr:OnLoginExpired()
 end
 
 function BattlePassMgr:OnPayFinished(PayReturnData)
+	local IsPaySuccess = true
 	if PayReturnData == nil then
-		FLOG_ERROR("Cannot get pay return data")
-		return
-	end
-
-    if PayReturnData.ResultCode == 0 then
-		FLOG_INFO("Pay succeeded.")
-		if not self.ReceivedGoods then
-			FLOG_INFO("Waiting for goods...")
-			self.PayFinished = true
+		_G.FLOG_ERROR("BattlePassMgr:OnPayFinished, Cannot get pay return data")
+		IsPaySuccess = false
+	else
+		if PayReturnData.ResultCode == 0 then
+			_G.FLOG_INFO("BattlePassMgr:OnPayFinished, Pay succeeded.")
+			--self.CurrentProductID = ""
+            local TipsContent = string.format(_G.LSTR(940042), PayUtil.GetProductTypeName(self.CurrentRequestOrder))
+			MsgTipsUtil.ShowTips(TipsContent)
 		else
-			self:OnRechargeSucceed()
+			IsPaySuccess = false
 		end
 	end
+    _G.RechargingMgr:SendPayResultToServer(self.CurrentProductID, IsPaySuccess, self.OrderToken)
 end
 
 function BattlePassMgr:OnGoodsReceived(GoodsData)
     self:OnRechargeSucceed()
+    self.CurrentProductID = ""
+    self.OrderToken = ""
 end
 
 function BattlePassMgr:OnRechargeSucceed()

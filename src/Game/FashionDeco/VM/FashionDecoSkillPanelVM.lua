@@ -5,6 +5,9 @@ local FashionDecoMgr = require("Game/FashionDeco/FashionDecoMgr")
 local FashionDecoDefine = require("Game/FashionDeco/VM/FashionDecoDefine")
 local FashionDecorateCfg = require("TableCfg/FashionDecorateCfg")
 local FashionDecorateSkillCfg = require("TableCfg/FashionDecorateSkillCfg")
+local MajorUtil = require("Utils/MajorUtil")
+local ActorUtil = require("Utils/ActorUtil")
+
 ---@class FashionDecoSkillPanelVM : UIViewModel
 local FashionDecoSkillPanelVM = LuaClass(UIViewModel)
 
@@ -32,7 +35,18 @@ end
 function FashionDecoSkillPanelVM:OnGameEventFashionDecorateUpdateData(InCurrentClothingMap)
     if InCurrentClothingMap ~= nil then
         if self:IsInClothingMapTypeValid(InCurrentClothingMap,FashionDecoDefine.FashionDecoType.Umbrella) then
-            self:ProcessUmbrella(InCurrentClothingMap[FashionDecoDefine.FashionDecoType.Umbrella])
+
+            --穿戴雨伞的情况下，如果拔刀，则隐藏雨伞技能
+            local StateComp = MajorUtil.GetMajorStateComponent()
+            local IsHoldWeapon = StateComp and StateComp:IsHoldWeaponState() or false
+            local IsCombatState = ActorUtil.IsCombatState(MajorUtil.GetMajorEntityID())
+            if IsHoldWeapon and not IsCombatState then
+                self.ActionUmAction1Enable = false
+                self.ActionUmAction2Enable = false
+            else
+                self:ProcessUmbrella(InCurrentClothingMap[FashionDecoDefine.FashionDecoType.Umbrella])
+            end
+
         else
             self.ActionUmAction1Enable = false
             self.ActionUmAction2Enable = false

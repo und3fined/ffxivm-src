@@ -80,11 +80,10 @@ function SettingsCDKWinView:OnClickBtnUse()
 		SendData.OpenID = LoginMgr:GetOpenID()
 		SendData.RoleID = MajorUtil.GetMajorRoleID()
 		SendData.WorldID = LoginMgr:GetWorldID()
-		SendData.OS = CommonUtil.GetDeviceType()
+		SendData.OS = CommonUtil.GetDeviceType() == 5 and "1" or CommonUtil.GetDeviceType()
 		SendData.CDKCode = self.CommInputBox:GetText()
 		SendData.Token = LoginMgr:GetToken()
 		local SendDataStr = Json.encode(SendData)
-		_G.FLOG_INFO("SettingsCDKWinView.SendData, Url: %s", ServerDomain)
 		_G.FLOG_INFO("SettingsCDKWinView.SendData, Data: %s",tostring(SendDataStr))
 		--测试用，研发登录不能触发这个
 		if SendData.ChannelId ~= "101" then

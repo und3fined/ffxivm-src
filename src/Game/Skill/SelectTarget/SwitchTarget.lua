@@ -150,9 +150,9 @@ local function GenerateTargetUnitList(Executor, VisionActorList)
 			if IsContinue and AttrComponent then
 				local TargetID = AttrComponent.EntityID
 
-				UIUtil.ProjectWorldLocationToScreen(TargetPos, ScreenLocation)   --获取人物头顶世界位置转为屏幕位置
+				local Rlt = UIUtil.ProjectWorldLocationToScreen(TargetPos, ScreenLocation)   --获取人物头顶世界位置转为屏幕位置
 				-- print(" ==== pcw ScreenLocation ==== ID:" , TargetID , ", ", ScreenLocation.X ..","..ScreenLocation.Y)
-				if ScreenLocation.X < 0 or ScreenLocation.Y < 0
+				if Rlt == false or ScreenLocation.X < 0 or ScreenLocation.Y < 0
 					or ScreenLocation.Y > ScreenSize.Y or ScreenLocation.X > ScreenSize.X then
 					IsInSector = false
 				end
@@ -391,11 +391,12 @@ end
 
 function SwitchTarget:CheckCanClickSelect(FromActor, TargetActor)
 	if FromActor and TargetActor then
-		if _G.PhotoMgr.IsOnPhoto then
-			return self:CheckCanClickSelectPhoto(FromActor, TargetActor)
-		else
-			return self:CheckCanClickSelectGame(FromActor, TargetActor)
-		end
+		return self:CheckCanClickSelectGame(FromActor, TargetActor)
+		-- if _G.PhotoMgr.IsOnPhoto then
+		-- 	return self:CheckCanClickSelectPhoto(FromActor, TargetActor)
+		-- else
+		-- 	return self:CheckCanClickSelectGame(FromActor, TargetActor)
+		-- end
 	end
 
 	return false

@@ -9,6 +9,9 @@ function MusicPerformanceMetronomeSettingVM:Ctor()
 	self.BPMTip = ""
 	self.BeatTip = ""
 	self.TempoTip = ""
+	self.TempoTipColor = nil
+	self.IsPlayTempoTipBgEffect = false 	   --是否播放文本背景闪烁动效(-2:1  -1:1时)
+	self.IsPlayMetronomeItemBgEffect = false   --是否播放节拍器item背景闪烁动效(1:1时)
 
 	self.VolumeValue = ""
 	self.BeatValue = ""

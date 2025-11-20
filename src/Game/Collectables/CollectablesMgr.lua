@@ -236,15 +236,14 @@ function CollectablesMgr:SendMsgExchangeinfo(GID, CollectID)
 end
 
 ---@type 请求获得收藏品最高纪录
----@param CollectID number @收藏品id
-function CollectablesMgr:SendMsgGetRecordinfo(CollectID)
+---@param CollectIDList number @收藏品id
+function CollectablesMgr:SendMsgGetRecordinfo(CollectIDList)
     local MsgID = CS_CMD.CS_CMD_COLLECT
     local SubMsgID = SUB_MSG_ID.CS_CMD_COLLECT_RECORD
 
     local MsgBody = {}
     MsgBody.Cmd = SubMsgID
-    MsgBody.Record = {}
-    MsgBody.Record.CollectID = CollectID
+    MsgBody.Record = { CollectID = CollectIDList }
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
@@ -254,11 +253,11 @@ function CollectablesMgr:OnNetMsgExchangeinfo(MsgBody)
     if nil == MsgBody then
         return
     end
-    local ExchangeInfo = MsgBody.Exchange
+    local ExchangeInfo = MsgBody.Exchange or {}
     local bIsBreakRecord = ExchangeInfo.IsBreakRecord
-    if not bIsBreakRecord then
-        LootMgr:SetDealyState(false)
-    end
+    local Rewards = ExchangeInfo.Rewards or {}
+
+    _G.UIViewMgr:ShowView(_G.UIViewID.CommonRewardPanel, { Title = _G.LSTR(740015), ItemList = Rewards })
     EventMgr:SendEvent(EventID.OnExchangeRspEvent, bIsBreakRecord)
 end
 
@@ -268,8 +267,15 @@ function CollectablesMgr:OnNetMsgGetRecordInfo(MsgBody)
     if nil == MsgBody then
         return
     end
-    local AllRecordInfo = MsgBody.Record
-    self.AllRecordData = AllRecordInfo
+    local AllRecordInfo = (MsgBody.Record or {}).RecordList or {}
+    for i = 1, #AllRecordInfo do
+        local _, Index = table.find_item( self.AllRecordData, AllRecordInfo[i].CollectID, "CollectID")
+        if Index == nil then 
+            table.insert(self.AllRecordData, AllRecordInfo[i])
+        else
+            self.AllRecordData[Index] = AllRecordInfo[i]
+        end
+    end
     CollectablesMgr:UpdateRoleData()
 end
 
@@ -393,6 +399,7 @@ function CollectablesMgr:GetCollectByDropFilter(ProfID, DropFilterID)
         if Elem.CollectionLevel >= DropFilterData.MinValue and Elem.CollectionLevel <= DropFilterData.MaxValue
         and ProfessionLevel >= Elem.UnlockLevel and self:CheckCollectionDisplayed(Elem) then
             Elem.HoldingNum = #CollectablesMgr:GetCollectionInBag(Elem.ID)
+            Elem.MaxCollectValue = (Elem.CollectValue or {})[3] or 0
             table.insert(EndCollectionData, Elem)
         end
     end
@@ -402,18 +409,21 @@ end
 
 ---@type 根据等级给收藏品排序
 function CollectablesMgr.SortCollectByLevel(Left, Right)
-    if Left.HoldingNum ~= Right.HoldingNum then
-        return Left.HoldingNum > Right.HoldingNum
-    else
-        if Left.CollectionLevel == Right.CollectionLevel then
-            if Left.StarLevel == Right.StarLevel then
-                return Left.ID < Right.ID
-            else
-                return Left.StarLevel > Right.StarLevel
-            end
+    if Left.HoldingNum > 0 and 0 == Right.HoldingNum then 
+        return true
+    end
+    if Left.HoldingNum == 0 and Right.HoldingNum > 0 then 
+        return false
+    end
+
+    if Left.CollectionLevel == Right.CollectionLevel then
+        if Left.StarLevel == Right.StarLevel then
+            return (Left.MaxCollectValue or 0) > (Right.MaxCollectValue or 0)
         else
-            return Left.CollectionLevel > Right.CollectionLevel
+            return Left.StarLevel > Right.StarLevel
         end
+    else
+        return Left.CollectionLevel > Right.CollectionLevel
     end
 end
 
@@ -515,12 +525,8 @@ end
 ---@type 更新一下后台角色数据
 function CollectablesMgr:UpdateRoleData()
     local AllRecordInfo = self.AllRecordData
-    local RecordList = AllRecordInfo.RecordList
-    if nil == RecordList then
-        return
-    end
-    for i = 1, #RecordList do
-        local RecordInfo = RecordList[i]
+    for i = 1, #AllRecordInfo do
+        local RecordInfo = AllRecordInfo[i]
         local RoleID = RecordInfo.RoleID
         RoleInfoMgr:FindRoleVM(RoleID)
     end
@@ -546,6 +552,31 @@ function CollectablesMgr:CheckCollectionDisplayed(CollectData)
         return CutVersion.Z > Num
     end
     return true
+end
+
+---@type 检查是否处于记录更新中   开启版本 <= 当前版本 < 结束版本
+---@param CollectData number @收藏品数据
+function CollectablesMgr:CheckInRecordUpdating(CollectData)
+    if not self:CheckCollectionDisplayed(CollectData) then 
+        return false
+    end 
+    local ClosingVersion = CollectData.ClosingVersion or ""
+    local CutVersion = self.CutVersion
+    local SplitStr = string.split(ClosingVersion, ".")
+
+    local Num = tonumber(SplitStr[1] or "0")
+    if CutVersion.X ~= Num then
+        return CutVersion.X < Num
+    end
+    Num = tonumber(SplitStr[2] or "0")
+    if CutVersion.Y ~= Num then
+        return CutVersion.Y < Num
+    end
+    Num = tonumber(SplitStr[3] or "0")
+    if CutVersion.Z ~= Num then
+        return CutVersion.Z < Num
+    end
+    return false
 end
 
 return CollectablesMgr

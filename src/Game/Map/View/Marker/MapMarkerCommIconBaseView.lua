@@ -88,8 +88,10 @@ function MapMarkerCommIconBaseView:OnHide()
 	end
 
 	-- 通用标记因为有cache，这里将标记图标设置为默认图标，避免地图切换后仍引用资源
-	local DefaultIconPath = MapDefine.MapIconConfigs.DefaultIcon
-	UIUtil.ImageSetBrushFromAssetPathSync(self.ImgIcon, DefaultIconPath)
+	if self.ImgIcon then
+		local DefaultIconPath = MapDefine.MapIconConfigs.DefaultIcon
+		UIUtil.ImageSetBrushFromAssetPathSync(self.ImgIcon, DefaultIconPath)
+	end
 end
 
 function MapMarkerCommIconBaseView:OnRegisterUIEvent()

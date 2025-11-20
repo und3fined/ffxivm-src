@@ -102,10 +102,13 @@ function PhotoTimeWeatherPanelView:OnInit()
 		{ "T12", 					UIBinderSetIsVisible.New(self, self.ImgSelectTime03) },
 		{ "T18", 					UIBinderSetIsVisible.New(self, self.ImgSelectTime02) },
 		{ "WeatherTipsOpa", 		UIBinderSetRenderOpacity.New(self, self.TextEditTime) },
+		{ "WeatherTipsOpa", 		UIBinderSetRenderOpacity.New(self, self.ImgTimeTextBg) },
+
 		{ "WeatherList",          	UIBinderUpdateBindableList.New(self, self.AdpWeather) },
 		{ "WeatherSeltIdx",         UIBinderSetSelectedIndex.New(self, self.AdpWeather)},
 		{ "WeatherName", 			UIBinderSetText.New(self, self.TextWeather) },
 
+		{ "IsShowAdjustTips", 		UIBinderSetIsVisible.New(self, self.ImgTimeTextBg) },
 		{ "IsShowAdjustTips", 		UIBinderSetIsVisible.New(self, self.TextEditTime) },
 	}
 end

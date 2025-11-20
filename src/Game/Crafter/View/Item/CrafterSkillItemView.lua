@@ -131,6 +131,31 @@ local CostValueType_Fix <const> = ProtoRes.skill_cost_value_type.SKILL_COST_VALU
 local CostValueType_Rate <const> = ProtoRes.skill_cost_value_type.SKILL_COST_VALUE_TYPE_RATE
 local AttrType_MK <const> = ProtoCommon.attr_type.attr_mk
 
+function CrafterSkillItemView.GetMakeCost(Cfg)
+	local CostList = Cfg.CostList or {}
+	local AttrComp = MajorUtil.GetMajorAttributeComponent()
+	for _, Cost in pairs(CostList) do
+		local AssetId = Cost.AdditionAssetId > 0 and Cost.AdditionAssetId or Cost.AssetId
+        if Cost.AssetType == CostType_Attr and AssetId == AttrType_MK then
+            local ValueType = Cost.ValueType
+			local MakeCost = 0
+			if ValueType == CostValueType_Fix then
+				MakeCost = Cost.AssetCost
+			elseif ValueType == CostValueType_Rate then
+				self.bMakeCostType_Rate = true
+				self.MakeCostRate = Cost.AssetCost / 10000
+				local AttrValue = AttrComp and AttrComp:GetAttrValue(AttrType_MK) or 0
+				MakeCost = AttrValue * self.MakeCostRate
+			end
+
+			if MakeCost > 0 then
+				return MakeCost, true
+			end
+        end
+    end
+	return 0, false
+end
+
 function CrafterSkillItemView:OnSkillReplace(ButtonIndex, SkillID)
 	if self.LogicData == nil then
 		return
@@ -157,30 +182,7 @@ function CrafterSkillItemView:OnSkillReplace(ButtonIndex, SkillID)
 		return
 	end
 
-	local CostList = Cfg.CostList or {}
-	local AttrComp = MajorUtil.GetMajorAttributeComponent()
-	for _, Cost in pairs(CostList) do
-		local AssetId = Cost.AdditionAssetId > 0 and Cost.AdditionAssetId or Cost.AssetId
-        if Cost.AssetType == CostType_Attr and AssetId == AttrType_MK then
-            local ValueType = Cost.ValueType
-			local MakeCost = 0
-			if ValueType == CostValueType_Fix then
-				MakeCost = Cost.AssetCost
-			elseif ValueType == CostValueType_Rate then
-				self.bMakeCostType_Rate = true
-				self.MakeCostRate = Cost.AssetCost / 10000
-				local AttrValue = AttrComp and AttrComp:GetAttrValue(AttrType_MK) or 0
-				MakeCost = AttrValue * self.MakeCostRate
-			end
-
-			if MakeCost > 0 then
-				VM.bShowMakeCost = true
-				VM.MakeCost = MakeCost
-			end
-			break
-        end
-    end
-
+	VM.MakeCost, VM.bShowMakeCost = CrafterSkillItemView.GetMakeCost(Cfg)
 
 	local bLearnedSkill, LockLevel = self.LogicData:IsSkillLearned(SkillID)
 	self.LockLevel = LockLevel or 0
@@ -503,11 +505,14 @@ function CrafterSkillItemView:OnSwitchStateChanged(bIsSwitchOn)
 	end
 end
 
+local Color_Enough <const> = UE.FLinearColor.FromHex("AC88DEFF")
+local Color_NotEnough <const> = UE.FLinearColor.FromHex("DD5667FF")
+
 function CrafterSkillItemView:OnMKEnoughChanged(bIsEnough)
 	if bIsEnough then
-		self.TextNum:SetColorAndOpacity(self.Color_Enough)
+		self.TextNum:SetColorAndOpacity(self.Color_Enough or Color_Enough)
 	else
-		self.TextNum:SetColorAndOpacity(self.Color_NotEnough)
+		self.TextNum:SetColorAndOpacity(self.Color_NotEnough or Color_NotEnough)
 	end
 end
 

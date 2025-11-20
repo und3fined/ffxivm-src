@@ -33,6 +33,7 @@ function FashionEvaluationFittingVM:Ctor(EvaluationVM)
     --试衣界面
     self.IsFirstTimesEnter = false
     self.IsHistoryEmpty = true
+    self.IsSearchEmpty = false
     self.ServerRecommendEquipList = {}
     self.ThemeNameText = ""
     self.CurSelectPart = 0
@@ -75,12 +76,8 @@ end
 
 ---@type 更新部位主题列表 
 function FashionEvaluationFittingVM:UpdateThemePartList(NewAppearanceList)
-    if self.PartThemeList == nil then
-        return
-    end
-
     -- 更新当前主题部位最新外观
-    if NewAppearanceList then
+    if NewAppearanceList and self.PartThemeList then
         for i = 1, #self.PartThemeList do
             local CurPartData = self.PartThemeList[i]
             for _, NewAppearance in ipairs(NewAppearanceList) do
@@ -176,7 +173,7 @@ function FashionEvaluationFittingVM:UpdateAppInfoListInternal(PartID, AppIDList)
     self.CurSelectEquipIndex = nil
     local IsEquiped = false
     local EquipedAppID = 0
-    if AppIDList ~= nil then
+    if AppIDList ~= nil and #AppIDList > 0 then
         for _, AppearanceID in ipairs(AppIDList) do
             local EquipInfo = {}
             EquipInfo.Part = PartID
@@ -201,6 +198,9 @@ function FashionEvaluationFittingVM:UpdateAppInfoListInternal(PartID, AppIDList)
         if NewIndex then
             self.CurSelectEquipIndex = NewIndex
         end
+        self.IsSearchEmpty = false
+    else
+        self.IsSearchEmpty = true
     end
 
     self.CurSelectAppID = EquipedAppID
@@ -611,6 +611,7 @@ end
 ---@type 历史记录索引被选中
 function FashionEvaluationFittingVM:OnHistoryIndexSelected(Index)
     self.CurHistoryIndex = Index
+    self.IsEquipedHistory = false
     local HistoryInfo = self.EvaluationHistoryList[self.CurHistoryIndex]
     if HistoryInfo == nil then
         return

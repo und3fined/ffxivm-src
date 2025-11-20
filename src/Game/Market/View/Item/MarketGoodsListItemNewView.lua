@@ -21,12 +21,12 @@ local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacity
 ---@field FHorizontalQuota UFHorizontalBox
 ---@field IconCollectFocus UFImage
 ---@field IconCollectNormal UFImage
----@field ImgBar UFImage
 ---@field ImgColor UFImage
 ---@field ImgFlame UFImage
 ---@field ImgGoods1 UFImage
 ---@field ImgHQ UFImage
 ---@field ImgInlet UFImage
+---@field ImgTagBg UFImage
 ---@field ImgX UFImage
 ---@field Money1 UFCanvasPanel
 ---@field PanelArrow UFCanvasPanel
@@ -49,12 +49,12 @@ function MarketGoodsListItemNewView:Ctor()
 	--self.FHorizontalQuota = nil
 	--self.IconCollectFocus = nil
 	--self.IconCollectNormal = nil
-	--self.ImgBar = nil
 	--self.ImgColor = nil
 	--self.ImgFlame = nil
 	--self.ImgGoods1 = nil
 	--self.ImgHQ = nil
 	--self.ImgInlet = nil
+	--self.ImgTagBg = nil
 	--self.ImgX = nil
 	--self.Money1 = nil
 	--self.PanelArrow = nil
@@ -97,7 +97,10 @@ function MarketGoodsListItemNewView:OnInit()
 		{ "UpArrowVisible", UIBinderSetIsVisible.New(self, self.PanelArrow) },
 		{ "ImgXVisible", UIBinderSetIsVisible.New(self, self.ImgX) },
 		{ "ProfRestrictionsImgColor", UIBinderSetColorAndOpacityHex.New(self, self.ImgX) },
+		{ "IsSpecialVisible", UIBinderSetIsVisible.New(self, self.ImgFlame) },
 
+		{ "ImgTagBgVisible", UIBinderSetIsVisible.New(self, self.ImgTagBg) },
+		
 	}
 end
 

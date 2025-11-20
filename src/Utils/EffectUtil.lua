@@ -228,6 +228,14 @@ end
 function EffectUtil.UpdateInDialogOrSeq()
 	local bShow =  not _G.UE.UFGameFXManager.Get():GetNeedSheildEff()
 	_G.EventMgr:SendEvent(EventID.UpdateInDialogOrSeq, bShow)
+
+	local AllLineVfxActors = _G.UE.TArray(_G.UE.APortalLine)
+	_G.UE.UGameplayStatics.GetAllActorsOfClass(_G.FWORLD(), _G.UE.APortalLine.StaticClass(), AllLineVfxActors )
+	for _, Actor in pairs(AllLineVfxActors) do
+        if _G.CommonUtil.IsObjectValid(Actor) then
+            Actor:SetActorHiddenInGame(not bShow)
+        end
+    end
 end
 
 --- 通用特效表特效播放调用接口
@@ -315,5 +323,67 @@ end
 function EffectUtil.LogVfxInfoDebug()
 	return _G.UE.UFGameFXManager.Get():GetVfxInfoDebug()
 end
+
+
+
+local VfxCommonEventMap = {}
+local VfxEndEventMap    = {}
+
+local bVfxEventRegistered = false
+
+local function CheckRegistered()
+	if not bVfxEventRegistered then
+		EffectUtil.RegisterVfxEvent()
+		bVfxEventRegistered = true
+	end
+end
+
+local function OnVfxCommonEvent(_, ID, bMajorOnly, EventKey)
+	local Func = VfxCommonEventMap[ID]
+	if Func then
+		Func(bMajorOnly, EventKey)
+		VfxCommonEventMap[ID] = nil
+	end
+end
+
+local function OnVfxEndEvent(_, ID)
+	local Func = VfxEndEventMap[ID]
+	if Func then
+		Func(ID)
+		VfxEndEventMap[ID] = nil
+	end
+	VfxCommonEventMap[ID] = nil
+end
+
+function EffectUtil.RegisterVfxEvent()
+	local Mgr = UE.UFGameFXManager.Get()
+	Mgr.VfxCommonEventDynamicMultiCast:Add(Mgr, OnVfxCommonEvent)
+	Mgr.OnVfxEndDynamicMultiCast:Add(Mgr, OnVfxEndEvent)
+end
+
+function EffectUtil.AddVfxCommonEvent(ID, Func)
+	CheckRegistered()
+	VfxCommonEventMap[ID] = Func
+end
+
+function EffectUtil.RemoveVfxCommonEvent(ID)
+	VfxCommonEventMap[ID] = nil
+end
+
+function EffectUtil.AddVfxEndEvent(ID, Func)
+	CheckRegistered()
+	VfxEndEventMap[ID] = Func
+end
+
+function EffectUtil.RemoveVfxEndEvent(ID)
+	VfxEndEventMap[ID] = nil
+end
+
+function EffectUtil.ClearVfxEventCache()
+	VfxCommonEventMap = {}
+	VfxEndEventMap    = {}
+end
+
+
 
 return EffectUtil

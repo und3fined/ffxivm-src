@@ -9,7 +9,11 @@ local ClosetSuitCfg = {
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'SuitName',
+            },
+		}
     },
     DefaultValues = nil,
 	LuaData = nil,

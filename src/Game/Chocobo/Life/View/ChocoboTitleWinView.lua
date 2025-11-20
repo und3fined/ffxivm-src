@@ -178,6 +178,12 @@ end
 
 function ChocoboTitleWinView:OnClickBtnGet()
     _G.ChocoboMgr:ReqGetTitleAward(self.ViewModel.CurSelectTitleID)
+
+    local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title/' .. self.ViewModel.CurSelectTitleID
+    local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+    if not IsSaveDel then
+        _G.RedDotMgr:DelRedDotByName(RedDotName)
+    end
 end
 
 return ChocoboTitleWinView

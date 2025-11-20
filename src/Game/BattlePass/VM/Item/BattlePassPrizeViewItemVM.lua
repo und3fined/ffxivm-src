@@ -19,6 +19,7 @@ function BattlePassPrizeViewItemVM:Ctor()
     self.Icon = nil
     self.ResID = nil
     self.ID = nil
+    self.IsPreview = false
 end
 
 function BattlePassPrizeViewItemVM:OnInit()
@@ -38,6 +39,7 @@ function BattlePassPrizeViewItemVM:UpdateVM(Value)
     self.ResID = Value.ResID
     self.ItemName = ItemUtil.GetItemName(Value.ResID)
     self.Icon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(Value.ResID))
+    self.IsPreview =  Value.JumpID ~= nil or ItemUtil.IsCanPreviewByResID(Value.ResID)
 end
 
 --要返回当前类

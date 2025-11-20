@@ -20,10 +20,13 @@ local TimeUtil = require("Utils/TimeUtil")
 local EffectUtil = require("Utils/EffectUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
+local ProtoBuff = require("Network/ProtoBuff")
+local SysnoticeCfg = require("TableCfg/SysnoticeCfg")
 
 local PVPColosseumHeaderVM = require("Game/PVP/Colosseum/VM/PVPColosseumHeaderVM")
 local PVPColosseumBattleLogVM = require("Game/PVP/Colosseum/VM/PVPColosseumBattleLogVM")
 local PVPColosseumRecordVM = require("Game/PVP/Record/VM/PVPColosseumRecordVM")
+local PVPColosseumRecordInsideVM = require("Game/PVP/Colosseum/VM/PVPColosseumRecordInsideVM")
 local PVPColosseumDefine = require("Game/PVP/Colosseum/PVPColosseumDefine")
 local ColosseumTeam = PVPColosseumDefine.ColosseumTeam
 local ColosseumConstant = PVPColosseumDefine.ColosseumConstant
@@ -46,6 +49,7 @@ local ColosseumSequence = ProtoCS.ColosseumSequence
 local CrystalStatus = ProtoCS.CrystalStatus
 local EventType = ProtoCS.EventType
 local PvPColosseumMode = ProtoCS.Game.PvPColosseum.PvPColosseumMode
+local PVPCommunicateProtoName = "PVPCommunicateInfo"
 
 local FLOG_INFO = _G.FLOG_INFO
 local FLOG_ERROR = _G.FLOG_ERROR
@@ -200,6 +204,8 @@ function PVPColosseumMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_CRYSTAL, self.OnNetMsgColosseumCrystal)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_EVENT_NOTIFY, self.OnNetMsgColosseumEventNotify)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_VISION_INFO, self.OnNetMsgColosseumVisionInfo)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_COMMUNICATE, self.OnNetMsgColosseumCommunicate)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_QUERY_STATS_PANEL, self.OnNetMsgColosseumRecordInside)
 
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PvPColosseum, CS_PVPCOLOSSEUM_CMD.GAME_RESULT, self.OnNetMsgColosseumGameResult)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PvPColosseum, CS_PVPCOLOSSEUM_CMD.GAME_RESULT_LIKE, self.OnNetMsgColosseumGameResultLike)
@@ -246,6 +252,7 @@ function PVPColosseumMgr:OnGameEventPWorldReady()
 	end
 
 	self:SendColosseumBundle()
+	self:RequestRecordInside()
 end
 
 function PVPColosseumMgr:OnGameEventRoleLoginRes(Params)
@@ -303,6 +310,7 @@ function PVPColosseumMgr:ResetBattle()
 	self:ResetData()
 
 	PVPColosseumRecordVM:Reset()
+	PVPColosseumRecordInsideVM:Reset()
 	PVPColosseumBattleLogVM:Reset()
 	_G.UE.FTickHelper.GetInst():SetTickDisable(self.TickTimerID)
 
@@ -453,10 +461,17 @@ function PVPColosseumMgr:OnNetMsgColosseumBundle(MsgBody)
 			self:OnNetMsgColosseumEventNotify(ColosseumCombatRsp)
 		elseif SubCmd == CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_VISION_INFO then
 			self:OnNetMsgColosseumVisionInfo(ColosseumCombatRsp)
+		elseif SubCmd == CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_COMMUNICATE then
+			self:OnNetMsgColosseumCommunicate(ColosseumCombatRsp)
 		end
 	end
 end
 
+function PVPColosseumMgr:OnNetMsgColosseumRecordInside(MsgBody)
+    local RecordInsideRsp = MsgBody.query_stats_panel_rsp and MsgBody.query_stats_panel_rsp.data
+    if RecordInsideRsp == nil then return end
+	PVPColosseumRecordInsideVM:UpdateVM(RecordInsideRsp)
+end
 ---更新游戏阶段
 function PVPColosseumMgr:OnNetMsgColosseumSequence(MsgBody)
     local ColosseumCombatSequenceRsp = MsgBody.sequence_rsp
@@ -705,6 +720,37 @@ function PVPColosseumMgr:OnNetMsgColosseumVisionInfo(MsgBody)
 	end
 end
 
+---发送局内沟通信息
+function PVPColosseumMgr:SendColosseumCommunicate(PVPCommunicateInfo)
+	if PVPCommunicateInfo == nil then return end
+	FLOG_INFO(table_to_string(PVPCommunicateInfo))
+	local Buffer = ProtoBuff:Encode(PVPCommunicateProtoName, PVPCommunicateInfo)
+
+	local ColosseumCombatCommunicateReq = {}
+	ColosseumCombatCommunicateReq.send_role_id = PVPCommunicateInfo.SendRoleID
+	ColosseumCombatCommunicateReq.content = Buffer
+
+    local MsgBody = {}
+    local SubMsgID = CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_COMMUNICATE
+    MsgBody.Cmd = SubMsgID
+    MsgBody.communicate_req = ColosseumCombatCommunicateReq
+    _G.GameNetworkMgr:SendMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, SubMsgID, MsgBody)
+end
+
+---同步局内沟通信息
+function PVPColosseumMgr:OnNetMsgColosseumCommunicate(MsgBody)
+	local ColosseumCombatCommunicateRsp = MsgBody.communicate_rsp
+	if ColosseumCombatCommunicateRsp == nil then return end
+
+	local Buffer = ColosseumCombatCommunicateRsp.content
+	local PVPCommunicateInfo = ProtoBuff:Decode(PVPCommunicateProtoName, Buffer)
+	if PVPCommunicateInfo == nil then return end
+	FLOG_INFO(table_to_string(PVPCommunicateInfo))
+
+	-- 左侧显示局内沟通信息
+	PVPColosseumBattleLogVM:PushLogCommunicateInfo(PVPCommunicateInfo)
+end
+
 ---比赛结算，由局外协议下发
 function PVPColosseumMgr:OnNetMsgColosseumGameResult(MsgBody)
 	if not self:IsPVPColosseumPWorld() then
@@ -715,6 +761,16 @@ function PVPColosseumMgr:OnNetMsgColosseumGameResult(MsgBody)
 	if PvPColosseumGameResultRsp == nil then return end
 
 	self:SetGameResult(PvPColosseumGameResultRsp)
+end
+
+---局内所有玩家战绩请求
+function PVPColosseumMgr:RequestRecordInside()
+    local SubMsgID = CS_COLOSSEUM_COMBAT_CMD.CS_COLOSSEUM_COMBAT_CMD_QUERY_STATS_PANEL
+    local MsgBody = {
+		Cmd = SubMsgID,
+		query_stats_panel_req = {}
+	}
+    _G.GameNetworkMgr:SendMsg(CS_CMD.CS_CMD_COLOSSEUM_COMBAT, SubMsgID, MsgBody)
 end
 
 ---点赞玩家请求
@@ -768,15 +824,29 @@ function PVPColosseumMgr:OnNetMsgColosseumGameResultLike(MsgBody)
 		RoleInfoMgr:QueryRoleSimple(TargetRoleID, function(Params, RoleVM)
 			if RoleVM then
 				MsgTipsUtil.ShowTipsByID(338010, nil, RoleVM.Name)
+				local Cfg = SysnoticeCfg:FindCfgByKey(338010)
+				if Cfg and Cfg.Content then
+					local SystemMessage = string.format(Cfg.Content[1], RoleVM.Name)
+					_G.ChatMgr:AddSysChatMsg(SystemMessage)
+				end
 			end
 		end, nil, false)
 		PVPColosseumRecordVM:LikeRole(TargetRoleID)
 	elseif TargetRoleID == MajorID then
+		local TipsID = nil
 		local IsLikeByTeammate = PVPTeamMgr:IsTeamMemberByRoleID(SrcRoleID)
 		if IsLikeByTeammate then
-			MsgTipsUtil.ShowTipsByID(338011)
+			TipsID = 338011
 		else
-			MsgTipsUtil.ShowTipsByID(338012)
+			TipsID = 338012
+		end
+
+		if TipsID then
+			MsgTipsUtil.ShowTipsByID(TipsID)
+			local Cfg = SysnoticeCfg:FindCfgByKey(TipsID)
+			if Cfg and Cfg.Content then
+				_G.ChatMgr:AddSysChatMsg(Cfg.Content[1])
+			end
 		end
 		PVPColosseumRecordVM:GetLike(PvPColosseumGameResulLikeRsp.CurLikeNum)
 	end
@@ -1664,8 +1734,8 @@ function PVPColosseumMgr:SetGameResult(PvPColosseumGameResultRsp)
 		WinnerTeamIndex = ColosseumTeam.COLOSSEUM_TEAM_2
 	end
 	local IsWinner = WinnerTeamIndex == self:GetTeamIndex()
-
-	PVPColosseumRecordVM:UpdateVM(IsWinner, self.SequenceEndTime, PvPColosseumGameResultRsp)
+	local CurrIsInPVPColosseumRank = PWorldMgr:CurrIsInPVPColosseumRank()
+	PVPColosseumRecordVM:UpdateVM(IsWinner, self.SequenceEndTime, PvPColosseumGameResultRsp, CurrIsInPVPColosseumRank)
 	PVPColosseumRecordVM.HasSetGameResult = true
 	if self.WaitGameResultTimeID then
 		self:UnRegisterTimer(self.WaitGameResultTimeID)
@@ -1689,7 +1759,37 @@ function PVPColosseumMgr:SetGameResult(PvPColosseumGameResultRsp)
 	self:RegisterTimer(ShowGameResultTips, 1)
 
 	-- 延迟显示，和前面胜负提示错开
-	self:RegisterTimer(self.ShowGameResultUI, 4)
+	-- 段位赛要先显示段位变化UI再展示结算UI
+	if PWorldMgr:CurrIsInPVPColosseumRank() then
+		self:RegisterTimer(self.ShowGameRankChangeUI, 4)
+	else
+		self:RegisterTimer(self.ShowGameResultUI, 4)
+	end
+end
+
+--- 显示段位变化UI
+function PVPColosseumMgr:ShowGameRankChangeUI()
+	if not self:IsPVPColosseumPWorld() then
+		return
+	end
+
+	if self.CurrentSequence ~= ColosseumSequence.COLOSSEUM_PHASE_RESULT then
+		return
+	end
+
+	local VM, Index = PVPColosseumRecordVM.LeftTeamRecordList:Find(function(VM)
+		return VM.RoleID == MajorUtil.GetMajorRoleID()
+	end)
+	if VM == nil then return end
+
+	local Params = {
+		OldRank = VM.LastRankID,
+		OldCrystalPoint = VM.LastCrystalPoint,
+		NewRank = VM.CurRankID,
+		NewCrystalPoint = VM.CurCrystalPoint,
+		IsShowGameResult = true,
+	}
+	UIViewMgr:ShowView(UIViewID.PVPCrystallineRankChangePanel, Params)
 end
 
 ---显示比赛结果UI

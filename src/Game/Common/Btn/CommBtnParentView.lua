@@ -13,15 +13,15 @@ local WidgetCallback = require("UI/WidgetCallback")
 
 local CommBtnColorType = UIDefine.CommBtnColorType
 
-local COLOR_ENABLE 		= "ffffffff"
-local COLOR_RECOM		= "f5f0dfff"
+local COLOR_ENABLE 		= "f5f0dfff"
+local COLOR_RECOM		= "ffffffff"
 local COLOR_DISABLE 	= "9e9c96ff"
 local COLOR_DONE 		= "d5d5d5ff"
 local COLOR_DONE_LIGHT	= "6c6964ff"
 
-local COLOR_ENABLE_OUTLINE 		= "4d3a004c"
-local COLOR_RECOM_OUTLINE		= "6a52334c"
-local COLOR_DISABLE_OUTLINE 	= "3131314c"
+local COLOR_ENABLE_OUTLINE 		= "6a52337f"
+local COLOR_RECOM_OUTLINE		= "4d3a007f"
+local COLOR_DISABLE_OUTLINE 	= "3131317f"
 local COLOR_DONE_OUTLINE 		= "0000004c"
 local COLOR_DONE_LIGHT_OUTLINE	= "6c696400"
 
@@ -266,22 +266,9 @@ function CommBtnParentView:UpdateBtnEnable(ColorType)
 	UIUtil.SetIsVisible(self.Button, true, true)
 
 	if ColorType == CommBtnColorType.Disable then
-		if not self.IsHitTestVisibleEnable then
-			self.Button:SetIsEnabled(false)
-		else
-			self.Button:SetIsEnabled(true)
-		end
+		UIUtil.SetIsVisible(self.Button, true, self.IsHitTestVisibleEnable)
 	elseif ColorType == CommBtnColorType.Done then
 		self.Button:SetVisibility( _G.UE.ESlateVisibility.selfHitTestInvisible)
-
-		-- if self.bUseLightStyleDone then
-		-- 	self.Button:SetIsEnabled(true)
-		-- 	-- UIUtil.SetIsVisible(self.Button, false)
-		-- else
-		-- 	self.Button:SetIsEnabled(false)
-		-- end
-	else
-		self.Button:SetIsEnabled(true)
 	end
 end
 

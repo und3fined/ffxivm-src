@@ -19,7 +19,7 @@ local EBubbleType =
 }
 
 local TextColor = {
-    Normal = "FFFFFFFF",
+    Normal = "D5D5D5",
     NoEnoughRedHex = "DC5868FF",
 }
 
@@ -41,6 +41,7 @@ local TipID =
         [2] = 330102,
         [3] = 330103,
     }, -- 进入求救范围,索引对应商人ID
+    EnterSystemHint = 330112, -- 进入系统提示区域
     EnterArea = 330001, -- 进入触发区域
     NearEndTrade = 330104, -- 即将结束交易
     EndTrade = 330105, -- 结束交易
@@ -48,11 +49,13 @@ local TipID =
     PickUpCargoTip = 330107, -- 拾取货物任务提示 （"商人的货物十分沉重，持有一定数量后将减慢移动速度！"）
     OverWeightTip = 330108, -- 货物超重提示
     InvestGoldCoinNotEnough = 330109, -- 金币不足
+    EnoughEObjects = 330116, -- 已拾取足够多的货物了，交还给商人吧
 }
 
 --交互类型
 local EndInteractType = 
 {
+    Reward = 500108, -- 投资回报
     Invest = 500109, -- 冒险投资
     SubmitItems = 500110, -- 提交任务货物
     Talk = 500111, -- 交谈
@@ -69,7 +72,13 @@ local ItemColor = {
 local SoundPath = {
     Settlement = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/TradingCaraven/Play_UI_TradingCaraven_finish.Play_UI_TradingCaraven_finish'",
     ExpUp = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/TradingCaraven/Play_UI_TradingCaraven_exp.Play_UI_TradingCaraven_exp'",
-    UnlockGoods = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/TradingCaraven/Play_UI_Puzzle_Lvup.Play_UI_Puzzle_Lvup'"
+    UnlockGoods = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/TradingCaraven/Play_UI_Puzzle_Lvup.Play_UI_Puzzle_Lvup'",
+    InvestTip = "AkAudioEvent'/Game/WwiseAudio/Events/UI/New_mod/Investment/Play_UI_Merchant_Investment.Play_UI_Merchant_Investment'",
+    InvestRewardStart = "AkAudioEvent'/Game/WwiseAudio/Events/UI/New_mod/Investment/Play_UI_Merchant_Investment_Excavate.Play_UI_Merchant_Investment_Excavate'",
+    InvestResultFailed = "",
+    InvestResultSuccess = "AkAudioEvent'/Game/WwiseAudio/Events/UI/New_mod/Investment/Play_UI_Merchant_Investment_Succeed.Play_UI_Merchant_Investment_Succeed'",
+    InvestResultSuperSuccess = "AkAudioEvent'/Game/WwiseAudio/Events/UI/New_mod/Investment/Play_UI_Merchant_Investment_Big_Succeed.Play_UI_Merchant_Investment_Big_Succeed'",
+    InvestResultNumText = "AkAudioEvent'/Game/WwiseAudio/Events/UI/New_mod/Investment/Play_UI_Merchant_Investment_Amount.Play_UI_Merchant_Investment_Amount'"
 }
 
 local GoodsLimitBuyType = {
@@ -107,10 +116,21 @@ local TaskProgressText = {
     } ,
 }
 
+local EnumInvestResult = {
+    Failed = 1,
+    Success = 2,
+    SpecialSuccess = 3,
+}
+
 local Title = LSTR(1110014)--商人奇遇
 local EnterTipText = LSTR(1110014)--商人奇遇
 local FriendlinessLevelText = LSTR(1110046) -- 1110046("友好度:%s/%s")
 local MaxLevelText = LSTR(1110054) -- 1110054("友好度已满")
+local InvestSuccessText = LSTR(1110055) -- 1110055("投资成功")
+local InvestFailedText = LSTR(1110056) -- 1110056("投资成功")
+local InvestSuccessSpecialText = LSTR(1110057) -- 1110057("点石成金")
+local InvestRewardMultipleText = LSTR(1110058) -- 1110057("%s倍")
+
 local MysterMerchantDefine = {
     Title = Title,
     EnterTipText = EnterTipText,
@@ -129,6 +149,11 @@ local MysterMerchantDefine = {
     FriendlinessLevelText = FriendlinessLevelText,
     MaxLevelText = MaxLevelText,
     SoundPath = SoundPath,
+    InvestSuccessText = InvestSuccessText,
+    InvestFailedText = InvestFailedText,
+    InvestSuccessSpecialText = InvestSuccessSpecialText,
+    InvestRewardMultipleText = InvestRewardMultipleText,
+    EnumInvestResult = EnumInvestResult,
 }
 
 return MysterMerchantDefine

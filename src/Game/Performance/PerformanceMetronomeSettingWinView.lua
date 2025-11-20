@@ -12,10 +12,12 @@ local MusicPerformanceMetronomeSettingVM = require("Game/Performance/VM/MusicPer
 local MPDefines = require("Game/MusicPerformance/MusicPerformanceDefines")
 local SaveKey = require("Define/SaveKey")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanceUtil")
 local MusicPerformanceMetronomeVM = require("Game/Performance/VM/MusicPerformanceMetronomeVM")
 local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 
 ---@class PerformanceMetronomeSettingWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -50,6 +52,8 @@ local MsgBoxUtil = require("Utils/MsgBoxUtil")
 ---@field TextRingSetting UFTextBlock
 ---@field TextTempo UFTextBlock
 ---@field TextVolumeValue UFTextBlock
+---@field AnimMetroBgShine UWidgetAnimation
+---@field AnimTempoBgShine UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceMetronomeSettingWinView = LuaClass(UIView, true)
 
@@ -86,6 +90,8 @@ function PerformanceMetronomeSettingWinView:Ctor()
 	--self.TextRingSetting = nil
 	--self.TextTempo = nil
 	--self.TextVolumeValue = nil
+	--self.AnimMetroBgShine = nil
+	--self.AnimTempoBgShine = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -139,7 +145,7 @@ function PerformanceMetronomeSettingWinView:OnInit()
 		self.Metronome.VM.Volume = math.floor(MPDefines.MetronomeSettings.VolumeMax * Value) 
 		self.VM.VolumeValue = tostring(self.Metronome.VM.Volume)
 		
-		_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.UI_Menu_Sound, self.Metronome.VM.Volume)
+		_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, self.Metronome.VM.Volume)
 		self:CheckSettingsUIState()
 	end
 end
@@ -157,9 +163,9 @@ function PerformanceMetronomeSettingWinView:InitStaticText()
 	self.TextAddReady:SetText(_G.LSTR(830071))
 	self.TextORR:SetText(_G.LSTR(830072))
 	
-	self.BtnCancel:SetBtnName(_G.LSTR(830060))
+	self.BtnCancel:SetBtnName(_G.LSTR(10003))
 	self.BtnDefault:SetBtnName(_G.LSTR(830061))
-	self.BtnSave:SetBtnName(_G.LSTR(830073))
+	self.BtnSave:SetBtnName(_G.LSTR(10011))
 end
 
 function PerformanceMetronomeSettingWinView:OnDestroy()
@@ -180,7 +186,7 @@ function PerformanceMetronomeSettingWinView:OnShow()
 	self.VM.BPMValue = tostring(self.Metronome.VM.BPM)
 	self.VM.BeatValue = tostring(self.Metronome.VM.BeatPerBar)
 	self.VM.VolumeValue = tostring(self.Metronome.VM.Volume)
-	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.UI_Menu_Sound, self.Metronome.VM.Volume)
+	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, self.Metronome.VM.Volume)
 	self.VM.PanelOnlyReadyRingVisible = self.Metronome.VM.Prepare == 1
 
 	self:CheckSettingsUIState()
@@ -195,7 +201,7 @@ end
 
 function PerformanceMetronomeSettingWinView:OnHide()
 	-- 还原
-	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.UI_Menu_Sound, _G.SettingsMgr:GetValueBySaveKey(MPDefines.UI_MenuSaveKey))
+	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, _G.SettingsMgr:GetValueBySaveKey(MPDefines.UI_MenuSaveKey))
 end
 
 function PerformanceMetronomeSettingWinView:UpdateSlider()
@@ -243,14 +249,14 @@ end
 function PerformanceMetronomeSettingWinView:OnClickBtnDefault()
 	local Select = _G.UE.USaveMgr.GetInt(SaveKey.MetronomeSettingRestoreDefaultTipSelect, 0, true)
 	if Select == 0 then
-		MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(830031), LSTR(830041), function(_, Params)
+		MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(10004), LSTR(830041), function(_, Params)
 			local IsNeverAgain = Params.IsNeverAgain
 			if IsNeverAgain then
 				--不再提醒
 				_G.UE.USaveMgr.SetInt(SaveKey.MetronomeSettingRestoreDefaultTipSelect, 1, true)
 			end
 			self:RestoreDefaultSettingData()
-		end, nil, LSTR(830014), LSTR(830038), {bUseNever = true, NeverMindText = LSTR(830006)})
+		end, nil, LSTR(10003), LSTR(10002), {bUseNever = true, NeverMindText = LSTR(830006)})
 	elseif Select == 1 then
 		self:RestoreDefaultSettingData()
 	end
@@ -258,17 +264,20 @@ end
 
 --恢复默认设置
 function PerformanceMetronomeSettingWinView:RestoreDefaultSettingData()
-	MusicPerformanceUtil.ResetMetronomeSettings(self.Metronome.VM)
-	self.VM.BPMValue = tostring(self.Metronome.VM.BPM)
-	self.VM.BeatValue = tostring(self.Metronome.VM.BeatPerBar)
-	self.VM.VolumeValue = tostring(self.Metronome.VM.Volume)
-	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.UI_Menu_Sound, self.Metronome.VM.Volume)
-
-	self.Metronome:ResetMetronome()
-	self:UpdatePanelMetronome()
-	self:UpdateSlider()
-	self:UpdateDropDown()
-	self:CheckSettingsUIState()
+	---做一次Object有效性校验
+    if self.Object ~= nil and self.Object:IsValid() then
+		MusicPerformanceUtil.ResetMetronomeSettings(self.Metronome.VM)
+		self.VM.BPMValue = tostring(self.Metronome.VM.BPM)
+		self.VM.BeatValue = tostring(self.Metronome.VM.BeatPerBar)
+		self.VM.VolumeValue = tostring(self.Metronome.VM.Volume)
+		_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, self.Metronome.VM.Volume)
+	
+		self.Metronome:ResetMetronome()
+		self:UpdatePanelMetronome()
+		self:UpdateSlider()
+		self:UpdateDropDown()
+		self:CheckSettingsUIState()
+	end
 end
 
 function PerformanceMetronomeSettingWinView:CheckSettingsUIState()
@@ -289,7 +298,7 @@ function PerformanceMetronomeSettingWinView:OnClickBtnSave()
 	_G.UE.USaveMgr.SetInt(SaveKey.MetronomeBPM, self.Metronome.VM.BPM, true)
 
 	_G.SettingsMgr:SetValueBySaveKey(MPDefines.UI_MenuSaveKey, self.Metronome.VM.Volume)
-	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.UI_Menu_Sound, self.Metronome.VM.Volume)
+	_G.UE.UAudioMgr:Get():SetAudioVolume(_G.UE.EWWiseAudioType.Sfx, self.Metronome.VM.Volume)
 	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceMetronomeSettingUpdate)
 	self:CheckSettingsUIState()
 	self:Hide()
@@ -308,6 +317,10 @@ function PerformanceMetronomeSettingWinView:OnRegisterBinder()
 		{ "BPMTip", UIBinderSetText.New(self, self.TextBPM) },
 		{ "BeatTip", UIBinderSetText.New(self, self.TextBeat) },
 		{ "TempoTip", UIBinderSetText.New(self, self.TextTempo) },
+		{ "TempoTipColor", UIBinderSetColorAndOpacityHex.New(self, self.TextTempo) },
+		{ "IsPlayTempoTipBgEffect", UIBinderValueChangedCallback.New(self, nil, self.OnIsPlayTempoTipBgEffectChanged) },
+		{ "IsPlayMetronomeItemBgEffect", UIBinderValueChangedCallback.New(self, nil, self.OnIsPlayMetronomeItemBgEffectChanged) },
+		
 		{ "VolumeValue", UIBinderSetText.New(self, self.TextVolumeValue) },
 		{ "BeatValue", UIBinderSetText.New(self, self.TextBeatValue) },
 		{ "BPMValue", UIBinderSetText.New(self, self.TextBPMValue) },
@@ -319,6 +332,22 @@ function PerformanceMetronomeSettingWinView:OnRegisterBinder()
 	}
 
 	self:RegisterBinders(self.VM, Binders)
+end
+
+--节拍tip(如1:1)背景特效
+function PerformanceMetronomeSettingWinView:OnIsPlayTempoTipBgEffectChanged(InIsPlayTempoTipBgEffect)
+	if InIsPlayTempoTipBgEffect == true then
+		self:PlayAnimation(self.AnimTempoBgShine)
+		self.VM.IsPlayTempoTipBgEffect = false
+	end
+end
+
+--节拍器item背景特效
+function PerformanceMetronomeSettingWinView:OnIsPlayMetronomeItemBgEffectChanged(InIsPlayMetronomeItemBgEffect)
+	if InIsPlayMetronomeItemBgEffect == true then
+		self:PlayAnimation(self.AnimMetroBgShine)
+		self.VM.IsPlayMetronomeItemBgEffect = false
+	end
 end
 
 return PerformanceMetronomeSettingWinView

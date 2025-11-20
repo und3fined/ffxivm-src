@@ -89,10 +89,12 @@ function CommPlayerItemView:OnShow()
 			self.TextStart:SetText(_G.LSTR(100004))
 			UIUtil.ImageSetBrushFromAssetPath(self.IconStart, "PaperSprite'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_QQ2_png.UI_Profile_Icon_QQ2_png'")
 			UIUtil.SetIsVisible(self.PanelStart, true, true)
-		end
+		end	
 	else
 		UIUtil.SetIsVisible(self.PanelStart, false)
 	end
+	-- ---更新文本大小设置
+	self.TextPlayerName:SetFont(self.TextPlayerName.Font)
 end
 
 function CommPlayerItemView:OnHide()

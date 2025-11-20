@@ -14,6 +14,7 @@ function MarketBuyListItemVM:Ctor()
 	self.QuantitySoldText = nil
 	self.ServerNameText = nil
 	self.PlayerNameText = nil
+    self.QuantitySoldColor = nil
 end
 
 function MarketBuyListItemVM:UpdateVM(Value)
@@ -48,7 +49,14 @@ function MarketBuyListItemVM:UpdateVM(Value)
 end
 
 function MarketBuyListItemVM:UpdateSelectedStatus(SellID)
-    self.PanelFocusVisible = SellID == self.Value.SellID
+    if SellID == self.Value.SellID then
+        self.PanelFocusVisible = true
+        self.QuantitySoldColor = "#d5d5d5"
+    else
+        self.PanelFocusVisible = false
+        self.QuantitySoldColor = "#828282"
+    end
+   
 end
 
 

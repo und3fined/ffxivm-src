@@ -29,6 +29,10 @@ local CommonUtil = require("Utils/CommonUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
 local ProSkillDefine = require("Game/Main/ProSkill/ProSkillDefine")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local GatheringLogDefine = require("Game/GatheringLog/GatheringLogDefine")
+local AudioUtil = require("Utils/AudioUtil")
+local SkillButtonStateMgr = require("Game/Skill/SkillButtonStateMgr")
+local SkillBtnState = SkillButtonStateMgr.SkillBtnState
 
 ---@class SkillUtil
 local SkillUtil = {
@@ -303,6 +307,10 @@ function SkillUtil.SendCastSkillEvent(SkillType, SkillID, CfgID, QueueIndex, Que
 	end
 	local Result = _G.SkillSingEffectMgr:PlayerSingBegin(MajorUtil.GetMajorEntityID(), SingUseSkill, Params, JoyStickParams)
 	if Result == true then
+		local MountMgr = _G.MountMgr
+		if MountMgr:IsInRide() and not MountMgr:IsMountSkill(SkillID) then 
+			MountMgr:SendMountCancelCall(nil, true)
+		end
 		return SkillCastType.SingType
 	end
 
@@ -520,6 +528,15 @@ function SkillUtil.GetSkillLearnValid(SkillID, ProfID, Level)
 	return SkillUtil.SkillLearnStatus.Learned, LearnedLevel, bAdvancedProfUse
 end
 
+local function IsUnlockIgnoreSpectrumID(SkillID)
+	for _, value in ipairs(ProSkillDefine.SpectrumIDIgnoreList) do
+		if SkillID == value then
+			return true
+		end
+	end
+	return false
+end
+
 function SkillUtil.GetSkillUnlockValid(SkillID, ProfID, Level)
 	if not SkillID or not ProfID or not Level then
 		return SkillUtil.SkillLearnStatus.Unknown, 0, false
@@ -532,8 +549,7 @@ function SkillUtil.GetSkillUnlockValid(SkillID, ProfID, Level)
 		LearnedLevel = Cfg.LearnedLevel
 		bAdvancedProfUse = Cfg.bAdvancedProfUse == ProtoRes.prof_level.PROF_LEVEL_ADVANCED
 		--召唤师、黑魔和武僧拳意量谱特殊处理
-		if not LearnedLevel or LearnedLevel <= 1 or SkillID == ProSkillDefine.SpectrumIDMap.MONK_FIST
-			 or SkillID == ProSkillDefine.SpectrumIDMap.BLACKMAGE_SLOT then
+		if not LearnedLevel or LearnedLevel <= 1 or IsUnlockIgnoreSpectrumID(SkillID) then
 			return SkillUtil.SkillLearnStatus.NotLockLevel, LearnedLevel, bAdvancedProfUse
 		end
     end
@@ -937,8 +953,12 @@ function SkillUtil.RegisterPressScaleEvent(View, InWidget, InScaleValue, Default
 		local Value = Params[2]
 		Widget:SetRenderScale(OneVector2D * Value)
 	end
+
+	local OnReleasedParam = {InWidget, DefaultScaleValue or 1}
+	ScaleFunc(nil, OnReleasedParam)
+
 	UIUtil.AddOnPressedEvent(View, InWidget, ScaleFunc, {InWidget, InScaleValue})
-	UIUtil.AddOnReleasedEvent(View, InWidget, ScaleFunc, {InWidget, DefaultScaleValue or 1})
+	UIUtil.AddOnReleasedEvent(View, InWidget, ScaleFunc, OnReleasedParam)
 end
 
 
@@ -1049,6 +1069,134 @@ function SkillUtil.GetSimulateSingTime(SkillID, SubSkillID, MainCfg, SubCfg)
 		end
 	end
 	return SimulateSingTime or 0
+end
+
+
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local SkillButtonStateMgr = require("Game/Skill/SkillButtonStateMgr")
+--TODO[chaooren] 手柄会隐藏普攻按钮，但又要释放，先直接调用这个函数
+--后续统一一下SkillGenAttackBtnView和这边的内容
+function SkillUtil.PreCastGenAttackSkillCondition(Index)
+	local ButtonIndex = Index
+	if ButtonIndex ~= 0 then
+        return
+    end
+	local CurEntityID = MajorUtil.GetMajorEntityID()
+	local LogicData = _G.SkillLogicMgr:GetSkillLogicData(CurEntityID)
+    if LogicData == nil then
+        return
+    end
+	LogicData:SetSkillPressFlag(ButtonIndex, true)
+end
+
+
+function SkillUtil.PostCastGenAttackSkillCondition(Index, bMajor, EntityID, BtnSkillID, CanPress, SkillGenAttackBtn)
+	local ButtonIndex = Index
+	if ButtonIndex ~= 0 then
+        return
+    end
+	local CurEntityID
+	if EntityID then
+		CurEntityID = EntityID
+	else
+		CurEntityID = MajorUtil.GetMajorEntityID()
+	end
+	local LogicData = _G.SkillLogicMgr:GetSkillLogicData(CurEntityID)
+	if LogicData == nil then
+		return
+	end
+	local SkillID
+	if BtnSkillID then
+		SkillID = BtnSkillID
+	else
+		SkillID = LogicData:GetBtnSkillID(ButtonIndex)
+	end
+	LogicData:SetSkillPressFlag(ButtonIndex, false)
+	 _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, true,MajorUtil.IsCrafterProf())
+
+	if not CanPress then
+    	_G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+        return
+    end
+
+	if bMajor and not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_SKILL, true) then
+        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+        return
+    end
+
+ 	if _G.GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith() then
+        MsgTipsUtil.ShowTipsByID(MsgTipsID.CannotFightSkillPanel)
+        _G.EventMgr:SendEvent(EventID.FightSkillPanelShowed, false) -- 临时代码，没有打开，但是前面发送了打开消息，这里发送一下关闭消息
+        return 
+    end
+	if bMajor and MajorUtil.IsCrafterProf() then
+        local IsAutoPathMovingState = _G.AutoPathMoveMgr:IsAutoPathMovingState()
+        if IsAutoPathMovingState then
+            _G.AutoPathMoveMgr:StopAutoPathMoving()
+        end 
+        AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
+        _G.UIViewMgr:ShowView(UIViewID.CraftingLog)
+        return
+    end
+
+	 if bMajor then
+        local IsGatherProf = MajorUtil.IsGatherProf()
+        if IsGatherProf then
+            AudioUtil.LoadAndPlayUISound(GatheringLogDefine.SkillAttackBtnSoundPath)
+            if _G.MainPanelVM.IsFightState then
+                _G.UIViewMgr:ShowView(UIViewID.GatheringLogMainPanelView)
+                return
+            end
+        end
+
+        local EventParams = {BtnIndex = ButtonIndex, SkillID = SkillID, UIState = false}
+        _G.EventMgr:SendEvent(EventID.SkillBtnClick, EventParams)
+        if EventParams.UIState == false then
+            --制作职业直接打开 炼金的制作界面(目前是临时处理，将来要打开制作手册的)
+            if MajorUtil.IsCrafterProf() then
+                _G.CrafterMgr:StartMake(nil, false)
+            end
+
+            return
+        end
+
+        if IsGatherProf and not _G.GatherMgr.IsGathering then
+            return
+        end
+
+        local SkillType =
+            SkillMainCfg:FindValue(SkillID, "SkillFirstClass") == ProtoRes.skill_first_class.LIFE_SKILL
+
+        if not LogicData:CanCastSkill(0, true, SkillBtnState.SkillWeight) then
+            if SkillType == true then
+            --MsgTipsUtil.ShowTips(LSTR("条件不满足"))
+            end
+
+            return
+        end
+
+        if _G.SkillStorageMgr:GetSkillID() > 0 then
+            return
+        end
+
+        if SkillType == true then
+            SkillUtil.CastLifeSkill(ButtonIndex, SkillID)
+            return
+        end
+        
+		-- 判定技能类型为普通攻击才进行自动攻击
+		local IsGenAttack = SkillMainCfg:FindValue(SkillID, "Type") == ProtoRes.skill_type.SKILL_TYPE_NORMAL
+        if _G.SkillLogicMgr:CanAutoGenSkillAttack() and SkillGenAttackBtn and IsGenAttack then
+            FLOG_INFO("Enter AutoGenAttack")
+            SkillGenAttackBtn:StartLongPressTimer()
+        end
+
+        SkillUtil.CastSkill(CurEntityID, 0, SkillID)
+    else
+        local bJoyStick = SkillMainCfg:FindValue(BtnSkillID, "IsEnableSkillJoyStick")
+        SkillUtil.PlayerCastSkill(EntityID, 0, BtnSkillID, bJoyStick)
+    end
+	return true
 end
 
 return SkillUtil

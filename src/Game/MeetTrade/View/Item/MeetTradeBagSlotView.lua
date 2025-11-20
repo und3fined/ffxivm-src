@@ -42,6 +42,8 @@ function MeetTradeBagSlotView:OnInit()
 		{ "NumVisible", UIBinderSetIsVisible.New(self, self.BagSlot_UIBP.RichTextNum) },
 		{ "IsMask", UIBinderSetIsVisible.New(self, self.BagSlot_UIBP.ImgMask) },
 		{ "IsSelectedForTrade", UIBinderSetIsVisible.New(self, self.BagSlot_UIBP.PanelMultiChoice) },
+		{ "IsSelectedForTrade", UIBinderSetIsVisible.New(self, self.BagSlot_UIBP.ImgCheck) },
+		{ "IsSelect", UIBinderSetIsVisible.New(self, self.BagSlot_UIBP.ImgPick1) },
 		--- 只有TableViewChosenItemList中的Item才需要显示该图标
 		{ "IsShowDeletButton", UIBinderSetIsVisible.New(self, self.BtnDelete, false, true) },
 		--- 复用背包Item，蓝图中存在一些在面对面交易不需要显示的图标，全部默认不显示

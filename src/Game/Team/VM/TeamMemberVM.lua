@@ -48,7 +48,8 @@ function TeamMemberVM:Ctor()
 	self:SetName("")
 	self:SetProfID(0)
 	self:SetLevel(0)
-
+	self:SetPVPRankID(nil)
+	
 	---@deprecated
 	self.IsMajor = false
 
@@ -142,12 +143,13 @@ function TeamMemberVM:UpdateVM(Value)
 	local Level = Value.Level
 	if bMajor then
 		ProfID = MajorUtil.GetMajorProfID() or 0
-		Level = MajorUtil.GetMajorLevel() or 0
+		Level = MajorUtil.GetTrueMajorLevel() or 0
 	end
 
 	-- set prof
 	self:SetProfID(ProfID)
 	self:SetLevel(Level)
+	self:SetPVPRankID(Value.Info)
 
 	local CliData = Value.CliData
 	local VoiceID =  0
@@ -252,6 +254,11 @@ end
 ---@private
 function TeamMemberVM:SetName(Value)
 	self.Name = Value
+end
+
+---@type 设置排位赛ID
+function TeamMemberVM:SetPVPRankID(Info)
+	self.PVPRankID = Info and Info.PVPRankID or 0
 end
 
 function TeamMemberVM:IsMajorRole()
@@ -541,7 +548,7 @@ function TeamMemberVM:SetRescureDeadline(Deadline)
 end
 
 function TeamMemberVM:UpdateRescureRemainTime()
-	local t = (self.RescureDeadline or  0) - _G.TimeUtil.GetServerTime()
+	local t = (self.RescureDeadline or  0) - TimeUtil.GetServerTime()
 	if t < 0 then
 		t = 0
 	end
@@ -695,6 +702,15 @@ function TeamMemberVM:SetMicSyncState(Value)
 	if bChanged then
 		_G.EventMgr:SendEvent(_G.EventID.TeamMemberMicSyncStateChanged, self, self.RoleID, self.MicSyncState)
 	end
+end
+
+function TeamMemberVM:IsSyncMicOn()
+	return ((self.MicSyncState or 0) & 1) == 1
+end
+
+--------准备确认--------
+function TeamMemberVM:SetConfirmState(State)
+	self.ConfirmState = State
 end
 
 return TeamMemberVM

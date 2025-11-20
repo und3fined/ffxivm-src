@@ -70,6 +70,7 @@ function CommDropDownListItemVM:UpdateVM(Value)
     self.bTextQuantityShow = Value.bTextQuantityShow or false
     self.IsSelectedFunc = Value.IsSelectedFunc
     self.ItemData = Value.ItemData
+    self.IsShowPlayingIcon = false
     -- self.ItemTextContentColor = Value.ItemTextContentColor
     -- self.ItemTextContenSelectedColor = Value.ItemTextContenSelectedColor
     -- self.ImgLineColor = Value.ImgLineColor

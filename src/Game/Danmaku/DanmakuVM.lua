@@ -461,16 +461,14 @@ end
 
 function Class:UpdateMoveSpeed()
     local Rate = 240 -- 每秒移动240像素
-    local TargetFrameRate = _G.SettingsMgr:GetMaxFPSValue()
-    if TargetFrameRate <= 0 then
-        FLOG_WARNING("[DanmakuVM] UpdateMoveSpeed, TargetFrameRate is invalid %s", TargetFrameRate)
+    local TargetFrameRate = _G.SettingsMgr:GetCurRealMaxFPSValue()
+    if nil == TargetFrameRate or TargetFrameRate <= 0 then
+        FLOG_WARNING("[DanmakuVM] UpdateMoveSpeed, TargetFrameRate is invalid %s", tostring(TargetFrameRate))
 
         TargetFrameRate = 30 -- 默认30帧
     end
 
     self.MoveSpeed = math.ceil(Rate / TargetFrameRate)
-
-    FLOG_INFO("[DanmakuVM] UpdateMoveSpeed, TargetFrameRate: %s, MoveSpeed: %s", TargetFrameRate, self.MoveSpeed)
 end
 
 return Class

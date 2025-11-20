@@ -119,7 +119,12 @@ function SkillObject:Init(SkillID, SubSkillID, bIgnoreArt, Owner, TableID, Table
     if not Cfg then
         return false
     end
-    self.bEnableJoyStickPoint = Cfg.IsEnableJoyStickPoint > 0
+    if nil ~= Cfg.IsEnableSkillJoyStick then
+        self.bJoyStick = Cfg.IsEnableSkillJoyStick > 0
+    end
+    if nil ~= Cfg.IsEnableJoyStickPoint then
+        self.bEnableJoyStickPoint = Cfg.IsEnableJoyStickPoint > 0
+    end
     if not self:CastSkill() then
         return false
     end
@@ -230,7 +235,7 @@ function SkillObject:ResetSkill(BreakType)
 
     if SkillLogicMgr:IsSkillSystem(self.OwnerEntityID) then
         local AllEffectIDList = self.AllEffectIDList
-        for _, ID in pairs(AllEffectIDList) do
+        for ID, _ in pairs(AllEffectIDList) do
             EffectUtil.StopVfx(ID, 0, 0)
         end
     end
@@ -346,21 +351,15 @@ function SkillObject:ResetSkillControl()
 end
 
 function SkillObject:AddEffectID(EffectID)
-    local CurrentEffectIDList = self.CurrentEffectIDList
-    if table.find_item(CurrentEffectIDList, EffectID) == nil then
-        table.insert(CurrentEffectIDList, EffectID)
-    end
+    self.CurrentEffectIDList[EffectID] = true
 end
 
 function SkillObject:RemoveEffectID(EffectID)
-    table.remove_item(self.CurrentEffectIDList, EffectID)
+    self.CurrentEffectIDList[EffectID] = nil
 end
 
 function SkillObject:RecordEffectID(EffectID)
-    local AllEffectIDList = self.AllEffectIDList
-    if table.find_item(AllEffectIDList, EffectID) == nil then
-        table.insert(AllEffectIDList, EffectID)
-    end
+    self.AllEffectIDList[EffectID] = true
 end
 
 function SkillObject:AddDamageCell(Index, DamageCell)

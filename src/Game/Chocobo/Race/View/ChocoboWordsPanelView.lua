@@ -12,20 +12,24 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local ChocoboRaceMainVM = nil
 local ProtoRes = require("Protocol/ProtoRes")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
+local LocalizationUtil = require("Utils/LocalizationUtil")
 
 ---@class ChocoboWordsPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field BtnSkip UFButton
 ---@field ImgArmy01 UFImage
 ---@field ImgArmy02 UFImage
 ---@field ImgArmy03 UFImage
 ---@field ImgIcon UFImage
+---@field ImgMapPlaceName01 UFImage
+---@field ImgMapPlaceName02 UFImage
+---@field ImgMapPlaceName03 UFImage
+---@field ImgWords01 UFImage
+---@field ImgWords02 UFImage
 ---@field Panel01 UFCanvasPanel
 ---@field Panel02 UFCanvasPanel
 ---@field Panel03 UFCanvasPanel
 ---@field PanelPlaceName UFCanvasPanel
 ---@field PanelRace UFCanvasPanel
----@field PanelSkip UFCanvasPanel
 ---@field TextMapName UFTextBlock
 ---@field TextPlace UFTextBlock
 ---@field AnimPlaceName1 UWidgetAnimation
@@ -37,17 +41,20 @@ local ChocoboWordsPanelView = LuaClass(UIView, true)
 
 function ChocoboWordsPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.BtnSkip = nil
 	--self.ImgArmy01 = nil
 	--self.ImgArmy02 = nil
 	--self.ImgArmy03 = nil
 	--self.ImgIcon = nil
+	--self.ImgMapPlaceName01 = nil
+	--self.ImgMapPlaceName02 = nil
+	--self.ImgMapPlaceName03 = nil
+	--self.ImgWords01 = nil
+	--self.ImgWords02 = nil
 	--self.Panel01 = nil
 	--self.Panel02 = nil
 	--self.Panel03 = nil
 	--self.PanelPlaceName = nil
 	--self.PanelRace = nil
-	--self.PanelSkip = nil
 	--self.TextMapName = nil
 	--self.TextPlace = nil
 	--self.AnimPlaceName1 = nil
@@ -64,6 +71,25 @@ end
 
 function ChocoboWordsPanelView:OnInit()
     ChocoboRaceMainVM = _G.ChocoboRaceMainVM
+    local DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_BigWords01.UI_Chocobo_Img_BigWords01'"
+    local LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgWords01, LocalIconPath)
+
+    DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_BigWords02.UI_Chocobo_Img_BigWords02'"
+    LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgWords02, LocalIconPath)
+    
+    DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_Words_MapStyle03_Name.UI_Chocobo_Img_Words_MapStyle03_Name'"
+    LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgMapPlaceName03, LocalIconPath)
+    
+    DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_Words_MapStyle01_Name.UI_Chocobo_Img_Words_MapStyle01_Name'"
+    LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgMapPlaceName01, LocalIconPath)
+    
+    DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_Words_MapStyle02_Name.UI_Chocobo_Img_Words_MapStyle02_Name'"
+    LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgMapPlaceName02, LocalIconPath)
 end
 
 function ChocoboWordsPanelView:OnDestroy()
@@ -73,14 +99,12 @@ end
 function ChocoboWordsPanelView:OnShow()
     ChocoboRaceMainVM:UpdateWordsPanelVM()
     self:PlayAnimation(self.AnimRace)
-    UIUtil.SetIsVisible(self.PanelSkip, false)
 end
 
 function ChocoboWordsPanelView:OnHide()
 end
 
 function ChocoboWordsPanelView:OnRegisterUIEvent()
-    UIUtil.AddOnClickedEvent(self, self.BtnSkip, self.OnClickBtnSkip)
 end
 
 function ChocoboWordsPanelView:OnRegisterGameEvent()
@@ -101,12 +125,6 @@ function ChocoboWordsPanelView:OnClickBtnSkip()
     _G.StoryMgr:StopSequence()
 end
 
-function ChocoboWordsPanelView:OnTouchStarted(MyGeometry, MouseEvent)
-    UIUtil.SetIsVisible(self.PanelSkip, true)
-
-    return _G.UE.UWidgetBlueprintLibrary.CaptureMouse(_G.UE.UWidgetBlueprintLibrary.Handled(), self)
-end
-
 function ChocoboWordsPanelView:OnAnimationFinished(Anim)
     if Anim == self.AnimRace then
         ChocoboRaceMainVM.IsShowPanelPlaceName = true
@@ -117,7 +135,7 @@ function ChocoboWordsPanelView:OnAnimationFinished(Anim)
         if BaseInfo ~= nil then
             SubNum =  BaseInfo.CurrPWorldResID - ChocoboRaceMapResIDMin
         end
-        
+
         if SubNum == 0 then
             self:PlayAnimation(self.AnimPlaceName3)
         elseif SubNum == 1 then

@@ -112,7 +112,9 @@ function SkillCustomBtnBaseView:DragEnd()
     self.VM.ButtonState = EButtonState.Available
     if SkillCustomMgr.CurrentDraggedIndex == self.ButtonIndex then
         SkillCustomMgr.CurrentDraggedIndex = nil
-        self.ParentView:DragEnd()
+        if self.ParentView then
+            self.ParentView:DragEnd()
+        end
     else
         FLOG_ERROR("[SkillCustomBtnBaseView:DragEnd] Unexpected ButtonIndex")
     end

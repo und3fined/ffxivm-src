@@ -189,6 +189,11 @@ function CrafterMgr:PreCheck(RecipeID)
 		MsgTipsUtil.ShowTipsByID(MsgTipsID.CrafterCannotMakeWhenSinging)
 		return false
 	end
+
+    if _G.MountMgr:IsRequestingMount() then
+		MsgTipsUtil.ShowTipsByID(MsgTipsID.CallMounting)
+        return false
+    end
     
     return true
 end
@@ -199,7 +204,13 @@ function CrafterMgr:StartMake(RecipeID, IsTrain, Num)
     if CommonStateUtil.CheckBehavior(CrafterActionID, true) == false then
         return false
     end
-    
+
+    -- 如果玩家已经是报名状态，那么不让制作
+    if (_G.GoldSauserMgr:IsPlayerSignup()) then
+        MsgTipsUtil.ShowTipsByID(MsgTipsID.CannotMakeCraftTips)
+        return
+    end
+
     if not self:PreCheck(RecipeID) then
         return
     end
@@ -215,6 +226,8 @@ function CrafterMgr:StartMake(RecipeID, IsTrain, Num)
     end
 
     local function SendStartMake()
+        self:Reset()
+        
         -- _G.EventMgr:SendEvent(_G.EventID.StartCrafter)
         Num = Num or 1
     
@@ -295,6 +308,12 @@ function CrafterMgr:StartSimpleMake(RecipeID, TotalMakeCount, bFastCraft)
         MsgTipsUtil.ShowTipsByID(MsgTipsID.CrafterCannotReEnter)
         return 
     end
+
+    -- 如果玩家已经是报名状态，那么不让制作
+    if (_G.GoldSauserMgr:IsPlayerSignup()) then
+        MsgTipsUtil.ShowTipsByID(MsgTipsID.CannotMakeCraftTips)
+        return
+    end
     
     -- 通用状态检测
     if CommonStateUtil.CheckBehavior(CrafterActionID, true) == false then
@@ -305,6 +324,8 @@ function CrafterMgr:StartSimpleMake(RecipeID, TotalMakeCount, bFastCraft)
         _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.OpIsQuickly)
         return
     end
+    
+    self:Reset()
 
     self.CurState = CraferStatus.Simple
     FLOG_INFO("Crafter StartSimpleMake RecipeID:%d, TotalCount:%d", RecipeID, TotalMakeCount)
@@ -397,6 +418,16 @@ end
 
 --各个职业的界面调用过来，放弃、退出制作
 function CrafterMgr:QuitMake()
+    local MajorEntityID = MajorUtil.GetMajorEntityID()
+    local EffectNode = self.EffectNodeMap[MajorEntityID]
+    if EffectNode then
+        if EffectNode.CacheExitState then
+            FLOG_INFO("CrafterMgr:QuitMake CacheExitState ExitRecipeState")
+            self:ExitRecipeState(MajorEntityID, EffectNode.RecipeID)
+            return
+        end
+    end
+
     self:SendStartQuitMakeReq()
 end
 
@@ -469,6 +500,7 @@ function CrafterMgr:CastLifeSkill(Index, SkillID, ExtraParams)
 
                 if OldEffectNode.CacheExitState then
                     FLOG_WARNING("Crafter Already Exit, so ignore skill")
+                    MsgTipsUtil.ShowTipsByID(MsgTipsID.CombatBtnSwitchDisable_Crafter)
                     return 
                 end
             end
@@ -522,7 +554,7 @@ function CrafterMgr:CastLifeSkill(Index, SkillID, ExtraParams)
 
         return IsValid
     else
-        FLOG_ERROR("Crafter CastLifeSkill, but index %d no skill", Index)
+        FLOG_ERROR("Crafter CastLifeSkill, but index %d no skill", Index or -1)
     end
 
     return false
@@ -769,6 +801,10 @@ end
 local function OnResultEffectOver()
     FLOG_INFO("====CrafterMgr OnResultEffectOver")
     if CrafterMgr.CrafterResultRsp then
+        if not CrafterMgr.bResultShown then
+            FLOG_INFO("====CrafterMgr OnResultEffectOver Result not Shown")
+            return 
+        end
         CrafterMgr.SkillEffectIDMap[CrafterMgr.CrafterResultRsp.ObjID] = nil
         CrafterMgr.CrafterResultRsp = nil
         _G.CraftingLogSimpleCraftWinVM:OnSimpleMakeOver()
@@ -787,6 +823,7 @@ local function OnSkillEffectOver(EntityID)
     --如果有记录结果，则播放结果的表现
     local CrafterResultRsp = CrafterMgr.CrafterResultRsp
     if CrafterResultRsp then
+        FLOG_INFO("CrafterMgr OnSkillEffectOver, CrafterResultRsp")
         CrafterMgr.bResultShown = true
         local ResultEffectPath = ResultSuccessEffectPath
         local ResultSoundPath = ResultSuccessSoundPath
@@ -826,6 +863,10 @@ local function OnSkillEffectOver(EntityID)
 
         AudioUtil.LoadAndPlaySoundEvent(EntityID, ResultSoundPath)
         CrafterMgr:ShowStateTips(ResultTipsParams, true)
+
+        if ResultTipsParams.EventType == FailedEventType then
+            CrafterMgr.IsCrafterFailed = true
+        end
 
         local ResSoftPath = _G.UE.FSoftObjectPath()
         ResSoftPath:SetPath(ResultEffectPath)
@@ -886,7 +927,7 @@ function CrafterMgr:OnSkillEnd(Params)
             self:DoSkillEnd({EntityID = EntityID, SkillID = SkillID})
         end
     else
-        FLOG_INFO("CrafterMgr OnSkillEnd Ignore SkillID:%d", SkillID)
+        -- FLOG_INFO("CrafterMgr OnSkillEnd Ignore SkillID:%d", SkillID)
     end
 
     -- 移除技能使用中的遮罩
@@ -1264,6 +1305,9 @@ function CrafterMgr:OnLifeSkillAction(MsgBody)
                 _G.EventMgr:SendEvent(_G.EventID.CraftingSimpleFinished) --退出
             end
         end
+        if EffectNode and EffectNode.CacheExitState or MsgBody.ErrorCode == 305006 then
+            self:ExitRecipeState(MajorUtil.GetMajorEntityID(), EffectNode.RecipeID)
+        end           
     end
 end
 
@@ -1936,10 +1980,6 @@ function CrafterMgr:SendMkChangeEvent(NewMkValue)
 end
 
 function CrafterMgr:OnCombatAttrUpdate(MsgBody)
-    if not MsgBody then
-        return
-    end
-
     local CombatAttrUpdate = MsgBody.AttrUpdate
     if not CombatAttrUpdate then
         return
@@ -2116,6 +2156,7 @@ function CrafterMgr:EnterRecipeState(EntityID, RecipeID, CallBack, NoLoop)
     if EntityID == MajorUtil.GetMajorEntityID() then
         CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommStatCraft, true)
         self:RegisterGameEvent(_G.EventID.StateChange, self.OnStateChange)
+        self:RegisterGameEvent(_G.EventID.MajorHit, self.OnGameEventMajorHit)
         
         local CameraMgr = _G.UE.UCameraMgr.Get()
         if CameraMgr ~= nil then
@@ -2176,11 +2217,12 @@ function CrafterMgr:EnterRecipeState(EntityID, RecipeID, CallBack, NoLoop)
     _G.EventMgr:SendEvent(_G.EventID.CrafterAllEnterRecipeState,EntityID)
     -- 修改头顶UI挂点
     _G.HUDMgr:SetEidMountPoint(EntityID, "EID_UI_NAME_CFT")
+    _G.HUDMgr:SetSmoothTime(EntityID, 1.0)
 end
 
 local EVFXEID = _G.UE.EVFXEID
 function CrafterMgr:PlayEffectByPosKey(EntityID, PosKey, EffectPath, SocketName, EffectIDMap, CompleteCallBack)
-    self:PlayVfxOnCrafterWeapon(EntityID, EVFXEID[SocketName], PosKey, EffectPath, 0, EffectIDMap, CompleteCallBack)
+    self:PlayVfxOnCrafterWeapon(EntityID, EVFXEID[SocketName], PosKey, EffectPath, 0, EffectIDMap, CompleteCallBack, true)
 end
 
 function CrafterMgr:ExitRecipeState(EntityID, RecipeID)
@@ -2198,8 +2240,8 @@ function CrafterMgr:ExitRecipeState(EntityID, RecipeID)
             CamCtrComp:SetIgnoreSocketOffset(false)
         end
 
+        RecipeID = RecipeID or self.CurRecipeID
         self:RestoreHidedPlayers()
-        self.CurRecipeID = 0
     end
 
     if self.EffectNodeMap == nil then  -- AnimMgr那边可能在CrafterMgr没初始化的时候调用这个函数?
@@ -2230,12 +2272,15 @@ function CrafterMgr:ExitRecipeState(EntityID, RecipeID)
     end
 
     if EntityID == MajorEntityID then
+        self.CurRecipeID = 0
         local UIViewMgr = _G.UIViewMgr
         FLOG_INFO("CrafterMgr Major ExitRecipeState")
         _G.FishMgr:StartMoveAndTurnChange(2, false)
+        self:UnRegisterGameEvent(_G.EventID.MajorHit, self.OnGameEventMajorHit)
 
         local CrafterMainPanelView = UIViewMgr:FindVisibleView(UIViewID.CrafterMainPanel)
-        local ProfMainPanelView = self.ProfID and UIViewMgr:FindVisibleView(ProfConfig[self.ProfID].MainPanelID) or nil
+        local Config = self.ProfID and ProfConfig[self.ProfID]
+        local ProfMainPanelView = Config and UIViewMgr:FindVisibleView(Config.MainPanelID) or nil
 
         if not self.IsCrafterLogViewOpen() and not self.CrafterLogbAlreadyOpend then
             if not self.bResultShown and self.CrafterResultRsp then 
@@ -2296,6 +2341,7 @@ function CrafterMgr:ExitRecipeState(EntityID, RecipeID)
 
         -- 修改头顶UI挂点
         _G.HUDMgr:ResetEidMountPoint(EntityID)
+        _G.HUDMgr:SetSmoothTime(EntityID, 1.0)
     end, CrafterMgr.DelayPlayExitAnimTime, 1, 1)
 
     local TargetEffectID = self.TargetEffectIDMap[EntityID]
@@ -2326,6 +2372,12 @@ function CrafterMgr:DelayShowLogView()
     UIViewMgr:ShowView(UIViewID.CraftingLog)
     if _G.CraftingLogMgr.OnShowSearchInfo ~= nil then
         _G.EventMgr:SendEvent(_G.EventID.CraftingLogFastSearch, _G.CraftingLogMgr.OnShowSearchInfo)
+    end
+    --制作失败时，弹出提升聚合弹窗(在打开制作笔记后)
+    if CrafterMgr.IsCrafterFailed then
+        local ProfID = MajorUtil.GetMajorProfID()
+        _G.EventMgr:SendEvent(_G.EventID.CrafterFailed, {ProfID = ProfID})
+        CrafterMgr.IsCrafterFailed = nil
     end
     CrafterMgr.DelayShowLogViewTimerID = nil
     
@@ -2476,8 +2528,9 @@ local CrafterPlaySourceType = _G.UE.EVFXPlaySourceType.PlaySourceType_Crafter
 local AvatarTypeMaster = _G.UE.EAvatarPartType.MASTER
 
 -- 生产工具特效播放，目前在裁衣匠中使用
-function CrafterMgr:PlayVfxOnCrafterWeapon(EntityID, ElementID, PosKey, EffectPath, FadeInTime, EffectIDMap, CompleteCallBack)
-    if not self:IsInCrafterStateFast(EntityID) then
+function CrafterMgr:PlayVfxOnCrafterWeapon(EntityID, ElementID, PosKey, EffectPath, FadeInTime, EffectIDMap, CompleteCallBack, bForce)
+    if not self:IsInCrafterStateFast(EntityID) and not bForce then
+        FLOG_INFO("Crafter not IsInCrafterStateFast")
         if CompleteCallBack then
             CompleteCallBack()
         end
@@ -2510,6 +2563,7 @@ function CrafterMgr:PlayVfxOnCrafterWeapon(EntityID, ElementID, PosKey, EffectPa
     VfxParameter.PlaySourceType = CrafterPlaySourceType
     local Tranform = Actor:GetTransform()
     VfxParameter.VfxRequireData.VfxTransform = Tranform
+    VfxParameter.OwnerEntityID = EntityID
     VfxParameter:SetCaster(Actor, ElementID, AttachPointType_AvatarPartType, PosKey)
     if CompleteCallBack then
         VfxParameter.OnVfxEnd = CommonUtil.GetDelegatePair(CompleteCallBack, true)
@@ -2563,6 +2617,7 @@ function CrafterMgr:PlayVfxOnMeshSocket(EntityID, PosKey, EffectPath, FadeInTime
     end
 
     VfxParameter.VfxRequireData.VfxTransform = Tranform
+    VfxParameter.OwnerEntityID = EntityID
     -- VfxParameter:SetCaster(Actor, ElementID, AttachPointType_AvatarPartType, PosKey)
     if CompleteCallBack then
         VfxParameter.OnVfxEnd = CommonUtil.GetDelegatePair(CompleteCallBack, true)
@@ -2607,7 +2662,7 @@ end
 
 local HideReason <const> = EHideReason.Crafting
 local function SetVisibilityInternal(Actor, bVisible)
-    Actor:SetVisibility(bVisible, EHideReason, true)
+    Actor:SetVisibility(bVisible, HideReason, true)
 end
 
 function CrafterMgr:SetPlayerVisibility(Actor, bVisible, bRemoveItem)
@@ -2777,6 +2832,10 @@ function CrafterMgr:OnGameEventMajorDead()
         FLOG_INFO("CrafterMgr OnGameEventMajorDead")
         self:QuitMakState()
     end
+end
+
+function CrafterMgr:OnGameEventMajorHit()
+    self:QuitMake()
 end
 
 function CrafterMgr:OnReconnect(bServerInState)

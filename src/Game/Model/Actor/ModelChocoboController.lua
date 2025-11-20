@@ -6,6 +6,7 @@
 
 local LuaClass = require("Core/LuaClass")
 local ActorUtil = require("Utils/ActorUtil")
+local CommonUtil = require("Utils/CommonUtil")
 
 ---@class ModelChocoboController
 local ModelChocoboController = LuaClass()
@@ -29,7 +30,7 @@ function ModelChocoboController:Create(LocationParam, RotationParam)
         AttrComp.SubType = _G.UE.EActorSubType.Buddy
     end
 
-    _G.UE.UVisionMgr.Get():RemoveFromVision(self.ChildActor)
+    self.ChildActor:MarkUIActor()
     self.ChildActor:GetAvatarComponent():SwitchForceMipStreaming(true)
     self.ChildActor:SetOverrideFadeInTime(0.0)
     self.ChildActorLocation = LocationParam
@@ -43,7 +44,11 @@ function ModelChocoboController:Create(LocationParam, RotationParam)
 end
 
 function ModelChocoboController:Release()
-    _G.UE.UActorManager.Get():RemoveClientActor(self.ChocoboEntityID)
+    if self.ChildActor then
+        CommonUtil.DestroyActor(self.ChildActor)
+    end
+    self.ChildActor = nil
+    self.SkeletalMeshComponent = nil
     self.ChocoboEntityID = -1
 end
 

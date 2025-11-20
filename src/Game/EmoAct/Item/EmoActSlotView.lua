@@ -14,6 +14,7 @@ local EmotionMgr = require("Game/Emotion/EmotionMgr")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
 local CommonUtil = require("Utils/CommonUtil")
+local TimeUtil = require("Utils/TimeUtil")
 
 ---@class EmoActSlotView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -39,8 +40,6 @@ function EmoActSlotView:Ctor()
 	--self.ImgName = nil
 	--self.ImgSelect = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
-
-	self.bEnableItem = nil  	 --设置启用可点击
 end
 
 function EmoActSlotView:OnRegisterSubView()
@@ -54,7 +53,6 @@ function EmoActSlotView:OnInit()
 end
 
 function EmoActSlotView:OnHide()
-	self.bEnableItem = nil
 	if self.TimerIDs then
 		for _, TimerID in pairs(self.TimerIDs) do
 			if TimerID then
@@ -89,14 +87,15 @@ function EmoActSlotView:OnRegisterBinder()
 				{ "EmotionName", UIBinderSetText.New(self, self.ImgName) },
 				{ "ID", UIBinderValueChangedCallback.New(self, nil, self.OnEmotionIDChanged) },
 				{ "IconPath", UIBinderValueChangedCallback.New(self, nil, self.OnIconPathChanged) },
+				{ "bEnable", UIBinderValueChangedCallback.New(self, nil, self.OnEnableChanged) },
 			}
 		end
 		self:RegisterBinders(self.Params.Data, self.Binders2)
 	end
 end
 
-function EmoActSlotView:OnEmotionIDChanged()
-	self:SetEnable( EmoActPanelVM.CanUseList[self.Params.Data.ID])
+--- 动作ID改变时执行此函数（值得注意的是此时的self.Params.Data中只有ID更新了，Name尚未更新）
+function EmoActSlotView:OnEmotionIDChanged(NewID)
 	self:SetSelectVisibity(false)
 
 	--配置红点路径
@@ -161,15 +160,6 @@ function EmoActSlotView:RequiredIcon(IsSelected)
 		return
 	end
 	local EmoActID = self.Params.Data.ID
-	
-	print("【情感动作】点击图标时检测图标状态", 
-	"动作ID:",EmoActID, 
-	"列表数量：", #EmoActPanelVM.CanUseList, 
-	"此动作是否可用：",EmoActPanelVM.CanUseList[EmoActID], 
-	self.Params.Data.CanUse[EmotionMgr.MajorCanUseType], 
-	"主角状态",EmotionMgr.MajorCanUseType,
-	"存在动作路径：",self.Params.Data.HasAnimPath)
-
 	if EmoActPanelVM.CanUseList[EmoActID] ~= false then	--可用按钮
 		self:SendEmotionReq(EmoActID)	     --请求情感动作
 
@@ -213,12 +203,15 @@ function EmoActSlotView:SetSelectVisibity(bVisibility)
 	end
 end
 
+function EmoActSlotView:OnEnableChanged(bEnable)
+	self:SetEnable( bEnable )
+end
+
 --- 设置启用可点击
 function EmoActSlotView:SetEnable(bEnable)
-	if self.bEnableItem == bEnable or self:IsNull() then
+	if self:IsNull() then
 		return
 	end
-	self.bEnableItem = bEnable
 
 	if CommonUtil.IsObjectValid(self) and self.ImgIcon and self.ImgName then
 		local Color = not bEnable and "#696969FF" or "#FFFFFFFF"

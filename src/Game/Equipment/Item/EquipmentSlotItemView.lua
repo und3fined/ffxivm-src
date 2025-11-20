@@ -34,6 +34,9 @@ local EndureState = EquipmentDefine.EndureState
 ---@field FImg_Mask UFImage
 ---@field FImg_Quality UFImage
 ---@field FImg_Select UFImage
+---@field IconEuipImprove UFImage
+---@field IconPosition UFImage
+---@field IconTask UFImage
 ---@field ImgBottomBg UFImage
 ---@field ImgDyeState UFImage
 ---@field ImgImproper UFImage
@@ -45,11 +48,9 @@ local EndureState = EquipmentDefine.EndureState
 ---@field RichTextNum URichTextBox
 ---@field Tag_Suit UFImage
 ---@field TextActivate UFTextBlock
+---@field WardrobeStainTag WardrobeStainTagItemView
 ---@field AnimChange UWidgetAnimation
----@field AnimGet UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
----@field AnimRepair UWidgetAnimation
----@field AnimSelect UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local EquipmentSlotItemView = LuaClass(UIView, true)
 
@@ -69,6 +70,9 @@ function EquipmentSlotItemView:Ctor()
 	--self.FImg_Mask = nil
 	--self.FImg_Quality = nil
 	--self.FImg_Select = nil
+	--self.IconEuipImprove = nil
+	--self.IconPosition = nil
+	--self.IconTask = nil
 	--self.ImgBottomBg = nil
 	--self.ImgDyeState = nil
 	--self.ImgImproper = nil
@@ -80,17 +84,16 @@ function EquipmentSlotItemView:Ctor()
 	--self.RichTextNum = nil
 	--self.Tag_Suit = nil
 	--self.TextActivate = nil
+	--self.WardrobeStainTag = nil
 	--self.AnimChange = nil
-	--self.AnimGet = nil
 	--self.AnimIn = nil
-	--self.AnimRepair = nil
-	--self.AnimSelect = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function EquipmentSlotItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.DiscountTag)
+	self:AddSubView(self.WardrobeStainTag)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -127,7 +130,9 @@ function EquipmentSlotItemView:OnInit()
 		{ "DyeColorValue", UIBinderSetColorAndOpacityHex.New(self, self.ImgDyeState)},
 		{ "bAllStainUnlock", UIBinderSetIsVisible.New(self, self.EFF_FullColor)},
 		{ "CanImprove", UIBinderSetIsVisible.New(self, self.IconEuipImprove) },
-		
+		{ "WardrobeStainTagVisible", UIBinderSetIsVisible.New(self, self.WardrobeStainTag) },
+		{ "WardrobeStainTagColorVsisble", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgDye) },
+		{ "WardrobeStainTagImgStainColorVsisble", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgStainColor) },
 	}
 	UIUtil.AddOnClickedEvent(self, self.FBtn_Item, self.OnSlotItemClick)
 end

@@ -14,6 +14,7 @@
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCS = require ("Protocol/ProtoCS")
+local ProtoRes = require("Protocol/ProtoRes")
 local EventID = require("Define/EventID")
 local PworldStepCfg = require("TableCfg/PworldStepCfg")
 
@@ -79,7 +80,7 @@ function ExclusiveBattleQuestMgr:OnPWorldMapEnter(Params)
 	--Lua侧发送的事件 Params类型由SendEvent时指定
     local CurPWOrldCfg = PWorldMgr:GetCurrPWorldTableCfg()
     if CurPWOrldCfg then
-        local IsInPhaseMap = CurPWOrldCfg.FunctionUIType == 1
+        local IsInPhaseMap = CurPWOrldCfg.FunctionUIType == ProtoRes.PWorldFunctionUIType.FUNCTION_TYPE_EXCLUSIVE_BATTLE_QUEST
         MainPanelVM:SetExclusiveBattleQuestVisible(IsInPhaseMap)
 
         if IsInPhaseMap then
@@ -91,7 +92,7 @@ end
 function ExclusiveBattleQuestMgr:OnNetRspPWorldProgress(MsgBody)
     local CurPWOrldCfg = PWorldMgr:GetCurrPWorldTableCfg()
     if CurPWOrldCfg then
-        local IsInPhaseMap = CurPWOrldCfg.FunctionUIType == 1
+        local IsInPhaseMap = CurPWOrldCfg.FunctionUIType == ProtoRes.PWorldFunctionUIType.FUNCTION_TYPE_EXCLUSIVE_BATTLE_QUEST
 		
 		if IsInPhaseMap then
 			local BaseInfo = PWorldMgr.BaseInfo
@@ -110,13 +111,6 @@ function ExclusiveBattleQuestMgr:OnNetRspPWorldProgress(MsgBody)
 			end
         end
 	end
-end
-
---尽量都加上文档注释，调用时可以智能提示，也方便他人查看
----GetXXX
----@param ID number
----@return table
-function ExclusiveBattleQuestMgr:GetXXX(ID)
 end
 
 function ExclusiveBattleQuestMgr:InitPworldStepCfg(PworldResID)

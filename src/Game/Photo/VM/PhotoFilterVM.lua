@@ -72,6 +72,7 @@ function PhotoFilterVM:SetFilterIdx(V)
 
     local Item = self.FilterList:Get(V)
 
+    _G.FLOG_INFO('[Photo][PhotoFilterVM] SetFilterIdx = ' .. V .. ", ID = " .. (Item and Item.ID or "nil"))
     if Item then
         PhotoMgr:HdlFilter(Item.ID, true)
         self.CurID = Item.ID
@@ -92,22 +93,28 @@ function PhotoFilterVM:SetFilterAlpha(V)
         self.FilterAlphaMap[self.CurFilterIdx] = V
     end
     PhotoMgr:SetFilterAlpha(V)
+
+    _G.FLOG_INFO('[Photo][PhotoFilterVM] FilterPercent = ' .. tostring(self.FilterAlphaText))
 end
 
 -------------------------------------------------------------------------------------------------------
 ---@region template setting
 
 function PhotoFilterVM:TemplateSave(InTemplate)
-    PhotoTemplateUtil.SetFilter(InTemplate, self.CurFilterIdx)
+    local Alpha = self.FilterAlphaMap[self.CurFilterIdx] or (self.ListData[self.CurFilterIdx] or {}).DefaultAlpha or 1
+    PhotoTemplateUtil.SetFilter(InTemplate, self.CurFilterIdx, Alpha)
 end
 
 function PhotoFilterVM:TemplateApply(InTemplate)
     local Info = PhotoTemplateUtil.GetFilter(InTemplate)
     if Info then
         local FilterIdx = Info.ID
-
+        local FilterPrecent = Info.FilterPrecent
         if FilterIdx and FilterIdx ~= 0 then
             self:SetFilterIdx(FilterIdx)
+            if FilterPrecent and FilterPrecent ~= 0 then 
+                self:SetFilterAlpha(FilterPrecent)
+            end
         end
     end
 end

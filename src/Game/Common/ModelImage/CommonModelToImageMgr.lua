@@ -109,7 +109,9 @@ function CommonModelToImageMgr:CreateRenderTarget2D(Actor, SizeX, SizeY, IsHD)
             local Ref, RT = next(Pool)
             Pool[Ref] = nil
             --FLOG_INFO("[CommonModelToImageMgr] 找到有效 RT ")
-            return RT, UE.FVector2D(RatioNew / RatioOld , 1) --以y为准，x缩放
+            if CommonUtil.IsObjectValid(RT) then
+                return RT, UE.FVector2D(RatioNew / RatioOld , 1) --以y为准，x缩放
+            end
         end
     end
     --FLOG_INFO("[CommonModelToImageMgr] 没有 RT， 创建 ")
@@ -236,7 +238,6 @@ end
 function CommonModelToImageMgr:AddReferenceCount()
     self.ReferenceCount = self.ReferenceCount + 1
     if self.ReferenceCount == 1 then
-        UILevelMgr:SwitchLevelStreaming(false)
     end
 end
 
@@ -244,7 +245,6 @@ end
 function CommonModelToImageMgr:RemoveReferenceCount()
     self.ReferenceCount = self.ReferenceCount - 1
     if self.ReferenceCount == 0 then
-        UILevelMgr:SwitchLevelStreaming(true)
     end
     if self.ReferenceCount < 0 then
         FLOG_ERROR("[CommonModelToImageMgr] Reference Count Error ! Count="..tostring(self.ReferenceCount))

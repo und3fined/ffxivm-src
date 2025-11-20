@@ -1,5 +1,6 @@
 
 local ActivityPageCfg = require("TableCfg/ActivityPageCfg")
+local ProtoRes = require("Protocol/ProtoRes")
 
 local function SortPagePredicate(Left, Right)
     local LeftCfg = ActivityPageCfg:FindCfgByKey(Left.Classcify)
@@ -93,6 +94,19 @@ local ActivityPageTag = {
     ActivityNodeTypeNewcomers = 3, --新手
 }
 
+local ActivityPureShowType = {
+    ActivityPureShowInvalid = 0,
+    ActivityPureShowMoney = 1, -- 通用货币栏显示节点类型
+
+}
+
+local ItemQuality = {
+    [ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/Ops/OpsMysteryShop/Frames/UI_OpsMysteryShop_Img_SlotBG1_png.UI_OpsMysteryShop_Img_SlotBG1_png'",
+	[ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/Ops/OpsMysteryShop/Frames/UI_OpsMysteryShop_Img_SlotBG2_png.UI_OpsMysteryShop_Img_SlotBG2_png'",
+	[ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/Ops/OpsMysteryShop/Frames/UI_OpsMysteryShop_Img_SlotBG3_png.UI_OpsMysteryShop_Img_SlotBG3_png'",
+	[ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/Ops/OpsMysteryShop/Frames/UI_OpsMysteryShop_Img_SlotBG4_png.UI_OpsMysteryShop_Img_SlotBG4_png'",
+}
+
 local RedDotID = 16001
 local RedDotName = "Root/OpsActivity"
 
@@ -106,6 +120,8 @@ local OpsActivityDefine =
     PropBoxType = PropBoxType,
     BindState = BindState,
     ActivityPageTag = ActivityPageTag,
+    ActivityPureShowType = ActivityPureShowType,
+    ItemQuality = ItemQuality,
 }
 
 return OpsActivityDefine

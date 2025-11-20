@@ -42,7 +42,9 @@ end
 
 function NPCPlotReviewItemView:OnShow()
 	self:CheckListIsEmpty()
-	self.TextTitle:SetText(LSTR(1280008))
+	self.CommonTitle.TextTitleName:SetText(LSTR(1280008))
+	UIUtil.SetIsVisible(self.CommonTitle.CommInforBtn, false)
+	UIUtil.SetIsVisible(self.CommonTitle.TextSubtitle, false)
 	self.BackpackEmpty:SetTipsContent(LSTR(90030))
 	self.TableViewAdapter:ScrollToBottom()
 

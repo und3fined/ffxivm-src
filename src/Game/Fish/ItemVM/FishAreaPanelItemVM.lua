@@ -93,6 +93,7 @@ function FishAreaPanelItemVM:UpdateFishAreaLockState(FishAreaID)
     self.bFishAreaLockInit = true
     -- 当渔场已解锁就不存在渔场解锁状态的更新了
     if self.FishAreaLocked == true then
+        FLOG_INFO("[FishAreaPanelItemVM]:UpdateFishAreaLockState FishAreaID = "..FishAreaID)
         self:SetFishAreaID(FishAreaID)
     end
 end

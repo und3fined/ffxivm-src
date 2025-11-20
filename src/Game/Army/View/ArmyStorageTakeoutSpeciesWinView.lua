@@ -176,6 +176,8 @@ function ArmyStorageTakeoutSpeciesWinView:OnShow()
 	if Params then
 		self:SetIsDepositPanel(true, Params.TotalNum)
 	end
+	---蓝图设置无效，走代码设置样式
+	self.BtnInfo:SetButtonStyle(HelpInfoUtil.HelpInfoType.NewTips)
 	self.BtnInfo:SetCallback(self, self.OnBtnInfoClickHelp)
 
 	-- LSTR string:取  消

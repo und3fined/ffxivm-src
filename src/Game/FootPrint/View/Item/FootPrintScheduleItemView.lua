@@ -115,7 +115,7 @@ function FootPrintScheduleItemView:OnBtnClicked()
 	end
 	
 	FootPrintMgr:SendMsgReceiveFootMarkRegionAwardReq(RegionID)
-	--[[FootPrintMgr.CurLightRegionID = RegionID
+    --[[FootPrintMgr.CurLightRegionID = RegionID
 	FootPrintVM:OnNotifyMapRewardReceived(RegionID)--]]
 end
 

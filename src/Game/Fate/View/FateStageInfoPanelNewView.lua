@@ -171,9 +171,9 @@ function FateStageInfoPanelNewView:OnRegisterUIEvent()
 end
 
 function FateStageInfoPanelNewView:OnBtnHighriskClicked()
-    UIUtil.SetIsVisible(self.PanelHighrisk, true)
-    self:PlayAnimation(self.AnimHighriskIn)
-    self.ShowPanelHighrisk = true
+    local Params = {}
+    Params.ItemView = self.BtnHighrisk
+    _G.UIViewMgr:ShowView(UIViewID.FateStageInfoTipsView, Params)
 end
 
 function FateStageInfoPanelNewView:OnClickButtonJoinIn()

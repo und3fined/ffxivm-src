@@ -48,4 +48,9 @@ StoryDefine.SpeedLevelData = {
 -- 来源：https://doc.weixin.qq.com/sheet/e3_AT8AVQYhALQwE0E0yb4SZqU07UhyW?scode=AJEAIQdfAAopRbyXtpAT8AVQYhALQ&tab=BB08J2
 StoryDefine.LcutWithNcutList = { "21405902", "21405904", "21603301", "21603401", "21603501", "21720503" }
 
+StoryDefine.LcutDynParamType = {
+	TreasureHuntOpenDoor = 2,
+	PlayHousingCamera = 3
+}
+
 return StoryDefine

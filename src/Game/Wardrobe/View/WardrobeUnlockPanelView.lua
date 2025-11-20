@@ -33,7 +33,10 @@ local UIViewID = require("Define/UIViewID")
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local MajorUtil = require("Utils/MajorUtil")
+local ProfUtil = require("Game/Profession/ProfUtil")
 local UKismetInputLibrary = UE.UKismetInputLibrary
+local EquipmentPartList = ProtoCommon.equip_part
 local EventID = _G.EventID
 local LSTR
 
@@ -158,7 +161,9 @@ function WardrobeUnlockPanelView:OnShow()
 	self.SuperView = self.Params.SuperView
 
 	self.MoneySlot:UpdateView(WardrobeDefine.NormalItemID, false)
-	self.BtnBack:AddBackClick(self, function () self.SuperView.ShowMainPanel(self.SuperView, true) self:Hide() end)
+	self.BtnBack:AddBackClick(self, function () 
+		self.SuperView.UnlockPanelToMainPanel(self.SuperView)
+		self.SuperView.ShowMainPanel(self.SuperView, true) self:Hide() end)
 
 	if self.Params.AppearanceList == nil then
 		return
@@ -229,20 +234,43 @@ end
 
 
 function WardrobeUnlockPanelView:OnPreprocessedMouseButtonDown(MouseEvent)
-
 	local MousePosition = UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(MouseEvent)
 	-- 点击的区域不是
 	local ViewID = UIViewID.ItemTips
+	local UnlockPanelViewID = UIViewID.WardrobeUnlockPanel
 	local ExistView = _G.UIViewMgr:FindView(ViewID)
-	if ExistView  ~= nil then
-		if not UIUtil.IsUnderLocation(self.AppearancePage.TableViewSwitchList, MousePosition) and not UIUtil.IsUnderLocation(ExistView.PanelTips, MousePosition)  then
-			self.AppearancePage:ClearSwitchList()
-			self.AppearancePage:ClearBindSelected()
+	local UnlockPanelExistView = _G.UIViewMgr:FindView(UnlockPanelViewID)
+	local CommonBoxExistView = _G.UIViewMgr:FindView(UIViewID.CommonMsgBox)
+	if ExistView ~= nil then
+		if not UIUtil.IsUnderLocation(self.AppearancePage.TableViewSwitchList, MousePosition) and 
+			 not UIUtil.IsUnderLocation(ExistView.PanelTips, MousePosition) and 
+			 UnlockPanelExistView ~= nil and UnlockPanelExistView.BtnUnlock ~= nil and
+			 not UIUtil.IsUnderLocation(UnlockPanelExistView.BtnUnlock, MousePosition) then
+			 if CommonBoxExistView == nil then
+				self.AppearancePage:ClearSwitchList()
+				self.AppearancePage:ClearBindSelected()
+			 else
+				if not UIUtil.IsUnderLocation(CommonBoxExistView, MousePosition)  then
+					self.AppearancePage:ClearSwitchList()
+					self.AppearancePage:ClearBindSelected()
+				end
+			 end
 		end
 	else
-		if not UIUtil.IsUnderLocation(self.AppearancePage.TableViewSwitchList, MousePosition)  then
-			self.AppearancePage:ClearSwitchList()
-			self.AppearancePage:ClearBindSelected()
+		if UnlockPanelExistView ~= nil then
+			if not UIUtil.IsUnderLocation(self.AppearancePage.TableViewSwitchList, MousePosition) and 
+			UnlockPanelExistView.BtnUnlock ~= nil and CommonBoxExistView ~= nil and  
+			not UIUtil.IsUnderLocation(UnlockPanelExistView.BtnUnlock, MousePosition) then
+				if CommonBoxExistView == nil then
+					self.AppearancePage:ClearSwitchList()
+					self.AppearancePage:ClearBindSelected()
+				else
+					if not UIUtil.IsUnderLocation(CommonBoxExistView, MousePosition)  then
+						self.AppearancePage:ClearSwitchList()
+						self.AppearancePage:ClearBindSelected()
+					end
+				end
+			end
 		end
 	end
 	
@@ -258,7 +286,7 @@ function WardrobeUnlockPanelView:SetAppearanceTabSelectIndex(SelectedAppID, IsQu
 	if not IsQuickLock then
 		if SelectedAppID ~= nil then
 			local AppearanceItem = SelectedAppID
-			local PartID = WardrobeUtil.GetPartIDByAppearanceID(AppearanceItem)
+			local PartID = WardrobeUtil.GetPartByAppearanceID(AppearanceItem)
 			if PartID == ProtoCommon.equip_part.EQUIP_PART_FINGER then
 				PartID = ProtoCommon.equip_part.EQUIP_PART_LEFT_FINGER
 			end
@@ -343,9 +371,7 @@ function WardrobeUnlockPanelView:ClearOlderApp()
 						local TempEquip = EquipList[part]
 						if TempEquip ~= nil then
 							local EquipID = TempEquip.ResID
-							if EquipID ~= nil then
-								self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
-							end
+							self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
 						else
 							self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
 						end
@@ -365,18 +391,51 @@ function WardrobeUnlockPanelView:OnAppearanceListChanged(Index, ItemData, ItemVi
 	self.CurAppID = ID
 	self.AppearancePage:SetCurAppearanceID(ID)
 	self.VM:UpdateInfo(ID)
+	-- self.AppearancePage:ClearBindList()
 	self.AppearancePage:ClearBindSelected()
-
-	--判断是否能否预览
 	local IsUnlock = WardrobeMgr:GetIsUnlock(ID)
 	local EquipementID = WardrobeMgr:IsRandomAppID(ID) and  WardrobeMgr:GetEquipIDByRandomApp(ID) or WardrobeUtil.GetEquipIDByAppearanceID(ID)
+	local Cfg = EquipmentCfg:FindCfgByKey(EquipementID)
+	local bShowSlaveHandTips = false
+	local bShowNoSameProf = false
+	if Cfg ~= nil then
+		local Part = Cfg.Part
+		self:UpdateWeaponPose(self.CurAppID, Part)
+		local bSameProf = self:CheckMasterSlaveWeaponSameProf(self.CurAppID, Part)
+		local CurWeaponProfID = MajorUtil.GetMajorProfID()
+		if Part == EquipmentPartList.EQUIP_PART_SLAVE_HAND and bSameProf and ProfUtil.IsProductionProf(CurWeaponProfID) then
+			bShowSlaveHandTips = true
+		end
+		--主副手不一致
+		if not bSameProf and (Part == EquipmentPartList.EQUIP_PART_MASTER_HAND or Part == EquipmentPartList.EQUIP_PART_SLAVE_HAND)then
+			bShowNoSameProf = true
+		end
+	end
+
+	--判断是否能否预览
 	if IsUnlock then
 		local CanEquiped = WardrobeMgr:CanEquipedAppearanceByServerData(ID)
 		local CanPreview = WardrobeMgr:CanPreviewAppearanceByServerData(ID)
 		if CanEquiped then
+			if bShowNoSameProf then
+				MsgTipsUtil.ShowTipsByID(147035)
+				return
+			end
+			if bShowSlaveHandTips then
+				MsgTipsUtil.ShowTips(LSTR(1080129))
+				return
+			end
 			self:PreviewEquipment(EquipementID)
 		else
 			if CanPreview then
+				if bShowNoSameProf then
+					MsgTipsUtil.ShowTipsByID(147035)
+					return
+				end
+				if bShowSlaveHandTips then
+					MsgTipsUtil.ShowTips(LSTR(1080129))
+					return
+				end
 				self:PreviewEquipment(EquipementID)
 			else
 				MsgTipsUtil.ShowTips(LSTR(1080024))
@@ -389,15 +448,132 @@ function WardrobeUnlockPanelView:OnAppearanceListChanged(Index, ItemData, ItemVi
 	local CanEquipedClient = WardrobeMgr:CanEquipedAppearanceByClientData(ID)
 	local CanPreviewClient = WardrobeMgr:CanPreviewAppearanceByClientData(ID)
 	if CanEquipedClient then
+		if bShowNoSameProf then
+			MsgTipsUtil.ShowTipsByID(147035)
+			return
+		end
+		if bShowSlaveHandTips then
+			MsgTipsUtil.ShowTips(LSTR(1080129))
+			return
+		end
 		self:PreviewEquipment(EquipementID)
 	else
 		if CanPreviewClient then
+			if bShowNoSameProf then
+				MsgTipsUtil.ShowTipsByID(147035)
+				return
+			end
+			if bShowSlaveHandTips then
+				MsgTipsUtil.ShowTips(LSTR(1080129))
+				return
+			end
 			self:PreviewEquipment(EquipementID)
 		else
 			MsgTipsUtil.ShowTips(LSTR(1080024))
 			return
 		end
 	end
+end
+
+function WardrobeUnlockPanelView:GetWeaponProfID(AppID)
+    local TempItemCfg = ItemCfg:FindCfgByKey(
+        WardrobeUtil.GetWeaponEquipIDByAppearanceID(AppID)
+    )
+    return TempItemCfg and TempItemCfg.ProfLimit[1] or MajorUtil.GetMajorProfID()
+end
+
+--- 更新手里拿着的武器的职业，调整pose
+function WardrobeUnlockPanelView:UpdateWeaponPose(AppID, Part)
+	if Part == WardrobeDefine.EquipmentTab[EquipmentPartList.EQUIP_PART_MASTER_HAND] or Part == WardrobeDefine.EquipmentTab[EquipmentPartList.EQUIP_PART_SLAVE_HAND]  then
+		if Part == WardrobeDefine.EquipmentTab[EquipmentPartList.EQUIP_PART_MASTER_HAND] then
+			local ProfID = self:GetWeaponProfID(AppID)
+			self.Common_Render2D_UIBP:OnProfSwitch({ProfID = ProfID})
+			self.CurWeaponProfID = ProfID
+		end
+		self:ResetWeaponPreview()
+		self:LoadSpecialWeapons(AppID, Part)
+	end
+
+end
+
+-- 重置手上的状态
+function WardrobeUnlockPanelView:ResetWeaponPreview()
+    self.Common_Render2D_UIBP:PreViewEquipment(nil, EquipmentPartList.EQUIP_PART_MASTER_HAND, 0)
+    self.Common_Render2D_UIBP:PreViewEquipment(nil, EquipmentPartList.EQUIP_PART_SLAVE_HAND, 0)
+end
+
+-- 处理特殊武器
+function WardrobeUnlockPanelView:LoadSpecialWeapons(AppID, Part)
+    local EquipID = WardrobeUtil.GetWeaponEquipIDByAppearanceID(AppID) -- 新增
+	--骑士/剑斗士
+	self:LoadGladiatorAndPaladinWeapon(AppID, Part)
+	--格斗家/武僧
+    self:LoadPugilistAndMonkWeapon(EquipID)
+end
+
+function WardrobeUnlockPanelView:LoadGladiatorAndPaladinWeapon(AppID, Part)
+	local CurProfID = Part == WardrobeDefine.EquipmentTab[EquipmentPartList.EQUIP_PART_MASTER_HAND] and self:GetWeaponProfID(AppID) or MajorUtil.GetMajorProfID()
+	local EquipList = EquipmentVM.ItemList
+	if CurProfID == ProtoCommon.prof_type.PROF_TYPE_GLADIATOR or CurProfID == ProtoCommon.prof_type.PROF_TYPE_PALADIN then
+		self.Common_Render2D_UIBP:PreViewEquipment(nil, EquipmentPartList.EQUIP_PART_MASTER_HAND, 0)
+		self.Common_Render2D_UIBP:PreViewEquipment(nil, EquipmentPartList.EQUIP_PART_SLAVE_HAND, 0)
+
+		for _, part in pairs(WardrobeDefine.EquipmentTab) do
+			if part == EquipmentPartList.EQUIP_PART_MASTER_HAND or part == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
+				local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
+				if CurrentAppID ~= 0 then
+					local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
+					local ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
+					local RegionDye = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
+					local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(CurrentAppID)
+					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, IsAppRegionDye and 0 or ColorID)
+					self:StainPartForSection(CurrentAppID, tonumber(part), RegionDye)
+				else
+					local TempEquip = EquipList[part]
+					if TempEquip ~= nil then
+						local EquipID = TempEquip.ResID
+						self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+					else
+						self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+					end
+				end
+			end
+		end
+	end
+end
+
+function WardrobeUnlockPanelView:LoadPugilistAndMonkWeapon(EquipID)
+	local CurProfID = self.CurWeaponProfID
+	local EquipList = EquipmentVM.ItemList
+	if CurProfID == ProtoCommon.prof_type.PROF_TYPE_PUGILIST or CurProfID == ProtoCommon.prof_type.PROF_TYPE_MONK then
+		for _, part in pairs(WardrobeDefine.EquipmentTab) do
+			if part == EquipmentPartList.EQUIP_PART_MASTER_HAND or part == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
+				self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+			end
+		end
+	end
+end
+
+
+
+function WardrobeUnlockPanelView:CheckMasterSlaveWeaponSameProf(AppID, PartID)
+	--Todo 如果是副手，判断自己跟主手的职业是否相交。
+	if PartID ~= ProtoCommon.equip_part.EQUIP_PART_SLAVE_HAND then
+		return true
+	end
+	local CurProfID = MajorUtil.GetMajorProfID() 
+	local SlaveItemCfg = ItemCfg:FindCfgByKey(WardrobeUtil.GetEquipIDByAppearanceID(AppID))
+	if SlaveItemCfg ~= nil and #SlaveItemCfg.ProfLimit == 0 then
+		return true
+	end
+	if SlaveItemCfg ~= nil then
+		for _,  ProfID in ipairs(SlaveItemCfg.ProfLimit or {}) do
+			if ProfID == CurProfID then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 function WardrobeUnlockPanelView:OnAppearanceListUnlockUpdate()

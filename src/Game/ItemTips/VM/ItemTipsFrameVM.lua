@@ -106,7 +106,7 @@ function ItemTipsFrameVM:Ctor()
 	self.BagNumText = nil
 	self.BagHQNumText = nil
 	self.BagHQVisible = nil
-	self.OwnRichText = nil
+	--self.OwnRichText = nil
 
 	self.ToGetVisible = nil
 	self.ShowDisCurEquipmentLevel = false
@@ -164,12 +164,19 @@ function ItemTipsFrameVM:UpdateVM(Value)
 		end
 		BagHQNum = BagMgr:GetItemNum(ItemResID) + EquipmentMgr:GetEquipedItemNum(ItemResID)
 		DepotHQNum = DepotVM:GetDepotItemNum(ItemResID)
+		self.BagHQVisible = true
+		self.DepotHQVisible = true
 	else
 		self.ItemQualityImg = not self.ShowEquipmentColorType and ItemTipsFrameVM.ItemColorType[Cfg.ItemColor] or ItemTipsFrameVM.EquipColorType[Cfg.ItemColor]
 		local NQHQItemID = Cfg.NQHQItemID
 		if NQHQItemID > 0 then
 			BagHQNum = BagMgr:GetItemNum(NQHQItemID) + EquipmentMgr:GetEquipedItemNum(NQHQItemID)
 			DepotHQNum = DepotVM:GetDepotItemNum(NQHQItemID)
+			self.BagHQVisible = true
+			self.DepotHQVisible = true
+		else
+			self.BagHQVisible = false
+			self.DepotHQVisible = false
 		end
 
 		-- 某些货币可以通过点击大图标显示，这里去判断一下是不是货币
@@ -183,8 +190,8 @@ function ItemTipsFrameVM:UpdateVM(Value)
 		DepotNQNum = DepotVM:GetDepotItemNum(ItemResID)
 	end
 
-	self.BagHQVisible = BagHQNum > 0
-	self.DepotHQVisible = DepotHQNum >0 
+	--self.BagHQVisible = BagHQNum > 0
+	--self.DepotHQVisible = DepotHQNum > 0 
 
 	self.DepotNumText = DepotNQNum
 	self.DepotHQNumText = DepotHQNum
@@ -193,7 +200,7 @@ function ItemTipsFrameVM:UpdateVM(Value)
 	self.BagHQNumText = BagHQNum
 
 	--持有数量
-	local HQRichText = RichTextUtil.GetTexture("PaperSprite'/Game/UI/Atlas/CommPic/Frames/UI_Icon_Quality_High_png.UI_Icon_Quality_High_png'", 30, 30, nil)
+	--[[local HQRichText = RichTextUtil.GetTexture("PaperSprite'/Game/UI/Atlas/CommPic/Frames/UI_Icon_Quality_High_png.UI_Icon_Quality_High_png'", 30, 30, nil)
 	if BagNQNum > 0 and BagHQNum > 0 then
 		self.OwnRichText = string.format("%d/%s%d", BagNQNum, HQRichText, BagHQNum)
 	elseif BagHQNum > 0 then
@@ -202,7 +209,7 @@ function ItemTipsFrameVM:UpdateVM(Value)
 		self.OwnRichText = string.format("%d", BagNQNum)
 	else
 		self.OwnRichText = string.format("%d", BagNQNum + BagHQNum)
-	end
+	end]]--
 
 
 	local IsBind = Value.IsBind
@@ -350,10 +357,10 @@ function ItemTipsFrameVM:UpdateItemLevel(ItemLevel, CurEquipLevel)
 		self.LevelText = string.format(LSTR(1020028), ItemLevel)
 	else
 		if ItemLevel > CurEquipLevel then
-			local DiffValueText = RichTextUtil.GetText(string.format("+%d", ItemLevel - CurEquipLevel), "89bd88", 0, nil)
+			local DiffValueText = RichTextUtil.GetText(string.format("+%d", ItemLevel - CurEquipLevel), "89bd88")
 			self.LevelText = string.format(LSTR(1020029), ItemLevel, DiffValueText)
 		elseif ItemLevel < CurEquipLevel then
-			local DiffValueText = RichTextUtil.GetText(string.format("-%d", CurEquipLevel - ItemLevel), "dc5868", 0, nil)
+			local DiffValueText = RichTextUtil.GetText(string.format("-%d", CurEquipLevel - ItemLevel), "dc5868")
 			self.LevelText = string.format(LSTR(1020029), ItemLevel, DiffValueText)
 		else
 			self.LevelText = string.format(LSTR(1020028), ItemLevel)

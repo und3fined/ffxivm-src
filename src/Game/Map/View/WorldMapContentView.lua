@@ -1,7 +1,7 @@
 ---
 --- Author: anypkvcai
 --- DateTime: 2022-12-07 11:20
---- Description: 大地图
+--- Description: 大地图内容
 ---
 
 --local UIView = require("UI/UIView")
@@ -24,10 +24,12 @@ local CommonUtil = require("Utils/CommonUtil")
 local UIViewID = require("Define/UIViewID")
 local MapUICfg = require("TableCfg/MapUICfg")
 local ObjectGCType = require("Define/ObjectGCType")
+local ProtoRes = require("Protocol/ProtoRes")
 
 local MapContentType = MapDefine.MapContentType
 local MapConstant = MapDefine.MapConstant
 local MapMarkerType = MapDefine.MapMarkerType
+local MapMarkerEventType = ProtoRes.MapMarkerEventType
 
 local UKismetInputLibrary = _G.UE.UKismetInputLibrary
 local FVector2D = _G.UE.FVector2D
@@ -279,14 +281,15 @@ function WorldMapContentView:OnPreprocessedMouseButtonDown(MouseEvent)
 	end
 end
 
+---目前所有地图tips界面
 function WorldMapContentView:CheckHaveDerivativeWindow()
-	-- 目前所有 地图标记 扩展界面
 	if UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsList) or
 	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsFollow) or
 	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsTransfer) or
 	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsTarget) or
 	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerFateStageInfoPanel) or
-	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerPlayStyleStageInfo) then
+	   UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerPlayStyleStageInfo) or
+	   UIViewMgr:IsViewVisible(UIViewID.WorldMapGoldSaucerMarkerTips) then
 		return true
 	end
 
@@ -641,6 +644,11 @@ function WorldMapContentView:OnClickedMakers(MapMarkers, RegionMarkers, ScreenPo
 	local Count = #MapMarkers
 	if Count <= 0 then
 		if not self.DerivativeWindowHide then
+			-- if (self.ContentType == MapContentType.IndividualHouseMap) then
+			-- 	-- 独立房屋地图，只允许点击房屋标记，其他类型标记屏蔽
+			-- 	return
+			-- end
+
 			if MapUtil.IsAreaMap(WorldMapMgr:GetUIMapID()) then
 				if not MapUtil.CheckScreenPositionInSafeArea(ScreenPosition) then
 					return
@@ -684,7 +692,9 @@ end
 
 
 ---点击二级地图
-function WorldMapContentView:OnClickedRegionMarker(RegionMarker)
+---@param RegionMarker RegionMarker 地图Region标记
+---@param bScaleByGesture boolean 是否通过手势缩放触发点击
+function WorldMapContentView:OnClickedRegionMarker(RegionMarker, bScaleByGesture)
 	if nil == RegionMarker then
 		return
 	end
@@ -709,13 +719,23 @@ function WorldMapContentView:OnClickedRegionMarker(RegionMarker)
 	local MapMarkerRegionView = Info.View
 	--MapMarkerRegionView:PlayClickAnim()
 
+	if MapUtil.IsHouseUIMap(RegionMarker.TargetUIMapID) then
+		-- 房屋地图切换额外处理
+		if not WorldMapVM:CanChangeToHouseUIMap(RegionMarker.TargetUIMapID) then
+			if not bScaleByGesture then
+				WorldMapVM:OpenMapHouseListPanel(RegionMarker.TargetMapID)
+			end
+			return
+		end
+	end
+
 	local ViewportSize = UIUtil.GetViewportSize()
 	local Scale = UIUtil.GetViewportScale()
 	local ViewportX = ViewportSize.X / Scale
 	local ViewportY = ViewportSize.Y / Scale
 	local ScreenCenterPosition = FVector2D(ViewportX/2, ViewportY/2)
 
-	local ViewPosition = UIUtil.LocalToViewport(MapMarkerRegionView, FVector2D(0,0))
+	local ViewPosition = UIUtil.LocalToViewport(MapMarkerRegionView, FVector2D(512,512))
 	local DeltaPostion = ScreenCenterPosition - ViewPosition
 	if math.abs(DeltaPostion.X) > 200 or math.abs(DeltaPostion.Y) > 200 then
 		-- 当前所点目标地图region位于屏幕边缘时，向屏幕中心区域位移
@@ -769,7 +789,7 @@ function WorldMapContentView:MoveMapByOffect(DeltaPostion, MoveFinishCallback)
 	end, 0, Interval, math.ceil(MoveTime / Interval) + 1)
 end
 
--- 通过缩放从二级地图进入三级地图
+---通过缩放从二级地图进入三级地图
 function WorldMapContentView:ChangeClosestRegionMap()
 	local ViewportSize = UIUtil.GetViewportSize()
 	local Scale = UIUtil.GetViewportScale()
@@ -786,7 +806,7 @@ function WorldMapContentView:ChangeClosestRegionMap()
 		if MapUtil.IsRegionMarkerBPType(MapMarker:GetBPType()) then
 			local MapMarkerRegionView = v.View
 			if v.ViewModel:GetIsMarkerVisible() and MapMarker:GetIsEnableHitTest() then
-				local ViewPosition = UIUtil.LocalToViewport(MapMarkerRegionView, FVector2D(0,0))
+				local ViewPosition = UIUtil.LocalToViewport(MapMarkerRegionView, FVector2D(512,512))
 				local dis = _G.UE.UKismetMathLibrary.Distance2D(ViewPosition, ScreenCenterPosition)
 				if dis < ClosestDistance then
 					ClosestDistance = dis
@@ -802,7 +822,7 @@ function WorldMapContentView:ChangeClosestRegionMap()
 	end
 	if ClosestRegionMarker and not self.HasTriggerChangeClosestRegionMap then
 		self.HasTriggerChangeClosestRegionMap = true -- 避免滑动条缩放时多次触发，从而多次位移动画导致抖动
-		self:OnClickedRegionMarker(ClosestRegionMarker)
+		self:OnClickedRegionMarker(ClosestRegionMarker, true)
 	end
 end
 
@@ -870,11 +890,14 @@ end
 ---@param MarkerID number 标记ID
 ---@param DefaultClick boolean 默认是否点击标记以弹出标记tips
 ---@param MarkerSubType number 标记子类型
----@param SubID number 子ID
-function WorldMapContentView:AdjustMarker2CenterPos(MarkerType, MarkerID, DefaultClick, MarkerSubType, SubID)
+---@param MarkerSubID number 子ID
+function WorldMapContentView:AdjustMarker2CenterPos(MarkerType, MarkerID, DefaultClick, MarkerSubType, MarkerSubID)
 	local MarkerSubType = MarkerSubType or 0
-	local MarkerView, Marker = self:GetMapMarkerByTypeAndID(MarkerType, MarkerID, MarkerSubType, SubID)
+	local MarkerView, Marker = self:GetMapMarkerByTypeAndID(MarkerType, MarkerID, MarkerSubType, MarkerSubID)
 	if MarkerView == nil or Marker == nil then
+		if MarkerType == MapMarkerType.Quest then
+			_G.MsgTipsUtil.ShowTipsByID(171016) -- 找不到任务时通用提示
+		end
 		return
 	end
 
@@ -957,12 +980,29 @@ function WorldMapContentView:ShowTreasureHuntCrystal(MapData)
 	if MapData == nil then return end
 
 	local UIMapID = MapUtil.GetUIMapID(MapData.MapResID)
-	local UIPosX,UIPosY = MapUtil.GetUIPosByLocation(MapData.Pos, UIMapID)
-	local TargetUIPos = _G.UE.FVector2D(UIPosX, UIPosY)
+	local UIPosX, UIPosY = MapUtil.GetUIPosByLocation(MapData.Pos, UIMapID)
+	local TargetUIPos = FVector2D(UIPosX, UIPosY)
 	self:ShowClosestCrystal(TargetUIPos, nil)
 end
 
--- 显示地图追踪信息
+-- 显示房屋快捷传送
+function WorldMapContentView:ShowHouseLandCrystal()
+	local Params = self.Params
+	if Params and Params.TargetBlockID and Params.TargetBlockPos then
+		--[[
+		local MarkerView, Marker = self:GetMapMarkerByTypeAndID(MapMarkerType.HouseLand, Params.TargetBlockID, 0)
+		if MarkerView == nil or Marker == nil then
+			return
+		end
+		local UIPosX, UIPosY = Marker:GetAreaMapPos()
+		--]]
+		local UIPosX, UIPosY = MapUtil.GetUIPosByLocation(Params.TargetBlockPos, WorldMapMgr:GetUIMapID())
+		local TargetUIPos = FVector2D(UIPosX, UIPosY)
+		self:ShowClosestCrystal(TargetUIPos, nil)
+	end
+end
+
+-- 显示地图标记追踪后快捷传送
 function WorldMapContentView:OnGameEventMapFollowAdd()
 	local FollowInfo = WorldMapMgr:GetMapFollowInfo()
 	if FollowInfo == nil or FollowInfo.FollowType == 0 or FollowInfo.FollowID == 0 then
@@ -978,11 +1018,11 @@ function WorldMapContentView:OnGameEventMapFollowAdd()
 	if MarkerView == nil or Marker == nil then
 		return
 	end
-
 	local UIPosX, UIPosY = Marker:GetAreaMapPos()
 	local TargetUIPos = FVector2D(UIPosX, UIPosY)
 	self:ShowClosestCrystal(TargetUIPos, Marker)
 end
+
 
 -- 地图自动寻路路线
 function WorldMapContentView:UpdateAutoPathLine()
@@ -1124,6 +1164,8 @@ function WorldMapContentView:OnGameEventMapFollowDelete()
 	self:UpdateMarkerExtraIcon()
 end
 
+
+--region 传送水晶相关
 
 local FindClosestCrystalFailReason =
 {
@@ -1322,6 +1364,10 @@ function WorldMapContentView:AddAcrossMapCrystalMarker(SmallCityUIMapID, BigCity
 	return false
 end
 
+--endregion
+
+
+---显示水晶传送tips
 function WorldMapContentView:ShowCrystalTips(CrystalMapMarker, CrystalMapMarkerView)
 	if CrystalMapMarkerView == nil then
 		return
@@ -1342,6 +1388,7 @@ function WorldMapContentView:ShowCrystalTips(CrystalMapMarker, CrystalMapMarkerV
 	end, DelayShowTipsTime)
 end
 
+---显示标记tips
 function WorldMapContentView:ShowMarkerTips(MapMarker, MapMarkerView)
 	if MapMarkerView == nil then
 		return
@@ -1384,8 +1431,41 @@ function WorldMapContentView:OpenMapShowMarker()
 	self:ShowMarkerFromInitPos()
 	self:ShowQuestTrackInfo()
 	self:ShowTreasureHuntCrystal()
+	self:ShowHouseLandCrystal()
 	self:AdjustMarker2CenterPos_Common()
 	self.IsOpenMapShow = false
 end
+
+---播放传送门标记高亮效果
+function WorldMapContentView:PlayDransDoorHighlight()
+
+	-- 查找传送门标记
+	local MarkerPredicate = function(Marker)
+		if Marker:GetType() == MapMarkerType.FixPoint then
+			if Marker:GetEventType() == MapMarkerEventType.MAP_MARKER_EVENT_TRANS_DOOR then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	-- 判断是否存在传送门标记
+	local MarkerView = self:GetMapMarkerByPredicate(MarkerPredicate)
+	if not MarkerView then
+		return
+	end
+
+	-- 首次打开该地图时才播放高亮效果
+	local UIMapID = WorldMapMgr:GetUIMapID()
+	if WorldMapVM:CanPlayDransDoorHighlight(UIMapID) then
+		local Params = {}
+		Params.MarkerPredicate = MarkerPredicate
+		self:UpdateMarkerHighlightEffect(Params)
+
+		WorldMapVM:RecordDransDoorHighlight(UIMapID)
+	end
+end
+
 
 return WorldMapContentView

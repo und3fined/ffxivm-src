@@ -8,6 +8,7 @@ local MajorUtil = require("Utils/MajorUtil")
 local LoginRoleRaceGenderVM = require("Game/LoginRole/LoginRoleRaceGenderVM")
 local LoginRoleTribePageVM = require("Game/LoginRole/LoginRoleTribePageVM")
 local LoginCreateSaveVM = require("Game/LoginCreate/LoginCreateSaveVM")
+local LoginRoleSetNameVM = require("Game/LoginRole/LoginRoleSetNameVM")
 local CameraControlDefine = require("Game/Common/Render2D/CameraControlDefine")
 
 local ProtoCommon = require("Protocol/ProtoCommon")
@@ -30,6 +31,7 @@ local FaceLookatParamCfg = require("TableCfg/FaceLookatParamCfg")
 local EmotionAnimUtils = require("Game/Emotion/Common/EmotionAnimUtils")
 local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
 local ActorUtil = require("Utils/ActorUtil")
+local RaceType = ProtoCommon.race_type
 
 local EyebrowCfg = require("TableCfg/EyebrowCfg")
 local EyeCfg = require("TableCfg/EyeCfg")
@@ -41,6 +43,7 @@ local NoseCfg = require("TableCfg/NoseCfg")
 local TailCfg = require("TableCfg/TailCfg")
 local EarCfg = require("TableCfg/EarCfg")
 local HairCfg = require("TableCfg/HairCfg")
+local StripeCfg = require("TableCfg/StripeCfg")
 local CharaVoiceTypeChsCfg = require("TableCfg/CharaVoiceTypeChsCfg")
 local CharaVoiceTypeCfg = require("TableCfg/CharaVoiceTypeCfg")
 local GlobalCfg = require("TableCfg/GlobalCfg")
@@ -100,7 +103,9 @@ LoginAvatarMgr.CustomizeSubType = LoginAvatarMgr.CustomizeSubType or
 	ChestSize = 24,        -- 身体-胸围
 	Tail = 25,             -- 身体-尾巴(形状/长度)
 	
-	Voice = 26             -- 声音
+	Voice = 26,             -- 声音
+
+	Stripe = 27             -- 毛纹
 }
 
 LoginAvatarMgr.CustomizeSubMenu = LoginAvatarMgr.CustomizeSubMenu or
@@ -136,6 +141,7 @@ LoginAvatarMgr.CustomizeSubMenu = LoginAvatarMgr.CustomizeSubMenu or
 	[LoginAvatarMgr.CustomizeSubType.Hairdo] = {Main = ProtoCommon.avatar_personal.AvatarPersonalHair, FocusType = CameraControlDefine.FocusType.UpperBody},
 	[LoginAvatarMgr.CustomizeSubType.HairColor] = {Main = ProtoCommon.avatar_personal.AvatarPersonalHairColor, Sub = ProtoCommon.avatar_personal.AvatarHairVariationColor, 
 								    SubChild = ProtoCommon.avatar_personal.AvatarHairVariation, FocusType = CameraControlDefine.FocusType.UpperBody},
+	[LoginAvatarMgr.CustomizeSubType.Stripe] = {Main = ProtoCommon.avatar_personal.AvatarLipsColor, Sub = ProtoCommon.avatar_personal.AvatarLipMode, FocusType = CameraControlDefine.FocusType.UpperBody},
 
 	[LoginAvatarMgr.CustomizeSubType.HeightScaleRate] = {Main = ProtoCommon.avatar_personal.AvatarHeightScaleRate, FocusType = CameraControlDefine.FocusType.WholeBody},
 	[LoginAvatarMgr.CustomizeSubType.BodyType] = {Main = ProtoCommon.avatar_personal.AvatarSpecific1, FocusType = CameraControlDefine.FocusType.WholeBody},
@@ -157,6 +163,7 @@ LoginAvatarMgr.CustomizeCfgName = LoginAvatarMgr.CustomizeCfgName or
 	[LoginAvatarMgr.CustomizeSubType.FaceDecal] = {Cfg = FaceDecalCfg},
 	[LoginAvatarMgr.CustomizeSubType.Hairdo] = {Cfg = HairCfg},
 	[LoginAvatarMgr.CustomizeSubType.Tail] = {Cfg = TailCfg},
+	[LoginAvatarMgr.CustomizeSubType.Stripe] = {Cfg = StripeCfg},
 }
 
 function LoginAvatarMgr:OnInit()
@@ -217,6 +224,8 @@ function LoginAvatarMgr:OnInit()
 	-- 资源版本号
 	self.VersionName = nil
 
+	-- 是否不再显示随机外貌弹框
+	self.IsNeverShowRandom = false
 end
 
 function LoginAvatarMgr:OnBegin()
@@ -320,6 +329,13 @@ function LoginAvatarMgr:SetSystemType(Type)
 end
 --TODO 预设一旦修改，自定义选项则发生变化，同时记得操作列表清空（只有预设选项变更及修改后）
 
+-- 随机外貌弹窗是否显示
+function LoginAvatarMgr:SetRandomNeverShow(bNeverShow)
+	self.IsNeverShowRandom = bNeverShow
+end
+function LoginAvatarMgr:GetRandomNeverShow()
+	return self.IsNeverShowRandom
+end
 
 -- 获取流水上报信息-捏脸点击随机次数
 function LoginAvatarMgr:GetReportRdTimes()
@@ -579,7 +595,8 @@ function LoginAvatarMgr:FilterHairList(CfgList)
 	local GameVersion = self.VersionName
 	local TableList = {}
 	for _, Cfg in ipairs(CfgList) do
-		local bInlcude = self:IsIncludeVersion(Cfg.VersionName, GameVersion)
+		--local bInlcude = self:IsIncludeVersion(Cfg.VersionName, GameVersion)
+		local bInlcude = _G.UE.UVersionMgr.IsBelowOrEqualGameVersion(Cfg.VersionName)
 		if bInlcude then
 			local bLogin = self.SystemType == LoginAvatarMgr.FaceSystemType.Login and Cfg.IsCanCreate == 1
 			local bHaircut = self.SystemType == LoginAvatarMgr.FaceSystemType.Haircut and Cfg.HaircutType > 0
@@ -961,6 +978,7 @@ end
 
 -- 随机外貌
 function LoginAvatarMgr:SetRandomAvatar()
+	local CurrentRaceCfg = LoginRoleRaceGenderVM.CurrentRaceCfg
 	local RandomAvatar = {}
 
 	local FaceData = self:GetRandomFromTypeList(self:GetPropertyList(LoginAvatarMgr.CustomizeSubType.FaceBase))
@@ -980,7 +998,12 @@ function LoginAvatarMgr:SetRandomAvatar()
 	RandomAvatar[ProtoCommon.avatar_personal.AvatarRightEyeColor] = self:GetRandomFromColorList(false)
 	RandomAvatar[ProtoCommon.avatar_personal.AvatarOption] = math.floor(math.random(1, 128)) - 1
 	RandomAvatar[ProtoCommon.avatar_personal.AvatarOptionColor] = self:GetRandomFromColorList(false)
-	RandomAvatar[ProtoCommon.avatar_personal.AvatarLipsColor] = self:GetRandomFromColorList(true)
+	if CurrentRaceCfg ~= nil and CurrentRaceCfg.RaceID == RaceType.RACE_TYPE_Hrothgar then
+		-- 毛纹
+		RandomAvatar[ProtoCommon.avatar_personal.AvatarLipsColor] = self:GetRandomFromTypeList(self:GetPropertyList(LoginAvatarMgr.CustomizeSubType.Stripe)).TypeID
+	else
+		RandomAvatar[ProtoCommon.avatar_personal.AvatarLipsColor] = self:GetRandomFromColorList(true)
+	end
 	RandomAvatar[ProtoCommon.avatar_personal.AvatarLipMode] = math.floor(math.random(1, 3)) - 1
 	local DecalData = self:GetRandomFromTypeList(self:GetPropertyList(LoginAvatarMgr.CustomizeSubType.FaceDecal))
 	if DecalData ~= nil and type(DecalData) == "table" then
@@ -1248,7 +1271,10 @@ end
 -- 设置所有的捏脸数据形象
 function LoginAvatarMgr:SetAllAvatarCustomize()
 	local UIComplexCharacter = _G.LoginUIMgr:GetUIComplexCharacter()
-	ActorUtil.SetCustomizeAvatarFace(UIComplexCharacter, self.CurAvatarFace)
+	--幻想药、理发屋强制显示帽子，避免预览时装时看不见帽子。同时不能修改CurAvatarFace数据，否则可能导致错误扣除道具
+	local FaceMap = table.clone(self.CurAvatarFace)
+	FaceMap[ProtoCommon.avatar_personal.AvatarEquipHeadShow] = 1
+	ActorUtil.SetCustomizeAvatarFace(UIComplexCharacter, FaceMap)
 	if self.IsTieUpHair then
 		-- 束发保持发型不变
 		self:TieUpHair(true)
@@ -1431,6 +1457,10 @@ end
 --- 加载所选存档
 function LoginAvatarMgr:LoadServerAvatar(SaveData)
 	local function Callback()
+		if SaveData == nil then
+			_G.FLOG_WARNING("LoginAvatarMgr:LoadServerAvatar Get SaveData Error!")
+			return 
+		end
 		self.CurAvatarFace = SaveData.DataList
 		-- 修改部族的接口
 		local TribeID = SaveData.Tribe
@@ -1440,6 +1470,8 @@ function LoginAvatarMgr:LoadServerAvatar(SaveData)
 		_G.LoginUIMgr:RecordProfSuit(nil)
 		
 		_G.LoginUIMgr:ChangeRenderActor(RaceID, TribeID, SaveData.Gender, true)
+		LoginRoleSetNameVM:UpdateBaseInformName()
+		
 		-- 设置外貌
 		self:SetAllAvatarCustomize()
 

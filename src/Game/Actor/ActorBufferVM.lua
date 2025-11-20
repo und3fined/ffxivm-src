@@ -116,7 +116,15 @@ function ActorBufferVM:UpdateVM(Value)
         else
             self.Name = Cfg.EffectName
         end
-        self.Desc = Cfg.Desc
+
+        local ScoreUse = Value.ScoreUse or 0
+        local Desc = Cfg.Desc or ""
+        if ScoreUse > 0 then
+            local ScoreText = string.formatint(ScoreUse) or "" 
+            self.Desc = string.format(Desc, ScoreText)
+        else
+            self.Desc = Desc
+        end
 
         self.BuffActiveType = BuffDefine.BuffDisplayActiveType.Positive
         self.IsFromMajor = true
@@ -147,12 +155,13 @@ function ActorBufferVM:UpdateLeftTime()
     else
         self.LeftTime = 0
     end
-   _G.EventMgr:SendEvent(_G.EventID.MajorUpdateBuffTime, {
-    BuffLeftTime = self.LeftTime,
-    BuffID = self.BuffID
-})
+    if self.IsFromMajor then
+        _G.EventMgr:SendEvent(_G.EventID.MajorUpdateBuffTime, {
+            BuffLeftTime = self.LeftTime,
+            BuffID = self.BuffID
+        })
+    end
 end
-
 function ActorBufferVM:UpdateBuffTimeDisplay()
     if not self.IsBuffTimeDisplayOrigin then
         self.IsBuffTimeDisplay = false

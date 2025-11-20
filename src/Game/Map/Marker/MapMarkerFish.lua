@@ -44,6 +44,7 @@ function MapMarkerFish:InitMarker(Params)
 	self.Name = Params.Name
 	self.Radius = Params.HorizontalDistance
 	self.bSelected = Params.Status
+	self.IconPath = _G.FishNotesMgr:GetFactionIconByLocationID(self.ID)
 
 	self:UpdateMarker(Params)
 end

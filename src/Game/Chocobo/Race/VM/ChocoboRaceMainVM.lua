@@ -14,7 +14,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local ChocoboDefine = require("Game/Chocobo/ChocoboDefine")
-local ChocoboRaceUtil = require("Game/Chocobo/Race/ChocoboRaceUtil")
+local TimeUtil = require("Utils/TimeUtil")
 
 local LSTR = nil
 local ChocoboRaceMgr = nil
@@ -30,11 +30,22 @@ function ChocoboRaceMainVM:Ctor()
 end
 
 function ChocoboRaceMainVM:ResetRace()
+    if self.DurationTimerID then
+        TimerMgr:CancelTimer(self.DurationTimerID)
+    end
+
+    if self.ReplaceCDTimer then
+        TimerMgr:CancelTimer(self.ReplaceCDTimer)
+    end
+    
     self.ChocoboRaceVMList = {}
     self.ChocoboSkillVMList = {}
     self.MajorIndex = 1
     self.MajorSpeed = ""
     self.ItemID = 0
+    self.ReplaceCDTimer = nil
+    self.CDEndTime = 0
+    self.IsCD = false
     self.IsItemSeal = false
     self.IsItemDisable = false
     self.IsShowItemMask = false
@@ -55,7 +66,7 @@ function ChocoboRaceMainVM:ResetRace()
     self.IsShowTreasureTips = false
     -- 结算界面
     self.IsShowPanelReward = false
-    self.DurationTimerID = 0
+    self.DurationTimerID = nil
     self.ServerSetupRanking = 1
     self.Mode = 0
     self.IsWin = false
@@ -90,10 +101,15 @@ function ChocoboRaceMainVM:OnEnd()
 end
 
 function ChocoboRaceMainVM:OnShutdown()
-    if self.DurationTimerID ~= 0 then
+    if self.DurationTimerID then
         TimerMgr:CancelTimer(self.DurationTimerID)
     end
-    self.DurationTimerID = 0
+    self.DurationTimerID = nil
+
+    if self.ReplaceCDTimer then
+        TimerMgr:CancelTimer(self.ReplaceCDTimer)
+    end
+    self.ReplaceCDTimer = nil
     
     self:ResetRace()
 end
@@ -154,7 +170,7 @@ end
 ---@param Value boolean
 function ChocoboRaceMainVM:SetIsShowTreasureTips(Value)
     if Value and not self.IsShowTreasureTips then
-        if self.DurationTimerID ~= 0 then
+        if self.DurationTimerID then
             TimerMgr:CancelTimer(self.DurationTimerID)
         end
         self.IsShowTreasureTips = true
@@ -260,14 +276,64 @@ function ChocoboRaceMainVM:GetItemID()
     return self.ItemID
 end
 
+function ChocoboRaceMainVM:UpdateItemCD(CDEndTimeMs)
+    if not CDEndTimeMs or CDEndTimeMs <= 0 then
+        self:ResetItemCDState()
+        return
+    end
+
+    if self.IsCD or CDEndTimeMs <= self.CDEndTime then
+        return
+    end
+
+    -- 重置当前CD状态
+    if self.ReplaceCDTimer then
+        TimerMgr:CancelTimer(self.ReplaceCDTimer)
+        self.ReplaceCDTimer = nil
+    end
+
+    -- 更新CD状态
+    self.CDEndTime = CDEndTimeMs
+    self.IsCD = true
+    self:UpdateItemShowMask()
+
+    _G.FLOG_INFO(string.format("[ChocoboRace] Set CD: ItemID=%d, EndAt=%d", self.ItemID, CDEndTimeMs))
+    self.ReplaceCDTimer = TimerMgr:AddTimer(self, self.TickItemCD, 0, 0.1, 0)
+end
+
+function ChocoboRaceMainVM:TickItemCD()
+    if not self.ReplaceCDTimer then return end
+    
+    local SubNum = self.CDEndTime - TimeUtil.GetServerTimeMS()
+    if SubNum <= 0 then
+        TimerMgr:CancelTimer(self.ReplaceCDTimer)
+        self.ReplaceCDTimer = nil
+        self:ResetItemCDState()
+    end
+end
+
+function ChocoboRaceMainVM:ResetItemCDState()
+    if self.ReplaceCDTimer then
+        TimerMgr:CancelTimer(self.ReplaceCDTimer)
+        self.ReplaceCDTimer = nil
+    end
+
+    self.IsCD = false
+    self:UpdateItemShowMask()
+end
+
 function ChocoboRaceMainVM:UpdateItemSeal(Value)
     self.IsItemSeal = Value
-    self.IsShowItemMask = self.IsItemSeal or self.IsItemDisable
+    self:UpdateItemShowMask()
 end
 
 function ChocoboRaceMainVM:UpdateItemDisabled(Value)
     self.IsItemDisable = Value
-    self.IsShowItemMask = self.IsItemSeal or self.IsItemDisable
+    self:UpdateItemShowMask()
+end
+
+function ChocoboRaceMainVM:UpdateItemShowMask()
+    self.IsShowItemMask = self.IsCD or self.IsItemSeal or self.IsItemDisable
 end
 
 ---GetChocoboRaceVMList
@@ -312,7 +378,7 @@ end
 ---@return table
 function ChocoboRaceMainVM:FindChocoboRaceVM(Index)
     if nil == Index or nil == self.ChocoboRaceVMList then
-        ChocoboRaceUtil.Err("ChocoboRaceMainVM:FindChocoboRaceVM is nil")
+        _G.FLOG_ERROR("[ChocoboRace] ChocoboRaceMainVM:FindChocoboRaceVM is nil")
         return
     end
     

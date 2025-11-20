@@ -115,6 +115,10 @@ function MapMarkerQuest:IsIconVisible(Scale)
 		if QUEST_TYPE.QUEST_TYPE_BRANCH == QuestType then
 			return Scale >= MapConstant.MAP_SCALE_VISIBLE_LEVEL3
 		end
+
+		if QUEST_TYPE.QUEST_TYPE_REPEAT == QuestType then
+			return Scale >= MapConstant.MAP_SCALE_VISIBLE_LEVEL3
+		end
 	end
 
 	return false

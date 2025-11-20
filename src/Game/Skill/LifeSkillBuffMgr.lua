@@ -247,7 +247,7 @@ function LifeSkillBuffMgr:OnVisionQuery(MsgBody)
 end
 
 function LifeSkillBuffMgr:OnVisionEnter(MsgBody)
-    -- print("ZHG LifeSkillBuffMgr:OnVisionEnter MsgBody = " .. table_to_string_block(MsgBody, 10))
+    -- _G.FLOG_WARNING("ZHG LifeSkillBuffMgr:OnVisionEnter MsgBody = " .. table_to_string_block(MsgBody, 10))
     for _, VEntity in ipairs(MsgBody.Enter.Entities or {}) do
         self:SyncVisionBuffAdd(VEntity)
     end
@@ -255,7 +255,7 @@ end
 
 function LifeSkillBuffMgr:OnVisionLeave(MsgBody)
     -- print("ZHG LifeSkillBuffMgr:OnVisionLeave MsgBody = " .. table_to_string_block(MsgBody, 10))
-    for _, VEntity in ipairs(MsgBody.Entities or {}) do
+    for _, VEntity in ipairs(MsgBody.Leave.Entities or {}) do
         self:SyncVisionBuffRemove(VEntity)
     end
 end
@@ -365,7 +365,7 @@ function LifeSkillBuffMgr:SyncVisionBuffAdd(VEntity)
 end
 
 function LifeSkillBuffMgr:SyncVisionBuffRemove(VEntity)
-    self:ClearEntityBuffImme(VEntity.ID)
+    self:ClearEntityBuffImme(VEntity)
 end
 
 function LifeSkillBuffMgr:RemoveAllBuff()

@@ -8,31 +8,24 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local PhotoDefine = require("Game/Photo/PhotoDefine")
-
-local FVector2D = _G.UE.FVector2D
-
 local PhotoMainUITabCfg = require("Game/Photo/Define/PhotoMainUITabCfg")
-local UITabMainDef = PhotoDefine.UITabMain
-local UITabSubDef = PhotoDefine.UITabSub
 local CommonUtil = require("Utils/CommonUtil")
-local PhotoActionItemVM = require("Game/Photo/VM/Item/PhotoActionItemVM")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
-
-
 local UIAdapterTableView =  require("UI/Adapter/UIAdapterTableView")
-local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
-
 local PhotoResetFunc = require("Game/Photo/Util/PhotoResetFunc")
-local MajorUtil = require("Utils/MajorUtil")
 local PhotoGiveAllFunc = require("Game/Photo/Util/PhotoGiveAllFunc")
 local PhotoMediaUtil = require("Game/Photo/Util/PhotoMediaUtil")
 local ActorUtil = require("Utils/ActorUtil")
+local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 
 local EventID
 local EventMgr
 local PhotoMgr
 local UIViewMgr
-local FVector2D = _G.UE.FVector2D
 local PhotoVM
 local PhotoCamVM
 local PhotoFilterVM
@@ -43,21 +36,10 @@ local PhotoActionVM
 local PhotoEmojiVM
 local PhotoRoleStatVM
 
-local UIBinderSetSlider = require("Binder/UIBinderSetSlider")
-local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
-local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
-local UIBinderSetProfName = require("Binder/UIBinderSetProfName")
-local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
-local UIBinderSetSelectedItem = require("Binder/UIBinderSetSelectedItem")
-local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
-local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
-local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
-local UIBinderSetRenderTransformAngle = require("Binder/UIBinderSetRenderTransformAngle")
-local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
+local FVector2D = _G.UE.FVector2D
+local UITabMainDef = PhotoDefine.UITabMain
+local UITabSubDef = PhotoDefine.UITabSub
+
 local AxisDef = {
 	Up 		= 1,
 	Down 	= 2,
@@ -70,26 +52,26 @@ local AxisDef = {
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnDofDebug UButton
----@field BtnDown UFButton
----@field BtnLeft UFButton
+---@field BtnLensRefresh UFButton
 ---@field BtnReset UFButton
----@field BtnRight UFButton
+---@field BtnShowUI UFButton
 ---@field BtnTakePhoto UFButton
----@field BtnUp UFButton
+---@field CameraStickPanel UFCanvasPanel
+---@field CommonTitle CommonTitleView
 ---@field DOFDebug UFCanvasPanel
 ---@field DisOffInput CommInputBoxView
+---@field FSafeZone_0 UFSafeZone
+---@field IconTitle UFImage
 ---@field PanelAssistLine UFCanvasPanel
 ---@field PanelContent UFCanvasPanel
 ---@field PanelExpand UFCanvasPanel
----@field PanelMove UFCanvasPanel
+---@field PanelIcon UFCanvasPanel
 ---@field PanelRight UFCanvasPanel
----@field PanelSelect01 UFCanvasPanel
----@field PanelSelect02 UFCanvasPanel
----@field PanelSelect03 UFCanvasPanel
----@field PanelSelect04 UFCanvasPanel
 ---@field PanelTab UFCanvasPanel
----@field PanelTabArrow UFCanvasPanel
+---@field PanelTakePhoto UFCanvasPanel
 ---@field RegionInput CommInputBoxView
+---@field StickItem PhotoTouchItemView
+---@field StickPt UFImage
 ---@field TableViewPages UTableView
 ---@field TextSubtitle UFTextBlock
 ---@field TextTitleName UFTextBlock
@@ -117,26 +99,26 @@ function PhotoMainView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnClose = nil
 	--self.BtnDofDebug = nil
-	--self.BtnDown = nil
-	--self.BtnLeft = nil
+	--self.BtnLensRefresh = nil
 	--self.BtnReset = nil
-	--self.BtnRight = nil
+	--self.BtnShowUI = nil
 	--self.BtnTakePhoto = nil
-	--self.BtnUp = nil
+	--self.CameraStickPanel = nil
+	--self.CommonTitle = nil
 	--self.DOFDebug = nil
 	--self.DisOffInput = nil
+	--self.FSafeZone_0 = nil
+	--self.IconTitle = nil
 	--self.PanelAssistLine = nil
 	--self.PanelContent = nil
 	--self.PanelExpand = nil
-	--self.PanelMove = nil
+	--self.PanelIcon = nil
 	--self.PanelRight = nil
-	--self.PanelSelect01 = nil
-	--self.PanelSelect02 = nil
-	--self.PanelSelect03 = nil
-	--self.PanelSelect04 = nil
 	--self.PanelTab = nil
-	--self.PanelTabArrow = nil
+	--self.PanelTakePhoto = nil
 	--self.RegionInput = nil
+	--self.StickItem = nil
+	--self.StickPt = nil
 	--self.TableViewPages = nil
 	--self.TextSubtitle = nil
 	--self.TextTitleName = nil
@@ -163,8 +145,10 @@ end
 function PhotoMainView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.DisOffInput)
 	self:AddSubView(self.RegionInput)
+	self:AddSubView(self.StickItem)
 	self:AddSubView(self.VerIconTabs)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -172,12 +156,12 @@ end
 function PhotoMainView:OnInit()
 	self.AdpSubTab 				= UIAdapterTableView.CreateAdapter(self, self.TableViewPages, self.OnAdpItemSubTab)
 
-	self.IndicatorIcon = {
-		self.PanelSelect01,
-		self.PanelSelect02,
-		self.PanelSelect03,
-		self.PanelSelect04,
-	}
+	-- self.IndicatorIcon = {
+	-- 	self.PanelSelect01,
+	-- 	self.PanelSelect02,
+	-- 	self.PanelSelect03,
+	-- 	self.PanelSelect04,
+	-- }
 
 	self:InitExtern()
 	self:InitUITab()
@@ -195,6 +179,7 @@ function PhotoMainView:InitExtern()
 	PhotoSceneVM 			= _G.PhotoSceneVM
 	PhotoTemplateVM 		= _G.PhotoTemplateVM
 	PhotoActionVM			= _G.PhotoActionVM
+	PhotoEmojiVM			= _G.PhotoEmojiVM
 	PhotoRoleStatVM			= _G.PhotoRoleStatVM
 	PhotoMgr				= _G.PhotoMgr
     UIViewMgr 				= _G.UIViewMgr
@@ -388,6 +373,8 @@ function PhotoMainView:OnMoveCamera(IsMove)
 
 	UIUtil.SetIsVisible(self.PanelContent, not IsMove)
 	UIUtil.SetIsVisible(self.TogRight3, not IsMove)
+	UIUtil.SetIsVisible(self.BtnTakePhoto, not IsMove, true)
+
 
 	if IsMove then
 		UIViewMgr:HideView(self.LastSubView)
@@ -467,11 +454,13 @@ function PhotoMainView:OnTouchStickEnd(Pos)
 end
 
 function PhotoMainView:InitBinder()
-	self.Binder = 
+	self.Binder =
 	{
 		{ "SubTabIdx", 			UIBinderValueChangedCallback.New(self, nil, self.OnBindTabSubIdx) },
 		{ "MainTabIdx", 		UIBinderValueChangedCallback.New(self, nil, self.OnBindMainTabIdx) },
-		{ "SubTitle", 			UIBinderSetText.New(self, self.TextSubtitle) },
+		{ "SubTitle", 			UIBinderValueChangedCallback.New(self, nil, function ()
+			self.CommonTitle:SetTextSubtitle(PhotoVM.SubTitle)
+		end) },
 		---
 		{ "SubTabList",  		UIBinderUpdateBindableList.New(self, self.AdpSubTab) },
 		{ "SubTabIdx",          UIBinderSetSelectedIndex.New(self, self.AdpSubTab)},
@@ -485,18 +474,26 @@ function PhotoMainView:InitBinder()
 		{ "IsHideContent", 		UIBinderSetIsVisible.New(self, self.BtnShowUI, false, true) },
 		{ "IsHideContent", 		UIBinderSetIsVisible.New(self, self.TogRight3, true) },
 		{ "IsHideContent", 		UIBinderSetIsVisible.New(self, self.PanelTakePhoto, true) },
-		
+
 		{ "IsHideContent", 		UIBinderSetIsChecked.New(self, self.TogUIShow) },
 		{ "IsHideContent", 		UIBinderValueChangedCallback.New(self, nil, self.OnBindHideContent) },
-		--- 
-		{ "IsFollowWithFace", UIBinderValueChangedCallback.New(self, nil, self.OnBindLookatValueChg) },
-		{ "IsFollowWithFace", UIBinderValueChangedCallback.New(self, nil, self.OnBindLookatValueChg) },
+		---
+		{
+			"IsFollowWithFace", UIBinderValueChangedCallback.New(self, nil, function ()
+				PhotoMgr:SetFaceAndEyeCharacterLookAtCamera()
+			end)
+		},
+		{
+			"IsFollowWithEye", UIBinderValueChangedCallback.New(self, nil, function ()
+				PhotoMgr:SetEyeCharacterLookAt()
+			end)
+		},
 
 		{ "IsFollowWithFace", UIBinderSetIsChecked.New(self, self.TogFace) },
 		{ "IsFollowWithEye", UIBinderSetIsChecked.New(self, self.TogEye) },
 		{ "IsShowCheckerboard", UIBinderSetIsChecked.New(self, self.TogLineShow) },
 		{ "IsShowCheckerboard", UIBinderSetIsVisible.New(self, self.PanelAssistLine) },
-		--- 
+		---
 		{ "IsBanMove", 			UIBinderSetIsChecked.New(self, self.TogMovable, nil, nil) },
 		--- Pause
 		{ "IsShowPausePanel", 	UIBinderSetIsChecked.New(self, self.TogPause) },
@@ -504,13 +501,9 @@ function PhotoMainView:InitBinder()
 		{ "IsPauseSelect", 		UIBinderSetIsChecked.New(self, self.TogSelfAct) },
 		{ "IsPauseAll", 		UIBinderSetIsChecked.New(self, self.TogAllAct) },
 		{ "IsPauseWeather", 	UIBinderSetIsChecked.New(self, self.TogWeather) },
-		--- 
+		---
 		{ "IsGiveAll", 			UIBinderSetIsChecked.New(self, self.TogSyncAll) },
 	}
-end
-
-function PhotoMainView:OnBindLookatValueChg()
-	self:RefreshCharacterLookAt()
 end
 
 function PhotoMainView:OnDestroy()
@@ -518,6 +511,7 @@ function PhotoMainView:OnDestroy()
 end
 
 function PhotoMainView:OnShow()
+	self:InitTitleView()
 	self:UpdUITab()
 
 	PhotoRoleStatVM:UpdateVM()
@@ -527,7 +521,7 @@ function PhotoMainView:OnShow()
 	PhotoCamVM:UpdateVM()
 	PhotoActionVM:UpdateVM()
 
-	_G.PhotoEmojiVM:UpdateVM()
+	PhotoEmojiVM:UpdateVM()
 	_G.PhotoDarkEdgeVM:ResetEdge()
 
 	PhotoSceneVM:UpdateVM()
@@ -554,7 +548,7 @@ function PhotoMainView:OnHide()
 		self.LastSubView = nil
 	end
 
-    _G.PhotoMgr:PostClosePhotoUI()
+    _G.PhotoMgr:ClosePhotoUI()
 end
 
 function PhotoMainView:OnRegisterUIEvent()
@@ -573,36 +567,36 @@ function PhotoMainView:OnRegisterUIEvent()
 	-- -- UIUtil.AddOnStateChangedEvent(self, 		self.TogSyncAll, 			self.OnTogSyncAll)
 	UIUtil.AddOnStateChangedEvent(self, 		self.TogPause, 				self.OnTogPause)
 	UIUtil.AddOnStateChangedEvent(self, 		self.TogSelfAct, 			self.OnTogPauseSelt)
-	UIUtil.AddOnStateChangedEvent(self, 		self.TogAllAct, 			self.OnTogPauseAll)
+	--UIUtil.AddOnStateChangedEvent(self, 		self.TogAllAct, 			self.OnTogPauseAll)
 	UIUtil.AddOnStateChangedEvent(self, 		self.TogWeather, 			self.OnTogPauseWeather)
 	UIUtil.AddOnStateChangedEvent(self, 		self.TogMovable, 			self.OnTogMovable)
 	UIUtil.AddOnStateChangedEvent(self,         self.TogSyncAll,    		self.OnTogGiveAll)
 	UIUtil.AddOnClickedEvent(self,              self.BtnReset,    			self.OnBtnReset)
-	
+
 	UIUtil.AddOnClickedEvent(self,              self.BtnShowUI,    			self.OnBtnShowUI)
 
 	-- take picture
 	UIUtil.AddOnClickedEvent(self,              self.BtnTakePhoto,    		self.OnBtnTakePicture)
 
-	UIUtil.AddOnClickedEvent(self,              self.BtnLensRefresh,    		self.OnBtnResetCameraPos)
+	UIUtil.AddOnClickedEvent(self,              self.BtnLensRefresh,    	self.OnBtnResetCameraPos)
 
 	-- -- move mode
 	UIUtil.AddOnStateChangedEvent(self, 		self.ToggleButtonMove, 		self.OnTogMoveMode)
 end
 
 function PhotoMainView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.MajorFirstMove,              self.OnEveMajorMove)
-	self:RegisterGameEvent(_G.EventID.InputFirstMove, 							self.OnEveInputFirstMove)
-    self:RegisterGameEvent(_G.EventID.ActorVelocityUpdate, 			self.OnEveActorMove)
+	self:RegisterGameEvent(EventID.MajorFirstMove,              self.OnEveMajorMove)
+	self:RegisterGameEvent(EventID.InputFirstMove, 				self.OnEveInputFirstMove)
+    self:RegisterGameEvent(EventID.ActorVelocityUpdate, 		self.OnEveActorMove)
 end
 
 function PhotoMainView:OnEveInputFirstMove()
-	_G.PhotoRoleStatVM:TryRptStat()
+	PhotoRoleStatVM:TryRptStat()
 end
 
 function PhotoMainView:OnEveMajorMove()
-	_G.PhotoActionVM:ResetRoleActAni()
-    _G.PhotoEmojiVM:ResetRoleActAni()
+	PhotoActionVM:ResetRoleActAni()
+    PhotoEmojiVM:ResetRoleActAni()
 end
 
 function PhotoMainView:OnEveActorMove(Params)
@@ -648,6 +642,11 @@ function PhotoMainView:SetSubPanel(Idx)
 	PhotoVM:SetSubTabIdx(Idx)
 end
 
+function PhotoMainView:InitTitleView()
+	self.CommonTitle:SetTextTitleName(_G.LSTR(630079))
+	self.CommonTitle:SetTitleIcon("Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_Photo.UI_Icon_Title_Photo'")
+end
+
 -------------------------------------------------------------------------------------------------------
 ---@region UIEveHandle
 
@@ -685,8 +684,7 @@ end
 function PhotoMainView:OnTogFace(Tog, Stat)
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
 	PhotoVM.IsFollowWithFace = IsChecked
-
-	self:RefreshCharacterLookAt()
+	--PhotoMgr:SetFaceAndEyeCharacterLookAtCamera()
 
 	MsgTipsUtil.ShowTips(PhotoVM.IsFollowWithFace and _G.LSTR(630036) or _G.LSTR(630004))
 end
@@ -694,7 +692,7 @@ end
 function PhotoMainView:OnTogEye(Tog, Stat)
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
 	PhotoVM.IsFollowWithEye = IsChecked
-	self:RefreshCharacterLookAt()
+	-- PhotoMgr:SetEyeCharacterLookAt()
 
 	MsgTipsUtil.ShowTips(PhotoVM.IsFollowWithEye and _G.LSTR(630023) or _G.LSTR(630003))
 end
@@ -747,11 +745,12 @@ function PhotoMainView:OnTogPause(Tog, Stat)
 end
 
 function PhotoMainView:OnTogPauseSelt(Tog, Stat)
+	if not PhotoMgr:IsCurSeltMajor() then
+		MsgTipsUtil.ShowTips(LSTR(630078))
+		return
+	end
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
 	PhotoVM:SetIsPauseSelect(IsChecked)
-
-	PhotoActionVM:SetAmimIsPause(IsChecked)
-
 	if PhotoVM.IsPauseSelect then
 		MsgTipsUtil.ShowTipsByID(PhotoDefine.PhotoTipsID.SelfPause, nil)
 	else
@@ -761,8 +760,7 @@ end
 
 function PhotoMainView:OnTogPauseAll(Tog, Stat)
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
-	PhotoVM:SetIsPauseAll(IsChecked)
-
+	--PhotoVM:SetIsPauseAll(IsChecked)
 
 	if PhotoVM.IsPauseAll then
 		MsgTipsUtil.ShowTipsByID(PhotoDefine.PhotoTipsID.AllActorPause, nil)
@@ -783,21 +781,12 @@ function PhotoMainView:OnTogPauseWeather(Tog, Stat)
 end
 
 function PhotoMainView:OnTogMovable(Tog, Stat)
-	-- if (PhotoVM.IsPauseSelect or PhotoVM.IsPauseAll) and (PhotoVM.IsBanMove) then
-	-- 	return
-	-- end
-
 	local IsChecked = UIUtil.IsToggleButtonChecked(Stat)
-
 	PhotoVM:SetIsBanMove(IsChecked)
 
 	if not IsChecked then
 		PhotoVM:SetIsPauseSelect(IsChecked)
 	end
-
-	-- PhotoVM:SetIsPauseAll(not IsChecked)
-	-- PhotoVM:SetIsPauseSelect(not IsChecked)
-
 	if PhotoVM.IsBanMove then
 		MsgTipsUtil.ShowTipsByID(PhotoDefine.PhotoTipsID.MoveLock, nil)
 	else
@@ -845,14 +834,14 @@ end
 ----------
 
 function PhotoMainView:RefreshCharacterLookAt()
-	PhotoMgr:RefreshCharacterLookAt()
+	PhotoMgr:SetFaceAndEyeCharacterLookAtCamera()
 end
 
 -------------------------------------------------------------------------------------------------------
 ---@region UIBindHdl
 
 function PhotoMainView:OnBindHideContent(Val)
-	_G.EventMgr:SendEvent(_G.EventID.PhotoViewHideDetailView, Val)
+	EventMgr:SendEvent(_G.EventID.PhotoViewHideDetailView, Val)
 
 	if not self.LastSubView then
 		return
@@ -867,15 +856,14 @@ end
 
 function PhotoMainView:OnBindMainTabIdx()
 	self:UpdSubViewShow()
-	
 	local IsSingle = PhotoVM.MainTabIdx == UITabMainDef.Mod
 	UIUtil.SetIsVisible(self.TableViewPages, not IsSingle)
 	-- UIUtil.SetIsVisible(self.PanelTabArrow, not IsSingle)
 
 	-- update indicator icon
-	for Idx, Icon in pairs(self.IndicatorIcon) do
-		UIUtil.SetIsVisible(Icon, MainIdx == Idx)
-	end
+	-- for Idx, Icon in pairs(self.IndicatorIcon) do
+	-- 	UIUtil.SetIsVisible(Icon, MainIdx == Idx)
+	-- end
 end
 
 function PhotoMainView:OnBindTabSubIdx()
@@ -889,10 +877,10 @@ function PhotoMainView:OnBindTabSubIdx()
 	-- UIUtil.SetIsVisible(self.PanelSelect03, MainIdx == PhotoDefine.UITabMain.Eff)
 	-- UIUtil.SetIsVisible(self.PanelSelect04, MainIdx == PhotoDefine.UITabMain.Mod)
 
-	_G.FLOG_INFO(string.format("[Photo][PhotoMainView][OnBindTabSubIdx] MainIdx = %s, SubIdx = %s", 
-		tostring(MainIdx),
-		tostring(SubIdx)
-	))
+	-- _G.FLOG_INFO(string.format("[Photo][PhotoMainView][OnBindTabSubIdx] MainIdx = %s, SubIdx = %s", 
+	-- 	tostring(MainIdx),
+	-- 	tostring(SubIdx)
+	-- ))
 	-- play anim
 	-- if self.SubTabAnim[MainIdx] and self.SubTabAnim[MainIdx][SubIdx] then
 	-- 	local Anim = self.SubTabAnim[MainIdx][SubIdx]

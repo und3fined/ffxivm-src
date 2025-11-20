@@ -66,7 +66,7 @@ function LinkShellMgr:OnRegisterNetMsg()
     --- Notify Msg
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_AUDITJOIN_RESULT_NTF, self.OnAuditJoinResultNotify) --通知加入了通讯贝或被拒绝
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_INVITE_JOIN_NTF, self.OnInviteJoinNotify) --邀请加入通讯贝通知
-    self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_JOIN_LINKSHELL, self.OnJoinLinkShellNotify) --新成员加入通讯贝通知
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_JOIN_LINKSHELL, self.OnJoinLinkShellNotify) --玩家加入通讯贝通知
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_DESTROY_NTF, self.OnLinkShellDestroyNotify) --销毁通讯贝通知
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_KICKOFF_NTF, self.OnKickOffNotify) --踢出通讯贝通知
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_LINKSHELL, SUB_MSG_ID.CS_SUB_CMD_LINKSHELL_TITLE_CHANGE_NTF, self.OnCurPlayerTitleChangeNotify) --身份变化通知
@@ -133,7 +133,7 @@ function LinkShellMgr:OnNetMsgLinkShellGetDetails(MsgBody)
 end
 
 function LinkShellMgr:OnNetMsgLinkShellCreate(MsgBody)
-    LinkShellVM:AddLinkShellList(MsgBody.Create)
+    LinkShellVM:AddLinkShellListByCreate(MsgBody.Create)
 
     EventMgr:SendEvent(EventID.LinkShellCreateSuc)
 
@@ -296,7 +296,6 @@ function LinkShellMgr:OnNetMsgLinkShellAnswerInviteJoin(MsgBody)
     LinkShellVM:DestroyInvitedLinkShell(AnswerInvite.ID)
 
     if AnswerInvite.Result then
-        self:SendMsgGetLinkShellListReq()
         MsgTipsUtil.ShowTips(LSTR(40032)) -- "加入通讯贝成功"
 
     else
@@ -396,8 +395,6 @@ end
 function LinkShellMgr:OnAuditJoinResultNotify(MsgBody)
     local AuditJoinNtf = MsgBody.AuditJoinNtf or {}
     if AuditJoinNtf.Result then
-        self:SendMsgGetLinkShellListReq()
-
         MsgTipsUtil.ShowTips(LSTR(40032)) --"加入通讯贝成功"
     end
 end
@@ -416,9 +413,15 @@ function LinkShellMgr:OnInviteJoinNotify(MsgBody)
     end
 end
 
---- 新成员加入通讯贝
+--- 玩家加入通讯贝
 ---@param MsgBody any
 function LinkShellMgr:OnJoinLinkShellNotify(MsgBody)
+    local JoinNtf = MsgBody.JoinNtf
+    if nil == JoinNtf then
+        return
+    end
+   
+    LinkShellVM:AddLinkShellListByNtf(JoinNtf.LinkShell)
 end
 
 --- 销毁通讯贝的通知
@@ -463,7 +466,7 @@ end
 function LinkShellMgr:OnApplyJoinNotify(MsgBody)
     local Ntf = MsgBody.ApplyJoinNtf
     if Ntf then
-        LinkShellVM:UpdateLinkShellApplyList(Ntf.ID, { Ntf.Req })
+        LinkShellVM:UpdateLinkShellApplyList(Ntf.ID, { Ntf.Req }, true)
         LinkShellVM:UpdateApplyTotalNumAndRedDot()
     end
 end
@@ -984,8 +987,7 @@ function LinkShellMgr:OpenLinkShellInviteSidebar(StartTime, CountDown, Type)
 
     local Params = {
         Title       = LSTR(40041), --"通讯贝邀请"
-        Desc1       = string.format('%s<span color="#8FBDD5FF">%s</>', LSTR(10005), Info.Name or ""), --"玩家"
-        Desc2       = string.format('%s[%s]', LSTR(40042), Info.LinkShellName or ""), --"邀请你加入通讯贝"
+        Desc1       = string.format('%s<span color="#6FB1E9FF">%s</>%s[%s]', LSTR(10005), Info.Name or "", LSTR(40042), Info.LinkShellName or ""), --"玩家"、"邀请你加入通讯贝"
         StartTime   = StartTime,
         CountDown   = CountDown,
         CBFuncRight = AcceptCallBack,
@@ -996,7 +998,7 @@ function LinkShellMgr:OpenLinkShellInviteSidebar(StartTime, CountDown, Type)
         TransData = { RoleID = Info.RoleID, LinkShellID = Info.LinkShellID },
     }
 
-    _G.UIViewMgr:ShowView(_G.UIViewID.SidebarCommon, Params)
+    SidebarMgr:ShowCommonSidebarWin(Params)
 end
 
 return LinkShellMgr

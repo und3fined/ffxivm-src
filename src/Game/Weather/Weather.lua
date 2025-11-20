@@ -44,13 +44,10 @@ function Weather:ZoneInit(WeatherID,IsContent,WeatherParams)
         self.SettingCurrentAysoTime_ = WeatherParams[1]
     end
 
-    self:SetCppWeather()
-
-    local Params = _G.EventMgr:GetEventParams()
-    Params.IntParam1 = WeatherID
-    Params.IntParam2 = self.time_
-
-    _G.EventMgr:SendCppEvent(EventID.MapWeatherChanged, Params)
+    --没有播sequenceweather变天气
+    if _G.WeatherMgr:GetCurrentCutSceneWeather() == Weather.WeatherInfo.INVALID_WEATHER_ID then
+        self:SetCppWeather()
+    end
 end
 
 function Weather:SetWeather(WeatherID,GraphicTransitionTime,IsContent,Time,IsFixed)

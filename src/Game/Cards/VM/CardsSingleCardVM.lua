@@ -49,6 +49,7 @@ function CardsSingleCardVM:Ctor(ParentVM, Index, CardType)
     self.TournamentWeaken = 0
     self:SetIsPlayerCard(false) -- 是否为玩家打出的牌，如果是，那么会修改底色
     self.Active = true -- 是否显示整个卡牌，已打出去的隐藏
+    self.CardNumHighLightDir = 0 -- 卡牌数字高亮方位
 end
 
 function CardsSingleCardVM:SetTournamentWeaken(TargetValue)
@@ -67,6 +68,10 @@ function CardsSingleCardVM:SetActive(Value)
     self.Active = Value
 end
 
+function CardsSingleCardVM:SetCardNumHighLightDir(Dir)
+    self.CardNumHighLightDir = Dir
+end
+
 -- 目前只是拖动，编辑的时候用到
 function CardsSingleCardVM:CopyFromOther(OtherVM)
     if (OtherVM == nil) then
@@ -77,6 +82,7 @@ function CardsSingleCardVM:CopyFromOther(OtherVM)
     self.CardId = OtherVM.CardId
     self.ChangePoint = OtherVM.ChangePoint
     self.TournamentWeaken = OtherVM.TournamentWeaken
+    self.CardNumHighLightDir = OtherVM.CardNumHighLightDir
 end
 
 function CardsSingleCardVM:TryChangeNotify()

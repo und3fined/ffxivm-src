@@ -286,6 +286,10 @@ function PuzzlePenguinJigsawMoveItemView:CheckIsRightLoc(PointerEvent, Operation
 end
 
 function PuzzlePenguinJigsawMoveItemView:BeginHighLight()
+    if (self.Object == nil or not self.Object:IsValid()) then
+        return
+    end
+
     if not self:IsAnimationPlaying(self.AnimHighlight) then
         self:PlayAnimation(self.AnimHighlight)
     end

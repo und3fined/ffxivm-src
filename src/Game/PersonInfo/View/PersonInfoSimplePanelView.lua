@@ -41,8 +41,9 @@ local TeamMgr
 local ArmyMgr
 local PersonInfoMgr
 local FVector2D = _G.UE.FVector2D
+local GroupRecruitStatus = ProtoCS.GroupRecruitStatus
 
-local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
+local UIBinderSetProfIconSimple7nd = require("Binder/UIBinderSetProfIconSimple7nd")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local BtnSortFunc = function(lhs, rhs)
 	return lhs.Priority < rhs.Priority
@@ -50,23 +51,33 @@ end
 
 ---@class PersonInfoSimplePanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field ArmyBadge ArmyBadgeItemView
 ---@field BtnArmy UFButton
 ---@field BtnGo UFButton
 ---@field BtnMask UFButton
+---@field CommonPlayerPortraitItem CommonPlayerPortraitItemView
+---@field FHorizontalServer UFHorizontalBox
+---@field IconJob UFImage
 ---@field IconOnline UFImage
----@field ImgFrame UFImage
----@field ImgFrameBg UFImage
----@field PersonInfoPlayer PersonInfoPlayerItemView
----@field PortraitPanel PersonInfoPortraitItemView
+---@field IconServer UFImage
+---@field ImgArmy UFImage
+---@field ImgFrameA UFImage
+---@field ImgFrameB UFImage
+---@field ImgFrameC UFImage
+---@field ImgLvBg UFImage
+---@field InfoNode UFCanvasPanel
+---@field PersonInfoPlayer CommHeadView
+---@field RankAndArmyNode UFCanvasPanel
 ---@field SizeBox2 USizeBox
 ---@field TableViewBtn UTableView
 ---@field TextArmyName UFTextBlock
 ---@field TextHomepage UFTextBlock
 ---@field TextJobLevel UFTextBlock
 ---@field TextNoneArmyTips UFTextBlock
+---@field TextNotes UFTextBlock
 ---@field TextOnline UFTextBlock
 ---@field TextPlayerName UFTextBlock
----@field TextRemark UFTextBlock
+---@field TextServer UFTextBlock
 ---@field TextTeam UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -74,23 +85,33 @@ local PersonInfoSimplePanelView = LuaClass(UIView, true)
 
 function PersonInfoSimplePanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.ArmyBadge = nil
 	--self.BtnArmy = nil
 	--self.BtnGo = nil
 	--self.BtnMask = nil
+	--self.CommonPlayerPortraitItem = nil
+	--self.FHorizontalServer = nil
+	--self.IconJob = nil
 	--self.IconOnline = nil
-	--self.ImgFrame = nil
-	--self.ImgFrameBg = nil
+	--self.IconServer = nil
+	--self.ImgArmy = nil
+	--self.ImgFrameA = nil
+	--self.ImgFrameB = nil
+	--self.ImgFrameC = nil
+	--self.ImgLvBg = nil
+	--self.InfoNode = nil
 	--self.PersonInfoPlayer = nil
-	--self.PortraitPanel = nil
+	--self.RankAndArmyNode = nil
 	--self.SizeBox2 = nil
 	--self.TableViewBtn = nil
 	--self.TextArmyName = nil
 	--self.TextHomepage = nil
 	--self.TextJobLevel = nil
 	--self.TextNoneArmyTips = nil
+	--self.TextNotes = nil
 	--self.TextOnline = nil
 	--self.TextPlayerName = nil
-	--self.TextRemark = nil
+	--self.TextServer = nil
 	--self.TextTeam = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -98,8 +119,9 @@ end
 
 function PersonInfoSimplePanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.PersonInfoPlayer)
+	self:AddSubView(self.ArmyBadge)
 	self:AddSubView(self.CommonPlayerPortraitItem)
+	self:AddSubView(self.PersonInfoPlayer)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -119,9 +141,10 @@ function PersonInfoSimplePanelView:OnInit()
 		-- { "HeadInfo", 			UIBinderSetHead.New(self, self.PersonInfoPlayer.ImgPlayer) },
 		{ "OnlineStatusName", UIBinderValueChangedCallback.New(self, nil, self.UpdOnlineName) },
 		{ "OnlineStatusIcon", 	UIBinderSetImageBrush.New(self, self.IconOnline) },
-		{ "Prof", 				UIBinderSetProfIcon.New(self, self.IconJob) },
+		{ "Prof",		UIBinderSetProfIconSimple7nd.New(self, self.IconJob) },
 		{ "Level", 				UIBinderSetText.New(self, self.TextJobLevel) },
 		-- { "LevelColor", 		UIBinderSetColorAndOpacityHex.New(self, self.TextJobLevel) },
+		{ "HouseID", UIBinderValueChangedCallback.New(self, nil, self.UpdHouseInfo) }
 	}
 
 	self:InitLSTR()
@@ -137,11 +160,48 @@ function PersonInfoSimplePanelView:OnDestroy()
 end
 
 function PersonInfoSimplePanelView:OnShow()
-	local RoleID = (PersonInfoVM.RoleVM or {}).RoleID
-	PersonInfoMgr:SendQueryGemInfoByRoleID(RoleID)
+	---默认隐藏，等数据回包再显示
+	self:SetInfoUIShow(false)
+end
+function PersonInfoSimplePanelView:SetInfoUIShow(IsShow)
+	UIUtil.SetIsVisible(self.CommonPlayerPortraitItem, IsShow)
+	UIUtil.SetIsVisible(self.ImgFrameA, IsShow)
+	UIUtil.SetIsVisible(self.ImgFrameB, IsShow)
+	UIUtil.SetIsVisible(self.ImgFrameC, IsShow)
+	UIUtil.SetIsVisible(self.InfoNode, IsShow)
+end
 
-	self.PersonInfoPlayer:SetInfo((PersonInfoVM.RoleVM or {}).RoleID)
-	self.CommonPlayerPortraitItem:SetParams({Data = PersonInfoVM.RoleVM})
+---onshow逻辑迁移到这里，等回包更新显示
+function PersonInfoSimplePanelView:UpdateRoleData(Source)
+	if self.Params then
+		self.Params.Source = Source
+	else
+		self.Params = {Source = Source}
+	end
+	---RoleVM可能有更新，重新绑定一次
+	--玩家数据
+	if self.RoleVM then
+		self:UnRegisterBinders(self.RoleVM, self.BindersRoleVM)
+	end
+	local RoleVM = PersonInfoVM.RoleVM
+	self.RoleVM = RoleVM
+
+	if RoleVM then
+		self:RegisterBinders(RoleVM, self.BindersRoleVM)
+	end
+
+	self:SetInfoUIShow(true)
+	local RoleID = (PersonInfoVM.RoleVM or {}).RoleID
+	if RoleID ~= nil then
+		PersonInfoMgr:SendQueryArmyInfoByRoleID(RoleID)
+		--PersonInfoMgr:SendQueryGemInfoByRoleID( RoleID )
+		self.PersonInfoPlayer:SetInfo(RoleID)
+	end
+	--self.CommonPlayerPortraitItem:SetParams({Data = PersonInfoVM.RoleVM})
+	---RoleVM可能有更新，重新绑定一次
+	if RoleVM then
+		self.CommonPlayerPortraitItem:UpdateBinderByData(RoleVM)
+	end
 	self.IsMajor = PersonInfoVM.IsMajor 
 	self.RoleID = PersonInfoVM.RoleID
 
@@ -149,13 +209,8 @@ function PersonInfoSimplePanelView:OnShow()
 		PersonInfoMgr:ReportSystemFlowData(PersonInfoDefine.DataReportType.IsOther)
 	end
 
-	local RoleVM = self.RoleVM or {}
-
-	--功能按钮状态
-	-- self:UpdateFunctionBtns()
-
 	--玩家名字
-	self.TextPlayerName:SetText(RoleVM.Name or "")
+	self:UpdPlayerName()
 	self:UpdTeamInfo()
 
 	--当前职业信息
@@ -165,6 +220,32 @@ function PersonInfoSimplePanelView:OnShow()
 
 	--当前职业信息
 	self:SetServerInfo()
+end
+
+function PersonInfoSimplePanelView:UpdPlayerName(Name)
+	local RoleVM = PersonInfoVM.RoleVM
+
+	if not RoleVM then
+		return
+	end
+
+	local RoleID = RoleVM.RoleID
+
+	local IsFriend = FriendMgr:IsFriend(RoleID)
+	local PlayerName = Name or PersonInfoVM.RoleVM.Name
+
+	local IsShowNickName = false
+	if IsFriend then
+		local NickName = FriendMgr:GetFriendNickname(RoleID)
+		if not string.isnilorempty(NickName) then
+			--PlayerName = NickName
+			local NickText = string.format("(%s)", NickName)
+			self.TextNotes:SetText(NickText)
+			IsShowNickName = true
+		end
+	end
+	UIUtil.SetIsVisible(self.TextNotes, IsShowNickName)
+	self.TextPlayerName:SetText(PlayerName)
 end
 
 ---服务器信息
@@ -204,12 +285,12 @@ end
 
 function PersonInfoSimplePanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.TeamNumberInfoQuerySucc, self.OnEveQueryTeamNumber)
-
-	self:RegisterGameEvent(EventID.FriendAddBlack, self.UpdateFunctionBtns)
-	self:RegisterGameEvent(EventID.FriendAdd, self.UpdateFunctionBtns)
-	self:RegisterGameEvent(EventID.FriendRemoved, self.UpdateFunctionBtns)
-	self:RegisterGameEvent(EventID.FriendRemoveBlack, self.UpdateFunctionBtns)
-
+	self:RegisterGameEvent(EventID.FriendAddBlack, self.OnEveFriendChg)
+	self:RegisterGameEvent(EventID.FriendAdd, self.OnEveFriendChg)
+	self:RegisterGameEvent(EventID.FriendRemoved, self.OnEveFriendChg)
+	self:RegisterGameEvent(EventID.FriendRemoveBlack, self.OnEveFriendChg)
+	self:RegisterGameEvent(EventID.FriendSetNicknameSuc, self.OnEveNickNameChg)
+	self:RegisterGameEvent(EventID.HousePrivilegeUpdate, self.OnHousePrivilegeUpdate)
 end
 
 function PersonInfoSimplePanelView:OnRegisterBinder()
@@ -222,6 +303,21 @@ function PersonInfoSimplePanelView:OnRegisterBinder()
 	if RoleVM then
 		self:RegisterBinders(RoleVM, self.BindersRoleVM)
 	end
+end
+
+function PersonInfoSimplePanelView:OnEveFriendChg()
+	self:UpdateFunctionBtns()
+	self:UpdPlayerName()
+end
+
+function PersonInfoSimplePanelView:OnEveNickNameChg(RoleID)
+	local RoleVM = PersonInfoVM.RoleVM
+
+	if not RoleVM or RoleVM.RoleID ~= RoleID then
+		return
+	end
+
+	self:UpdPlayerName()
 end
 
 function PersonInfoSimplePanelView:UpdatePlayerProfInfo(Prof)
@@ -261,9 +357,10 @@ end
 ---公会
 
 function PersonInfoSimplePanelView:OnValueChangedArmySimpleInfo(Info)
+	self:UpdateFunctionBtns()
+
 	Info = Info or {}
 	local ArmyID = Info.ID 
-	self:UpdateFunctionBtns()
 
 	if nil == ArmyID or ArmyID <= 0 then
 		UIUtil.SetIsVisible(self.ImgArmy, false)
@@ -275,6 +372,7 @@ function PersonInfoSimplePanelView:OnValueChangedArmySimpleInfo(Info)
 		UIUtil.SetIsVisible(self.ArmyBadge, false)
 		return
 	end
+
 	UIUtil.SetIsVisible(self.TextNoneArmyTips, false)
 	UIUtil.SetIsVisible(self.ImgArmy, true)
 	UIUtil.SetIsVisible(self.TextArmyName, true)
@@ -346,16 +444,15 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 	-- local MajorRoleVM = MajorUtil.GetMajorRoleVM()
 
 	local MajorGroupID = nil
-	local HasTargetArmyInfo = false
+	local TargetGroupID = nil
+
 	local MajorGroupInfo = ArmyMgr:GetSelfArmyInfo()
 	if MajorGroupInfo and MajorGroupInfo.Simple then
 		MajorGroupID = MajorGroupInfo.Simple.ID
 	end
 
-	local TargetGroupID = nil
 	local TargetGroupInfo = PersonInfoVM.ArmySimpleInfo
 	if TargetGroupInfo then
-		HasTargetArmyInfo = true
 		TargetGroupID = TargetGroupInfo.ID
 	end
 
@@ -363,9 +460,14 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 
 		if ID == PopupBtnType.TeamInvite then
 			if (not IsMajor) and (not IsInBlackList) then
+				local IsAdd = not _G.TeamRecruitVM.IsRecruiting
 				local IsTargetInTeam = TeamMgr:IsTeamMemberByRoleID(RoleID) or ActorUtil.HasTeam(ActorUtil.GetEntityIDByRoleID(RoleID))
 				if (not IsTargetInTeam) then
-					local Ele = MakeBtnEle(Item)
+					local Ele = MakeBtnEle(Item, IsAdd)
+					if not IsAdd then
+						Ele.Name = _G.LSTR(1300069)
+					end
+					
 					table.insert(List, Ele)
 				end
 			end
@@ -383,6 +485,12 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 					table.insert(List, Ele)
 				end
 			end
+		elseif ID == PopupBtnType.AddNickName then
+			-- local NickName = FriendMgr:GetFriendNickname(RoleID)
+			if not IsMajor and FriendMgr:IsFriend(RoleID) then
+				local Ele = MakeBtnEle(Item)
+				table.insert(List, Ele)
+			end
 		elseif ID == PopupBtnType.ArmyTransCap then
 			if not IsMajor then
 				local IsCap = ArmyMgr:IsLeader()
@@ -396,32 +504,39 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 				end
 			end
 		elseif ID == PopupBtnType.RideInvite then
-			local IsSkip, NewName = self:GetRideBtnName()
-			if not IsSkip then
-				local Ele = MakeBtnEle(Item)
-				Ele.Name = NewName
-				table.insert(List, Ele)
-			end
+			-- local IsSkip, NewName = self:GetRideBtnName()
+			-- if not IsSkip then
+			-- 	local Ele = MakeBtnEle(Item)
+			-- 	Ele.Name = NewName
+			-- 	table.insert(List, Ele)
+			-- end
 		elseif ID == PopupBtnType.ArmyInvite then
-			local IsUnlcok = _G.ModuleOpenMgr:CheckOpenState(ProtoModuleID.ModuleIDArmy)
-			if IsTargetOriServer and IsUnlcok and (not IsMajor) then
+			if not IsMajor and IsTargetOriServer and _G.ModuleOpenMgr:CheckOpenState(ProtoModuleID.ModuleIDArmy) then
 				local MajorHasArmy = MajorGroupID ~= nil
 				local RoleHasArmy = (TargetGroupID ~= nil)
 				local IsPermiss = ArmyMgr:GetSelfIsHavePermisstion(ProtoRes.GroupPermissionType.GROUP_PERMISSION_TYPE_SendInvite)
-				if MajorHasArmy and (not RoleHasArmy) and IsPermiss then
-					local NewName = LSTR(620042) 
-					local Ele = MakeBtnEle(Item, true)
-					Ele.Name = NewName
-					table.insert(List, Ele)
-				elseif RoleHasArmy and (not MajorHasArmy) and HasTargetArmyInfo then
-					local NewName = LSTR(620041) 
-					local Icon = "PaperSprite'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_AddArmy_png.UI_Profile_Icon_AddArmy_png'"
-					local Ele = MakeBtnEle(Item, false)
-					Ele.Name = NewName
-					Ele.Icon = Icon
-					table.insert(List, Ele)
+				if MajorHasArmy and IsPermiss and (not RoleHasArmy) then
+					local MajorRecruitStatus = ArmyMgr:GetRecruitInfo()
+					if MajorRecruitStatus == GroupRecruitStatus.GROUP_RECRUIT_STATUS_Open then
+						local NewName = LSTR(620042)  -- 部队邀请
+						local Ele = MakeBtnEle(Item, true)
+						Ele.Name = NewName
+						table.insert(List, Ele)
+					end
+					
+				elseif (not MajorHasArmy) and RoleHasArmy then
+					local RoleRecruitStatus = (TargetGroupInfo or {}).RecruitStatus 
+					if RoleRecruitStatus == GroupRecruitStatus.GROUP_RECRUIT_STATUS_Open then
+						local NewName = LSTR(620041) -- 部队申请
+						local Icon = "PaperSprite'/Game/UI/Atlas/PersonInfo/Frames/UI_Profile_Icon_AddArmy_png.UI_Profile_Icon_AddArmy_png'"
+						local Ele = MakeBtnEle(Item, false)
+						Ele.Name = NewName
+						Ele.Icon = Icon
+						table.insert(List, Ele)
+					end
 				end
 			end
+
 		elseif ID == PopupBtnType.ArmySign then
 			-- 策划要求不检查解锁
 			local IsUnlcok = true --_G.ModuleOpenMgr:CheckOpenState(ProtoModuleID.ModuleIDArmy)
@@ -492,6 +607,11 @@ function PersonInfoSimplePanelView:UpdateFunctionBtns()
 		elseif ID == PopupBtnType.Chat or ID == PopupBtnType.Report or ID == PopupBtnType.LinkShellInvite then
 			if not IsMajor then
 				table.insert(List,MakeBtnEle(Item))
+			end
+		elseif ID == PopupBtnType.VisitingHouse then
+			if self.CanVisited then
+				local Ele = MakeBtnEle(Item)
+				table.insert(List, Ele)
 			end
 		else
 			table.insert(List,MakeBtnEle(Item))
@@ -577,6 +697,11 @@ function PersonInfoSimplePanelView:GetRideBtnName()
 	return true
 end
 
+-- ---房屋获取回包处理
+-- function PersonInfoSimplePanelView:OnValueChangedHouseInfo(Info)
+-- 	self:UpdateFunctionBtns()
+-- end
+
 -------------------------------------------------------------------------------------------------------
 ---Component CallBack
 
@@ -591,6 +716,7 @@ end
 function PersonInfoSimplePanelView:OnClickButtonArmy()
 	PersonInfoMgr:ShowPersonInfoArmyTipsView()
 	PersonInfoMgr:ReportSystemFlowData(PersonInfoDefine.DataReportType.ClickAmry)
+	self:Hide()
 end
 
 function PersonInfoSimplePanelView:OnClickPersonInfo()
@@ -601,6 +727,15 @@ end
 
 function PersonInfoSimplePanelView:UpdOnlineName( OnlineStatusName  )
 	self.TextOnline:SetText(OnlineStatusName)
+end
+
+function PersonInfoSimplePanelView:UpdHouseInfo(HouseID)
+	_G.HouseLandMgr:SendPullHouseBasicInfo(HouseID)
+end
+
+function PersonInfoSimplePanelView:OnHousePrivilegeUpdate(HouseInfo)
+	self.CanVisited = HouseInfo.CanVisited
+	self:UpdateFunctionBtns()
 end
 
 return PersonInfoSimplePanelView

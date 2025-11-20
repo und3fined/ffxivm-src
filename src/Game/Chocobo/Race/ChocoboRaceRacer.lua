@@ -19,6 +19,7 @@ local ChocoboRaceStatusCfg = require("TableCfg/ChocoboRaceStatusCfg")
 local ChocoboRaceVfxCfg = require("TableCfg/ChocoboRaceVfxCfg")
 local ChocoboRaceUtil = require("Game/Chocobo/Race/ChocoboRaceUtil")
 local AudioUtil = require("Utils/AudioUtil")
+local TimeUtil = require("Utils/TimeUtil")
 
 local ChocoboRaceMainVM = nil
 local ChocoboRaceMgr = nil
@@ -55,9 +56,12 @@ end
 
 function ChocoboRaceRacer:Update()
     self:UpdateMotion()
+    self:UpdateProgress()
+    self:UpdateBuffEffect()
 end
 
 function ChocoboRaceRacer:Reset()
+    self.ActorValid = false
     self.Index = 0
     self.RoleID = 0
     self.EntityID = 0
@@ -69,10 +73,13 @@ function ChocoboRaceRacer:Reset()
     self.IsKeyRight = false
     self.IsKeyJump = false
     self.Stamina = 10000
+    self.Progress = 0
     self.CurMotionStatusID = 0
     self.IsOtherMode = false
     self.BuffFlags = {}
+    self.BuffTimeData = {}
     self.BuffEffectIDs = {}
+    self.BuffReplayTimers = {}
     self.StaminaTutorialFlag = false
     self.AccTutorialFlag = false
     self.IsBlindState = false
@@ -93,6 +100,7 @@ function ChocoboRaceRacer:UpdateData(Data)
     self.Stamina = Data.Stamina
     self.Ranking = Data.Ranking
     self.Status = Data.Status
+    self.Progress = Data.Progress / 100
     
     if self.IsMajor and not self.AccTutorialFlag and self.Stamina <= 2500 then
         ---陆行鸟竞赛新手引导提示: 当玩家第一次达到疲惫时，提示玩家体力低于25%会进入疲惫，无法主动加速
@@ -142,11 +150,23 @@ function ChocoboRaceRacer:UpdateCtrl(Data)
     end
 end
 
+function ChocoboRaceRacer:VisionEnter()
+    self.ActorValid = true
+    self:UpdateMotion()
+end
+
+function ChocoboRaceRacer:VisionLeave()
+    self.ActorValid = false
+    self.CurMotionStatusID = MOTION_MODE.NULL
+end
+
 function ChocoboRaceRacer:UpdateResult(Data)
     if self.Index ~= Data.Index then return end
     
     self.Ranking = Data.Rank
+    self.IsArrival = true
     self:ClearBuff()
+    self:UpdateMotion()
 end
 
 function ChocoboRaceRacer:SetRank(Value)
@@ -165,32 +185,57 @@ function ChocoboRaceRacer:GetBuffFlags()
     return self.BuffFlags
 end
 
+function ChocoboRaceRacer:GetBuffTimeDataByID(Status)
+    return self.BuffTimeData[Status] or {}
+end
+
 function ChocoboRaceRacer:SetBuff(Index, Flag)
     self.BuffFlags[Index] = Flag
     
-    if self.BuffEffectIDs == nil then
-        self.BuffEffectIDs = {}
+    if not self.BuffEffectIDs then
+        return
+    end
+
+    if not self.BuffReplayTimers then
+        return
     end
     
     -- 更新Buff特效
     local HandleID = self.BuffEffectIDs[Index]
     if Flag then
-        if HandleID == nil then
+        self.BuffTimeData[Index] = {
+            StartTime = TimeUtil.GetServerLogicTimeMS(),
+            EndTime = 0,
+        }
+        
+        if not HandleID then
             local Cfg = ChocoboRaceStatusCfg:FindCfgByKey(Index)
-            if Cfg ~= nil then
+            if Cfg then
+                -- 首次播放特效
                 HandleID = self:PlayEffect(Cfg.LoopEffect)
                 self.BuffEffectIDs[Index] = HandleID
+
+                -- 初始化重播计时器
+                if Cfg.ReplayIntervalMS and Cfg.ReplayIntervalMS > 0 then
+                    self.BuffReplayTimers[Index] = TimeUtil.GetServerLogicTimeMS() + Cfg.ReplayIntervalMS
+                end
             end
         end
     else
-        if HandleID ~= nil then
+        if self.BuffTimeData[Index] then
+            self.BuffTimeData[Index].EndTime = TimeUtil.GetServerLogicTimeMS()
+        end
+        
+        -- 清除BUFF时处理
+        if HandleID then
             EffectUtil.StopVfx(HandleID)
             self.BuffEffectIDs[Index] = nil
+            self.BuffReplayTimers[Index] = nil -- 同时清除计时器
         end
     end
     
     if self.IsMajor then
-        ChocoboRaceUtil.Log(string.format("ChocoboRaceRacer:SetBuff: Index = %d, Flag = %d", Index, Flag and 1 or 0 ))
+        _G.FLOG_INFO(string.format("[ChocoboRace] ChocoboRaceRacer:SetBuff: Index = %d, Flag = %d", Index, Flag and 1 or 0 ))
         if Index == ProtoRes.CHOCOBO_RACE_STATUS.CHOCOBO_EFFECT_ABILITY_SEAL then
             for k = 1, ChocoboDefine.SKILL_NUM do
                 local SkillVM = ChocoboRaceMainVM:FindSkillVM(k)
@@ -217,24 +262,45 @@ function ChocoboRaceRacer:SetBuff(Index, Flag)
     end
 end
 
+function ChocoboRaceRacer:UpdateBuffEffect()
+    local CurrentTime = TimeUtil.GetServerLogicTimeMS()
+
+    -- 遍历所有需要重播的特效
+    for BuffIndex, NextReplayTime in pairs(self.BuffReplayTimers or {}) do
+        if CurrentTime >= NextReplayTime then
+            local Cfg = ChocoboRaceStatusCfg:FindCfgByKey(BuffIndex)
+
+            -- 有效性检查：配置存在且BUFF仍生效
+            if Cfg and self.BuffFlags[BuffIndex] then
+                -- 停止旧特效
+                local OldHandle = self.BuffEffectIDs[BuffIndex]
+                if OldHandle then
+                    EffectUtil.StopVfx(OldHandle)
+                end
+
+                -- 重新播放特效并更新句柄
+                self.BuffEffectIDs[BuffIndex] = self:PlayEffect(Cfg.LoopEffect)
+
+                -- 计算下次重播时间
+                self.BuffReplayTimers[BuffIndex] = CurrentTime + Cfg.ReplayIntervalMS
+            else
+                -- 清理无效记录
+                self.BuffReplayTimers[BuffIndex] = nil
+            end
+        end
+    end
+end
+
 function ChocoboRaceRacer:SetKeyUp(IsOn)
     self.IsKeyUp = IsOn
 end
 
 function ChocoboRaceRacer:SetKeyRight(IsOn)
     self.IsKeyRight = IsOn
-    
-    if self.IsMajor then
-        _G.UE.UChocoboRaceMgr.Get():SetKeyRight(IsOn)
-    end
 end
 
 function ChocoboRaceRacer:SetKeyLeft(IsOn)
     self.IsKeyLeft = IsOn
-    
-    if self.IsMajor then
-        _G.UE.UChocoboRaceMgr.Get():SetKeyLeft(IsOn)
-    end
 end
 
 function ChocoboRaceRacer:SetKeyJump(IsOn)
@@ -251,10 +317,8 @@ function ChocoboRaceRacer:SetKeyJump(IsOn)
     end
 end
 
-function ChocoboRaceRacer:GetRacerProgress()
-    local Progress = _G.UE.UChocoboRaceMgr.Get():GetRacerProgressByIndex(self.Index - 1)
-
-    if self.IsMajor and not self.StaminaTutorialFlag and Progress >= 90 and self.Stamina >= 5000 then
+function ChocoboRaceRacer:UpdateProgress()
+    if self.IsMajor and not self.StaminaTutorialFlag and self.Progress >= 90 and self.Stamina >= 5000 then
         ---陆行鸟竞赛新手引导提示: 当玩家进度超过90%且剩余体力大于50%时，提示玩家即将到达终点，可以全力加速消耗体力
         local function ShowChocoboRaceUserStaminaTutorial(Params)
             local EventParams = _G.EventMgr:GetEventParams()
@@ -268,13 +332,18 @@ function ChocoboRaceRacer:GetRacerProgress()
         _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
         self.StaminaTutorialFlag = true
     end
-    
-    return Progress
 end
 
 function ChocoboRaceRacer:UpdateMotion()
+    if not self.ActorValid then
+        return
+    end
+    
     local Actor = ActorUtil.GetActorByEntityID(self.EntityID)
-    if Actor == nil then return end
+    if Actor == nil then
+        self.CurMotionStatusID = MOTION_MODE.NULL
+        return 
+    end
     
     local MotionMode = self:GetMotionMode()
     if MotionMode == MOTION_MODE.NULL then
@@ -305,9 +374,9 @@ function ChocoboRaceRacer:GetMotionMode()
     end
 
     if self.IsArrival == true then
-        if self.Ranking == 1 then
+        if self.Ranking == 1 and self.IsMajor then
             return MOTION_MODE.ARRIVAL_FIRST
-        elseif self.Ranking <= 3 then
+        elseif self.Ranking <= 3 and self.IsMajor then
             return MOTION_MODE.ARRIVAL
         else
             return MOTION_MODE.NULL
@@ -358,7 +427,7 @@ function ChocoboRaceRacer:ClearMotionStatus()
         return
     end
 
-    ChocoboRaceUtil.Log(string.format("ChocoboRaceRacer:ClearMotionStatus: Index = %d   StatusID = %d", self.Index, self.CurMotionStatusID))
+    _G.FLOG_INFO(string.format("[ChocoboRace] ChocoboRaceRacer:ClearMotionStatus: Index = %d   StatusID = %d", self.Index, self.CurMotionStatusID))
     --主角
     AnimComp:StopAnimation()
     --坐骑
@@ -368,7 +437,7 @@ end
 function ChocoboRaceRacer:SetMotionStatus(MotionID)
     if self.CurMotionStatusID == MotionID then return end
 
-    ChocoboRaceUtil.Log(string.format("ChocoboRaceRacer:SetMotionStatus: Index = %d   MontionID = %d", self.Index, MotionID))
+    _G.FLOG_INFO(string.format("[ChocoboRace] ChocoboRaceRacer:SetMotionStatus: Index = %d   MontionID = %d", self.Index, MotionID))
     self.CurMotionStatusID = MotionID
     local ResID = self:GetATLResIDByMotionMode(MotionID)
     if ResID ~= 0 then
@@ -378,7 +447,7 @@ end
 
 function ChocoboRaceRacer:RevertState()
     self.IsOtherMode = false
-    --_G.FLOG_INFO("ChocoboRaceRacer:RevertState: Index = %d   IsOtherMode = %d", self.Index, self.IsOtherMode and 1 or 0 )
+    --_G.FLOG_INFO("[ChocoboRace] ChocoboRaceRacer:RevertState: Index = %d   IsOtherMode = %d", self.Index, self.IsOtherMode and 1 or 0 )
 end
 
 function ChocoboRaceRacer:PlayActionTimeline(ActionTimelineID)

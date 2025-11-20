@@ -36,6 +36,13 @@ function PVPColosseumRecordItemVM:Ctor()
 	self.Damaged = 0 -- 受伤量
 	self.Heal = 0 -- 治疗量
 
+	-- 段位数据 --
+	self.LastRankID = 0
+	self.LastCrystalPoint = 0
+	self.CurRankID = 0
+	self.CurCrystalPoint = 0
+	self.RankName = ""
+
 	-- 点赞相关 --
 	self.ShowLikeCount = false -- 是否显示点赞数
 	self.LikeCount = 0 -- 点赞数
@@ -67,6 +74,12 @@ function PVPColosseumRecordItemVM:UpdateVM(Value)
 	self.Damage = PvPColosseumTeamMemberBtlResult.Output
 	self.Damaged = PvPColosseumTeamMemberBtlResult.Survival
 	self.Heal = PvPColosseumTeamMemberBtlResult.Cure
+
+	self.LastRankID = Value.LastRankID
+	self.LastCrystalPoint = Value.LastCrystalPoint
+	self.CurRankID = Value.RankID
+	self.CurCrystalPoint = Value.CrystalPoint
+	self.RankName = _G.PVPInfoMgr:GetCrystallineRankName(Value.RankID)
 
 	self.IconLikePath = self.IsMajor and IconLikePathMap["Major"] or IconLikePathMap["Other"]
 	self.ShowLikeCount = false

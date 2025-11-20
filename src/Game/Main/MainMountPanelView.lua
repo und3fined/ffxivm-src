@@ -119,8 +119,17 @@ function MainMountPanelView:OnInit()
 	}
 
 	self.MountJumpLongClickTimer = nil
+	for i = 1, 3 do
+		local SkillBtn = self["SkillAbleBtn0"..i]
+		UIUtil.SetIsVisible(SkillBtn, false)
+	end
 
 	rawset(self, "bMainMountPanel", true)	--技能按钮用于判断是否为坐骑技能
+
+	self.EnableFlyOrJump = true
+	self.EnableFlyOrJumpCheckSkillList = {
+		35061, --魔导滑板技能
+	}
 end
 
 function MainMountPanelView:OnDestroy()
@@ -169,6 +178,8 @@ function MainMountPanelView:OnRegisterGameEvent()
 
 	--设置项
 	self:RegisterGameEvent(EventID.MountBgmSettingChange, self.OnBgmStateChange)
+
+	self:RegisterGameEvent(EventID.SkillStatusUpdate, self.OnSkillStatusUpdate)
 end
 
 function MainMountPanelView:OnRegisterBinder()
@@ -193,8 +204,25 @@ function MainMountPanelView:OnRegisterBinder()
 		--{ "FlyHigh", UIBinderValueChangedCallback.New(self, nil, self.OnFlyHighStateChange) },
 		{ "AllowFlyRide", UIBinderValueChangedCallback.New(self, nil, self.OnUpdateAllowFlyRide) },
 		--{ "IsMountFall", UIBinderSetIsChecked.New(self, self.ToggleBtnRemove2, false)}
+		{ "HandleSkillViewFight", UIBinderValueChangedCallback.New(self, nil, self.OnHandleSkillViewFight)},
 	}
 	self:RegisterBinders(MountVM, Binders)
+end
+
+function MainMountPanelView:OnSkillStatusUpdate()
+	local LogicData = _G.SkillLogicMgr:GetMajorSkillLogicData()
+	if LogicData and LogicData.SkillMap then
+		for _, SkillData in pairs(LogicData.SkillMap) do
+			for _, SkillID in ipairs(self.EnableFlyOrJumpCheckSkillList) do
+				if SkillData.SkillID == SkillID then
+					if SkillData.States then
+						self.EnableFlyOrJump = SkillData.States.InValidStateCount <= 0
+					end
+					break
+				end
+			end
+		end
+	end
 end
 
 function MainMountPanelView:OnIsMajorInFlyChange()
@@ -249,7 +277,7 @@ function MainMountPanelView:OnLongClickButtonRide()
 	self:EndRideProbar()
 	local CommSideBarUtil = require("Utils/CommSideBarUtil")
 	DataReportUtil.ReportMountInterSystemFlowData(1, 3)
-	CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Mount)
+	CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Mount)
 end
 
 function MainMountPanelView:OnClickMountJump()
@@ -338,7 +366,9 @@ function MainMountPanelView:OnClickMountUpPressed()
 	TimerMgr:CancelTimer(self.MountUpTimer)
 	TimerMgr:CancelTimer(self.MountDownTimer)
 	self.UpPressTime = TimeUtil.GetServerTimeMS()
-	MajorController:JumpStart()
+	if nil ~= MajorController then
+		MajorController:JumpStart()
+	end
 end
 
 function MainMountPanelView:OnClickMountUpReleased()
@@ -364,11 +394,16 @@ function MainMountPanelView:OnClickBtnTransfer()
 end
 
 function MainMountPanelView:OnMountUpPressed()
+	if not MountVM.IsMajorInFly and not self.EnableFlyOrJump then
+		MsgTipsUtil.ShowTips(LSTR(1090083))
+		return
+	end
 	local MoveComp = MajorUtil.GetMajor():GetMovementComponent()
 	if MoveComp and MoveComp:IsFalling() then
 		local MajorController = MajorUtil.GetMajorController()
 		if MajorController == nil then return end
 		MajorController:MountFly()
+		self:OnClickMountUpPressed()
 		return
 	end
 
@@ -384,7 +419,9 @@ function MainMountPanelView:OnMountUpPressed()
 
 	local MountJumpLongClickFunction = function()
 		_G.TimerMgr:CancelTimer(self.MountJumpLongClickTimer)
-		MajorController:MountFly()
+		if nil ~= MajorController then
+			MajorController:MountFly()
+		end
 	end
 
 	self.MountJumpLongClickTimer = _G.TimerMgr:AddTimer(self, MountJumpLongClickFunction, self.MountJumpLongClickTime)
@@ -406,6 +443,11 @@ function MainMountPanelView:OnMountDownClick()
 	end
 	if MountVM.bFlyLimitedByMap then
 		MsgTipsUtil.ShowTips(LSTR(1090051))
+		return
+	end
+
+	if not self.EnableFlyOrJump then
+		MsgTipsUtil.ShowTips(LSTR(1090083))
 		return
 	end
 
@@ -500,7 +542,7 @@ function MainMountPanelView:SetMountSkill()
 	for i = 1, 3 do
 		if LogicData ~= nil and self["SkillAbleBtn0"..i] ~= nil then
 			local SkillBtn = self["SkillAbleBtn0"..i]
-			if MountVM.PlayActionList and MountVM.PlayActionList[i] then
+			if not MountVM.IsInOtherRide and MountVM.PlayActionList and MountVM.PlayActionList[i] then
 				local ActionStringSplit = string.split(MountVM.PlayActionList[i], ",")
 				local Action = tonumber(ActionStringSplit[1])
 				if Action ~= nil then
@@ -586,4 +628,11 @@ function MainMountPanelView:StopInOutAnim()
 	self:StopAnimation(self.AnimMountOut)
 end
 
+function MainMountPanelView:OnHandleSkillViewFight(Value)
+    if Value then
+        self:PlayAnimationToEndTime(self.AnimHide)
+    else
+        self:PlayAnimationToEndTime(self.AnimShow)
+    end
+end
 return MainMountPanelView

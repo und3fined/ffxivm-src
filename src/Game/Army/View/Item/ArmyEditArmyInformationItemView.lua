@@ -10,6 +10,8 @@ local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIDefine = require("Define/UIDefine")
+local SearchBtnColorType = UIDefine.SearchBtnColorType
 
 ---@class ArmyEditArmyInformationItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -82,7 +84,9 @@ function ArmyEditArmyInformationItemView:OnIsCheckedChange(IsChecked)
 end
 
 function ArmyEditArmyInformationItemView:OnIsEnabledChange(IsEnabled)
-	self.CommSingleBox:SetIsEnabled(IsEnabled)
+	--self.CommSingleBox:SetIsEnabled(IsEnabled)
+	self.CommSingleBox:SetClickable(IsEnabled)
+	self.CommSingleBox:SetColorType(UIDefine.SearchBtnColorType.Dark, not IsEnabled)
 end
 
 function ArmyEditArmyInformationItemView:OnToggleStateChanged(ToggleButton, State)

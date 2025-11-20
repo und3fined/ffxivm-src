@@ -104,7 +104,11 @@ function ArmyBatchGroupItemView:OnClickedBtnSwitch()
 
 	if self.ViewModel then
 		local RoleIDs = {self.ViewModel.RoleID}
-		self.ViewModel.OnClickedSwitchCategory(self.ViewModel.Owner, RoleIDs, self.BtnSwitch)
+		if self.ViewModel.OnClickedSwitchCategory then
+			self.ViewModel.OnClickedSwitchCategory(self.ViewModel.Owner, RoleIDs, self.BtnSwitch)
+		else
+			_G.FLOG_WARNING("ArmyBatchGroupItemView:OnClickedBtnSwitch OnClickedSwitchCategory is nil")
+		end
 	end
 end
 return ArmyBatchGroupItemView

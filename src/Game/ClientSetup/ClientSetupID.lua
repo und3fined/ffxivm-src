@@ -164,7 +164,7 @@ local ClientSetupID = {
     MountGlobalBGMSetting = 1604,
 
     --- 商城奇遇盲盒红点已读状态
-	StoreMasterBoxReddot = 1605,
+	StoreMasteryBoxReddot = 1605,
 
     -- HUD
 	HUDMemberFlyTextVisible = 1611,  -- 是否显示队友造成的伤害飘字

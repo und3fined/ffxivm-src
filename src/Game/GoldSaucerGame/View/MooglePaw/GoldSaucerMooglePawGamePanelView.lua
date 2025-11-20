@@ -7,17 +7,26 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local ProtoRes = require("Protocol/ProtoRes")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderCanvasSlotSetPosition = require("Binder/UIBinderCanvasSlotSetPosition")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIBinderSetText = require("Binder/UIBinderSetText")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local ObjectGCType = require("Define/ObjectGCType")
+local EventID = require("Define/EventID")
+local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local MoogleBallCaughtState = GoldSaucerMiniGameDefine.MoogleBallCaughtState
 local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local MoogleActBtnActiveType = GoldSaucerMiniGameDefine.MoogleActBtnActiveType
+local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
+local MogulBallType = ProtoRes.Game.MogulBallType
 local AudioType = GoldSaucerMiniGameDefine.AudioType
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 local FLOG_INFO = _G.FLOG_INFO
 local FLOG_ERROR = _G.FLOG_ERROR
 
@@ -27,40 +36,82 @@ local ShootingTipsBPName = "GoldSaucerGame/MooglePaw/GoldSaucer_MooglePawShootin
 
 ---@class GoldSaucerMooglePawGamePanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field BtnClickCactus UFButton
 ---@field BtnLeft UFButton
 ---@field BtnRight UFButton
 ---@field ChallengeBegins GoldSaucerCuffchallengeBeginsItemView
+---@field EFFCaughtMove UFCanvasPanel
+---@field EFFRoundBg UFCanvasPanel
 ---@field ImgBtnLeftNornal UFImage
 ---@field ImgBtnRightNornal UFImage
+---@field ImgCactusPeople UFImage
+---@field ImgCaughtGreen UFImage
+---@field ImgCaughtNormal UFImage
+---@field ImgPowerOnBg UFImage
+---@field ImgSuccessNormalBG UFImage
 ---@field Moogle GoldSaucerMooglePawMoogleItemView
+---@field PanelCactus UFCanvasPanel
+---@field PanelCaughtGreen UFCanvasPanel
+---@field PanelCaughtNormal UFCanvasPanel
 ---@field PanelMachine UFCanvasPanel
 ---@field PanelMain UFCanvasPanel
 ---@field RoundTips GoldSaucerMooglePawRoundTipsItemView
+---@field SpineCactusPeople1 USpineWidget
+---@field SpineCactusPeople2 USpineWidget
 ---@field StageTips GoldSaucerMooglePawStageTipsItemView
 ---@field TableViewBall UTableView
+---@field TextCountDown UFTextBlock
+---@field AnimClickCactus UWidgetAnimation
+---@field AnimCountdownRedLight UWidgetAnimation
 ---@field AnimFail UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
+---@field AnimRound0 UWidgetAnimation
+---@field AnimRound3 UWidgetAnimation
+---@field AnimRound4 UWidgetAnimation
+---@field AnimRound4Loop UWidgetAnimation
+---@field AnimSectionGreenShow UWidgetAnimation
 ---@field AnimSuccess UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerMooglePawGamePanelView = LuaClass(UIView, true)
 
 function GoldSaucerMooglePawGamePanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.BtnClickCactus = nil
 	--self.BtnLeft = nil
 	--self.BtnRight = nil
 	--self.ChallengeBegins = nil
+	--self.EFFCaughtMove = nil
+	--self.EFFRoundBg = nil
 	--self.ImgBtnLeftNornal = nil
 	--self.ImgBtnRightNornal = nil
+	--self.ImgCactusPeople = nil
+	--self.ImgCaughtGreen = nil
+	--self.ImgCaughtNormal = nil
+	--self.ImgPowerOnBg = nil
+	--self.ImgSuccessNormalBG = nil
 	--self.Moogle = nil
+	--self.PanelCactus = nil
+	--self.PanelCaughtGreen = nil
+	--self.PanelCaughtNormal = nil
 	--self.PanelMachine = nil
 	--self.PanelMain = nil
 	--self.RoundTips = nil
+	--self.SpineCactusPeople1 = nil
+	--self.SpineCactusPeople2 = nil
 	--self.StageTips = nil
 	--self.TableViewBall = nil
+	--self.TextCountDown = nil
+	--self.AnimClickCactus = nil
+	--self.AnimCountdownRedLight = nil
 	--self.AnimFail = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
+	--self.AnimRound0 = nil
+	--self.AnimRound3 = nil
+	--self.AnimRound4 = nil
+	--self.AnimRound4Loop = nil
+	--self.AnimSectionGreenShow = nil
 	--self.AnimSuccess = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -89,9 +140,14 @@ function GoldSaucerMooglePawGamePanelView:OnInit()
 		{"GameState", UIBinderValueChangedCallback.New(self, nil, self.OnMiniGameStateChanged)},
 		{"BallCaughtState", UIBinderValueChangedCallback.New(self, nil, self.OnBallCaughtStateChanged)},
 		{"ReconnectSuccess", UIBinderValueChangedCallback.New(self, nil, self.OnReconnectSuccess)},
+		{"TotalTimeText", UIBinderSetText.New(self, self.TextCountDown)},
+		{"bKeyTime", UIBinderValueChangedCallback.New(self, nil, self.OnComeInKeyTime)},
+		{"bBless", UIBinderSetIsVisible.New(self, self.PanelCactus)},
+		{"TextHint", UIBinderSetText.New(self, self.StageTips.TextTips)},
 	}
 	-- 初始化相关数据
 	self.VM = self.Params and self.Params.Data
+	self.MoogleDcfg = MiniGameClientConfig[MiniGameType.MooglesPaw]
 end
 
 function GoldSaucerMooglePawGamePanelView:OnDestroy()
@@ -103,6 +159,16 @@ function GoldSaucerMooglePawGamePanelView:OnShow()
 	self:ControlTheActBtnShowState(MoogleActBtnActiveType.Invalid)
 	self:InitGameReadyUIState()
 	self:ShowTheGameReadyBP()
+
+	-- 赐福仙人掌动画种类切换
+	local GameInst = self.VM and self.VM.MiniGame
+	if not GameInst then
+		return
+	end
+
+	local bBigBlessMode = GameInst:IsBigBlessMode()
+	UIUtil.SetIsVisible(self.SpineCactusPeople1, not bBigBlessMode)
+	UIUtil.SetIsVisible(self.SpineCactusPeople2, bBigBlessMode)
 end
 
 function GoldSaucerMooglePawGamePanelView:OnHide()
@@ -116,6 +182,7 @@ function GoldSaucerMooglePawGamePanelView:OnRegisterUIEvent()
 	UIUtil.AddOnReleasedEvent(self, self.BtnLeft, self.OnActBtnReleased)
 	UIUtil.AddOnPressedEvent(self, self.BtnRight, self.OnActBtnPressed)
 	UIUtil.AddOnReleasedEvent(self, self.BtnRight, self.OnActBtnReleased)
+	UIUtil.AddOnClickedEvent(self, self.BtnClickCactus, self.OnBtnClickCactus)
 end
 
 function GoldSaucerMooglePawGamePanelView:OnRegisterGameEvent()
@@ -125,6 +192,20 @@ end
 function GoldSaucerMooglePawGamePanelView:OnRegisterBinder()
     self.VM = self.Params and self.Params.Data
     self:RegisterBinders(self.VM, self.Binders)
+end
+
+function GoldSaucerMooglePawGamePanelView:OnBtnClickCactus()
+	self:PlayAnimation(self.AnimClickCactus)
+end
+
+--- 玩家游玩时间减少
+function GoldSaucerMooglePawGamePanelView:OnComeInKeyTime(bInKeyTime)
+	if bInKeyTime then
+		self:PlayAnimation(self.AnimCountdownRedLight, 0, 0, nil, 1.0)
+	else
+		self:PlayAnimation(self.AnimCountdownRedLight, 0.67) -- 动画单次时长
+	end
+	FLOG_INFO("GoldSaucerMooglePawGamePanelView:OnComeInKeyTime bInKeyTime %s", bInKeyTime)
 end
 
 --- UI界面控制操作按钮的显示状态
@@ -146,6 +227,7 @@ function GoldSaucerMooglePawGamePanelView:InitGameReadyUIState()
 	UIUtil.SetIsVisible(self.Moogle, false)
 	UIUtil.SetIsVisible(self.ChallengeBegins, false)
 	self:HideShootingTips()
+	self:PlayAnimation(self.AnimSectionGreenShow, 0.2, 1, _G.UE.EUMGSequencePlayMode.Reverse)
 end
 
 --- 进行游戏的准备开始阶段
@@ -216,6 +298,10 @@ function GoldSaucerMooglePawGamePanelView:OnMiniGameStateChanged(NewValue, OldVa
 		self:UpdateEndStateInfo()
 	elseif OldValue == MiniGameStageType.End and NewValue == MiniGameStageType.Restart then
         self:UpdateRestartInfo()
+	elseif OldValue == MiniGameStageType.End and NewValue == MiniGameStageType.ExtraRound then
+		self:EnterTheExtraRoundReadyStep()
+	elseif OldValue == MiniGameStageType.ExtraRound and NewValue == MiniGameStageType.ExtraRoundStart then
+		self:EnterTheExtraRoundStartStep()
 	end
 end
 
@@ -223,15 +309,18 @@ function GoldSaucerMooglePawGamePanelView:UpdateEndStateInfo()
 	if self.VM == nil then
 		return
 	end
-	-- 还原莫古力位置
+	--self:ResetMoogle()
+	--self:SetVisible(false)
+	-- 清一遍控件
+	--self.VM:ClearBall()
+end
+
+function GoldSaucerMooglePawGamePanelView:ResetMoogle()
+	-- 还原莫古力
 	local MoogleInitPos = GoldSaucerMiniGameDefine.MoogleInitPos
 	self.VM.MooglePosition:SetValue(MoogleInitPos.X, MoogleInitPos.Y)
 	self:InitMoogleEffectState()
-	self:SetVisible(false)
-	-- 清一遍控件
-	self.VM:ClearBall()
 end
-
 
 function GoldSaucerMooglePawGamePanelView:ShowShootingTips(CaughtResult)
 	if self.ShootingTips then
@@ -276,8 +365,11 @@ function GoldSaucerMooglePawGamePanelView:OnBallCaughtStateChanged(NewValue)
 	if NewValue == MoogleBallCaughtState.None then
 		return
 	end
-
-	GameInst:StopGameTimeLoop(true) -- 该阶段就暂停游戏循环进行表现
+	
+	local BallType = GameInst.CatchBallType
+	UIUtil.SetIsVisible(self.PanelCaughtNormal, BallType ~= MogulBallType.MogulBallTypeStar)
+	UIUtil.SetIsVisible(self.PanelCaughtGreen, BallType == MogulBallType.MogulBallTypeStar)
+	--GameInst:StopGameTimeLoop(true) -- 该阶段就暂停游戏循环进行表现
 
 	local SuccessCaught = NewValue == MoogleBallCaughtState.Caught
 	self:ShowShootingTips(SuccessCaught)
@@ -296,6 +388,7 @@ function GoldSaucerMooglePawGamePanelView:OnBallCaughtStateChanged(NewValue)
 				MoogleWidget:ShowSuccessCatchBallResult()
 			end
 		end
+
 		self:PlayAnimation(self.AnimSuccess)
 	else
 		--失败的屏幕动画
@@ -312,9 +405,14 @@ function GoldSaucerMooglePawGamePanelView:OnBallCaughtStateChanged(NewValue)
 		MoogleWidget:ResetAnimationState()
 	end, TempResultAniTotalTime - 0.05)
 	self:RegisterTimer(function()
-		GameInst:RecoverGameTimeLoop()
-		GameInst:TriggerTheRoundEnd()
-		self.VM:ResetBallShowStateWhenShowCatchResult()
+		--GameInst:RecoverGameTimeLoop()
+		GameInst:PushGameProcessAfterCatchResultShow()
+		local BlessResetMoogleMinTimeSeconds = 1 -- 赐福模式重置莫古位置的最小时间限制
+		if GameInst:IsBless() and GameInst:GetRemainSeconds() > BlessResetMoogleMinTimeSeconds then
+			self:ResetMoogle()
+			self:ControlTheActBtnShowState(MoogleActBtnActiveType.Horizontal)
+		end
+		--self.VM:ResetBallShowStateWhenShowCatchResult()
 	end, TempResultAniTotalTime)
 end
 
@@ -339,10 +437,8 @@ function GoldSaucerMooglePawGamePanelView:ShowRewardChange()
 		return
 	end
 
-	local RoundID = MiniGameInst:GetCurRoundId()
-	local _, CaughtBallID = MiniGameInst:GetTheCatchBallResult()
-	local RewardThisRound = MiniGameInst:GetActualRoundScore(RoundID, CaughtBallID)
-	self.VM.RewardGot = RewardThisRound
+	local RoundIndex = MiniGameInst:GetRoundIndex()
+	self.VM.RewardGot = MiniGameInst:GetRoundScoreByIndex(RoundIndex)
 end
 
 --- 设置莫古力大小
@@ -373,6 +469,40 @@ function GoldSaucerMooglePawGamePanelView:InitBallDistribute()
 	self.VM:InitBallDistribute()
 end
 
+--- 切换游戏面板背景图
+function GoldSaucerMooglePawGamePanelView:ChangeTheGamePanelBg()
+	local ViewModel = self.VM
+    if ViewModel == nil then
+        return
+    end
+
+    local MiniGameInst = ViewModel.MiniGame
+    if MiniGameInst == nil then
+        return
+    end
+	--- 设定背景特效
+	local RoundIndex = MiniGameInst:GetRoundIndex() + 1 or 1
+
+	local MoogleDcfg = self.MoogleDcfg
+	if MoogleDcfg then
+		local BgPath = MoogleDcfg.PanelBgPath
+		if BgPath then
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgPowerOnBg, BgPath[RoundIndex])
+		end
+	end
+	if self:IsAnimationPlaying(self.AnimRound4Loop) then
+		self:StopAnimation(self.AnimRound4Loop)
+	end
+	if RoundIndex == 1 then
+		self:PlayAnimation(self.AnimRound0)
+	elseif RoundIndex == 3 then
+		self:PlayAnimation(self.AnimRound3)
+	elseif RoundIndex == 4 then
+		self:PlayAnimation(self.AnimRound4)
+		self:PlayAnimation(self.AnimRound4Loop, 0, 0)
+	end
+end
+
 function GoldSaucerMooglePawGamePanelView:InitGameStartUIState(bReconnect)
 	-- 准备阶段UI状态初始化
 	UIUtil.SetIsVisible(self.TableViewBall, true)
@@ -390,12 +520,57 @@ function GoldSaucerMooglePawGamePanelView:InitGameStartUIState(bReconnect)
 	end
 	self:SetTheMoogleSize()
 	UIUtil.SetIsVisible(self.Moogle, true)
-	
+
+	self:ControlTheActBtnShowState(MoogleActBtnActiveType.Horizontal)
 	self:StartGameRunState()
+	self:ChangeTheGamePanelBg()
 end
 
 function GoldSaucerMooglePawGamePanelView:UpdateRestartInfo()
 	self:ControlTheActBtnShowState(MoogleActBtnActiveType.Invalid)
+	self:ResetMoogle()
+	self:ShowGoldSauserCommRoundTips()
+	self:SetTheMoogleSize()
+	self:InitBallDistribute()
+	self:ChangeTheGamePanelBg()
+end
+
+--- 进行大赐福的额外回合的准备开始阶段
+function GoldSaucerMooglePawGamePanelView:ShowTheBlessExtraRoundReadyBP()
+	local ChallengeBegins = self.ChallengeBegins
+	if not ChallengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(ChallengeBegins, true)
+	ChallengeBegins:SetBlessRoundReady(function()
+		local MiniGameInst = self.VM and self.VM.MiniGame
+		if MiniGameInst == nil then
+			return
+		end
+		_G.EventMgr:SendEvent(EventID.DetailMiniGameRestart, {Type = MiniGameInst.MiniGameType or MiniGameType.OutOnALimb, bRestart = true}) --与服务器约定由翻倍协议获取额外轮的球体数据
+	end)
+end
+
+--- 显示大赐福额外回合进入动效
+function GoldSaucerMooglePawGamePanelView:EnterTheExtraRoundReadyStep()
+	self:PlayAnimation(self.AnimSectionGreenShow)
+	self:InitMoogleEffectState()
+	self:ShowTheBlessExtraRoundReadyBP()
+end
+
+--- 正式开始额外回合
+function GoldSaucerMooglePawGamePanelView:EnterTheExtraRoundStartStep()
+	UIUtil.SetIsVisible(self.TableViewBall, true)
+	self:InitBallDistribute()
+	UIUtil.SetIsVisible(self.ChallengeBegins, false)
+	self:ControlTheActBtnShowState(MoogleActBtnActiveType.Horizontal)
+	self:SetTheMoogleSize()
+	UIUtil.SetIsVisible(self.Moogle, true)
+	self:StartGameRunState()
+end
+
+--- 显示通用回合提示
+function GoldSaucerMooglePawGamePanelView:ShowGoldSauserCommRoundTips()
 	local RoundTips = self.RoundTips
 	if RoundTips then
 		UIUtil.SetIsVisible(RoundTips, true)
@@ -405,8 +580,6 @@ function GoldSaucerMooglePawGamePanelView:UpdateRestartInfo()
 			UIUtil.SetIsVisible(RoundTips, false)
 		end)
 	end
-	self:SetTheMoogleSize()
-	self:InitBallDistribute()
 end
 
 --- 重连成功

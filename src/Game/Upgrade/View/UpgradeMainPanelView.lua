@@ -21,6 +21,7 @@ local DirectUpgradeCfg = require("TableCfg/DirectUpgradeCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local LocalizationUtil = require("Utils/LocalizationUtil")
 local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
+local TimeUtil = require("Utils/TimeUtil")
 
 local LSTR = _G.LSTR
 local USaveMgr = _G.UE.USaveMgr
@@ -122,13 +123,14 @@ function UpgradeMainPanelView:OnShow()
 		return
 	end
 	self.CommInforBtn_UIBP.HelpInfoID = 11127
+	self.StartTimeStamp = TimeUtil.GetServerLogicTime()
 	self.ViewModel:Update(self.Params)
 	self.AdapterCountDownTime:Start(self.ViewModel.EndTimeStamp, 1, true, false)
 	self.TableViewTabAdapter:SetSelectedIndex(self.ViewModel.CurrentSelectDay)
 end
 
 function UpgradeMainPanelView:OnHide()
-
+	UpgradeMgr.IsUpdateMainPanel = false
 end
 
 function UpgradeMainPanelView:OnRegisterUIEvent()
@@ -136,7 +138,14 @@ function UpgradeMainPanelView:OnRegisterUIEvent()
 end
 
 function UpgradeMainPanelView:OnRegisterGameEvent()
+	self:RegisterGameEvent(_G.EventID.UpdateUpgradeMainPanel, self.OnUpdateUpgradeMainPanel)
+end
 
+function UpgradeMainPanelView:OnUpdateUpgradeMainPanel(Params)
+	self.StartTimeStamp = TimeUtil.GetServerLogicTime()
+	self.ViewModel:Update(Params)
+	self.AdapterCountDownTime:Start(self.ViewModel.EndTimeStamp, 1, true, false)
+	self.TableViewTabAdapter:SetSelectedIndex(self.ViewModel.CurrentSelectDay)
 end
 
 function UpgradeMainPanelView:OnClickBtnUpgrade()
@@ -161,7 +170,7 @@ function UpgradeMainPanelView:OnClickBtnUpgrade()
 end
 
 function UpgradeMainPanelView:SendUpgrade()
-	_G.UpgradeMgr.UpgradeUseProf = self.Params.Prof
+	UpgradeMgr.UpgradeUseProf = self.Params.Prof
 	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.BagMain) then
 		_G.UIViewMgr:HideView(_G.UIViewID.BagMain)
 	end
@@ -169,14 +178,23 @@ function UpgradeMainPanelView:SendUpgrade()
 		_G.UIViewMgr:HideView(_G.UIViewID.UpgradeMainPanelView)
 	end
 	local function CallBack()
-		_G.UpgradeMgr.IsLevelUpgrade = false
-		UpgradeMgr:SendUpgrade(_G.UpgradeMgr.UpgradeUseProf)
-		_G.UpgradeMgr.UpgradeUseProf = nil
+		local Item = { ResID = self.ViewModel.ItemID}
+		if _G.BagMgr:ItemUseCondition(Item) then
+			UpgradeMgr.IsLevelUpgrade = false
+			UpgradeMgr:SendUpgrade(UpgradeMgr.UpgradeUseProf)
+			UpgradeMgr.UpgradeUseProf = nil
+		end
 	end
 	local CostItemIDCfg = DirectUpgradeCfg:FindCfgByKey(ProtoRes.DirectUpgradeCfgID.DirectUpgradeCfgIDDialogID)
 	if CostItemIDCfg ~= nil then
 		local DialogLibID = CostItemIDCfg.Value
 		_G.NpcDialogMgr:PlayDialogLib(DialogLibID, nil, nil, CallBack)
+		if _G.UIViewMgr:IsViewVisible(_G.UIViewID.NpcDialogueMainPanel) then
+			local View = _G.UIViewMgr:FindView(_G.UIViewID.NpcDialogueMainPanel)
+			if View and View.Dialogue and View.Dialogue.UpgradeNpcDialogue then
+				View.Dialogue.UpgradeNpcDialogue:PlayAnimIn()
+			end
+		end
 	end
 end
 
@@ -237,7 +255,30 @@ function UpgradeMainPanelView:TimeOutCallback()
 end
 
 function UpgradeMainPanelView:TimeUpdateCallback(LeftTime)
-	return LocalizationUtil.GetCountdownTimeForLongTime(LeftTime, "")
+	local EndTimeStamp = TimeUtil.GetServerLogicTime()
+	-- 跨天刷新界面
+	if self:CrossDailyReset(self.StartTimeStamp, EndTimeStamp) then
+		UpgradeMgr.IsUpdateMainPanel = true
+		UpgradeMgr:SendUpdate()
+	else
+		return LocalizationUtil.GetCountdownTimeForLongTime(LeftTime, "")
+	end
+end
+
+function UpgradeMainPanelView:CrossDailyReset(StartTimeStamp, EndTimeStamp)
+
+    local EndDate = os.date("*t", EndTimeStamp)
+
+    local EndResetTime = os.time({
+        year = EndDate.year,
+        month = EndDate.month,
+        day = EndDate.day,
+        hour = 5,
+        min = 0,
+        sec = 0
+    })
+
+    return EndTimeStamp >= EndResetTime and StartTimeStamp < EndResetTime
 end
 
 return UpgradeMainPanelView

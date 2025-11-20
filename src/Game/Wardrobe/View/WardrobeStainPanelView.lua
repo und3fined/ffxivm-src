@@ -14,6 +14,8 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local CommonUtil = require("Utils/CommonUtil")
+local SystemEntranceMgr = require("Game/Common/Tips/SystemEntranceMgr")
 local WardrobeMgr =  require("Game/Wardrobe/WardrobeMgr")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderSetText = require("Binder/UIBinderSetText")
@@ -27,6 +29,8 @@ local WardrobeMainPanelVM = require("Game/Wardrobe/VM/WardrobeMainPanelVM")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local CameraFocusCfgMap = require("Game/Wardrobe/WardrobeCameraFocusCfgMap")
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
+local USaveMgr = _G.UE.USaveMgr
+local SaveKey = require("Define/SaveKey")
 
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local DyeColorCfg = require("TableCfg/DyeColorCfg")
@@ -40,27 +44,35 @@ local EquipmentPartList = ProtoCommon.equip_part
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBack CommBackBtnView
 ---@field BtnCamera UToggleButton
----@field BtnGo UFButton
+---@field BtnControls UFButton
+---@field BtnGo UToggleButton
 ---@field BtnHand UToggleButton
 ---@field BtnHat UToggleButton
 ---@field BtnHatStyle UToggleButton
+---@field BtnOnetouch UFButton
 ---@field BtnPose UToggleButton
 ---@field BtnUnlock CommBtnLView
+---@field CommBtnM1 CommBtnMView
+---@field CommBtnM2 CommBtnMView
 ---@field CommonBkg CommonBkg01View
 ---@field CommonTitle CommonTitleView
 ---@field Consume1 WardrobeConsumeItemView
 ---@field Consume2 WardrobeConsumeItemView
+---@field FHorizontalRegion UFHorizontalBox
 ---@field HorizontalConsume UFHorizontalBox
 ---@field ImgDisable3 UFImage
 ---@field ImgMask UFImage
 ---@field PanelBg UFCanvasPanel
+---@field PanelBtn2 UFCanvasPanel
 ---@field PanelColor UFCanvasPanel
 ---@field PanelList UFCanvasPanel
 ---@field PanelName UFCanvasPanel
 ---@field PanelTab UFCanvasPanel
 ---@field PanelTab2 UFCanvasPanel
 ---@field PanelTitle UFCanvasPanel
+---@field PanelUnlock UFCanvasPanel
 ---@field StainTag WardrobeStainTagItemView
+---@field StainTagNew WardrobeStainStyleItem2View
 ---@field TableViewBall UTableView
 ---@field TableViewBox UTableView
 ---@field TableViewList UTableView
@@ -69,6 +81,7 @@ local EquipmentPartList = ProtoCommon.equip_part
 ---@field TextConsume UFTextBlock
 ---@field TextLack UFTextBlock
 ---@field TextName UFTextBlock
+---@field TextRegion UFTextBlock
 ---@field TextSubtitle URichTextBox
 ---@field TextTitle UFTextBlock
 ---@field TextUnlock UFTextBlock
@@ -83,27 +96,35 @@ function WardrobeStainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBack = nil
 	--self.BtnCamera = nil
+	--self.BtnControls = nil
 	--self.BtnGo = nil
 	--self.BtnHand = nil
 	--self.BtnHat = nil
 	--self.BtnHatStyle = nil
+	--self.BtnOnetouch = nil
 	--self.BtnPose = nil
 	--self.BtnUnlock = nil
+	--self.CommBtnM1 = nil
+	--self.CommBtnM2 = nil
 	--self.CommonBkg = nil
 	--self.CommonTitle = nil
 	--self.Consume1 = nil
 	--self.Consume2 = nil
+	--self.FHorizontalRegion = nil
 	--self.HorizontalConsume = nil
 	--self.ImgDisable3 = nil
 	--self.ImgMask = nil
 	--self.PanelBg = nil
+	--self.PanelBtn2 = nil
 	--self.PanelColor = nil
 	--self.PanelList = nil
 	--self.PanelName = nil
 	--self.PanelTab = nil
 	--self.PanelTab2 = nil
 	--self.PanelTitle = nil
+	--self.PanelUnlock = nil
 	--self.StainTag = nil
+	--self.StainTagNew = nil
 	--self.TableViewBall = nil
 	--self.TableViewBox = nil
 	--self.TableViewList = nil
@@ -112,6 +133,7 @@ function WardrobeStainPanelView:Ctor()
 	--self.TextConsume = nil
 	--self.TextLack = nil
 	--self.TextName = nil
+	--self.TextRegion = nil
 	--self.TextSubtitle = nil
 	--self.TextTitle = nil
 	--self.TextUnlock = nil
@@ -126,11 +148,14 @@ function WardrobeStainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnUnlock)
+	self:AddSubView(self.CommBtnM1)
+	self:AddSubView(self.CommBtnM2)
 	self:AddSubView(self.CommonBkg)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Consume1)
 	self:AddSubView(self.Consume2)
 	self:AddSubView(self.StainTag)
+	self:AddSubView(self.StainTagNew)
 	self:AddSubView(self.WardrobeOperateItem)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -159,13 +184,18 @@ function WardrobeStainPanelView:OnInit()
 				{ "ColorAreaList",  UIBinderUpdateBindableList.New(self, self.ColorAreaListAdapter)},
 				{ "ColorOftenList",  UIBinderUpdateBindableList.New(self, self.ColorOftenListAdapter)},
 				{ "SubTitleName", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)},
+				{ "SectionName", UIBinderSetText.New(self, self.TextRegion)},
+				{ "ReNameBtnVisible", UIBinderSetIsVisible.New(self, self.BtnControls, false, true)},
 				{ "AppearanceName", UIBinderSetText.New(self, self.TextName)},
 				{ "CurColorName", UIBinderSetText.New(self, self.TextUnlock)},
-				{ "CurColor", UIBinderSetBrushTintColorHex.New(self, self.StainTag.ImgStainColor)},
-				{ "CurColorVisible", UIBinderSetIsVisible.New(self, self.StainTag.ImgStainColor)},
-				{ "CurColorVisible", UIBinderSetIsVisible.New(self, self.StainTag.ImgBg, true)},
+				{ "CurColor", UIBinderSetBrushTintColorHex.New(self, self.StainTagNew.ImgStainColor)},
+				{ "CurColorIsMetal", UIBinderSetIsVisible.New(self, self.StainTagNew.ImgMetal)},
+				{ "CurColorVisible", UIBinderSetIsVisible.New(self, self.StainTagNew.ImgStainColor)},
+				{ "CurColorVisible", UIBinderSetIsVisible.New(self, self.StainTagNew.ImgBg, true)},
 				{ "BtnUnlockTxt", UIBinderSetText.New(self, self.BtnUnlock.TextContent)},
-				{ "BtnUnlockVisible", UIBinderSetIsVisible.New(self, self.BtnUnlock)},
+				{ "PanelUnlockVisible", UIBinderSetIsVisible.New(self, self.PanelUnlock)},
+				{ "ActiveColor", UIBinderSetIsVisible.New(self, self.BtnUnlock, false, true)},
+				{ "ActiveColor", UIBinderSetIsVisible.New(self, self.PanelBtn2, true, true)},
 				{ "ItemLackVisible", UIBinderSetIsVisible.New(self, self.TextLack)},
 				{ "AppearanceTabVisible", UIBinderSetIsVisible.New(self, self.PanelTab)},
 				{ "HorizontalConsumeVisible", UIBinderSetIsVisible.New(self, self.HorizontalConsume)},
@@ -186,15 +216,13 @@ function WardrobeStainPanelView:OnInit()
 				{ "BtnHatChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnHat)},
 				{ "BtnHatStyleChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnHatStyle)},
 				{ "BtnPoseChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnPose)},
-				{ "BtnCameraChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnCamera)},
-				{ "BtnHatStyleVisible", UIBinderSetIsVisible.New(self, self.WardrobeOperateItem.BtnHatStyle, false, true)},
 			}
 		}
 	}
 
 	self.CameraFocusCfgMap = CameraFocusCfgMap.New()
-
-	self.CurColorID = 0	
+	self.LastAppID = 0
+	self.CurColorID = -1	
 	self.ColorTypeID = 0
 	self.CurStainAreaID = -1
 	self.CurAppearanceID = 0
@@ -204,8 +232,8 @@ function WardrobeStainPanelView:OnInit()
 	self.Common_Render2D_UIBP = nil
 	self.ShowModelType = nil
 	self.SuperView = nil
-	self.StainPanelY = 25
 	self.IsTransition = true
+	self.IsInsertUsedStain = false
 end
 
 function WardrobeStainPanelView:OnDestroy()
@@ -215,43 +243,34 @@ function WardrobeStainPanelView:OnShow()
 	self:InitText()
 	UIUtil.SetIsVisible(self.CommonBkg, false)
 	UIUtil.SetIsVisible(self.PanelTitle, false)
+	UIUtil.SetIsVisible(self.StainTag, false)
+	UIUtil.SetIsVisible(self.FHorizontalRegion, true)
+	UIUtil.SetIsVisible(self.StainTagNew, true)
+	
+
 	self.Common_Render2D_UIBP = self.Params.SuperView.Common_Render2D_UIBP
 	self.SuperView = self.Params.SuperView
-	
 	self.CameraFocusCfgMap:SetAssetUserData(self.Common_Render2D_UIBP:GetEquipmentConfigAssetUserData())
-
-	self.BtnBack:AddBackClick(self, function () 
-		self.VM.BtnBlockChecked = true
-		self.VM.BtnBlockVisible = false
-		self.SuperView.ShowMainPanel(self.SuperView, false) self:Hide() 
+	self.BtnBack:AddBackClick(self, function ()
+		if self.VM:IsPreviewEmpty(self.CurAppearanceID) or self.StainType == WardrobeDefine.StainType.TryStain then
+			self:ExitStainPanel()
+			return
+		else
+			local Time =  WardrobeMgr:GetStainNoShowTipsTime()
+			if Time == 0 or not _G.TimeUtil.GetIsCurDailyCycleTime(Time) then
+				self:ShowExitStainPanelTips()
+				return
+			end
+			self:ExitStainPanel()
+		end
 	end)
 	self.StainType = self.Params.StainType
 	self.IsTransition = true
+	local IsTryStain = self.StainType == WardrobeDefine.StainType.TryStain 
+	UIUtil.SetIsVisible(self.BtnOnetouch, not IsTryStain , not IsTryStain)
 
-
-	-- 初始化染色的装备
-	local Suit = WardrobeMgr:GetCurAppearanceList()
-	for _, appID in ipairs(self.Params.AppearanceList) do
-		local PartID = WardrobeUtil.GetPartByAppearanceID(appID)
-		if Suit[PartID] == nil then
-			local RegionDye = WardrobeMgr:GetUnlockedAppearanceRegionDyes(appID)
-			local Color = WardrobeMgr:GetDyeColor(appID)
-			local TempStainAera =  WardrobeUtil.GetRegionDye(appID, RegionDye)
-			WardrobeMgr:SetStainViewSuit(PartID, appID, Color, TempStainAera)
-		else
-			local value = Suit[PartID]
-			if value and value.Avatar and value.Avatar == appID then
-				local TempStainAera = WardrobeUtil.GetRegionDye(appID, value.RegionDye)
-				WardrobeMgr:SetStainViewSuit(PartID, appID, value.Color, TempStainAera)
-			else
-				local RegionDye = WardrobeMgr:GetUnlockedAppearanceRegionDyes(appID)
-				local Color = WardrobeMgr:GetDyeColor(appID)
-				local TempStainAera = WardrobeUtil.GetRegionDye(appID, RegionDye)
-				WardrobeMgr:SetStainViewSuit(PartID, appID, Color, TempStainAera)
-			end
-		end
-	end
-	
+	-- 初始化染色的外观
+	self:InitViewModelSuit()
 	self.VM:InitAppearanceTabList(self.Params.AppearanceList)
 	self.VM:UpdateTitle(self.StainType)
 	self.VM:InitColorTabList()
@@ -263,7 +282,7 @@ function WardrobeStainPanelView:OnShow()
 		self:PlayAnimation(self.Tab1)
 		self.VM.AppearanceTabVisible = true
 		local TempIDList = {}				
-		for _, AppID in ipairs( self.Params.AppearanceList) do		
+		for _, AppID in ipairs(self.Params.AppearanceList) do		
 			local DyeEnable = WardrobeMgr:GetDyeEnable(AppID)	
 			if DyeEnable then	
 				table.insert(TempIDList, AppID)
@@ -301,24 +320,21 @@ function WardrobeStainPanelView:OnShow()
 		self.AppearanceTabListAdapter:SetSelectedIndex(1)
 	end
 
-	self:InitBtnHatStyleState()
 	self.VM.BtnBlockVisible = true
 	self.WardrobeOperateItem.BtnBlock:SetChecked(self.VM.BtnBlockChecked, true)
+	self:InitBtnHatStyleState()
 	WardrobeMgr:SendClosetUsedStainQuery()
 end
 
-function WardrobeStainPanelView:InitText()
-	self.TextLack:SetText(_G.LSTR(1080076))
-	self.TextConsume:SetText(_G.LSTR(1080059))
-end
-
 function WardrobeStainPanelView:OnHide()
-	self.CurColorID = 0	
+	self.CurColorID = -1	
 	self.ColorTypeID = 0
 	self.CurAppearanceID = 0
 	self.LastColorIndex = nil
+	self.LastAppID = nil
 	self.StainType = WardrobeDefine.Normal
-	WardrobeMgr:ClearStainViewSuit()
+	self.VM:ClearStainSuit()
+	self.VM:ClearPreStainSuit()
 end
 
 function WardrobeStainPanelView:OnRegisterUIEvent()
@@ -330,6 +346,10 @@ function WardrobeStainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnStateChangedEvent(self, self.WardrobeOperateItem.BtnBlock, self.OnClickedBtnBlock)
 	UIUtil.AddOnClickedEvent(self, self.BtnUnlock, self.OnClickedBtnUnlock)
 	UIUtil.AddOnClickedEvent(self, self.BtnGo, self.OnClickedBtnGO)
+	UIUtil.AddOnClickedEvent(self, self.CommBtnM1, self.OnClickedActive)  -- 激活染色
+	UIUtil.AddOnClickedEvent(self, self.CommBtnM2, self.OnClickedActiveAndStain) -- 激活并染色
+	UIUtil.AddOnClickedEvent(self, self.BtnControls, self.OnClickedRegionDyeName) -- 区域染色改名
+	UIUtil.AddOnClickedEvent(self, self.BtnOnetouch, self.OnClickedBtnPreviewColor) --预览色弹窗
 end
 
 function WardrobeStainPanelView:OnRegisterGameEvent()
@@ -343,6 +363,8 @@ function WardrobeStainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.WardrobeActiveColorUpdate, self.OnActiveColorUpdate)
 	-- 通用染色刷新
 	self:RegisterGameEvent(EventID.WardrobeUsedStainUpdate, self.OnWardrobeUsedStainUpdate)
+	-- 染色区域改名
+	self:RegisterGameEvent(EventID.WardrobeRegionDyeNameUpdate, self.OnWardrobeRegionDyeNameUpdate)
 	-- 背包更新
 	self:RegisterGameEvent(EventID.BagUpdate, self.OnUpdateBag)
 	-- 模型组件组装通知
@@ -355,6 +377,44 @@ function WardrobeStainPanelView:OnRegisterBinder()
 	self.Consume2:SetParams({ Data = self.VM.ConsumeVM2})
 end
 
+-- 初始化文本
+function WardrobeStainPanelView:InitText()
+	self.TextLack:SetText(_G.LSTR(1080076))
+	self.TextConsume:SetText(_G.LSTR(1080059))
+
+	self.CommBtnM1:SetText(_G.LSTR(1080107)) --解锁
+	self.CommBtnM2:SetText(_G.LSTR(1080140)) --解锁并染色
+end
+
+-- 初始化染色的外观
+function  WardrobeStainPanelView:InitViewModelSuit()
+	local Suit = WardrobeMgr:GetCurAppearanceList()
+	for _, appID in ipairs(self.Params.AppearanceList) do
+		local PartID = WardrobeUtil.GetPartByAppearanceID(appID)
+		if Suit[PartID] == nil then
+			local RegionDye = WardrobeMgr:GetUnlockedAppearanceRegionDyes(appID)
+			local Color = WardrobeMgr:GetDyeColor(appID)
+			local TempStainAera =  WardrobeUtil.GetRegionDye(appID, RegionDye)
+			self.VM:SetStainSuit(PartID, appID, Color, TempStainAera)
+			self.VM:SetPreStainSuit(PartID, appID, Color, TempStainAera)
+		else
+			local value = Suit[PartID]
+			if value and value.Avatar and value.Avatar == appID then
+				local TempStainAera = WardrobeUtil.GetRegionDye(appID, value.RegionDye)
+				self.VM:SetStainSuit(PartID, appID, value.Color, TempStainAera)
+				self.VM:SetPreStainSuit(PartID, appID, value.Color, TempStainAera)
+			else
+				local RegionDye = WardrobeMgr:GetUnlockedAppearanceRegionDyes(appID)
+				local Color = WardrobeMgr:GetDyeColor(appID)
+				local TempStainAera = WardrobeUtil.GetRegionDye(appID, RegionDye)
+				self.VM:SetStainSuit(PartID, appID, Color, TempStainAera)
+				self.VM:SetPreStainSuit(PartID, appID, Color, TempStainAera)
+			end
+		end
+	end
+end
+
+-- 初始化头部装饰开关状态
 function WardrobeStainPanelView:InitBtnHatStyleState()
 	local HasGimmick = self:CheckHeadHasGimmick()
 	if HasGimmick then
@@ -362,7 +422,7 @@ function WardrobeStainPanelView:InitBtnHatStyleState()
 		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(self.MainVM.BtnHatStyleChecked and _G.UE.EToggleButtonState.Checked  or _G.UE.EToggleButtonState.Unchecked, false)
 	else
 	    self.MainVM.BtnHatStyleDisabled = true
-		self.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
 	end
 end
 
@@ -394,98 +454,110 @@ function WardrobeStainPanelView:OnActiveColorUpdate()
 	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, self.CurColorID)
 	self:UpdateConsumeItem(self.CurAppearanceID, self.CurColorID)
 	self:UpdateBtnUnlockState(self.CurAppearanceID, self.CurColorID)
+	self.VM:UpdateCurAppearanceSeationName(self.StainType, self.CurAppearanceID, self.CurStainAreaID)
 end
 
 -- 更新激活
-function WardrobeStainPanelView:OnWardrobeActiveStain()
+function WardrobeStainPanelView:OnWardrobeActiveStain(Params)
 	--更新
-	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, self.CurColorID)
-	self.VM:UpdateColorListUnlockState(self.StainType, self.CurAppearanceID)
-	self:UpdateBtnUnlockState(self.CurAppearanceID, self.CurColorID)
-	self:UpdateConsumeItem(self.CurAppearanceID, self.CurColorID)
-	-- if self.CurStainAreaID == -1 then
-	-- 	self:UpdateModelColor(self.CurAppearanceID, self.CurColorID)
-	-- else
-	-- 	self:StainPartForSection(self.CurAppearanceID, self.CurPartID, {{ID = self.CurStainAreaID, ColorID = self.CurColorID}})
-	-- end
+	local ColorList = Params.ColorIDList or {}
+	local ColorID = Params.ColorID
+	local AppID = Params.ID
+	if AppID == self.CurAppearanceID then
+		if table.is_nil_empty(ColorList) then
+			self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, ColorID)
+			self.VM:UpdateColorListUnlockState(self.StainType, self.CurAppearanceID)
+			self:UpdateBtnUnlockState(self.CurAppearanceID, ColorID)
+			self:UpdateConsumeItem(self.CurAppearanceID, ColorID)
+		else
+			for _, colorID in ipairs(ColorList) do
+				self.VM:UpdateColorListUnlockState(self.StainType, self.CurAppearanceID)
+				if colorID == self.CurColorID then
+					self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, colorID)
+					self:UpdateBtnUnlockState(self.CurAppearanceID, colorID)
+					self:UpdateConsumeItem(self.CurAppearanceID, colorID)
+				end
+			end
+		end
+	end
 end
 
 -- 监听染色
 function WardrobeStainPanelView:OnWardrobeDyeUpdate(Params)
-	local RecoveryColor = Params.ColorID
+	local AppID = Params.ID
+	local ColorID = Params.ColorID -- 染色值
+	local RegionDyes = Params.RegionDyes or {}
+
+	-- Todo 如果是区域染色的外观 更改数据
+	local CurPartID = WardrobeUtil.GetPartByAppearanceID(AppID)
+	self.VM:SetStainSuit(CurPartID, AppID, ColorID, RegionDyes)
+
+	if ColorID == 0 then
+		local TempRegionDye = {}
+		local PreStainView = self.VM:GetPreStainSuitByAppID(AppID)
+		for index, v in ipairs(PreStainView.RegionDye or {}) do
+			table.insert(TempRegionDye, {ID = index, ColorID = ColorID})
+		end
+		self.VM:SetPreStainSuit(CurPartID, AppID, ColorID, TempRegionDye)
+	end
+	
 	--左边装备
 	self.VM:UpdateAppearanceTabList()
 	--更新颜色标志
 	self.VM:UpdateColorListUnlockState(self.StainType, self.CurAppearanceID)
 	--更新解锁按钮装备
-	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, RecoveryColor or self.CurColorID)
+	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, ColorID or self.CurColorID)
 
-	self:UpdateBtnUnlockState(self.CurAppearanceID, RecoveryColor or self.CurColorID)
+	self:UpdateBtnUnlockState(self.CurAppearanceID, ColorID or self.CurColorID)
 	--更新模型颜色
-	self:UpdateModelColor(self.CurAppearanceID, RecoveryColor or self.CurColorID)
+	self:UpdateModelColor(self.CurAppearanceID, ColorID or self.CurColorID)
 	--更新染色区域
-	local RegionDyes = WardrobeMgr:GetUnlockedAppearanceRegionDyes(self.CurAppearanceID)
-	-- local CurPartID
-	-- for _, v in ipairs(RegionDyes) do
-	-- 	self.VM:UpdateColorAeraList(self.CurAppearanceID, v.ID, -1)
-	-- end
-	self.VM:UpdateColorAeraList(self.CurAppearanceID, self.CurPartID, -1)
-
+	self.VM:UpdateColorAeraList(self.CurAppearanceID, -1)
 
 	--取消染色 
-	if RecoveryColor and RecoveryColor == 0 then
-		self.ColorListAdapter:CancelSelected()
-		self.VM.BtnUnlockVisible = false
-		self.VM:UpdateCurColorInfo(nil)
+	if ColorID == 0 then
+		self:SetColorListSelectdIndex(self.CurAppearanceID, -1, 0)
 	end
 end
 
 -- 监听区域染色染色
 function WardrobeStainPanelView:OnWardrobeRegionDyeUpdate(Params)
-	local RecoveryColor = Params.ColorID
 	local RegionDyes = Params.RegionDyes or  {}
-	local RecoveryColor
-	for _, v in ipairs(RegionDyes) do
-		if v.ID == self.CurStainAreaID then
-			RecoveryColor = v.ColorID == 0 and v.ColorID or nil
-			break
-		end
-	end
+	local ColorID = Params.ColorID
+	local AppID = Params.ID
+
+	-- 更新界面染色数据
+	local CurPartID = WardrobeUtil.GetPartByAppearanceID(AppID)
+	self.VM:SetStainSuit(CurPartID, AppID, Params.ColorID, Params.RegionDyes)
 
 	--左边装备
 	self.VM:UpdateAppearanceTabList()
 	--更新颜色标志
 	self.VM:UpdateColorListUnlockState(self.StainType, self.CurAppearanceID, self.CurStainAreaID)
 	--更新解锁按钮装备
-	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, RecoveryColor or self.CurColorID, self.CurStainAreaID)
+	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, self.CurColorID, self.CurStainAreaID)
 
-	self:UpdateBtnUnlockState(self.CurAppearanceID, RecoveryColor or self.CurColorID, self.CurStainAreaID)
+	self:UpdateBtnUnlockState(self.CurAppearanceID, self.CurColorID, self.CurStainAreaID)
 
-	-- 更新左边颜色
+	-- 更新左边颜色(Todo 每个都需要修改了)
 	for _, v in ipairs(RegionDyes) do
-		self.VM:UpdateColorAeraList(self.CurAppearanceID, v.ID, self.CurStainAreaID)
-	end
-	--更新模型颜色
-	for _, v in ipairs(RegionDyes) do
-		if v.ID == self.CurStainAreaID then
-			self:StainPartForSection(self.CurAppearanceID, self.CurPartID, {{ID = self.CurStainAreaID, ColorID = self.CurColorID}})
-		end
+		self.VM:UpdateColorAeraList(self.CurAppearanceID, v.ID)
 	end
 
-	-- for _, v in ipairs(RegionDyes) do
-	-- 	self:UpdateModelColor(self.CurAppearanceID, RecoveryColor or self.CurColorID, RegionDyes)
-	-- end
+	--更新模型颜色(Todo 每个都需要修改了)
+	for _, v in ipairs(RegionDyes) do
+		-- if v.ID == self.CurStainAreaID then
+			self:StainPartForSection(self.CurAppearanceID, self.CurPartID, {{ID = v.ID, ColorID = v.ColorID}})
+		-- end
+	end
 
 	--取消染色 --如果是当前的颜色
 	for _, v in ipairs(RegionDyes) do
 		if v.ID == self.CurStainAreaID then
 			if v.ColorID == 0 then
-				self.ColorListAdapter:CancelSelected()
-				self:StainPartForSection(self.CurAppearanceID, self.CurPartID, {{ID = self.CurStainAreaID, ColorID = 0}})
-				self.VM.BtnUnlockVisible = false
-				self.VM:UpdateCurColorInfo(nil)
+				self:SetColorListSelectdIndex(self.CurAppearanceID, self.CurStainAreaID, 0)
+				break
 			end
-			break
 		end
 	end
 end
@@ -495,61 +567,112 @@ function WardrobeStainPanelView:OnWardrobeUsedStainUpdate()
 	self.VM:InitColorOftenList(WardrobeMgr:GetUsedStainList())
 end
 
+-- 染色区域改名监听
+function WardrobeStainPanelView:OnWardrobeRegionDyeNameUpdate(Params)
+	if Params == nil or Params.ID == nil or Params.Name == nil then
+		return
+	end
+	
+	local ID = Params.ID
+	local Name = Params.Name
+
+	for i = 1, self.ColorAreaListAdapter:GetNum() do
+		local ItemData = self.ColorAreaListAdapter:GetItemDataByIndex(i)
+		if ItemData and ItemData.ID and ItemData.ID == ID then
+			ItemData:UpdateName(Name)
+			break
+		end
+	end
+
+	self.VM:UpdateCurAppearanceSeationName(self.StainType, self.CurAppearanceID, ID)
+end
+
+-- 刷新染色按钮状态（推荐，设置态）
 function WardrobeStainPanelView:UpdateBtnUnlockState(AppearanceID, ColorID, SectionID)
 	if self.StainType == WardrobeDefine.StainType.TryStain then
-		self.VM.BtnUnlockVisible = false
+		self.VM.PanelUnlockVisible = false
 		self.VM.ItemLackVisible = false
 		self.VM.HorizontalConsumeVisible = false
 		return
 	end
 
 	if self.StainType == WardrobeDefine.StainType.OnlyLook then
-		self.VM.BtnUnlockVisible = true
+		self.VM.PanelUnlockVisible = true
 	end
 
-	if self.StainType == WardrobeDefine.StainType.Normal and ColorID ~= 0 then
-		self.VM.BtnUnlockVisible = true
+	if self.StainType == WardrobeDefine.StainType.Normal and ColorID ~= -1  then
+		self.VM.PanelUnlockVisible = true
 	end
 
-	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
-	if ColorCfg == nil then
-		self.BtnUnlock:SetIsNormalState(true)
+	local IsActive = WardrobeMgr:IsActiveColor(AppearanceID, ColorID)
+	local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppearanceID)
+	local IsCurrentDye = WardrobeMgr:GetIsClothing(AppearanceID) and WardrobeMgr:GetCurAppearanceDyeColor(AppearanceID, SectionID) == ColorID or WardrobeMgr:GetDyeColor(AppearanceID, SectionID) == ColorID
+	
+	self.VM.ActiveColor = IsActive
+
+	if ColorID == 0 then
+		local IsDisable = false
+		self.VM.ItemLackVisible = false
+		self.VM.HorizontalConsumeVisible = false
+		if SectionID == -1 then
+			if not IsAppRegionDye then
+				IsDisable = IsCurrentDye
+			else
+				IsDisable = WardrobeMgr:IsSameColorRegionDye(AppearanceID, ColorID)
+			end
+		else
+			IsDisable = IsCurrentDye
+		end
+	
+		-- 统一设置按钮状态
+		if IsDisable then
+			self.BtnUnlock:SetIsDisabledState(true, true)
+		else
+			self.BtnUnlock:SetIsRecommendState(true)
+		end
 		return
 	end
 
+	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
+
 	local IsLacked = false
-	local DyeItemID = ColorCfg.StainAgentRes[1] and ColorCfg.StainAgentRes[1].ID or 0
-	local DyeItemNum = ColorCfg.StainAgentRes[1] and ColorCfg.StainAgentRes[1].Num or 0
-	if DyeItemID ~= 0 then
-		IsLacked = _G.BagMgr:GetItemNum(DyeItemID) < DyeItemNum
+	if ColorCfg ~= nil then
+		for _, v in ipairs(ColorCfg.StainAgentRes) do
+			local DyeItemID = v.ID
+			local DyeItemNum = v.Num
+			if v.ID ~= 0 then
+				if _G.BagMgr:GetItemNum(DyeItemID) < DyeItemNum then
+					IsLacked = true
+					break
+				end
+			end
+		end
 	end
 
-	local IsUnlock = WardrobeMgr:IsActiveColor(AppearanceID, ColorID)
-	local IsCurrentDye = WardrobeMgr:GetIsClothing(AppearanceID) and WardrobeMgr:GetCurAppearanceDyeColor(AppearanceID, SectionID) == ColorID or WardrobeMgr:GetDyeColor(AppearanceID, SectionID) == ColorID
-
-	if IsUnlock then
+	if IsActive then
 		if IsCurrentDye then
 			self.BtnUnlock:SetIsNormalState(true)
 		else
 			self.BtnUnlock:SetIsRecommendState(true)
 		end
+	end
+
+	if IsLacked then
+		self.CommBtnM1:SetIsRecommendState(true)
 	else
-		if IsLacked then
-			self.BtnUnlock:SetIsDisabledState(true, true)
-		else
-			self.BtnUnlock:SetIsRecommendState(true)
-		end
+		self.CommBtnM1:SetIsNormalState(true)
 	end
 end
 
+-- 左侧外观Tab选中
 function WardrobeStainPanelView:OnAppearanceTabListChanged(Index, ItemData, ItemView)
 	self.CurAppearanceID = ItemData.ID
 	self.VM:UpdateSubTitle(self.CurAppearanceID)
-	self.VM:UpdateCurAppearanceInfo(self.CurAppearanceID)
+	self.VM:UpdateCurAppearanceInfo(self.CurAppearanceID, self.CurStainAreaID)
 	self.CurPartID = self.VM:GetPart(self.CurAppearanceID)
 
 	-- 设置镜头全身就是全身，当前部位就是当前部位
-	if self.MainVM and self.MainVM.BtnCameraChecked ~= nil then
+	if self.MainVM ~= nil and self.MainVM.BtnCameraChecked ~= nil then
 		local EquipmentCfgs = EquipmentCfg:FindAllCfgByAppearanceID(ItemData.ID)
 		if not table.is_nil_empty(EquipmentCfgs) then
 			local Item = EquipmentCfgs[1]
@@ -566,52 +689,76 @@ function WardrobeStainPanelView:OnAppearanceTabListChanged(Index, ItemData, Item
 
 	if self.VM.BtnBlockChecked then
 		for _ , part in pairs(WardrobeDefine.EquipmentTab) do
-			if self.CurPartID ~= part then
-				self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+			local IsHoldWeapon = (part == EquipmentPartList.EQUIP_PART_SLAVE_HAND or part == EquipmentPartList.EQUIP_PART_MASTER_HAND) and self.MainVM ~= nil and self.MainVM.BtnPoseChecked
+			if not IsHoldWeapon then
+				if self.CurPartID ~= part then
+					self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+				end
 			end
 		end
 	end
 
 	-- 更新当前染色ID
-	self.VM:InitColorAeraList(self.CurAppearanceID)
+	if self.LastAppID ~= self.CurAppearanceID then
+		self.VM:InitColorAeraList(self.CurAppearanceID)
+	end
+	self.LastAppID = self.CurAppearanceID
 	self.ColorAreaListAdapter:SetSelectedIndex(1)
 	
 end
 
+-- 颜色菜单列表选中
 function WardrobeStainPanelView:OnColorTabListChanged(Index, ItemData, ItemView)
 	local ColorTypeID = ItemData.ID
 	self.ColorTypeID = ColorTypeID
 	self.LastColorIndex = nil
-	self.VM:UpdateColorList(self.StainType, ColorTypeID, self.CurAppearanceID, self.CurStainAreaID)
+	local CurStainAreaID =  self.CurStainAreaID 
+	local AppID = self.CurAppearanceID
+	self.VM:UpdateColorList(self.StainType, ColorTypeID, AppID, CurStainAreaID)
 
 	local CurColor = 0
 
-	local AppID = self.CurAppearanceID
-	local StainViewSuit = WardrobeMgr:GetStainViewSuitByAppID(AppID)
+	local StainViewSuit = self.VM:GetPreStainSuitByAppID(AppID)
+	local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
 
 	if self.CurStainAreaID == -1 then
-		local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(self.CurAppearanceID)
-		CurColor = IsAppRegionDye and  WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
+		CurColor = IsAppRegionDye and WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
 	else
-		CurColor = StainViewSuit.RegionDye[self.CurStainAreaID] ~= nil and StainViewSuit.RegionDye[self.CurStainAreaID].ColorID or 0
+		CurColor = StainViewSuit.RegionDye[CurStainAreaID] ~= nil and StainViewSuit.RegionDye[CurStainAreaID].ColorID or 0
 	end
+
+	self.VM:UpdateCurAppearanceSeationName(self.StainType, AppID, CurStainAreaID)
 
 	if self.OftenSelectColor ~= nil then
 		CurColor = self.OftenSelectColor
 		self.OftenSelectColor = nil
 	end
 
-	local SelectIndex = 0
-	if CurColor ~= 0 then
-		for i = 1, self.ColorListAdapter:GetNum() do
-			local TempAppearanceItem = self.ColorListAdapter:GetItemDataByIndex(i)
-			if TempAppearanceItem and TempAppearanceItem.ID == CurColor then
-				SelectIndex = i
-				break
-			end
-		end
+	self:SetColorListSelectdIndex(AppID, CurStainAreaID, CurColor) 
+end
 
-		if SelectIndex ~= 0 then
+-- 设置同颜色列表选中
+function WardrobeStainPanelView:SetColorListSelectdIndex(AppID, CurStainAreaID, CurColor)
+	local SelectIndex = 0
+	for i = 1, self.ColorListAdapter:GetNum() do
+		local TempAppearanceItem = self.ColorListAdapter:GetItemDataByIndex(i)
+		if TempAppearanceItem and TempAppearanceItem.ID == CurColor then
+			SelectIndex = i
+			break
+		end
+	end
+	
+	if SelectIndex ~= 0 then
+		if CurStainAreaID == -1  then
+			if CurColor ~= 0 then
+				if WardrobeMgr:IsSameColorRegionDye(AppID, CurColor) then
+					self.VM.ColorListSelectedIndex = 0
+					self.VM.ColorListSelectedIndex = SelectIndex
+					self.ColorListAdapter:SetSelectedIndex(SelectIndex)
+					return
+				end
+			end
+		else
 			self.VM.ColorListSelectedIndex = 0
 			self.VM.ColorListSelectedIndex = SelectIndex
 			self.ColorListAdapter:SetSelectedIndex(SelectIndex)
@@ -619,20 +766,19 @@ function WardrobeStainPanelView:OnColorTabListChanged(Index, ItemData, ItemView)
 		end
 	end
 
-	-- 如果没有选中，按钮跟消耗都不显示
 	self.VM.ColorListSelectedIndex = 0
 	self.ColorListAdapter:CancelSelected()
 	self.VM:UpdateCurColorInfo(CurColor ~= nil and CurColor or nil)
-	self.VM.BtnUnlockVisible = false
+	self.VM.PanelUnlockVisible = false
 	self.VM.ItemLackVisible = false
 	self.VM.HorizontalConsumeVisible = false
-
 end
 
+-- 同色系颜色列表选中
 function WardrobeStainPanelView:OnColorListChanged(Index, ItemData, ItemView)
 	local ColorID = ItemData.ID
 
-	if ColorID == 0 or ColorID == nil then
+	if ColorID == -1 or ColorID == nil then
 		if self.LastColorIndex ~= nil then
 			self.ColorListAdapter:SetSelectedIndex(self.LastColorIndex)
 		end
@@ -643,16 +789,13 @@ function WardrobeStainPanelView:OnColorListChanged(Index, ItemData, ItemView)
 	self.LastColorIndex = Index
 
 	self.VM:UpdateCurColorInfo(ColorID)
-	if ColorID == 0 or ColorID == nil then
-		self.VM.BtnUnlockVisible = false
+	
+	if ColorID == -1 or ColorID == nil then
+		self.VM.PanelUnlockVisible = false
 		self.VM.ItemLackVisible = false
 		self.VM.HorizontalConsumeVisible = false
 	end
 
-	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
-	if ColorCfg == nil then
-		return
-	end
 	if self.CurAppearanceID == 0 then
 		return
 	end
@@ -661,17 +804,20 @@ function WardrobeStainPanelView:OnColorListChanged(Index, ItemData, ItemView)
 	local AppID = self.CurAppearanceID
 	local ResID =  WardrobeMgr:IsRandomAppID(AppID) and WardrobeMgr:GetEquipIDByRandomApp(AppID) or WardrobeUtil.GetEquipIDByAppearanceID(AppID)
 	local Cfg = EquipmentCfg:FindCfgByKey(ResID)
-	local TempStainAera = {}
-	local StainViewSuitList = WardrobeMgr:GetStainViewSuit()
+
+	local StainViewSuitList = self.VM:GetStainSuit()
 	local StainViewSuit = StainViewSuitList[Cfg.Part]
+
+	local PreStainView = self.VM:GetPreStainSuitByAppID(AppID)
 	local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
+	local TempStainAera = {}
 
 	if self.CurStainAreaID == -1 then
 		self.Common_Render2D_UIBP:PreViewEquipment(ResID, Cfg.Part, IsAppRegionDye and 0 or ColorID)
 		local CCfg = ClosetCfg:FindCfgByKey(AppID)
 		if CCfg ~= nil and CCfg.StainAera ~= nil then
 			for index, v in ipairs(CCfg.StainAera) do
-				if v.Ban ~= 1 then
+				if v.Ban ~= 1 and v.List ~= "" then
 					table.insert(TempStainAera, {ID = index, ColorID = ColorID})
 				end
 			end
@@ -681,9 +827,9 @@ function WardrobeStainPanelView:OnColorListChanged(Index, ItemData, ItemView)
 		local CCfg = ClosetCfg:FindCfgByKey(AppID)
 		if CCfg ~= nil and CCfg.StainAera ~= nil then
 			for index, v in ipairs(CCfg.StainAera) do
-				if v.Ban ~= 1 then
+				if v.Ban ~= 1 and v.List ~= ""  then
 					local ColorID = 0 
-					if StainViewSuit.RegionDye ~= nil and StainViewSuit.RegionDye[index] ~= nil and StainViewSuit.RegionDye[index].Color ~= nil then
+					if StainViewSuit.RegionDye ~= nil and StainViewSuit.RegionDye[index] ~= nil and StainViewSuit.RegionDye[index].ColorID ~= nil then
 						ColorID = StainViewSuit.RegionDye[index].ColorID
 					end
 					table.insert(TempStainAera, {ID = index, ColorID = ColorID})
@@ -695,27 +841,40 @@ function WardrobeStainPanelView:OnColorListChanged(Index, ItemData, ItemView)
 
 	local TempRegionDye = {}
 	if self.CurStainAreaID == -1 then
-		for _, v in ipairs(StainViewSuit.RegionDye or {}) do
-			table.insert(TempRegionDye, {ID = v.ID, ColorID = ColorID})
+		for index, v in ipairs(PreStainView.RegionDye or {}) do
+			table.insert(TempRegionDye, {ID = index, ColorID = ColorID})
 		end
-		WardrobeMgr:SetStainViewSuit(Cfg.Part, AppID, ColorID, TempRegionDye)
+		self.VM:SetPreStainSuit(Cfg.Part, AppID, ColorID, TempRegionDye)
 	else
-		for index, v in ipairs(StainViewSuit.RegionDye or {}) do
-			table.insert(TempRegionDye, {ID = v.ID, ColorID = index ~= self.CurStainAreaID and v.ColorID or ColorID})
+		for index, v in ipairs(PreStainView.RegionDye or {}) do
+			table.insert(TempRegionDye, {ID = index, ColorID = index ~= self.CurStainAreaID and v.ColorID or ColorID})
 		end
-		WardrobeMgr:SetStainViewSuit(Cfg.Part, AppID, ColorID, TempRegionDye)
+		self.VM:SetPreStainSuit(Cfg.Part, AppID, ColorID, TempRegionDye)
 	end
 
-	WardrobeMgr:PushUsedStainList(self.CurColorID)
-	WardrobeMgr:SengClosetUsedStainSave(self.CurAppearanceID, {self.CurColorID})
-	self.VM:UpdateColorAeraList(AppID, Cfg.Part, self.CurStainAreaID)
+	if self.IsInsertUsedStain then
+		if self.CurColorID > 0 then
+			WardrobeMgr:PushUsedStainList(self.CurColorID)
+			WardrobeMgr:SengClosetUsedStainSave(self.CurAppearanceID, {self.CurColorID})
+		end
+	end
+
+	self.LastCurStainAreaID = nil
+	self.VM:UpdateColorAeraList(AppID, self.CurStainAreaID)
 	self.VM:UpdateBtnUnlockState(self.StainType, self.CurAppearanceID, ColorID, self.CurStainAreaID)
 	self:UpdateBtnUnlockState(self.CurAppearanceID, ColorID, self.CurStainAreaID)
 	self:UpdateConsumeItem(self.CurAppearanceID, ColorID)
-
 end
 
+-- 区域染色列表选中
 function WardrobeStainPanelView:OnColorAreaListChanged(Index, ItemData, ItemView)
+	if self.LastCurStainAreaID == nil or self.LastCurStainAreaID ~= ItemData.ID then
+		if ItemView ~= nil then
+			ItemView:PlaySelectedAnim()
+		end
+		self.LastCurStainAreaID = ItemData.ID
+	end
+
 	self.CurStainAreaID = ItemData.ID
 	if self.CurStainAreaID ~= -1 then
 		local bShow = true
@@ -730,37 +889,35 @@ function WardrobeStainPanelView:OnColorAreaListChanged(Index, ItemData, ItemView
 			bShow = not bShow
 		end, 0, 0.5, 2)
 	end
+
 	local CurColor = 0
 	local AppID = self.CurAppearanceID
-	local StainViewSuit = WardrobeMgr:GetStainViewSuitByAppID(AppID)
+	local StainViewSuit = self.VM:GetPreStainSuitByAppID(AppID) -- 实际染色的数据
+	local RegionDye = StainViewSuit.RegionDye or {}
 	if self.CurStainAreaID == -1 then
 		local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(self.CurAppearanceID)
-		CurColor = IsAppRegionDye and WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
+		CurColor = IsAppRegionDye and WardrobeUtil.GetUnifyRegionDyeColor(AppID, RegionDye) or StainViewSuit.Color
 	else
-		CurColor = StainViewSuit.RegionDye[self.CurStainAreaID] and  StainViewSuit.RegionDye[self.CurStainAreaID].ColorID or 0
+		CurColor = RegionDye[self.CurStainAreaID] and RegionDye[self.CurStainAreaID].ColorID or 0
 	end
 
+	self.IsInsertUsedStain = false
 	if CurColor == 0 then
 		self.ColorTabListAdapter:CancelSelected()
 		self.ColorTabListAdapter:SetSelectedIndex(1)
 	else
 		local ColorCfg = DyeColorCfg:FindCfgByKey(CurColor)
-		self.ColorTabListAdapter:CancelSelected()
-		self.ColorTabListAdapter:SetSelectedIndex(self:ConvertIndex(ColorCfg.Type))
-	end
-
-end
-
-function WardrobeStainPanelView:ConvertIndex(Type)
-	local TypeList = WardrobeDefine.ColorTypeList
-	for _, v in ipairs(TypeList) do
-		if v == Type then
-			return _
+		if ColorCfg ~= nil then
+			self.ColorTabListAdapter:CancelSelected()
+			local Index = WardrobeUtil.ColorTypeConvertIndex(ColorCfg.Type)
+			self.ColorTabListAdapter:SetSelectedIndex(Index)
 		end
 	end
-	return   1
+
+	self.IsInsertUsedStain = true
 end
 
+-- 常用染色列表选中
 function WardrobeStainPanelView:OnColorOftenListChanged(Index, ItemData, ItemView)
 	--Todo 选中常用染色，根据当前的区域
 	local ColorID = ItemData.ID
@@ -772,10 +929,11 @@ function WardrobeStainPanelView:OnColorOftenListChanged(Index, ItemData, ItemVie
 	else
 		local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
 		self.ColorTabListAdapter:CancelSelected()
-		self.ColorTabListAdapter:SetSelectedIndex(self:ConvertIndex(ColorCfg.Type))
+		self.ColorTabListAdapter:SetSelectedIndex(WardrobeUtil.ColorTypeConvertIndex(ColorCfg.Type))
 	end
 end
 
+-- 更新染色模型
 function WardrobeStainPanelView:UpdateModelColor(AppID, ColorID, RegionDyes)
 	if AppID == nil then
 		return
@@ -806,6 +964,7 @@ function WardrobeStainPanelView:UpdateModelColor(AppID, ColorID, RegionDyes)
 	end
 end
 
+-- 更新染色消耗
 function WardrobeStainPanelView:UpdateConsumeItem(ID, ColorID)
 	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
 	if ColorCfg == nil then
@@ -828,14 +987,10 @@ function WardrobeStainPanelView:UpdateConsumeItem(ID, ColorID)
 			if v.ID ~= 0 and Items[index] ~= nil then
 				local ItemLacked = BagMgr:GetItemNum(v.ID) < v.Num
 				local ColorNum = RichTextUtil.GetText(string.format("%d", BagMgr:GetItemNum(v.ID)), ItemLacked and WardrobeDefine.TxtColor.WarningColor or "#D5D5D5FF")
+				local Item = ItemUtil.CreateItem(v.ID, 0)
+				Items[index].BagSlotVM:UpdateVM(Item, {IsShowNum = false, IsShowLeftCornerFlag = false, PanelBagVisible = true})
 				Items[index].Num = string.format("%s/%d", ColorNum, v.Num)
-				local IconID = ItemUtil.GetItemIcon(v.ID)
-				if IconID ~= 0 then
-					Items[index].BagSlotVM.ResID = v.ID
-					Items[index].BagSlotVM.Icon = UIUtil.GetIconPath(IconID)
-					Items[index].BagSlotVM.PanelBagVisible = true
-					Items[index].ItemNum = v.Num
-				end
+				Items[index].ItemNum = v.Num
 			end
 
 			if index == 1 then
@@ -864,7 +1019,11 @@ end
 function WardrobeStainPanelView:OnClickedBtnHatStyle(ToggleButton, State)
 	local bChanged = self.SuperView.OnClickedBtnHatStyle(self.SuperView, ToggleButton, State)
 	if not bChanged then
-		self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.MainVM.BtnHatStyleChecked, false)
+		if not self.MainVM.BtnHatStyleVisible then
+			self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+		else
+			self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.MainVM.BtnHatStyleChecked, false)
+		end
 	end
 end
 
@@ -873,14 +1032,61 @@ function WardrobeStainPanelView:OnClickedBtnPose(ToggleButton, State)
 	if not bChanged then
 		self.WardrobeOperateItem.BtnPose:SetChecked(self.MainVM.BtnPoseChecked, false)
 	end
+
+	if bChanged then
+		-- 需要更新一下pose武器装备
+		if self.MainVM.BtnPoseChecked then
+			if self.Common_Render2D_UIBP ~= nil then
+				local ViewSuit = WardrobeMgr:GetViewSuit()
+				local HasEquipWeaponViewSuit = false
+				for key, v in pairs(ViewSuit) do
+					if key == EquipmentPartList.EQUIP_PART_MASTER_HAND or key == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
+						HasEquipWeaponViewSuit = true
+						local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(v.Avatar)
+						local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(v.Avatar)
+						self.Common_Render2D_UIBP:PreViewEquipment(EquipID, key, IsAppRegionDye and 0 or v.Color)
+						-- Todo 区域染色逻辑
+						self:StainPartForSection(v.Avatar, tonumber(key), v.RegionDye)
+					end
+				end
+	
+				if not HasEquipWeaponViewSuit then
+					local EquipList = EquipmentVM.ItemList
+					for _, part in pairs(WardrobeDefine.EquipmentTab) do
+						if EquipmentPartList.EQUIP_PART_MASTER_HAND == part or EquipmentPartList.EQUIP_PART_SLAVE_HAND == part then
+							-- 判断当前装备
+							local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
+							if CurrentAppID ~= 0 then
+								local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
+								local ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
+								local RegionDye = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
+								local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(CurrentAppID)
+								self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, IsAppRegionDye and 0 or ColorID)
+								--Todo 区域染色逻辑
+								self:StainPartForSection(CurrentAppID, tonumber(part), RegionDye)
+							else
+								local TempEquip = EquipList[part]
+								if TempEquip ~= nil then
+									local EquipID = TempEquip.ResID
+									self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+								else
+									self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
 end
 
 function WardrobeStainPanelView:OnClickedBtnCamera(ToggleButton, State)
 	local IsShow = State == _G.UE.EToggleButtonState.Checked
 	self.MainVM.BtnCameraChecked = IsShow
 	if IsShow then
-		self:ShowModelFocusPart(self.CurPartID)
 		_G.FLOG_INFO(string.format("WardrobeStainPanelView 切换镜头到 %s", ProtoEnumAlias.GetAlias(ProtoCommon.equip_part, self.CurPartID)))
+		self:ShowModelFocusPart(self.CurPartID)
 	else
 		_G.FLOG_INFO(string.format("WardrobeStainPanelView 切换全身镜头"))
 		self:ShowAllModel(true)
@@ -898,8 +1104,11 @@ function WardrobeStainPanelView:OnClickedBtnBlock(ToggleButton, State)
 	-- 清空所有部位
 	if self.VM.BtnBlockChecked then
 		for _ , part in pairs(WardrobeDefine.EquipmentTab) do
-			if PartID ~= part then
-				self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+			local IsHoldWeapon = (part == EquipmentPartList.EQUIP_PART_SLAVE_HAND or part == EquipmentPartList.EQUIP_PART_MASTER_HAND) and self.MainVM.BtnPoseChecked
+			if not IsHoldWeapon then
+				if self.CurPartID ~= part then
+					self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+				end
 			end
 		end
 	else
@@ -907,6 +1116,7 @@ function WardrobeStainPanelView:OnClickedBtnBlock(ToggleButton, State)
 	end
 end
 
+-- 点击打开常用染色
 function WardrobeStainPanelView:OnClickedBtnGO()
 	self.VM:UpdateColorOfenList(not self.OftenListOpen)
 	self.VM.ShowOftenAll = not self.VM.ShowOftenAll
@@ -914,63 +1124,207 @@ function WardrobeStainPanelView:OnClickedBtnGO()
 	self.VM.MoreOftenCheck = self.OftenListOpen
 end
 
--- 点击解锁
-function WardrobeStainPanelView:OnClickedBtnUnlock()
-
+-- 点击激活颜色
+function WardrobeStainPanelView:OnClickedActive()
 	if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_CLOSET_DYE, true) then
 		return
 	end
 
-	-- 如果是当前的染色 
-	local CurColorID = WardrobeMgr:GetIsClothing(self.CurAppearanceID) and WardrobeMgr:GetCurAppearanceDyeColor(self.CurAppearanceID, self.CurStainAreaID)  or WardrobeMgr:GetDyeColor(self.CurAppearanceID, self.CurStainAreaID)
-	local IsActive = WardrobeMgr:IsActiveColor(self.CurAppearanceID, self.CurColorID)
-
-	if self.CurColorID == 0 then
+	if self.CurColorID == 0 or self.CurAppearanceID == 0  then
 		return
 	end
 
-	if CurColorID == self.CurColorID then
-		if self.CurStainAreaID == -1 then
-			WardrobeMgr:SendClosetDyeRecoveryReq(self.CurAppearanceID)
-		else
-			WardrobeMgr:SendClosetRegionDyeReq(self.CurAppearanceID, self.CurStainAreaID, 0)
-		end
+	local Color = self.CurColorID 
+	local AppID = self.CurAppearanceID
+
+	local IsActive = WardrobeMgr:IsActiveColor(AppID, Color)
+
+	if IsActive then
 		return
 	end
 
-	if self.CurColorID ~= 0 then
-		local ColorCfg = DyeColorCfg:FindCfgByKey(self.CurColorID)
-		local IsEnough = false
-	
-		for index, v in ipairs(ColorCfg.StainAgentRes) do
+	if self:IsEnoughStainItem(Color) then
+		WardrobeMgr:SendClosetActiveReq(AppID, Color)
+		return
+	end
+
+	-- 染色试剂不足
+	self:ShowNotEoughtStainWin(Color)
+end
+
+-- 染剂是否充足
+function WardrobeStainPanelView:IsEnoughStainItem(ColorID)
+	local IsEnough = false
+
+	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
+	if ColorCfg ~= nil then
+		for _, v in ipairs(ColorCfg.StainAgentRes) do
 			if v.ID ~= 0 then
 				IsEnough = BagMgr:GetItemNum(v.ID) >= v.Num
 				if not IsEnough then
-					break
+					return IsEnough
 				end
 			end
-		end
-		
-		if IsActive then
-			if self.CurStainAreaID == -1 then
-				WardrobeMgr:SendClosetDyeReq(self.CurAppearanceID, self.CurColorID)
-			else
-				WardrobeMgr:SendClosetRegionDyeReq(self.CurAppearanceID, self.CurStainAreaID, self.CurColorID)
-			end
-		else
-			if not IsEnough then
-				for index, v in ipairs(ColorCfg.StainAgentRes) do
-					if v.ID ~= 0 then
-						if BagMgr:GetItemNum(v.ID) < v.Num then
-						MsgTipsUtil.ShowErrorTips(string.format(_G.LSTR(1080048), ItemUtil.GetItemName(v.ID))) --"%s不足"
-						return
-						end
-					end
-				end
-			end
-			WardrobeMgr:SendClosetActiveStainReq(self.CurAppearanceID, self.CurColorID)
 		end
 	end
+
+	return IsEnough
+end
+
+-- 展示染色不足弹窗
+function WardrobeStainPanelView:ShowNotEoughtStainWin(ColorID)
+	local ColorCfg = DyeColorCfg:FindCfgByKey(ColorID)
+	if ColorCfg ~= nil then
+		for _, v in ipairs(ColorCfg.StainAgentRes) do
+			if v.ID ~= 0 then
+				if BagMgr:GetItemNum(v.ID) < v.Num then
+					local function GoShopping()
+						local Cfg = ItemUtil.GetItemGetWayList(v.ID)
+						if table.length(Cfg) > 0 then
+							local TransferData = {}
+							TransferData.NeedBuyNum =  v.Num - _G.BagMgr:GetItemNum(v.ID)
+							TransferData.FunValue = 0
+							SystemEntranceMgr:ShowStoreEntrance(v.ID, TransferData)
+						end
+					end
+			
+					local QuantityText = string.format(_G.LSTR("%s/%d"), RichTextUtil.GetText(_G.BagMgr:GetItemNum(v.ID), "dc5868"), v.Num)
+					local CostText = string.format(_G.LSTR(1080101), RichTextUtil.GetText(ItemUtil.GetItemName(v.ID), "d1ba8e"))
+					local Params = {ItemResID = v.ID, TextQuantity = QuantityText}
+							_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(620039), CostText, GoShopping, nil, _G.LSTR(620011), _G.LSTR(620029), Params)
+					return
+				end
+			end
+		end
+	end
+end
+
+-- 点击染色区域改名
+function WardrobeStainPanelView:OnClickedRegionDyeName()
+	if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_CLOSET_DYE, true) then
+		return
+	end
+	
+	if self.CurAppearanceID == 0 then
+		return
+	end
+
+	local AppID = self.CurAppearanceID
+	local CurStainAreaID = self.CurStainAreaID
+    local Params = {
+        Title = _G.LSTR(1080141),  --区域染色备注
+        Desc = _G.LSTR(1080142), --区域名称
+		HintText = _G.LSTR(1080143), --输入区域名称
+        MaxTextLength = 14,
+		EmptyInputEnable = true,
+        SureCallback = function(Text)
+			if Text ~= "" then
+				_G.JudgeSearchMgr:QueryTextIsLegal(Text, function( IsLegal )
+					if not IsLegal then
+						MsgTipsUtil.ShowTips(_G.LSTR(10057)) 
+						return
+					end
+					local Region = {}
+					Region.ID = CurStainAreaID
+					Region.Color = 0
+					Region.Name = Text
+					WardrobeMgr:SendRegionDyeRenameRep(Region, AppID)
+				end)
+			end
+        end
+    }
+
+    _G.UIViewMgr:ShowView(_G.UIViewID.CommonPopupInput, Params)
+end
+
+-- 点击解锁并染色
+function  WardrobeStainPanelView:OnClickedActiveAndStain()
+	if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_CLOSET_DYE, true) then
+		return
+	end
+	
+	if self.CurColorID == 0 or self.CurAppearanceID == 0 then
+		return
+	end
+
+	local Color = self.CurColorID 
+	local AppID = self.CurAppearanceID
+	local CurStainAreaID = self.CurStainAreaID
+
+	local IsActive = WardrobeMgr:IsActiveColor(AppID, Color)
+
+	if IsActive then
+		return
+	end
+
+	if self:IsEnoughStainItem(Color) then
+		local IsAllDye = CurStainAreaID == -1
+		local RegionDye = {ID  = CurStainAreaID == -1 and 1 or CurStainAreaID, ColorID = Color, Name = "" }
+		WardrobeMgr:SendClosetActiveAndStainReq(AppID, RegionDye, IsAllDye)
+		return
+	end
+
+	self:ShowNotEoughtStainWin(Color)
+end
+
+-- 点击染色
+function WardrobeStainPanelView:OnClickedBtnUnlock()
+	if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_CLOSET_DYE, true) then
+		return
+	end
+	
+	if self.CurAppearanceID == 0 then
+		return
+	end
+
+	local Color = self.CurColorID 
+	local AppID = self.CurAppearanceID
+	local CurStainAreaID = self.CurStainAreaID
+
+	-- 如果是当前的染色 
+	local CurColorID = WardrobeMgr:GetIsClothing(AppID) and WardrobeMgr:GetCurAppearanceDyeColor(AppID, CurStainAreaID) or WardrobeMgr:GetDyeColor(AppID, CurStainAreaID)
+	local IsActive = WardrobeMgr:IsActiveColor(AppID, Color)
+
+	-- 取消染色
+	if CurColorID == Color then
+		if self.CurStainAreaID == -1 then
+			if WardrobeMgr:IsSameColorRegionDye(AppID, 0) then
+				MsgTipsUtil.ShowTips(_G.LSTR(1080144))
+				return
+			end
+		else
+			if CurColorID == 0 then
+				MsgTipsUtil.ShowTips(_G.LSTR(1080144))
+				return
+			end	
+		end
+		if self.CurStainAreaID == -1 then
+			WardrobeMgr:SendClosetDyeRecoveryReq(AppID)
+		else
+			WardrobeMgr:SendClosetRegionDyeReq(AppID, CurStainAreaID, 0)
+		end
+		return
+	end
+
+	-- 染色
+	if IsActive then
+		if CurStainAreaID == -1 then
+			WardrobeMgr:SendClosetDyeReq(AppID, Color)
+		else
+			WardrobeMgr:SendClosetRegionDyeReq(AppID, CurStainAreaID, Color)
+		end
+	end
+end
+
+-- 点击预览弹窗
+function  WardrobeStainPanelView:OnClickedBtnPreviewColor()
+	local CurAppID = self.CurAppearanceID
+	local Params = {
+		AppID =  CurAppID,
+		StainColorList = self.VM:GetStainSuitByAppID(CurAppID),
+		PreviewColorList = self.VM:GetPreStainSuitByAppID(CurAppID)
+	}
+	_G.UIViewMgr:ShowView(_G.UIViewID.WardrobePreviewColorWin, Params)
 end
 
 -- 更新当前外观
@@ -978,7 +1332,7 @@ function WardrobeStainPanelView:UpdateModelEquipment()
 	local ItemList = {}
 	local EquipList = EquipmentVM.ItemList
 
-	local CurViewSuit = WardrobeMgr:GetStainViewSuit()
+	local CurViewSuit = self.VM:GetStainSuit()
 	for index, partID in pairs(WardrobeDefine.EquipmentTab) do
 		if CurViewSuit[partID] ~= nil and CurViewSuit[partID].Avatar ~= 0 then
 			local Equip = CurViewSuit[partID]
@@ -1035,7 +1389,7 @@ function WardrobeStainPanelView:RenderPreviewEquipmentList(Items)
 				end
 			elseif PartID == EquipmentPartList.EQUIP_PART_SLAVE_HAND or PartID == EquipmentPartList.EQUIP_PART_MASTER_HAND then
 				if self.MainVM ~= nil and self.MainVM.BtnHandChecked ~= nil then
-					if self.MainVM.BtnHandChecked then
+					if self.MainVM.BtnHandChecked or self.MainVM.BtnPoseChecked then
 						self.Common_Render2D_UIBP:PreViewEquipment(EquipID, PartID, IsAppRegionDye and 0 or Color)
 						self:StainPartForSection(AppID, PartID, RegionDyes)
 					else
@@ -1050,8 +1404,9 @@ function WardrobeStainPanelView:RenderPreviewEquipmentList(Items)
 	end
 end
 
+-- 展示全模型
 function WardrobeStainPanelView:ShowAllModel(bBackAll)
-	self:SetModelSpringArmToDefault(false)
+	self:SetModelSpringArmToDefault(true)
 	self.MainVM.BtnCameraChecked = false
 end
 
@@ -1060,6 +1415,7 @@ function WardrobeStainPanelView:ShowModelFocusPart(Part)
 	if type(Part) ~= 'number' then
 		return
 	end
+
 	if self.IsTransition  then
 		self.IsTransition = false
 		return
@@ -1069,8 +1425,10 @@ function WardrobeStainPanelView:ShowModelFocusPart(Part)
 	if Part == EquipmentPartList.EQUIP_PART_MASTER_HAND or Part == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
 		Part = 0
 	end
-	local CameraFocusCfg = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType,  MajorUtil.GetMajorProfID(), Part)
+
+	local CameraFocusCfg = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, MajorUtil.GetMajorProfID(), Part)
 	if CameraFocusCfg == nil then return end
+	-- _G.FLOG_INFO(string.format("WardrobeStainPanelView:ShowModelFocusPart Fov %s ", tostring(CameraFocusCfg.FOV)))
 	self.Common_Render2D_UIBP:SetCameraLockedFOV(CameraFocusCfg.FOV)
 	self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 + WardrobeDefine.StainPanelOffsetY, CameraFocusCfg.Distance)
 	local DPIScale = _G.UE.UWidgetLayoutLibrary.GetViewportScale(self)
@@ -1092,21 +1450,24 @@ function WardrobeStainPanelView:ShowModelFocusPart(Part)
 	self.ShowModelType = WardrobeDefine.ShowModelType.Part
 end
 
+-- 设置镜头位置
 function WardrobeStainPanelView:SetModelSpringArmToDefault(bInterp)
 	-- 设置一下相机参数
 	if self.ShowModelType == WardrobeDefine.ShowModelType.All then
 		return
 	end
-
-	if self.IsTransition  then
+	if self.IsTransition then
 		self.IsTransition  = false
 		return
 	end
 
 	local DefaultSpringArmLength = nil
-	if nil ~= self.Common_Render2D_UIBP.CamControlParams then
-		DefaultSpringArmLength = self.Common_Render2D_UIBP.CamControlParams.DefaultViewDistance
+	if CommonUtil.IsObjectValid(self.Common_Render2D_UIBP) then
+		if nil ~= self.Common_Render2D_UIBP.CamControlParams and self.Common_Render2D_UIBP.CamControlParams.DefaultViewDistance ~= nil then
+			DefaultSpringArmLength = self.Common_Render2D_UIBP.CamControlParams.DefaultViewDistance
+		end
 	end
+	
 	self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 + WardrobeDefine.StainPanelOffsetY, DefaultSpringArmLength)
 	self.Common_Render2D_UIBP:EnableRotator(true)
 	self.Common_Render2D_UIBP:SetCameraFocusScreenLocation(nil, nil, nil, nil)
@@ -1114,20 +1475,18 @@ function WardrobeStainPanelView:SetModelSpringArmToDefault(bInterp)
 	self.Common_Render2D_UIBP:ResetViewDistance(bInterp)
 	self.Common_Render2D_UIBP:SetPostProcessVignetteIntensity(self.VignetteIntensityDefaultValue)
 	self.Common_Render2D_UIBP:EnableZoom(true)
-
+	
 	local AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
-	--local CameraParams = WardrobeMgr:GetCameraControlParams(AttachType, 1)
 	local CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, MajorUtil.GetMajorProfID() , 0)
 
 	if CameraParams ~= nil then
-		-- _G.FLOG_INFO(string.format("WardrobeStainPanelView:SetModelSpringArmToDefault Fov %s ", tostring(CameraParams.FOV)))
 		self.Common_Render2D_UIBP:ResetViewDistance(bInterp)
 	end
 
 	self.ShowModelType = WardrobeDefine.ShowModelType.All
 end
 
-
+-- 模型组装完成回调
 function WardrobeStainPanelView:OnAssembleAllEnd(Params)
 	if (self.Common_Render2D_UIBP == nil) then return end
 	local ChildActor = self.Common_Render2D_UIBP:GetCharacter()
@@ -1140,6 +1499,7 @@ function WardrobeStainPanelView:OnAssembleAllEnd(Params)
 	end
 end
 
+-- 区域染色接口
 function WardrobeStainPanelView:StainPartForSection(AppID, PartID, RegionDyes)
 	if AppID == nil then
 		return
@@ -1153,6 +1513,42 @@ function WardrobeStainPanelView:StainPartForSection(AppID, PartID, RegionDyes)
 	end	
 end
 
+function WardrobeStainPanelView:SaveNoShowTipsTime(Params)
+	if Params ~= nil and Params.IsNeverAgain ~= nil then
+		if Params.IsNeverAgain then
+			local ServerTime = _G.TimeUtil.GetServerLogicTime()
+			WardrobeMgr:SetStainNoShowTipsTime(ServerTime)
+			USaveMgr.SetInt(SaveKey.StainTipsNoShowTime, ServerTime, true)
+		else
+			WardrobeMgr:SetStainNoShowTipsTime(0)
+			USaveMgr.SetInt(SaveKey.StainTipsNoShowTime, 0, true)
+		end
+	end
+end
 
+function WardrobeStainPanelView:ExitStainPanel()
+	self.VM.BtnBlockChecked = true
+	self.VM.BtnBlockVisible = false
+	self.SuperView.ShowMainPanel(self.SuperView, false, self.CurPartID)
+	self:Hide()
+end
+
+function WardrobeStainPanelView:ShowExitStainPanelTips()
+	local function GoPreviewColorWinView()
+		self:OnClickedBtnPreviewColor()
+	end
+
+	local function ExitStainPanelView(View, Params)
+		self:SaveNoShowTipsTime(Params)
+		self:ExitStainPanel()
+	end
+
+	local Params = {NeverMindText = _G.LSTR(1080145), bUseNever = true} --今日不再提示
+	--退出确认, 
+	--当前外观仍有未确认的染色, 是否确认要退出染色?
+	--查看染色
+	--退 出
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(1080146), _G.LSTR(1080147), ExitStainPanelView, GoPreviewColorWinView, _G.LSTR(1080148), _G.LSTR(1080149), Params)
+end
 
 return WardrobeStainPanelView

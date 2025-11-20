@@ -91,7 +91,9 @@ function DepartOfLightVM:UpdateActivityInfoList(InfoList)
     end
 
     self.ActivityInfoList = InfoList
-    self.ActivityInfoVMList:UpdateByValues(self.ActivityInfoList, nil, false)
+    if self.ActivityInfoVMList then
+        self.ActivityInfoVMList:UpdateByValues(self.ActivityInfoList, nil, false)
+    end
 end
 
 function DepartOfLightVM:UpdateActivity(Info, Index)

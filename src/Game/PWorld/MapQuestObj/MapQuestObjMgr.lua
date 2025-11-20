@@ -49,6 +49,19 @@ function MapQuestObjMgr:OnUpdateQuest()
 
     -- 触发器
     self:LoadTriggerArea(CurrMapEditCfg)
+    self:LoadFestivalTriggerArea()
+end
+
+function MapQuestObjMgr:LoadFestivalTriggerArea()
+    local CurrMapFestivalEditCfg = _G.MapEditDataMgr:GetFestivalEditCfg()
+
+    for k,v in pairs(CurrMapFestivalEditCfg) do
+        for x,MapEditCfg in pairs(v) do
+            if MapEditCfg.MapID == _G.PWorldMgr:GetCurrMapResID() then
+                self:LoadTriggerArea(MapEditCfg)
+            end
+        end
+    end
 end
 
 function MapQuestObjMgr:LoadTriggerArea(CurrMapEditCfg)
@@ -73,6 +86,8 @@ function MapQuestObjMgr:LoadTriggerArea(CurrMapEditCfg)
             end
         end
     end
+
+
 end
 
 return MapQuestObjMgr

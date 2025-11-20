@@ -60,7 +60,7 @@ function SkillLimitBackGenAttackBtnView:OnRegisterUIEvent()
 end
 
 function SkillLimitBackGenAttackBtnView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(EventID.GamePadSkillCancel, self.OnGamePadSkillCancel)
 end
 
 function SkillLimitBackGenAttackBtnView:OnRegisterBinder()
@@ -69,6 +69,10 @@ end
 
 function SkillLimitBackGenAttackBtnView:OnBtnAttackClick()
 	_G.EventMgr:SendEvent(EventID.SkillLimitCancelBtnClick)
+end
+
+function SkillLimitBackGenAttackBtnView:OnGamePadSkillCancel(Index)
+	self:OnBtnAttackClick()
 end
 
 return SkillLimitBackGenAttackBtnView

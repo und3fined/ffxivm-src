@@ -117,16 +117,18 @@ function BinderRegister:UnRegisterAll()
 
 	for i = #Registers, 1, -1 do
 		local v = Registers[i]
-		do
-			local _ <close> = CommonUtil.MakeProfileTag(string.format("BinderRegister_UnRegisterBinder"))
-			if nil ~= v.ViewModel then
-				v.ViewModel:UnRegisterBinder(v.PropertyName, v.Binder)
+		if type(v) ~= "boolean" then
+			do
+				local _ <close> = CommonUtil.MakeProfileTag(string.format("BinderRegister_UnRegisterBinder"))
+				if nil ~= v.ViewModel then
+					v.ViewModel:UnRegisterBinder(v.PropertyName, v.Binder)
+				end
 			end
-		end
 
-		do
-			local _ <close> = CommonUtil.MakeProfileTag(string.format("BinderRegister_FreeCommonTable"))
-			ObjectPoolMgr:FreeCommonTable(v)
+			do
+				local _ <close> = CommonUtil.MakeProfileTag(string.format("BinderRegister_FreeCommonTable"))
+				ObjectPoolMgr:FreeCommonTable(v)
+			end
 		end
 	end
 

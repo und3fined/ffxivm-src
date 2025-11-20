@@ -29,7 +29,6 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local TeamMgr = require("Game/Team/TeamMgr")
 local TeamRecruitMgr = require("Game/TeamRecruit/TeamRecruitMgr")
-local PWorldEntUtil = require("Game/PWorld/Entrance/PWorldEntUtil")
 
 local ModuleType = TeamDefine.ModuleType
 
@@ -192,6 +191,7 @@ end
 ---@field CommSingleBox CommSingleBoxView
 ---@field CommTabs CommTabsView
 ---@field CommTabsModule CommVerIconTabsView
+---@field CommTextSlide CommTextSlideView
 ---@field CommonTitle CommonTitleView
 ---@field IconJob UFImage
 ---@field IconMicOff UFImage
@@ -205,6 +205,7 @@ end
 ---@field ImgTitleBg2 UFImage
 ---@field PanelBtns UFCanvasPanel
 ---@field PanelListEmpty UFCanvasPanel
+---@field PanelListEmptyNew CommBackpackEmptyView
 ---@field PanelRecruit UFCanvasPanel
 ---@field PanelTeam UFCanvasPanel
 ---@field RichTextBuff URichTextBox
@@ -244,6 +245,7 @@ function TeamMainPanelView:Ctor()
 	--self.CommSingleBox = nil
 	--self.CommTabs = nil
 	--self.CommTabsModule = nil
+	--self.CommTextSlide = nil
 	--self.CommonTitle = nil
 	--self.IconJob = nil
 	--self.IconMicOff = nil
@@ -257,6 +259,7 @@ function TeamMainPanelView:Ctor()
 	--self.ImgTitleBg2 = nil
 	--self.PanelBtns = nil
 	--self.PanelListEmpty = nil
+	--self.PanelListEmptyNew = nil
 	--self.PanelRecruit = nil
 	--self.PanelTeam = nil
 	--self.RichTextBuff = nil
@@ -286,7 +289,9 @@ function TeamMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.CommSingleBox)
 	self:AddSubView(self.CommTabs)
 	self:AddSubView(self.CommTabsModule)
+	self:AddSubView(self.CommTextSlide)
 	self:AddSubView(self.CommonTitle)
+	self:AddSubView(self.PanelListEmptyNew)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -361,6 +366,7 @@ function TeamMainPanelView:OnShow()
 	self.ModuleVMList = self.PolTy.TeamVM.ModuleVMList
 	self.BtnInvite:SetText(LSTR(1300026))
 	self.CommSingleBox:SetText(_G.LSTR(1310107))
+	self.CommTextSlide:ShowSliderText(LSTR(1310116))
 
 	if self.TextListEmpty then
 		self.TextListEmpty:SetText(LSTR(1310051))
@@ -699,6 +705,7 @@ function TeamMainPanelView:OnClickedButtonQuitTeam()
 end
 
 function TeamMainPanelView:OnClickedButtonInvite()
+	local PWorldEntUtil = require("Game/PWorld/Entrance/PWorldEntUtil")
 	if PWorldEntUtil.GoToPWorldEntranceUI() then
 		self:Hide()
 	end

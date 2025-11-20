@@ -1,5 +1,6 @@
 local LuaClass = require("Core/LuaClass")
 local MiniGameBase = require("Game/GoldSaucerMiniGame/MiniGameBase")
+local ProtoCS = require("Protocol/ProtoCS")
 local MajorUtil = require("Utils/MajorUtil")
 local CuffRoundCfg = require("TableCfg/CuffRoundCfg") -- 
 local CuffStrengthStageCfg = require("TableCfg/CuffStrengthStageCfg")
@@ -8,6 +9,8 @@ local CuffRewardCfg = require("TableCfg/CuffRewardCfg")
 local CuffBatterCfg = require("TableCfg/CuffBatterCfg")
 local CuffParamCfg = require("TableCfg/CuffParamCfg")
 local CuffBlessCfg = require("TableCfg/CuffBlessCfg")
+local CuffDifficultyCfg = require("TableCfg/CuffDifficultyCfg")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
 
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local MiniGameVM = require("Game/GoldSaucerMiniGame/MiniGameVM")
@@ -27,9 +30,16 @@ local MiniGameRoundEndState = GoldSaucerMiniGameDefine.MiniGameRoundEndState
 local AnimTimeLineSourceKey = GoldSaucerMiniGameDefine.AnimTimeLineSourceKey
 local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local CenterBlowID = GoldSaucerMiniGameDefine.CuffDefine.CenterBlowID
-local CuffCfg = MiniGameClientConfig[MiniGameType.Cuff]
 local GilgameshParamType = ProtoRes.Game.GilgameshParamType
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
+local BigBlessSuccessIconPath = GoldSaucerMiniGameDefine.BigBlessSuccessIconPath
+local BigBlessFailIconPath = GoldSaucerMiniGameDefine.BigBlessFailIconPath
+local LittleBlessSuccessIconPath = GoldSaucerMiniGameDefine.LittleBlessSuccessIconPath
+local LittleBlessFailIconPath = GoldSaucerMiniGameDefine.LittleBlessFailIconPath
+local BlessSuccessItemBg = GoldSaucerMiniGameDefine.BlessSuccessItemBg
+local BlessFailItemBg = GoldSaucerMiniGameDefine.BlessFailItemBg
 local LSTR = _G.LSTR
+local FLOG_ERROR = _G.FLOG_ERROR
 local TimerMgr = _G.TimerMgr
 local UE = _G.UE
 local EffectUtil = require("Utils/EffectUtil")
@@ -63,12 +73,14 @@ function MiniGameCuff:Ctor()
     self.StrengthPro = 0 -- 力量值进度条
     self.CurStrengthStage = 1
     self.CuffScore = 0 -- 一次交互获取的力量值
+    self.ScoreByInteractItemType = 0 -- 一次交互获取的力量值所属交互Item
     self.bCuffScoreVisible = false -- 一次交互获取的力量值显隐
     self.bPanelNormalVisible = true
     self.bPanelResultVisible = false
     self.bFailed = false
     self.bSuccessed = false
     self.TextMultiple = ""
+    self.MultipleNum = 1
     self.bTextMultipleVisible = false
     self.MaxComboNum = 0    
     self.CurRoundBlowNum = 0 -- 当前轮数出现的交互物数量
@@ -109,6 +121,8 @@ function MiniGameCuff:Ctor()
     self.CuffGameState = DefineCfg.EGameState.InGame
 
     self.bPlayerActed = false -- 玩家是否操作过
+
+    self.BlessInteractorNumGot = 0
 end
 
 function MiniGameCuff:Reset()
@@ -127,6 +141,7 @@ function MiniGameCuff:Reset()
     self.bFailed = false
     self.bSuccessed = false
     self.TextMultiple = ""
+    self.MultipleNum = 1
     self.bTextMultipleVisible = false
     self.MaxComboNum = 0    
     self.CurRoundBlowNum = 0 -- 当前轮数出现的交互物数量
@@ -169,6 +184,9 @@ function MiniGameCuff:Reset()
     self.PunchWindVfxStage = 0
 
     self.bPlayerActed = false
+
+    self.BlessInteractorNumGot = 0
+    self.bResultPanelShow = false
 end
 
 --- 初始化游戏数据
@@ -256,7 +274,19 @@ end
 
 --- @type 增加力量值
 function MiniGameCuff:AddStrengthValue(Value, bShow)
-    self.StrengthValue = math.clamp(self.StrengthValue + Value, 0, 9999999)
+    local NewStrengthValue = math.clamp(self.StrengthValue + Value, 0, 9999999)
+    self.StrengthValue = NewStrengthValue
+    if self:IsBless() then
+        local BlessKind = self.BlessKind
+        local BlessCfg = CuffBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            local ChallengeTarget = BlessCfg.StrengthValue or 0
+            if NewStrengthValue >= ChallengeTarget then
+                self:SetIsBlessChallengeSuccess(true)
+            end
+        end
+    end
+ 
     if bShow then
         self.TextStrengthValue = self.TextStrengthValue + Value
     end
@@ -305,17 +335,44 @@ function MiniGameCuff:UpdateStrengthPro(AddScore)
     if Cfg == nil then
         return
     end
+
+    local DefineCfg = self.DefineCfg
+    if not DefineCfg then
+        return
+    end
+
     local MaxProValue = Cfg.Value
 
     if self.AddProTimer ~= nil then
         TimerMgr:CancelTimer(self.AddProTimer)
     end
 
+    local LastStrength = self:GetStrengthValue()
+    local TotalPercent = (AddScore + LastStrength) / MaxProValue
+
+    -- 暂定播放速度比例
+    local PercentChangeTimeMulti = {
+        [1] = 1.2,
+        [2] = 1.5
+    }
+
+    -- 进度条变化百分比
+    local PercentLimitChange = DefineCfg.PercentLimitChange
+    if not PercentLimitChange then
+        return
+    end
+
+    local TargetMulti = 1
+    if TotalPercent > PercentLimitChange[1] then
+        TargetMulti = PercentChangeTimeMulti[1]
+    elseif TotalPercent > PercentLimitChange[2] then
+        TargetMulti = PercentChangeTimeMulti[2]
+    end
+
     local ViewModel = MiniGameVM:GetDetailMiniGameVM(self.MiniGameType)
-    local TotleTime = 0.8
+    local TotleTime = 0.8 / TargetMulti
     local LoopNum = TotleTime / 0.05
     local AddValue = AddScore / LoopNum
-    local LastStrength = self:GetStrengthValue()
 
     local function LeroProBar()
         LastStrength = LastStrength + AddValue
@@ -332,7 +389,8 @@ function MiniGameCuff:SetTextHint(Text, bVisible)
 end
 
 --- @type 设置一次交互增加的力量值
-function MiniGameCuff:SetCuffScoreAndVisible(Score)
+function MiniGameCuff:SetCuffScoreAndVisible(Score, Type)
+    self.ScoreByInteractItemType = Type
     self.CuffScore = Score
     self.bCuffScoreVisible = Score > 0
 end
@@ -376,7 +434,9 @@ end
 --- @type 通过交互增加金碟币
 function MiniGameCuff:AddRewardNum(Type, HitResult)
     local EnumInteractResult = GoldSaucerMiniGameDefine.InteractResult
-	if HitResult == EnumInteractResult.Perfect then
+    local bAddExtraReward = Type == InteractionCategory.CATEGORY_STARLIGHT and (HitResult == EnumInteractResult.Perfect or HitResult == EnumInteractResult.Excellent)
+    or HitResult == EnumInteractResult.Perfect
+	if bAddExtraReward then
         local InteractCfg = CuffInteractiveCfg:FindCfgByKey(Type)
         if not InteractCfg then
             return
@@ -395,87 +455,67 @@ function MiniGameCuff:SetRewardGot(RewardCount)
     if not RewardCount then
         local LastRewardCount = self.RewardGot or 0
         local NewRewardCount = BaseReward + self.RewardNumByInter
+        if self:IsBless() and self:IsBlessChallengeSuccess() then
+            local BlessCfg = CuffBlessCfg:FindCfgByKey(self.BlessKind)
+            if BlessCfg then
+                NewRewardCount = NewRewardCount + BlessCfg.Reward or 0
+            end
+        end
         self.CuffAddRewardGot = NewRewardCount - LastRewardCount
         self.RewardGot = NewRewardCount
     else
         self.CuffAddRewardGot = RewardCount - BaseReward
         self.RewardGot = RewardCount
     end
-   
-    --[[self.RewardGot = RewardCount
-    local LastRewardGot = self.RewardGot
-    local RewardCfg = CuffRewardCfg:FindAllCfg()
-    local Reward = 0
-    local Score = self:GetStrengthValue()
-    for _, v in pairs(RewardCfg) do
-        local Elem = v
-        if Score >= Elem.Score then
-            Reward = Elem.GoldCoin
-            self.EndEmotionID = Elem.EndEmotionID
-        end
-    end
-    Reward = Reward + self:AddBlessReward(Score)
-    if tonumber(Reward) > tonumber(LastRewardGot) then
-        self.CuffAddRewardGot = Reward - LastRewardGot
-    else
-        self.CuffAddRewardGot = 0
-    end
-    self.RewardGot = Reward + self.RewardNumByInter--]]
 end
 
 --- 设定根据表格
 function MiniGameCuff:GetBaseReward(bSetEmotionID)
     local RewardCfg = CuffRewardCfg:FindAllCfg()
-    local Score = self:GetStrengthValue()
-    for _, v in pairs(RewardCfg) do
-        local Elem = v
-        if Score >= Elem.Score then
-            if bSetEmotionID then
-                self.EndEmotionID = Elem.EndEmotionID
+    local ShowStrengthValue = self:GetTextStrengthValue() or 0
+    local Multi = self.MultipleNum or 1
+    local Score = self.bTextMultipleVisible and ShowStrengthValue * Multi or ShowStrengthValue
+    for Index = #RewardCfg, 1, -1 do
+        local Elem = RewardCfg[Index]
+        if Elem then
+            if Score >= Elem.Score then
+                if bSetEmotionID then
+                    self.EndEmotionID = Elem.EndEmotionID
+                end
+                return Elem.GoldCoin
             end
-            return Elem.GoldCoin
         end
     end
 end
 
---- 获取未暴击前的金碟币数量
-function MiniGameCuff:GetOriginRewardGot()
-    local bCritical = self.bCriticalHit
-    local RewardGot = self.RewardGot or 0
-    if bCritical then
-        local Cfg = CuffParamCfg:FindCfgByKey(GilgameshParamType.GilgameshParamTypeCriticalHitTimes)
-        if Cfg then
-            local Multi = Cfg.Value or 1
-            return RewardGot / Multi
+function MiniGameCuff:GetMainPanelRewardGot()
+    if self:IsBless() then
+        if not self:IsBlessChallengeSuccess() then
+            return self.RewardNumByInter or 0
+        else
+            local PreviewReward = self.RewardNumByInter or 0
+            local BlessCfg = CuffBlessCfg:FindCfgByKey(self.BlessKind)
+            if BlessCfg then
+                PreviewReward = PreviewReward + BlessCfg.Reward or 0
+            end
+            return PreviewReward
         end
-    else
-       return RewardGot
-    end
+     end
+    return self.RewardGot
 end
 
 --- @type 获得当前获得金碟币的数量
 function MiniGameCuff:GetRewardGot()
-    return self.RewardGot
+    if self:IsBless() and not self:IsBlessChallengeSuccess() then
+        return 0
+    else
+        return self.RewardGot
+    end
 end
 
 --- @type 获取交互获得的额外金碟币奖励
 function MiniGameCuff:GetInteractRewarNum()
     return self.RewardNumByInter
-end
-
-function MiniGameCuff:AddBlessReward(Score)
-    if not _G.GoldSaucerBlessingMgr:GetSgIsInBlessing(self.DynAssetID) then
-        return 0
-    end
-    local BlessKind = _G.GoldSaucerBlessingMgr:GetBlessKind()
-    local BlessCfg = CuffBlessCfg:FindCfgByKey(BlessKind)
-    if BlessCfg == nil then
-        return
-    end
-    if Score >= BlessCfg.StrengthValue then
-        return BlessCfg.Reward
-    end 
-    return 0
 end
 
 function MiniGameCuff:MultiRewardGot()
@@ -513,6 +553,7 @@ end
 --- @type 设置增加多少比例的力量值
 function MiniGameCuff:SetTextMutiAndVisible(Scale)
     self.TextMultiple = string.format("×%s", Scale)
+    self.MultipleNum = Scale
     self.bTextMultipleVisible = Scale > 1
     if self.bTextMultipleVisible then
         local DoubleTime = GilgameshParamType.GilgameshParamTypeDoubleTime
@@ -529,7 +570,7 @@ function MiniGameCuff:SetTextMutiAndVisible(Scale)
     end
 end
 
---- @type 缓存下一轮的交互物数据
+--- @type 缓存下一轮的交互物数据(新增轮数逻辑，赐福阶段不止4轮)
 function MiniGameCuff:InitNextRoundCfgs(RoundID, ApertureList)
     local Cfg = CuffRoundCfg:FindCfgByKey(RoundID)
     if Cfg == nil then
@@ -537,8 +578,24 @@ function MiniGameCuff:InitNextRoundCfgs(RoundID, ApertureList)
     end
     self.CurRound = RoundID
     self:SetBlowNum(#ApertureList)
+    local RoundIndex = RoundID % 1000
+    local RoundDifficult = math.floor(RoundID / 1000)
+    if RoundIndex == 1 then
+        -- 首轮更新MaxRound数值
+        local DifficultCfg = CuffDifficultyCfg:FindCfgByKey(RoundDifficult)
+        if DifficultCfg then
+            local TotalNum = 0
+            local RoundIDList = DifficultCfg.RoundID or {}
+            for _, RoundID in ipairs(RoundIDList) do
+                if RoundID > 0 then
+                    TotalNum = TotalNum + 1
+                end
+            end
+            self.MaxRound = TotalNum
+        end
+    end
     local NextRoundInteractionCfg = {}  -- 下一轮交互物配置
-    if RoundID % 1000 ~= self.MaxRound then -- 前三轮
+    if RoundIndex ~= self.MaxRound then
         for i = 1, 9 do
             local InteractionData = {}
             for _, v in pairs(ApertureList) do
@@ -549,9 +606,11 @@ function MiniGameCuff:InitNextRoundCfgs(RoundID, ApertureList)
                     InteractionData.DelayShowTime = Cfg.DelayShowTime[Elem.Index + 1]
                     InteractionData.DelayShrinkTime = Cfg.DelayShrinkTime[Elem.Index + 1]
                     local InteractiveCfg = CuffInteractiveCfg:FindCfgByKey(InteractionData.Type)
-                    if Cfg ~= nil then
+                    if Cfg ~= nil and InteractiveCfg ~= nil then
                         InteractionData.ShrinkSp = InteractiveCfg.ShrinkSp
                         InteractionData.Scale = InteractiveCfg.Scale
+                    else
+                        FLOG_ERROR("MiniGameCuff:InitNextRoundCfgs Type%s", InteractionData.Type)
                     end
                     InteractionData.bBlowResultVisible = false
                     InteractionData.bBtnVisible = false
@@ -560,15 +619,17 @@ function MiniGameCuff:InitNextRoundCfgs(RoundID, ApertureList)
             end
             table.insert(NextRoundInteractionCfg, InteractionData)
         end
-    else            --- 第四轮
+    else            --- 最后一轮
         NextRoundInteractionCfg.Pos = CenterBlowID
         NextRoundInteractionCfg.Type = Cfg.Category[ApertureList[1].Index + 1]
         NextRoundInteractionCfg.DelayShowTime = Cfg.DelayShowTime[ApertureList[1].Index + 1]
         NextRoundInteractionCfg.DelayShrinkTime = Cfg.DelayShrinkTime[ApertureList[1].Index + 1]
         local InteractiveCfg = CuffInteractiveCfg:FindCfgByKey(NextRoundInteractionCfg.Type)
-        if Cfg ~= nil then
+        if Cfg ~= nil and InteractiveCfg ~= nil then
             NextRoundInteractionCfg.ShrinkSp = InteractiveCfg.ShrinkSp
             NextRoundInteractionCfg.Scale = InteractiveCfg.Scale
+        else
+            FLOG_ERROR("MiniGameCuff:InitNextRoundCfgs Type%s", NextRoundInteractionCfg.Type)
         end
         NextRoundInteractionCfg.bBlowResultVisible = false
         NextRoundInteractionCfg.bBtnVisible = true
@@ -611,7 +672,7 @@ function MiniGameCuff:UnRegisterTimer()
 end
 
 --- @type 刷新自己的VM
-function MiniGameCuff:ConstructResultData(Pos, InteractResult)
+function MiniGameCuff:ConstructResultData(Pos, InteractResult, Type)
 	local VMData = self:GetSubViewVMData(Pos)
     if VMData ~= nil then
         VMData.bBlowResultVisible = true	-- 显示结果
@@ -625,9 +686,26 @@ function MiniGameCuff:ConstructResultData(Pos, InteractResult)
 		bExcellentVisible = false
 		bFailVisible = true
 	elseif InteractResult == EnumInteractResult.Excellent then
-		bPerfectVisible = false
-		bExcellentVisible = true
-		bFailVisible = false
+        if Type ~= InteractionCategory.CATEGORY_STARLIGHT then
+            bPerfectVisible = false
+            bExcellentVisible = true
+            bFailVisible = false
+        else
+            local ComboNum = self:GetComboNum()
+            if ComboNum == 1 then
+                bPerfectVisible = true
+                bExcellentVisible = false
+                bFailVisible = false
+                ResultData.bPerfectComboVisible = false
+            elseif ComboNum > 1 and ComboNum < 10 then
+                ResultData.bComboVisible = true
+                ResultData.ComboNum = ComboNum
+                bPerfectVisible = false
+                bExcellentVisible = false
+                bFailVisible = false
+                ResultData.bPerfectComboVisible = true
+            end
+        end
 	elseif InteractResult == EnumInteractResult.Perfect then
 		local ComboNum = self:GetComboNum()
         -- local ComboCfg = CuffBatterCfg:FindCfgByKey(ComboNum)
@@ -668,15 +746,24 @@ function MiniGameCuff:AddStrengthValueAndCombos(InteractionCfg, InteractResult)
 	local EnumInteractResult = GoldSaucerMiniGameDefine.InteractResult
 	local RewardScore = 0
 	local bAddCombo = false
+    local Type = InteractionCfg.Category
+    local OldBlessInteractorNumGot = self.BlessInteractorNumGot or 0
 	if InteractResult == EnumInteractResult.Fail then
 		RewardScore = 0
 		bAddCombo = false
 	elseif InteractResult == EnumInteractResult.Excellent then
 		RewardScore = InteractionCfg.NiceScore
-		bAddCombo = false
+        local bStarItem = Type == InteractionCategory.CATEGORY_STARLIGHT
+		bAddCombo = bStarItem
+        if bStarItem then
+            self.BlessInteractorNumGot = OldBlessInteractorNumGot + 1
+        end
 	elseif InteractResult == EnumInteractResult.Perfect then
 		RewardScore = InteractionCfg.BestScore
 		bAddCombo = true
+        if Type == InteractionCategory.CATEGORY_STARLIGHT then
+            self.BlessInteractorNumGot = OldBlessInteractorNumGot + 1
+        end
     elseif InteractResult == EnumInteractResult.Error then
         bAddCombo = false
         RewardScore = InteractionCfg.BestScore
@@ -689,9 +776,9 @@ function MiniGameCuff:AddStrengthValueAndCombos(InteractionCfg, InteractResult)
             RewardScore = RewardScore + ComboCfg.Score  -- 增加连续得分
 		end
 	else
-		self:ResetComboNum( )
+		self:ResetComboNum()
 	end
-    self:SetCuffScoreAndVisible(RewardScore)
+    self:SetCuffScoreAndVisible(RewardScore, InteractionCfg.Category)
     self:UpdateStrengthPro(RewardScore)
 	self:AddStrengthValue(RewardScore, true)
     self:CheckReachStrengthStage()
@@ -961,7 +1048,11 @@ end
 function MiniGameCuff:CheckHitResult(Type, PauseTime)
     self.bPlayerActed = true
     local InteractResult = GoldSaucerMiniGameDefine.InteractResult
-    local CheckResultTime = CuffCfg.CheckResultTime
+    if Type == InteractionCategory.CATEGORY_ERROR then
+        -- 点到负面需要扣分
+        return InteractResult.Error
+    end
+    local CheckResultTime = GoldSaucerMiniGameDefine.CuffCheckResultTime
     local NeedTime
     if Type == InteractionCategory.CATEGORY_LOW then
 		NeedTime = CheckResultTime.Low
@@ -971,17 +1062,15 @@ function MiniGameCuff:CheckHitResult(Type, PauseTime)
 		NeedTime = CheckResultTime.High
     elseif Type == InteractionCategory.CATEGORY_STARLIGHT then
 		NeedTime = CheckResultTime.StarLight
-    elseif Type == InteractionCategory.CATEGORY_ERROR then
-		NeedTime = CheckResultTime.Error
 	else
         NeedTime = CheckResultTime.Red
 	end
-    if PauseTime < NeedTime.Great or PauseTime >= NeedTime.Miss then
+    if PauseTime < NeedTime.MissOuter or PauseTime > NeedTime.Profect then
         return InteractResult.Fail
-    elseif PauseTime >= NeedTime.Profect then
-        return InteractResult.Perfect
-    elseif PauseTime >= NeedTime.Great then
+    elseif PauseTime <= NeedTime.Great then
         return InteractResult.Excellent
+    elseif PauseTime <= NeedTime.Profect then
+        return InteractResult.Perfect
     end
     return InteractResult.Fail
 end
@@ -991,7 +1080,7 @@ function MiniGameCuff:PlayAudioByHitResult(Result, bRed)
     local NeedAudioPath
     if Result == InteractResult.Excellent then
         NeedAudioPath = AudioPath.Excellent
-    elseif Result == InteractResult.Fail then
+    elseif Result == InteractResult.Fail or Result == InteractResult.Error then
         NeedAudioPath = AudioPath.Miss
     else
         if bRed then
@@ -1045,18 +1134,15 @@ end
 
 --- 是否结束游戏
 function MiniGameCuff:OnIsGameRunEnd()
-
     if self.RoundEndState == MiniGameRoundEndState.Success or self.RoundEndState == MiniGameRoundEndState.FailChance then
-		return true
+        return true
     end
-	local RemainTime = self.RemainSeconds
-	if RemainTime <= 0 then
+    local RemainTime = self.RemainSeconds
+    if RemainTime <= 0 then
         self:SetRoundEndState(MiniGameRoundEndState.FailTime)
         _G.GoldSaucerMiniGameMgr:SendMsgCuffExistReq(false)
-		return true
-	end
-
-  
+        return true
+    end
 	return false
 end
 
@@ -1065,49 +1151,148 @@ function MiniGameCuff:OnGetTopTipsContent(GameState)
     return ""
 end
 
+function MiniGameCuff:GetStarInteractorGotNum()
+    return self.BlessInteractorNumGot
+end
+
 --- 构造成功列表数据
 function MiniGameCuff:ConstructData(Power, AttactCount)
-    local NeedAttactCount =  self:GetMaxComboNum()
-    local bAttackRecordVisible = AttactCount ~= 0 
-    local NeedPower =  self:GetStrengthValue()
-    local bPowerRecordVisible = Power ~= 0
-    if Power ~= 0 then
-        NeedPower = Power
-    end
-    if AttactCount ~= 0 then
-        NeedAttactCount = AttactCount
-    end
+    local bBless = self:IsBless()
+    local BlessSuccess = self:IsBlessChallengeSuccess()
     local ResultListData = {}
-    local Temp1, Temp2 = {}, {}
-    Temp1.VarName = LSTR(250004) -- 力量值
-    Temp1.bIsNewRecord = bPowerRecordVisible
-    Temp1.bIsPerfectChallenge = bPowerRecordVisible
-    Temp1.Value = string.format("%sPz", NeedPower)
-    Temp2.VarName = LSTR(250005) -- 连击数
-    Temp2.bIsNewRecord = bAttackRecordVisible
-    Temp2.bIsPerfectChallenge = bAttackRecordVisible
-    Temp2.Value = string.format("%s次", NeedAttactCount)
-    table.insert(ResultListData, Temp1)
-    table.insert(ResultListData, Temp2)
+    if (Power and AttactCount) or (bBless and BlessSuccess) then
+        -- 普通挑战成功或者赐福挑战成功
+        local NeedAttactCount =  self:GetMaxComboNum()
+        local bAttackRecordVisible = AttactCount ~= 0 
+        local NeedPower =  self:GetStrengthValue()
+        local bPowerRecordVisible = Power ~= 0
+        if Power ~= 0 then
+            NeedPower = Power
+        end
+        if AttactCount ~= 0 then
+            NeedAttactCount = AttactCount
+        end
+       
+        local Temp1, Temp2 = {}, {}
+        Temp1.VarName = LSTR(250004) -- 力量值
+        Temp1.bIsNewRecord = bPowerRecordVisible
+        Temp1.bIsPerfectChallenge = bPowerRecordVisible
+        Temp1.Value = string.format("%sPz", NeedPower)
+        Temp2.VarName = LSTR(250005) -- 连击数
+        Temp2.bIsNewRecord = bAttackRecordVisible
+        Temp2.bIsPerfectChallenge = bAttackRecordVisible
+        Temp2.Value = string.format("%s次", NeedAttactCount)
+        table.insert(ResultListData, Temp1)
+        table.insert(ResultListData, Temp2)
+    end
+
+    -- 赐福模式条目
+    if bBless then
+        local BlessKind = self.BlessKind
+        local function GetTheBlessChallengeTarget()
+            local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.Cuff)
+            if not TargetCfg then
+                return
+            end
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                return TargetCfg.BChallengeTarget
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                return TargetCfg.LChallengeTarget
+            end
+        end
+        if BlessSuccess then
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessSuccessIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessSuccessIconPath
+            end
+    
+            local ChallengeRewardScoreNum = ""
+            local BlessCfg = CuffBlessCfg:FindCfgByKey(BlessKind)
+            if BlessCfg then
+                ChallengeRewardScoreNum = string.formatint(BlessCfg.Reward)
+            end
+           
+            local BlessInteractorRlt = {}
+            BlessInteractorRlt.bBless = true
+            BlessInteractorRlt.BlessTitle = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG and LSTR(1660008) or LSTR(1660009)
+            BlessInteractorRlt.BlessTitleIcon = TitleIcon
+            BlessInteractorRlt.BlessBg = BlessSuccessItemBg
+            BlessInteractorRlt.bShowNumOrCheckIcon = true
+            BlessInteractorRlt.GetRewardNumText = string.format("x%s", tostring(self:GetStarInteractorGotNum())) 
+            BlessInteractorRlt.ScoreGotNumText = string.formatint(self:GetInteractRewarNum())
+            BlessInteractorRlt.bPlayBlessSuccessAnim = true
+            BlessInteractorRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            table.insert(ResultListData, BlessInteractorRlt)
+    
+            local BlessChallengeRlt = {}
+            BlessChallengeRlt.bBless = true
+            BlessChallengeRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessChallengeRlt.BlessTitleIcon = TitleIcon
+            BlessChallengeRlt.BlessBg = BlessSuccessItemBg
+            BlessChallengeRlt.bShowNumOrCheckIcon = false
+            BlessChallengeRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_Check.UI_GoldSaucerGame_Img_ResultList_Check'"
+            BlessChallengeRlt.ScoreGotNumText = ChallengeRewardScoreNum
+            BlessChallengeRlt.bPlayBlessSuccessAnim = true
+            BlessChallengeRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            table.insert(ResultListData, BlessChallengeRlt)
+        else
+            -- 设定titleIcon
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessFailIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessFailIconPath
+            end
+            local BlessFailRlt = {}
+            BlessFailRlt.bBless = true
+            BlessFailRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessFailRlt.BlessTitleIcon = TitleIcon
+            BlessFailRlt.BlessBg = BlessFailItemBg
+            BlessFailRlt.bShowNumOrCheckIcon = false
+            BlessFailRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_UnCheck.UI_GoldSaucerGame_Img_ResultList_UnCheck'"
+            BlessFailRlt.ScoreGotNumText = "0"
+            BlessFailRlt.bBigBless = false
+            table.insert(ResultListData, BlessFailRlt)
+        end
+    end
+
     self.ResultListData = ResultListData
 end
 
 function MiniGameCuff:GetRestartTimeAndChances()
-    
     local Time = 0
-
-    local Cfg = CuffParamCfg:FindCfgByKey(GilgameshParamType.GilgameshParamTypeTotalTime)
-    if Cfg == nil then
-        return 
+    local bBless = self:IsBless()
+    if not bBless then
+        local Cfg = CuffParamCfg:FindCfgByKey(GilgameshParamType.GilgameshParamTypeTotalTime)
+        if Cfg then
+            Time = Cfg.Value
+        end
+    else
+        local BlessCfg = CuffBlessCfg:FindCfgByKey(self.BlessKind)
+        if BlessCfg then
+            Time = BlessCfg.OverrideTime
+        end
     end
-    Time = Cfg.Value
+   
 	return Time
 end
 
+--- 获取赐福时间提示开始关卡ID
+function MiniGameCuff:GetBigBlessLvID()
+    local BlessCfg = CuffBlessCfg:FindCfgByKey(BLESSED_KIND.BLESSED_KIND_BIG)
+    if not BlessCfg then
+        return nil
+    end
 
--- function MiniGameCuff:GetBGMVolumeInGame()
---     return BGMVolume
--- end
+    return BlessCfg.BigBlessLvID
+end
+
+function MiniGameCuff:OnRecycleVfxEffect()
+    self:StopWindEffect()
+    self:StopFireEffect()
+end
 
 return MiniGameCuff
 

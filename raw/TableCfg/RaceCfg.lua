@@ -146,4 +146,23 @@ function RaceCfg:GetRacePortraitIDByRaceIDGenderAndTribe(RaceID, Gender, Tribe)
 	return Cfg.RacePortraitID
 end
 
+function RaceCfg:GetRaceIDByAttachType(AttachType)
+	if nil == AttachType then
+		return
+	end
+
+	local CachedData = self:GetCachedData()
+	for _, v in pairs(CachedData) do
+		if v.AttachType == AttachType then
+			return v.RaceID, v.Gender
+		end
+	end
+
+	local SearchConditions = string.format("AttachType = %d", AttachType)
+	local Cfg = self:FindCfg(SearchConditions)
+	if nil == Cfg then return end
+
+	return Cfg.RaceID, Cfg.Gender
+end
+
 return RaceCfg

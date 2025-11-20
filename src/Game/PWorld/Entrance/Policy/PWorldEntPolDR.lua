@@ -97,7 +97,7 @@ function PWorldEntPolDR:GetRequireEquipLv(EntID)
 end
 
 function PWorldEntPolDR:CheckJoinPre(EntID)
-    local _, Result = self.Super:CheckJoinPre(EntID)
+    local _, Result = self.Super.CheckJoinPre(self, EntID)
     Result = Result or {}
     Result.IsPassEquipLv = _G.EquipmentMgr:CalculateEquipScore() >= self:GetRequireEquipLv(EntID)
 

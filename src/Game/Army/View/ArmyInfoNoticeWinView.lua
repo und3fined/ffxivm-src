@@ -54,7 +54,7 @@ function ArmyInfoNoticeWinView:OnShow()
 	self.BtnCancel:UpdateImage(CommBtnColorType.Normal)
 	self.BtnSave:UpdateImage(CommBtnColorType.Recommend)
 	-- LSTR string:取消
-	self.BtnCancel.TextContent:SetText(LSTR(910083))
+	self.BtnCancel.TextContent:SetText(LSTR(910081))
 	-- LSTR string:保存更改
 	self.BtnSave.TextContent:SetText(LSTR(910043))
 	self.MulitiLineInputBox:SetMaxNum(Params.MaxNum)

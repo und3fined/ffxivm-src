@@ -10,6 +10,7 @@ local TradeMarketGoodsCfg = require("TableCfg/TradeMarketGoodsCfg")
 local BagMgr = require("Game/Bag/BagMgr")
 local ItemCfg = require("TableCfg/ItemCfg")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ItemDefine = require("Game/Item/ItemDefine")
 local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
 local ITEM_CLASSIFY_TYPE = ProtoRes.ITEM_CLASSIFY_TYPE
 local LSTR = _G.LSTR
@@ -38,6 +39,7 @@ function MeetTradeBagMainVM:Ctor()
 	self.TipsPanelItemNumVisible = false
 	self.TipsPanelItemIcon = nil
 	self.TipsPanelItemResID = nil
+	self.TipsPanelItemItemQualityIcon = nil
 	self.TipsPanelItemName = ""
 	self.TipsPanelItemQuantity = ""
 	self.TipsPanelItemNumber = 0
@@ -51,6 +53,7 @@ function MeetTradeBagMainVM:Ctor()
 	self.ClassifyCache = {}
 	self.SelectedItemList = {} ---记录交易背包面板中选中的物品列表,记录物品的GID
 	self.SelectedItemListParams	= {} ---用于构建和全量更新选中物品列表的参数
+	self.SelectedListHasSpar = false	---记录选中列表中是否有镶嵌了魔晶石的物品
 end
 
 function MeetTradeBagMainVM:ClearSelectedItemList()
@@ -63,8 +66,10 @@ function MeetTradeBagMainVM:Reset()
 	self.TipsPanelInfoVisible = false
 	self.TipsPanelEmptyVisible = true
 	self.TipsPanelItemNumVisible = false
+	self.SelectedListHasSpar = false
 	self.TipsPanelItemIcon = nil
 	self.TipsPanelItemResID = nil
+	self.TipsPanelItemItemQualityIcon = nil
 	self.TipsPanelItemName = ""
 	self.TipsPanelItemQuantity = ""
 	self.TipsPanelItemNumber = 0
@@ -93,6 +98,24 @@ function MeetTradeBagMainVM:UpdateTableViewSelectItemList()
 	--- 全量更新VM
     ItemList = self:FillCapacityByEmptyItem(ItemList, SelectListCapacity - #ItemList)
     self.CurrentSlectItemVMList:UpdateByValues(ItemList)
+	self.SelectedListHasSpar = false
+	for _, ItemData in ipairs(Items) do
+		local Item = ItemData.Item
+		if Item and Item.Attr and Item.Attr.Equip and Item.Attr.Equip.GemInfo and Item.Attr.Equip.GemInfo.CarryList then
+			if next(Item.Attr.Equip.GemInfo.CarryList) then
+				self.SelectedListHasSpar = true
+				break
+			end
+		end
+	end
+	local MeetTradeExchangeView = _G.UIViewMgr:FindView(_G.UIViewID.MeetTradeExchangeChoosePanel)
+	if MeetTradeExchangeView ~= nil then
+		if self.SelectedListHasSpar then
+			MeetTradeExchangeView.CommBtnL_UIBP:SetIsDisabledState(true, true)
+		else
+			MeetTradeExchangeView.CommBtnL_UIBP:SetIsRecommendState(true)
+		end
+	end
 end
 
 
@@ -163,16 +186,27 @@ function MeetTradeBagMainVM:GetCurItemVM()
 end
 
 function MeetTradeBagMainVM:GetItemIndexByGID(GID)
-	if GID == nil then
-		return
-	end
+    if GID == nil then
+        return
+    end
 
-	for i = 1, self.CurrentItemVMList:Length() do
-		local ItemVM = self.CurrentItemVMList:Get(i)
-		if ItemVM and ItemVM.IsValid == true and ItemVM.Item and ItemVM.Item.GID == GID then
-			return i
-		end
-	end
+    local function FindIndex()
+        for i = 1, self.CurrentItemVMList:Length() do
+            local ItemVM = self.CurrentItemVMList:Get(i)
+            if ItemVM and ItemVM.IsValid == true and ItemVM.Item and ItemVM.Item.GID == GID then
+                return i
+            end
+        end
+        return nil
+    end
+
+    local Index = FindIndex()
+    if Index then
+        return Index
+    end
+
+    MeetTradeBagMainVM:SetTabToEquip()
+    return FindIndex()
 end
 
 function MeetTradeBagMainVM:UpdateTabInfo()
@@ -333,6 +367,7 @@ function MeetTradeBagMainVM:RemoveItemVMFromSelectedList(ItemVM)
 			local BagItemVM = self:GetItemVMFromTradeBagByGID(BagItemVMGID)
 			if nil ~= BagItemVM then
 				BagItemVM.IsSelectedForTrade = false
+				BagItemVM.IsSelect = false
 			end
 			self.SelectedItemList[ItemVM.GID] = nil
 		end
@@ -340,8 +375,22 @@ function MeetTradeBagMainVM:RemoveItemVMFromSelectedList(ItemVM)
 		local ParamIndex = self:GetSelectListItemVMParamIndexByGID(ItemVM.GID)
 		if ParamIndex > 0 then
 			table.remove(self.SelectedItemListParams, ParamIndex)
+			if #self.SelectedItemListParams >= 1 then
+				local SelectedItemGID = self.SelectedItemListParams[#self.SelectedItemListParams].GID
+				self:SetCurTabIndex(1)
+				local Index = self:GetItemIndexByGID(SelectedItemGID)
+				if nil == Index then
+					_G.EventMgr:SendEvent(_G.EventID.ChangeTabState)
+				end
+				local NowIndex = self:GetItemIndexByGID(SelectedItemGID)
+				self:SetCurItem(NowIndex)
+			else
+				self:SetCurItem(nil)
+			end
 		end
 		self:UpdateTableViewSelectItemList(self.SelectedItemListParams)
+		self:UpdateTipsInfo()
+		_G.EventMgr:SendEvent(_G.EventID.ScrollToIndex, self.ItemIndex)
 	end
 end
 
@@ -373,11 +422,14 @@ function MeetTradeBagMainVM:UpdateTipsInfo()
 			self.TipsPanelItemIcon = CurItemVM.Icon
 			self.TipsPanelItemName = CurItemVM.Name
 			self.TipsPanelItemResID = CurItemVM.ResID
+			self.TipsPanelItemItemQualityIcon = ItemUtil.GetSlotColorIcon(self.TipsPanelItemResID, ItemDefine.ItemSlotType.Item126Slot)
 			self.TipsPanelItemQuantity = string.format(LSTR(1490011), CurItemVM.ItemLevel)
 			self.TipsPanelItemNumberText = string.format(LSTR(1490012), CurItemVM.Num)
 			self.TipsPanelItemNumber = CurItemVM.Num
 			self.ExchangeSettingNumber = self:GetSelectItemNumForTradeByGID(CurItemVM.GID)
 		end
+	else
+		self:Reset()
 	end
 end
 

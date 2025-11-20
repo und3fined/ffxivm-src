@@ -37,6 +37,7 @@ local AudioUtil = require("Utils/AudioUtil")
 local ActorUtil = require("Utils/ActorUtil")
 local TimeUtil = require("Utils/TimeUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local SaveKey = require("Define/SaveKey")
 local HUDType = require("Define/HUDType")
 local MapUICfg = require("TableCfg/MapUICfg")
@@ -220,10 +221,16 @@ function AetherCurrentsMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.VisionEnter, self.OnGameEventVisionEnter)
 	self:RegisterGameEvent(EventID.VisionLeave, self.OnGameEventVisionLeave)
     self:RegisterGameEvent(EventID.TutorialGuideFenMaiQuanFinish, self.OnGameEventTutorialGuideAetherCurrentFinish)
+    self:RegisterGameEvent(EventID.InteractiveReqEndError, self.OnGameEventInteractiveReqEndError)
 end
 
 function AetherCurrentsMgr:OnRegisterTimer()
     self:RegisterTimer(self.OnTimeTick, 0, 0.2, 0)
+end
+
+-- 交互出错还原交互变量
+function AetherCurrentsMgr:OnGameEventInteractiveReqEndError()
+    self:ResetPointActiveVar()
 end
 
 function AetherCurrentsMgr:NotifyPointInVisionStateChange(Params, bEnterOrLeave)
@@ -243,7 +250,8 @@ function AetherCurrentsMgr:NotifyPointInVisionStateChange(Params, bEnterOrLeave)
     end
 
     local Cfg = EObjCfg:FindCfgByKey(EobjID)
-    if not Cfg then
+    if not Cfg or type(Cfg) ~= "table" then
+        FLOG_ERROR("AetherCurrentsMgr:NotifyPointInVisionStateChange Cfg is Invalid Cfg Value: %s", Cfg)
         return
     end
 
@@ -355,7 +363,8 @@ function AetherCurrentsMgr:OnMajorSingBarOver(EntityID, IsBreak)
     FLOG_INFO("AetherCurrentLeaveVision:SingOver %s", tostring(TimeUtil.GetServerTimeMS()))
  
     if IsBreak then
-        _G.InteractiveMgr:SetShowMainPanelEnabled(true)
+        self:ResetPointActiveVar()
+        FLOG_INFO("AetherCurrentLeaveVision:SingOverBreak")
     end
 end
 
@@ -430,7 +439,7 @@ function AetherCurrentsMgr:OnTimeTick()
         self:UpdateSkillBtnVisibleState()
     end--]]
 
-    if self:IsMajorMoving() then -- 非移动状态不进行Tick更新
+    if MajorUtil.IsMajorHaveVec() then -- 非移动状态不进行Tick更新
         self:UpdateSkillPanelAndBuoyShow(true)
         local MontageUseSearchMachine = self.MontageUseSearchMachine
         if MontageUseSearchMachine then
@@ -447,6 +456,7 @@ end
 --- 重连/切图情况下重置相关Mgr状态变量
 function AetherCurrentsMgr:ResetPointActiveVar()
     _G.InteractiveMgr:SetShowMainPanelEnabled(true)
+    _G.InteractiveMgr:ShowInteractiveEntrance()-- 2025.4.23 交互界面被隐藏需要手动打开
 end
 
 function AetherCurrentsMgr:OnGameEventLoginRes(Params)
@@ -542,25 +552,6 @@ function AetherCurrentsMgr:OnModuleOpen(OpenID)
         self:SendMsgAetherCurrentsDataSync()
         WorldMapVM.BtnAetherCurrentVisible = self:IsAetherCurrentSysOpen()
     end
-end
-
-function AetherCurrentsMgr:IsMajorMoving()
-    local Major = MajorUtil.GetMajor()
-    if not Major then
-        return
-    end
-    local CharacterMovement = Major.CharacterMovement
-    if not CharacterMovement then
-        return
-    end
-
-    local MojorVec = CharacterMovement.Velocity
-    if not MojorVec then
-        return
-    end
-
-    local INF = 0.000000001
-    return MojorVec:Size() >= INF
 end
 
 function AetherCurrentsMgr:SaveLastAddPointDataInLocalDeviceInternal(SaveKeyParam)
@@ -861,7 +852,6 @@ function AetherCurrentsMgr:OnNetMsgAetherCurrentsSuccessAct(MsgBody)
     self:OnNotifyEobjAetherCurrentLeaveVision(StartActPoint)
     self:UpdatePointActiveClientPerformance(StartActPoint)
     self:OnNotifyAetherCurrentQuestActivated(StartActPoint)
-    self:UpdateSkillPanelAndBuoyShow() -- 激活成功后风脉泉数量发生改变，手动触发一次显示刷新
     self:UpdateMapNotCompletePointInfo(StartActPoint)
 end
 
@@ -1322,7 +1312,7 @@ function AetherCurrentsMgr:ShowCompMissionTip(MapID, bNoFlyTips)
     if bFinished then
         local UIMapID = MapUtil.GetUIMapID(MapID) or 0
         local MapName = MapUtil.GetMapName(UIMapID) or ""
-        local TipsContent = string.format(LSTR(310014), MapName)
+        local TipsContent = LSTR(310014) --string.format(, "")
 
         local function ShowCanFlyTips()
             MsgTipsUtil.ShowAetherCurrentPanelTips(LSTR(310015))
@@ -1335,10 +1325,10 @@ function AetherCurrentsMgr:ShowCompMissionTip(MapID, bNoFlyTips)
 
         local function ShowTip()
             if not bNoFlyTips then
-                MsgTipsUtil.ShowAetherCurrentPanelTips(TipsContent, AetherCurrentDefine.MissionTipShowDuration, MapName, true, false,
+                MsgTipsUtil.ShowAetherCurrentPanelTips(TipsContent, AetherCurrentDefine.MissionTipShowDuration, MapName, true, true,
                 ShowCanFlyTips)
             else
-                MsgTipsUtil.ShowAetherCurrentPanelTips(TipsContent, AetherCurrentDefine.MissionTipShowDuration, MapName, true, false)
+                MsgTipsUtil.ShowAetherCurrentPanelTips(TipsContent, AetherCurrentDefine.MissionTipShowDuration, MapName, true, true)
             end
            
             AudioUtil.LoadAndPlayUISound(CommonFloatTipsAudioPath)
@@ -1500,7 +1490,7 @@ end
 --- 播放道具激活地图风脉泉后的玩家表现
 function AetherCurrentsMgr:PlayMapActiveShowOnMajor()
     self:PlayEffectByPathWithCallBack(VfxEffectType.OneTimeMapComplete)
-    if self:IsMajorMoving() or _G.MountMgr:IsInRide() then
+    if MajorUtil.IsMajorHaveVec() or _G.MountMgr:IsInRide() then
         self:PlayEffectByPathWithCallBack(VfxEffectType.UseItem1, function()
             self:PlayEffectByPathWithCallBack(VfxEffectType.UseItem2)
         end)
@@ -1635,8 +1625,8 @@ function AetherCurrentsMgr:OnNotifyEobjAetherCurrentLeaveVision(PointID)
     self:RegisterTimer(function()
         ClientVisionMgr:ClientActorLeaveVision(MapEditorID, _G.MapEditorActorConfig.EObj.ActorType)
         FLOG_INFO("AetherCurrentLeaveVision:ClientActorLeave %s", tostring(TimeUtil.GetServerTimeMS()))
-        _G.InteractiveMgr:SetShowMainPanelEnabled(true)
-        _G.InteractiveMgr:ShowInteractiveEntrance()-- 2025.4.23 交互界面被隐藏需要手动打开
+        self:ResetPointActiveVar()
+        self:UpdateSkillPanelAndBuoyShow() -- 激活成功后风脉泉数量发生改变，手动触发一次显示刷新
     end, 2)
 end
 
@@ -1786,6 +1776,41 @@ function AetherCurrentsMgr:GetTheClosestAetherCurrentPointID()
     return TargetPoint
 end
 
+--- 风脉地图状态检测
+---@param bTips boolean@是否触发显示Tips
+function AetherCurrentsMgr:PointActiveMapCond(bTips)
+    local bCanUse = true
+    local CurMapID = PWorldMgr:GetCurrMapResID()
+    FLOG_INFO("AetherCurrentsMgr:UseSearchMachine MapID:%s", CurMapID)
+    local ActivateState = self:IsMapInteractPointsAllActived(CurMapID)
+    local AllPointActivateState = self:IsMapPointsAllActived(CurMapID)
+    if AllPointActivateState == MapAllPointActivateState.NotComp and ActivateState == MapAllPointActivateState.AllComp then
+        if bTips then
+            local TipsContent = (LSTR(310021))
+            MsgTipsUtil.ShowTips(TipsContent)
+        end
+        bCanUse = false
+    end
+
+    local UIMapID = MapUtil.GetUIMapID(CurMapID) or 0
+    local MapName = MapUtil.GetMapName(UIMapID) or ""
+    if ActivateState == MapAllPointActivateState.InvalidMap then
+        if bTips then
+            local TipsContent = (LSTR(310022))
+            MsgTipsUtil.ShowTips(TipsContent)
+        end
+        bCanUse = false
+    elseif ActivateState == MapAllPointActivateState.AllComp then
+        if bTips then
+            local TipsContent = string.format(LSTR(310023), MapName)
+            MsgTipsUtil.ShowTips(TipsContent)
+        end
+        bCanUse = false
+    end
+
+    return bCanUse
+end
+
 --- 使用风脉仪探测
 ---@return boolean @风脉仪是否进入CD
 function AetherCurrentsMgr:UseSearchMachine()
@@ -1814,29 +1839,16 @@ function AetherCurrentsMgr:UseSearchMachine()
         return bInCD
     end
 
+    if not CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_USE_AETHERCURRENT_SEARCHMACHINE, true) then
+        return bInCD
+    end 
+
     local TimerHandle = self.SkillTimerHandle
     if TimerHandle ~= nil then
         MsgTipsUtil.ShowTips(LSTR(310020))
         return bInCD
     end
-    local CurMapID = PWorldMgr:GetCurrMapResID()
-    local ActivateState = self:IsMapInteractPointsAllActived(CurMapID)
-    local AllPointActivateState = self:IsMapPointsAllActived(CurMapID)
-    if AllPointActivateState == MapAllPointActivateState.NotComp and ActivateState == MapAllPointActivateState.AllComp then
-        local TipsContent = (LSTR(310021))
-        MsgTipsUtil.ShowTips(TipsContent)
-        return bInCD
-    end
-
-    local UIMapID = MapUtil.GetUIMapID(CurMapID) or 0
-    local MapName = MapUtil.GetMapName(UIMapID) or ""
-    if ActivateState == MapAllPointActivateState.InvalidMap then
-        local TipsContent = (LSTR(310022))
-        MsgTipsUtil.ShowTips(TipsContent)
-        return bInCD
-    elseif ActivateState == MapAllPointActivateState.AllComp then
-        local TipsContent = string.format(LSTR(310023), MapName)
-        MsgTipsUtil.ShowTips(TipsContent)
+    if not self:PointActiveMapCond(true) then
         return bInCD
     end
 
@@ -1852,7 +1864,7 @@ function AetherCurrentsMgr:UseSearchMachine()
         --AudioUtil.LoadAndPlaySoundEvent(MajorEntityID, UseSearchMachineAudioPath, true) 2025.4.14 音效已接入到对应动画上
     end
 
-    if self:IsMajorMoving() or _G.MountMgr:IsInRide() then
+    if MajorUtil.IsMajorHaveVec() or _G.MountMgr:IsInRide() then
         self:PlayEffectByPathWithCallBack(VfxEffectType.UseItem1, function()
             self:PlayEffectByPathWithCallBack(VfxEffectType.UseItem2)
         end)
@@ -2180,9 +2192,9 @@ function AetherCurrentsMgr:CreateMarkersDataSource(UIMapID)
                     end--]]
                 end
             end
+            MapEditDataMgr:ClearOtherMapEditCfgByMapID(MapID)
             return SrcResult
         end
-        MapEditDataMgr:ClearOtherMapEditCfgByMapID(MapID)
     end
 end
 
@@ -2498,21 +2510,6 @@ function AetherCurrentsMgr:IsMapInteractPointsAllActived(MapID)
         ResultState = MapAllPointActivateState.NotComp
     end
     return ResultState
-end
-
---- 使用风脉仪打开风脉仪技能界面
-function AetherCurrentsMgr:UseAetherCurrentSearchMachine()
-    local CurMapID = PWorldMgr:GetCurrMapResID()
-    if not CurMapID then
-        FLOG_ERROR("AetherCurrentsMgr:UseAetherCurrentSearchMachine: CurMapID is not valid")
-        return
-    end
-    local bHavePointToActive = self:IsMapInteractPointsAllActived(CurMapID) == MapAllPointActivateState.NotComp
-    if bHavePointToActive then
-        AetherCurrentsVM.bShowAetherCurrentSearchSkill = true
-    else
-        MsgTipsUtil.ShowTips(LSTR(310024))
-    end
 end
 
 --- 计算当前地图风脉的解锁进度

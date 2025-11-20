@@ -1,23 +1,24 @@
 ---
 --- Author: Administrator
---- DateTime: 2023-10-20 20:49
+--- DateTime: 2025-08-19 20:29
 --- Description:
 ---
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
-local UIBinderSetText = require("Binder/UIBinderSetText")
-local EmoActPanelVM = require("Game/EmoAct/EmoActPanelVM")
+local UIUtil = require("Utils/UIUtil")
 
 ---@class EmoActHeadlineItemMView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field RichTextContent URichTextBox
+---@field RichTextTitle URichTextBox
+---@field TextContent URichTextBox
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local EmoActHeadlineItemMView = LuaClass(UIView, true)
 
 function EmoActHeadlineItemMView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.RichTextContent = nil
+	--self.RichTextTitle = nil
+	--self.TextContent = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -27,9 +28,7 @@ function EmoActHeadlineItemMView:OnRegisterSubView()
 end
 
 function EmoActHeadlineItemMView:OnInit()
-	-- self.Binders = {
-	-- 	{ "RichTextContent", UIBinderSetText.New(self, self.RichTextContent) },
-	-- }
+
 end
 
 function EmoActHeadlineItemMView:OnDestroy()
@@ -37,8 +36,13 @@ function EmoActHeadlineItemMView:OnDestroy()
 end
 
 function EmoActHeadlineItemMView:OnShow()
-	if self.RichTextContent and self.Params.Data then
-		self.RichTextContent:SetText(self.Params.Data)
+	if self.Params and self.Params.Data then
+		if self.RichTextTitle then
+			self.RichTextTitle:SetText(self.Params.Data.Title)
+		end
+		if self.TextContent then
+			self.TextContent:SetText(self.Params.Data.Content)
+		end
 	end
 end
 
@@ -47,7 +51,7 @@ function EmoActHeadlineItemMView:OnHide()
 end
 
 function EmoActHeadlineItemMView:OnRegisterUIEvent()
-	-- self:RegisterBinders(EmoActPanelVM, self.Binders)
+
 end
 
 function EmoActHeadlineItemMView:OnRegisterGameEvent()

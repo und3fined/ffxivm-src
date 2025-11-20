@@ -17,6 +17,7 @@ local UIBinderSetBrushFromAssetPath =  require("Binder/UIBinderSetBrushFromAsset
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local ActorUtil = require("Utils/ActorUtil")
 local MentorDefine = require("Game/Mentor/MentorDefine")
 local ProtoRes = require("Protocol/ProtoRes")
@@ -36,12 +37,26 @@ local LSTR = _G.LSTR
 ---@field HorizontalDate UFHorizontalBox
 ---@field ImgAttitude UFImage
 ---@field ImgMentorIcon UFImage
+---@field PanelFight UFCanvasPanel
+---@field PanelGoldSaucer UFCanvasPanel
+---@field PanelJob UFCanvasPanel
+---@field PanelJobWinTips UFCanvasPanel
+---@field PanelNormalBG UFCanvasPanel
 ---@field PopUpBG CommonPopUpBGView
+---@field Spine_Mentor_Grass USpineWidget
+---@field Spine_Mentor_Grass_2 USpineWidget
+---@field Spine_Mentor_Grass_3 USpineWidget
+---@field Spine_Mentor_Monster1 USpineWidget
+---@field Spine_Mentor_Monster2 USpineWidget
+---@field Spine_Mentor_Monster3 USpineWidget
 ---@field TableViewConditions UTableView
+---@field TableViewJob UTableView
+---@field TextJobtips UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTips UFTextBlock
 ---@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
+---@field AnimLoop UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field AnimResultFail UWidgetAnimation
 ---@field AnimResultPass UWidgetAnimation
@@ -55,12 +70,26 @@ function MentorMainPanelView:Ctor()
 	--self.HorizontalDate = nil
 	--self.ImgAttitude = nil
 	--self.ImgMentorIcon = nil
+	--self.PanelFight = nil
+	--self.PanelGoldSaucer = nil
+	--self.PanelJob = nil
+	--self.PanelJobWinTips = nil
+	--self.PanelNormalBG = nil
 	--self.PopUpBG = nil
+	--self.Spine_Mentor_Grass = nil
+	--self.Spine_Mentor_Grass_2 = nil
+	--self.Spine_Mentor_Grass_3 = nil
+	--self.Spine_Mentor_Monster1 = nil
+	--self.Spine_Mentor_Monster2 = nil
+	--self.Spine_Mentor_Monster3 = nil
 	--self.TableViewConditions = nil
+	--self.TableViewJob = nil
+	--self.TextJobtips = nil
 	--self.TextTime = nil
 	--self.TextTips = nil
 	--self.TextTitle = nil
 	--self.AnimIn = nil
+	--self.AnimLoop = nil
 	--self.AnimOut = nil
 	--self.AnimResultFail = nil
 	--self.AnimResultPass = nil
@@ -86,6 +115,9 @@ function MentorMainPanelView:OnInit()
 		{ "ImgAttitude", UIBinderSetBrushFromAssetPath.New(self, self.ImgAttitude) },
 		{ "ExpirationVisible", UIBinderSetIsVisible.New(self, self.HorizontalDate) },
 		{ "ExpirationDayNum", UIBinderSetTextFormat.New(self, self.TextTime, LSTR(760001)) },
+		{ "bGoldSauserType", UIBinderSetIsVisible.New(self, self.PanelGoldSaucer) },
+		{ "bGoldSauserType", UIBinderSetIsVisible.New(self, self.PanelNormalBG, true) },
+		{ "GoldSauserCompleteNum", UIBinderValueChangedCallback.New(self, nil, self.OnShowPanelCondCompleteEffect) },
 	}
 
 	self.PopUpBG:SetHideOnClick(false)
@@ -132,6 +164,9 @@ function MentorMainPanelView:OnShow()
 	if NpcActor then
 		_G.EmotionMgr:PlayEmotionIDFromEntityID( NpcEmotionID, NPCEntityID, false)
 	end
+
+	-- 非金碟指导者内容，暂时屏蔽
+	UIUtil.SetIsVisible(self.PanelJobWinTips, false)
 end
 
 function MentorMainPanelView:OnHide()
@@ -145,6 +180,26 @@ end
 
 function MentorMainPanelView:OnDestroy()
 
+end
+
+function MentorMainPanelView:OnShowPanelCondCompleteEffect(NewValue)
+	if not NewValue then
+		return
+	end
+
+	local MaxCondNum = MentorMainPanelVM.ConditionsVMList:Length() or 0
+	if MaxCondNum == 0 then
+		return
+	end
+
+	local bGoldSauserType = MentorMainPanelVM.bGoldSauserType
+	-- 规则：0 1~2 3~n-1 n
+	UIUtil.SetIsVisible(self.Spine_Mentor_Grass, not bGoldSauserType or NewValue <= 2) -- 0~2
+	UIUtil.SetIsVisible(self.Spine_Mentor_Monster1, bGoldSauserType and NewValue >= 1) --1~n
+	UIUtil.SetIsVisible(self.Spine_Mentor_Grass_2, bGoldSauserType and (NewValue >= 3 and NewValue <= MaxCondNum - 1)) --3~n-1
+	UIUtil.SetIsVisible(self.Spine_Mentor_Monster2, bGoldSauserType and NewValue >= 3) --3~n
+	UIUtil.SetIsVisible(self.Spine_Mentor_Grass_3, bGoldSauserType and NewValue == MaxCondNum) --n
+	UIUtil.SetIsVisible(self.Spine_Mentor_Monster3, bGoldSauserType and NewValue == MaxCondNum) --n
 end
 
 function MentorMainPanelView:OnClickBtnCancel()
@@ -161,9 +216,10 @@ end
 function MentorMainPanelView:CheckCutIdentity(ShowType)
 	if (ShowType == GUIDE_TYPE.GUIDE_TYPE_FIGHT and OnlineStatusMgr:MajorHasIdentity(OnlineStatusIdentify.OnlineStatusIdentifyBattleMentor)) or
 	(ShowType == GUIDE_TYPE.GUIDE_TYPE_GATHER and OnlineStatusMgr:MajorHasIdentity(OnlineStatusIdentify.OnlineStatusIdentifyMakeMentor)) or
-	(ShowType == GUIDE_TYPE.GUIDE_TYPE_SENIOR and OnlineStatusMgr:MajorHasIdentity(OnlineStatusIdentify.OnlineStatusIdentifyMentor)) then 
-		self.BtnConfirm:SetIsEnabled( false, false)
-		self.BtnConfirm:SetText(LSTR(760014))
+	(ShowType == GUIDE_TYPE.GUIDE_TYPE_SENIOR and OnlineStatusMgr:MajorHasIdentity(OnlineStatusIdentify.OnlineStatusIdentifyMentor)) or
+	(ShowType == GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER and OnlineStatusMgr:MajorHasIdentity(OnlineStatusIdentify.OnlineStatusIdentifyGoldSauserMentor)) then 
+		self.BtnConfirm.bUseLightStyleDone = true
+		self.BtnConfirm:SetIsDoneState(true, LSTR(760014))
 		return true
 	else
 		self.BtnConfirm:SetIsEnabled( true, true)

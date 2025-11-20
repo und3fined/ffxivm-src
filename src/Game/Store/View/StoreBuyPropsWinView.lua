@@ -14,30 +14,21 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local StoreDefine = require("Game/Store/StoreDefine")
 local StoreMgr = require("Game/Store/StoreMgr")
 local StoreUtil = require("Game/Store/StoreUtil")
-local ProtoRes = require("Protocol/ProtoRes")
+local StorePropsItemVM = require("Game/Store/VM/ItemVM/StorePropsItemVM")
 
 ---@class StoreBuyPropsWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field AmountSlider CommAmountSliderView
 ---@field BG Comm2FrameMView
----@field BtnAdd UFButton
 ---@field BtnBuyConfirm CommBtnLView
----@field BtnCancel CommBtnLView
 ---@field BtnGift UFButton
----@field BtnItem UFButton
----@field BtnSub UFButton
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field HorizontalPrice UFHorizontalBox
----@field ImgGoods UFImage
----@field ImgHQ UFImage
 ---@field ImgMoney UFImage
----@field ImgQuality UFImage
 ---@field PanelBuySetting UFCanvasPanel
----@field PanelDiscount UFCanvasPanel
----@field PanelHQ UFCanvasPanel
 ---@field PanelOriginal UFCanvasPanel
----@field TextAmount UFTextBlock
+---@field ShopGoods ShopGoodsListItemView
 ---@field TextCurrentPrice UFTextBlock
----@field TextDiscount UFTextBlock
 ---@field TextItemDescription UFTextBlock
 ---@field TextItemName UFTextBlock
 ---@field TextItemType UFTextBlock
@@ -51,24 +42,15 @@ function StoreBuyPropsWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.AmountSlider = nil
 	--self.BG = nil
-	--self.BtnAdd = nil
 	--self.BtnBuyConfirm = nil
-	--self.BtnCancel = nil
 	--self.BtnGift = nil
-	--self.BtnItem = nil
-	--self.BtnSub = nil
+	--self.CommWinSlotQuality = nil
 	--self.HorizontalPrice = nil
-	--self.ImgGoods = nil
-	--self.ImgHQ = nil
 	--self.ImgMoney = nil
-	--self.ImgQuality = nil
 	--self.PanelBuySetting = nil
-	--self.PanelDiscount = nil
-	--self.PanelHQ = nil
 	--self.PanelOriginal = nil
-	--self.TextAmount = nil
+	--self.ShopGoods = nil
 	--self.TextCurrentPrice = nil
-	--self.TextDiscount = nil
 	--self.TextItemDescription = nil
 	--self.TextItemName = nil
 	--self.TextItemType = nil
@@ -83,27 +65,25 @@ function StoreBuyPropsWinView:OnRegisterSubView()
 	self:AddSubView(self.AmountSlider)
 	self:AddSubView(self.BG)
 	self:AddSubView(self.BtnBuyConfirm)
-	self:AddSubView(self.BtnCancel)
+	self:AddSubView(self.CommWinSlotQuality)
+	self:AddSubView(self.ShopGoods)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function StoreBuyPropsWinView:OnInit()
 	self.Binders = {
-		{ "MultiBuyBg", UIBinderSetBrushFromAssetPath.New(self, self.ImgQuality) },
-		{ "MultiBuyIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgGoods) },
+		{ "MultiBuyQualityBg", UIBinderSetBrushFromAssetPath.New(self, self.CommWinSlotQuality.ImgBg2) },
+		{ "MultiBuyBg", UIBinderSetBrushFromAssetPath.New(self, self.ImgQuality) }, --1
 		{ "MultiBuyName", UIBinderSetText.New(self, self.TextItemName) },
 		{ "MultiBuySubName", UIBinderSetText.New(self, self.TextItemType) },
 		{ "MultiBuyPriceText", UIBinderSetText.New(self, self.TextCurrentPrice) },
 		{ "MultiBuyPriceType", UIBinderSetBrushFromAssetPath.New(self, self.ImgMoney) },
-		{ "MultiBuyPurchaseNumber", UIBinderSetText.New(self, self.AmountSlider.TextQuantity) },
 		{ "MultiBuyQuantity", UIBinderSetText.New(self, self.TextSurplus) },
 		{ "MultiBuyDesc", UIBinderSetText.New(self, self.TextItemDescription) },
-		{ "MultiDisPanelVisible", UIBinderSetIsVisible.New(self, self.PanelDiscount) },
-		{ "MultiDisText", UIBinderSetText.New(self, self.TextDiscount) },
 
-		{ "bMultiBuyPanelHQVisible", UIBinderSetIsVisible.New(self, self.PanelHQ) },
 		-- { "bMultiBuySliderEnabled", UIBinderSetIsEnabled.New(self, self.AmountSlider) },
 		{ "bMultiBuySliderEnabled", UIBinderSetIsVisible.New(self, self.AmountSlider) },
+		{ "bHorizontalPriceVisible", UIBinderSetIsVisible.New(self, self.HorizontalPrice) },
 		
 		{ "bMultiBuyPanelOriginalVisible", UIBinderSetIsVisible.New(self, self.PanelOriginal) },
 		{ "bMultiBuyOriginalPriceText", UIBinderSetText.New(self, self.TextOriginalPrice) },
@@ -131,32 +111,42 @@ function StoreBuyPropsWinView:OnShow()
 	--重置购买数据
 	StoreMainVM:SetMultiQuantity(1)
 	self.BG:SetTitleText(LSTR(StoreDefine.BuyTipTittleText))
-	self.BtnCancel:SetBtnName(LSTR(950030))			--- 取消
 	self.BtnBuyConfirm:SetBtnName(LSTR(950053))		--- 确认购买
 
 	self.AmountSlider:SetSliderValueMaxTips(LSTR(950040))
 	self.AmountSlider:SetSliderValueMinTips(LSTR(950040))
 	self.BtnBuyConfirm:UpdateImage(StoreMainVM.MultiBuyConfirmBtnImgType)
-	UIUtil.SetIsVisible(self.TextAmount, StoreMainVM.bMultiBuySliderEnabled)
 	UIUtil.SetIsVisible(self.TextSurplus, StoreMainVM.bMultiBuySliderEnabled)
 	local ItemData = _G.StoreMgr:GetProductDataByID(StoreMainVM.CurrentselectedID)
+	if not ItemData then
+		FLOG_ERROR("StoreBuyPropsWinView ItemData is Nil") 
+		self:Hide()
+		return
+	end
+	local VM = StorePropsItemVM.New()
+	local Data = {PropsData = ItemData, ItemIndex = 1, BtnVisible = true}
+	Data.ImgBarVisible = false
+	VM:UpdateVM(Data)
+	self.ShopGoods:SetParams({Data = VM})
+	self.ShopGoods:SetBuyViewItemStateByMarket(false)
+
 	if nil ~= ItemData then
 		if not StoreMainVM.bMultiBuySliderEnabled then
 			local IsCan, CanNotReason = _G.StoreMgr:IsCanBuy(ItemData.Cfg.ID)
 			self.TextSoldout:SetText(CanNotReason)
 			self.TextSoldout:SetColorAndOpacity(_G.UE.FLinearColor.FromHex("#DC5868FF"))
 			UIUtil.SetIsVisible(self.TextSoldout, not IsCan)
+			StoreMainVM.bHorizontalPriceVisible = IsCan
 		else
+			UIUtil.SetIsVisible(self.TextSoldout, false)
 			if ItemData.GoodsCounterFirst == 0 then
-				UIUtil.SetIsVisible(self.TextSoldout, false)
+				StoreMainVM.bHorizontalPriceVisible = true
 			else
 				local RemainGoodsQuantity = StoreMgr:GetRemainQuantity(ItemData.Cfg.ID)
-				if RemainGoodsQuantity >= 0 then
-					self.TextSoldout:SetText(string.format(LSTR(950035), RemainGoodsQuantity))
-					self.TextSoldout:SetColorAndOpacity(_G.UE.FLinearColor.FromHex("#828282FF"))
-					UIUtil.SetIsVisible(self.TextSoldout, true)
+				if RemainGoodsQuantity == 0 then
+					StoreMainVM.bHorizontalPriceVisible = false
 				else
-					UIUtil.SetIsVisible(self.TextSoldout, false)
+					StoreMainVM.bHorizontalPriceVisible = true
 				end
 			end
 		end
@@ -166,7 +156,6 @@ function StoreBuyPropsWinView:OnShow()
 		CanBuyForOther = _G.StoreMgr:CanGift(StoreMainVM.CurrentselectedID)
 	end
 	UIUtil.SetIsVisible(self.BtnGift, CanBuyForOther, true)
-	UIUtil.SetIsVisible(self.BtnCancel, true, true)
 	self.AmountSlider:SetSliderValueMaxMin(StoreMainVM.MultiBuyLimitNum, 1)
 	self.AmountSlider:SetValueChangedCallback(function (v)
 		self:OnValueChangedSlider(v,self.MaxNum)
@@ -176,14 +165,9 @@ function StoreBuyPropsWinView:OnShow()
 	if _G.CommonDefine.bPreLoadCommRewardPannel then
 		_G.StoreMgr:PreLoadCommRewardPannel()
 	end
-
-	--临时处理，分支和主干蓝图代码不同导致显示问题
-	UIUtil.SetIsVisible(self.TextAmount, false)
 end
 
 function StoreBuyPropsWinView:OnNumChanged(NewValue)
-	UIUtil.SetIsVisible(self.BtnAdd, NewValue == StoreMainVM.MultiBuyLimitNum, true)
-	UIUtil.SetIsVisible(self.BtnSub, NewValue == 1, true)
 end
 
 function StoreBuyPropsWinView:OnHide()
@@ -191,11 +175,8 @@ function StoreBuyPropsWinView:OnHide()
 end
 
 function StoreBuyPropsWinView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.BtnCancel.Button, self.Hide)
 	UIUtil.AddOnClickedEvent(self, self.BtnGift, self.OnClickButtonGift)
-	UIUtil.AddOnClickedEvent(self, self.BtnItem, self.OnClickBtnItem)
-	UIUtil.AddOnClickedEvent(self, self.BtnAdd, self.OnClickBtnAddAndBtnSub)
-	UIUtil.AddOnClickedEvent(self, self.BtnSub, self.OnClickBtnAddAndBtnSub)
+	UIUtil.AddOnClickedEvent(self, self.ShopGoods.BtnGoods, self.OnClickBtnItem)
 	
 	UIUtil.AddOnClickedEvent(self, self.BtnBuyConfirm.Button, self.OnClickButtonBuy)
 end
@@ -250,14 +231,8 @@ function StoreBuyPropsWinView:OnClickBtnItem()
 		ItemID = ItemData.Cfg.Items[1].ID
 	end
 	if ItemID then
-		ItemTipsUtil.ShowTipsByResID(ItemID, self.BtnItem, {X = 0, Y = 0})
+		ItemTipsUtil.ShowTipsByResID(ItemID, self.ShopGoods, {X = 0, Y = 0})
 	end
-end
-
---- 点击错误提示Btn
-function StoreBuyPropsWinView:OnClickBtnAddAndBtnSub()
-	local Tips = LSTR(950040)
-	MsgTipsUtil.ShowTips(Tips)
 end
 
 function StoreBuyPropsWinView:OnScoreUpdate(Params)

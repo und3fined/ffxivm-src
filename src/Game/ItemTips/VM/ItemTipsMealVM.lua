@@ -4,8 +4,8 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local DateTimeTools = require("Common/DateTimeTools")
 local FuncCfg = require("TableCfg/FuncCfg")
 local ProtoRes = require("Protocol/ProtoRes")
-local BuffCfg = require("TableCfg/BuffCfg")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
+local BonusStateBuffCfg = require("TableCfg/BonusStateBuffCfg")
 
 local FuncType = ProtoRes.FuncType
 local LSTR = _G.LSTR
@@ -35,14 +35,14 @@ function ItemTipsMealVM:UpdateVM(Value)
 
     local CfgFunc = FuncCfg:FindCfgByKey(Cfg.UseFunc) -- 物品功能
     if CfgFunc ~= nil then
-        if CfgFunc.Func[1].Type == FuncType.OpBuff then
-            local OpBuffCfg = BuffCfg:FindCfgByKey(CfgFunc.Func[1].Value[1])
-            if OpBuffCfg ~= nil then
-                local LiveTime = OpBuffCfg.LiveTime
+        if CfgFunc.Func[1].Type == FuncType.OpBonusState then
+            local OpStateCfg = BonusStateBuffCfg:FindCfgByKey(CfgFunc.Func[1].Value[1])
+            if OpStateCfg ~= nil then
+                local LiveTime = OpStateCfg.LiveTime or 0
                 if LiveTime == 0 then
-                    self.DurationText = LSTR(1020030)
+                    self.DurationText = LSTR(1020002)
                 else
-                    self.DurationText = DateTimeTools.TimeFormat(LiveTime/1000, "smart-h-m-s", true)
+                    self.DurationText = _G.LocalizationUtil.GetCountdownTimeForSimpleTime(LiveTime, "")
                 end
             end
         else

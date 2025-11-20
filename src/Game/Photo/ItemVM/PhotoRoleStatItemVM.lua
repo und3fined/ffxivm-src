@@ -24,11 +24,21 @@ function PhotoRoleStatItemVM:UpdateVM(Data)
         self.Icon = Cfg.Icon
         self.StatID = Cfg.StatID
     end
+    self.IsSelected = false
+    self:UpdateEnableAndColor()
 end
 
 function PhotoRoleStatItemVM:IsEqualVM(Data)
 	return Data.ID == self.ID
 end
 
+function PhotoRoleStatItemVM:UpdateEnableAndColor()
+    local IsMajor = _G.PhotoMgr:IsCurSeltMajor()
+    self.ColorHex = IsMajor and "#FFFFFFFF" or "#C1C1C1FF"
+end
+
+function PhotoRoleStatItemVM:SetIsSelected(IsSelected)
+    self.IsSelected = IsSelected
+end
 
 return PhotoRoleStatItemVM

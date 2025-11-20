@@ -66,6 +66,7 @@ local ProtoRes = {
 		TRIGGER_ENTITY_TYPE_TRIGGER = 4, --触发者
 		TRIGGER_ENTITY_TYPE_EOBJ = 5, --EOBJ
 		TRIGGER_ENTITY_TYPE_FAITH = 6, --亲信
+		TRIGGER_ENTITY_TYPE_TARGET_FILTER = 7, --技能目标筛选
 	},
 	trigger_camp_type = {
 		TRIGGER_CAMP_TYPE_NONE = 0,
@@ -138,6 +139,13 @@ local ProtoRes = {
 		TRIGGER_SNAPSHOT_TYPE_SAVE = 1, --存档
 		TRIGGER_SNAPSHOT_TYPE_BACK = 2, --回档
 		TRIGGER_SNAPSHOT_TYPE_CLEAR = 3, --清档
+	},
+	trigger_major_type = {
+		TRIGGER_MAJOR_TYPE_NONE = 0,
+		TRIGGER_MAJOR_TYPE_PLAYER = 1, --玩家
+		TRIGGER_MAJOR_TYPE_BNPCLIST = 2, --BNpcListID
+		TRIGGER_MAJOR_TYPE_BNPCTABLE = 3, --BNpc表ID
+		TRIGGER_MAJOR_TYPE_FAITH = 4, --亲信
 	},
 	condition_run_state_type = {
 		CONDITION_RUN_STATE_TYPE_NONE = 0,
@@ -755,24 +763,10 @@ local ProtoRes = {
 		GLOBAL_CFG_GAME_VERSION = 106, --游戏版本号
 		GlobalCfgClosetAppearanceHighLightNum = 112, --衣橱外观高亮数量
 		GlobalCfgTreasureMapCounter = 113, --宝图获取上限计数器
-		GlobalCfgChocoboRentLimit = 114, --陆行鸟租借数量上限
-		GlobalCfgChocoboMatingLevel = 115, --陆行鸟配种等级
-		GlobalCfgChocoboMatingTime = 116, --陆行鸟配种时间
-		GlobalCfgChocoboMaxLevel = 117, --陆行鸟最高等级
-		GlobalCfgChocoboPerGenLimit = 118, --陆行鸟每代数量上限
-		GlobalCfgChocoboInitAttr = 119, --陆行鸟初始属性随机上下限
-		GlobalCfgChocoboNewbieQuest = 120, --陆行鸟新人任务ID
-		GlobalCfgChocoboInitialSkill = 121, --陆行鸟初始技能
-		GlobalCfgChocoboActiveSkillLimit = 122, --陆行鸟主动技能携带最大数
-		GlobalCfgChocoboPassiveSkillLimit = 123, --陆行鸟被动技能携带最大数
-		GlobalCfgChocoboGeneStarMax = 124, --陆行鸟基因最大星星数
-		GlobalCfgChocoboSuitModuleOpenID = 125, --陆行鸟甲图鉴系统解锁ID
 		GlobalCfgClosetSpecialUnlockAppear = 126, --衣橱手动解锁材质光武器外观
 		GlobalCfgClosetAddCharm = 127, --衣橱增加魅力值
 		GlobalCfgCrossDayOffset = 128, --跨天时间
 		GlobalCfgNewbieSceneID = 129, --新手场景副本id
-		GlobalCfgChocoboAdoptCost = 130, --陆行鸟领养金碟币消耗
-		GlobalCfgChocoboRenameCost = 131, --陆行鸟改名金碟币消耗
 		GlobalCfgVanGuardChannelSpeakLevel = 132, --先锋频道发言等级
 	},
 	skill_tag = {
@@ -911,6 +905,7 @@ local ProtoRes = {
 		PROMOTE_TYPE_COMBAT = 1, --战斗职业等级
 		PROMOTE_TYPE_PRODUCTION = 2, --生产职业等级
 		PROMOTE_TYPE_EQUIP = 3, --装备品级
+		PROMOTE_TYPE_ABILITY = 4, --能力提升
 	},
 	instrument_type = {
 		INSTRUMENT_TYPE_STRINGS = 0, --弦乐
@@ -969,6 +964,7 @@ local ProtoRes = {
 		SYSNOTICE_SHOWTYPE_PVPCOLOSSEUM_TEAM_NOTICE = 21, --水晶冲突队伍提示
 		SYSNOTICE_SHOWTYPE_PVPCOLOSSEUM_COMMAND = 22, --水晶冲突指挥
 		SYSNOTICE_SHOWTYPE_PWORLD_ENTER = 23, --进入副本提示
+		SYSNOTICE_SHOWTYPE_CHATCHANNEL_TEAM = 24, --队伍频道
 	},
 	EquipmentExistTag = {
 		EQUIPMENT_EXIST = 0, --TRUE
@@ -1082,6 +1078,12 @@ local ProtoRes = {
 		PWORLD_UI_NONE = 0, --空类型
 		PWORLD_UI_TEACH = 1, --副本教学
 		PWORLD_UI_GUIDE = 2, --新手引导
+	},
+	HOUSE_MAPPING_TABLE_ID = {
+		HOUSE_INDORR_TERRITORY = 0, --内装
+		HOUSE_TERRITORY = 1, --外装
+		HOUSE_FURNITURE = 2, --家具
+		HOUSE_YARD = 3, --庭院
 	},
 	ItemAccessFunType = {
 		Fun_Invalid = 0,
@@ -1217,6 +1219,23 @@ local ProtoRes = {
 		INTERACT_FUNC_DIALOG_AND_OPENUI = 65, --对话并打开界面
 		INTERACT_FUNC_TREASUREHUNT_PWORLD_GATE = 66, --寻宝宝物库大门
 		INTERACT_START_MATCH = 67, --副本匹配
+		INTERACT_FUNC_AQUAPOLIS_BOX = 68, --水城宝物库中央宝箱
+		INTERACT_FUNC_AQUAPOLIS_DROP = 69, --水城宝物库掉落奖励
+		INTERACT_FUNC_GET_DETAIL_MAP = 70, --领取主城详细地图
+		INTERACT_FUNC_STARLIGHT_RHYTHM_GAME = 71, --打开星芒节音游
+		INTERACT_FUNC_HOUSING_TRANS = 72, --房屋传送
+		INTERACT_FUNC_HOUSING_FURNITURE_UI = 73, --房屋家具打开界面
+		INTERACT_FUNC_INVITE_RIDE = 74, --邀请骑乘
+		INTERACT_FUNC_APPLY_RIDE = 75, --申请骑乘
+		INTERACT_FUNC_GOARMY_SELFROOM = 76, --部队房屋门移动到自己房间
+		INTERACT_FUNC_SEE_ALL_ARMYROOM = 77, --部队房屋门查看全部房间
+		INTERACT_FUNC_ENTER_HOUSE = 78, --进入房屋
+		INTERACT_FUNC_LEAVE_HOUSE = 79, --离开房屋
+		INTERACT_FUNC_SHOW_GUIDE_PANEL = 80, --新手引导弹窗
+		INTERACT_FUNC_CRYSTALLINE_RANKING_REWARD = 81, --水晶冲突赛季排名奖励
+		INTERACT_FUNC_CRYSTALLINE_RANK_REWARD = 82, --水晶冲突赛季段位奖励
+		INTERACT_FUNC_HOUSING_FURNITURE_INTERACTION = 83, --房屋家具交互
+		INTERACT_FUNC_ROULETTE_PASS_BOX = 84, --宝物库神殿通关宝箱
 		INTERACT_FUNC_CLIENT_MAX = 999, --仅客户端使用的交互最大值
 		INTERACT_FUNC_SERVER_MIN = 1000, --服务器使用的交互类型
 		INTERACT_FUNC_ENTER_SCENE_S = 1001, --副本传送
@@ -1308,6 +1327,7 @@ local ProtoRes = {
 		SIDE_POPUP_EASY_USE = 1, --便捷使用
 		SIDE_POPUP_CLICK_WEAR = 2, --一键穿戴
 		SIDE_POPUP_UNLOCK_MOUNT = 3, --一键解锁坐骑
+		SIDE_POPUP_UNLOCK_FASHION = 4, --一键解锁外观
 	},
 	transition_type = {
 		TRANSITION_INVALID = 0,
@@ -1343,11 +1363,7 @@ local ProtoRes = {
 		STORE_MALL_PERSONALITY = 11, --个性
 		STORE_MALL_RECOMMEND = 12, --推荐
 		STORE_MALL_MYSTERYBOX = 13, --奇遇盲盒
-	},
-	Store_TipsBtnType = {
-		STORE_TIPSBTNTYPE_NONE = 0,
-		STORE_TIPSBTNTYPE_COMMON = 1, --通用
-		STORE_TIPSBTNTYPE_SPECIAL = 2, --特殊
+		STORE_MALL_ORNAMENT = 14, --时尚配饰
 	},
 	GoodsShowConditionType = {
 		GOODS_SHOW_COND_Always = 0,
@@ -1743,6 +1759,7 @@ local ProtoRes = {
 		MONTHCARD_PROMPT = 7, --月卡红点
 		LOTTERY_PROMPT = 8, --抽奖红点
 		PANDORA_PROMPT = 9, --潘多拉红点
+		RETURNING_PROMPT = 10, --回流红点
 	},
 	CommercialPrizeType = {
 		CommercialPrizeTypeNone = 0,
@@ -1838,9 +1855,34 @@ local ProtoRes = {
 		SYSTEM_LIGHT_ID_PERSON_INFO = 26, --头像编辑
 		SYSTEM_LIGHT_ID_MATERIAL = 27, --魔晶石
 	},
+	HOUSE_SIZE = {
+		HOUSE_SIZE_ID_SAMLL = 0, --小
+		HOUSE_SIZE_ID_MIDDLE = 1, --中
+		HOUSE_SIZE_ID_BIG = 2, --大
+		HOUSE_SIZE_ID_INVALID = 100, --无效
+	},
 	OPS_GAMEPLAY_TYPE = {
 		OPS_GAMEPLAY_TYPE_NONE = 0, --无
 		OPS_GAMEPLAY_TYPE_HALLOWEEN = 1, --守护天节
+	},
+	PVPCommunicateCommand = {
+		PVPCommunicateCommandNone = 0,
+		PVPCommunicateCommandAttack = 1,
+		PVPCommunicateCommandRetreat = 2,
+		PVPCommunicateCommandMuster = 3,
+		PVPCommunicateCommandLimit = 4,
+	},
+	PVPCommunicateMethod = {
+		PVPCommunicateMethodNone = 0,
+		PVPCommunicateMethodClick = 1,
+		PVPCommunicateMethodMiniMap = 2,
+		PVPCommunicateMethodTargetList = 3,
+	},
+	PVPCommunicateTarget = {
+		PVPCommunicateTargetNone = 0,
+		PVPCommunicateTargetCrystal = 1,
+		PVPCommunicateTargetPlayerInView = 2,
+		PVPCommunicateTargetPlayerOutView = 3,
 	},
 	ExpressionType = {
 		EXPRESSION_TYPE_NONE = 0,
@@ -1937,6 +1979,11 @@ local ProtoRes = {
 		TreasureNBSP = 50, --传送魔纹
 		PVPMap = 51, --pvp地图
 		OpenRecruitView = 52, --打开招募界面
+		EnterMazeMainPanel = 53, --进入迷宫挑战界面
+		CraftingLogEsoterica = 54, --制作笔记秘籍实装
+		GatheringLogInherit = 55, --采集笔记传承录实装
+		UnlockTreasureMap = 56, --解读宝图
+		TreasureTemplateTeleporter = 57, --传送魔纹宝物库神殿
 	},
 	TutoriaEndHandleType = {
 		EndHandleTypeNone = 0,
@@ -2087,9 +2134,15 @@ local ProtoRes = {
 		Exchang_Group_NONE = 0,
 		Exchang_Group_GRAND = 1, --军队
 	},
+	MysteryBoxBuyCondType = {
+		MYSTERYBOX_BUYCONDTYPE_NONE = 0,
+		MYSTERYBOX_BUYCONDTYPE_CONDCFG = 1, --条件表
+	},
 	SpecialMysteryBoxTypes = {
 		SPECIAL_MYSTERYBOXTYPE_NONE = 0,
 		SPECIAL_MYSTERYBOXTYPE_HAIRSTYLE = 1, --发型
+		SPECIAL_MYSTERYBOXTYPE_MOUNT_SKIN = 2, --坐骑涂装
+		SPECIAL_MYSTERYBOXTYPE_CLOTHING = 3, --时装
 	},
 	MallTypeInfo = {
 		MALL_TYPE_InValids = 0,
@@ -2130,10 +2183,19 @@ local ProtoRes = {
 		GoldSauserGameTypeMiniCactpot = 502, --仙人微彩
 		GoldSauserGameTypeFairyColor = 501, --仙人仙彩
 	},
+	GoldSauserDataItemFormatType = {
+		TypeNone = 0,
+		TypeKingDee = 1, --金碟币数量
+		TypeFairyColorTicket = 2, --仙彩券数量
+		TypeTimes = 3, --次数
+		TypePercentage = 4, --百分比
+		TypeItemNum = 5, --道具数量
+	},
 	GoldSauserAwardSourceType = {
 		AwardSourceTypeNone = 0,
 		AwardSourceTypeShop = 1, --商店
 		AwardSourceTypeAchievement = 2, --成就
+		AwardSourceTypeOther = 3, --其他
 	},
 	GoldSauserAwardBelongType = {
 		AwardBelongTypeNone = 0,
@@ -2145,14 +2207,6 @@ local ProtoRes = {
 		AwardBelongTypeHonor = 6, --称号
 		AwardBelongTypeFashion = 7, --时装
 		AwardBelongTypeBirdEquip = 8, --鸟甲
-	},
-	GoldSauserDataItemFormatType = {
-		TypeNone = 0,
-		TypeKingDee = 1, --金碟币数量
-		TypeFairyColorTicket = 2, --仙彩券数量
-		TypeTimes = 3, --次数
-		TypePercentage = 4, --百分比
-		TypeItemNum = 5, --道具数量
 	},
 	StoreViewType = {
 		StoreViewTypeDefault = 0,
@@ -2178,6 +2232,8 @@ local ProtoRes = {
 		STORE_LABEL_MAIN_PROP = 4, --道具
 		STORE_LABEL_MAIN_PET = 5, --宠物
 		STORE_LABEL_MAIN_RECOMMEND = 6, --推荐
+		STORE_LABEL_MAIN_ACTINGTEXTBOOK = 7, --演技教材
+		STORE_LABEL_MAIN_ORNAMENT = 8, --时尚配饰
 	},
 	select_circle_type = {
 		SELECT_CIRCLE_ARROW = 0, --带朝向
@@ -2194,6 +2250,7 @@ local ProtoRes = {
 		INTERACTOBJ = 1, --交互物
 		WILDBOX = 2, --野外宝箱
 		ARMY = 3, --部队NPC
+		HOUSING = 4, --房屋NPC
 	},
 	bubble_type = {
 		BUBBLE_TYPE_TASK = 0, --任务
@@ -2313,6 +2370,7 @@ local ProtoRes = {
 		GLOBAL_CFG_STORNGEST_EQUIPMENT = 43, --完成特定任务触发最强装备指令
 		GLOBAL_CFG_TOUCH_WAIT_TIME = 44, --对话TouchWait时长
 		GLOBAL_CFG_QUEST_FOLLOW_NPC_DISTANCE_LIMIT = 45, --护送NPC距离限制
+		GLOBAL_CFG_AUTO_SKIP_WHITELIST = 46, --自动跳过任务剧情动画白名单
 		GLOBAL_SHOP_DOUBLE_COLOR_SHOP = 101, --双色宝石商店ID
 		GLOBAL_CFG_ADVENTURE_REWARD_STAGE = 102, --挑战笔记完成次数
 		GLOBAL_CFG_HOTEL_CUT_ZERO = 111, --栖木旅店动画
@@ -2329,6 +2387,7 @@ local ProtoRes = {
 		GLOBAL_CFG_CHOCOBO_TRANSPORT_QTE_NPCID = 206, --陆行鸟运QTE的NPCID
 		GLOBAL_CFG_MOUNT_FLY_LONG_CLICK_TIME = 220, --长按坐骑跳跃键进入飞行时间
 		GLOBAL_CFG_MOUNT_PASSENGER_IDLE_NOTIFY_TIME = 221, --乘客静止通知时间
+		GLOBAL_CFG_MOUNT_HOST_WAIT_TIMEOUT_TIME = 222, --等待主乘加载最长时间
 		GLOBAL_CFG_LEFT_SIDE_BAR_STAY_TIME = 230, --左侧通用提示漂浮窗停留秒
 		GLOBAL_CFG_CHOCOBO_RACE_MATCH_ISUNLOCK = 240, --陆行鸟竞赛匹配界面是否解锁
 		GLOBAL_CFG_CHOCOBO_RACE_MATCH_MOVE_SIDE_ANGLE_SPEED = 241, --陆行鸟竞赛横向移动旋转速度
@@ -2344,12 +2403,20 @@ local ProtoRes = {
 		GLOBAL_CFG_FASHIONDECO_MAXEMPTYITEMS = 270, --时尚配饰最大空格数
 		GLOBAL_CFG_FASHIONDECO_MAXCOLLECTNUM = 271, --时尚配饰最大收藏数
 		GLOBAL_CFG_NOT_SHOW_MAP_NPCBASE_ID = 272, --不在雷达地图上显示的形象名ID
-		GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY = 280, --战斗职业装备魔晶石获取途径
-		GLOBAL_CRAFTER_PROF_MAGICSPAR_GETWAY = 281, --生产职业装备魔晶石获取途径
-		GLOBAL_GATHER_PROF_MAGICSPAR_GETWAY = 282, --采集职业装备魔晶石获取途径
 		GLOBAL_FINAL_DUNGEON_COUNT_ID = 283, --版本最终副本计数器ID
+		GLOBAL_BATTLE_PROF_MAGICSPAR_GETWAY = 290, --战斗职业装备魔晶石获取途径
+		GLOBAL_CRAFTER_PROF_MAGICSPAR_GETWAY = 291, --生产职业装备魔晶石获取途径
+		GLOBAL_GATHER_PROF_MAGICSPAR_GETWAY = 292, --采集职业装备魔晶石获取途径
+		GLOBAL_BATTLE_PROF_BANMAGICSPAR_GETWAY = 293, --战斗职业禁忌魔晶石获取途径
 		GLOBAL_CFG_ITEM_MAGIC_CARD_PACK_ID_TABLE = 300, --幻卡卡包物品ID列表
 		GLOBAL_CFG_FATE_LOST_LADY_GUIDE_DIS = 401, --FATE迷失少女指引出现距离
+		GLOBAL_CFG_RHYTHM_EASY_AUDIENCE_SATISFACTION = 451, --音游简单难度观众满意度
+		GLOBAL_CFG_RHYTHM_HARD_AUDIENCE_SATISFACTION = 452, --音游困难难度观众满意度
+		GLOBAL_CFG_RHYTHM_JUDGE_PERFECT_SCORE = 453, --音游完美判定得分
+		GLOBAL_CFG_RHYTHM_JUDGE_GREAT_SCORE = 454, --音游很棒判定得分
+		GLOBAL_CFG_RHYTHM_JUDGE_GOOD_SCORE = 455, --音游不错判定得分
+		GLOBAL_CFG_RHYTHM_JUDGE_MISS_SCORE = 456, --音游失误判定得分
+		GLOBAL_CFG_ADVENTURE_FATE_REWARD = 501, --冒险笔记Fate推荐奖励
 	},
 	CombatStatCategory = {
 		COMBAT_STAT_CATEGORY_STRONG_CONTROLL = 0, --强控
@@ -2572,6 +2639,7 @@ local ProtoRes = {
 		BEHAVIOR_CONDITION_ENPC_N_MAGICCARD_END = 56, --ENPC(n)附近的幻卡对局是否已经结束
 		BEHAVIOR_CONDITION_HAS_TRACKING_QUEST_CURRENT_MAP = 57, --当前地图有追踪任务
 		BEHAVIOR_CONDITION_TREASURE_OPEN = 101, --宝箱被打开
+		BEHAVIOR_CONDITION_MYSTER_MERCHANT_ACTIVE = 102, --商人奇遇触发中
 		BEHAVIOR_CONDITION_MAX = 200, --行为条件最大值
 	},
 	behavior_cond_target = {
@@ -2723,48 +2791,18 @@ local ProtoRes = {
 	},
 	ClosetSuitSpecialEffectType = {
 		SPECIAL_EFFECT_TYPE_NONE = 0,
-		SPECIAL_EFFECT_TYPE_SPRINT_TRAIL = 1, --冲刺拖尾特效
-		SPECIAL_EFFECT_TYPE_SPRINT_FOOTPRINT = 2, --冲刺脚印特效
+		SPECIAL_EFFECT_TYPE_SPRINT_TRAIL = 1, --拖尾
+		SPECIAL_EFFECT_TYPE_SPRINT_FOOTPRINT = 2, --脚印
 		SPECIAL_EFFECT_TYPE_RANDOM_VARIANT = 3, --随机图案
+		SPECIAL_EFFECT_TYPE_FISHING_CHAIR = 4, --钓鱼凳
+		SPECIAL_EFFECT_TYPE_TELEPORT_EFFECT = 5, --传送
+		SPECIAL_EFFECT_TYPE_RANDOM_EFFECT = 6, --随机特性
 	},
 	MOVIE_TYPE = {
 		MOVIE_TYPE_NONE = 0,
 		MOVIE_TYPE_OPENING = 1, --Opening
 		MOVIE_TYPE_VOYAGE = 2, --Voyage
 		MOVIE_TYPE_VER500 = 3, --Trailer
-	},
-	HOUSING_ITEM_CATEGORY_TYPE = {
-		HOUSING_ITEM_CATEGORY_INVALID = 0,
-		HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF = 1, --外装屋顶
-		HOUSING_ITEM_CATEGORY_EXTERIOR_WALL = 2, --外装墙
-		HOUSING_ITEM_CATEGORY_EXTERIOR_WINDOW = 3, --外装窗
-		HOUSING_ITEM_CATEGORY_EXTERIOR_DOOR = 4, --外装门
-		HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF_OPTION = 5, --外装屋顶装饰
-		HOUSING_ITEM_CATEGORY_EXTERIOR_WALL_OPTION = 6, --外装墙装饰
-		HOUSING_ITEM_CATEGORY_EXTERIOR_SIGN = 7, --外装看板
-		HOUSING_ITEM_CATEGORY_EXTERIOR_FENCE = 8, --外装围栏
-		HOUSING_ITEM_CATEGORY_INTERIOR_WALL = 9, --内装墙
-		HOUSING_ITEM_CATEGORY_INTERIOR_FLOOR = 10, --内装地板
-		HOUSING_ITEM_CATEGORY_INTERIOR_LIGHT = 11, --内装照明
-		HOUSING_ITEM_CATEGORY_FURNITURE_SINGLE = 12, --家具单体
-		HOUSING_ITEM_CATEGORY_FURNITURE_BASE = 13, --家具台座
-		HOUSING_ITEM_CATEGORY_FURNITURE_DESKTOP = 14, --家具桌上
-		HOUSING_ITEM_CATEGORY_FURNITURE_WALLHUNG = 15, --家具壁挂
-		HOUSING_ITEM_CATEGORY_FURNITURE_CARPET = 16, --家具地毯
-		HOUSING_ITEM_CATEGORY_FURNITURE_YARD = 17, --庭具
-		HOUSING_ITEM_CATEGORY_MAX = 18,
-	},
-	HOUSING_SIZE_TYPE = {
-		HOUSING_SIZE_S = 0, --S
-		HOUSING_SIZE_M = 1, --M
-		HOUSING_SIZE_L = 2, --L
-		HOUSING_SIZE_SS = 3, --SS
-		HOUSING_SIZE_WORKSHOP = 4, --WorkShop
-		HOUSING_SIZE_MANSIONROOM = 5, --公寓房间
-		HOUSING_SIZE_MINIONAIRE = 6, --无人岛
-		HOUSING_SIZE_ALL = 254, --无限制
-		HOUSING_SIZE_INVALID = 255, --无效
-		HOUSING_SIZE_MAX = 256, --Max
 	},
 	skill_first_class = {
 		COMBAT_SKILL = 0, --战斗技能
@@ -2834,6 +2872,7 @@ local ProtoRes = {
 		SKILL_CONDITION_MAIN_CFG_SKILL_TYPE = 31, --技能主表中的技能类型
 		SKILL_CONDITION_MAIN_CFG_SKILL_CLASS = 32, --技能主表中的技能类别
 		SKILL_CONDITION_ATTACK_HP_WAN_RATE = 33, --单次伤害血量万分比
+		SKILL_CONDITION_CASTER_AND_TARGET_RELATION = 34, --施法者和目标的关系
 	},
 	condition_sign = {
 		CONDITION_SIGN_NULL = 0,
@@ -2997,7 +3036,10 @@ local ProtoRes = {
 		SKILL_EFFECT_FLOAT_AIR = 63, --浮空
 		SKILL_EFFECT_SET_COMM_STAT = 64, --设置通用状态
 		SKILL_EFFECT_CLEAR_COMM_STAT = 65, --清除通用状态
-		SKILL_EFFECT_MAX = 66,
+		SKILL_EFFECT_MARK_BACK_POINT = 66, --标记回归点
+		SKILL_EFFECT_TRANSMIT_TO_BACK_POINT = 67, --传送到回归点
+		SKILL_EFFECT_REPLACE_SKILL_GROUP = 68, --替换技能组
+		SKILL_EFFECT_MAX = 69,
 	},
 	skill_effect_tag = {
 		SKILL_EFFECT_TAG_NULL = 0,
@@ -3032,6 +3074,11 @@ local ProtoRes = {
 		EFFECT_UNIT_TYPE_CASTER_HP_RATE_POWER = 8,
 		EFFECT_UNIT_TYPE_TRAGET_LOSS_HP_RATE = 9,
 		EFFECT_UNIT_TYPE_ATTACK_RATE = 10,
+	},
+	effect_select_point_type = {
+		EFFECT_SELECT_POINT_TYPE_NULL = 0,
+		EFFECT_SELECT_POINT_TYPE_SKILL = 1,
+		EFFECT_SELECT_POINT_TYPE_TARGET = 2,
 	},
 	call_monster_attr_type = {
 		EFFECT_CALL_MONSTER_ATTR_TYPE_NULL = 0,
@@ -3173,6 +3220,14 @@ local ProtoRes = {
 			ActivityTypeLightStart = 6, --光之启程
 			ActivityTypePandora = 7, --潘多拉活动
 			ActivityTypePureBackEnd = 8, --纯后台活动
+			ActivityTypeMoguCollectRegular = 9, --莫古莫古大收集常规任务
+			ActivityTypeMoguCollectWeek = 10, --莫古莫古大收集每周任务
+			ActivityTypeMoguCollectBattle = 11, --莫古莫古大收集挑战任务
+			ActivityTypeDaughterDay = 12, --女儿节
+		},
+		LayerCondType = {
+			LayerCondTypeInvalid = 0,
+			LayerCondTypeDaughterDay = 1, --女儿节雪米果
 		},
 		RelationType = {
 			None = 0,
@@ -3189,8 +3244,10 @@ local ProtoRes = {
 			ActivityCondAccountBattleLv = 4, --账号战斗等级
 			ActivityCondModuleOpenID = 5, --模块开启
 			ActivityCondQuest = 6, --完成任务
+			ActivityCondReturnDays = 7, --回归天数
 			ActivityCondDeviceType = 8, --设备类型
 			ActivityCondAccountType = 9, --账号类型
+			ActivityCondAfterReturnDays = 10, --回归几天后
 		},
 		ActivityNodeType = {
 			ActivityNodeTypeMinInvalid = 0,
@@ -3217,6 +3274,25 @@ local ProtoRes = {
 			ActivityNodeTypeCounter = 24, --计数器
 			ActivityNodeTypeMailSend = 25, --邮件发送
 			ActivityNodeTypeFinishScene = 26, --完成副本
+			ActivityNodeTypeDesignContestCommit = 27, --设计评选投稿
+			ActivityNodeTypeDesignContestVote = 28, --设计评选投票
+			ActivityNodeTypeDesignContestShow = 29, --设计评选展示
+			ActivityNodeTypeDesignContestRank = 30, --设计评选排名奖励
+			ActivityNodeTypeDesignContestJudge = 31, --设计评选评委分奖励
+			ActivityNodeTypeDesignContestHistory = 32, --设计评选历届
+			ActivityNodeTypeTeam = 33, --活动组队传播
+			ActivityNodeTypeDesignContestAccVote = 34, --设计评选累计投票
+			ActivityNodeTypePureShow = 35, --通用显示节点
+			ActivityNodeTypeDaughterDayUpdateProgress = 36, --女儿节客户端拉取进度节点
+			ActivityNodeTypeDaughterDayGetAward = 37, --女儿节领取奖励节点
+			ActivityNodeTypeFinishLottery = 38, --通用完成抽奖次数节点
+			ActivityNodeTypeBackFlowFlag = 39, --回流标签节点
+			ActivityNodeTypeStarDayPutGift = 40, --星芒节放入交换礼物
+			ActivityNodeTypeStarDayGetGift = 41, --星芒节获取交换礼物
+			ActivityNodeTypeCommClientReport = 42, --通用客户端上报节点
+			ActivityNodeTypeAccChildNodeProgress = 43, --累计子节点进度
+			ActivityNodeTypeStarDaySendGreetingCard = 44, --星芒节发送贺卡节点
+			ActivityNodeTypeStarDayMusicGame = 45, --星芒节音游节点
 		},
 		ActivityNodeRewardCollectType = {
 			ActivityNodeRewardCollectTypeMinInvalid = 0,
@@ -3251,6 +3327,14 @@ local ProtoRes = {
 			WEB_JUMP = 3, --外链跳转
 			MINPROGRAM_JUMP = 4, --小程序跳转
 		},
+		DesignType = {
+			DesignType_None = 0,
+			DesignType_Avatar = 1, --穿搭
+		},
+		ActivityGlobalCfgId = {
+			ActivityGlobalNone = 0,
+			ActivityGlobalCfg_LOTTERYDRAW_BAGFULL_MAILID = 1, --抽奖背包满邮件ID
+		},
 		GameID = {
 			GameIDDefault = 0,
 			GameIDAnyWayWindBlows = 1, --喷风中的幸存者
@@ -3276,6 +3360,7 @@ local ProtoRes = {
 			GameIDCatchBall = 21, --莫古抓球机
 			GameIDAloneTree = 22, --孤树无援
 			GameIDOreSearch = 43, --矿脉探索
+			GameIDFairyBlessed = 46, --仙人赐福
 			GameIDMysteryMerchant = 23, --神秘商人
 			GameIDMatch = 24, --匹配
 			GameIDPvpcolosseumCrystal = 25, --水晶冲突
@@ -3291,11 +3376,12 @@ local ProtoRes = {
 			GameIDLeapOfFaithB = 35, --虚景跳跳乐大挑战B
 			GameIDLotteryDraw = 36, --商业化随机表
 			GameIDChooseTreasureChest = 37, --自选宝箱
-			GameIDMonstorHuntA = 38, --狩猎令A
-			GameIDMonstorHuntB = 39, --狩猎令B
+			GameIDMonsterHunt = 38, --狩猎令
 			GameIDBlindBox = 40, --盲盒
 			GameIDZeroSceneRank = 41, --零式副本排行
 			GameIDTreasuryRoulette = 42, --神殿宝物库
+			GameIDStarlight = 44, --星芒节
+			GameIDTianshu = 45, --天书奇谈
 		},
 		game_global_cfg_id = {
 			GAME_CFG_NONE = 0,
@@ -3459,21 +3545,13 @@ local ProtoRes = {
 			GAME_CFG_BAND_CHEER_DROP_ID = 1178, --乐团应援掉落奖励ID
 			GAME_CFG_BAND_STATE_IDS = 1179, --乐团奖励加成ID
 			GAME_CFG_BAND_NON_COMBAT_SYS_ID = 1180, --巡回非战斗职业提示ID
-			GAME_CFG_MONSTORHUNT_AWARD_MAILIDA = 1181, --狩猎令A类怪奖励邮件ID
-			GAME_CFG_MONSTORHUNT_AWARD_MAILIDB = 1182, --狩猎令B类怪奖励邮件ID
 			GAME_CFG_MERCHANT_INVEST_TURN = 1183, --商人投资回报回合
 			GAME_CFG_MERCHANT_INTERACTIVE_BUFF = 1184, --商人拾取货物附加debuffID
 			GAME_CFG_MERCHANT_HELP_DISTANCE = 1185, --商人求救距离
 			GAME_CFG_FATE_DANCE_HYUR_CFG = 1186, --庆典跳舞FATE人族ListID
 			GAME_CFG_FATE_DANCE_LALAFELL_CFG = 1187, --庆典跳舞FATE拉拉非尔ListID
 			GAME_CFG_FATE_DANCE_ROEGADYN_CFG = 1188, --庆典跳舞FATE鲁加族ListID
-			GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_LIMITB = 1189, --狩猎令B周奖励限制
-			GAME_CFG_MONSTORHUNT_AWARD_DAILY_LIMITB = 1190, --狩猎令B单怪物天击杀奖励限制
-			GAME_CFG_MONSTORHUNT_MONSTOR_COUNT_B = 1191, --狩猎令B每天刷B怪的个数
-			GAME_CFG_MONSTORHUNT_MONSTOR_AWARD_DELAY_B = 1192, --狩猎令B箱子存留时间
-			GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_B = 1193, --狩猎令B周奖励礼包ID
-			GAME_CFG_MONSTORHUNT_AWARD_WEEKLY_MAILID_B = 1194, --狩猎令B周奖励邮件ID
-			GAME_CFG_MONSTORHUNT_AWARD_DAILY_LIMITA = 1195, --狩猎令A单怪物天击杀奖励限制
+			GAME_CFG_MONSTERHUNT_MONSTER_COUNT_B = 1191, --狩猎令B每天刷B怪的个数
 			GAME_CFG_FATE_CELEBRATE_MAIL_REWARD_ID = 1196, --FATE庆典不在区域内玩家奖励邮件ID
 			GAME_CFG_FATE_CELEBRATE_NOTIFY_CFG = 1197, --FATE庆典结束通知配置
 			GAME_CFG_ROULETTE_RING_SPIN_TIME = 1198, --神殿召唤环旋转时间配置
@@ -3499,6 +3577,30 @@ local ProtoRes = {
 			GAME_CFG_LEAP_OF_FAITH = 1282, --跳跳乐补发奖励邮件ID
 			GAME_CFG_FATE_DANCE_NOTIFY_CFG = 1283, --庆典跳舞喊话通知配置
 			GAME_CFG_MERCHANT_SCENE_BLOCK_MS = 1284, --商人位面进入拦截时间
+			GAME_CFG_SNOWBALL_CFG = 1285, --雪球对对碰配置
+			GAME_CFG_SHARED_MERCHANT_INTERACTION_ID = 1286, --游商团共享商人采集物交互ID
+			GAME_CFG_SHARED_MERCHANT_DISPLAY_EVENT_ID = 1287, --游商团共享商人显示干扰怪事件ID
+			GAME_CFG_SHARED_MERCHANT_HIDE_EVENT_ID = 1288, --游商团共享商人隐藏干扰怪事件ID
+			GAME_CFG_FATE_ROLE_TRIGGER_INTERVAL = 1289, --FATE玩家触发类间隔CD
+			GAME_CFG_FATE_HUNT_EGG_CFG = 1290, --FATE猎蛋节配置
+			GAME_CFG_CHOCOBO_RACE_MAX_ACC_LIMIT = 1291, --陆行鸟最大加速度上限
+			GAME_CFG_FATE_HEAVENSTURN_CFG = 1292, --FATE降神节配置
+			GAME_CFG_STAR_LIGHT_MUSIC_NORMAL_REWARD_CFG = 1293, --星芒节音游普通难度奖励
+			GAME_CFG_STAR_LIGHT_MUSIC_HARD_REWARD_CFG = 1294, --星芒节音游困难难度奖励
+			GAME_CFG_STAR_LIGHT_MUSIC_SATISFACTION_CFG = 1295, --星芒节音游观众满意度配置
+			GAME_CFG_STAR_LIGHT_MUSIC_SCORE_CFG = 1296, --星芒节音游得分配置
+			GAME_CFG_MONSTERHUNT_CLUE = 1297, --狩猎令线索
+			GAME_CFG_STAR_LIGHT_MUSIC_TIME_LIMIT = 1298, --星芒节音游时间限制
+			GAME_CFG_STAR_LIGHT_MUSIC_NOTE_TIME_CFG = 1299, --星芒节音游Note提前出现时间
+			GAME_CFG_STAR_LIGHT_MUSIC_NOTE_RANGE_CFG = 1300, --星芒节音游Note判断范围
+			GAME_CFG_MONSTERHUNT_WEEK_AWARD = 1301, --狩猎令周常奖励
+			GAME_CFG_TIANSHU_REWARD_MAIN_QUESTID = 1302, --天书奇谈奖励领取主线任务ID
+			GAME_CFG_TIANSHU_BOOK_ITEMID = 1303, --天书奇谈天书道具ID
+			GAME_CFG_TIANSHU_STRANGE_ITEMID = 1304, --天书奇谈奇想录道具ID
+			GAME_CFG_TIANSHU_ONE_LINE_RATE = 1305, --天书奇谈贴花连成一条线的概率
+			GAME_CFG_TIANSHU_TWO_LINE_RATE = 1306, --天书奇谈贴花连成二条线的概率
+			GAME_CFG_TIANSHU_THREE_LINE_RATE = 1307, --天书奇谈贴花连成三条线的概率
+			GAME_CFG_OPEN_SERVER_FATE_ID = 1308, --开服庆典FATE列表
 		},
 		GameSceneType = {
 			GameSceneTypeNone = 0,
@@ -3507,6 +3609,7 @@ local ProtoRes = {
 			GameSceneTypeDungeon = 12, --副本
 			GameSceneTypePrivate = 14, --私人
 			GameSceneTypeDemo = 17, --演示
+			GameSceneTypeHouse = 18, --房屋
 		},
 		card_race_type = {
 			CARD_RACE_NONE = 0, --无
@@ -3760,6 +3863,7 @@ local ProtoRes = {
 			MogulBallTypeRed = 1,
 			MogulBallTypeOrange = 2,
 			MogulBallTypeBlue = 3,
+			MogulBallTypeStar = 4,
 		},
 		CatchBallParamType = {
 			CatchBallParamTypeInvalid = 0,
@@ -3805,6 +3909,7 @@ local ProtoRes = {
 			RuleOrderAll = 1, --顺序全部击杀
 			DiedEvent = 11,
 			TipsID = 12,
+			IsPatrol = 13,
 		},
 		RouletteType = {
 			RouletteType_Good = 0, --下级召唤
@@ -3825,6 +3930,15 @@ local ProtoRes = {
 			FATE_HIGH_RISK_TYPE_JZSB = 6, --精准闪避
 			FATE_HIGH_RISK_TYPE_ZZCC = 7, --众志成城
 			FATE_HIGH_RISK_TYPE_GLWY = 8, --孤立无援
+			FATE_HIGH_RISK_TYPE_JH = 9, --极寒
+			FATE_HIGH_RISK_TYPE_CB = 10, --磁暴
+			FATE_HIGH_RISK_TYPE_PZ = 11, --屏障
+			FATE_HIGH_RISK_TYPE_JJ = 12, --荆棘
+		},
+		FATE_RUNE_BUFF_TARGET = {
+			FATE_RUNE_BUFF_TARGET_NONE = 0,
+			FATE_RUNE_BUFF_TARGET_ROLE = 1, --角色
+			FATE_RUNE_BUFF_TARGET_BUDDY = 2, --陆行鸟
 		},
 		FATE_TYPE = {
 			FATE_TYPE_INVALID = 0,
@@ -3835,6 +3949,7 @@ local ProtoRes = {
 			FATE_TYPE_DEFENCE = 5, --防守类
 			FATE_TYPE_DANCE = 6, --庆典跳舞类
 			FATE_TYPE_PUZZLE = 7, --庆典拼图类
+			FATE_TYPE_BUFF = 8, --BUFF交互类
 		},
 		FATE_EVENT_CONDITION_TYPE = {
 			FATE_EVENT_CONDITION_INVALID = 0,
@@ -3856,6 +3971,8 @@ local ProtoRes = {
 			FATE_EVENT_CONDITION_DANCE = 18, --庆典正确跳舞
 			FATE_EVENT_CONDITION_PUZZLE = 19, --庆典完成拼图
 			FATE_EVENT_CONDITION_END = 20, --FATE结束
+			FATE_EVENT_CONDITION_INTERACT_WITH_BUFF = 21, --带BUFF交互
+			FATE_EVENT_CONDITION_REACH_SCORE = 22, --达到积分
 		},
 		FATE_EVENT_ACTION_TYPE = {
 			FATE_EVENT_ACTION_TYPE_INVALID = 0,
@@ -3879,6 +3996,11 @@ local ProtoRes = {
 			FATE_EVENT_ACTION_CREATE_PUZZLE_NPC = 18, --创建拼图NPC
 			FATE_EVENT_ACTION_TRIGGER_SCENE_EVENT = 19, --触发关卡事件
 			FATE_EVENT_ACTION_RANGE_NOTIFY = 20, --范围内系统通知
+			FATE_EVENT_ACTION_RANDOM_ADD_BUFF = 21, --随机附加BUFF
+			FATE_EVENT_ACTION_STOP_REFRESH_MONSTER = 22, --停止刷怪
+			FATE_EVENT_ACTION_CONTINUE_REFRESH_MONSTER = 23, --继续刷怪
+			FATE_EVENT_ACTION_MONSTER_RETREAT = 24, --怪物撤退
+			FATE_EVENT_ACTION_SHOW_EBOJ = 25, --显示隐藏的EOBJ
 			FATE_EVENT_CONDITION_DROP_ITEM = 100,
 		},
 		FATE_ACHIEVEMENT_TYPE = {
@@ -3951,6 +4073,11 @@ local ProtoRes = {
 			FATE_ACHIEVEMENT_TYPE_ROLE_HAS_BUFF_AND_DAMAGE_MONSTER = 219, --在指定BUFF下对怪物累计伤害
 			FATE_ACHIEVEMENT_TYPE_FINISH_HIGH_RISK_COUNT = 220, --高危FATE累计完成次数
 			FATE_ACHIEVEMENT_TYPE_FINISH_IN_HIGH_RISK = 221, --完成时FATE为高危
+			FATE_ACHIEVEMENT_TYPE_FINISH_USE_DIFF_PROF = 222, --多个职业
+			FATE_ACHIEVEMENT_TYPE_SERIAL_GOLD_REWARD = 223, --连环金牌
+			FATE_ACHIEVEMENT_TYPE_GUARD_KILL_IN_TIME = 224, --护送限时击败
+			FATE_ACHIEVEMENT_TYPE_USE_SPECIAL_SKILL = 225, --道具技能
+			FATE_ACHIEVEMENT_TYPE_KILL_IN_TIME_AFTER_CREATE = 226, --创建后限时击败
 		},
 		FATE_ACHIEVEMENT_INGAME_OPTION = {
 			FATE_ACHIEVEMENT_INGAME_OPTION_MULTI = 0, --不限单局
@@ -4114,6 +4241,33 @@ local ProtoRes = {
 			PVPCOLOSSEUM_BTLLOSSRATE = 1084, --战损率计算参数
 			PVPCOLOSSEUM_MATCH_CRYSTAL_WAITING_TIME = 1085, --水晶冲突匹配池等待时长
 			PVPCOLOSSEUM_MATCH_CRYSTAL_PROF_RATIO = 1086, --水晶冲突职业总和占比
+			PVPCOLOSSEUM_STARROADSIGNS = 1087, --星里路标最少展示天数
+			PVPCOLOSSEUM_RANK_ROLEEXP_RATE_WIN = 1088, --水晶冲突段位赛获胜角色经验倍率
+			PVPCOLOSSEUM_RANK_ROLEEXP_RATE_FAIL = 1089, --水晶冲突段位赛失败角色经验倍率
+			PVPCOLOSSEUM_RANK_SERIALEXP_WIN = 1090, --水晶冲突段位赛获胜系列赛经验
+			PVPCOLOSSEUM_RANK_SERIALEXP_FAIL = 1091, --水晶冲突段位赛失败系列赛经验
+			PVPCOLOSSEUM_RANK_POEM_WIN = 1092, --水晶冲突段位赛获胜诗学神典石
+			PVPCOLOSSEUM_RANK_POEM_FAIL = 1093, --水晶冲突段位赛失败诗学神典石
+			PVPCOLOSSEUM_RANK_GOLD_WIN = 1094, --水晶冲突段位赛获胜金币
+			PVPCOLOSSEUM_RANK_GOLD_FAIL = 1095, --水晶冲突段位赛失败金币
+			PVPCOLOSSEUM_RANK_WINSTAR_LIMIT = 1096, --胜利之星上限
+			PVPCOLOSSEUM_RANK_NEED_CONTINUEWIN_NUM = 1097, --连胜奖励所需最少连胜数
+			PVPCOLOSSEUM_RANK_CONTINUEWIN_ADDSTAR = 1098, --连胜额外加星
+			PVPCOLOSSEUM_RANK_CRYSTAL_RANGE = 1099, --水晶点取值范围
+			PVPCOLOSSEUM_SEASON_RESULT_MAIL_RANK = 1100, --赛季排名结算邮件
+			PVPCOLOSSEUM_SEASON_RESULT_MAIL_SEG = 1101, --赛季段位结算邮件
+			PVPCOLOSSEUM_SEASON_RESULT_RANK1 = 1102, --排名结算第1档名次
+			PVPCOLOSSEUM_SEASON_RESULT_RANK2 = 1103, --排名结算第2档名次
+			PVPCOLOSSEUM_SEASON_RESULT_RANK3 = 1104, --排名结算第3档名次
+			PVPCOLOSSEUM_RANK_UPDATE_TIME = 1105, --水晶冲突排行榜刷新时间
+			PVPCOLOSSEUM_RANK_SHOWTIME = 1107, --排位赛结算段位展示时长
+			PVPCOLOSSEUM_RANK_DELAY_SHOW = 1108, --段位排行榜开放延迟
+			PVPCOLOSSEUM_RANK_NEEDBTLNUM = 1109, --水晶冲突上榜需求参与场次
+			PVPCOLOSSEUM_RANK_ACT_BEGINTIME = 1110, --段位赛每日活动开始时间
+			PVPCOLOSSEUM_RANK_ACT_ENDTIME = 1111, --段位赛每日活动结束时间
+			PVPCOLOSSEUM_RANK_SWITCH = 1112, --段位赛功能开关
+			PVPCOLOSSEUM_EXCERSIZE_SWITCH = 1113, --练习赛功能开关
+			PVPCOLOSSEUM_RANK_SCORE_BAN_MATCH = 1114, --挂机禁止匹配分数
 		},
 		game_pvpcolosseum_baseexptype = {
 			PVPCOLOSSEUM_BASEEXPTYPE_Exercise = 0, --水晶冲突练习赛
@@ -4147,6 +4301,20 @@ local ProtoRes = {
 			SRSType_AssistWinNumOne = 7, --单局助攻获胜次数
 			SRSType_EscortTime = 8, --累计护送水晶时间
 			SRSType_MaxValue = 9, --预留最大
+		},
+		pvp_rank_type = {
+			RT_None = 0,
+			RT_BRONZE = 1, --青铜
+			RT_SILVER = 2, --白银
+			RT_GOLD = 3, --黄金
+			RT_BIRKIN = 4, --铂金
+			RT_DIAMOND = 5, --钻石
+			RT_CRYSTALE = 6, --水晶
+		},
+		pvp_rank_result_mode = {
+			RRM_None = 0,
+			RRM_WINSTAR = 1, --胜利之星
+			RRM_CRYSTALSCORE = 2, --水晶积分
 		},
 		MysteryMerchantType = {
 			MysteryMerchantTypeInvalid = 0,
@@ -4316,10 +4484,6 @@ local ProtoRes = {
 			RaceSkillTypeActive = 1, --主动
 			RaceSkillTypePassive = 2, --被动
 		},
-		ActivityGlobalCfgId = {
-			ActivityGlobalNone = 0,
-			ActivityGlobalCfg_LOTTERYDRAW_BAGFULL_MAILID = 1, --抽奖背包满邮件ID
-		},
 		BandType = {
 			BandTypeNone = 0,
 			BandTypeTouring = 1, --巡回乐团
@@ -4343,6 +4507,15 @@ local ProtoRes = {
 			AreaMonsterTypeElite = 2, --精英怪
 			AreaMonsterTypeObject = 3, --可破坏物件
 			AreaMonsterTypeBoss = 4, --boss
+		},
+		CellContent = {
+			CellContentNone = 0,
+			DirectionUp = 1, --向上
+			DirectionDown = 2, --向下
+			DirectionLeft = 3, --向左
+			DirectionRight = 4, --向右
+			BallTypeNormal = 5, --普通雪球
+			BallTypeSuper = 6, --超级雪球
 		},
 		GameSceneGlobalCfgID = {
 			SceneGlobalIDCfgUnknown = 0,
@@ -4373,6 +4546,7 @@ local ProtoRes = {
 			FairyBlessedParamTypeIntervalTop = 2, --间隔时间上限
 			FairyBlessedParamTypeStrongWeight = 3, --强赐福权重
 			FairyBlessedParamTypeWeakWeight = 4, --弱赐福权重
+			FairyBlessedParamTypeRadiusCheck = 5, --任务信息检测范围
 		},
 		LotteryDrawPoolType = {
 			LotteryDrawPoolTypeNone = 0, --None
@@ -4399,24 +4573,21 @@ local ProtoRes = {
 			TriggerTypeFate = 1, --开启fate
 			TriggerTypeSceneEvent = 2, --触发关卡事件
 		},
-		MonstorHuntMonstorCate = {
-			MonstorHuntMonstorCateNone = 0, --None
-			MonstorHuntMonstorCateB = 1, --B级怪
-			MonstorHuntMonstorCateA = 2, --A级怪
-			MonstorHuntMonstorCateARet = 3, --A级怪物随从
-			MonstorHuntMonstorCateS = 4, --S级怪
-			MonstorHuntMonstorCateSRet = 5, --S级怪物随从
-			MonstorHuntMonstorCateSp = 6, --S+级怪
+		Category = {
+			CategoryNone = 0, --None
+			CategoryB = 1, --B级怪
+			CategoryA = 2, --A级怪
+			CategoryS = 3, --S级怪
+			CategorySp = 4, --S+级怪
 		},
-		MonstorHuntAwardTarget = {
-			MonstorHuntAwardTargetNone = 0, --None
-			MonstorHuntAwardTargetKiller = 1, --击杀者
-			MonstorHuntAwardTargetHater = 2, --仇恨列表玩家
+		EType = {
+			ETypeFate = 0, --完成Fate
+			ETypeItem = 1, --使用道具
+			ETypeHunt = 2, --完成狩猎
 		},
-		MonstorHuntRefreshCond = {
-			MonstorHuntRefreshCondNone = 0, --None
-			MonstorHuntRefreshCondDie = 1, --死亡间隔时间
-			MonstorHuntRefreshCondTime = 2, --出生间隔时间
+		BlindBoxBuyCondType = {
+			BlindBoxBuyCondTypeNone = 0, --无
+			BlindBoxBuyCondTypeCondCfg = 1, --条件表
 		},
 		zerorank_paramvalue = {
 			ZERORANK_NONE = 0,
@@ -4432,6 +4603,25 @@ local ProtoRes = {
 			TeamStatusNotFull = 1, --未满员
 			TeamStatusFull = 2, --满员
 		},
+		SceneType = {
+			SceneTypeAny = 0, --任意副本
+			SceneTypeSpecific = 1, --指定副本
+			SceneWanfa = 2, --玩法
+			LevelLimit = 3,
+			MainQuestLimit = 4,
+			PreQuestLimit = 5,
+			SceneResId = 6,
+			PoolID = 7,
+		},
+		LootType = {
+			LootTypeInvalid = 0,
+			LootTypeNineFlower = 1, --贴上9个印花
+			LootTypeLine1 = 2, --贴出1条故事线
+			LootTypeLine2 = 3, --贴出2条故事线
+			LootTypeLine3 = 4, --贴出3条故事线
+			LootIDs = 1,
+			QuestUnlock = 2,
+		},
 	},
 	ChannelType = {
 		ChannelTypeNone = 0,
@@ -4444,11 +4634,16 @@ local ProtoRes = {
 		ChannelTypeGroup = 7, --通讯贝频道
 		ChannelTypeSystem = 8, --系统频道
 		ChannelTypeSceneTeam = 9, --副本小队频道
+		ChannelTypeSquad = 10, --团队频道
 	},
 	ChatGlobalCfgID = {
 		ChatGlobalCfgIDNone = 0,
 		ChatGlobalCfgIDVanGuardOpenDays = 1, --先锋频道开启天数
 		ChatGlobalCfgIDVanGuardSpeakLevel = 2, --先锋频道发言等级
+		ChatGlobalCfgIDQuickSpeakPlanRow = 3, --便捷发言方案最大条数
+		ChatGlobalCfgIDQuickSpeakTitleSize = 4, --便捷发言方案名称最大长度
+		ChatGlobalCfgIDQuickSpeakContentRow = 5, --便捷发言内容最大条数
+		ChatGlobalCfgIDQuickSpeakContentSize = 6, --便捷发言内容最大长度
 	},
 	bs_unit_type = {
 		BS_UNIT_DIGIT = 0,
@@ -4495,6 +4690,7 @@ local ProtoRes = {
 		PWORLD_CATEGORY_DUNGEON = 12, --副本
 		PWORLD_CATEGORY_PRIVATE = 14, --私人
 		PWORLD_CATEGORY_DEMO = 17, --演示
+		PWORLD_CATEGORY_HOUSE = 18, --房屋
 	},
 	pworld_sub_type = {
 		PWORLD_SUB_TYPE_NONE = 0,
@@ -4510,6 +4706,8 @@ local ProtoRes = {
 		PWORLD_SUB_TYPE_COLOSSEUM = 10, --水晶冲突
 		PWORLD_SUB_TYPE_ACTIVITY = 11, --活动副本
 		PWORLD_SUB_TYPE_MERCHANT = 12, --冒险游商团
+		PWORLD_SUB_TYPE_HOUSE_PUBLIC = 13, --房屋公共区域
+		PWORLD_SUB_TYPE_HOUSE_ROOM = 14, --房屋室内
 	},
 	monster_tag = {
 		MONSTER_TAG_DEFAULT = 0,
@@ -4596,6 +4794,7 @@ local ProtoRes = {
 		FRIEND_CFG_MAX_FRIEND_REMARK_MESSAGE = 5, --好友备注名称最大值
 		FRIEND_CFG_MAX_BlackListGroupMemberNum = 6, --黑名单分组成员上限
 		FRIEND_CFG_MAX_FriendsApplyRetentionTime = 7, --好友申请保留时间
+		FRIEND_CFG_MAX_NICKNAME_LEN = 8, --好友昵称最大长度
 	},
 	grand_company_type = {
 		GRAND_COMPANY_TYPE_None = 0,
@@ -4608,6 +4807,8 @@ local ProtoRes = {
 		GRAND_PERMISSION_CLASS_InfoEdit = 1, --信息编辑
 		GRAND_PERMISSION_CLASS_STORE = 2, --仓库权限
 		GRAND_PERMISSION_CLASS_MemberManage = 3, --成员管理
+		GRAND_PERMISSION_CLASS_House = 4, --房屋权限
+		GRAND_PERMISSION_CLASS_HouseMaintenance = 5, --房屋维护权限
 	},
 	GroupPermissionType = {
 		GROUP_PERMISSION_TYPE_None = 0,
@@ -4631,6 +4832,12 @@ local ProtoRes = {
 		GPT_STORE_8_USE = 108, --8号仓库使用权
 		GPT_STORE_9_USE = 109, --9号仓库使用权
 		GPT_STORE_10_USE = 110, --10号仓库使用权
+		PermissionTypeEstateEditNameAndGreeting = 201, --编辑住房名称、问候语
+		PermissionTypeEstateGuestAccessAndTagSettings = 202, --设置访客权限及房屋宣传标签
+		PermissionTypeEstateSetDisplayPicture = 203, --设置展示图片
+		PermissionTypeEstatePurchaseLandAndBuild = 204, --购买土地和搭建房屋
+		PermissionTypeEstateFixtures = 205, --房屋内外装潢/家具/庭具的追加、布置、收回
+		PermissionTypeEstateOrchestrionOperation = 206, --管弦乐琴管理
 	},
 	GroupGlobalConfigType = {
 		GroupGlobalConfigType_None = 0,
@@ -4686,6 +4893,13 @@ local ProtoRes = {
 		GlobalCfgCompanySealNumExchangeFriendExpRate = 52,
 		GlobalCfgGrandCompanyChangeCD = 53,
 		GlobalCfgGrandCompanyChangeCost = 54,
+		GlobalCfgPurchaseLandGroupLevel = 55,
+		GlobalCfgPurchaseLandMemberNum = 56,
+		GlobalCfgPurchaseLandRoleLevel = 57,
+		GlobalCfgPurchaseLandJoinDays = 58,
+		GlobalCfgAutoTransferLeaderOfflineDays = 59,
+		GlobalCfgNewLeaderConditionLoginDays = 60,
+		GlobalCfgNewLeaderConditionJoinDays = 61,
 	},
 	GroupScoreSpecialTaskID = {
 		GroupScoreSpecialTaskIDNone = 0,
@@ -4710,6 +4924,98 @@ local ProtoRes = {
 		GroupChatGlobalCfgAnnouncementCharNumMax = 11, --通讯贝公告最大字符数量
 		GroupChatGlobalCfgCreateCool = 12, --创建通讯贝冷却时间
 	},
+	HouseGlobalCfgID = {
+		HouseGlobalCfgIDUnknown = 0,
+		HouseGlobalCfgIDHouseNameWidth = 1, --房屋名最大宽度
+		HouseGlobalCfgIDMusicListLen = 2, --管弦乐琴播放列表长度
+		HouseGlobalCfgIDHouseRoommateLimit = 3, --最大室友数量
+		HouseGlobalCfgIDBeInviteNumLimit = 4, --最大被邀请数量
+		HouseGlobalCfgIDBeInviteLevelLimit = 5, --被邀请的最小等级
+		HouseGlobalCfgIDHouseGreetingWidth = 6, --房屋问候语最大宽度
+		HouseGlobalCfgIDGroupMemberRoomResID = 7, --部队成员房间房屋ID
+		HouseGlobalCfgIDGroupMemberRoomMoneyType = 8, --部队成员创建房间货币ID
+		HouseGlobalCfgIDGroupMemberRoomMoneyNum = 9, --部队成员创建房间货币数量
+		HouseGlobalCfgIDBagFullSendMail = 10, --添加道具是背包满的兜底邮件
+		HouseGlobalCfgIDHouseItemReturnMailID = 11, --房产证返还邮件ID
+	},
+	HouseRegionType = {
+		HouseRegionType_Start = 0,
+		HouseRegionType_Room = 1, --室内
+		HouseRegionType_Yard = 2, --庭院
+		HouseRegionType_Max = 3,
+	},
+	HouseFurnitureFunction = {
+		HouseFurnitureFunction_Start = 0,
+		HouseFurnitureFunction_SysEntry = 1, --系统入口
+		HouseFurnitureFunction_Emotion = 2, --情感动作交互
+		HouseFurnitureFunction_Musical = 3, --管弦乐琴
+		HouseFurnitureFunction_Food = 4, --食物
+		HouseFurnitureFunction_Effects = 5, --特效
+		HouseFurnitureFunction_Status = 6, --变换状态
+		HouseFurnitureFunction_Door = 7, --门
+		HouseFurnitureFunction_WoodenMan = 8, --木人
+		HouseFurnitureFunction_Ether = 9, --以太之光
+		HouseFurnitureFunction_Max = 10,
+	},
+	HouseFurnitureInteractionPrivilege = {
+		HouseFurnitureInteractionPrivilege_None = 0, --不可交互
+		HouseFurnitureInteractionPrivilege_ALL = 1, --所有玩家可交互
+		HouseFurnitureInteractionPrivilege_Private = 2, --私人可交互
+	},
+	HOUSING_ITEM_CATEGORY_TYPE = {
+		HOUSING_ITEM_CATEGORY_INVALID = 0,
+		HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF = 1, --外装屋顶
+		HOUSING_ITEM_CATEGORY_EXTERIOR_WALL = 2, --外装墙
+		HOUSING_ITEM_CATEGORY_EXTERIOR_WINDOW = 3, --外装窗
+		HOUSING_ITEM_CATEGORY_EXTERIOR_DOOR = 4, --外装门
+		HOUSING_ITEM_CATEGORY_EXTERIOR_ROOF_OPTION = 5, --外装屋顶装饰
+		HOUSING_ITEM_CATEGORY_EXTERIOR_WALL_OPTION = 6, --外装墙装饰
+		HOUSING_ITEM_CATEGORY_EXTERIOR_SIGN = 7, --外装看板
+		HOUSING_ITEM_CATEGORY_EXTERIOR_FENCE = 8, --外装围栏
+		HOUSING_ITEM_CATEGORY_INTERIOR_WALL = 9, --内装墙
+		HOUSING_ITEM_CATEGORY_INTERIOR_FLOOR = 10, --内装地板
+		HOUSING_ITEM_CATEGORY_INTERIOR_LIGHT = 11, --内装照明
+		HOUSING_ITEM_CATEGORY_FURNITURE_SINGLE = 12, --家具单体
+		HOUSING_ITEM_CATEGORY_FURNITURE_BASE = 13, --家具台座
+		HOUSING_ITEM_CATEGORY_FURNITURE_DESKTOP = 14, --家具桌上
+		HOUSING_ITEM_CATEGORY_FURNITURE_WALLHUNG = 15, --家具壁挂
+		HOUSING_ITEM_CATEGORY_FURNITURE_CARPET = 16, --家具地毯
+		HOUSING_ITEM_CATEGORY_FURNITURE_YARD = 17, --庭具
+		HOUSING_ITEM_CATEGORY_MAX = 18,
+	},
+	HOUSING_SIZE_TYPE = {
+		HOUSING_SIZE_S = 0, --S
+		HOUSING_SIZE_M = 1, --M
+		HOUSING_SIZE_L = 2, --L
+		HOUSING_SIZE_SS = 3, --SS
+		HOUSING_SIZE_WORKSHOP = 4, --WorkShop
+		HOUSING_SIZE_MANSIONROOM = 5, --公寓房间
+		HOUSING_SIZE_MINIONAIRE = 6, --无人岛
+		HOUSING_SIZE_ALL = 254, --无限制
+		HOUSING_SIZE_INVALID = 255, --无效
+		HOUSING_SIZE_MAX = 256, --Max
+	},
+	HouseDoUpPos = {
+		HouseDoUpPos_Start = 0,
+		HouseDoUpPos_RoomWall = 1, --室内墙壁
+		HouseDoUpPos_RoomFloor = 2, --室内地板
+		HouseDoUpPos_RoomRoof = 3, --室内屋顶
+		HouseDoUpPos_RoomCenterLight = 4, --室内中央顶灯
+		HouseDoUpPos_YardWall = 11, --室外墙壁
+		HouseDoUpPos_YardRoof = 12, --室外屋顶
+		HouseDoUpPos_YardWindow = 13, --室外窗户
+		HouseDoUpPos_YardDoor = 14, --室外房门
+		HouseDoUpPos_YardWallDecoration = 21, --室外墙壁装饰
+		HouseDoUpPos_YardRoofDecoration = 22, --室外屋顶装饰
+		HouseDoUpPos_YardDoorplateDecoration = 23, --室外门牌装饰
+		HouseDoUpPos_YardFenceDecoration = 24, --室外院墙装饰
+	},
+	ResidenceNumberType = {
+		ResidenceNumber_Min = 0,
+		ResidenceNumber_1 = 1, --海雾村
+		ResidenceNumber_2 = 2, --薰衣草苗圃
+		ResidenceNumber_3 = 3, --高脚孤丘
+	},
 	IDip = {
 		IdIpCfgTableName = {
 			IdIpCfgTableNone = 0,
@@ -4717,6 +5023,23 @@ local ProtoRes = {
 			IdIpCfgTableShareReward = 2,
 			IdIpCfgTablePreLoginVersion = 3,
 		},
+	},
+	LandSizeType = {
+		LandSizeType_Min = 0,
+		LandSizeType_Small = 1, --S
+		LandSizeType_Medium = 2, --M
+		LandSizeType_Large = 3, --L
+	},
+	LandBuyType = {
+		LandBuyType_Min = 0,
+		LandBuyType_Personal = 1, --个人可购买
+		LandBuyType_Team = 2, --部队可购买
+		LandBuyType_All = 3, --所有人可购买
+	},
+	SubAreaType = {
+		SubAreaType_Min = 0,
+		SubAreaType_Init = 1, --初始区
+		SubAreaType_Expand = 2, --扩建区
 	},
 	LogsStatistic = {
 		SceneTag = {
@@ -4732,12 +5055,16 @@ local ProtoRes = {
 			CombatStatistic = 4,
 			PWorldName = 5,
 			MapList = 6,
+			MaxPlayerNum = 7,
 		},
+	},
+	Messageboard = {
 	},
 	QUEST_TYPE = {
 		QUEST_TYPE_MAIN = 0, --主线
 		QUEST_TYPE_IMPORTANT = 1, --重要支线
 		QUEST_TYPE_BRANCH = 2, --支线
+		QUEST_TYPE_REPEAT = 3, --循环任务
 	},
 	QUEST_ACCEPT_TYPE = {
 		QUEST_ACCEPT_TYPE_CONDITION = 0, --达到条件接取
@@ -4776,6 +5103,7 @@ local ProtoRes = {
 		QUEST_TARGET_TYPE_CUTOUT = 44, --剪影拼装
 		QUEST_TARGET_TYPE_CHOCOBO_QTE = 45, --陆行鸟喂食QTE
 		QUEST_TARGET_TYPE_FINISH_FATE = 46, --完成FATE
+		QUEST_TARGET_TYPE_CLIENT_FINISH_GAME = 47, --完成玩法
 	},
 	QUEST_LOGIC_TYPE = {
 		QUEST_LOGIC_TYPE_INVALID = 0,
@@ -4855,6 +5183,14 @@ local ProtoRes = {
 		FISH_LOCATION_TYPE_MAGIC_FOUNTAIN = 7, --魔泉
 		FISH_LOCATION_TYPE_SALT_LAKE = 8, --盐湖
 		FISH_LOCATION_TYPE_UNIVERSE = 9, --宇宙
+	},
+	FISH_SIZE_LIMIT_TYPE = {
+		FISH_SIZE_LIMIT_TYPE_NONE = 0,
+		FISH_SIZE_LIMIT_TYPE_TEN_THOUSAND = 1, --一万
+		FISH_SIZE_LIMIT_TYPE_ONE_HUNDRED_THOUSAND = 2, --十万
+		FISH_SIZE_LIMIT_TYPE_MILLION = 3, --百万
+		FISH_SIZE_LIMIT_TYPE_TEN_MILLION = 4, --千万
+		FISH_SIZE_LIMIT_TYPE_ONE_HUNDRED_MILLION = 5, --一亿
 	},
 	FISH_LIFT_TYPE = {
 		FISH_LIFT_TYPE_NONE = 0,
@@ -5092,6 +5428,8 @@ local ProtoRes = {
 	BonusStateGlobalCfgID = {
 		BonusStateGlobalCfgIDInvalid = 0,
 		BonusStateGlobalCfgIDArmouryStateID = 1, --兵装转换经验状态ID
+		BonusStateGlobalCfgIDWeChatStates = 2, --微信登录状态ID
+		BonusStateGlobalCfgIDQQStates = 3, --QQ登录状态ID
 	},
 	GrandCompanyGlobalParamType = {
 		GrandCompanyGlobalParamNone = 0,
@@ -5219,6 +5557,12 @@ local ProtoRes = {
 		ConditionStatGetGatherGuide = 12, --成为采集指导者
 		ConditionStatPlayTimeLess = 13, --累计游戏时间未满
 		ConditionStatNotFinishMainQuests = 14, --未完成主线任务
+		ConditionStatStatisticsValueReach = 15, --统计值达到
+		ConditionStatCounterValueReach = 16, --计数器值达到
+		ConditionStatCounterValueLess = 17, --计数器值小于
+		ConditionStatJobFinishTask = 18, --完成职能任务
+		ConditionStatJobLevelReach = 19, --职业达到等级
+		ConditionStatAccumulativeFinish = 20, --累计完成条件
 	},
 	STAT_CONDITION_MULTIPLE_OPT = {
 		CONDITION_MULTIPLE_OPT_NONE = 0,
@@ -5260,6 +5604,8 @@ local ProtoRes = {
 		GuideRedFlowerGuideIdentifyNoticeMailID = 31, --内测指导者邮件通知ID
 		GuideGameAllTimeCounterID = 32, --玩家游戏总时长计数器ID
 		GuideInvitationRetainTime = 33, --单次邀请进入新人频道保留时长
+		GuideGoldSauserNoticeMailID = 34, --金碟指导者满足条件通知邮件ID
+		GuideGoldSauserAttestationTimeAfterResign = 35, --金碟指导者辞职后认证间隔时间
 	},
 	BattlePassGlobalParamType = {
 		BattlePassGlobalParamTypeNone = 0,
@@ -5290,6 +5636,7 @@ local ProtoRes = {
 		ClosetRefreshRandomPatternID = 4, --衣橱刷新随机图案计数器ID
 		ClosetDynamicsObjectID = 5, --衣橱动态物件ID
 		ClosetUnlockLimit = 6, --衣橱批量解锁数量限制
+		ClosetRegionNameLengthLimit = 7, --衣橱区域名称上限
 	},
 	NotPassedType = {
 		NotPassedTypeDefault = 0,
@@ -5354,6 +5701,7 @@ local ProtoRes = {
 		BuddyGlobalCfgIDVegetable = 2, --野菜ID
 		BuddyGlobalCfgIDBreakThrough = 3, --突破果ID
 		BuddyGlobalCfgIDOutTimeLimit = 4, --召出时间上限
+		BuddyGlobalCfgResetColorFruit = 5, --重置染色果ID
 	},
 	StatisticsSubType = {
 		STATISTICS_INVALID = 0,
@@ -5505,7 +5853,20 @@ local ProtoRes = {
 		STATISTICS_PROF_TOTAL_LEVEL = 398, --职业等级总和
 		STATISTICS_GATHER_COLLECT = 399, --采集收藏品次数
 		STATISTICS_FOOT_MARK_REGION_ACHIEVED = 400, --足迹区域点亮
+		STATISTICS_MOUNT_TAKE_PHOTO = 401, --骑乘坐骑拍照
+		STATISTICS_MYSTERY_MERCHABT_INVEST = 402, --神秘商人投资
+		STATISTICS_JOIN_GAME_BLESS = 403, --小游戏赐福模式参与次数
+		STATISTICS_MEET_TRADE = 404, --面对面交易
+		STATISTICS_MYSTERY_MERCHABT_INVEST_COIN = 405, --神秘商人投资获得金币数量
+		STATISTICS_MYSTERY_MERCHABT_INVEST_MUTIPLE = 406, --神秘商人投资获得金币倍数
+		STATISTICS_ACTIVATE_CLOSET_STAIN = 407, --染剂激活
+		STATISTICS_PVP_KILL = 408, --PVP击败敌人
+		STATISTICS_PVP_LIKE = 409, --PVP点赞
+		STATISTICS_PVP_SEASON_RANK_ID = 410, --PVP赛季结算段位
+		STATISTICS_PVP_SEASON_RANKING = 411, --PVP赛季结算排名
+		STATISTICS_PVP_STAR_LEVEL = 412, --PVP星里路标等级
 		STATISTICS_SCENE_COMPELETED_FIX = 413, --副本完成修复
+		STATISTICS_SMALL_GAME_AWARD_COIN_BLESS = 414, --小游戏赐福模式获得金碟币
 	},
 	DevicePlatform = {
 		DEVICE_PLATFORM_NULL = 0,
@@ -5529,6 +5890,25 @@ local ProtoRes = {
 		ProcessTypeSuit = 1, --套装
 		ProcessTypePart = 2, --部件
 	},
+	ChocoboGlobalCfgID = {
+		ChocoboGlobalCfgIDInvalid = 0,
+		ChocoboGlobalCfgIDRentLimit = 1, --陆行鸟租借数量上限
+		ChocoboGlobalCfgIDMatingLevel = 2, --陆行鸟配种等级
+		ChocoboGlobalCfgIDMatingTime = 3, --陆行鸟配种时间
+		ChocoboGlobalCfgIDMaxLevel = 4, --陆行鸟最高等级
+		ChocoboGlobalCfgIDPerGenLimit = 5, --陆行鸟每代数量上限
+		ChocoboGlobalCfgIDInitAttr = 6, --陆行鸟初始属性随机上下限
+		ChocoboGlobalCfgIDNewbieQuest = 7, --陆行鸟新人任务ID
+		ChocoboGlobalCfgIDInitialSkill = 8, --陆行鸟初始技能
+		ChocoboGlobalCfgIDActiveSkillLimit = 9, --陆行鸟主动技能携带最大数
+		ChocoboGlobalCfgIDPassiveSkillLimit = 10, --陆行鸟被动技能携带最大数
+		ChocoboGlobalCfgIDGeneStarMax = 11, --陆行鸟基因最大星星数
+		ChocoboGlobalCfgIDSuitModuleOpenID = 12, --陆行鸟甲图鉴系统解锁ID
+		ChocoboGlobalCfgIDAdoptCost = 13, --陆行鸟领养金碟币消耗
+		ChocoboGlobalCfgIDRenameCost = 14, --陆行鸟改名金碟币消耗
+		ChocoboGlobalCfgIDMatingCount = 15, --陆行鸟可配种次数
+		ChocoboGlobalCfgIDRentMatingCount = 16, --租借陆行鸟可配种次数
+	},
 	FootMarkType = {
 		FootMarkType_Invalide = 0,
 		FootMarkType_Normal = 1, --通用
@@ -5543,6 +5923,8 @@ local ProtoRes = {
 		PortraitUnlockTypeTask = 2, --任务解锁
 		PortraitUnlockTypeItem = 3, --道具解锁
 		PortraitUnlockTypeBattlePass = 4, --至臻战令解锁
+		PortraitUnlockTypeCrystalConflict = 5, --水晶冲突段位解锁
+		PortraitUnlockTypeSeasonRank = 6, --赛季排名解锁
 	},
 	MonthCardGlobalParamType = {
 		MonthCardGlobalNull = 0,
@@ -5659,6 +6041,19 @@ local ProtoRes = {
 		MODULE_COMPANION_PREVIEW = 22, --宠物图鉴
 		MODULE_MOUNT_PREVIEW = 23, --坐骑图鉴
 	},
+	ToyType = {
+		ToyTypeNone = 0,
+		ToyTypeCosplay = 1, --变身怪物
+		ToyTypeCosObj = 2, --变身物品
+		ToyTypeRandTrans = 3, --随机传送
+		ToyTypeGroupTrans = 4, --部队传送
+		ToyTypeGoldTrans = 5, --金碟传送
+		ToyTypeSceneObj = 6, --场景物体
+		ToyTypeSwinging = 7, --摇摇马
+		ToyTypeStage = 8, --舞台
+		ToyTypeMonsterEye = 9, --怪物眼镜
+		ToyTypePetZoomIn = 10, --宠物放大镜
+	},
 	start_end_init_type = {
 		SCHEDULE_START_END_NONE = 0,
 		SCHEDULE_START_END_ABSOLUTE = 1, --绝对值
@@ -5767,9 +6162,15 @@ local ProtoRes = {
 		UnlockTitle = 56, --使用道具获得称号
 		RecycleInteractObj = 57, --回收交互物
 		WindPulseMapActive = 58, --风脉泉地图激活
-		UseAdventureRocord = 59, --使用冒险录
+		UseAdventureRecord = 59, --使用冒险录
 		UnlockModule = 62, --使用道具解锁系统
+		AwardItem = 63, --领取道具
 		BattlePassGradeImprove = 64, --战令阶段进阶
+		UnlockToy = 65, --玩具解锁
+	},
+	AwardItemType = {
+		AwardItemTypeNone = 0,
+		AwardItemTypeMountSpeed = 1,
 	},
 	CondFuncRelate = {
 		OR = 0, --或
@@ -5833,6 +6234,11 @@ local ProtoRes = {
 		GuessCardPlayerLimit = 50, --强欲陷阱玩家限制
 		TreasureHuntPWorldGateLimit = 51, --寻宝副本大门限制
 		PointlessTeleportationLimit = 52, --原地传送限制
+		TreasureHuntBoxPlayerLimit = 53, --寻宝宝箱玩家限制
+		OwnPersonalHouse = 54, --拥有个人房屋
+		OwnGroupHouse = 55, --拥有部队房屋
+		ActivityStageLimit = 56, --活动阶段限制
+		SelfHaveRoomInVisitGroup = 57, --在访问的部队中拥有个人房间
 	},
 	LIFESKILL_BUFF_COST_RULE = {
 		COST_RULE_NONE = 0,
@@ -5841,6 +6247,7 @@ local ProtoRes = {
 		COST_RULE_COLLECTION = 3, --收藏品
 		COST_RULE_NO_COLLECTION = 4, --非收藏品
 		COST_RULE_MAKE_STEP = 5, --工次
+		COST_RULE_FISH_DROP_SUCCESS = 6, --抛竿成功
 	},
 	LIFESKILL_EFFECT_TYPE = {
 		LIFESKILL_EFFECT_TYPE_NONE = 0,
@@ -6166,7 +6573,8 @@ local ProtoRes = {
 		OnlineStatusBandListen = 32, --乐团聆听
 		OnlineStatusRecollect = 33, --回想
 		OnlineStatusBandListenFans = 34, --粉丝乐团聆听
-		OnlineStatusMax = 35,
+		OnlineStatusGoldSauserMentor = 35, --金碟指导者
+		OnlineStatusMax = 36,
 	},
 	OnlineStatusIdentify = {
 		OnlineStatusIdentifyNormal = 0, --玩家
@@ -6180,6 +6588,7 @@ local ProtoRes = {
 		OnlineStatusIdentifyUnverifiedMakeMentor = 8, --未认证的制作采集指导者
 		OnlineStatusIdentifyReturner = 9, --回归者
 		OnlineStatusIdentifyRedFlowerMentor = 10, --小红花指导者
+		OnlineStatusIdentifyGoldSauserMentor = 11, --金碟指导者
 	},
 	RoleAttachmentType = {
 		RoleAttachmentTypeUnknownType = 0,
@@ -6218,6 +6627,11 @@ local ProtoRes = {
 		STORE_TYPE_NONE_SLIVERCODE = 2, --非银币商店
 		STORE_TYPE_GOLDCODE = 3, --金币商店
 		STORE_TYPE_NONE_GOLDCODE = 4, --非金币商店
+	},
+	StoreRandType = {
+		StoreRandType_Invalid = 0,
+		StoreRandType_Absolute = 1, --绝对概率
+		StoreRandType_Relative = 2, --相对概率
 	},
 	Module_Type = {
 		Module_Invalid = 0,
@@ -6311,6 +6725,11 @@ local ProtoRes = {
 		NoteProductionHistoryPageMaxNum = 4, --制作笔记历史页签最大数量
 		NoteFishClockMaxNum = 5, --钓鱼闹钟最大数量
 	},
+	PhotoGlobalCfgID = {
+		PhotoNone = 0,
+		PhotoTemplateLimit = 1, --拍照保存模板数量上限
+		PhotoDefaultLensRange = 2, --拍照默认镜头距离
+	},
 	SceneGlobalCfgID = {
 		SceneGlobalIDCfgUnknown = 0,
 		SceneGlobalIDCfgFirstPassEquipMailID = 1, --副本初见玩家装备奖励邮件ID
@@ -6333,6 +6752,10 @@ local ProtoRes = {
 		InteractionParamCfgIDUnknown = 0,
 		InteractionParamCfgIDInteractionEndEarly = 1, --可提前结束交互时长
 		InteractionParamCfgIDInteractionDistance = 2, --可交互距离
+	},
+	FashionDecorateCfgID = {
+		FashionDecorateNone = 0,
+		FashionDecorateImproveAchieveID = 1, --配饰改良解锁时尚达人成就ID
 	},
 	TribeID = {
 		TribeIDNone = 0,
@@ -6366,6 +6789,7 @@ local ProtoRes = {
 		AdventureRecordTypeMail = 4, --收到一封邮件
 		AdventureRecordTypeFinishMainQuestNoReward = 5, --完成到任务A为止的主线任务不发奖励
 		AdventureRecordTypeFinishProfQuestNoReward = 6, --完成到任务A为止的特职任务不发奖励
+		AdventureRecordTypeActiveCrystalBefVersion = 7, --激活版本ID之前的传送水晶
 	},
 	LightJourneyGameID = {
 		LightJourneyGameIDNone = 0,
@@ -6385,6 +6809,7 @@ local ProtoRes = {
 			SceneTypeDungeon = 12, --副本
 			SceneTypePrivate = 14, --私人
 			SceneTypeDemo = 17, --演示
+			SceneTypeHouse = 18, --房屋
 		},
 		SceneSubType = {
 			SceneSubTypeNone = 0,
@@ -6400,6 +6825,8 @@ local ProtoRes = {
 			SceneSubColosseum = 10, --水晶冲突
 			SceneSubActivity = 11, --活动副本
 			SceneSubMerchant = 12, --冒险游商团
+			SceneTypeHousePublic = 13, --房屋公共区域
+			SceneTypeHouseRoom = 14, --房屋室内
 		},
 		SceneVoteType = {
 			SceneVoteNil = 0,
@@ -6457,6 +6884,7 @@ local ProtoRes = {
 			MinJumpPressDuration = 12, --最小跳跃按压时长
 			MaxJumpPressDuration = 13, --最大跳跃按压时长
 			ReadyToJumpAnimDuration = 14, --原地前跳蓄力时长
+			SpecialJumpMaxSpeed = 15, --辅助跳跃最大水平速度
 		},
 		MoveCfgKey = {
 			MoveCfgNone = 0,
@@ -6623,6 +7051,7 @@ local ProtoRes = {
 			BUFF_STORAGE_NULL = 0,
 			BUFF_STORAGE_HURT = 1, --伤害
 			BUFF_STORAGE_HEAL = 2, --治疗
+			BUFF_STORAGE_CASTER_HURT = 3, --Buff添加人伤害
 		},
 		buff_combin_type = {
 			BUFF_COMBIN_TYPE_NULL = 0,
@@ -6805,6 +7234,7 @@ local ProtoRes = {
 			ParameterIDElectrocardiogramTime = 7, --心电图状态间隔
 			ParameterIDElectrocardiogramTimeInPublic = 8, --心电图状态间隔-公共副本
 			ParameterIDRoleKickVoteCD = 14, --玩家副本内踢人投票冷却时间
+			ParameterIDTeamReadyTimeout = 15, --副本小队准备超时时间
 		},
 		TrackingType = {
 			TrackingTypeInvalid = 0,
@@ -6833,6 +7263,7 @@ local ProtoRes = {
 			SceneTypeDungeon = 12, --副本
 			SceneTypePrivate = 14, --私人
 			SceneTypeDemo = 17, --演示
+			SceneTypeHouse = 18, --房屋
 		},
 		AffinityTag = {
 			AffinityTagNone = 0,
@@ -6854,6 +7285,8 @@ local ProtoRes = {
 		TEAM_CFG_RECRUIT_MSG_MAX = 10, --招募宣言最大值
 		TEAM_CFG_RECRUIT_REFRESH_RATE = 11, --招募列表刷新频率
 		TEAM_CFG_RECRUIT_EDIT_EQUIP_MAX_LEVEL = 12, --招募要求装备等级最大值
+		TEAM_CFG_RECRUIT_QUERY_CACHE_TIMEOUT = 13, --招募缓存时长
+		TEAM_CFG_READY_TIMEOUT = 14, --队伍准备超时时长
 	},
 	trade_market_param_cfg_id = {
 		TRADE_MAERKET_PARAM_NONE = 0,
@@ -6884,6 +7317,9 @@ local ProtoRes = {
 		MeetTradeParamsID_ProduceMailID = 8, --交易成功背包满返回邮件id
 		MeetTradeParamsID_RollbackMailID = 9, --交易失败背包满返回邮件id
 		MeetTradeParamsID_EnableSceneIDs = 10, --可交易场景ID
+		MeetTradeParamsID_LockDelayTime = 11, --双方提出条件后停留时间
+		MeetTradeParamsID_FinalDelayTime = 12, --双方最终确认后停留时间
+		MeetTradeParamsID_TradeLastTime = 13, --交易持续时长
 	},
 	WORLD_COUNTER_TYPE = {
 		WORLD_COUNTER_TYPE_NONE = 0,

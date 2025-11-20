@@ -6,6 +6,7 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
+local ScoreMgr = require("Game/Score/ScoreMgr")
 local MerchantTaskInfoVM = require("Game/MysterMerchant/VM/MerchantTaskInfoVM")
 local GoodsItemVM = require("Game/MysterMerchant/VM/Item/MerchantGoodsListItemVM")
 local MerchantDefine = require("Game/MysterMerchant/MysterMerchantDefine")
@@ -56,6 +57,12 @@ function MysterMerchantVM:OnInit()
     self.MapResID = 0 --地图ID
     self.TaskID = 0 --任务ID
     self.ExpireTime = 0 --商人回收时间|0=不回收
+
+    self.SpentCoinText = 0 -- 当前商人投资金额
+    self.RewardCoinText = 0 -- 当前商人投资回报金额
+    self.RewardMultipleText = "" -- 回报倍数
+    self.InvestResult = MerchantDefine.EnumInvestResult.Failed -- 投资结果
+    self.InvestResultText = "" -- 投资结果文本
 end
 
 function MysterMerchantVM:OnBegin()
@@ -114,6 +121,37 @@ function MysterMerchantVM:UpdateMerchantInfo(LevelExp)
     end
 end
 
+function MysterMerchantVM:UpdateInvestInfo(InvestInfo)
+    if InvestInfo == nil then
+        return
+    end
+    local SpentCoin = InvestInfo.SpentCoin or 0
+    local RewardCoin = InvestInfo.RewardCoin or 0
+    local IsSpecialReward = InvestInfo.IsSpecialReward
+    self.SpentCoinText = ScoreMgr.FormatScore(SpentCoin)
+    self.RewardCoinText = ScoreMgr.FormatScore(RewardCoin)
+    if SpentCoin > 0 and RewardCoin > 0 then
+        local RewardMultiple = tonumber(RewardCoin / SpentCoin)
+        if RewardMultiple > 1 then
+            self.RewardMultipleText = string.format(MerchantDefine.InvestRewardMultipleText, RewardMultiple)
+            if IsSpecialReward then
+                self.InvestResult = MerchantDefine.EnumInvestResult.SpecialSuccess
+                self.InvestResultText = MerchantDefine.InvestSuccessSpecialText
+            else
+                self.InvestResult = MerchantDefine.EnumInvestResult.Success
+                self.InvestResultText = MerchantDefine.InvestSuccessText
+            end
+        else
+            self.InvestResult = MerchantDefine.EnumInvestResult.Failed
+            self.InvestResultText = MerchantDefine.InvestFailedText
+            self.RewardMultipleText = ""
+        end
+    else
+        self.InvestResultText = ""
+        self.RewardMultiple = 0
+    end
+end
+
 ---@type 获取友好度经验
 function MysterMerchantVM:GetFriendlinessEXPTotal()
     return self.FriendlinessEXPTotal
@@ -127,6 +165,15 @@ function MysterMerchantVM:ResetPerformExpInfo()
     self.PreFriendlinessEXPTotal = self.FriendlinessEXPTotal
 end
 
+local function GoodsSort(GoodsA, GoodsB)
+    if GoodsA.IsSoldOut ~= GoodsB.IsSoldOut then
+        return GoodsB.IsSoldOut
+    elseif GoodsA.Slot ~= GoodsB.Slot then
+        return GoodsA.Slot < GoodsB.Slot
+    end
+    return false
+end
+
 ---@type 更新商品列表
 function MysterMerchantVM:UpdateGoodsInfo(NewGoodsList)
     if NewGoodsList == nil or next(NewGoodsList) == nil then
@@ -137,9 +184,11 @@ function MysterMerchantVM:UpdateGoodsInfo(NewGoodsList)
     for _, Data in ipairs(NewGoodsList) do
         local GoodsID = Data.GoodsID
         local BuyCount = Data.BuyNum
+        local Slot = Data.Slot or 0
         local GoodsInfo = MysterMerchantUtils.GetGoodsInfo(GoodsID)
         if GoodsInfo then
             local NewGoodsInfo = {
+                Slot = Slot, --槽位，用于排序
                 GoodsId = GoodsID, --商品ID
                 BoughtCount = BuyCount, --已购数量
                 ItemID = GoodsInfo.ItemID, -- 物品ID
@@ -164,14 +213,11 @@ function MysterMerchantVM:UpdateGoodsInfo(NewGoodsList)
         end
     end
     
-    table.sort(self.GoodsList, function(a, b) 
-        if a.IsSoldOut ~= b.IsSoldOut then
-            return b.IsSoldOut
-        end
-        return false
-    end)
+    table.sort(self.GoodsList, GoodsSort)
     self.GoodsVMList:UpdateByValues(self.GoodsList, nil, true)
 end
+
+
 
 --- 根据返回消息更新购买后前台商店信息
 ---@param MsgBody table @消息体
@@ -195,6 +241,11 @@ function MysterMerchantVM:UpdateGoodsInfoAfterBuy(GoodInfo)
             local UpdateGoodsVM = self.GoodsVMList and self.GoodsVMList:Get(i)
             if UpdateGoodsVM then
                 UpdateGoodsVM:UpdateByValue(GoodsItemData, nil, false)
+            end
+
+            if GoodsItemData.IsSoldOut then
+                table.sort(self.GoodsList, GoodsSort)
+                self.GoodsVMList:UpdateByValues(self.GoodsList, nil, true)
             end
         end
     end
@@ -247,6 +298,12 @@ function MysterMerchantVM:OnEnterTaskRange(MerchantInfo)
         return
     end
     self.MerchantID = MerchantInfo.MerchantID
+    local InvestInfo = {
+        SpentCoin = MerchantInfo.SpentCoin,
+        RewardCoin = MerchantInfo.RewardCoin,
+        IsSpecialReward = MerchantInfo.IsSpecialReward,
+    }
+    self:UpdateInvestInfo(InvestInfo)
 end
 
 function MysterMerchantVM:OnLeaveTaskRange(MerchantInfo)

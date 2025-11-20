@@ -107,7 +107,7 @@ function WardrobePresetsPanelView:OnInit()
 		{ "EquipmentList",  UIBinderUpdateBindableList.New(self, self.EquipmentListAdapter)},
 		{ "SaveBtnVisible", UIBinderSetIsVisible.New(self, self.BtnSave)}, -- 保存按钮显隐
 		{ "UseBtnVisible", UIBinderSetIsVisible.New(self, self.BtnUse, false, true)}, --使用按钮显隐
-		-- { "BtnUseText", UIBinderSetText.New(self, self.BtnUse)},
+		{ "SaveText", UIBinderSetText.New(self, self.BtnSave)},
 		{ "UsingBtnVisible", UIBinderSetIsVisible.New(self, self.BtnUsed, false, true)}, --使用中按钮显隐
 		{ "UsingBtnStatus", UIBinderSetIsEnabled.New(self, self.BtnUsed)},
 		{ "RenameVisible", UIBinderSetIsVisible.New(self, self.PanelEdit)},
@@ -144,7 +144,7 @@ function WardrobePresetsPanelView:OnShow()
 	self.VM:InitPresetList()
 	self.PresetsListAdapter:SetSelectedIndex(1)
 	self.BtnBack:AddBackClick(self, function () 
-		-- self.SuperView.PresetsPanelToMainPanel(self.SuperView)
+		self.SuperView.PresetsPanelToMainPanel(self.SuperView)
 		self.SuperView.ResetSelected(self.SuperView)
 		self.SuperView.ShowMainPanel(self.SuperView,true)  self:Hide() end)
 
@@ -180,14 +180,16 @@ end
 
 
 function WardrobePresetsPanelView:OnWardrobePresetSuitUpdate(Params)
-	local SuitID = Params.SuitID
-
+	local SuitID = self.CurrentPresetID
+	if SuitID == nil then
+		return
+	end
 	--更新预设列表
 	self.VM:UpdatePresetListByID(SuitID)
 	--更新选中预设套装的装备
-	self.VM:UpdateEquipementSlotList(self.CurrentPresetID)
+	self.VM:UpdateEquipementSlotList(SuitID)
 	--更新选中预设套装的按钮状态
-	self.VM:UpdateBtnStatus(self.CurrentPresetID)
+	self.VM:UpdateBtnStatus(SuitID)
 	--更新预设模型
 	self:UpdateSuit(SuitID)
 end
@@ -316,7 +318,7 @@ function WardrobePresetsPanelView:OnClickedBtnAssociation(ToggleButton, State)
 			MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1080041), 
 											 string.format(LSTR(1080042), _G.EquipmentMgr:GetProfName(MajorProfID), CurLinkData.SuitName ),
 											 function ()
-											 	WardrobeMgr:SendClosetSuitLinkProfReq(PresetID, MajorProfID)
+												WardrobeMgr:SendClosetSuitLinkProfReq(PresetID, MajorProfID)
 											 end, 
 											 function ()
 												self.BtnAssociation:SetChecked(false, false)
@@ -344,10 +346,25 @@ function WardrobePresetsPanelView:OnClickedItemEnlargerBtn()
 		Title = LSTR(1080045), 
 		Message = LSTR(1080046),
 		LeftCB = function () _G.UIViewMgr:HideView(UIViewID.WardrobeTipsWin) end, 
-		RightCB = function () WardrobeMgr:SendClosetEnlargeSuitReq(CurID) end,
+		RightCB = function ()
+			local ScoreNum  = _G.ScoreMgr:GetScoreValueByID(Cfg.ScoreID)
+				if ScoreNum >= Cfg.ScoreNum then
+					_G.UIViewMgr:HideView(UIViewID.WardrobeTipsWin)
+					WardrobeMgr:SendClosetEnlargeSuitReq(CurID)
+					return
+				end
+				self:ShowLessMoneyTips()
+			end,
 		Params = { CostItemID = Cfg.ScoreID, CostNum = Cfg.ScoreNum}
 	})
 	
+end
+
+function WardrobePresetsPanelView:ShowLessMoneyTips()
+	local function GoRecharging()
+		_G.RechargingMgr:ShowMainPanel()
+	end
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1080163), LSTR(1080164), GoRecharging, nil, _G.LSTR(620011), _G.LSTR(620029))
 end
 
 -- 从主界面到预设界面，把当前的viewsuit 展示在预设界面。
@@ -380,11 +397,9 @@ function WardrobePresetsPanelView:UpdateSuit(PresetID)
 		if v.Avatar ~= 0 then
 			-- 这里还需要判断是否能穿戴
 			if WardrobeMgr:CanPreviewAppearance(v.Avatar) then
+				local AppID = v.Avatar
 				local EquipID = (IsCurrent and WardrobeMgr:IsRandomAppID(v.Avatar)) and WardrobeMgr:GetEquipIDByRandomApp(v.Avatar) or WardrobeUtil.GetEquipIDByAppearanceID(v.Avatar)
-				local TempStainAera = {}
-				if WardrobeUtil.GetRegionDye ~= nil then
-					TempStainAera = WardrobeUtil.GetRegionDye(v.Avatar, v.RegionDye or {})
-				end
+				local TempStainAera = WardrobeUtil.GetRegionDye(AppID, v.RegionDye or {})
 				ItemList[equip_part] = {AppID = v.Avatar ,EquipID = EquipID, PartID = equip_part, ColorID = v.Color, RegionDye = TempStainAera}
 			end
 		end
@@ -400,7 +415,8 @@ function WardrobePresetsPanelView:UpdateModel(EquipList)
 		-- 如果
 		if EquipList[partID] ~= nil then
 			local Equip = EquipList[partID]
-			self.Common_Render2D_UIBP:PreViewEquipment(Equip.EquipID, Equip.PartID, Equip.ColorID)
+			local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(EquipList[partID].AppID)
+			self.Common_Render2D_UIBP:PreViewEquipment(Equip.EquipID, Equip.PartID, IsAppRegionDye and 0 or Equip.ColorID)
 			if EquipList[partID].RegionDye and not table.is_nil_empty(EquipList[partID].RegionDye) then
 				self:StainPartForSection(EquipList[partID].AppID, partID, EquipList[partID].RegionDye )
 			end
@@ -416,12 +432,14 @@ function WardrobePresetsPanelView:UpdateModel(EquipList)
 					local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
 					local ColorID = 0
 					local RegionDyes = {}
+					local IsAppRegionDye = false
 					if CurrentAppID ~= 0 then
 						EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
 						ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
 						RegionDyes = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
+						IsAppRegionDye = WardrobeUtil.IsAppRegionDye(CurrentAppID)
 					end
-					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, partID, ColorID)
+					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, partID, IsAppRegionDye and 0 or ColorID)
 					if #RegionDyes > 0 then
 						self:StainPartForSection(CurrentAppID, partID, RegionDyes)
 					end

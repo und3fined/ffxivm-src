@@ -34,6 +34,7 @@ function EmoActVM:Reset()
 	self.CanUse = nil
 	self.IsBattleEmotion = false
 	self.HasAnimPath = false
+	self.bEnable = false
 end
 
 function EmoActVM:IsEqualVM(Value)

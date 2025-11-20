@@ -354,7 +354,7 @@ function LoginUIMgr:SwitchToNextPhase()
 			and self.CurLoginRolePhase == LoginRolePhase.Finishment then
 		local changed, reason = self:CheckFantasiaAvatarChanged()
 		if changed then
-			FLOG_INFO("Avatar was changed! Reason: {1}", reason)
+			FLOG_INFO("Avatar was changed! Reason: %s", reason)
 			UIViewMgr:ShowView(UIViewID.FantasiaFinishWin)
 		else
 			local TipContent = string.format(LSTR(980082))--当前未进行修改，确认要退出角色编辑吗？
@@ -940,8 +940,8 @@ function LoginUIMgr:OnGameEventLoginRes(Params)
 		-- 断线重连要返回上一界面，闪断重连保持在预览界面
 		self.IsShowPreviewPage = false
 		UIViewMgr:HideView(_G.LoginMapMgr:GetPreViewPageID())
-		self:ReturnCurPhaseView(true)
 		self:CreateRenderActor()
+		self:ReturnCurPhaseView(true)
 		self:ResetMorePageBtnState()
 		CommonUtil.HideJoyStick()
 	else
@@ -1278,6 +1278,7 @@ function LoginUIMgr:SetEquipByRoleSimple()
 			--[sammrli] 投影和染色
 			local EquipID = WardrobeUtil.GetEquipID(Equip.EquipID, Equip.ResID, Equip.RandomID)
 			UIComplexCharacter:HandleAvatarEquipNoLoad(EquipID, Equip.Part, Equip.ColorID)
+			ActorUtil.UpdateEquipRegionDyes(UIComplexCharacter, Equip.Part, EquipList)
 		end
 
 		UIComplexCharacter:StartLoadAvatar()
@@ -1404,6 +1405,7 @@ end
 function LoginUIMgr:ChangeRenderActor(RaceID, TribeID, Gender, bReadAvatarRecord)
 	LoginRoleRaceGenderVM:ChangeRenderActor(RaceID, TribeID, Gender, bReadAvatarRecord)
 	LoginRoleTribePageVM:ChangeRenderActor(RaceID, TribeID, Gender)
+	LoginRoleShowPageVM:OnShowTryOn()
 
 	self:CreateRenderActor(bReadAvatarRecord)
 	if LoginRoleProfVM.CurrentProf and self.CurLoginRolePhase == LoginRolePhase.Prof then
@@ -2097,6 +2099,7 @@ function LoginUIMgr:OnGameEventPWorldMapEnter(Params)
 		--从幻想药回来，需要先把主角显示出来
 		UActorManager:HideMajor(false)
 		local function SequenceCallBack()
+			_G.PersonPortraitHeadMgr:TryPopFantasyStat()
 			FLOG_INFO("Fantasia Play Sequence Wakeup End")
 		end
 		local PlaybackSettings = {
@@ -2132,12 +2135,12 @@ function LoginUIMgr:ReleaseCameraActor()
 		CameraMgr:ResumeCamera(0, true, self.CameraActor)
 	end
 
-	if nil ~= self.CameraActor then
+	if nil ~= self.CameraActor and CommonUtil.IsObjectValid(self.CameraActor) then
 		UnLua.Unref(self.CameraActor)
-		self.CameraActorRef = nil
 		CommonUtil.DestroyActor(self.CameraActor)
 	end
 
+	self.CameraActorRef = nil
 	self.IsAlreadySwitchCamera = false
 	self.CameraActor = nil
 end
@@ -2148,7 +2151,7 @@ end
 
 function LoginUIMgr:RotatorCameraActor(YawOffset)
 	local Ratation = _G.UE.FRotator(0, _G.LoginMapMgr:GetActorYawOffset(), 0)
-	if self.CameraActor then
+	if self.CameraActor and CommonUtil.IsObjectValid(self.CameraActor) then
 		self.CameraActor:K2_SetActorRotation(Ratation, false)
 	end
 end
@@ -2231,6 +2234,8 @@ function LoginUIMgr:BeginFantasia()
 	-- 设置外貌
 	_G.LoginAvatarMgr.LastRoleInform = {Tribe = TribeID, Gender = RoleSimple.Gender}
 	_G.LoginAvatarMgr:SetCurAvatarFace(RoleSimple.Avatar.Face)
+	-- 进入幻想药默认选中自定义
+	_G.LoginAvatarMgr:RefreshPlayerAvatarFace()
 	--初始化生日
 	LoginRoleBirthdayVM:InitCalendarList();
 	LoginRoleBirthdayVM.SelectMonthIndex = RoleSimple.CreateMoon
@@ -2326,10 +2331,15 @@ function LoginUIMgr:CheckFantasiaAvatarChanged()
 		return true, reason
 	end
 	reason = reason + 1
+	--21,22,23对应的是玩家设置，比如是否显示头部等，直接用RoleSimple里的数据，避免因为捏脸数据里没有这些设置而出错
+	--  AvatarEquipHeadShow = 21,  AvatarEquipHandShow = 22,  AvatarEquipSwitchShow = 23,
+	Profile.Avatar[21] = RoleSimple.Avatar.Face[21]
+	Profile.Avatar[22] = RoleSimple.Avatar.Face[22]
+	Profile.Avatar[23] = RoleSimple.Avatar.Face[23]
 	if not table.compare_table(RoleSimple.Avatar.Face, Profile.Avatar) then
 		local role = _G.TableToString(RoleSimple.Avatar.Face)
 		local profile = _G.TableToString(Profile.Avatar)
-		FLOG_INFO("Avatar was changed!\nRole: {1}\nProfile: {2}", role, profile)
+		FLOG_INFO("Avatar was changed!\nRole: %s\nProfile: %s", role, profile)
 		return true, reason
 	end
 	return false, reason

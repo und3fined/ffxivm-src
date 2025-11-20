@@ -1,3 +1,9 @@
+---
+--- Author: enqingchen
+--- DateTime: 2021-12-28
+--- Description:
+---
+
 local LuaClass = require("Core/LuaClass")
 local UIBinder = require("UI/UIBinder")
 local ProtoCommon = require("Protocol/ProtoCommon")

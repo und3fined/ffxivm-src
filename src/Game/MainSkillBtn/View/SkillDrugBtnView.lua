@@ -136,7 +136,14 @@ function SkillDrugBtnView:OnMainSkillButtonUp(IsSkillDrugBtn)
 	end
 	if IsSkillDrugBtn then
 		self:UseSkillDrug()
+	end
+end
 
+function SkillDrugBtnView:OnLongClickButtonUp()
+	if self.bMajor then
+		_G.UIViewMgr:ShowView(_G.UIViewID.BagDrugsSetPanel) 
+	else
+		MsgTipsUtil.ShowTipsByID(MsgTipsID.SkillSystemUseDrugProfUnlock)
 	end
 end
 
@@ -175,8 +182,9 @@ function SkillDrugBtnView:UseSkillDrug()
 	end
 	SkillDrugVM.Num = BagMgr:GetItemNum(SkillDrugVM.ResID)
 	if SkillDrugVM.Num <= 0 and bMajor then
-		MsgTipsUtil.ShowTips(LSTR(140065), nil)  -- 药品不足
-		return false
+		--MsgTipsUtil.ShowTips(LSTR(140065), nil)  -- 药品不足
+		_G.UIViewMgr:ShowView(_G.UIViewID.BagDrugsSetPanel)
+		return true
 	end
 
 	--debug用的tips不要忘记屏蔽
@@ -184,8 +192,8 @@ function SkillDrugBtnView:UseSkillDrug()
 
 	-- 技能系统仅弹提示, 主角才会走使用的逻辑
 	if bMajor then
-		SkillDrugVM.Num = SkillDrugVM.Num - 1
-		self.TextDrugNumber:SetText(tostring(SkillDrugVM.Num)) -- 药品数量
+		--SkillDrugVM.Num = SkillDrugVM.Num - 1
+		--self.TextDrugNumber:SetText(tostring(SkillDrugVM.Num)) -- 药品数量
 		BagMgr:UseItem(SkillDrugVM.DrugGID, nil)
 	else
 		MsgTipsUtil.ShowTipsByID(MsgTipsID.SkillSystemUseDrug)
@@ -196,6 +204,10 @@ end
 
 function SkillDrugBtnView:OnFreezeCD(GroupID, EndFreezeTime, FreezeCD)
 	if SkillDrugVM.DrugGID == nil or not self.bMajor then -- 未进行战斗药品设置
+		return
+	end
+
+	if FreezeCD == nil then
 		return
 	end
 
@@ -224,9 +236,10 @@ function SkillDrugBtnView:OnFreezeCD(GroupID, EndFreezeTime, FreezeCD)
 	end
 end
 
-function SkillDrugBtnView:OnMouseButtonDown()
+function SkillDrugBtnView:OnMouseButtonDown() 
 	self:SetRenderScale(OneVector2D * SkillCommonDefine.SkillBtnClickFeedback)
 	local Handled = WBL.Handled()
+	self.StartLongClickTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
 	return WBL.CaptureMouse(Handled, self)
 end
 
@@ -238,9 +251,15 @@ function SkillDrugBtnView:OnMouseButtonUp()
 	self:SetRenderScale(OneVector2D)
 	local bSuccess = false
 	if self.bEnablePress then
-		bSuccess = self:UseSkillDrug()
+		if self.StartLongClickTime > 0 and _G.UE.UTimerMgr:Get().GetLocalTimeMS() - self.StartLongClickTime > 1000 then
+			self:OnLongClickButtonUp()
+			bSuccess = true
+		else
+			bSuccess = self:UseSkillDrug()
+		end
 	end
 
+	self.StartLongClickTime = 0
 	if not bSuccess then
 		local Anim = self.AnimDisable
 		if Anim then

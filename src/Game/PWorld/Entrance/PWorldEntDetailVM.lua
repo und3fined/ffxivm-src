@@ -63,6 +63,7 @@ function PWorldEntDetailVM:Ctor()
     self.SubType = 1 -- 二级副本类型
     self.EntTyIcon = ""
     self.EntTyName = ""
+    self.TitleIconPath = ""
     self.TyData = nil
     self.TyVMs = {} -- UIBindableList.New()
     self.IsExpandAll = true
@@ -556,7 +557,8 @@ function PWorldEntDetailVM:UpdateRequireDesc()
         self.bPassTeamNum = RltInfo.IsPassMem
 
         local ReqLv = self.PWorldRequireLv
-        if self.TaskType == SceneMode.SceneModeUnlimited then
+        local TaskType <const> = self.TaskType
+        if TaskType == SceneMode.SceneModeUnlimited then
             self.LvReqDesc = string.sformat(LSTR(1320207), ReqLv)
         elseif self.EntTy == ProtoCommon.ScenePoolType.ScenePoolRandom then
             self.LvReqDesc = string.sformat(LSTR(1320078), ReqLv)
@@ -569,11 +571,18 @@ function PWorldEntDetailVM:UpdateRequireDesc()
         local SyncEquipLv = self.EquipLvSyncReq or 0
         local ReqEquipLv = self.PWorldRequireEquipLv
         self.bPassEquipLv = RltInfo.IsPassEquipLv
-        if SyncEquipLv > 0 then
-            self.EquipReqDesc = PWorldHelper.pformat("PWOLRD_EQUILP_LIMIT_FULL", ReqEquipLv, SyncEquipLv)
+        if TaskType == SceneMode.SceneModeChallenge then
+            self.EquipReqDesc = string.sformat(LSTR(1320253), SyncEquipLv)
+        elseif TaskType == SceneMode.SceneModeUnlimited then
+            self.EquipReqDesc= LSTR(1320254)
         else
-            self.EquipReqDesc = PWorldHelper.pformat("PWORLD_EQUIP_LIMIT", ReqEquipLv)
+            if SyncEquipLv > 0 then
+                self.EquipReqDesc = string.sformat(LSTR(1320048), ReqEquipLv, SyncEquipLv)
+            else
+                self.EquipReqDesc = string.sformat(LSTR(1320049), ReqEquipLv)
+            end
         end
+            
         self.EquipReqDesc = GetColorReqDesc(self.EquipReqDesc, self.bPassEquipLv)
     end
 end
@@ -599,10 +608,10 @@ function PWorldEntDetailVM:UpdateSettingModeEnable()
             return
         end
         local Cfg = self.EntCfg
-        self.EnableSettingModeNormal = Cfg.HasNormal > 0
-        self.EnableSettingModeChallenge = Cfg.HasChallenge > 0
-        self.EnableSettingModeUnlimited = Cfg.HasUnlimited > 0
-        self.EnableSettingModeExplore = Cfg.HasExplore > 0
+        self.EnableSettingModeNormal = tonumber(Cfg.HasNormal) == 1
+        self.EnableSettingModeChallenge = tonumber(Cfg.HasChallenge) == 1
+        self.EnableSettingModeUnlimited = tonumber(Cfg.HasUnlimited) == 1
+        self.EnableSettingModeExplore = tonumber(Cfg.HasExplore) == 1
         self.EnableSettingModeChocoboRank = false
         self.EnableSettingModeRoom = false
     end
@@ -825,6 +834,23 @@ end
 function PWorldEntDetailVM:SetEntTy(Type)
     self.EntTy = Type
     self:SetMuren(Type == ProtoCommon.ScenePoolType.ScenePoolMuRen)
+
+    local TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_GameMatching.UI_Icon_Title_GameMatching'"
+    if Type ==  ProtoCommon.ScenePoolType.ScenePoolChocobo then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_Chocobo.UI_Icon_Title_Chocobo'"
+    elseif Type == ProtoCommon.ScenePoolType.ScenePoolRandom then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_DailyRandom.UI_Icon_Title_DailyRandom'"
+    elseif Type == ProtoCommon.ScenePoolType.ScenePoolChallenge then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_MazeChallenge.UI_Icon_Title_MazeChallenge'"
+    elseif Type == ProtoCommon.ScenePoolType.ScenePoolAnnihilation then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_AnnihilationWar1.UI_Icon_Title_AnnihilationWar1'"
+    elseif Type == ProtoCommon.ScenePoolType.ScenePoolLargeTask then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_LargeTasks.UI_Icon_Title_LargeTasks'"
+    elseif Type == ProtoCommon.ScenePoolType.ScenePoolMuRen then
+        TypeIconPath = "Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_AnnihilationWar2.UI_Icon_Title_AnnihilationWar2'"
+    end
+
+    self.TitleIconPath = TypeIconPath
 end
 
 function PWorldEntDetailVM:SetMuren(Value)
@@ -1026,6 +1052,7 @@ end
 function PWorldEntDetailVM:CheckExtraDescription()
     local ExtraDescription = ""
     if PWorldEntUtil.IsCrystalline(self.SubType) then
+        if self.Policy.CheckIsInEventTime == nil then return end
         local IsInEventTime, EventTimeData, CurIntervalData, NextIntervalData = self.Policy:CheckIsInEventTime(self.CurEntID)
         local EventTimeString = self:GetCrystallineEventTimeInfo(EventTimeData)
 
@@ -1079,12 +1106,10 @@ function PWorldEntDetailVM:GetCrystallineEventTimeInfo(EventTimeData)
     local StartTimeMinute = EventTimeData.StartTime.min
     local EndTimeHour = EventTimeData.EndTime.hour
     local EndTimeMinute = EventTimeData.EndTime.min
-
     -- 00:00是新一天的第一秒，但是策划希望显示24:00，所以在展示上对数字做处理，接口里实际返回时间还是新一天的00:00，只对EndTime处理是因为开始时间不会是24:00，只有结束时间要这样显示
-    if EndTimeHour == 0 and EndTimeMinute == 0 and EventTimeData.EndTime.sec == 0 then
+    if EventTimeData.EndTime.hour == 0 and EventTimeData.EndTime.min == 0 and EventTimeData.EndTime.sec == 0 then
         EndTimeHour = 24
     end
-    
     local StartTimeString = string.format(LSTR(1320123), StartTimeHour, StartTimeMinute)
     local EndTimeString = string.format(LSTR(1320123), EndTimeHour, EndTimeMinute)
     if EventTimeData.IsCrossDay then

@@ -3,7 +3,8 @@
 -- Date:
 -- Description: 水晶冲突玩法数据定义
 --
-
+local ProtoRes = require("Protocol/ProtoRes")
+local ERankType = ProtoRes.Game.pvp_rank_type
 
 ---常量定义
 local ColosseumConstant =
@@ -25,6 +26,7 @@ local ColosseumConstant =
 	MaxMemberNum = 5, -- 水晶冲突队伍成员最大数量
 	CrystalCircleDistance = 5, -- 水晶圈内判断距离
 	OverTimeCountDown = 3, -- 加时赛劣势方出圈判输倒计时3秒
+	CommunicateCD = 5, -- 局内沟通CD
 }
 
 local AudioPath =
@@ -56,6 +58,17 @@ local PVPCOLOSSEUM_TEAM =
 
 	PVPCOLOSSEUM_MKS_TEAM1 = 1,
 	PVPCOLOSSEUM_MKS_TEAM2 = 2,
+}
+
+---段位图标
+local RankIconPath =
+{
+	[ERankType.RT_BRONZE] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_BronzeS.UI_PVP_Dan_Img_BronzeS'", --青铜
+	[ERankType.RT_SILVER] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_SilverS.UI_PVP_Dan_Img_SilverS'", --白银
+	[ERankType.RT_GOLD] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_GoldS.UI_PVP_Dan_Img_GoldS'", --黄金
+	[ERankType.RT_BIRKIN] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_PlatinumS.UI_PVP_Dan_Img_PlatinumS'", --铂金
+	[ERankType.RT_DIAMOND] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_DiamondS.UI_PVP_Dan_Img_DiamondS'", --钻石
+	[ERankType.RT_CRYSTALE] = "Texture2D'/Game/UI/Texture/PVP/UI_PVP_Dan_Img_CrystalS.UI_PVP_Dan_Img_CrystalS'", --水晶
 }
 
 
@@ -316,7 +329,8 @@ local ColosseumLogType =
 	MKS_LOG_TYPE_TORNADO_FINISH = 8,
 	MKS_LOG_TYPE_FESTIVAL_EXEC = 9,	-- 祭り
 	MKS_LOG_TYPE_FESTIVAL_FINISH = 10,
-	MKS_LOG_TYPE_MAX = 11,
+	MKS_LOG_TYPE_COMMUNICATE = 11, -- 局内沟通信息，手游新增
+	MKS_LOG_TYPE_MAX = 12,
 }
 
 ---战场日志图标配置
@@ -370,6 +384,9 @@ local PVPColosseumDefine =
 	ColosseumLogInfoID = ColosseumLogInfoID,
 	ColosseumLogType = ColosseumLogType,
 	ColosseumLogIcon = ColosseumLogIcon,
+	
+	RankIconPath = RankIconPath,
+	ERankType = ERankType,
 }
 
 return PVPColosseumDefine

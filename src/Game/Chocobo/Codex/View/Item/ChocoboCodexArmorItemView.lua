@@ -14,15 +14,14 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 --local UIBinderSetColorAndOpacity = require("Binder/UIBinderSetColorAndOpacity")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderIsLoopAnimPlay = require("Binder/UIBinderIsLoopAnimPlay")
+local UIUtil = require("Utils/UIUtil")
 
 ---@class ChocoboCodexArmorItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field Comm126Slot CommLight126SlotView
 ---@field ImgBg UFImage
----@field ImgMask UFImage
 ---@field ImgSelect UFImage
----@field ImgShow UFImage
 ---@field PanelShow UFCanvasPanel
----@field PanelShowSelect UFCanvasPanel
 ---@field TableViewPart UTableView
 ---@field TextArmorName URichTextBox
 ---@field TextOwnNum URichTextBox
@@ -32,12 +31,10 @@ local ChocoboCodexArmorItemView = LuaClass(UIView, true)
 
 function ChocoboCodexArmorItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.Comm126Slot = nil
 	--self.ImgBg = nil
-	--self.ImgMask = nil
 	--self.ImgSelect = nil
-	--self.ImgShow = nil
 	--self.PanelShow = nil
-	--self.PanelShowSelect = nil
 	--self.TableViewPart = nil
 	--self.TextArmorName = nil
 	--self.TextOwnNum = nil
@@ -47,6 +44,7 @@ end
 
 function ChocoboCodexArmorItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.Comm126Slot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -59,7 +57,6 @@ function ChocoboCodexArmorItemView:OnDestroy()
 end
 
 function ChocoboCodexArmorItemView:OnShow()
-
 end
 
 function ChocoboCodexArmorItemView:OnHide()
@@ -83,14 +80,11 @@ function ChocoboCodexArmorItemView:OnRegisterBinder()
 
 	self.Binders = {
 		{"ArmorName", UIBinderSetText.New(self, self.TextArmorName)}, 
-		{"TextOwnNum", UIBinderSetText.New(self, self.TextOwnNum)}, 
-		{"ImgShow", UIBinderSetImageBrush.New(self, self.ImgShow)},
-        {"IsMask", UIBinderSetIsVisible.New(self, self.ImgMask)},
+		{"TextOwnNum", UIBinderSetText.New(self, self.TextOwnNum)},
 		--{"ItemColorAndOpacity",UIBinderSetColorAndOpacity.New(self, self.ImgShow)},
 		{"ImgShowVisible", UIBinderSetIsVisible.New(self, self.PanelShow)},
 		{"ImgSelectVisible", UIBinderSetIsVisible.New(self, self.ImgSelect) },
 		{"ArmorPartList", UIBinderUpdateBindableList.New(self, self.ArmorPartTableView)},
-        {"PanelShowSelectVisible", UIBinderSetIsVisible.New(self, self.PanelShowSelect)},
 	}
 
 	self:RegisterBinders(ViewModel, self.Binders)
@@ -108,7 +102,8 @@ function ChocoboCodexArmorItemView:OnSelectChanged(Value)
 	 end 
 
 	ViewModel.ImgSelectVisible = Value
-    ViewModel.PanelShowSelectVisible = Value
+	self.Comm126Slot:OnItemSelectChanged(Value)
+	
 	if Value then 
 		self:PlayAnimation(self.AnimSelect)
 	end

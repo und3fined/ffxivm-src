@@ -34,17 +34,21 @@ local RedDotIDList = {
 ---@field BtnClose CommonCloseBtnView
 ---@field CommMenu_UIBP CommMenuView
 ---@field CommonBkg01 CommonBkg01View
+---@field CommonTitle CommonTitleView
 ---@field FTreeViewCurrency UFTreeView
 ---@field HelpBtn CommHelpBtnView
 ---@field HorizontalConvertTips UFHorizontalBox
+---@field IconTitle UFImage
 ---@field PanelTips UFCanvasPanel
 ---@field PanelTipsBgBtn UFButton
+---@field PanelTitleIcon UFCanvasPanel
 ---@field TableViewCurrency UTableView
 ---@field TextConvert UFTextBlock
 ---@field TextTipsDescription UFTextBlock
 ---@field TextTipsTitle UFTextBlock
 ---@field TextTitle UFTextBlock
 ---@field AnimChangeTab UWidgetAnimation
+---@field AnimConvertTipsNotice UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimPanelTipsIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -55,17 +59,21 @@ function EquipmentCurrencyPanelView:Ctor()
 	--self.BtnClose = nil
 	--self.CommMenu_UIBP = nil
 	--self.CommonBkg01 = nil
+	--self.CommonTitle = nil
 	--self.FTreeViewCurrency = nil
 	--self.HelpBtn = nil
 	--self.HorizontalConvertTips = nil
+	--self.IconTitle = nil
 	--self.PanelTips = nil
 	--self.PanelTipsBgBtn = nil
+	--self.PanelTitleIcon = nil
 	--self.TableViewCurrency = nil
 	--self.TextConvert = nil
 	--self.TextTipsDescription = nil
 	--self.TextTipsTitle = nil
 	--self.TextTitle = nil
 	--self.AnimChangeTab = nil
+	--self.AnimConvertTipsNotice = nil
 	--self.AnimIn = nil
 	--self.AnimPanelTipsIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -76,6 +84,7 @@ function EquipmentCurrencyPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommMenu_UIBP)
 	self:AddSubView(self.CommonBkg01)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.HelpBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -113,7 +122,8 @@ function EquipmentCurrencyPanelView:OnDestroy()
 end
 
 function EquipmentCurrencyPanelView:OnShow()
-	self.TextTitle:SetText(LSTR(490001))	--- 货币总览
+
+	self.CommonTitle:SetTextTitleName(LSTR(490001))	--- 货币总览
 	self.TextConvert:SetText(LSTR(490006))	--- 货币已发生转化
 	
 	UIUtil.SetIsVisible(self.HorizontalConvertTips, #ScoreMgr.IterationConvertInfos ~= 0)
@@ -122,8 +132,6 @@ function EquipmentCurrencyPanelView:OnShow()
 	self.OpenListData = self:CheckListDataItemIsExist()
 	self.CommMenu_UIBP:UpdateItems(self.OpenListData)
 	self:SelectCommMenuIndex(1)
-	---请求有周获取上限的积分周获取量
-	ScoreMgr:SendGetScoreLimitInfo()
 end
 
 function EquipmentCurrencyPanelView:OnHide()

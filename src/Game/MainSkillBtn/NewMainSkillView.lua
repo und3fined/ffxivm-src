@@ -16,6 +16,9 @@ local TimeUtil = require("Utils/TimeUtil")
 local MainPanelVM = require("Game/Main/MainPanelVM")
 local MainControlPanelVM = require("Game/Main/VM/MainControlPanelVM")
 local QteSkilldisplayCfg = require("TableCfg/QteSkilldisplayCfg")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
+
 
 local ESlateVisibility = _G.UE.ESlateVisibility
 local EMapType = SkillUtil.MapType
@@ -34,7 +37,9 @@ local EMapType = SkillUtil.MapType
 ---@field BackSkillGenAttackBtn SkillLimitBackGenAttackBtnView
 ---@field BtnEmpty1 UFButton
 ---@field BtnEmpty2 UFButton
+---@field BtnSwitch_1 UFButton
 ---@field Chant SkillChantView
+---@field ImgSwitch_1 UFImage
 ---@field LimitRoot UFCanvasPanel
 ---@field MultiChoiceDisplay SkillMultiChoiceDisplayView
 ---@field PanelAble UFCanvasPanel
@@ -68,7 +73,9 @@ function NewMainSkillView:Ctor()
 	--self.BackSkillGenAttackBtn = nil
 	--self.BtnEmpty1 = nil
 	--self.BtnEmpty2 = nil
+	--self.BtnSwitch_1 = nil
 	--self.Chant = nil
+	--self.ImgSwitch_1 = nil
 	--self.LimitRoot = nil
 	--self.MultiChoiceDisplay = nil
 	--self.PanelAble = nil
@@ -184,6 +191,8 @@ function NewMainSkillView:OnShow()
 		self:OnEventMajorProfSwitch()
 
 		self:OnSkillLimitDel()
+
+		self:InitSkillLimitVisible()
 		
 		--方便入口的回调
 		self.SkillLimitEntrance.IsEntrance = true
@@ -205,6 +214,7 @@ function NewMainSkillView:OnShow()
 				AbleView:SetVisibleEnum(ESlateVisibility.Visible)
 			end
 		end
+		self.BtnSwitch_1:SetIsDisabledState(true)
 	else
 		self:CheckSystemSkillBtnsVisible()
 	end
@@ -255,6 +265,8 @@ local function OnMouseButtonDown()
 end
 
 function NewMainSkillView:OnRegisterUIEvent()
+	UIUtil.AddOnClickedEvent(self, self.BtnSwitch_1, self.OnClickBtnSwitch)
+    SkillUtil.RegisterPressScaleEvent(self, self.BtnSwitch_1, SkillCommonDefine.SkillBtnClickFeedback)
 	for i = 1, AntiPenetratePanelNum do
 		local Widget = self["AntiPenetratePanel" .. tostring(i)]
 		if Widget then
@@ -268,8 +280,10 @@ function NewMainSkillView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.SkillLimitDel, self.OnSkillLimitDel)
 	self:RegisterGameEvent(EventID.SkillLimitOff, self.OnSkillLimitOff)
 	self:RegisterGameEvent(EventID.SkillLimitCancelBtnClick, self.OnSkillLimitCancelBtnClick)
+	self:RegisterGameEvent(EventID.GamePadAbleExtend, self.OnSimulatedSkillLimitClick)
 	self:RegisterGameEvent(EventID.DragSkillBegin, self.OnDragSkillBegin)
 	self:RegisterGameEvent(EventID.DragSkillEnd, self.OnDragSkillEnd)
+
 	-- self:RegisterGameEvent(EventID.ThirdPlayerSkillSingBreak, self.OnOtherSingBreak)
 	-- self:RegisterGameEvent(EventID.MajorBreakSing, self.OnMajorSingBreak)
     self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnEventMajorProfSwitch)
@@ -385,7 +399,7 @@ function NewMainSkillView:CheckSubTriggerView()
 end
 
 function NewMainSkillView:OnSkillCustomIndexReplace(CustomIndexMap)
-	if not CustomIndexMap then
+	if table.is_nil_empty(CustomIndexMap)  then
 		return
 	end
 
@@ -419,7 +433,6 @@ end
 function NewMainSkillView:OnEventMajorProfSwitch(Params)
 	local bProfLevelBase = MajorUtil.IsProfBase()--不确定和LimitMgr的Event哪个先响应。。。
 	local CanUseLimitSkill = _G.SkillLimitMgr.CanUseLimitSkill
-	
 	FLOG_INFO("SkillLimitMgr NewMainSkillView EventProfSwitch bBaseProf:%s CanUseLimitSkill:%s"
 		, tostring(bProfLevelBase), tostring(CanUseLimitSkill))
 	if bProfLevelBase or not CanUseLimitSkill or CanUseLimitSkill == 0 then
@@ -499,7 +512,30 @@ end
 -- 		self.SkillLimitEntrance:StopSingLoopAnim(true)
 -- 	end
 -- end
+function NewMainSkillView:OnSimulatedSkillLimitClick()
+	local Opacity = self.SkillLimitEntrance:GetRenderOpacity()
+		if Opacity > 0.1 and self.SkillLimitEntrance:IsVisible() then
+			local CircleWidgetRenderTransform = self.SkillLimitEntrance.RenderTransform
+			if CircleWidgetRenderTransform == nil then
+				return
+			end
 
+			local WidgetScale = CircleWidgetRenderTransform.Scale
+			if WidgetScale == nil then
+				return
+			end
+			local ScreenPosition = UIUtil.LocalToAbsolute(self.SkillLimitEntrance, _G.UE.FVector2D(0,0))
+			if ScreenPosition.X ~= 0 and ScreenPosition.Y ~= 0 then
+				local WidgetSize = UIUtil.GetWidgetSize(self.SkillLimitEntrance)
+				ScreenPosition.X = ScreenPosition.X+WidgetSize.X*WidgetScale.X/2
+				ScreenPosition.Y = ScreenPosition.Y+WidgetSize.Y*WidgetScale.Y/2
+				EventMgr:SendEvent(EventID.SimulatedTouchStartClickConfirm, ScreenPosition)
+				EventMgr:SendEvent(EventID.SimulatedTouchEndClickConfirm, ScreenPosition)
+		
+			end
+		end
+
+end
 --切换到右上角的极限技入口
 function NewMainSkillView:OnSkillLimitCancelBtnClick()
 	if self.SkillLimitState == 2 then
@@ -638,12 +674,20 @@ end
 
 function NewMainSkillView:ViewSwitchFight()
 	local AnimMap = self.MapTypeAnimMap[self.MapType or EMapType.PVE]
+	if not AnimMap then
+		FLOG_INFO("[NewMainSkillView] ViewSwitchFight-AnimMap is nil, MapType=%s", tostring(self.MapType))
+		return
+	end
 	self:StopAnimation(AnimMap.Out)
 	self:PlayAnimationToEndTime(AnimMap.In)
 end
 
 function NewMainSkillView:ViewSwitchPeace()
 	local AnimMap = self.MapTypeAnimMap[self.MapType or EMapType.PVE]
+	if not AnimMap then
+		FLOG_INFO("[NewMainSkillView] ViewSwitchFight-AnimMap is nil, MapType=%s", tostring(self.MapType))
+		return
+	end
 	self:StopAnimation(AnimMap.In)
 	self:PlayAnimationToEndTime(AnimMap.Out)
 end
@@ -719,6 +763,20 @@ function NewMainSkillView:DoCustomIndexReplace()
 	local CustomIndexMap = SkillCustomMgr:GetCustomIndexMap(self.bMajor)
 	if CustomIndexMap then
 		self:OnSkillCustomIndexReplace(CustomIndexMap)
+	end
+end
+
+function NewMainSkillView:OnClickBtnSwitch()
+	if self.ParentView then
+    	self.ParentView:ExecuteClickBtnSwitch_1()
+	end
+end
+
+function NewMainSkillView:InitSkillLimitVisible()
+	local LimitSkillID = _G.SkillLimitMgr:GetLimitSkillID()
+	local LimitData = _G.SkillLimitMgr.LimitData
+	if LimitData and LimitData.IsOpen then
+		self:OnSkillLimitOff()
 	end
 end
 

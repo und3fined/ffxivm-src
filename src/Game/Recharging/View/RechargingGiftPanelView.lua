@@ -24,6 +24,8 @@ local LSTR = _G.LSTR
 ---@field BtnBack CommBackBtnView
 ---@field BtnLeft UFButton
 ---@field BtnRight UFButton
+---@field CommonTitle CommonTitleView
+---@field PanelTitleIcon UFCanvasPanel
 ---@field TableViewGift UTableView
 ---@field TextTitle UFTextBlock
 ---@field AnimRawIn UWidgetAnimation
@@ -37,6 +39,8 @@ function RechargingGiftPanelView:Ctor()
 	--self.BtnBack = nil
 	--self.BtnLeft = nil
 	--self.BtnRight = nil
+	--self.CommonTitle = nil
+	--self.PanelTitleIcon = nil
 	--self.TableViewGift = nil
 	--self.TextTitle = nil
 	--self.AnimRawIn = nil
@@ -48,6 +52,7 @@ end
 function RechargingGiftPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnBack)
+	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -56,13 +61,15 @@ function RechargingGiftPanelView:OnInit()
 	self.TableViewAdapter.bLessRenderModeChange = true		-- 减少RT的创建数量
 	self.Binders = {
 		{ "GiftItemVMList", UIBinderUpdateBindableList.New(self, self.TableViewAdapter) },
-		{ "TextTitle", UIBinderSetText.New(self, self.TextTitle) },
+		--{ "TextTitle", UIBinderSetText.New(self, self.TextTitle) },
 	}
 
 	self.bShowCharacter = false
 	self.LastScrollOffset = 0
 	self.LastItemOffset = 0
 	self.bIgnoreScrollOnce = false
+
+	self.ShowItemIndexList = {}
 end
 
 function RechargingGiftPanelView:OnDestroy()
@@ -70,8 +77,13 @@ function RechargingGiftPanelView:OnDestroy()
 end
 
 function RechargingGiftPanelView:OnShow()
+	UIUtil.SetIsVisible(self.PanelTitleIcon, false)
+	UIUtil.SetIsVisible(self.TextTitle, false)
 	self.bShowCharacter = RechargingMgr:ShouldShowShopkeeper()
-	RechargingGiftVM.TextTitle = self.bShowCharacter and LSTR(940010) or LSTR(940011)
+	--RechargingGiftVM.TextTitle = self.bShowCharacter and LSTR(940010) or LSTR(940011)
+	local TextTitle = self.bShowCharacter and LSTR(940010) or LSTR(940011)
+	self.CommonTitle:SetTextTitleName(TextTitle)
+	UIUtil.SetIsVisible(self.CommonTitle, true)
 	if self.bShowCharacter then
 		self:PlayAnimation(self.AnimTataruIn)
 	else
@@ -88,6 +100,7 @@ end
 
 function RechargingGiftPanelView:OnHide()
 	RechargingMgr:OnGiftPanelHide()
+	self.ShowItemIndexList = {}
 end
 
 function RechargingGiftPanelView:OnRegisterUIEvent()
@@ -95,6 +108,23 @@ function RechargingGiftPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnItemHideEvent(self, self.TableViewGift, self.OnTableViewItemHide)
 	UIUtil.AddOnItemShowEvent(self, self.TableViewGift, self.OnTableViewItemShow)
 	UIUtil.AddOnScrolledEvent(self, self.TableViewGift, self.OnTableViewScrolled)
+	--UIUtil.AddOnScrollToFirstItemEvent(self, self.TableViewGift, self.OnScrollToFirstItemEvent)
+	--UIUtil.AddOnScrollToLastItemEvent(self, self.TableViewGift, self.OnScrollToLastItemEvent)
+
+	UIUtil.AddOnClickedEvent(self, self.BtnLeft, self.OnBtnLeftClicked)
+	UIUtil.AddOnClickedEvent(self, self.BtnRight, self.OnBtnRightClicked)
+end
+
+function RechargingGiftPanelView:OnScrollToFirstItemEvent(_, Item, ItemView)
+	_G.FLOG_INFO("RechargingGiftPanelView:OnScrollToFirstItemEvent, Item=%d", Item)
+	--获取最后一个Item的显示状态
+	self.TableViewAdapter:GetItemShowStatus(self.TableViewAdapter:GetNum())
+end
+
+function RechargingGiftPanelView:OnScrollToLastItemEvent(_, Item, ItemView)
+	_G.FLOG_INFO("RechargingGiftPanelView:OnScrollToLastItemEvent, Item=%d", Item)
+	--获取第一个Item的显示状态
+	self.TableViewAdapter:GetItemShowStatus(1)
 end
 
 function RechargingGiftPanelView:OnRegisterGameEvent()
@@ -117,17 +147,83 @@ function RechargingGiftPanelView:OnBackClicked()
 	RechargingMgr:OnGiftPanelStartHide(Delay)
 end
 
+function RechargingGiftPanelView:OnBtnLeftClicked()
+	if #self.ShowItemIndexList == 0 then
+		--_G.FLOG_WARNING("RechargingGiftPanelView:OnBtnLeftClicked, ShowItemIndexList is empty")
+		return
+	end
+	local PrevItemIndex = self.ShowItemIndexList[1] - 1
+	--_G.FLOG_INFO("RechargingGiftPanelView:OnBtnLeftClicked, PrevItemIndex=%d", PrevItemIndex)
+	if PrevItemIndex >= 1 then
+		self.TableViewAdapter:ScrollToIndex(PrevItemIndex)
+		if PrevItemIndex == 1 then
+			_G.MsgTipsUtil.ShowTips(LSTR(940041))
+		end
+	end
+end
+
+function RechargingGiftPanelView:OnBtnRightClicked()
+	local ItemIndexNum = #self.ShowItemIndexList
+	if ItemIndexNum == 0 then
+		--_G.FLOG_WARNING("RechargingGiftPanelView:OnBtnRightClicked, ShowItemIndexList is empty")
+		return
+	end
+	local NextItemIndex = self.ShowItemIndexList[1] + 1
+	--_G.FLOG_INFO("RechargingGiftPanelView:OnBtnRightClicked, NextItemIndex=%d", NextItemIndex)
+	local TotalItemCount = self.TableViewAdapter:GetNum()
+	if NextItemIndex <= TotalItemCount then
+		self.TableViewAdapter:ScrollToIndex(NextItemIndex)
+		if (self.ShowItemIndexList[ItemIndexNum] + 1) == TotalItemCount then
+			_G.MsgTipsUtil.ShowTips(LSTR(940041))
+		end
+	end
+end
+
+function RechargingGiftPanelView:SetShowItemIndex(ItemIndex)
+	--_G.FLOG_INFO("RechargingGiftPanelView:SetShowItemIndex, ItemIndex=%d", ItemIndex)
+	local IsExist = false
+	for _, Item in ipairs(self.ShowItemIndexList) do
+		if Item == ItemIndex then
+			IsExist = true
+			break
+		end
+	end
+	if not IsExist then
+		table.insert(self.ShowItemIndexList, ItemIndex)
+	end
+	table.sort(self.ShowItemIndexList, function(A, B)
+		return A < B
+	end)
+end
+
+function RechargingGiftPanelView:SetHideItemIndex(ItemIndex)
+	--_G.FLOG_INFO("RechargingGiftPanelView:SetHideItemIndex, ItemIndex=%d", ItemIndex)
+	for Index, Item in ipairs(self.ShowItemIndexList) do
+		if Item == ItemIndex then
+			table.remove(self.ShowItemIndexList, Index)
+			break
+		end
+	end
+	table.sort(self.ShowItemIndexList, function(A, B)
+		return A < B
+	end)
+end
+
 function RechargingGiftPanelView:OnTableViewItemHide(_, ItemView)
-	local ItemIndex = ItemView.ViewModel.GiftID
+	local ItemIndex = ItemView.ViewModel.ItemIndex
+	self:SetHideItemIndex(ItemIndex)
+	--_G.FLOG_INFO("RechargingGiftPanelView:OnTableViewItemHide, ItemIndex=%d", ItemIndex)
 	if ItemIndex == 1 then
-		UIUtil.SetIsVisible(self.BtnLeft, true)
+		UIUtil.SetIsVisible(self.BtnLeft, true, true)
 	elseif ItemIndex == self.TableViewAdapter:GetNum() then
-		UIUtil.SetIsVisible(self.BtnRight, true)
+		UIUtil.SetIsVisible(self.BtnRight, true, true)
 	end
 end
 
 function RechargingGiftPanelView:OnTableViewItemShow(_, Item, ItemView)
-	local ItemIndex = ItemView.ViewModel.GiftID
+	local ItemIndex = ItemView.ViewModel.ItemIndex
+	self:SetShowItemIndex(ItemIndex)
+	--_G.FLOG_INFO("RechargingGiftPanelView:OnTableViewItemShow, ItemIndex=%d, Item=%d", ItemIndex, Item)
 	if ItemIndex == 1 then
 		UIUtil.SetIsVisible(self.BtnLeft, false)
 	elseif ItemIndex == self.TableViewAdapter:GetNum() then
@@ -154,9 +250,15 @@ function RechargingGiftPanelView:GenerateGiftList()
 	local GiftCount = RechargingMgr:GetMaxRewardCount()
 	for ID = 1, GiftCount do
 		local GiftItemVM = RechargingGiftItemVM.New()
-		GiftItemVM:UpdateVM({GiftID = ID})
+		GiftItemVM:UpdateVM({GiftID = ID, ItemIndex = ID})
 		table.insert(GiftItemVMList, GiftItemVM)
 	end
+	-- Just For Test
+	-- for ID = 1, 3 do
+	-- 	local GiftItemVM = RechargingGiftItemVM.New()
+	-- 	GiftItemVM:UpdateVM({GiftID = ID, ItemIndex = (ID + GiftCount)})
+	-- 	table.insert(GiftItemVMList, GiftItemVM)
+	-- end
 	self.TableViewAdapter:UpdateAll(GiftItemVMList)
 
 	-- 滚动到第一个未领取的礼物

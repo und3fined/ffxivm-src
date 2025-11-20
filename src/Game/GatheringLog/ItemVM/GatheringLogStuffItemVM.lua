@@ -82,7 +82,7 @@ function GatheringLogStuffItemVM:UpdateVM(Value)
     self.bSetFavor = Value.bSetFavor ~= nil and Value.bSetFavor or false
     --用于表示在那个上方分支之下
 
-    self.bLeveQuestMarked = Value.bLeveQuestMarked
+    self.bLeveQuestMarked = Value.bLeveQuestMarked ~= nil and Value.bLeveQuestMarked or self:SetLeveQuestMarked(Value)
     self.bLockGray = Value.bLockGray ~= nil and Value.bLockGray or self:SetLockState(Value)
     self.OrderID = Value.OrderID
     self.Name = ItemCfg:GetItemName(Value.ItemID)
@@ -136,6 +136,11 @@ function GatheringLogStuffItemVM:UpdateVM(Value)
     _G.GatheringLogVM.bToggleBtnAlarmClockVisible = self.bUseClock
 
     self.RedDotName = Value.RedDotName
+end
+
+function GatheringLogStuffItemVM:SetLeveQuestMarked(Value)
+    local MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(Value.GatheringJob)
+    return MarkedItemID and MarkedItemID == Value.ItemID
 end
 
 function GatheringLogStuffItemVM:SetLockState(Value)

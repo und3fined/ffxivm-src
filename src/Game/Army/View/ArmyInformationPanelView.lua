@@ -135,7 +135,7 @@ function ArmyInformationPanelView:OnInit()
 		{"OtherGrandCompanyName2", UIBinderSetText.New(self, self.RichTextBoxArmy03)},
 		{"OtherGrandCompanyIcon2", UIBinderSetBrushFromAssetPath.New(self, self.ImgArmyIcon_2)},
 		{"IsShowEditBtn", UIBinderSetIsVisible.New(self, self.BtnEdit)},
-
+		{"IsShowReportBtn", UIBinderSetIsVisible.New(self, self.BtnReport, false, true)},
 	}
 end
 
@@ -268,7 +268,7 @@ function ArmyInformationPanelView:OnClickedEdit()
 		ArmyInformationPanelVM:UpdateEditWinVMCurData()
 		UIViewMgr:ShowView(UIViewID.ArmyEditInformationWin)
 		--- 隐藏编辑招募提醒红点
-		_G.RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind)
+		_G.RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, ArmyDefine.RedDotCheckID)
 	end
 end
 

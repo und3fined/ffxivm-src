@@ -73,6 +73,9 @@ function MainProSkillMgr:OnInitSpectrumIDMap(SpectrumIDs)
 end
 
 function MainProSkillMgr:OnNetMsgUpdateSpectrumLimit(MsgBody)
+    if nil == MsgBody.SpectrumLimit then
+        return
+    end
     local SpectrumID = MsgBody.SpectrumLimit.SpectrumID
     local ResourceMax = MsgBody.SpectrumLimit.ResourceMax
     local SingleSpectrumInfo = self.SpectrumInfo[SpectrumID]
@@ -151,13 +154,14 @@ function MainProSkillMgr:LoadSpectrumTable()
             self.SpectrumInfo[ID].SpectrumMax = value.SpectrumMax
             self.SpectrumInfo[ID].ResourceInit = value.ResourceInit
             self.SpectrumInfo[ID].bDeadKeep = value.DeadKeep == 1
-            if ID == SpectrumIDMap.WHITEMAGE_MP or ID == SpectrumIDMap.WHITEMAGE_HP then
+            if ID == SpectrumIDMap.WHITEMAGE_MP or ID == SpectrumIDMap.WHITEMAGE_HP or ID == SpectrumIDMap.DarkKnight_Blood or ID == SpectrumIDMap.Manchinist_Heat or ID == SpectrumIDMap.Manchinist_Electric then
                 local WhiteMageTable = string.split(value.TypeParam1, ",")
                 local TypeParam = {}
                 for index, value1 in ipairs(WhiteMageTable) do
                     TypeParam[index] = tonumber(value1)
                 end
                 self.SpectrumInfo[ID].TypeParam = TypeParam
+                self.SpectrumInfo[ID].TypeParam2 = value.TypeParam2
             elseif ID == SpectrumIDMap.BARD_1_1 or ID == SpectrumIDMap.BARD_2_1 or ID == SpectrumIDMap.BARD_3_1 then
                 self.BtnClickMap[ID] = value.TypeParam1
                 self.SpectrumInfo[ID].TypeParam2 = value.TypeParam2

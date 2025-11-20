@@ -189,6 +189,7 @@ function ArmyInfoPageView:OnInit()
         {"ArmyShortName", UIBinderSetText.New(self, self.TextArmyName02)},
         {"GainNum", UIBinderSetText.New(self, self.RichTextCombatGains)},
         {"GrandCompanyType", UIBinderValueChangedCallback.New(self, nil, self.OnGrandCompanyTypeChanged)},
+		{"IsShowReportBtn", UIBinderSetIsVisible.New(self, self.BtnReport, false, true)},
     }
     self.BtnGradeInfo:SetCallback(self, self.ShowLevelTips)
     -- LSTR string:招募信息
@@ -389,7 +390,7 @@ function ArmyInfoPageView:OnClickedUpdateRecruit()
     local IsAllowEditor = ArmyMgr:GetSelfIsHavePermisstion(GroupPermissionType.GROUP_PERMISSION_TYPE_EditNotice)
     local IsDelRecruitRedDot = not ArmyMgr:GetIsRecruitPanelHaveOpened()
     if IsDelRecruitRedDot then
-        RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyRecruit)
+        RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyRecruit, ArmyDefine.RedDotCheckID)
         ArmyMgr:SetIsRecruitPanelHaveOpened(true)
     end
     UIViewMgr:ShowView(

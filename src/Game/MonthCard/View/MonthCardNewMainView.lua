@@ -36,6 +36,7 @@ local MonthCardMainPanelVM = require("Game/MonthCard/VM/MonthCardMainPanelVM")
 ---@field BtnPurchase CommBtnLView
 ---@field Comm96Slot CommBackpack96SlotView
 ---@field CommRewardSlot CommBackpackSlotView
+---@field CommonRedDot2 CommonRedDotView
 ---@field FCanvasPanel1 UFCanvasPanel
 ---@field FTextBlock UFTextBlock
 ---@field FTextBlock_2 UFTextBlock
@@ -70,6 +71,7 @@ function MonthCardNewMainView:Ctor()
 	--self.BtnPurchase = nil
 	--self.Comm96Slot = nil
 	--self.CommRewardSlot = nil
+	--self.CommonRedDot2 = nil
 	--self.FCanvasPanel1 = nil
 	--self.FTextBlock = nil
 	--self.FTextBlock_2 = nil
@@ -104,6 +106,7 @@ function MonthCardNewMainView:OnRegisterSubView()
 	self:AddSubView(self.BtnPurchase)
 	self:AddSubView(self.Comm96Slot)
 	self:AddSubView(self.CommRewardSlot)
+	self:AddSubView(self.CommonRedDot2)
 	self:AddSubView(self.MoneyBar)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -124,7 +127,7 @@ end
 function MonthCardNewMainView:OnShow()
 	MonthCardMgr:ResetPaying()
 	MonthCardMgr:SendMonthCardDataReq()
-	-- self.CommonRedDot2:SetRedDotIDByID(MonthCardDefine.RedDefines.MonthCard)
+	self.CommonRedDot2:SetRedDotIDByID(MonthCardDefine.RedDefines.MonthCard)
 	self:OnMonthCardUpdate()
 	UIUtil.SetIsVisible(self.PanelMonthCard,  _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard) and _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_MONTHLY_CARD))
 	UIUtil.SetIsVisible(self.FCanvasPanel1, _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMonthCard) and _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_MONTHLY_CARD))

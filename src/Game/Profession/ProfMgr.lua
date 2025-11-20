@@ -339,6 +339,13 @@ function ProfMgr:OnNetMsgLevelUp(MsgBody)
 		self:SyncMajorLevel(NewLevel, AttrLevel)
 	end
 
+	local Params = {Prof = ProfID, Level = NewLevel}
+	local EventParams = _G.EventMgr:GetEventParams()
+	EventParams.Type = TutorialDefine.TutorialConditionType.ProfLevel
+	EventParams.Param1 = Params.Prof
+	EventParams.Param2 = Params.Level
+	_G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+
 	local MajorRoleDetail = ActorMgr:GetMajorRoleDetail()
 	if MajorRoleDetail then
 		MajorRoleDetail.Prof.Sync = MsgBody.LevelUp.Sync
@@ -512,9 +519,9 @@ function ProfMgr:CanChangeProf(ProfID, CanPreview, bNoTips)
 	--Pvp区域
 	local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
     local bPVP = PworldCfg:FindValue(CurrPWorldResID, "CanPK")
-	local IsAdvancedProf = ProfUtil.IsAdvancedProf(ProfID)
+	local IsPVPAdvancedProf = ProfMgr.CheckProfClass(ProfID, 22)
 	local IsProductionProf = ProfUtil.IsProductionProf(ProfID)
-	if bPVP ~= 0 and (not IsAdvancedProf or IsProductionProf) then
+	if bPVP ~= 0 and (not IsPVPAdvancedProf or IsProductionProf) then
 		ConditionalShowTips("ShowTips", bNoTips, LSTR(1050219))
         return false
 	end
@@ -671,8 +678,8 @@ function ProfMgr:AddLevelUpSysChatMsg(EntityID, OldLevel, NewLevel, ProfID)
 	end
 end
 
-function ProfMgr.ShowProfSwitchTab()
-	UIViewMgr:ShowView(_G.UIViewID.ProfessionToggleJobTab)
+function ProfMgr.ShowProfSwitchTab(Params)
+	UIViewMgr:ShowView(_G.UIViewID.ProfessionToggleJobTab, Params)
 end
 
 function ProfMgr.HideProfSwitchTab()
@@ -920,12 +927,7 @@ function ProfMgr:OnTimer()
 		PostProcessSettings.RadialBlurStrength = 0.0
 
 		-- 升级时触发新手引导
-		local function OnTutorial(Params)
-			local EventParams = _G.EventMgr:GetEventParams()
-			EventParams.Type = TutorialDefine.TutorialConditionType.ProfLevel --新手引导触发类型
-			EventParams.Param1 = Params.Prof
-			EventParams.Param2 = Params.Level
-			_G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+		local function OnTutorial()
 		end
 
 		-- _G.TipsQueueMgr:Pause(false)

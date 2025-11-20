@@ -60,7 +60,8 @@ end
 
 function PhotoFilterPanelView:OnInit()
 	PhotoFilterVM = _G.PhotoFilterVM
-	self.AdpFilter 				= UIAdapterTableView.CreateAdapter(self, self.TableViewFilter, self.OnAdpItemFilter)
+	self.AdpFilter 				= UIAdapterTableView.CreateAdapter(self, self.TableViewFilter)--, self.OnAdpItemFilter)
+	self.AdpFilter:SetOnClickedCallback(self.OnStatItemClicked)
 
 	self.BinderFilter = 
 	{
@@ -97,7 +98,16 @@ function PhotoFilterPanelView:OnRegisterBinder()
 	self:RegisterBinders(PhotoFilterVM, 		self.BinderFilter)
 end
 
-function PhotoFilterPanelView:OnAdpItemFilter(Idx, ItemVM)
+-- function PhotoFilterPanelView:OnAdpItemFilter(Idx, ItemVM)
+-- 	PhotoFilterVM:SetFilterIdx(Idx)
+-- end
+
+function PhotoFilterPanelView:OnStatItemClicked(Idx, ItemData, ItemView)
+	if PhotoFilterVM.CurFilterIdx and PhotoFilterVM.CurFilterIdx == Idx then
+		PhotoFilterVM:SetFilterIdx(nil)
+		self.AdpFilter:CancelSelected()
+		return
+	end
 	PhotoFilterVM:SetFilterIdx(Idx)
 end
 

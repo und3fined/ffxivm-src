@@ -15,7 +15,7 @@ local MinLifeProfID = ProtoCommon.prof_type.PROF_TYPE_BLACKSMITH
 local MinEarthHandsProfID = ProtoCommon.prof_type.PROF_TYPE_MINER
 local LockStateTipsText = LSTR(770002)
 
-local MaxRecordBasisText = RichTextUtil.GetText(LSTR(770023), "D1BA8EFF") .. RichTextUtil.GetTexture("PaperSprite'/Game/UI/Atlas/Collectables/Frames/UI_Collectables_Icon_02_png.UI_Collectables_Icon_02_png'", 60,60, -20) or ""   
+local MaxRecordBasisText = RichTextUtil.GetText(LSTR(770023), "D5D5D5FF") .. RichTextUtil.GetTexture("PaperSprite'/Game/UI/Atlas/Collectables/Frames/UI_Collectables_Icon_02_png.UI_Collectables_Icon_02_png'", 60,60, -20) or ""   
 local MaxRecordNameBasisText = RichTextUtil.GetText(LSTR(770024), "D1BA8EFF")
 
 

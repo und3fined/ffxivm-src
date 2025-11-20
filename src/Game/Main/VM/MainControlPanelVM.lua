@@ -26,6 +26,8 @@ function MainControlPanelVM:Ctor()
     self.bLimitCastState = true
     self.LimitGenAttackVisible = true
 
+    self.HandleSkillViewFight = false
+
     self:ResetDefaultBG()
 end
 
@@ -95,6 +97,22 @@ function MainControlPanelVM:ResetDefaultBG()
     for i = 1, #DefaultBG do
         self[string.format("BGIcon_%d", i)] = DefaultBG[i]
     end
+end
+
+function MainControlPanelVM:SetHandleSkillViewFight(bFight)
+    self.HandleSkillViewFight = bFight
+end
+
+--技能界面相关按钮是否可响应手柄输入
+function MainControlPanelVM:AllowHandleSkill(bNormalSkill, bNormalCmd, bLimitSkill)
+    if bLimitSkill and self.bLimitCastState == false then
+        return true
+    end
+
+    if bNormalSkill or bNormalCmd and self.bLimitCastState then
+        return self.bFightStatus
+    end
+    return false
 end
 
 return MainControlPanelVM

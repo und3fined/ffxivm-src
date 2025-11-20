@@ -99,6 +99,10 @@ function PWorldEntPolDT:CheckCondPWorldUnlock(EntID)
     end
 
     local PList = PolUtil.GetDRPoolList(EntID)
+    if PList == nil or table.empty(PList) then
+        return false
+    end
+
     local NList = {}
     for _, EID in pairs(PList) do
         local ECfg = SceneEnterCfg:FindCfgByKey(EID)

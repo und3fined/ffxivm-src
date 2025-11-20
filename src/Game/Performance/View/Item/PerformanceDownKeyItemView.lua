@@ -17,8 +17,10 @@ local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanc
 ---@field ImgDesDisable UFImage
 ---@field ImgDesNormal UFImage
 ---@field ImgDesPress UFImage
+---@field ImgNote UFImage
 ---@field KeyState PerformanceKeyStateItemView
----@field AnimTips UWidgetAnimation
+---@field AnimTipsHide UWidgetAnimation
+---@field AnimTipsLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceDownKeyItemView = LuaClass(UIView, true)
 
@@ -28,8 +30,10 @@ function PerformanceDownKeyItemView:Ctor()
 	--self.ImgDesDisable = nil
 	--self.ImgDesNormal = nil
 	--self.ImgDesPress = nil
+	--self.ImgNote = nil
 	--self.KeyState = nil
-	--self.AnimTips = nil
+	--self.AnimTipsHide = nil
+	--self.AnimTipsLoop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -49,7 +53,7 @@ function PerformanceDownKeyItemView:OnDestroy()
 end
 
 function PerformanceDownKeyItemView:OnShow()
-
+	
 end
 
 function PerformanceDownKeyItemView:OnHide()
@@ -81,21 +85,24 @@ function PerformanceDownKeyItemView:OnMusicPerformanceToneOffset(Offset)
 	MusicPerformanceUtil.Log(string.format("PerformanceDownKeyItemView:OnMusicPerformanceToneOffset,  ToneOffset = %s", tostring(Offset)))
 	if Offset == 0 then
 		self.IsPressedKey = false
-		UIUtil.SetIsVisible(self.BtnDes, true, true, false)
 		UIUtil.SetIsVisible(self.ImgDesDisable, false, false, false)
 		UIUtil.SetIsVisible(self.ImgDesNormal, true, false, false)
 		UIUtil.SetIsVisible(self.ImgDesPress, false, false, false)
+		UIUtil.SetIsVisible(self.ImgNote, true, false, false)
+		self.BtnDes:SetIsEnabled(true)
 	elseif Offset == self.ToneOffset then
 		self.IsPressedKey = true
 		UIUtil.SetIsVisible(self.ImgDesDisable, false, false, false)
 		UIUtil.SetIsVisible(self.ImgDesNormal, false, false, false)
 		UIUtil.SetIsVisible(self.ImgDesPress, true, false, false)
+		UIUtil.SetIsVisible(self.ImgNote, true, false, false)
 	else
 		self.IsPressedKey = false
-		UIUtil.SetIsVisible(self.BtnDes, true, false)
 		UIUtil.SetIsVisible(self.ImgDesDisable, true, false, false)
 		UIUtil.SetIsVisible(self.ImgDesNormal, false, false, false)
 		UIUtil.SetIsVisible(self.ImgDesPress, false, false, false)
+		UIUtil.SetIsVisible(self.ImgNote, false, false, false)
+		self.BtnDes:SetIsEnabled(false)
 	end
 end
 
@@ -110,19 +117,23 @@ function PerformanceDownKeyItemView:StartPromptKeyState()
 		return
 	end
 	
-	if self.AnimTips then
-		if not self:IsAnimationPlaying(self.AnimTips) then
-			self:PlayAnimation(self.AnimTips,0,0)
+	if self.AnimTipsLoop then
+		if not self:IsAnimationPlaying(self.AnimTipsLoop) then
+			self:PlayAnimation(self.AnimTipsLoop,0,0)
 		end
 	end
 end
 
 --结束按键提示
 function PerformanceDownKeyItemView:StopPromptKeyState()
-	if self.AnimTips then
-		if self:IsAnimationPlaying(self.AnimTips) then
-			self:StopAnimation(self.AnimTips)
+	if self.AnimTipsLoop then
+		if self:IsAnimationPlaying(self.AnimTipsLoop) then
+			self:StopAnimation(self.AnimTipsLoop)
 		end
+	end
+
+	if self.AnimTipsHide then
+		self:PlayAnimation(self.AnimTipsHide)
 	end
 end
 

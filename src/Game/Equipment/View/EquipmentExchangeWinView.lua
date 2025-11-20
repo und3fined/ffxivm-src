@@ -34,6 +34,7 @@ local EquipImproveMaterialCfg = require("TableCfg/EquipImproveMaterialCfg")
 ---@field Comm2FrameL_UIBP Comm2FrameLView
 ---@field Comm96Slot CommBackpack96SlotView
 ---@field CommBtn CommBtnLView
+---@field CommEmpty CommBackpackEmptyView
 ---@field FTextBlock_101 UFTextBlock
 ---@field InforBtn CommInforBtnView
 ---@field SingleBox CommSingleBoxView
@@ -51,6 +52,7 @@ function EquipmentExchangeWinView:Ctor()
 	--self.Comm2FrameL_UIBP = nil
 	--self.Comm96Slot = nil
 	--self.CommBtn = nil
+	--self.CommEmpty = nil
 	--self.FTextBlock_101 = nil
 	--self.InforBtn = nil
 	--self.SingleBox = nil
@@ -67,6 +69,7 @@ function EquipmentExchangeWinView:OnRegisterSubView()
 	self:AddSubView(self.Comm2FrameL_UIBP)
 	self:AddSubView(self.Comm96Slot)
 	self:AddSubView(self.CommBtn)
+	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.InforBtn)
 	self:AddSubView(self.SingleBox)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -94,6 +97,7 @@ function EquipmentExchangeWinView:OnShow()
 	self.CommBtn.TextContent:SetText(LSTR(1050169))
 	self.FTextBlock_101:SetText(LSTR(1050170))
 	self.TextTitle:SetText(LSTR(1050016))
+	self.CommEmpty:SetTipsContent(LSTR(1050203))
 	self.SingleBox.ToggleButton:SetCheckedState(_G.UE.EToggleButtonState.UnChecked, true)
 	UIUtil.SetIsVisible(self.Comm2FrameL_UIBP.FText_Title, false)
 end
@@ -168,16 +172,23 @@ function EquipmentExchangeWinView:InitTableList()
 		for k, v in pairs(BagEquipments) do
 			local Cfg = EquipReceiptCfg:CheckEquipCanExchange(v.ResID, self.Params.ItemID)
 			if Cfg and next(Cfg) then
-				local ItemData = {
-					GID = v.GID,
-					Cfg = Cfg,
-					isChoise = false,
-				}
-				table.insert(TableList, ItemData)
+				if v.GID ~= self.Params.IgnoreGID then
+					local ItemData = {
+						GID = v.GID,
+						Cfg = Cfg,
+						isChoise = false,
+					}
+					table.insert(TableList, ItemData)
+				end
 			end
 		end
 	end
 	self.ViewModel.TabList = TableList
+	if #self.ViewModel.TabList == 0 then
+		UIUtil.SetIsVisible(self.CommEmpty, true)
+	else
+		UIUtil.SetIsVisible(self.CommEmpty, false)
+	end
 end
 
 function EquipmentExchangeWinView:UpdateSelectNum()
@@ -221,15 +232,6 @@ function EquipmentExchangeWinView:CheckCanSendMsg()
 	--检查是否装备中
 	for k, v in pairs(self.ViewModel.TabList) do
 		if v.isChoise then
-			--魔晶石
-			local Item = _G.EquipmentMgr:GetItemByGID(v.GID)
-			if Item and Item.Attr and Item.Attr.Equip and Item.Attr.Equip.GemInfo and Item.Attr.Equip.GemInfo.CarryList then
-				if next(Item.Attr.Equip.GemInfo.CarryList) then
-					local Content = _G.LSTR(1050073)
-					_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1050083), Content, self.SendExchangeMsg, nil, LSTR(1050044), LSTR(1050104))
-					return
-				end
-			end
 			--套装
 			local RoleDetail = _G.ActorMgr:GetMajorRoleDetail()
 			for key, value in pairs(RoleDetail.Prof.ProfList) do
@@ -242,6 +244,15 @@ function EquipmentExchangeWinView:CheckCanSendMsg()
 							return
 						end
 					end
+				end
+			end
+			--魔晶石
+			local Item = _G.EquipmentMgr:GetItemByGID(v.GID)
+			if Item and Item.Attr and Item.Attr.Equip and Item.Attr.Equip.GemInfo and Item.Attr.Equip.GemInfo.CarryList then
+				if next(Item.Attr.Equip.GemInfo.CarryList) then
+					local Content = _G.LSTR(1050073)
+					_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1050083), Content, self.SendExchangeMsg, nil, LSTR(1050044), LSTR(1050104))
+					return
 				end
 			end
 		end

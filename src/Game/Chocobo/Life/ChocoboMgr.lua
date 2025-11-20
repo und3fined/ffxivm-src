@@ -27,6 +27,9 @@ local PWorldEntUtil = require("Game/PWorld/Entrance/PWorldEntUtil")
 local NpcCfg = require("TableCfg/NpcCfg")
 local TimeUtil = require("Utils/TimeUtil")
 local SidebarDefine = require("Game/Sidebar/SidebarDefine")
+local ItemCfg = require("TableCfg/ItemCfg")
+local FuncCfg = require("TableCfg/FuncCfg")
+local ChocoboGlobalCfg = require("TableCfg/ChocoboGlobalCfg")
 
 local GameNetworkMgr = nil
 local USaveMgr = nil
@@ -66,21 +69,32 @@ function ChocoboMgr:OnBegin()
     FLOG_INFO = _G.FLOG_INFO
     
     local Value = nil
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboGeneStarMax, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDGeneStarMax, "Value")
     self.GeneMaxStarNum = Value and tonumber(Value[1]) or 4
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboActiveSkillLimit, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDActiveSkillLimit, "Value")
     self.CarryActiveSkillNum = Value and tonumber(Value[1]) or 3
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboPassiveSkillLimit, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDPassiveSkillLimit, "Value")
     self.CarryPassiveSkillNum = Value and tonumber(Value[1]) or 1
 
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboMatingLevel, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMatingLevel, "Value")
     self.MatingLevel = Value and tonumber(Value[1]) or 2
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboMatingTime, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDMatingTime, "Value")
     self.MatingNeedTime = Value and tonumber(Value[1]) or 10
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboPerGenLimit, "Value")
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDPerGenLimit, "Value")
     self.GenerationLimit = Value and tonumber(Value[1]) or 5
-    Value = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboRentLimit, "Value") or {}
+    Value = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDRentLimit, "Value")
     self.RentLimit = Value and tonumber(Value[1]) or 5
+
+
+    local function CheckItemUsed(ItemResID)
+        local FindItemCfg = ItemCfg:FindCfgByKey(ItemResID)
+        if FindItemCfg == nil then return false end
+        local FindFuncCfg = FuncCfg:FindCfgByKey(FindItemCfg.UseFunc)
+        if FindFuncCfg == nil then return false end
+
+        return not self:IsSkillLockByID(FindFuncCfg.Func[1].Value[1])
+    end
+    _G.BagMgr:RegisterItemUsedFun(ProtoCommon.ITEM_TYPE_DETAIL.CHOCOBO_TRAINING_MANUAL, CheckItemUsed)
 end
 
 function ChocoboMgr:OnEnd()
@@ -107,7 +121,7 @@ function ChocoboMgr:OnRegisterGameEvent()
 end
 
 function ChocoboMgr:OnRegisterNetMsg()
-    self:RegisterGameNetMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQueryMatchChocobo, self.OnNetMsgQueryMatchChocobo) -- 玩家 查询匹配的陆行鸟
+    --self:RegisterGameNetMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQueryMatchChocobo, self.OnNetMsgQueryMatchChocobo) -- 玩家 查询匹配的陆行鸟
     self:RegisterGameNetMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQuery, self.OnNetMsgQuery) -- 玩家 陆行鸟详细信息
     self:RegisterGameNetMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQuerySkillList, self.OnNetMsgQuerySkillList) --技能 玩家已解锁全量技能
     self:RegisterGameNetMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdLearnSkill, self.OnNetMsgLearnSkill) --技能 玩家学会技能
@@ -149,17 +163,17 @@ function ChocoboMgr:OnGameEventLoginRes()
 end
 
 --region 协议请求
---玩家 陆行鸟详细信息
-function ChocoboMgr:ReqQueryMatchChocobo(List)
-    if List == nil then return end
-    self.QueryMatchChocoboList = List
-
-    local Params = {}
-    Params.MatchChocobo = {}
-    Params.MatchChocobo.RoleIDs = List
-    Params.Cmd = SUB_MSG_ID.ChocoboCmdQueryMatchChocobo
-    GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQueryMatchChocobo, Params)
-end
+--玩家 陆行鸟详细信息  废弃
+--function ChocoboMgr:ReqQueryMatchChocobo(List)
+--    if List == nil then return end
+--    self.QueryMatchChocoboList = List
+--
+--    local Params = {}
+--    Params.MatchChocobo = {}
+--    Params.MatchChocobo.RoleIDs = List
+--    Params.Cmd = SUB_MSG_ID.ChocoboCmdQueryMatchChocobo
+--    GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO, SUB_MSG_ID.ChocoboCmdQueryMatchChocobo, Params)
+--end
 
 --玩家 陆行鸟详细信息
 function ChocoboMgr:ReqQuery(ID, CallBack)
@@ -423,6 +437,13 @@ function ChocoboMgr:OnNetMsgQuery(MsgBody)
         self.ReqQueryCallBack(Info)
         self.ReqQueryCallBack = nil
     end
+
+    if ChocoboMainVM.IsMating then
+        if self.MatchTimerID > 0 then
+            self:UnRegisterTimer(self.MatchTimerID)
+        end
+        self.MatchTimerID = self:RegisterTimer(self.TryResumeChocoboSideBar, 0, 1, 0)
+    end
 end
 
 function ChocoboMgr:OnNetMsgAdopt(MsgBody)
@@ -573,6 +594,9 @@ function ChocoboMgr:OnNetMsgMating(MsgBody)
     ChocoboMainVM.MatingTime = Mating.MatingTime
     -- LSTR string: 恭喜你，您的陆行鸟配种成功...
     MsgTipsUtil.ShowTips(LSTR(420082))
+    if self.MatchTimerID > 0 then
+        self:UnRegisterTimer(self.MatchTimerID)
+    end
     self.MatchTimerID = self:RegisterTimer(self.TryResumeChocoboSideBar, 0, 1, 0)
 
     if self.FemaleChocoboID and self.MaleChocoboID then
@@ -846,6 +870,8 @@ function ChocoboMgr:OnNetMsgQueryTitle(MsgBody)
     TitleVM:UpdateTitleCounter(self.TitleCounter)
     TitleVM:UpdateTitleAwards(self.TitleAwards)
     TitleVM:UpdateTitleData()
+    TitleVM:UpdateNode()
+    TitleVM:UpdateContent()
 end
 
 function ChocoboMgr:OnNetMsgGetTitleAward(MsgBody)
@@ -970,6 +996,14 @@ function ChocoboMgr:GetQueryMatchChocoboList()
     return self.QueryMatchChocoboList
 end
 
+function ChocoboMgr:AddRoleChocoboInfo(Info)
+    if not Info or Info.ActorID == MajorUtil.GetMajorRoleID() then
+        return
+    end
+
+    self.RoleOutChocoboInfoList[Info.ActorID] = Info
+end
+
 ---其他玩家的出战陆行鸟VM
 ---@param RoleID number
 ---@return table, boolean
@@ -992,17 +1026,17 @@ function ChocoboMgr:FindRoleChocoboVM(RoleID)
         FLOG_INFO("ChocoboMgr:FindRoleChocoboVM.Info == nil RoleID: %d", RoleID)
     else
         IsSuc = true
-        ViewModel:UpdateVM(Info)
+        ViewModel:UpdateVMByVote(Info)
     end
     return ViewModel, IsSuc
 end
 
----QueryChocoboSimples
+---QueryChocoboSimples  废弃
 ---@param RoleIDList table
 ---@param Callback function
-function ChocoboMgr:QueryChocoboSimples(RoleIDList)
-    self:ReqQueryMatchChocobo(RoleIDList)
-end
+--function ChocoboMgr:QueryChocoboSimples(RoleIDList)
+--    self:ReqQueryMatchChocobo(RoleIDList)
+--end
 
 ---OpenChocoboBorrowPanel
 function ChocoboMgr:OpenChocoboBorrowPanel()
@@ -1106,8 +1140,8 @@ end
 
 ---ShowChocoboMainPanelView
 function ChocoboMgr:ShowChocoboMainPanelView(PageIndex)
-    local TaskID = 150221
-    local Cfg = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboNewbieQuest, "Value")
+    local TaskID = 150004
+    local Cfg = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDNewbieQuest, "Value")
     if Cfg ~= nil and Cfg[1] ~= nil then
         TaskID = Cfg[1]
     end
@@ -1403,7 +1437,7 @@ function ChocoboMgr:OpenChocoboBabyClaimSidebar(StartTime, CountDown, Type)
         Type         = Type,
     }
 
-    UIViewMgr:ShowView(UIViewID.SidebarCommon, Params)
+    _G.SidebarMgr:ShowCommonSidebarWin(Params)
 end
 
 return ChocoboMgr

@@ -187,7 +187,9 @@ function FashionEvaluationVM:UpdateProgressAwardList(BestResult)
     self.ProgressAwardList = {}
     -- 根据当前最高分数更新进度
     self.ProgressAwardList = FashionEvaluationVMUtils.GetAwardList(self.WeekHighestScore, self.WeekRemainTimes)
-    self.ProgressAwardVMList:UpdateByValues(self.ProgressAwardList, nil)
+    if self.ProgressAwardVMList then
+        self.ProgressAwardVMList:UpdateByValues(self.ProgressAwardList, nil)
+    end
 end
 
 ---更新弹幕信息
@@ -454,7 +456,7 @@ function FashionEvaluationVM:UpdateSettlementInfo(Result)
     --挑战进度
     self.IsOwnAll = self:GetIsOwnedAllChallengeEquip(CheckResultMap)
     self:UpdateLastEvaluateResult(ResultInfo)
-    if self:IsGetMaxAward(self.BestResult) then
+    if self:IsGetMaxAward() then
         self.SettlementTipText = FashionEvaluationDefine.SettlementTipTextFinish
     elseif self.CurScore >= FashionEvaluationDefine.TrackTipScore and not self.IsOwnAll then
         self.SettlementTipText = FashionEvaluationDefine.SettlementTipTextRetry
@@ -479,13 +481,12 @@ end
 
 ---@type 挑战外观是否全部拥有
 function FashionEvaluationVM:GetIsOwnedAllChallengeEquip(ResultEquips)
-    local OwnedAppearNum = 0
     for _, CheckResul in pairs(ResultEquips) do
-        if CheckResul.IsOwn then
-            OwnedAppearNum = OwnedAppearNum + 1
+        if CheckResul.OwnScore <= 0 then
+            return false
         end
     end
-    return OwnedAppearNum >= 4
+    return true
 end
 
 ---@type 最新挑战结果
@@ -680,12 +681,12 @@ function FashionEvaluationVM:GetReaminTimes()
 end
 
 ---@type 是否达成最大奖励
-function FashionEvaluationVM:IsGetMaxAward(BestResult)
-    if BestResult == nil then
+function FashionEvaluationVM:IsGetMaxAward()
+    if self.BestResult == nil then
         return false
     end
 
-    local BestScore = BestResult.TotalScore
+    local BestScore = self.BestResult.TotalScore
     return FashionEvaluationVMUtils.IsGetProgress(4, BestScore, self.WeekRemainTimes)
 end
 

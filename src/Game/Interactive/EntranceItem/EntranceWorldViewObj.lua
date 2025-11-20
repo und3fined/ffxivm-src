@@ -18,7 +18,7 @@ function EntranceWorldViewObj:OnUpdateDistance()
     self.Distance = 10000
 end
 
-function EntranceWorldViewObj:CheckInterative(EnableCheckLog)
+function EntranceWorldViewObj:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     return true
 end
 

@@ -105,6 +105,7 @@ function TutorialGuideShowPanelView:OnShow()
 		self.IsRead = tonumber(Cfg.IsRead) == 1
 		bMultiContent = #Cfg.WindowContent > 1
 	end
+
 	UIUtil.SetIsVisible(self.PanelArrowLeft,  bMultiContent)
 	UIUtil.SetIsVisible(self.PanelBtnArrowRight, bMultiContent)
 	UIUtil.SetIsVisible(self.TableViewDrop, bMultiContent)
@@ -113,24 +114,31 @@ function TutorialGuideShowPanelView:OnShow()
 	-- UIUtil.SetColorAndOpacity(self.ShowBanner.ImgLine, 1, 1, 1, 0.3)
 	UIUtil.SetColorAndOpacity(self.ShowBanner.ImgFrame2, 1, 1, 1, 0.3)
 
+	self.TextTips:SetText(_G.LSTR(890004))
+	self.TextHint:SetText(_G.LSTR(890006))
+
+	UIUtil.SetIsVisible(self.BtnClose, false)
+	if self.Params.IsActivity ~= nil or self.Params.IsActivity then
+		UIUtil.SetIsVisible(self.TextHint, false)
+		self.PopUpBG:SetHideOnClick(true)
+		UIUtil.SetIsVisible(self.TextTips, true)
+		return
+	end
+
 	-- 副本教学中屏蔽部分UI,点击空白处关闭
 	if self.Params.PWorldTeaching then
 		self.PopUpBG:SetHideOnClick(true)
 		UIUtil.SetIsVisible(self.TextTips, true)
 
-		UIUtil.SetIsVisible(self.BtnClose, false)
 		UIUtil.SetIsVisible(self.TextHint, false)
 		UIUtil.SetIsVisible(self.PanelArrowLeft, false)
 		UIUtil.SetIsVisible(self.PanelBtnArrowRight, false)
 	else
-		UIUtil.SetIsVisible(self.BtnClose, false)
 		self.PopUpBG:SetHideOnClick(true)
 		self.PopUpBG:SetCallback(self, self.BgClickCallBack)
 		UIUtil.SetIsVisible(self.TextTips, true)
 	end
 
-	self.TextTips:SetText(LSTR(890004))
-	self.TextHint:SetText(LSTR(890006))
 end
 
 function TutorialGuideShowPanelView:OnHide()

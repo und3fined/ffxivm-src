@@ -198,6 +198,9 @@ function CardsPrepareMainNewPanelView:OnInit()
         [3] = self.AnimRulePage,
     }
     self.PrepareRulePage:SetViewModel(self.ViewModel)
+
+    self.DefaultBGPath = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_EditDecksBG.UI_Cards_Img_EditDecksBG'"
+    self.EmoActBGPath = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_PrepareEmoActBG.UI_Cards_Img_PrepareEmoActBG'"
 end
 
 function CardsPrepareMainNewPanelView:OnIsAllRulePassChanged(NewValue, OldValue)
@@ -221,7 +224,8 @@ function CardsPrepareMainNewPanelView:OnDestroy()
 end
 
 function CardsPrepareMainNewPanelView:SetLSTR()
-    self.TextTitle:SetText(_G.LSTR(1130080))--("幻卡备战")
+    self.CommonTitle_UIBP:SetTextTitleName(_G.LSTR(1130080))--("幻卡备战")
+    self.CommonTitle_UIBP:SetCommInforBtnIsVisible(true)
 	self.TextTitle_1:SetText(_G.LSTR(1130040))--1130040("编辑卡组")
 	self.TextCountdownTitle:SetText(_G.LSTR(1130041))--1130041("开局倒计时:")
 	self.TextAutomatic:SetText(_G.LSTR(1130042))--1130042("自动组卡")
@@ -309,14 +313,16 @@ end
 --- 左边的栏目选择变动了
 function CardsPrepareMainNewPanelView:OnCommVerIconTabsChanged(CurIndex)
     self.ViewModel:SetLeftTabSelectIndex(CurIndex)
-    self.TextSubtitle:SetText(LocalDef.EditType[CurIndex] or "")
+    self.CommonTitle_UIBP:SetTextSubtitle(LocalDef.EditType[CurIndex] or "")
     self:ShowCurSelectPanel(CurIndex)
 end
 
 function CardsPrepareMainNewPanelView:ShowCurSelectPanel(CurIndex)
+    local BGPath = CurIndex == 2 and self.EmoActBGPath or self.DefaultBGPath
+    UIUtil.ImageSetBrushFromAssetPath(self.FImage_54, BGPath)
     UIUtil.SetIsVisible(self.PrepareEmoActPage, CurIndex == 2)
     UIUtil.SetIsVisible(self.PrepareRulePage, CurIndex == 3)
-    local TabAnim = self.TabAnimMap[CurIndex]
+    
     if (CurIndex == 1) then
         -- 显示卡组信息
         if(self.IsFirst) then
@@ -328,6 +334,8 @@ function CardsPrepareMainNewPanelView:ShowCurSelectPanel(CurIndex)
         local AnimTime = self.AnimIn:GetEndTime()
         self:PlayAnimationTimeRange(self.AnimIn, AnimTime, AnimTime, 1, nil, 1.0, false)
     end
+
+    local TabAnim = self.TabAnimMap[CurIndex]
     self:PLayAnimation(TabAnim)
 end
 

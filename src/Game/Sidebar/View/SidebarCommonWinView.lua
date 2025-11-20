@@ -20,7 +20,6 @@ local LSTR = _G.LSTR
 ---@field BtnRight CommBtnSView
 ---@field ProBarCD UProgressBar
 ---@field RichTextDesc URichTextBox
----@field RichTextDesc2 URichTextBox
 ---@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -30,7 +29,6 @@ local LSTR = _G.LSTR
 ---@field Params table @通过外部参数传入
 ---@field Params.Title string @标题
 ---@field Params.Desc1 string @描述文本1，不传或空字符串时，会隐藏对应的文本组件
----@field Params.Desc2 string @描述文本2，不传或空字符串时，会隐藏对应的文本组件
 ---@field Params.StartTime number @倒计时开始时间（时间搓，单位秒）
 ---@field Params.CountDown number @倒计时长
 ---@field Params.CBFuncObj table @回调函数调用者对象
@@ -49,7 +47,6 @@ function SidebarCommonWinView:Ctor()
 	--self.BtnRight = nil
 	--self.ProBarCD = nil
 	--self.RichTextDesc = nil
-	--self.RichTextDesc2 = nil
 	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -84,9 +81,6 @@ function SidebarCommonWinView:OnShow()
 	--描述文本1
 	self:SetDesc(self.RichTextDesc, Params.Desc1)
 
-	--描述文本2
-	self:SetDesc(self.RichTextDesc2, Params.Desc2)
-
 	self.CBFuncObj = Params.CBFuncObj
 	self.CBFuncLeft = Params.CBFuncLeft
 	self.CBFuncRight = Params.CBFuncRight
@@ -109,7 +103,7 @@ function SidebarCommonWinView:OnShow()
 	self.LossTime = TimeUtil.GetServerTime() - StartTime
 	if self.LossTime >= self.CountDown then
 		self.ProBarCD:SetPercent(0)
-		self:CloseUI()
+		SidebarMgr:TryOpenSidebarMainWin()
 		return
 	end
 

@@ -80,7 +80,12 @@ function CommGetWayTipsView:OnShow()
 		if ForbidRangeWidget == nil then
 			if Params.AdjustTips == nil then
 				local Pos = UIUtil.CanvasSlotGetPosition(self.PanelGetWayTips)
-				UIUtil.CanvasSlotSetPosition(self.PanelGetWayTips, Pos + Params.Offset)
+				local ExtraOffset = _G.UE.FVector2D(0, 0)		
+				if Params.Extras and Params.Extras.OffsetXViewCount then
+					local Size = UIUtil.CanvasSlotGetSize(self.PanelGetWayTips)
+					ExtraOffset.X = Params.Extras.OffsetXViewCount * Size.X
+				end
+				UIUtil.CanvasSlotSetPosition(self.PanelGetWayTips, Pos + Params.Offset + ExtraOffset)
 				UIUtil.CanvasSlotSetAlignment(self.PanelGetWayTips, Params.Alignment)
 			else
 				-- 延迟才能获取大小

@@ -59,14 +59,8 @@ local UpdateTextData = {}
 ---@field BtnMoney1 UFButton
 ---@field BtnMoney2 UFButton
 ---@field BtnMoney3 UFButton
----@field BtnNumber1 UFButton
----@field BtnNumber2 UFButton
 ---@field BtnPreview UFButton
----@field BtnTips1 UFButton
----@field BtnTips1_1 UFButton
----@field BtnTips2 UFButton
----@field BtnTips2_1 UFButton
----@field FHorizontalSurplus UFHorizontalBox
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field Goods MysterMerchantGoodsItemView
 ---@field HorizontalCurrent1 UFHorizontalBox
 ---@field HorizontalCurrent2 UFHorizontalBox
@@ -76,12 +70,9 @@ local UpdateTextData = {}
 ---@field ImgMoney2 UFImage
 ---@field ImgMoney3 UFImage
 ---@field ImgPreview UFImage
----@field NumberPanel1 UFCanvasPanel
----@field NumberPanel2 UFCanvasPanel
 ---@field PanelBuySetting UFCanvasPanel
 ---@field PanelItem UFCanvasPanel
 ---@field PanelOriginal UFCanvasPanel
----@field TextAmount UFTextBlock
 ---@field TextCurrentPrice1 UFTextBlock
 ---@field TextCurrentPrice2 UFTextBlock
 ---@field TextCurrentPrice3 UFTextBlock
@@ -89,12 +80,8 @@ local UpdateTextData = {}
 ---@field TextItemName UFTextBlock
 ---@field TextItemType URichTextBox
 ---@field TextNumWin UFTextBlock
----@field TextNumber1 UFTextBlock
----@field TextNumber2 UFTextBlock
 ---@field TextOriginalPrice UFTextBlock
 ---@field TextSoldout UFTextBlock
----@field TextSurplus URichTextBox
----@field TextSurplus_2 UFTextBlock
 ---@field TextWear UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MysterMerchantBuyPropsWinView = LuaClass(UIView, true)
@@ -110,14 +97,8 @@ function MysterMerchantBuyPropsWinView:Ctor()
 	--self.BtnMoney1 = nil
 	--self.BtnMoney2 = nil
 	--self.BtnMoney3 = nil
-	--self.BtnNumber1 = nil
-	--self.BtnNumber2 = nil
 	--self.BtnPreview = nil
-	--self.BtnTips1 = nil
-	--self.BtnTips1_1 = nil
-	--self.BtnTips2 = nil
-	--self.BtnTips2_1 = nil
-	--self.FHorizontalSurplus = nil
+	--self.CommWinSlotQuality = nil
 	--self.Goods = nil
 	--self.HorizontalCurrent1 = nil
 	--self.HorizontalCurrent2 = nil
@@ -127,12 +108,9 @@ function MysterMerchantBuyPropsWinView:Ctor()
 	--self.ImgMoney2 = nil
 	--self.ImgMoney3 = nil
 	--self.ImgPreview = nil
-	--self.NumberPanel1 = nil
-	--self.NumberPanel2 = nil
 	--self.PanelBuySetting = nil
 	--self.PanelItem = nil
 	--self.PanelOriginal = nil
-	--self.TextAmount = nil
 	--self.TextCurrentPrice1 = nil
 	--self.TextCurrentPrice2 = nil
 	--self.TextCurrentPrice3 = nil
@@ -140,12 +118,8 @@ function MysterMerchantBuyPropsWinView:Ctor()
 	--self.TextItemName = nil
 	--self.TextItemType = nil
 	--self.TextNumWin = nil
-	--self.TextNumber1 = nil
-	--self.TextNumber2 = nil
 	--self.TextOriginalPrice = nil
 	--self.TextSoldout = nil
-	--self.TextSurplus = nil
-	--self.TextSurplus_2 = nil
 	--self.TextWear = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -157,6 +131,7 @@ function MysterMerchantBuyPropsWinView:OnRegisterSubView()
 	self:AddSubView(self.BtnBuyConfirm)
 	self:AddSubView(self.BtnCancel)
 	self:AddSubView(self.BtnGift)
+	self:AddSubView(self.CommWinSlotQuality)
 	self:AddSubView(self.Goods)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -171,7 +146,6 @@ function MysterMerchantBuyPropsWinView:OnInit()
 	self.MoneyImgList = {self.ImgMoney1,self.ImgMoney2,self.ImgMoney3}
 	self.MoneyTextList = {self.TextCurrentPrice1,self.TextCurrentPrice2,self.TextCurrentPrice3}
 	self.MoneyBtnList = {self.BtnMoney1,self.BtnMoney2,self.BtnMoney3}
-	self.NumberPanelList = {self.NumberPanel1,self.NumberPanel2}
 	self.BindingList = nil
 	self.IsCanBuy = true
 end
@@ -184,7 +158,6 @@ function MysterMerchantBuyPropsWinView:SetLSTR()
 	self.BG:SetTitleText(_G.LSTR(1110019)) -- 1110019("商品购买")
 	self.BtnCancel:SetButtonText(_G.LSTR(1110012)) -- 1110012("取消")
 	self.BtnBuyConfirm:SetButtonText(_G.LSTR(1110040)) -- 1110040("确认购买")
-	self.TextAmount:SetText(1)
 end
 
 function MysterMerchantBuyPropsWinView:OnShow()
@@ -214,10 +187,10 @@ function MysterMerchantBuyPropsWinView:OnShow()
 	local ScoreID = MysterMerchantVM.CoinID
 	--self.MoneySlot:UpdateView(ScoreID, false, nil, true)
 	self:UpdateGoodsInfo()
+	self.CommWinSlotQuality:UpdateUIByItem(self.ItemID)
 end
 
 function MysterMerchantBuyPropsWinView:OnHide()
-	self.TextAmount:SetText(1)
 	if UIViewMgr:IsViewVisible(UIViewID.ItemTipsStatus) then
 		UIViewMgr:HideView(UIViewID.ItemTipsStatus)
 	end
@@ -229,12 +202,6 @@ function MysterMerchantBuyPropsWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnBuyConfirm, self.OnClickedConfirmBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnGoods, self.OnClickedBtnGoods)
 	UIUtil.AddOnClickedEvent(self, self.BtnCancel, self.OnClickedBtnCancel)
-	UIUtil.AddOnClickedEvent(self, self.BtnNumber1, self.OnClickedBtnNumber1)
-	UIUtil.AddOnClickedEvent(self, self.BtnNumber2, self.OnClickedBtnNumber2)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips1, self.OnClickedBtnTips1)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips2, self.OnClickedBtnTips2)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips1_1, self.OnClickedBtnTips1)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips2_1, self.OnClickedBtnTips2)
 	UIUtil.AddOnClickedEvent(self, self.BtnPreview, self.OnClickedBtnPreview)
 	for i = 1, 3 do
 		UIUtil.AddOnClickedEvent(self, self.MoneyBtnList[i], self.ShowPirceTips, i)
@@ -287,11 +254,6 @@ function MysterMerchantBuyPropsWinView:UpdateGoodsInfo()
 	self.Exchange = GCfg.Exchange
 	self.Obtain = GCfg.Obtain
 	self.IsPop = GCfg.PopOut
-	if IsHQ == 1 then
-		UIUtil.SetIsVisible(self.PanelHQ,true)
-	else
-		UIUtil.SetIsVisible(self.PanelHQ,false)
-	end
 
 	local QualityPath = MerchantDefine.ItemColor[ItemColor]
 	self.TextItemName:SetText(ItemName)
@@ -301,28 +263,6 @@ function MysterMerchantBuyPropsWinView:UpdateGoodsInfo()
 	-- UIUtil.ImageSetBrushFromAssetPath(self.ImgGoods,IconPath)
 	-- UIUtil.ImageSetBrushFromAssetPath(self.ImgQuality,QualityPath)
 
-	local PanelList = self.NumberPanelList
-	local ShowNumsSelect = GCfg.ShowNumsSelect
-	self.ShowNumsSelect = ShowNumsSelect
-	for i = 1, #PanelList do 
-		if ShowNumsSelect == 1 then
-			--UIUtil.SetIsVisible(PanelList[i],true)
-			UIUtil.SetIsVisible(self.BtnNumber1, true, true)
-			UIUtil.SetIsVisible(self.BtnTips1, true, true)
-			UIUtil.SetIsVisible(self.TextNumber1, true)
-			UIUtil.SetIsVisible(self.BtnNumber2, true, true)
-			UIUtil.SetIsVisible(self.BtnTips2, true, true)
-			UIUtil.SetIsVisible(self.TextNumber2, true)
-		else
-			--UIUtil.SetIsVisible(PanelList[i],false)
-			UIUtil.SetIsVisible(self.BtnNumber1, false, true)
-			UIUtil.SetIsVisible(self.BtnTips1, false, true)
-			UIUtil.SetIsVisible(self.TextNumber1, false)
-			UIUtil.SetIsVisible(self.BtnNumber2, false, true)
-			UIUtil.SetIsVisible(self.BtnTips2, false, true)
-			UIUtil.SetIsVisible(self.TextNumber2, false)
-		end
-	end
 	
 	if OnceLimitation == 1 then
 		-- for i = 1,#PanelList do 
@@ -352,7 +292,6 @@ function MysterMerchantBuyPropsWinView:UpdateGoodsInfo()
 	end
 
 	if self.IsCanBuy then
-		UIUtil.SetIsVisible(self.TextAmount, true)
 		UIUtil.SetIsVisible(self.AmountSlider, true, true)
 		UIUtil.SetIsVisible(self.HorizontalPrice, true, true)
 		--UIUtil.SetIsVisible(self.NumberPanel1,true,true)
@@ -368,21 +307,10 @@ function MysterMerchantBuyPropsWinView:UpdateGoodsInfo()
 			UIUtil.SetIsVisible(self.TextSoldout, false)
 		end
 	else
-		UIUtil.SetIsVisible(self.TextAmount, false)
 		UIUtil.SetIsVisible(self.TextSoldout, true)
 		UIUtil.SetIsVisible(self.AmountSlider, false, true)
 		-- UIUtil.SetIsVisible(self.NumberPanel1, false, true)
 		-- UIUtil.SetIsVisible(self.NumberPanel2, false, true)
-		UIUtil.SetIsVisible(self.BtnNumber1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1_1, false, true)
-		UIUtil.SetIsVisible(self.TextNumber1, false)
-		UIUtil.SetIsVisible(self.BtnNumber2, false, true)
-		UIUtil.SetIsVisible(self.BtnTips2, false, true)
-		UIUtil.SetIsVisible(self.BtnTips2_1, false, true)
-		UIUtil.SetIsVisible(self.TextNumber2, false)
-		UIUtil.SetIsVisible(self.BtnTips1,false, true)
-		UIUtil.SetIsVisible(self.BtnTips2,false, true)
 
 		if self.IsSoldout then
 			if self.AllSurplus <= 0 then
@@ -433,12 +361,12 @@ function MysterMerchantBuyPropsWinView:SetDiscount(Info)
 	-- else
 	if Info.Discount > 0 and Info.Discount < 100 then
 		self.IsDiscount = true
-		UIUtil.SetIsVisible(self.PanelDiscount, true)
+		--UIUtil.SetIsVisible(self.PanelDiscount, true)
 		local DiscountValue = string.format(LSTR(1110002), math.floor(Info.Discount / 10))--%d折
 		--self.TextDiscount:SetText(DiscountValue)
 	else
 		self.IsDiscount = false
-		UIUtil.SetIsVisible(self.PanelDiscount, false)
+		--UIUtil.SetIsVisible(self.PanelDiscount, false)
     end
 end
 
@@ -461,7 +389,6 @@ end
 
 function MysterMerchantBuyPropsWinView:SetQuota(QuotaInfo, OnceLimitation)
 	if QuotaInfo.RestrictionType and QuotaInfo.RestrictionType ~= 0 then
-		UIUtil.SetIsVisible(self.FHorizontalSurplus, true)
 		local QuotaTtitle = MerchantDefine.LimitBuyNumTipsTitle[QuotaInfo.RestrictionType]
 		local CanBuyCount = QuotaInfo.RestrictionCount - QuotaInfo.BoughtCount  --可购买-已购买
 		local CurrentRestore = QuotaInfo.RestrictionCount -- CounterMgr:GetCounterRestore(QuotaInfo.CounterFirstID)
@@ -494,29 +421,29 @@ function MysterMerchantBuyPropsWinView:SetQuota(QuotaInfo, OnceLimitation)
 
 		self.MaxNum = CanBuyCount
 		if self.IsSoldout then
-			UIUtil.SetIsVisible(self.TextSurplus, false)
+			--UIUtil.SetIsVisible(self.TextSurplus, false)
 		else
-			UIUtil.SetIsVisible(self.TextSurplus, true)
+			--UIUtil.SetIsVisible(self.TextSurplus, true)
 			if CanBuyCount == 0 then
-				local Text = string.format("<span color=\"#f3f3f399\">%s</><span color=\"#dc5868\">%d</><span color=\"#f3f3f399\">/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
-				self.TextSurplus:SetText(Text)
+				--local Text = string.format("<span color=\"#f3f3f399\">%s</><span color=\"#dc5868\">%d</><span color=\"#f3f3f399\">/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
+				--self.TextSurplus:SetText(Text)
 			else
-				local Text = string.format("<span color=\"#f3f3f399\">%s%d/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
-				self.TextSurplus:SetText(Text)
+				--local Text = string.format("<span color=\"#f3f3f399\">%s%d/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
+				--self.TextSurplus:SetText(Text)
 			end
 		end
 	else
 		self.IsSoldout = false
 		self.MaxNum = OnceLimitation
 		UIUtil.SetIsVisible(self.TextWear, false)
-		UIUtil.SetIsVisible(self.FHorizontalSurplus, false)
+		--UIUtil.SetIsVisible(self.FHorizontalSurplus, false)
 	end
 	
 end
 
 function MysterMerchantBuyPropsWinView:SetBindState()
 	local Item = ItemUtil.CreateItem(self.ItemID, 0)
-	--ItemTipsUtil.ShowTipsByItem(Item, self.ImgGoods)
+	ItemTipsUtil.ShowTipsByItem(Item, self.ImgGoods)
 end
 
 function MysterMerchantBuyPropsWinView:SetPriceInfo(PriceInfo)
@@ -610,9 +537,8 @@ end
 
 
 function MysterMerchantBuyPropsWinView:OnValueChangedSlider(Value,MaxNum)
-	self.CurNum = Value 
-	self.TextAmount:SetText(Value)
-	self:IsCurNumMax(Value,MaxNum)
+	self.CurNum = Value
+	--self:IsCurNumMax(Value,MaxNum)
 	self:UpdatePriceInfo(Value)
 
 	for i = 1,#PriceValueInfo do
@@ -629,31 +555,28 @@ end
 
 function MysterMerchantBuyPropsWinView:IsCurNumMax(CurNum,MaxNum)
 	if CurNum >= MaxNum and MaxNum ~= 1 then
-		self.BtnNumber2:SetIsEnabled(false)
+		--self.BtnNumber2:SetIsEnabled(false)
 		if self.ShowNumsSelect == 1 then
-			UIUtil.SetIsVisible(self.BtnTips2,true, true)
+			--UIUtil.SetIsVisible(self.BtnTips2,true, true)
 		end
-		UIUtil.SetIsVisible(self.BtnTips2_1,true, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2,TextColor[3])
+		--UIUtil.SetIsVisible(self.BtnTips2_1,true, true)
+		--UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2,TextColor[3])
 	else
-		self.BtnNumber2:SetIsEnabled(true)
-		UIUtil.SetIsVisible(self.BtnTips2,false, true)
-		UIUtil.SetIsVisible(self.BtnTips2_1,false, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2,TextColor[1])
+
 	end
 
 	if CurNum <= 1 and MaxNum ~= 1 then
-		self.BtnNumber1:SetIsEnabled(false)
+		--self.BtnNumber1:SetIsEnabled(false)
 		if self.ShowNumsSelect == 1 then
-			UIUtil.SetIsVisible(self.BtnTips1, true, true)
+			--UIUtil.SetIsVisible(self.BtnTips1, true, true)
 		end
-		UIUtil.SetIsVisible(self.BtnTips1_1,true, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[3])
+		--UIUtil.SetIsVisible(self.BtnTips1_1,true, true)
+		--UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[3])
 	else
-		self.BtnNumber1:SetIsEnabled(true)
-		UIUtil.SetIsVisible(self.BtnTips1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1_1,false, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[1])
+		--self.BtnNumber1:SetIsEnabled(true)
+		--UIUtil.SetIsVisible(self.BtnTips1, false, true)
+		--UIUtil.SetIsVisible(self.BtnTips1_1,false, true)
+		--UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[1])
 	end
 end
 
@@ -913,7 +836,6 @@ function MysterMerchantBuyPropsWinView:BagCapacityIsEnough()
 end
 
 function MysterMerchantBuyPropsWinView:OnClickedBtnGoods()
-	--ItemTipsUtil.CurrencyTips(self.ItemID, false, self.PanelHQ)
 	self:SetBindState()
 end
 

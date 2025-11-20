@@ -60,6 +60,7 @@ function MentorMgr:OnBegin()
     
 	self.GuideTypeList = {}     	--- { {GuideType:Type   bool:NeedUpdate}, ...}
 	self.ResignTime = nil
+	self.GoldSauserResignTime = nil -- 金碟指导者的辞职时间
 	self.Edition = nil
 	self.LoginTime = 0   			-- 指导者后台下发的登录时间戳
 	self.GameAllTimeBefore = 0   	-- 本次登录之前，玩家的总游戏时长 单位秒
@@ -82,14 +83,25 @@ function MentorMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_Status, self.GuideStatusRsp)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_Attestation, self.GuideAttestationRsp)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_Resign, self.GuideResignRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_Resign_Single, self.GuideGoldSauserResignRsp)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_ConditionUpdateNotice, self.GuideConditionUpdateNoticeRsp)
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_IdentifyChangeNotice, self.GuideIdentifyChangeNotice)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_GUIDE, SUB_MSG_ID.GuideOptCmd_AllStatus, self.AllStatusRsp)
 end
 
 function MentorMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventRoleLoginRes)
 end
+
+--- 金碟指导者界面打开GM测试接口
+function MentorMgr:OpenConditionUITest()
+	self:OpenMentorConditionUI(GuideType.GUIDE_TYPE_GOLD_SAUSER)
+end
+
+--- 金碟指导者界面打开GM测试接口
+function MentorMgr:OpenResignUITest()
+	self:OpenResignMentorUI(GuideType.GUIDE_TYPE_GOLD_SAUSER)
+end
+
 
 ---@param MentorType  MentorDefine.GuideType
 function MentorMgr:OpenMentorConditionUI(MentorType)
@@ -109,35 +121,37 @@ function MentorMgr:OpenMentorAuthenticationUI(MentorType)
 	UIViewMgr:ShowView(UIViewID.MentorAuthenticationPanel, { ShowType = MentorType })
 end
 
-function MentorMgr:OpenResignMentorUI()
-	local CloseFun = function()  
+function MentorMgr:OpenResignMentorUI(MentorType)
+	local bGoldSauserType = MentorType == GuideType.GUIDE_TYPE_GOLD_SAUSER
+	local CloseFun = function()
 		DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.MentorResign), "0")
 	end
 
-	local BackToGame = function()  
-		if self.HelpInfoMidWinView ~= nil then
-			self.HelpInfoMidWinView:Hide() 
-			self.HelpInfoMidWinView = nil
+	local BackToGame = function(View)
+		if View ~= nil then
+			View:Hide()
 			DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.MentorResign), "1")
 		end
 	end
 
-	local ConfirmFun = function()  
-		if self.HelpInfoMidWinView ~= nil then
-			self.HelpInfoMidWinView:Hide() 
-			self.HelpInfoMidWinView = nil
-			self.SendMsgMentorResignReq()
+	local ConfirmFun = function(View)
+		if View ~= nil then
+			View:Hide()
+			if bGoldSauserType then
+				self:SendMsgGoldSauserMentorResignReq()
+			else
+				self.SendMsgMentorResignReq()
+			end
 			DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.MentorResign), "2")
 		end
 	end
 
-	local Title = LSTR(760029)
-	local ContentText = LSTR(760023)
-	local HintText = RichTextUtil.GetText( string.format(LSTR(760002), self.ResignCD), "d1906d")
-	--local Cfgs = {{HelpName = Title, SecTitle = ContentText, SecContent = { { SecContent = HintText } } } }
-	local Cfgs = {{ HelpName = Title, SecTitle = ContentText, SecContent = {} }, {SecTitle = "", SecContent = { { SecContent = HintText } }} }
-	local Params = { Cfgs = Cfgs, ShowBtn = true, LeftBtnText = LSTR(760030), RightBtnText = LSTR(760031), View = self, RightBtnCB = BackToGame, LeftBtnCB = ConfirmFun, CloseBtnCB = CloseFun, IsMentorResign = true }
-	self.HelpInfoMidWinView = UIViewMgr:ShowView(UIViewID.HelpInfoMidWinView, Params)
+	local Title = bGoldSauserType and LSTR(760050) or LSTR(760029)
+	local ContentText = bGoldSauserType and LSTR(760051) or LSTR(760023)
+	local HintText = string.format(LSTR(760002), self.ResignCD)
+	local Params = { Title = Title, ContentText = ContentText, HintText = HintText, LeftBtnText = LSTR(760030),
+				 RightBtnText = LSTR(760031), RightBtnCB = BackToGame, LeftBtnCB = ConfirmFun, CloseBtnCB = CloseFun }
+	UIViewMgr:ShowView(UIViewID.MentorDismissWinPanel, Params)
 end
 
 -- 返回指导者所有相关状态
@@ -151,6 +165,7 @@ function MentorMgr:AllStatusRsp(MsgBody)
 	self.GuideTypeList = AllStatus.GuideStatus
 	self.Edition = AllStatus.Edition
 	self.ResignTime = AllStatus.GuideResignTime
+	self.GoldSauserResignTime = AllStatus.GoldSauserResignTime
 	self.LoginTime = (AllStatus.LoginTime or 0) == 0 and TimeUtil.GetServerTime() or AllStatus.LoginTime
 	self.GameAllTimeBefore = AllStatus.GameAllTimeBefore
 	ReturneeMgr:SetEdition(AllStatus.Edition)
@@ -164,15 +179,31 @@ function MentorMgr:AllStatusRsp(MsgBody)
 	NewbieMgr:SetBeKickOutJoinNewbieChannelTime(AllStatus.BeKickOutJoinNewbieChannelTime)
 end
 
--- 返回指导者状态
+-- 指导者状态变更通知
 function MentorMgr:GuideStatusRsp(MsgBody)
 	if nil == MsgBody or nil == MsgBody.Status then
 		return
 	end
 	local Status = MsgBody.Status
-	self.GuideTypeList = Status.GuideStatus
 	self.Edition = Status.Edition
-	self.ResignTime = Status.ResignTime
+
+	local OldGuideTypeList = self.GuideTypeList or {}
+	local NewGuideTypeList = Status.GuideStatus or {}
+	self.GuideTypeList = Status.GuideStatus
+
+	for _, CutGuide in pairs(MentorDefine.PureMentorType) do
+		local OldlistExist = table.containAttr(OldGuideTypeList, CutGuide, "Type")
+		local NewlistExist = table.containAttr(NewGuideTypeList, CutGuide, "Type")
+		if OldlistExist and not NewlistExist then
+			-- 移除
+			if GuideType.GUIDE_TYPE_RED_FLOWER == CutGuide then
+				OnlineStatusUtil.RedflowerMentorDisappear()
+			end
+		end
+		if not OldlistExist and NewlistExist then
+			-- 新增
+		end
+	end
 end
 
 -- 返回指导者条件及完成状态
@@ -205,8 +236,6 @@ function MentorMgr:GuideAttestationRsp(MsgBody)
 		FLOG_ERROR(string.format(" An invalid mentor type was received from MentorMgr:GuideAttestationRsp! Type: %d ", InGuideType))
 		return
 	end
-	-- GuideOptCmd_Status 后台不会即时发送先自己添加
-	table.insert(self.GuideTypeList, { Type = InGuideType, NeedUpdate = false })
 
 	local View = UIViewMgr:FindVisibleView(UIViewID.MentorAuthenticationPanel)
 	if View ~= nil then
@@ -223,9 +252,28 @@ function MentorMgr:GuideResignRsp(MsgBody)
 	end
 	local Resign = MsgBody.Resign or {}
 	self.ResignTime = Resign.ResignTime
+
 	-- 接收到消息就是清空所有指导者成功
 	self.GuideTypeList = {}
 	_G.MsgTipsUtil.ShowTips(MentorDefine.GuideResignText)
+end
+
+-- 返回 辞去金碟指导者结果
+function MentorMgr:GuideGoldSauserResignRsp(MsgBody)
+	if nil == MsgBody then
+		return
+	end
+	local Resign = MsgBody.ResignSingle
+	if not Resign then
+		return
+	end
+
+	local MentorType = Resign.GuideType
+	if MentorType ~= GuideType.GUIDE_TYPE_GOLD_SAUSER then
+		return
+	end
+	self.GoldSauserResignTime = Resign.ResignTime
+	_G.MsgTipsUtil.ShowTips(MentorDefine.GoldSauserGuideResignText)
 end
 
 --指导者资格更新通知
@@ -245,25 +293,6 @@ function MentorMgr:GuideConditionUpdateNoticeRsp(MsgBody)
 	local Open = USaveMgr.GetInt(SaveKey.MentorUpdateNoticeUI, 0, true)
 	if (Open or 0) == 0 then
 		UIViewMgr:ShowView(UIViewID.MentorUpdateNoticePanel, {})
-	end
-end
-
--- 指导者身份变更通知  后台告知暂时只有“消失”通知
-function MentorMgr:GuideIdentifyChangeNotice(MsgBody)
-	if nil == MsgBody or nil == MsgBody.IdentifyChange then
-		return
-	end
-
-	local ChangeRet = MsgBody.IdentifyChange.ChangeRet
-	local ChangeList = MsgBody.IdentifyChange.GuideTypeList or {}
-	local GuideTypeList = self.GuideTypeList or {}
-	if ChangeRet == 0 then   --暂时只有消失需求， 后台没有处理增加
-		if table.contain(ChangeList, GuideType.GUIDE_TYPE_RED_FLOWER) then
-			OnlineStatusUtil.RedflowerMentorDisappear()
-		end
-		for i = 1, #ChangeList do
-			table.remove_item(GuideTypeList, ChangeList[i], "Type")
-		end
 	end
 end
 
@@ -308,6 +337,17 @@ function MentorMgr:SendMsgMentorResignReq()
 	local SubMsgID = SUB_MSG_ID.GuideOptCmd_Resign
 	local MsgBody = { Cmd = SUB_MSG_ID.GuideOptCmd_Resign }
 
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+-- 请求辞去金碟指导者
+function MentorMgr:SendMsgGoldSauserMentorResignReq()
+	local MsgID = CS_CMD.CS_CMD_GUIDE
+	local SubMsgID = SUB_MSG_ID.GuideOptCmd_Resign_Single
+	local MsgBody = { Cmd = SubMsgID }
+	MsgBody.ResignSingle = {
+		GuideType = GuideType.GUIDE_TYPE_GOLD_SAUSER
+	}
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 

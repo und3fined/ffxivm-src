@@ -10,8 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
-local UIBinderSetActiveWidgetIndex = require("Binder/UIBinderSetActiveWidgetIndex")
-local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local TouringBandDefine = require("Game/TouringBand/TouringBandDefine")
 local RedDotDefine = require("Game/CommonRedDot/RedDotDefine")
 
 local EToggleButtonState = _G.UE.EToggleButtonState
@@ -24,6 +23,9 @@ local LSTR = nil
 ---@field BkgContent TouringBandContentItemView
 ---@field CloseBtn CommonCloseBtnView
 ---@field CommTab CommHorTabsView
+---@field CommonBkg02_UIBP CommonBkg02View
+---@field CommonBkgMask_UIBP CommonBkgMaskView
+---@field CommonGuideBG CommonGuideBkgView
 ---@field CommonTitle CommonTitleView
 ---@field GuideCondition TouringBandContentItemView
 ---@field ImgPaper UFImage
@@ -48,6 +50,8 @@ local LSTR = nil
 ---@field AnimIn UWidgetAnimation
 ---@field AnimSwitchOff UWidgetAnimation
 ---@field AnimSwitchOn UWidgetAnimation
+---@field AnimTableViewTabSelectionChanged UWidgetAnimation
+---@field backup_AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local TouringBandGuidePanelView = LuaClass(UIView, true)
 
@@ -57,6 +61,9 @@ function TouringBandGuidePanelView:Ctor()
 	--self.BkgContent = nil
 	--self.CloseBtn = nil
 	--self.CommTab = nil
+	--self.CommonBkg02_UIBP = nil
+	--self.CommonBkgMask_UIBP = nil
+	--self.CommonGuideBG = nil
 	--self.CommonTitle = nil
 	--self.GuideCondition = nil
 	--self.ImgPaper = nil
@@ -81,6 +88,8 @@ function TouringBandGuidePanelView:Ctor()
 	--self.AnimIn = nil
 	--self.AnimSwitchOff = nil
 	--self.AnimSwitchOn = nil
+	--self.AnimTableViewTabSelectionChanged = nil
+	--self.backup_AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -90,6 +99,9 @@ function TouringBandGuidePanelView:OnRegisterSubView()
 	self:AddSubView(self.BkgContent)
 	self:AddSubView(self.CloseBtn)
 	self:AddSubView(self.CommTab)
+	self:AddSubView(self.CommonBkg02_UIBP)
+	self:AddSubView(self.CommonBkgMask_UIBP)
+	self:AddSubView(self.CommonGuideBG)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.GuideCondition)
 	self:AddSubView(self.Poster)
@@ -104,6 +116,7 @@ function TouringBandGuidePanelView:OnInit()
     LSTR = _G.LSTR
     self.SelectIndex = 1
     self.BandID = 0
+    self.NeedPlayAnimTabView = true
     self.BandTabVMAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewTab, nil, nil)
     self.BandTabVMAdapter:SetOnSelectChangedCallback(self.OnBandTabSelectChange)
     self.BandTabVMAdapter2 = UIAdapterTableView.CreateAdapter(self, self.TableViewTab2, nil, nil)
@@ -117,6 +130,7 @@ function TouringBandGuidePanelView:OnDestroy()
 end
 
 function TouringBandGuidePanelView:OnShow()
+    TouringBandMgr:UpdateBandRedDot()
     TouringBandMgr:QueryCollectionReq()
     self:InitConstInfo()
 
@@ -126,15 +140,6 @@ function TouringBandGuidePanelView:OnShow()
     table.insert(TabList, {Name = LSTR(450032)})
 
     self.CommTab:UpdateItems(TabList)
-
-    if self.CommTab ~= nil and self.CommTab.AdapterTabs ~= nil then
-        local Child = self.CommTab.AdapterTabs:GetChildren(2)
-        if Child then
-            self.RedDotStory = Child.RedDot
-            self.RedDotStory:SetIsCustomizeRedDot(true)
-            self.RedDotStory:SetStyle(RedDotDefine.RedDotStyle.SecondStyle)
-        end
-    end
     
     local FromViewID = (self.Params or {}).FromViewID
     UIUtil.SetIsVisible(self.CloseBtn, FromViewID == nil)
@@ -142,7 +147,7 @@ function TouringBandGuidePanelView:OnShow()
     self.ViewModel:InitBandTabList()
     UIUtil.SetIsVisible(self.SwitcherContent, true)
 
-    local MostRecentBandID = TouringBandMgr:GetMostRecentBandID()
+    local MostRecentBandID = (self.Params or {}).BandID or TouringBandMgr:GetMostRecentBandID()
     local AllBandData = TouringBandMgr:GetAllBandData()
     for Index, Value in ipairs(AllBandData) do
         if Value.BandID == MostRecentBandID then
@@ -160,6 +165,7 @@ function TouringBandGuidePanelView:OnShow()
     ToggleSoftPath:SetPath("AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/New/Play_UI_Band_List_Switch.Play_UI_Band_List_Switch'")
     self.ToggleBtnSwitch.SoundPathOnClick = ToggleSoftPath
     
+    self.NeedPlayAnimTabView = true
     UIUtil.SetIsVisible(self.TableViewTab, true, true)
     UIUtil.SetIsVisible(self.TableViewTab2, false, false)
     self.BandTabVMAdapter:SetSelectedIndex(self.SelectIndex)
@@ -226,13 +232,12 @@ function TouringBandGuidePanelView:OnRegisterBinder()
     self:RegisterBinders(self.ViewModel, Binders)
 end
 
-function TouringBandGuidePanelView:OnBandTabSelectChange(Index, ItemData, ItemView, IsByClick)
-    _G.TouringBandMgr:StopBandSong()
-    self.SelectIndex = Index
-    self.BandID = ItemData.BandID
-    self.BandSongVMAdapter:CancelSelected()
+function TouringBandGuidePanelView:DelayUpdateSelectBand()
+    if self.DelayTimerID then
+        self:UnRegisterTimer(self.DelayTimerID)
+    end
     self.ViewModel:UpdateSelectBand(self.BandID)
-
+    
     local IsUnLock = TouringBandMgr:IsBandUnLockByID(self.BandID)
     UIUtil.SetIsVisible(self.CommTab, IsUnLock)
     if IsUnLock then
@@ -259,6 +264,23 @@ function TouringBandGuidePanelView:OnBandTabSelectChange(Index, ItemData, ItemVi
     self:UpdateRedDot()
 end
 
+function TouringBandGuidePanelView:OnBandTabSelectChange(Index, ItemData, ItemView, IsByClick)
+    _G.TouringBandMgr:StopBandSong()
+    self.SelectIndex = Index
+    self.BandID = ItemData.BandID
+    self.BandSongVMAdapter:CancelSelected()
+
+    if self.NeedPlayAnimTabView then
+        if self.DelayTimerID then
+            self:UnRegisterTimer(self.DelayTimerID)
+        end
+        self.DelayTimerID = self:RegisterTimer(self.DelayUpdateSelectBand, 0.27)
+    else
+        self:DelayUpdateSelectBand()
+        self:UpdateRedDot()
+    end
+end
+
 function TouringBandGuidePanelView:OnGroupStateChangedTab(Index)
     self.SwitcherContent:SetActiveWidgetIndex(Index - 1)
 
@@ -272,7 +294,9 @@ function TouringBandGuidePanelView:OnToggleSwitchStateChangedEvent(ToggleButton,
         local IsUnLock = TouringBandMgr:IsBandUnLockByID(self.BandID)
         UIUtil.SetIsVisible(self.CommTab, IsUnLock)
         self:PlayAnimation(self.AnimSwitchOn)
+        self.NeedPlayAnimTabView = false
     else
+        self.NeedPlayAnimTabView = true
         self:PlayAnimation(self.AnimSwitchOff)
     end
     self.BandTabVMAdapter:SetSelectedIndex(self.SelectIndex)
@@ -289,25 +313,15 @@ function TouringBandGuidePanelView:UpdateRedDot()
     if self.ViewModel == nil or self.ViewModel.SelectBandID == nil then
         return
     end
-
-    local IsShow = false
-    local RedDotList = TouringBandMgr:GetCustomizeRedDotList()
-    local StoryStateList = TouringBandMgr:GetBandStoryLockState(self.ViewModel.SelectBandID)
-    for Index = 1, #StoryStateList do
-        if StoryStateList[Index].Lock == false then
-            local RedDotName = "TouringBand" .. self.ViewModel.SelectBandID .. "StoryIndex" .. Index
-            local IsSave = false
-            for __, ItemName in pairs(RedDotList) do
-                if RedDotName == ItemName then
-                    IsSave = true
-                end
-            end
-            IsShow = not IsSave
+    
+    if self.CommTab ~= nil and self.CommTab.AdapterTabs ~= nil then
+        local Child = self.CommTab.AdapterTabs:GetChildren(2)
+        if Child then
+            self.RedDotStory = Child.RedDot
+            local RedDotName = TouringBandDefine.RED_DOT_NAME .. '/' .. tostring(self.ViewModel.SelectBandID) .. '/Story'
+            self.RedDotStory:SetRedDotNameByString(RedDotName)
+            self.RedDotStory:SetStyle(RedDotDefine.RedDotStyle.SecondStyle)
         end
-    end
-
-    if self.RedDotStory and self.RedDotStory.ItemVM then
-        self.RedDotStory.ItemVM.IsVisible = IsShow
     end
 end
 
@@ -320,16 +334,17 @@ function TouringBandGuidePanelView:DelRedDot()
         return
     end
 
-    local IsShow = self.RedDotStory.ItemVM.IsVisible
-    if IsShow then
-        local StoryStateList = TouringBandMgr:GetBandStoryLockState(self.ViewModel.SelectBandID)
-        for Index = 1, #StoryStateList do
-            if StoryStateList[Index].Lock == false then
-                local RedDotName = "TouringBand" .. self.ViewModel.SelectBandID .. "StoryIndex" .. Index
-                TouringBandMgr:AddCustomizeRedDotName(RedDotName)
+    _G.TouringBandMgr:RemoveBandRecord(self.ViewModel.SelectBandID, TouringBandDefine.RECORD_TYPE.STORY)
+
+    local StoryStateList = TouringBandMgr:GetBandStoryLockState(self.ViewModel.SelectBandID)
+    for Index = 1, #StoryStateList do
+        if not StoryStateList[Index].Lock then
+            local RedDotName = TouringBandMgr:GetRedDotName(self.ViewModel.SelectBandID, Index)
+            local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+            if not IsSaveDel then
+                _G.RedDotMgr:DelRedDotByName(RedDotName)
             end
         end
-        self.RedDotStory.ItemVM.IsVisible = false
     end
 end
 

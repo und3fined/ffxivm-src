@@ -62,7 +62,7 @@ function ClientSetupMgr:SendQueryReq(KeyList)
 end
 
 function ClientSetupMgr:SendSetReq(Key, Value)
-  	FLOG_WARNING("ClientSetupMgr:SendSetReq " .. Key .. " To " ..Value)
+  	-- FLOG_WARNING("ClientSetupMgr:SendSetReq " .. Key .. " To " ..Value)
 	local MsgID = CS_CMD.CS_CMD_CLIENT_CFG
 	local SubMsgID = CLIENT_SETUP_SUB_ID.ClientSetupMsgIDSet
 	local MsgBody = {}

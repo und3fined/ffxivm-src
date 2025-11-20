@@ -58,7 +58,7 @@ function BuddySurfaceSlotVM:SetNumProgress(ID, Value)
 		if TotalNum > 0 then
 			self.ItemVM.Num = string.format("%d/%d", TotalNum, Value)
 		else
-			local curNumRichText = RichTextUtil.GetText(string.format("%d", TotalNum), "dc5868", 0, nil)
+			local curNumRichText = RichTextUtil.GetText(string.format("%d", TotalNum), "dc5868")
 			self.ItemVM.Num = string.format("%s/%d", curNumRichText, Value)
 		end
 	end

@@ -24,6 +24,7 @@ local ProtoCS = {
 		CS_ACHIEVEMENT_LEVEL_UP = 7,
 		CS_ACHIEVEMENT_SHOWED_COMPLETED = 8,
 		CS_ACHIEVEMENT_OTHER_COMPLETE = 9,
+		CS_ACHIEVEMENT_ONE_KEY_LEVEL_AWARD = 10,
 	},
 	LevelType = {
 		LEVEL_TYPE_ALL = 0,
@@ -69,6 +70,38 @@ local ProtoCS = {
 				NodeOpTypePhoneBindCode = 13,
 				NodeOpTypePhoneBindAuth = 14,
 				NodeOpTypePhoneBindAgreements = 15,
+				NodeOpTypeShareTeamMembers = 16,
+				NodeOpTypeStarDayPutGift = 17,
+				NodeOpTypeStarDayGetGift = 18,
+				NodeOpTypeDCCommitInfo = 20,
+				NodeOpTypeDCCommitDo = 21,
+				NodeOpTypeDCCommitDone = 22,
+				NodeOpTypeDCVoteInfo = 23,
+				NodeOpTypeDCVoteStart = 24,
+				NodeOpTypeDCVoteDo = 25,
+				NodeOpTypeDCShowInfo = 26,
+				NodeOpTypeDCRankInfo = 27,
+				NodeOpTypeDCRankReward = 28,
+				NodeOpTypeDCJudgeReward = 29,
+				NodeOpTypeDCHistorySeason = 30,
+				NodeOpTypeDCHistoryRank = 31,
+				NodeOpTypeDCHistoryMyWork = 32,
+				NodeOpTypeDaughterDayUpdateProgress = 40,
+				NodeOpTypeStarDaySendGreetingCard = 41,
+				NodeOpTypeStarDayBuySendGreetingTimes = 42,
+				NodeOpTypeUpdateTagSuggestTask = 45,
+				NodeOpTypeStarDayMusicStart = 46,
+				NodeOpTypeStarDayMusicEnd = 47,
+			},
+			AwradType = {
+				None = 0,
+				Normal = 1,
+				FullCombo = 2,
+				AllPerfect = 3,
+				IsHard = 1,
+				Score = 2,
+				Satisfaction = 3,
+				Award = 4,
 			},
 			PhoneBindMode = {
 				PhoneBindMode_Bind = 0,
@@ -88,6 +121,15 @@ local ProtoCS = {
 				Status = 1,
 				CouponCode = 2,
 				UsedTimes = 3,
+			},
+			DCWorkStatus = {
+				DCWorkStatus_None = 0,
+				DCWorkStatus_Commit = 1,
+				DCWorkStatus_Review = 2,
+				DCWorkStatus_ReviewFail = 3,
+				DCWorkStatus_ReviewPass = 4,
+				DCWorkStatus_CommitFail = 5,
+				DCWorkStatus_Deleted = 6,
 			},
 		},
 		AreaMail = {
@@ -145,6 +187,33 @@ local ProtoCS = {
 				LANTERN_NTF_DEL = 3,
 			},
 		},
+		MonsterHunt = {
+			CS_MONSTERHUNT_CMD = {
+				CS_MONSTERHUNT_CMD_INVALID = 0,
+				CS_MONSTERHUNT_CMD_INFO = 1,
+				CS_MONSTERHUNT_CMD_NOTIFY_MONSTER = 2,
+				CS_MONSTERHUNT_CMD_NOTIFY_AWARD = 3,
+				CS_MONSTERHUNT_CMD_UNLOCK_NOTE = 4,
+				CS_MONSTERHUNT_CMD_COLLECT_WEEK_AWARD = 5,
+				CS_MONSTERHUNT_CMD_NOTIFY_CLUE_A = 6,
+				CS_MONSTERHUNT_CMD_NOTIFY_CLUE_S = 7,
+			},
+			UserDataKey = {
+				UserDataKeyMonster = 0,
+			},
+			AwardType = {
+				AwardTypeInvalid = 0,
+				AwardTypeB = 1,
+				AwardTypeA = 2,
+				AwardTypeAMinion = 3,
+				AwardTypeS = 4,
+			},
+			UnlockWay = {
+				UnlockWayNPC = 0,
+				UnlockWayWantedMap = 1,
+				UnlockWayEnmity = 2,
+			},
+		},
 		MysteryMerchant = {
 			MERCHANT_TYPE = {
 				MERCHANT_TYPE_NONE = 0,
@@ -177,8 +246,8 @@ local ProtoCS = {
 				SubmitMerchantTask = 15,
 				InvestMerchant = 16,
 				ReceiveInvestRewards = 17,
-				MerchantBuffDestroy = 18,
 				ExclusiveRefresh = 19,
+				MerchantBuffDestroy = 18,
 			},
 		},
 		PvPColosseum = {
@@ -201,6 +270,9 @@ local ProtoCS = {
 				GET_DUEL_INFO = 15,
 				GET_LIKE_INFO = 16,
 				BADGE_UPDATE = 17,
+				SEASON_RANK = 18,
+				SEASON_REWARD = 19,
+				SEASON_RANK_HISTORY = 20,
 			},
 			PvPColosseumGameType = {
 				Invalid = 0,
@@ -229,6 +301,11 @@ local ProtoCS = {
 				PvPColosseumUserDataKeyPvPGame = 0,
 				PvPColosseumUserDataKeyDuel = 1,
 			},
+			PvPSeasonRewardType = {
+				PvPSeasonRewardType_NONE = 0,
+				PvPSeasonRewardType_Rank = 1,
+				PvPSeasonRewardType_Seg = 2,
+			},
 		},
 		Questionnaire = {
 			Cmd = {
@@ -236,6 +313,28 @@ local ProtoCS = {
 				QueryQuestionnaire = 1,
 				TriggerQuestionnaire = 2,
 				QuestionnaireValid = 3,
+			},
+		},
+		StarLight = {
+			CS_STAR_LIGHT_CMD = {
+				STAR_LIGHT_INVALID = 0,
+				STAR_LIGHT_MUSIC_START = 1,
+				STAR_LIGHT_MUSIC_STATE = 2,
+			},
+		},
+		Tianshu = {
+			TianshuCmd = {
+				TianshuCmdQuery = 0,
+				TianshuPickBook = 1,
+				TianshuPickReward = 2,
+				TianshuThinkMore = 3,
+				TianshuReStick = 4,
+				TianshuPickFlowers = 5,
+			},
+			TianshuTaskStatus = {
+				TaskUnFinished = 0,
+				TaskUnpick = 1,
+				TaskPicked = 2,
 			},
 		},
 		TouringBand = {
@@ -260,6 +359,7 @@ local ProtoCS = {
 				BandInteractFinish = 6,
 				ClickBandEmotion = 7,
 				BandBirthNotify = 8,
+				BatchInteractReport = 9,
 			},
 		},
 		TreasureHunt = {
@@ -286,6 +386,7 @@ local ProtoCS = {
 				TreasurySpin = 19,
 				GetGuessCardInfo = 20,
 				TreasureDigFinNotify = 21,
+				GetRouletteSpin = 22,
 			},
 			TreasureHuntState = {
 				TreasureNone = 0,
@@ -316,6 +417,11 @@ local ProtoCS = {
 				DigNone = 0,
 				PreStart = 1,
 				Finish = 2,
+			},
+			ETreasurType = {
+				None = 0,
+				Normal = 1,
+				Roulette = 2,
 			},
 			TreasurehuntUserDataKey = {
 				TreasurehuntUserDataKeyDefault = 0,
@@ -395,6 +501,7 @@ local ProtoCS = {
 		CS_CMD_ITEM_RECYC = 10,
 		CS_CMD_ITEM_BIND = 11,
 		CS_CMD_ITEM_TOMQ = 12,
+		CS_CMD_BATCH_USE = 13,
 	},
 	ITEM_USE_FROM = {
 		ITEM_USE_FROM_BAG = 0,
@@ -487,6 +594,12 @@ local ProtoCS = {
 		CHANNEL_TYPE_RECRUIT = 10,
 		CHANNEL_TYPE_VANGUARD = 14,
 		CHANNEL_TYPE_MAX = 15,
+		CHANNEL_TYPE_SQUAD = 16,
+	},
+	SPEAK_TYPE_DEFINE = {
+		SPEAK_TYPE_NONE = 0,
+		SPEAK_TYPE_DEFAULT = 1,
+		SPEAK_TYPE_VERSUS = 2,
 	},
 	CS_CHAT_CMD = {
 		CS_CHAT_CMD_NONE = 0,
@@ -510,6 +623,8 @@ local ProtoCS = {
 		CS_CHAT_CMD_VANGUARD_JOIN = 20,
 		CS_CHAT_CMD_VANGUARD_QUIT = 21,
 		CS_CHAT_CMD_VANGUARD_NOTIFY = 22,
+		CS_CHAT_CMD_UPDATE_QUICK_SPEAK = 23,
+		CS_CHAT_CMD_GET_QUICK_SPEAK = 24,
 	},
 	FailReason = {
 		ReasonOK = 0,
@@ -533,6 +648,7 @@ local ProtoCS = {
 		PARAM_TYPE_DEFINE_TEAM_RECRUIT = 9,
 		PARAM_TYPE_DEFINE_TEAM_TREASUREHUNT = 10,
 		PARAM_TYPE_DEFINE_ACHIEVEMENT_SHARE = 11,
+		PARAM_TYEP_DEFINE_FISH = 12,
 	},
 	SPECIAL_SYSTEM_MSG_ID = {
 		SPECIAL_SYSTEM_MSG_ID_NONE = 0,
@@ -652,6 +768,11 @@ local ProtoCS = {
 		CS_CLOSET_USED_STAIN_SAVE = 22,
 		CS_CLOSET_QUERY_PART_UNLOCK = 23,
 		CS_CLOSET_SUIT_CLOTHING = 24,
+		CS_CLOSET_UNLOCK_NOTICE = 25,
+		CS_CLOSET_REGION_RENAME = 26,
+		CS_CLOSET_REGION_UNLOCK_DYE = 27,
+		CS_CLOSET_CHARM_UPDATE_NOTIFY = 28,
+		CS_CLOSET_ACTIVE_STAIN_NOTIFY = 29,
 	},
 	GenderLimit = {
 		GENDER_ALL = 0,
@@ -671,6 +792,8 @@ local ProtoCS = {
 		CS_COLOSSEUM_COMBAT_CMD_CRYSTAL = 4,
 		CS_COLOSSEUM_COMBAT_CMD_EVENT_NOTIFY = 5,
 		CS_COLOSSEUM_COMBAT_CMD_VISION_INFO = 6,
+		CS_COLOSSEUM_COMBAT_CMD_COMMUNICATE = 7,
+		CS_COLOSSEUM_COMBAT_CMD_QUERY_STATS_PANEL = 8,
 	},
 	ColosseumSequence = {
 		COLOSSEUM_PHASE_NONE = 0,
@@ -1032,6 +1155,7 @@ local ProtoCS = {
 				CsFashionDecorateRead = 7,
 				CsFashionDecorateUnlock = 8,
 				CsFashionDecoratePlay = 9,
+				CsFashionDecorateImprove = 10,
 			},
 			FashionDecorateType = {
 				FashionDecorateNone = 0,
@@ -1155,10 +1279,28 @@ local ProtoCS = {
 				SearchFriendDim = 3,
 			},
 		},
+		Share = {
+			ShareType = {
+				ShareType_Default = 0,
+				ShareType_TxChannel = 1,
+			},
+			ShareOptCmd = {
+				Share_Get = 0,
+				Share_Save = 1,
+			},
+		},
 		SummonBeast = {
 			SummonBeastCmd = {
 				SummonBeastCmdNone = 0,
 				SummonBeastCmdCallBack = 1,
+			},
+		},
+		Toy = {
+			ToyCmd = {
+				ToyCmdNone = 0,
+				ToyCmdQuery = 1,
+				ToyCmdPlay = 2,
+				ToyCmdNotifyActive = 3,
 			},
 		},
 		Tribe = {
@@ -1207,6 +1349,7 @@ local ProtoCS = {
 		CS_CMD_EQUIP_GEM_UNINLAY = 4,
 		CS_CMD_EQUIP_REPAIR = 5,
 		CS_CMD_EQUIP_INFO = 6,
+		CS_CMD_EQUIP_SCHEME_UPDATE = 9,
 		CS_CMD_EQUIP_IMPROVE = 11,
 		CS_CMD_EQUIP_EXCHANGE_RECEIPT = 12,
 	},
@@ -1304,6 +1447,7 @@ local ProtoCS = {
 		FANTASY_CARD_OP_TOURNAMENT_MATCH_CONFIRM = 22,
 		FANTASY_CARD_OP_TOURNAMENT_OPPONENT_LEAVE = 24,
 		FANTASY_CARD_OP_TOURNAMENT_EFFECT_REROLL = 26,
+		FANTASY_CARD_OP_TOURNAMENT_BROADCAST = 27,
 		FANTASY_CARD_OP_ROOM_UPDATE = 25,
 	},
 	FLIP_MOVEMENT = {
@@ -1369,6 +1513,9 @@ local ProtoCS = {
 		CS_FATE_CMD_DANCE = 19,
 		CS_FATE_CMD_NPC_DANCE_NOTIFY = 20,
 		CS_FATE_CMD_DANCE_NPC_HIDDEN = 21,
+		CS_FATE_CMD_PLAYER_ACTION_START = 22,
+		CS_FATE_CMD_INTERACT_WITH_BUFF = 23,
+		CS_FATE_CMD_GET_MAP_SETTLE_WEIGHT = 24,
 	},
 	FateState = {
 		FateState_Invalid = 0,
@@ -1376,6 +1523,7 @@ local ProtoCS = {
 		FateState_InProgress = 2,
 		FateState_EndSubmitItem = 3,
 		FateState_Finished = 4,
+		FateState_CD = 5,
 	},
 	FatePlayerJoinState = {
 		FatePlayerJoinState_NotJoined = 0,
@@ -1479,6 +1627,7 @@ local ProtoCS = {
 				CS_SUB_CMD_FRIENDS_CONFIRMADD_NTF = 28,
 				CS_SUB_CMD_FRIENDS_SAVE_SETTING = 29,
 				CS_SUB_CMD_FRIENDS_PULL_SETTING = 30,
+				CS_SUB_CMD_FRIENDS_SET_NICKNAME = 31,
 				CS_SUB_CMD_FRIENDS_FIND = 40,
 				CS_SUB_CMD_FRIENDS_RECOMMOND = 50,
 			},
@@ -1587,7 +1736,6 @@ local ProtoCS = {
 		CS_CMD_GROUP_QUERY_APPLIED_GROUPS = 31,
 		CS_CMD_GROUP_NOTIFY_SELF = 36,
 		CS_CMD_GROUP_EDIT_INFO = 37,
-		CS_CMD_GROUP_QUERY_ROLE_GROUP = 38,
 		CS_CMD_GROUP_NOTIFY_APPLICATION_LIST = 39,
 		CS_CMD_GROUP_CHECK_SLOGAN = 40,
 		CS_CMD_GROUP_ADD_GROUP_SCORE = 41,
@@ -1645,6 +1793,9 @@ local ProtoCS = {
 		CS_CMD_GROUP_SIGN_REFUSE_TOC = 96,
 		CS_CMD_GROUP_SIGN_FULL_READ = 97,
 		CS_CMD_GROUP_NOTIFY_REPUTATION = 98,
+		CS_CMD_GROUP_RECRUIT_STATUS_TOC = 99,
+		CS_CMD_GROUP_AUTO_TRANSFER_LEADER_TOC = 100,
+		CS_CMD_GROUP_HOUSE_DESTROYED_TOC = 101,
 	},
 	GroupRedDotType = {
 		GroupRedDotTypeApply = 0,
@@ -1707,6 +1858,7 @@ local ProtoCS = {
 		GuideOptCmd_AllStatus = 18,
 		GuideOptCmd_IdentifyChangeNotice = 19,
 		GuideOptCmd_BeMoveOutNewbieChannelNotice = 20,
+		GuideOptCmd_Resign_Single = 21,
 	},
 	CS_HOPE_CMD = {
 		CS_CMD_UNDEF = 0,
@@ -1720,6 +1872,149 @@ local ProtoCS = {
 		INSTRUCTIONTYPE_USERDEFINED = 4,
 		INSTRUCTIONTYPE_STOP = 7,
 		INSTRUCTIONTYPE_PRELOGOUT = 8,
+	},
+	CS_SUBMSGID_FURNITURE_INTERACTION = {
+		CS_SUBMSGID_FURNITURE_INTERACTION_START = 0,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAY_LIST = 1,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAY_LIST_BC = 2,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAYING = 3,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAYING_BC = 4,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAY_MODE = 5,
+		CS_SUBMSGID_FURNITURE_INTERACTION_MUSICAL_SET_PLAY_MODE_BC = 6,
+		CS_SUBMSGID_FURNITURE_INTERACTION_FOOD_EAT = 8,
+		CS_SUBMSGID_FURNITURE_INTERACTION_FOOD_EAT_BC = 9,
+		CS_SUBMSGID_FURNITURE_INTERACTION_DISPLAY_EFFECTS = 10,
+		CS_SUBMSGID_FURNITURE_INTERACTION_DISPLAY_EFFECTS_BC = 11,
+		CS_SUBMSGID_FURNITURE_INTERACTION_CHANGE_STATUS = 12,
+		CS_SUBMSGID_FURNITURE_INTERACTION_CHANGE_STATUS_BC = 13,
+	},
+	HouseAttrMusicalPlayMode = {
+		HouseAttrMusicalPlayMode_None = 0,
+		HouseAttrMusicalPlayMode_Order = 1,
+		HouseAttrMusicalPlayMode_Loop = 2,
+		HouseAttrMusicalPlayMode_Random = 3,
+		HouseAttrMusicalPlayMode_Max = 4,
+	},
+	CS_SUBMSGID_HOUSE = {
+		CS_SUBMSGID_HOUSE_START = 0,
+		CS_SUBMSGID_HOUSE_GET_DEPOT = 1,
+		CS_SUBMSGID_HOUSE_PUT_FURNITURE = 2,
+		CS_SUBMSGID_HOUSE_PUT_FURNITURE_BC = 3,
+		CS_SUBMSGID_HOUSE_MOVE_FURNITURE = 5,
+		CS_SUBMSGID_HOUSE_MOVE_FURNITURE_BC = 6,
+		CS_SUBMSGID_HOUSE_BACK_FURNITURE = 7,
+		CS_SUBMSGID_HOUSE_BACK_FURNITURE_BC = 8,
+		CS_SUBMSGID_HOUSE_SET_SETTING = 9,
+		CS_SUBMSGID_HOUSE_SET_SETTING_BC = 10,
+		CS_SUBMSGID_HOUSE_FURNITURE_DYE = 12,
+		CS_SUBMSGID_HOUSE_FURNITURE_DYE_BC = 13,
+		CS_SUBMSGID_HOUSE_DO_UP_SET = 14,
+		CS_SUBMSGID_HOUSE_DO_UP_SET_BC = 15,
+		CS_SUBMSGID_HOUSE_ITEM_MOVE = 16,
+		CS_SUBMSGID_HOUSE_BEGIN_EDIT = 17,
+		CS_SUBMSGID_HOUSE_FINISH_EDIT = 18,
+		CS_SUBMSGID_HOUSE_DO_UP_DYE = 19,
+		CS_SUBMSGID_HOUSE_DO_UP_DYE_BC = 20,
+		CS_SUBMSGID_HOUSE_DEPOT_ITEM_ADD_NTF = 21,
+		CS_SUBMSGID_HOUSE_DEPOT_ITEM_UPDATE_NTF = 22,
+		CS_SUBMSGID_HOUSE_DEPOT_ITEM_REMOVE_NTF = 23,
+		CS_SUBMSGID_HOUSE_BACK_ALL_FURNITURE = 24,
+		CS_SUBMSGID_HOUSE_BACK_ALL_FURNITURE_BC = 25,
+		CS_SUBMSGID_HOUSE_PULL_DECORATE = 26,
+		CS_SUBMSGID_HOUSE_ENTER_ROOM = 27,
+		CS_SUBMSGID_HOUSE_LEAVE_ROOM = 53,
+		CS_SUBMSGID_HOUSE_SET_VISIT_PRIVILEGE = 29,
+		CS_SUBMSGID_HOUSE_SET_VISIT_PRIVILEGE_BC = 51,
+		CS_SUBMSGID_HOUSE_PULL_ROLE_INFO = 30,
+		CS_SUBMSGID_HOUSE_PULL_HOUSE_DETAIL = 31,
+		CS_SUBMSGID_HOUSE_ENTER_ESTATE = 32,
+		CS_SUBMSGID_HOUSE_PULL_ESTATE_HOUSE = 33,
+		CS_SUBMSGID_HOUSE_ENTER_PERSONAL_ETHER = 34,
+		CS_SUBMSGID_HOUSE_CREATED_HOUSE_BC = 35,
+		CS_SUBMSGID_HOUSE_DESTORIED_HOUSE_BC = 36,
+		CS_SUBMSGID_HOUSE_MODIFY_INFO = 37,
+		CS_SUBMSGID_HOUSE_DO_LINKE = 38,
+		CS_SUBMSGID_HOUSE_PULL_GROUP_INFO = 39,
+		CS_SUBMSGID_HOUSE_CREATE_GROUP_MEMBER_ROOM = 40,
+		CS_SUBMSGID_HOUSE_PULL_GROUP_MEMBER_ROOM = 41,
+		CS_SUBMSGID_HOUSE_DESTORY_GROUP_MEMBER_ROOM = 42,
+		CS_SUBMSGID_HOUSE_PULL_SELF_GROUP_MEMBER_ROOM = 50,
+		CS_SUBMSGID_HOUSE_RECYCLE_ROLE_ASSET = 43,
+		CS_SUBMSGID_HOUSE_RECYCLE_GROUP_ASSET = 44,
+		CS_SUBMSGID_HOUSE_UPLOAD_HOUSE_PIC = 45,
+		CS_SUBMSGID_HOUSE_ENTER_ESTATE_BLOCK = 46,
+		CS_SUBMSGID_HOUSE_PULL_ROLE_HOUSE_ADDR = 47,
+		CS_SUBMSGID_HOUSE_PULL_HOUSE_BASIC = 48,
+		CS_SUBMSGID_HOUSE_PULL_ROLE_BASIC = 49,
+		CS_SUBMSGID_HOUSE_MAX = 54,
+	},
+	HouseUseBagType = {
+		HouseUseBagType_Start = 0,
+		HouseUseBagType_RoleBag = 1,
+		HouseUseBagType_HouseDepot = 2,
+		HouseUseBagType_Max = 3,
+	},
+	HouseSettingType = {
+		HouseSettingType_Start = 0,
+		HouseSettingType_Light = 1,
+		HouseSettingType_Max = 2,
+	},
+	HouseVisitSettingType = {
+		HouseVisitSettingType_None = 0,
+		HouseVisitSettingType_Enter = 1,
+		HouseVisitSettingType_Browser = 2,
+		HouseVisitSettingType_Max = 3,
+	},
+	HouseVisitSettingValue = {
+		HouseVisitSettingValue_None = 0,
+		HouseVisitSettingValue_All = 1,
+		HouseVisitSettingValue_Friend = 2,
+		HouseVisitSettingValue_Roommate = 3,
+		HouseVisitSettingValue_Max = 4,
+	},
+	HouseType = {
+		HouseType_HouseType_None = 0,
+		HouseType_HouseType_Personal = 1,
+		HouseType_HouseType_Group = 2,
+		HouseType_HouseType_GroupMemberRoom = 3,
+		HouseType_HouseType_Apartment = 4,
+		HouseType_HouseType_Max = 5,
+	},
+	ModifyHouseInfoType = {
+		ModifyHouseInfoType_None = 0,
+		ModifyHouseInfoType_Name = 1,
+		ModifyHouseInfoType_Greeting = 2,
+		ModifyHouseInfoType_Tags = 3,
+	},
+	RecycleHouseAssetType = {
+		RecycleHouseAssetType_None = 0,
+		RecycleHouseAssetType_Personal = 1,
+		RecycleHouseAssetType_Group = 2,
+		RecycleHouseAssetType_GroupMemberRoom = 3,
+	},
+	CS_SUBMSGID_HOUSE_ROOMMATE = {
+		CS_SUBMSGID_HOUSE_ROOMMATE_START = 0,
+		CS_SUBMSGID_HOUSE_ROOMMATE_INVITE = 1,
+		CS_SUBMSGID_HOUSE_ROOMMATE_BE_INVITE_NTF = 2,
+		CS_SUBMSGID_HOUSE_ROOMMATE_INVITE_REPLY = 3,
+		CS_SUBMSGID_HOUSE_ROOMMATE_INVITE_REPLY_NTF = 4,
+		CS_SUBMSGID_HOUSE_ROOMMATE_PULL_BE_INVITE = 5,
+		CS_SUBMSGID_HOUSE_ROOMMATE_CHANGE_PRIVILEGE = 6,
+		CS_SUBMSGID_HOUSE_ROOMMATE_CHANGE_PRIVILEGE_NTF = 11,
+		CS_SUBMSGID_HOUSE_ROOMMATE_REMOVE = 7,
+		CS_SUBMSGID_HOUSE_ROOMMATE_BE_REMOVE_NTF = 8,
+		CS_SUBMSGID_HOUSE_ROOMMATE_DISSOLVE = 9,
+		CS_SUBMSGID_HOUSE_ROOMMATE_BE_DISSOLVE_NTF = 10,
+	},
+	HousePrivilgeType = {
+		HousePrivilgeType_None = 0,
+		HousePrivilgeType_EditBasic = 1,
+		HousePrivilgeType_ManagerVisit = 2,
+		HousePrivilgeType_EditCover = 3,
+		HousePrivilgeType_BuyLand = 4,
+		HousePrivilgeType_EditDecorate = 5,
+		HousePrivilgeType_ManagerMusical = 6,
+		HousePrivilgeType_Max = 7,
 	},
 	CsInteractionCMD = {
 		CsInteractionCMDStart = 0,
@@ -1743,6 +2038,83 @@ local ProtoCS = {
 		SpellResultNext = 2,
 		SpellResultFirst = 3,
 	},
+	CS_SUBMSGID_LAND = {
+		CS_SUBMSGID_LAND_BEGIN = 0,
+		CS_SUBMSGID_LAND_QUERY_AREA = 1,
+		CS_SUBMSGID_LAND_COLLECT_LAND = 2,
+		CS_SUBMSGID_LAND_BUY_COND_CHECK = 3,
+		CS_SUBMSGID_LAND_BUY_LAND = 4,
+		CS_SUBMSGID_LAND_QUERY_BUY_STATUS = 5,
+		CS_SUBMSGID_LAND_GET_RETURN_ASSET = 6,
+		CS_SUBMSGID_LAND_BUILD_HOUSE = 7,
+		CS_SUBMSGID_LAND_ABANDON = 8,
+		CS_SUBMSGID_LAND_DESTROY_HOUSE = 9,
+	},
+	LandSizeType = {
+		LandSizeType_Min = 0,
+		LandSizeType_Small = 1,
+		LandSizeType_Medium = 2,
+		LandSizeType_Large = 3,
+		LandSizeType_All = 4,
+	},
+	LandBuyType = {
+		LandBuyType_Min = 0,
+		LandBuyType_Personal = 1,
+		LandBuyType_Team = 2,
+		LandBuyType_All = 3,
+	},
+	ApplyType = {
+		ApplyType_Min = 0,
+		ApplyType_Personal = 1,
+		ApplyType_Team = 2,
+	},
+	Residence = {
+		Residence_Min = 0,
+		Residence_1 = 1,
+		Residence_2 = 2,
+		Residence_3 = 3,
+		Residence_Max = 4,
+	},
+	SubAreaType = {
+		SubAreaType_Min = 0,
+		SubAreaType_Init = 1,
+		SubAreaType_Expand = 2,
+	},
+	LandStatusType = {
+		LandStatusType_Min = 0,
+		LandStatusType_Ready = 1,
+		LandStatusType_Sale = 2,
+		LandStatusType_Public = 3,
+		LandStatusType_Built = 4,
+		LandStatusType_Destroy = 5,
+	},
+	BuildStatusType = {
+		BuildStatus_Min = 0,
+		BuildStatus_CanNotBuild = 1,
+		BuildStatus_CanBuild = 2,
+		BuildStatus_Built = 3,
+		BuildStatus_Overdue = 4,
+	},
+	ApplyStatus = {
+		ApplyStatus_Min = 0,
+		ApplyStatus_Unable = 1,
+		ApplyStatus_NotApply = 2,
+		ApplyStatus_Apply = 3,
+		ApplyStatus_Award = 4,
+		ApplyStatus_NoReturn = 5,
+		ApplyStatus_Return = 6,
+	},
+	BuyCond = {
+		BuyCondMinConditions = 0,
+		BuyCondPorfLevel = 1,
+		BuyCondHistoryRankLevel = 2,
+		BuyCondAssetsReturned = 3,
+		BuyCondTeamNum = 4,
+		BuyCondTeamLevel = 5,
+		BuyCondPurchasePermissions = 6,
+		BuyCondJoinDays = 7,
+		BuyCondOtherHasNotApply = 8,
+	},
 	LatencyType = {
 		LatencyTypeNone = 0,
 		LatencyTypePing = 1,
@@ -1757,12 +2129,7 @@ local ProtoCS = {
 		LeveQuestCmd = {
 			LeveQuestInvalid = 0,
 			LeveQuestQuery = 1,
-			LeveQuestAcceptTask = 2,
-			LeveQuestGiveUpTask = 3,
-			LeveQuestAcceptTaskList = 4,
-			LeveQuestSubmitTask = 5,
-			LeveQuestBatchAbandon = 6,
-			LeveQuestBatchSubmit = 7,
+			LeveQuestSubmitTask = 8,
 		},
 	},
 	FeatureType = {
@@ -2034,6 +2401,7 @@ local ProtoCS = {
 		ItemType = 1,
 		MallType = 2,
 		FateMailType = 3,
+		GreetingCardMailType = 4,
 	},
 	MailType = {
 		SystemNone = 0,
@@ -2049,6 +2417,7 @@ local ProtoCS = {
 		CS_MALL_AND_STORE_CMD_MALL_GIFT = 5,
 		CS_MALL_AND_STORE_CMD_QUERY_RESIDS = 6,
 		CS_MALL_AND_STORE_CMD_BATCH_PRUCHASE = 7,
+		CS_MALL_AND_STORE_CMD_BATCH_PRUCHASE_EX = 8,
 	},
 	MarketMacro = {
 		MarketMacro_None = 0,
@@ -2211,6 +2580,7 @@ local ProtoCS = {
 		CSMonsterBasketball_Enter = 1,
 		CSMonsterBasketball_Throw = 2,
 		CSMonsterBasketball_Finish = 3,
+		CSMonsterBasketball_Blessed = 4,
 	},
 	BasketballType = {
 		BasketballType_Invalid = 0,
@@ -2218,16 +2588,6 @@ local ProtoCS = {
 		BasketballType_Super = 2,
 		BasketballType_Bang = 3,
 		BasketballType_Star = 4,
-	},
-	CS_MONSTORHUNT_CMD = {
-		CS_MONSTORHUNT_CMD_INVALID = 0,
-		CS_MONSTOR_HUNT_CMD_GET_AWARD_B = 1,
-		CS_MONSTOR_HUNT_CMD_AWARD_NOTIFY = 2,
-		CS_MONSTOR_HUNT_CMD_GET_DATA_B = 3,
-		CS_MONSTOR_HUNT_CMD_GET_WEEKLY_AWARD_B = 4,
-		CS_MONSTOR_HUNT_CMD_GET_AWARD_A = 5,
-		CS_MONSTOR_HUNT_CMD_GET_UNLOCK_DATA = 6,
-		CS_MONSTOR_HUNT_CMD_REP_UNLOCK_DATA = 7,
 	},
 	MonthCardCmd = {
 		MonthCardCmd_None = 0,
@@ -2255,6 +2615,7 @@ local ProtoCS = {
 		MountCmdReplyNotify = 16,
 		MountCmdFacadeUnlock = 17,
 		MountCmdSpeedPromote = 21,
+		MountCmdSpeedItemNotify = 22,
 	},
 	MountFlagBitmap = {
 		MountFlagStart = 0,
@@ -2409,6 +2770,7 @@ local ProtoCS = {
 		CS_CMD_FISH_GROUND_QUERY = 18,
 		CS_CMD_GROUND_UNLOCK = 19,
 		CS_CMD_SCENE_FINISH_LOG = 20,
+		CS_CMD_SCENE_MODEL_FINISH_LOG = 21,
 	},
 	SpecialType = {
 		SpecialTypeNone = 0,
@@ -2472,6 +2834,7 @@ local ProtoCS = {
 		CS_CMD_SCORE = 32, --csproto.ScoreReq
 		CS_CMD_BAG = 33, --csproto.BagMsgReq
 		CS_CMD_QUEST = 34, --csproto.QuestReq
+		CS_CMD_TOY = 35, --csproto.role.toy.ToyReq
 		CS_CMD_LOOT = 36, --csproto.LootItemUpdateRsp
 		CS_CMD_LIFE_SKILL = 37, --csproto.LifeSkillReq
 		CS_CMD_EMOTION = 38, --csproto.EmotionReq
@@ -2548,11 +2911,12 @@ local ProtoCS = {
 		CS_CMD_TOURING_BAND = 213, --csproto.game.touringband.Req
 		CS_CMD_QUESTIONNAIRE = 214, --csproto.game.questionnaire.Req
 		CS_CMD_ACTIVITY_SYSTEM = 215, --csproto.game.activity.Req
-		CS_CMD_MONSTORHUNT = 216, --csproto.game.monstorhunt.CSMonstorHuntReq
+		CS_CMD_MONSTERHUNT = 216, --csproto.game.monsterhunt.CSMonsterHuntReq
 		CS_CMD_TRIBE = 217, --csproto.role.tribe.TribeReq
 		CS_CMD_ZeroSceneRank = 218, --csproto.game.zeroscenerank.ZeroSceneRankReq
 		CS_CMD_DIRECT_UPGRADE = 219, --csproto.role.directupgrade.Req
 		CS_CMD_LIGHT_JOURNEY = 220, --csproto.role.lightjourney.LightJourneyReq
+		CS_CMD_TIANSHU = 221, --csproto.game.tianshu.TianshuReq
 		CS_CMD_WINDPULSE = 401, --csproto.WindPulseReq
 		CS_CMD_ALONE_TREE = 402, --csproto.AloneTreeReq
 		CS_CMD_FOG = 403, --csproto.ExploreFogReq
@@ -2590,6 +2954,11 @@ local ProtoCS = {
 		CS_CMD_BLINDBOX = 512, --csproto.game.blindbox.BlindBoxReq
 		CS_CMD_AUTOFINDPATH = 513, --navmesh.AutoFindPathReq
 		CS_CMD_FOOT_MARK = 600, --csproto.CsFootMarkMsgReq
+		CS_CMD_HOUSE = 601, --csproto.HouseReq
+		CS_CMD_FURNITURE_INTERACTION = 602, --csproto.FurnitureInteractionReq
+		CS_CMD_HOUSE_ROOMMATE = 603, --csproto.HouseRoommateReq
+		CS_CMD_LAND = 604, --csproto.LandReq
+		CS_CMD_SHARE = 605, --csproto.role.share.ShareReq
 	},
 	CS_PAY_CMD = {
 		CS_CMD_PAY_INVALID = 0,
@@ -2598,6 +2967,7 @@ local ProtoCS = {
 		CS_CMD_PAY_DISTRIBUTE_ORDER = 3,
 		CS_CMD_PAY_DISTRIBUTE_NOTIFY = 4,
 		CS_CMD_PAY_DISTRIBUTE_COUPON = 5,
+		CS_CMD_PAY_BUY_GAME_COIN = 6,
 	},
 	DevicePlatform = {
 		DevicePlatformNone = 0,
@@ -2610,6 +2980,7 @@ local ProtoCS = {
 		PerformCmdExit = 2,
 		PerformCmdPerform = 3,
 		PerformCmdUpdateTimbre = 4,
+		PerformCmdAssist = 5,
 		EnsembleCmdQuery = 10,
 		EnsembleCmdAskConfirm = 11,
 		EnsembleCmdConfirm = 12,
@@ -2624,6 +2995,7 @@ local ProtoCS = {
 		EnsembleStatusReady = 3,
 		EnsembleStatusEnsemble = 4,
 		EnsembleStatusResult = 5,
+		EnsembleStatusAssist = 6,
 	},
 	Status = {
 		None = 0,
@@ -2696,6 +3068,9 @@ local ProtoCS = {
 		CS_PWORLD_CMD_SCENE_TEAM_MEMBER_STATUS = 51,
 		CS_PWORLD_CMD_MECHANISM_DATA = 52,
 		CS_PWORLD_CMD_QUERY_ROLE_DATA = 53,
+		CS_PWORLD_CMD_TEAM_READY = 54,
+		CS_PWORLD_CMD_TEAM_READY_VOTE = 55,
+		CS_PWORLD_CMD_TEAM_READY_VOTE_NTF = 56,
 	},
 	EnterFlag = {
 		EnterFlagBefore = 0,
@@ -2756,6 +3131,17 @@ local ProtoCS = {
 		SceneTeamEntityTypePlayer = 0,
 		SceneTeamEntityTypeFaith = 1,
 	},
+	RescuedEndReason = {
+		ReasonNtf = 0,
+		ReasonRescued = 1,
+		ReasonRefuse = 2,
+		EndTime = 1,
+		Reason = 2,
+		Tag = 1,
+		RoleID = 1,
+		Rescued = 2,
+		Tag = 3,
+	},
 	Operate = {
 		List = 0,
 		Add = 1,
@@ -2763,6 +3149,10 @@ local ProtoCS = {
 		Update = 3,
 		Entities = 1,
 		Op = 2,
+	},
+	ReadyVoteStatus = {
+		ReadyVoteStatusReady = 0,
+		ReadyVoteStatusWait = 1,
 	},
 	CS_QUEST_CMD = {
 		QUEST_LIST_CMD = 0,
@@ -2822,6 +3212,8 @@ local ProtoCS = {
 		ChocoboRaceAllUserIn = 15,
 		ChocoboRaceDebugInfo = 16,
 		ChocoboRaceSkillCDChange = 17,
+		ChocoboRaceFinish = 18,
+		ChocoboRaceAilog = 19,
 	},
 	ChocoboRaceConst = {
 		ChocoboRaceConstInvalid = 0,
@@ -2879,7 +3271,6 @@ local ProtoCS = {
 		SCORE_CONVERT_CMD = 1,
 		SCORE_UPDATE_CMD = 2,
 		SCORE_ITERATION_CONVERT_CMD = 3,
-		SCORE_LIMIT_INFO = 4,
 	},
 	SearchNoteCmd = {
 		SearchNoteCmdNone = 0,
@@ -2939,6 +3330,9 @@ local ProtoCS = {
 				CsSubCmdTeamQueryRoleInfo = 36,
 				CsQueryTeamMemberLocation = 37,
 				CsQueryTeamMemberData = 38,
+				CSSubCmdTeamReady = 39,
+				CSSubCmdTeamReadyVote = 40,
+				CSSubCmdTeamReadyVoteNotify = 41,
 			},
 			JOIN_TEAM_REASON = {
 				JOIN_TEAM_RELATION = 0,
@@ -2988,6 +3382,7 @@ local ProtoCS = {
 			TeamBroadcastType = {
 				TeamEventUnknow = 0,
 				TeamMemStateChg = 1,
+				TeamMemCrossWorld = 2,
 			},
 			MemStateType = {
 				MemStateTypeUnknown = 0,
@@ -3001,6 +3396,11 @@ local ProtoCS = {
 			TeamMemberDataQueryType = {
 				TeamMemberDataQueryTypeLocation = 0,
 				TeamMemberDataQueryTypeCounter = 1,
+				TeamMemberDataQueryTypeSimple = 2,
+			},
+			ReadyVoteStatus = {
+				ReadyVoteStatusReady = 0,
+				ReadyVoteStatusWait = 1,
 			},
 		},
 		TeamRecruit = {
@@ -3059,7 +3459,6 @@ local ProtoCS = {
 		ACTIVATE_NTF = 3,
 		TRANSFER = 4,
 		TRANSFER_NTF = 5,
-		QueryOther = 6,
 		CROSS_WORLD_TRANSFER = 7,
 	},
 	TitleOptCmd = {

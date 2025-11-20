@@ -12,6 +12,15 @@ local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMini
 local AudioType = GoldSaucerMiniGameDefine.AudioType
 local LSTR = _G.LSTR
 
+-- 轮次序号对应UI名称状态序号
+local Round2StateIndex = {
+	[1] = 2,
+	[2] = 2,
+	[3] = 3,
+	[4] = 3,
+	[5] = 4,
+}
+
 ---@class GoldSaucerMooglePawRoundTipsItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field PanelRound2 UFCanvasPanel
@@ -20,10 +29,13 @@ local LSTR = _G.LSTR
 ---@field TextRound2 UFTextBlock
 ---@field TextRound3 UFTextBlock
 ---@field TextRound4 UFTextBlock
----@field AnimOut UWidgetAnimation
+---@field AnimOutManual UWidgetAnimation
 ---@field AnimRound2 UWidgetAnimation
 ---@field AnimRound3 UWidgetAnimation
 ---@field AnimRound4 UWidgetAnimation
+---@field AnimSection1 UWidgetAnimation
+---@field AnimSection2 UWidgetAnimation
+---@field AnimSection3 UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerMooglePawRoundTipsItemView = LuaClass(UIView, true)
 
@@ -35,10 +47,13 @@ function GoldSaucerMooglePawRoundTipsItemView:Ctor()
 	--self.TextRound2 = nil
 	--self.TextRound3 = nil
 	--self.TextRound4 = nil
-	--self.AnimOut = nil
+	--self.AnimOutManual = nil
 	--self.AnimRound2 = nil
 	--self.AnimRound3 = nil
 	--self.AnimRound4 = nil
+	--self.AnimSection1 = nil
+	--self.AnimSection2 = nil
+	--self.AnimSection3 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -55,7 +70,7 @@ end
 
 function GoldSaucerMooglePawRoundTipsItemView:OnInit()
 	self.AnimOutEndCallBack = nil
-	self:InitConstStringInfo()
+	--self:InitConstStringInfo()
 end
 
 function GoldSaucerMooglePawRoundTipsItemView:OnDestroy()
@@ -93,12 +108,28 @@ function GoldSaucerMooglePawRoundTipsItemView:ShowRoundTips(ViewModel, CallBack)
 	UIUtil.SetIsVisible(self.PanelRound4, false)
 
 	local CurRoundIndex = GameInst:GetRoundIndex() + 1
-	local PanelKeyToShow = string.format("PanelRound%s", tostring(CurRoundIndex))
-	local AnimKeyToPlay = string.format("AnimRound%s", tostring(CurRoundIndex))
+	local TotalRound = GameInst:GetTheMaxRound()
+
+	local StateKey = 2
+	if CurRoundIndex <= 2 then
+		StateKey = 2
+	elseif CurRoundIndex <= TotalRound - 1 then
+		StateKey = 3
+	else
+		StateKey = 4
+	end
+
+	local PanelKeyToShow = string.format("PanelRound%s", tostring(StateKey))
+	local AnimKeyToPlay = string.format("AnimRound%s", tostring(StateKey))
+	local TextKeyToShow = string.format("TextRound%s", tostring(StateKey))
 	local PanelToShow = self[PanelKeyToShow]
 	local AnimToPlay = self[AnimKeyToPlay]
-	if PanelToShow and AnimToPlay then
+	local TextToShow = self[TextKeyToShow]
+	if PanelToShow and AnimToPlay and TextToShow then
 		UIUtil.SetIsVisible(PanelToShow, true)
+		UIUtil.SetIsVisible(TextToShow, true)
+		local FormatContent = StateKey == 4 and LSTR(360043) or string.format(LSTR(360041), CurRoundIndex, TotalRound)
+		TextToShow:SetText(FormatContent)
 		self:PlayAnimation(AnimToPlay)
 		GoldSaucerMiniGameMgr.PlayUISoundByAudioType(AudioType.MoogleRoundTitle)
 		self.AnimOutEndCallBack = CallBack
@@ -106,15 +137,17 @@ function GoldSaucerMooglePawRoundTipsItemView:ShowRoundTips(ViewModel, CallBack)
 end
 
 function GoldSaucerMooglePawRoundTipsItemView:OnAnimationFinished(Anim)
-	local AnimEndTime = Anim:GetEndTime()
-	self:RegisterTimer(function()
+	if Anim == self.AnimOutManual then
 		local OutEndCallBack = self.AnimOutEndCallBack
 		if OutEndCallBack then
 			OutEndCallBack()
 			self.AnimOutEndCallBack = nil
 		end
-	end, AnimEndTime)
-	
+	elseif Anim == self.AnimRound2 or Anim == self.AnimRound3 or Anim == self.AnimRound4 then
+		self:RegisterTimer(function()
+		    self:PlayAnimation(self.AnimOutManual)
+		end, 0.5)
+	end
 end
 
 return GoldSaucerMooglePawRoundTipsItemView

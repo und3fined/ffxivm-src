@@ -13,7 +13,10 @@ local MajorUtil = require("Utils/MajorUtil")
 local ActorUtil = require("Utils/ActorUtil")
 local SkillUtil = require("Utils/SkillUtil")
 local CommonUtil = require("Utils/CommonUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ProfUtil = require("Game/Profession/ProfUtil")
 local SkillSystemRedDotUtil = require("Game/Skill/SkillSystem/SkillSystemRedDotUtil")
+local MsgTipsID = require("Define/MsgTipsID")
 local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
 local WidgetPoolMgr = require("UI/WidgetPoolMgr")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
@@ -22,6 +25,7 @@ local PassiveSkillVM = require("Game/Skill/View/PassiveSkillVM")
 local SkillSystemGlobalCfg = require("TableCfg/SkillSystemGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
+local ProtoCommon = require("Protocol/ProtoCommon")
 local SkillSystemConfig = require("Game/Skill/SkillSystem/SkillSystemConfig")
 local ObjectGCType = require("Define/ObjectGCType")
 local SkillExpandConfig = SkillSystemConfig.SkillExpandConfig
@@ -29,7 +33,7 @@ local SkillExpandConfig = SkillSystemConfig.SkillExpandConfig
 local USaveMgr = _G.UE.USaveMgr
 local UWorldMgr
 local UFGameFXManager
-local SkillLogicMgr, ProfMgr
+local SkillLogicMgr, ProfMgr, ModuleOpenMgr
 local WorldOffset = UE.FVector(0, 0, 50000)
 
 
@@ -41,6 +45,7 @@ function SkillSystemMgr:OnInit()
 	UWorldMgr = _G.UE.UWorldMgr.Get()
 	SkillLogicMgr = _G.SkillLogicMgr
 	ProfMgr = _G.ProfMgr
+	ModuleOpenMgr = _G.ModuleOpenMgr
 	UFGameFXManager = UE.UFGameFXManager.Get()
 	self.CasterResID = 20250001
     self.TargetResID = 20250000
@@ -121,14 +126,25 @@ end
 
 function SkillSystemMgr:SetVolumeActorEnabled(bEnabled)
 	local VolumeActor = self.VolumeActor
-	if VolumeActor then
+	if VolumeActor and VolumeActor:IsValid() then
 		VolumeActor.bEnabled = bEnabled
 	end
 end
 
+local MapType_PVE <const> = SkillUtil.MapType.PVE
+local MapType_PVP <const> = SkillUtil.MapType.PVP
+
 function SkillSystemMgr:Enter(VM, ProfID, MapType)
 	self:RegisterGameEvent(EventID.ThirdPlayerSkillSing, self.OnPlayerSing)
-	self.CurrentMapType = MapType or self:GetCurrentMapType() or SkillUtil.MapType.PVE
+
+	MapType = MapType or self:GetCurrentMapType() or MapType_PVE
+	if MapType == MapType_PVP then
+		if not self:CanShowPVPTab(ProfID, false) then
+			MapType = MapType_PVE
+		end
+	end
+
+	self.CurrentMapType = MapType
 	self.ProfID = ProfID
 	self.bIsActive = true
 	self.PressedButtonIndex = nil
@@ -198,7 +214,7 @@ end
 function SkillSystemMgr:CreateSkillExpandWidgetAsync(ParentView)
     local WeakRoot = _G.UE.FWeakObjectPtr(ParentView.Root)
 	local function Callback(Widget)
-        if not WeakRoot:IsValid() then
+        if not WeakRoot:IsValid() or not Widget then
             return
         end
 
@@ -575,6 +591,46 @@ end
 
 function SkillSystemMgr:OnGameEventWorldPostLoad()
 	self.CurrentMapType = nil
+end
+
+local ProfClassType_PVP <const> = 22
+local ModuleIDBattle    <const> = ProtoCommon.ModuleID.ModuleIDBattle
+
+local MsgTipsID_ModuleBattleNotOpen <const> = 106050
+local MsgTipsID_NotAdvancedProf     <const> = 106051
+
+local function ConditionalShowTipsByID(ID, bShowTips)
+	if bShowTips then
+		MsgTipsUtil.ShowTipsByID(ID)
+	end
+end
+
+function SkillSystemMgr:CanShowPVPTab(ProfID, bShowTips)
+	-- 非战斗职业
+	if not ProfUtil.IsCombatProf(ProfID) then
+		return false
+	end
+
+	-- 基职
+	if not ProfUtil.IsAdvancedProf(ProfID) then
+		ConditionalShowTipsByID(MsgTipsID_NotAdvancedProf, bShowTips)
+		return false
+	end
+
+	-- 未开放PVP内容的职业
+	local bSupportPVP = ProfMgr.CheckProfClass(ProfID, ProfClassType_PVP)
+	if not bSupportPVP then
+		ConditionalShowTipsByID(MsgTipsID.ProfPVPUnable, bShowTips)
+		return false
+	end
+
+	-- 对战未开放
+	if not ModuleOpenMgr:CheckOpenState(ModuleIDBattle) then
+		ConditionalShowTipsByID(MsgTipsID_ModuleBattleNotOpen, bShowTips)
+		return false
+	end
+
+	return true
 end
 
 function SkillSystemMgr:GetCurrentMapType()

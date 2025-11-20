@@ -7,6 +7,8 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local WardrobeMgr = require("Game/Wardrobe/WardrobeMgr")
+local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+local WardrobeDefine = require("Game/Wardrobe/WardrobeDefine")
 
 ---@class WardrobeEquipmentSlotItemVM : UIViewModel
 local WardrobeEquipmentSlotItemVM = LuaClass(UIViewModel)
@@ -26,6 +28,10 @@ function WardrobeEquipmentSlotItemVM:Ctor()
 
     self.StainColor = ""
     self.StainColorVisible = false
+    self.TraitVisible = false
+    self.TraitIcon = nil
+    self.IsReward = nil
+    self.RewardItemPlayAnimIn = nil
 end
 
 function WardrobeEquipmentSlotItemVM:OnInit()
@@ -57,7 +63,9 @@ function WardrobeEquipmentSlotItemVM:UpdateVM(Value)
     self.StainColor = Value.StainColor
     self.StainColorVisible = Value.StainColorVisible
     self.ID = Value.ID
-
+    self.TraitVisible = WardrobeUtil.IsTraitApp(self.ID)
+    self.TraitIcon = WardrobeDefine.TraitTypeIcon[WardrobeUtil.GetTraitTypeApp(self.ID)]
+    self.IsReward = Value.IsReward
 end
 
 function WardrobeEquipmentSlotItemVM:IsEqualVM(Value)
@@ -90,6 +98,11 @@ end
 function WardrobeEquipmentSlotItemVM:UpdateUnlockDataState()
     self.UnlockVisible = not WardrobeMgr:GetIsUnlock(self.ID)
     self.CanEquip = WardrobeMgr:CanEquipAppearance(self.ID)
+end
+
+
+function WardrobeEquipmentSlotItemVM:UpdateRewardItemPlayAnimIn(RewardItemPlayAnimIn)
+    self.RewardItemPlayAnimIn = RewardItemPlayAnimIn
 end
 
 

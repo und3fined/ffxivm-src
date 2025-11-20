@@ -37,6 +37,7 @@ local ModuleType = ProtoRes.module_type
 ---@field BtnClose CommonCloseBtnView
 ---@field CommonBkg02_UIBP CommonBkg02View
 ---@field CommonBkgMask_UIBP CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field ImgLock1 UFImage
 ---@field ImgLock10 UFImage
 ---@field ImgLock2 UFImage
@@ -66,8 +67,6 @@ local ModuleType = ProtoRes.module_type
 ---@field Text7 UFTextBlock
 ---@field Text8 UFTextBlock
 ---@field Text9 UFTextBlock
----@field TextSubtitle URichTextBox
----@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimMainLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -88,6 +87,7 @@ function GuideMainPanelView:Ctor()
 	--self.BtnClose = nil
 	--self.CommonBkg02_UIBP = nil
 	--self.CommonBkgMask_UIBP = nil
+	--self.CommonTitle = nil
 	--self.ImgLock1 = nil
 	--self.ImgLock10 = nil
 	--self.ImgLock2 = nil
@@ -117,8 +117,6 @@ function GuideMainPanelView:Ctor()
 	--self.Text7 = nil
 	--self.Text8 = nil
 	--self.Text9 = nil
-	--self.TextSubtitle = nil
-	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimMainLoop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -129,6 +127,7 @@ function GuideMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommonBkg02_UIBP)
 	self:AddSubView(self.CommonBkgMask_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.RedDot10)
 	self:AddSubView(self.RedDot2)
 	self:AddSubView(self.RedDot3)
@@ -162,7 +161,8 @@ end
 
 function GuideMainPanelView:OnShow()
 	_G.TouringBandMgr:QueryCollectionReq()
-	self.TextTitle:SetText(LSTR(1180001))
+	self.CommonTitle:SetSubTitleIsVisible(false)
+	self.CommonTitle:SetTextTitleName(LSTR(1180001))
 	for i = 1, #self.AtlasInfo do
 		local IsUnLock = self:AtlasIsUnLock(self.AtlasInfo[i].OpenID)
 		if self.AtlasInfo[i].ID == 6  then

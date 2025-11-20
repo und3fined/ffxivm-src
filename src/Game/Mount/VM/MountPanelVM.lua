@@ -59,7 +59,7 @@ function MountPanelVM:IsShowMount(Mount, InName)
     if (IsLike == true and IsShowLike == false) then return false end
     local IsShowUnLike = MountVM:IsLikeFilterValue(UnLikeFilterKey)
     if (IsLike == false and IsShowUnLike == false) then return false end
-    local c_ride_cfg = RideCfg:FindCfgByKey(Mount.ResID)
+    local c_ride_cfg = _G.MountMgr:GetRideCfg(Mount.ResID)
     if c_ride_cfg == nil or c_ride_cfg.PackageName == "" then return false end
     local IsVersion = MountVM:IsVersionFilterValue(c_ride_cfg.OpenVersion)
     if IsVersion == false then return false end

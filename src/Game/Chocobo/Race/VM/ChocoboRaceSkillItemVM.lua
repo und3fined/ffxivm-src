@@ -19,6 +19,7 @@ local ChocoboRaceSkillItemVM = LuaClass(UIViewModel)
 ---Ctor
 function ChocoboRaceSkillItemVM:Ctor()
     self.SkillID = 0
+    self.SkillLevel = 1
     self.SkillIcon = ""
     self.SkillCDText = ""
     self.NormalCDPercent = 0
@@ -55,6 +56,7 @@ end
 
 function ChocoboRaceSkillItemVM:UpdateSkillID(ID, Passive, PassiveLevel)
     self.SkillID = ID
+    self.SkillLevel = PassiveLevel
     self.PassiveEffect = 0
     self.PassiveEffectParam = {}
     
@@ -102,7 +104,7 @@ function ChocoboRaceSkillItemVM:UpdateSkillCD(CDEndTimeMs)
 
     -- 如果新CD比当前剩余时间短，则忽略 (取最长CD)
     if self.IsCD and CDEndTimeMs <= self.CDEndTime then
-        ChocoboRaceUtil.Log(string.format("Ignore shorter CD: SkillID=%d, NewCD=%dms, CurrentRemain=%dms", 
+        _G.FLOG_INFO(string.format("[ChocoboRace] Ignore shorter CD: SkillID=%d, NewCD=%dms, CurrentRemain=%dms", 
                 self.SkillID, CDEndTimeMs - NowTimeMS, self.CDEndTime - NowTimeMS))
         return
     end
@@ -121,7 +123,7 @@ function ChocoboRaceSkillItemVM:UpdateSkillCD(CDEndTimeMs)
     self.IsCD = true
     self:UpdateShowMask()
 
-    ChocoboRaceUtil.Log(string.format("Set CD: SkillID=%d, Duration=%dms, EndAt=%d", self.SkillID, self.CDTime, CDEndTimeMs))
+    _G.FLOG_INFO(string.format("[ChocoboRace] Set CD: SkillID=%d, Duration=%dms, EndAt=%d", self.SkillID, self.CDTime, CDEndTimeMs))
 
     self.ReplaceCDTimer = TimerMgr:AddTimer(self, self.TickSkillCD, 0, 0.1, 0)
 end
@@ -189,7 +191,7 @@ function ChocoboRaceSkillItemVM:UpdateShowMask()
     --                    or "无限制条件"
     --        end
     --
-    --        ChocoboRaceUtil.Log(string.format(
+    --        FLOG_INFO(string.format(
     --                "[技能遮罩] ID:%d 状态:%s->%s 原因:%s (CD:%s 体力:%s 封印:%s 禁用:%s)",
     --                self.SkillID,
     --                tostring(OldValue),
@@ -222,6 +224,8 @@ function ChocoboRaceSkillItemVM:UpdateStamina(Value)
         local ActiveStamina = self.PassiveEffectParam[1] or 0
         if Value <= ActiveStamina then
             self.CostNum = math.floor((self.BaseCostNum / 2) + 0.5)
+        else
+            self.CostNum = self.BaseCostNum
         end
     end
     

@@ -29,7 +29,7 @@ end
 -- }
 function MountArchiveDetailVM:UpdateDetail(Mount)
     self.ResID = Mount.ResID
-    local c_ride_cfg = RideCfg:FindCfgByKey(self.ResID)
+    local c_ride_cfg = _G.MountMgr:GetRideCfg(self.ResID)
     self.Name = c_ride_cfg.Name
     self.SeatCount = c_ride_cfg.SeatCount
     self.SkeletonId = c_ride_cfg.SkeletonId

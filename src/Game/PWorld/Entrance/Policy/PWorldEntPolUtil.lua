@@ -14,6 +14,9 @@ local LevelExpCfg = require("TableCfg/LevelExpCfg")
 local RoleInfoMgr = require("Game/Role/RoleInfoMgr")
 local ProfUtil = require("Game/Profession/ProfUtil")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
+local SceneCombatCfg = require("TableCfg/SceneCombatCfg")
+local ProtoRes = require("Protocol/ProtoRes")
+local GlobalCfg = require("TableCfg/GlobalCfg")
 
 ---@class PWorldEntPolUtil
 local PWorldEntPolUtil = {}
@@ -44,6 +47,7 @@ function PWorldEntPolUtil.MakeRewardData(ID, Cnt, Type, EntID)
         ShowTipFirst = Type == PWorldEntDefine.RewardType.FirstPass,
         LackFunc = LackFunc,
         bWeekly = Type == PWorldEntDefine.RewardType.Weekly,
+        bPropDrop = Type == PWorldEntDefine.RewardType.PropDrop,
         RewardType = Type,
         Cnt = Cnt
     }
@@ -82,8 +86,41 @@ function PWorldEntPolUtil.GetDRPoolList(EntID)
         return Ret
     end
 
+    local CurVersionValue <const> = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GLOBAL_CFG_GAME_VERSION).Value
+
+    local function IsPass(ID)
+        if EntID ~= 4 then
+           return true 
+        end
+
+        local CombatCfg = SceneCombatCfg:FindCfgByKey(ID)
+        if CombatCfg == nil then
+           return false 
+        end
+
+        local VerArr = string.split(CombatCfg.Version or "", ".")
+        if #VerArr ~= 3 then
+            return false
+        end
+
+        for i = 1, 3 do
+            local Ver = tonumber(VerArr[i]) or 0
+            local CurVer = CurVersionValue[i] or 0
+            if Ver > CurVer then
+               return false 
+            end
+            if Ver < CurVer then
+               return true 
+            end
+        end
+
+        return true
+    end
+
     for _, ID in pairs(PCfg.ID or {}) do
-        table.insert(Ret, ID)
+        if IsPass(ID) then
+            table.insert(Ret, ID)
+        end
     end
 
     return Ret

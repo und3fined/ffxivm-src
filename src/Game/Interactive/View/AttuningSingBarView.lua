@@ -158,6 +158,7 @@ function AttuningSingBarView:UpdateProcessBar()
 	if PassTime >= self.SingTime then
 		self.TextCD:SetText(string.format("0%.2f", 0))
 		self.ProgressSingBar:SetPercent(1)
+		_G.SingBarMgr:SetSingPercent(1)
 
 		self:CloseSingTimer()
 		self:Hide()
@@ -180,6 +181,7 @@ function AttuningSingBarView:UpdateProcessBar()
 		self.TextCD:SetText(string.format("%.2f", CountDown))
 	end
 
+	_G.SingBarMgr:SetSingPercent(Percent)
 	-- FLOG_INFO("SingBar percent: " .. tostring(Percent) .. " time: " .. TimeUtil.GetLocalTimeMS() .. " passTime: " .. PassTime .. "Sing: " .. self.SingTime)
 	self.ProgressSingBar:SetPercent(Percent)
 	_G.InteractiveMgr:SetMajorIsinging(true)
@@ -210,6 +212,7 @@ function AttuningSingBarView:BeginSingBar(SingTime, SingName, ShowSingTimeCountD
 		self.SingTimerID = TimerMgr:AddTimer(self, self.UpdateProcessBar, 0, 0.02, 0)
 	end
 
+	_G.SingBarMgr:SetSingPercent(0)
 	self.ProgressSingBar:SetPercent(0)
 
 	FLOG_INFO("SingBar BeginSingBar time: " .. TimeUtil.GetLocalTimeMS() .. " singTime: " .. SingTime)

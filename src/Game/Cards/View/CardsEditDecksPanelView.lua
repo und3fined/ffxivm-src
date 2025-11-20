@@ -44,6 +44,7 @@ local LSTR = _G.LSTR
 ---@field CardRulesDescPanel UFCanvasPanel
 ---@field CardsEditDecksCardsPage CardsEditDecksCardsPageView
 ---@field CommInforBtn_UIBP CommInforBtnView
+---@field CommonTitle CommonTitleView
 ---@field Common_PopUpBG_UIBP CommonPopUpBGView
 ---@field IconTitle UFImage
 ---@field ImgSave UFImage
@@ -105,6 +106,7 @@ function CardsEditDecksPanelView:OnRegisterSubView()
     self:AddSubView(self.CardsEditDecksCardsPage)
     self:AddSubView(self.Common_PopUpBG_UIBP)
     self:AddSubView(self.CommInforBtn_UIBP)
+    self:AddSubView(self.CommonTitle)
     -- AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 
     self.CardsEditDecksCardsPage:SetParentVM(self.ViewModel)
@@ -279,7 +281,9 @@ function CardsEditDecksPanelView:OnShow()
 end
 
 function CardsEditDecksPanelView:SetLSTR()
-	self.TextTitle:SetText(_G.LSTR(1130040))--1130040("编辑卡组")
+    self.CommonTitle:SetTextTitleName(_G.LSTR(1130040))--1130040("编辑卡组")
+    self.CommonTitle:SetCommInforBtnIsVisible(true)
+    self.CommonTitle:SetSubTitleIsVisible(false)
 	self.TextCountdownTitle:SetText(_G.LSTR(1130041))--1130041("开局倒计时:")
 	self.TextAutomatic:SetText(_G.LSTR(1130042))--1130042("自动组卡")
 	self.TextSave:SetText(_G.LSTR(1130043))--1130043("保存")

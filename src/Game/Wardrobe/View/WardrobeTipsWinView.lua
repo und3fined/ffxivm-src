@@ -80,6 +80,8 @@ function WardrobeTipsWinView:OnRegisterUIEvent()
 end
 
 function WardrobeTipsWinView:OnRegisterGameEvent()
+	-- 背包更新
+	self:RegisterGameEvent(_G.EventID.UpdateScore, self.OnUpdateBag)
 end
 
 function WardrobeTipsWinView:OnRegisterBinder()
@@ -91,6 +93,7 @@ function WardrobeTipsWinView:UpdateView(Info)
 	end
 
 	self.View = Info.UIView
+	self.Info = Info
 
 	self.RichTextBoxDesc:SetText(Info.Message or "")
 
@@ -112,16 +115,28 @@ function WardrobeTipsWinView:UpdateView(Info)
 		local Color = IsSucc and NumColor.Succ or NumColor.Fail
 		UIUtil.SetColorAndOpacityHex(self.TextSpentTotal, Color)
 		-- self.RightBtnOp:SetColorType( IsSucc and CommBtnColorType.Recommend or  CommBtnColorType.Normal )
-		self.LeftBtnOp:SetIsDisabledState(true, true)
-		if IsSucc then
-			self.RightBtnOp:SetIsNormalState(true)
-		else
-			self.RightBtnOp:SetIsDisabledState(true, true)
-		end
+		self.LeftBtnOp:SetIsNormalState(true)
+		self.RightBtnOp:SetIsRecommendState(true)
+		-- if IsSucc then
+		-- else
+		-- 	self.RightBtnOp:SetIsNormalState(true, true)
+		-- end
 		-- self.MoneySlot:UpdateView(Info.Params.CostItemID, false, nil, true)
 	end
 
 	
+end
+
+function WardrobeTipsWinView:OnUpdateBag()
+	local Info = self.Info 
+	if self.Info and self.Info.Params and  self.Info.Params.CostNum and self.Info.Params.CostItemID then
+		local ReqNum = Info.Params.CostNum
+		self.TextSpentTotal:SetText(ReqNum)
+		local Num =  _G.ScoreMgr:GetScoreValueByID(Info.Params.CostItemID)
+		local IsSucc = 	Num >= ReqNum
+		local Color = IsSucc and NumColor.Succ or NumColor.Fail
+		UIUtil.SetColorAndOpacityHex(self.TextSpentTotal, Color)
+	end
 end
 
 function WardrobeTipsWinView:OnBtnClickL()
@@ -143,10 +158,9 @@ function WardrobeTipsWinView:OnBtnClickR()
 		local UIView = Params.View
 		if Callback ~= nil then
 			Callback(UIView)
-			
 		end
 	end
-	self:Hide()
+	-- self:Hide()
 end
 
 return WardrobeTipsWinView

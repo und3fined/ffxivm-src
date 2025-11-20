@@ -21,6 +21,9 @@ local TeamDefine = require("Game/Team/TeamDefine")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local Json = require("Core/Json")
 local VoiceMgr = require("Game/Voice/VoiceMgr")
+local ProtoCS = require("Protocol/ProtoCS")
+
+local EnumTeamConfirmReady <const> = ProtoCS.Team.Team.ReadyVoteStatus.ReadyVoteStatusReady
 
 local RollMgr
 local MaxMemberNum = TeamDefine.MaxMemberNum
@@ -33,12 +36,10 @@ local function PredicateFindByRoleID(RoleID)
 end
 
 ---@class ATeamVM : UIViewModel
+---@field BindableListMember UIBindableList
 local ATeamVM = LuaClass(UIViewModel)
 local ClassTy = ProtoCommon.class_type
----Ctor
----@field BindableListMember UIBindableList
----@field JoinRedDotVisible boolean
----@field FunctionBarVisible boolean
+
 function ATeamVM:Ctor()
     self.BindableListMember = UIBindableList.New(TeamMemberVM) --小队界面(主界面)
     self.MemberSimpleVMList = UIBindableList.New(TeamMemberSimpleVM) --队伍界面
@@ -75,6 +76,10 @@ function ATeamVM:Ctor()
 	self.SmoothAnimPlayCount = 1
 	self.IsSwitch = false
 
+	---team confirm
+	self.CurConfirmCount = 0
+	self.TotalConfirmCount = 0
+	self:SetTeamConfirmReadyTime(0)
 end
 
 function ATeamVM:OnInit()
@@ -331,6 +336,7 @@ function ATeamVM:FindMemberVM(RoleID)
 end
 
 ---@deprecated #TODO UNSAFE! REMVOE IN THE FUTURE!
+---@return TeamMemberSimpleVM | nil
 function ATeamVM:FindMemberSimpleVM( RoleID )
 	if nil == RoleID or RoleID == 0 then
 		return
@@ -364,6 +370,15 @@ end
 
 function ATeamVM:ToggleFunctionBar()
 	self:SetFunctionBarVisible(not self.FunctionBarVisible)
+end
+
+function ATeamVM:UpdateMemberPostion(RoleID, Data)
+	local VM = self:FindMemberSimpleVM( RoleID )
+	if VM == nil or Data == nil then
+		return
+	end
+
+	VM:SetMapResID(Data.MapResID)
 end
 
 -------------------------------------------------------------------------------------------------------
@@ -470,6 +485,45 @@ end
 function ATeamVM:OnTimerUpdate()
 	for _, Item in ipairs(self:GetTeamMemberVMs()) do
 		Item:TimerUpdate()
+	end
+end
+
+function ATeamVM:SetTeamConfirmReadyTime(t)
+	self.TimeTeamReadyToConfirm = t
+end
+
+
+function ATeamVM:GetTeamConfirmReadyTime()
+	return self.TimeTeamReadyToConfirm
+end
+
+function ATeamVM:GetTeamReadyConfirmTuple()
+	local Count, Total, OKCount = 0, 0, 0
+	for _, Item in ipairs(self:GetTeamMemberVMs()) do
+		local State = Item.ConfirmState
+		Total = Total + 1
+		if State ~= nil then
+			Count = Count + 1
+		end
+		if State == EnumTeamConfirmReady then
+			OKCount = OKCount + 1
+		end
+	end
+
+	return Count, Total, OKCount
+end
+
+function ATeamVM:SetMajorConfirmTeamReady(bReady)
+	self.bMajorConfirmTeamReady = bReady
+end
+
+function ATeamVM:SetConfirmState(RoleID, Status)
+	local VM = self:FindMemberVM(RoleID)
+	if VM then
+		VM:SetConfirmState(Status)
+		local Cur, Total = self:GetTeamReadyConfirmTuple()
+		self.CurConfirmCount = Cur
+		self.TotalConfirmCount = Total
 	end
 end
 

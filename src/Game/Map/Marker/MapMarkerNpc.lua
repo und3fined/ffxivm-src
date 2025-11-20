@@ -17,7 +17,7 @@ local MapMarkerBPType = MapDefine.MapMarkerBPType
 local MapConstant = MapDefine.MapConstant
 
 
----@class MapMarkerNpc
+---@class MapMarkerNpc : MapMarker
 local MapMarkerNpc = LuaClass(MapMarker)
 
 function MapMarkerNpc:Ctor()
@@ -42,9 +42,9 @@ function MapMarkerNpc:InitMarker(Params)
         self.TipsName = MapNpcIconCfgItem.TipsName
     end
 
-	-- 记录NPC所属的三级地图信息，因为有些NPC图标需要MapID去判断是否激活，一二级地图显示时默认MapID是不对的
+	-- 记录标记所属的三级地图信息，因为有些NPC图标需要MapID去判断是否激活，一二级地图显示时默认MapID是不对的
 	self:SetAreaUIMapID(Params.UIMapID)
-    self:SetMapID(Params.MapID)
+	self:SetMapID(Params.MapID)
 
     self:UpdateMarker(Params)
 end

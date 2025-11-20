@@ -36,6 +36,7 @@ function AdventureRecommendTaskNewItemVM:Ctor()
 	self.ImgTask = nil
 	self.GoBtnStyle = nil
 	self.UnlockIconPath = ""
+	self.ImgTaskVisible = nil
 end
 
 function AdventureRecommendTaskNewItemVM:OnInit()
@@ -69,6 +70,7 @@ function AdventureRecommendTaskNewItemVM:UpdateVM(Params)
     if Params.RewardList then
         self:SetRewardData(Params.RewardList)
     end
+	self.ImgTaskVisible = Params.ImgTaskVisible
 end
 
 function AdventureRecommendTaskNewItemVM:SetRewardData(RewardList)

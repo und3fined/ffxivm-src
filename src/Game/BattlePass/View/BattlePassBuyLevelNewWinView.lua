@@ -103,6 +103,7 @@ function BattlePassBuyLevelNewWinView:OnShow()
 	self.FirstEnter = false
 
 	self:InitText()
+	UIUtil.SetIsVisible(self.TextAmount, false)
 
 end
 
@@ -154,7 +155,7 @@ function BattlePassBuyLevelNewWinView:OnClickedBtnBuy()
 								   string.format(_G.LSTR(850012), ScoreName),
 								   function ()  
 									UIViewMgr:HideView(UIViewID.BattlePassBuyLevelWin)
-									UIViewMgr:HideView(UIViewID.BattlePassMainView) 
+									-- UIViewMgr:HideView(UIViewID.BattlePassMainView) 
 									_G.RechargingMgr:ShowMainPanel()
 									end,
 

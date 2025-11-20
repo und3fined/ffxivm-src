@@ -13,6 +13,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 
 local MajorUtil = require("Utils/MajorUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local QuestHelper = require("Game/Quest/QuestHelper")
 
 local ITEM_UPDATE_TYPE = ProtoCS.ITEM_UPDATE_TYPE
@@ -86,6 +87,7 @@ end
 
 function TargetOwnItem:DoStartTarget()
     self:RegisterEvent(EventID.BagUpdate, self.OnEventBagUpdate)
+    self:RegisterEvent(EventID.BagInit, self.OnEventBagInit)
     self:UpdateMissItemList()
     self:CheckFinish()
     QuestMgr.QuestRegister:RegisterOwnItemData(self)
@@ -135,6 +137,9 @@ end
 ---是否符合条件，用于检查任务目标是否满足
 ---@param Item common.Item
 function TargetOwnItem:CheckAdaptCondition(Item)
+    if not CommonUtil.IsShipping() then
+        FLOG_INFO("[Quest] TargetOwnItem CheckAdaptCondition MissItemList num="..tostring(#self.MissItemList))
+    end
     local IsRemove = false
     for i=#self.MissItemList, 1, -1 do
         local NeedItemData = self.MissItemList[i]
@@ -166,6 +171,9 @@ function TargetOwnItem:CheckAdaptCondition(Item)
             self.CollectItemList[Item.GID] = FindNum
         end
         if OwnNum >= NeedNum then
+            if not CommonUtil.IsShipping() then
+                FLOG_INFO("[Quest] TargetOwnItem CheckAdaptCondition remove at "..tostring(i))
+            end
             table.remove(self.MissItemList, i)
             IsRemove = true
         end
@@ -232,7 +240,7 @@ function TargetOwnItem:UpdateMissItemList()
                 end
             end
 
-            if IsFind and IsNeedEquip and not _G.EquipmentMgr:CanEquiped(Item.ResID, false, self.ProfID) then
+            if IsFind and IsNeedEquip and not _G.EquipmentMgr:CanEquiped(Item.ResID, false, self.ProfID, 9999) then --传入一个高等级,表示不需要判断等级
                 IsFind = false
             end
             if IsFind then
@@ -323,6 +331,11 @@ end
 ---@param UpdateItem CsItemUpdateMsg
 function TargetOwnItem:OnEventBagUpdate(UpdateItem)
     self:UpdateBag(UpdateItem)
+    self:CheckFinish()
+end
+
+function TargetOwnItem:OnEventBagInit()
+    self:UpdateMissItemList()
     self:CheckFinish()
 end
 

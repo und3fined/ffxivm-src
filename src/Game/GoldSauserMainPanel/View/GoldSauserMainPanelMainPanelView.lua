@@ -18,8 +18,8 @@ local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMa
 local GoldSauserMainPanelMgr = require("Game/GoldSauserMainPanel/GoldSauserMainPanelMgr")
 local EventID = require("Define/EventID")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
-local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
-local UIBinderUpdateCountDown = require("Binder/UIBinderUpdateCountDown")
+--local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
+--local UIBinderUpdateCountDown = require("Binder/UIBinderUpdateCountDown")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 --local DateTimeTools = require("Common/DateTimeTools")
 
@@ -324,6 +324,9 @@ function GoldSauserMainPanelMainPanelView:OnHide()
 	_G.GoldSauserCeremonyMgr:StopUpdateTimeInfo()
 
 	self:StopAllAnimations()
+
+	-- 清除主界面成功动画开关，防止未及时播放动画逻辑导致变量无法重置的问题
+	GoldSauserMainPanelMainVM.MiniGameSuccess = false
 end
 
 function GoldSauserMainPanelMainPanelView:OnRegisterUIEvent()
@@ -379,6 +382,7 @@ function GoldSauserMainPanelMainPanelView:OnMiniGameSuccessShow(NewValue, OldVal
 
 	if NewValue then
 		self:PlayAnimation(self.AnimGameSuccess)
+		GoldSauserMainPanelMainVM.MiniGameSuccess = false
 	end
 end
 
@@ -502,11 +506,8 @@ function GoldSauserMainPanelMainPanelView:UpdateOtherModuleSevInfoContent(GameID
 			self.NextTripleTriadTournamentItem.ItemVM:SetIsGameNoFinish(false)
 		end
 	elseif GameID == GoldSauserGameClientType.GoldSauserGameTypeFashionCheck then
-		local FashionInfo = FashionEvaluationMgr:GetEvaluationInfo()
-        if FashionInfo then
-            local RemainTimes = FashionInfo.WeekRemainTimes or 0
-            self.FashionReportItem.ItemVM:SetIsGameNoFinish(RemainTimes > 0)
-        end
+		local bFinished = FashionEvaluationMgr:IsFinishedEvaluation()
+		self.FashionReportItem.ItemVM:SetIsGameNoFinish(not bFinished)
 	end
 end
 

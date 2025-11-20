@@ -35,6 +35,13 @@ local ENTERMAP_MIN_DIFF_DISTANCE = 5000
 --被自动寻路管理器调用
 local AutoPathMoveImpl = {}
 
+--读条中断寻路
+AutoPathMoveImpl.SingIDBreakList = 
+{
+    302,
+    500015
+}
+
 -----------------------对外接口begin------------------
 function AutoPathMoveImpl:IsAutoPathMovingByMap(DstMapID, DstPos)
     if (self.IsAutoPathMoving == nil or not self.IsAutoPathMoving) then
@@ -110,7 +117,7 @@ function AutoPathMoveImpl:OnBegin()
     local cfg = NavigationConfigCfg:FindCfgByKey(NavigationConfigType.AUTOPATH_REJUST_DIST)
     if (cfg ~= nil) then
         self.EndPositionOffset = cfg.Value        
-    end
+    end    
 
     cfg = NavigationConfigCfg:FindCfgByKey(NavigationConfigType.AUTOPATH_USE_MOUNT_MIN_DIST)
     if (cfg ~= nil) then
@@ -215,7 +222,6 @@ function AutoPathMoveImpl:RegisterGameEvent(AutoPathMoveMgr)
         end
     )
 
-
     AutoPathMoveMgr:RegisterGameEvent(
         EventID.MajorDead,
         function(_)
@@ -270,7 +276,21 @@ function AutoPathMoveImpl:RegisterGameEvent(AutoPathMoveMgr)
         function(_, Params)
             self:OnEventBeginPlaySequence(Params)
         end
-    )  
+    )
+
+    -- AutoPathMoveMgr:RegisterGameEvent(
+    --     EventID.ExitWater, 
+    --     function(_, Params)
+    --         self:OnEventExitWater(Params)
+    --     end
+    -- )
+
+    AutoPathMoveMgr:RegisterGameEvent(
+        EventID.StartSwimming, 
+        function(_, Params)
+            self:OnEventStartSwimming(Params)
+        end
+    )
 end
 
 --发送开始自动寻路协议
@@ -399,7 +419,7 @@ function AutoPathMoveImpl:Stop(IsSuccessStop)
     self:ClearAutoMoveData()
 
     --TLog发送
-    if (self.TLogData ~= nil) then
+    if (self.TLogData ~= nil) then      
         local SrcPosStr = string.format("(%s,%s,%s)", 
             tostring(self.TLogData.SrcPos.X), 
             tostring(self.TLogData.SrcPos.Y), 
@@ -408,7 +428,7 @@ function AutoPathMoveImpl:Stop(IsSuccessStop)
             tostring(self.TLogData.DstPos.X), 
             tostring(self.TLogData.DstPos.Y), 
             tostring(self.TLogData.DstPos.Z))
-
+        
         DataReportUtil.ReportData("AutomaticFlow", true, false, true,
         "RequestTargetType", tostring(self.TargetType),
         "InitiateArg1", tostring(self.TLogData.SrcMapID),
@@ -495,9 +515,9 @@ function AutoPathMoveImpl:RunCrystalMoveData(CrystalData)
     local CrystalMgr = _G.PWorldMgr:GetCrystalPortalMgr()
     local Success = CrystalMgr:TransferByMap(CrystalID)
     if (Success == nil) then
-        --失败，传送中断
         FLOG_ERROR("AutoPathMoveImpl Crystal transition failed! id:%d", CrystalID)
 
+        --失败，传送中断
         self:Stop()        
         return
     end
@@ -558,9 +578,9 @@ function AutoPathMoveImpl:RunActorMoveData(ActorData)
     self.ToMapID = ActorData.ToMapID
     self.TransPos = ActorData.TransPos
 
-    --监听回包,20秒未收到回包，终止寻路
+    --监听回包,5秒未收到回包，终止寻路
     self:CancelNetworkRsqTimer()
-    self.ReqNetworkTimer = _G.TimerMgr:AddTimer(self, self.CheckNetworkRsq, 10, 0, 1)
+    self.ReqNetworkTimer = _G.TimerMgr:AddTimer(self, self.CheckNetworkRsq, 5, 0, 1)
 end
 
 function AutoPathMoveImpl:InteravtiveTransition(ActorID, InteractiveID)
@@ -583,8 +603,8 @@ end
 function AutoPathMoveImpl:CheckNetworkRsq(Params)
     --没有收到回包
     FLOG_ERROR("AutoPathMoveImpl CheckNetworkRsq call: no rsq data!")
-    self:CancelNetworkRsqTimer()
 
+    self:CancelNetworkRsqTimer()
     if (Params ~= nil and Params.CrystalTrans ~= nil) then
         --水晶传送没有回包
         _G.MsgTipsUtil.ShowTipsByID(107012)
@@ -652,18 +672,19 @@ function AutoPathMoveImpl:OnPWorldMapEnter(MapData, IsOnlyChangeLocation)
     --取消监听
     self:CancelNetworkRsqTimer()
 
-    if (self.FromMapID == self.ToMapID) then
-        --同地图传送
+    if (self.FromMapID == self.ToMapID and (MapData == nil or not MapData.bChangeMap)) then
+        --同地图传送，且不是切换地图（会出现播放cutscene，而不走同地图切换）
         LastMapID = _G.PWorldMgr:GetLastTransMapResID()
     end
     
     local MajorPos = Major:FGetActorLocation()
 
-    FLOG_INFO("AutoPathMoveImpl OnPWorldMapEnter() call! CurrMapID:%d, LastMapID:%d", CurrMapID, LastMapID)
-    local NeedPlayRunningEffect = (CurrMapID ~= LastMapID)
+    FLOG_INFO("AutoPathMoveImpl OnPWorldMapEnter() call! CurrMapID:%d, LastMapID:%d", CurrMapID, LastMapID)  
 
     local RejustCurrMapID = NavigationPathMgr:RejustDynamicMap(CurrMapID)
     local RejustLastMapID = NavigationPathMgr:RejustDynamicMap(LastMapID)
+
+    local NeedPlayRunningEffect = (RejustCurrMapID ~= RejustLastMapID)
 
     if (self.FromMapID == RejustLastMapID and self.ToMapID == RejustCurrMapID) then
         --set 0
@@ -788,6 +809,8 @@ function AutoPathMoveImpl:OnFindPathNotify(MsgBody)
     --路径优化
     self:RejustNPCEndPos(PointList)
 
+    --NavigationPathMgr:ShowFindPath(PointList)
+
     --获取路径长度
     local PathDistance = self:GetDistanceForPointList(PointList)
 
@@ -828,8 +851,8 @@ function AutoPathMoveImpl:OnFindPathNotify(MsgBody)
             --监听技能释放完
             self.CurrentSkillID = _G.SkillObjectMgr:GetOrCreateEntityData(MajorUtil.GetMajorEntityID()).CurrentSkillObject.CurrentSkillID
             self.StartListenSkillEnd = true            
-        else
-            --直接使用坐骑
+        elseif (not MajorUtil.IsSwimming()) then
+            --直接使用坐骑(游泳状态除外)
             FLOG_INFO("AutoPathMoveImpl: not using skill, use mount")
             _G.EventMgr:SendEvent(EventID.UseMount)
         end
@@ -853,7 +876,7 @@ function AutoPathMoveImpl:OnEventSkillEnd(Params)
 
         --延后一帧处理，因为接口MajorUtil.IsUsingSkill()下一帧才会返回false
         local function callback()
-            if (not self.IsAutoPathMoving) then
+            if (not self.IsAutoPathMoving) or MajorUtil.IsSwimming() then
                 return
             end            
             FLOG_INFO("AutoPathMoveImpl: delay one frame to use mount")
@@ -872,30 +895,39 @@ function AutoPathMoveImpl:RejustEndPoint(PointList)
         return
     end
 
-    local PointNum = #PointList
+    local UEEndPoint = nil
+    local UEPreEndPoint = nil
+    local EndPositionOffset = self.EndPositionOffset
 
-    if (PointNum < 2) then
-        FLOG_INFO("AutoPathMoveImpl:RejustEndPoint point num < 2")
-        return
+    while true do
+        local PointNum = #PointList
+
+        if (PointNum < 2) then
+            FLOG_INFO("AutoPathMoveImpl:RejustEndPoint point num < 2")
+            return
+        end
+
+        UEEndPoint = PointList[PointNum]
+        UEPreEndPoint = PointList[PointNum - 1]
+    
+        local Distance = _G.UE.FVector.Dist(UEEndPoint, UEPreEndPoint)
+        if (Distance < EndPositionOffset) then
+            FLOG_WARNING("AutoPathMoveImpl PreEndPos=%s and EndPos=%s too near", table.tostring(UEPreEndPoint), table.tostring(UEEndPoint))    
+    
+            table.remove(PointList, PointNum)        
+            EndPositionOffset = EndPositionOffset - Distance
+        else
+            break
+        end
     end
 
-    local UEEndPoint = PointList[PointNum]
-    local UEPreEndPoint = PointList[PointNum - 1]
-
-    local Distance = _G.UE.FVector.Dist(UEEndPoint, UEPreEndPoint)
-    if (Distance <= self.EndPositionOffset) then
-        FLOG_WARNING("AutoPathMoveImpl PreEndPos=%s and EndPos=%s too near", table.tostring(UEPreEndPoint), table.tostring(UEEndPoint))    
-
-        table.remove(PointList, PointNum)        
-        return
-    end
 
     --路径上取点，指定终点偏移量
     local Dir = UEPreEndPoint - UEEndPoint
     _G.UE.FVector.Normalize(Dir)
-    local AimPoint = UEEndPoint + Dir * self.EndPositionOffset
+    local AimPoint = UEEndPoint + Dir * EndPositionOffset
 
-    PointList[PointNum] = AimPoint
+    PointList[#PointList] = AimPoint
 
     FLOG_INFO("AutoPathMoveImpl EndPos=%s, NewEndPos=%s", table.tostring(UEEndPoint), table.tostring(AimPoint))
 end
@@ -1009,9 +1041,16 @@ function AutoPathMoveImpl:OnMajorSingBarBegin(EntityID, SingStateID)
 
     --读条开始，取消读条计时，读条结束后重新监听
     if (self.MoveType == self.AutoPathMoveMgr.EMoveType.Crystal) then                
-        self:CancelNetworkRsqTimer()           
+        self:CancelNetworkRsqTimer()
+    else
+        --释放打断读条白名单
+        if (table.contain(self.SingIDBreakList, SingStateID)) then
+            FLOG_INFO("AutoPathMoveImpl: singbar break stop!")
+            self:Stop()
+        end        
     end
 end
+
 
 --死亡
 function AutoPathMoveImpl:OnGameEventMajorDead()
@@ -1225,6 +1264,29 @@ function AutoPathMoveImpl:OnEventBeginPlaySequence(Params)
     FLOG_INFO("AutoPathMoveImpl: play sequence!")
 
     self:Stop()
+end
+
+-- function AutoPathMoveImpl:OnEventExitWater(Params)
+--     local EntityID = Params.ULongParam1
+--     local MajorEntityID = MajorUtil.GetMajorEntityID()
+--     if (self.IsAutoPathMoving) and EntityID == MajorEntityID then
+--         --自动寻路游泳结束后召唤坐骑
+--         FLOG_INFO("AutoPathMoveImpl: swim end, use mount")
+--         _G.EventMgr:SendEvent(EventID.UseMount)
+--     end
+-- end
+
+--进入深水区，停止自动寻路
+function AutoPathMoveImpl:OnEventStartSwimming(Params)
+    if (not self.IsAutoPathMoving) then
+        return
+    end
+
+    _G.MsgTipsUtil.ShowTipsByID(40191)
+
+    FLOG_INFO("AutoPathMoveImpl: start swimming")
+
+    self:Stop()    
 end
 
 return AutoPathMoveImpl

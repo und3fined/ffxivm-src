@@ -52,7 +52,7 @@ local GoldSauserMainPanelMainVM = require("Game/GoldSauserMainPanel/VM/GoldSause
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local GoldSaucerMinigameCfg = require("TableCfg/GoldSaucerMinigameCfg")
-local GoldSaucerAwardShowCfg = require("TableCfg/GoldSaucerAwardShowCfg")
+--local GoldSaucerAwardShowCfg = require("TableCfg/GoldSaucerAwardShowCfg")
 local GoldSaucerAwardBelongCfg = require("TableCfg/GoldSaucerAwardBelongCfg")
 local CrystalPortalCfg = require("TableCfg/TeleportCrystalCfg")
 local AchievementUtil = require("Game/Achievement/AchievementUtil")
@@ -63,6 +63,7 @@ local GameDescCfg = require("TableCfg/GoldSaucerGameDescCfg")
 local GoldSaucerTaskTypeCfg = require("TableCfg/GoldSaucerTaskTypeCfg")
 local GoldSaucerCfg = require("TableCfg/GoldSaucerCfg")
 local MountVM = require("Game/Mount/VM/MountVM")
+
 local AsyncReqModuleType = GoldSauserMainPanelDefine.AsyncReqModuleType
 local GoldSauserUnlockNpcID = GoldSauserMainPanelDefine.GoldSauserUnlockNpcID
 local GoldSauserCrystalPortalID = GoldSauserMainPanelDefine.GoldSauserCrystalPortalID
@@ -146,12 +147,16 @@ function GoldSauserMainPanelMgr:OnBegin()
 
     self.RewardMarkedList = {} -- 奖励一览收藏ID存储
     self:LoadMarkedReward()
+
+    self.PanelGameAutoDisappearTimer = nil -- 金碟界面彩蛋小游戏自动消失计时器
+    self.ActiveGameType = nil -- 激活中的彩蛋小游戏 
 end
 
 function GoldSauserMainPanelMgr:OnEnd()
     self.OtherModuleMsgFlags = nil
     self.RewardMarkedList = nil
     self:EndRunTimer()
+    self:RemoveActiveGameInfo()
 end
 
 function GoldSauserMainPanelMgr:OnShutdown()
@@ -175,7 +180,6 @@ function GoldSauserMainPanelMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
     self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnModuleOpen)
     self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
-    --self:RegisterGameEvent(EventID.ExcuteAsyncInfoFromOtherModule, self.OnExcuteAsyncInfoCallBack)
 end
 
 function GoldSauserMainPanelMgr:OnGameEventLoginRes(Params)
@@ -365,7 +369,6 @@ function GoldSauserMainPanelMgr:OnNetMsgGoldSauserMainGameNotify(MsgBody)
 	if nil == Msg then
 		return
 	end
-    --print("gold GameNotify "..Msg.MiniGameType)
     local MiniGameType = Msg.MiniGameType
     if not MiniGameType then
         return
@@ -380,15 +383,76 @@ function GoldSauserMainPanelMgr:OnNetMsgGoldSauserMainGameNotify(MsgBody)
         return
     end
 
+    if self:IsAnyPanelGameActive() then
+        return -- 当前有任何已激活的小游戏则不再接受触发新的小游戏
+    end
+    
+    self.ActiveGameType = MiniGameType
+    self:StartMiniGameAutoDisappearTimer()
     GoldSauserMainPanelMainVM:SetGameNotify(MiniGameType, Level)
 end
 
+function GoldSauserMainPanelMgr:RemoveActiveGameInfo()
+    local ActiveGameType = self.ActiveGameType
+    if not ActiveGameType then
+        return
+    end
+    GoldSauserMainPanelMainVM:NotifyGameAutoEnd(ActiveGameType)
+    self:EndMiniGameAutoDisappearTimer()
+    self.ActiveGameType = nil
+end
+
+function GoldSauserMainPanelMgr:StartMiniGameAutoDisappearTimer()
+    local Timer = self.PanelGameAutoDisappearTimer
+    if Timer then
+        self:UnRegisterTimer(Timer)
+        FLOG_ERROR("GoldSauserMainPanelMgr:StartMiniGameAutoDisappearTimer Timer is Exist")
+    end
+    local TotalTime = 60 * 60 -- 默认1小时结束
+    local ParamCfg = GoldSaucerMinigameCfg:FindCfgByKey(GoldSauserMainPanelDefine.MiniGameEnum.BodyGuardStartTime)
+    if ParamCfg then
+        local ValueList = ParamCfg.Value
+        if ValueList and type(ValueList) == "table" then
+            TotalTime = (ValueList[1] or 0) / 1000
+        end
+    end
+    
+    self.PanelGameAutoDisappearTimer = self:RegisterTimer(function()
+        self:RemoveActiveGameInfo()
+    end, TotalTime)
+end
+
+function GoldSauserMainPanelMgr:EndMiniGameAutoDisappearTimer()
+    local Timer = self.PanelGameAutoDisappearTimer
+    if not Timer then
+        return
+    end
+
+    self:UnRegisterTimer(Timer)
+    self.PanelGameAutoDisappearTimer = nil
+end
+
+--- 当前是否有已激活的小游戏
+function GoldSauserMainPanelMgr:IsAnyPanelGameActive()
+    return self.ActiveGameType ~= nil
+end
+
 function GoldSauserMainPanelMgr:TestTriggerGameNotify(Level)
+    self.ActiveGameType = MiniGameType.MiniGameTypeAirForceOne
+    self:StartMiniGameAutoDisappearTimer()
     GoldSauserMainPanelMainVM:SetGameNotify(MiniGameType.MiniGameTypeAirForceOne, Level)
 end
 
 function GoldSauserMainPanelMgr:TestTriggerBirdGameNotify(Level)
+    self.ActiveGameType = MiniGameType.MiniGameTypeCliffHanger
+    self:StartMiniGameAutoDisappearTimer()
     GoldSauserMainPanelMainVM:SetGameNotify(MiniGameType.MiniGameTypeCliffHanger, Level)
+end
+
+function GoldSauserMainPanelMgr:TestTriggerBanbooNotify(Level)
+    self.ActiveGameType = MiniGameType.MiniGameTypeBodyGuard
+    self:StartMiniGameAutoDisappearTimer()
+    GoldSauserMainPanelMainVM:SetGameNotify(MiniGameType.MiniGameTypeBodyGuard, Level)
 end
 
 ---@小游戏完成统计次数
@@ -610,8 +674,8 @@ function GoldSauserMainPanelMgr:IsGameEntranceLocked(GameID)
         return true
     end
     local ModuleOpen = self:IsGameUnlock(GameID)
-    if GameID == GoldSauserGameClientType.GoldSauserGameTypeChocoboRace or
-    GameID == GoldSauserGameClientType.GoldSauserGameTypeChocobo then -- 5.7 OBT暂时屏蔽陆行鸟竞赛相关内容
+    if GameID == GoldSauserGameClientType.GoldSauserGameTypeChocoboRace --[[or
+    GameID == GoldSauserGameClientType.GoldSauserGameTypeChocobo--]] then
         return true -- 暂时关闭
     elseif GameID == GoldSauserGameClientType.GoldSauserGameTypeFantasyCardRace then
         local RaceStart = MagicCardTourneyMgr:IsTourneyActive()
@@ -751,10 +815,15 @@ function GoldSauserMainPanelMgr:GetGameHintInfo(GameID, CallBack)
     elseif GameID == GoldSauserGameClientType.GoldSauserGameTypeFashionCheck then
         local FashionInfo = FashionEvaluationMgr:GetEvaluationInfo()
         if FashionInfo then
-            RemainTimes = FashionInfo.WeekRemainTimes or 0
-            --MaxTimes = FashionInfo.MaxWeekRemainTimes or 0
-            Rlt = string.format(LSTR(350008), tostring(RemainTimes))
-            IconTobeViewVisible = RemainTimes > 0
+            local FashionFinished = FashionEvaluationMgr:IsFinishedEvaluation()
+            if FashionFinished then
+                IconTobeViewVisible = false
+                Rlt = ""
+            else
+                RemainTimes = FashionInfo.WeekRemainTimes or 0
+                Rlt = string.format(LSTR(350008), tostring(RemainTimes))
+                IconTobeViewVisible = RemainTimes > 0
+            end
         end
     end
 
@@ -780,7 +849,7 @@ function GoldSauserMainPanelMgr:GetGameTimeLimitInfo(GameID, CallBack)
 
     local bAsync = false
     local Rlt = 0
-    local CurTimeStamp = TimeUtil.GetServerTime()
+    local CurTimeStamp = TimeUtil.GetServerLogicTime()
 
     if GameID ==  GoldSauserGameClientType.GoldSauserGameTypeChocoboRace then
         --TODO:功能尚未开发
@@ -956,6 +1025,9 @@ end
 --- 设置是否在小游戏过程中
 function GoldSauserMainPanelMgr:SetIsInPanelMiniGame(bIn)
     self.IsInPanelMiniGame = bIn
+    if bIn then
+        self:EndMiniGameAutoDisappearTimer() -- 进入小游戏停止自动离场计时器
+    end
 end
 
 --- 处于小游戏流程中屏蔽点击功能
@@ -1178,17 +1250,14 @@ function GoldSauserMainPanelMgr:GetItemName(Cfg)
     end
 end
 
---- 根据页签类型获取内容数据
-function GoldSauserMainPanelMgr:CreateContentDatasByAwardType(AwardType)
-    local TypeCfgs = GoldSaucerAwardShowCfg:FindAllCfg(string.format("AwardType = %d", AwardType))
-    if not TypeCfgs or not next(TypeCfgs) then
-        return
-    end
+--- 根据页签表数据重建内容数据
+function GoldSauserMainPanelMgr:RebuildContentDatasByTypeCfgs(TypeCfgs)
     local ContentDatas = {}
     for _, Cfg in ipairs(TypeCfgs) do
         local CfgID = Cfg.ID
         local ItemValue = {
             ID = CfgID,
+            BelongType = Cfg.BelongType,
             bMarked = self:GetTheRewardIsMarked(CfgID),
             IconReceivedVisible = self:GetTheRewardIsOwned(Cfg),
             BelongTypeName = self:GetBelongTypeName(Cfg),
@@ -1202,12 +1271,13 @@ function GoldSauserMainPanelMgr:CreateContentDatasByAwardType(AwardType)
     return ContentDatas
 end
 
-function GoldSauserMainPanelMgr:GetDetailPanelDesc(ItemCfg)
-    local CfgKey = ItemCfg.GroupID
-    if not CfgKey then
+function GoldSauserMainPanelMgr:GetDetailPanelDesc(OneAwardShowCfg)
+    local CfgKey = OneAwardShowCfg.GroupID
+    if CfgKey == nil then
         return
     end
-    if ItemCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeShop then
+
+    if OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeShop then
         local GoodsConfig = GoodsCfg:FindCfgByKey(CfgKey)
         if GoodsConfig then
             local MallName
@@ -1241,17 +1311,23 @@ function GoldSauserMainPanelMgr:GetDetailPanelDesc(ItemCfg)
             end
             return string.format(LSTR(350086), MallName or "", PriceContent or "")
         end
-    elseif ItemCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeAchievement then
+    elseif OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeAchievement then
         return AchievementUtil.QueryAchievementHelp(CfgKey)
+    elseif OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeOther then
+        if OneAwardShowCfg.Detail ~= nil then
+            return OneAwardShowCfg.Detail
+        else
+            FLOG_ERROR("GoldSauserMainPanelMgr: OneAwardShowCfg.Detail is nil. AwardSourceTypeOther type only use in WilderExplore")
+        end
     end
 end
 
-function GoldSauserMainPanelMgr:GetCondText(ItemCfg)
-    local CfgKey = ItemCfg.GroupID
+function GoldSauserMainPanelMgr:GetCondText(OneAwardShowCfg)
+    local CfgKey = OneAwardShowCfg.GroupID
     if not CfgKey then
         return
     end
-    if ItemCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeShop then
+    if OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeShop then
         local GoodsConfig = GoodsCfg:FindCfgByKey(CfgKey)
         if GoodsConfig then
             local PriceContent
@@ -1295,7 +1371,7 @@ function GoldSauserMainPanelMgr:GetCondText(ItemCfg)
             end
             return PriceContent
         end
-    elseif ItemCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeAchievement then
+    elseif OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeAchievement then
         local AchSevInfo = _G.AchievementMgr:GetAchievementInfo(CfgKey)
         if AchSevInfo then
             local Progress = AchSevInfo.Progress or 0
@@ -1308,6 +1384,30 @@ function GoldSauserMainPanelMgr:GetCondText(ItemCfg)
             end
             return string.format(LSTR(350089), ProgressRichText, TotalProgress)
         end
+    elseif OneAwardShowCfg.AwardType == GoldSauserAwardSourceType.AwardSourceTypeOther then
+        local ID = OneAwardShowCfg.ItemID
+        local PriceContent = ""
+        
+        if (ItemUtil.ItemIsScore(ID)) then
+            --积分
+            local IconPath = _G.ScoreMgr:GetScoreIconName(ID)
+            local PriceRichTextIcon = RichTextUtil.GetTexture(IconPath, 40, 40, -8)
+            local OwnScore = _G.ScoreMgr:GetScoreValueByID(ID)
+
+            local PriceRichTextCount = string.formatint(OwnScore)                 
+            PriceContent = string.format(LSTR(350088), PriceRichTextIcon, PriceRichTextCount) 
+        else
+            --物品
+            local IconID = ItemUtil.GetItemIcon(ID)
+            local IconPath = UIUtil.GetIconPath(IconID)
+            local PriceRichTextIcon = RichTextUtil.GetTexture(IconPath, 40, 40, -8)
+            local OwnItemNum = _G.BagMgr:GetItemNum(ID)
+            
+            local PriceRichTextCount = tostring(OwnItemNum)
+            PriceContent = string.format(LSTR(350088), PriceRichTextIcon, PriceRichTextCount)                             
+        end
+        
+        return PriceContent
     end
 end
 
@@ -1338,23 +1438,18 @@ function GoldSauserMainPanelMgr:GetWayDatas(ItemCfg)
 end
 
 --- 根据具体ItemVM获取对应详情面板需要的额外信息
-function GoldSauserMainPanelMgr:CreateExplainExtraParams(ItemVM)
-    if not ItemVM then
+function GoldSauserMainPanelMgr:RebuildExplainExtraParams(OneAwardShowCfg, IconReceivedVisible)
+    if not OneAwardShowCfg then
         return
     end
 
-    local ID = ItemVM.ID
-    local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(ID)
-    if not ItemCfg then
-        return
-    end
     local ExtraParam = {}
-    ExtraParam.DetailPanelDesc = self:GetDetailPanelDesc(ItemCfg)
-    if not ItemVM.IconReceivedVisible then
-        ExtraParam.CondText = self:GetCondText(ItemCfg)
+    ExtraParam.DetailPanelDesc = self:GetDetailPanelDesc(OneAwardShowCfg)
+    if not IconReceivedVisible then
+        ExtraParam.CondText = self:GetCondText(OneAwardShowCfg)
     end
 
-    ExtraParam.GetWayDatas = self:GetWayDatas(ItemCfg)
+    ExtraParam.GetWayDatas = self:GetWayDatas(OneAwardShowCfg)
 
     return ExtraParam
 end

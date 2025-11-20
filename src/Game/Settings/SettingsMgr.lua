@@ -19,6 +19,7 @@ local DataReportUtil = require("Utils/DataReportUtil")
 local DungeonFpsmodeCfg = require("TableCfg/DungeonFpsmodeCfg")
 local ProtoRes = require ("Protocol/ProtoRes")
 local EffectUtil = require("Utils/EffectUtil")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local USaveMgr
 local TutorialGuideMgr
@@ -324,6 +325,10 @@ function SettingsMgr:GetIndexBySaveKey(SaveKeyStr, DefaultIndex)
     local SettingCfg = self.SettingCfgMap[SaveKey[SaveKeyStr]]
     if SettingCfg then
         local Value = SettingsUtils.GetValue(SettingCfg.GetValueFunc, SettingCfg)
+        if not Value then
+            Value = DefaultIndex or 1
+        end
+        
         return SettingsUtils.GetDropDownListIndex(Value, SettingCfg)
     end
 
@@ -332,15 +337,23 @@ end
 
 --设置项里设置的
 function SettingsMgr:GetMaxFPSValue()
-    local SaveKeyStr = "MaxFPS"
-    local SettingCfg = self.SettingCfgMap[SaveKey[SaveKeyStr]]
-    if SettingCfg then
-        local Value = SettingsUtils.GetValue(SettingCfg.GetValueFunc, SettingCfg)
-        return Value or 30
+    if nil ~= self.SettingCfgMap then
+        local SaveKeyStr = "MaxFPS"
+        local SettingCfg = self.SettingCfgMap[SaveKey[SaveKeyStr]]
+        if SettingCfg then
+            local Value = SettingsUtils.GetValue(SettingCfg.GetValueFunc, SettingCfg)
+            return Value or 30
+        end
     end
 
     return 30
 end
+
+--当前实际的，如果是FpsMode的推荐模式(副本表现效果模式这个设置项)，帧率会被锁死30fps
+function SettingsMgr:GetCurRealMaxFPSValue()
+    return self:GetMaxFPSValue()
+end
+
 
 --给上报提供通用的获取当前Index的接口
 --返回-9表示获取出错;    滑杆返回数值，下来列表返回index
@@ -449,9 +462,9 @@ end
 --现在超链接不用考虑默认的，slider、下拉框存储的分别是数值和index，所以都是int
     --这里可以直接检测到是否存过，没存的话，就使用默认值，直接set/让其生效
 function SettingsMgr:InitAll()
-    if _G.DemoMajorType == 1 then
-        return
-    end
+    -- if _G.DemoMajorType == 1 then
+    --     return
+    -- end
     
     local CfgList = SettingsCfg:FindAllCfg()
     if CfgList then
@@ -534,7 +547,8 @@ function SettingsMgr:InitAll()
                 end
             end
         end
-
+        --各职业自定义技能映射
+        SettingsUtils["SettingsTabHandle"]:UpdateByMajorProfSwitch()
         --所有都处理完之后再手动处理性能模式        
         if self:IsPerforcemanceMode() then
             FLOG_WARNING("setting EnablePerformanceParams After InitAll")

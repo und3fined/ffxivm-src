@@ -36,9 +36,8 @@ local SaveKey = require("Define/SaveKey")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnClose UFButton
 ---@field CheckBox CommSingleBoxView
+---@field CrafterTitleItem CrafterTitleItemView
 ---@field GatheringJobBar GatheringJobBarItemView
----@field IconGardener UFImage
----@field IconMining UFImage
 ---@field ImgNotStarted UFImage
 ---@field ImgNotStarted2 UFImage
 ---@field ImgStarting UFImage
@@ -53,9 +52,11 @@ local SaveKey = require("Define/SaveKey")
 ---@field RichTextStatus2 URichTextBox
 ---@field TableViewList UTableView
 ---@field TextModeTips UFTextBlock
----@field TextTitle UFTextBlock
+---@field AnimBarIn UWidgetAnimation
+---@field AnimBarInImmediate UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
----@field AnimOut UWidgetAnimation
+---@field AnimOutAll UWidgetAnimation
+---@field AnimOutLeft UWidgetAnimation
 ---@field AnimPanelGathering UWidgetAnimation
 ---@field AnimPanelList UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -65,9 +66,8 @@ function NewGatheringJobPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnClose = nil
 	--self.CheckBox = nil
+	--self.CrafterTitleItem = nil
 	--self.GatheringJobBar = nil
-	--self.IconGardener = nil
-	--self.IconMining = nil
 	--self.ImgNotStarted = nil
 	--self.ImgNotStarted2 = nil
 	--self.ImgStarting = nil
@@ -82,9 +82,11 @@ function NewGatheringJobPanelView:Ctor()
 	--self.RichTextStatus2 = nil
 	--self.TableViewList = nil
 	--self.TextModeTips = nil
-	--self.TextTitle = nil
+	--self.AnimBarIn = nil
+	--self.AnimBarInImmediate = nil
 	--self.AnimIn = nil
-	--self.AnimOut = nil
+	--self.AnimOutAll = nil
+	--self.AnimOutLeft = nil
 	--self.AnimPanelGathering = nil
 	--self.AnimPanelList = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -93,9 +95,9 @@ end
 function NewGatheringJobPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CheckBox)
+	self:AddSubView(self.CrafterTitleItem)
 	self:AddSubView(self.GatheringJobBar)
 	self:AddSubView(self.MaterialItem)
-	self:AddSubView(self.CrafterTitleItem)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -324,6 +326,7 @@ function NewGatheringJobPanelView:OnRegisterBinder()
     self:RegisterBinders(GatheringJobPanelVM, Binders)
 
     --子蓝图的绑定
+    self.MaterialItem:SimpleItemAddRegisterGameEvent()
     self.MaterialItem:SetParams({ Data = GatheringJobPanelVM.SimpleGatherItemVM })
 end
 

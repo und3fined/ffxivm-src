@@ -118,8 +118,8 @@ function OpsActivityTreasureChestPanelVM:Update(Params)
         end
     end
 
-    local SkipAnimation = USaveMgr.GetInt(SaveKey.OpsSkipAnimation, 0, true)
-    self.CheckBoxState = SkipAnimation == self.ActivityID
+    local SkipAnimationState = _G.OpsActivityMgr:GetSkipAnimationState(self.ActivityID)
+    self.CheckBoxState = SkipAnimationState == 1
 end
 
 function OpsActivityTreasureChestPanelVM:SetFinalRewardTips(ItemID, ItemNum)

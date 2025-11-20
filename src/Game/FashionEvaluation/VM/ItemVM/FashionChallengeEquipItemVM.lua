@@ -73,8 +73,9 @@ function FashionChallengeEquipItemVM:UpdateVM(Value)
         self.IsEmpty = false
     else
         self.AppearanceName = FashionEvaluationVMUtils.GetPartName(self.Part)
-        self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
-        self.EquipIconOpacity = 0.4
+        --self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
+        self.AppearanceIcon = FashionEvaluationVMUtils.GetPartIcon(self.Part)
+        self.EquipIconOpacity = 1
         self.IsEmpty = true
 	end
 end

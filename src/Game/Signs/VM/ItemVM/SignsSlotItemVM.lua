@@ -48,4 +48,7 @@ function SignsSlotItemVM:OnInit()
 
 end
 
+function SignsSlotItemVM:IsEqualVM()
+	return true
+end
 return SignsSlotItemVM

@@ -18,6 +18,9 @@ local EffectUtil = require("Utils/EffectUtil")
 local ProtoCS = require("Protocol/ProtoCS")
 local BuffTransferEffectCfg = require("TableCfg/BuffTransferEffectCfg")
 local ChatDefine = require("Game/Chat/ChatDefine")
+local CombatChatIgnoreCfg = require("TableCfg/CombatChatIgnoreCfg")
+local ProtoCommon = require("Protocol/ProtoCommon")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 
 local LSTR = _G.LSTR
 
@@ -25,6 +28,7 @@ local SkillBuffMgr = LuaClass(MgrBase)
 
 function SkillBuffMgr:OnInit()
     self.BuffList = {}
+    self.CurrentCarryID = 0
 end
 
 function SkillBuffMgr:OnBegin()
@@ -86,6 +90,10 @@ function SkillBuffMgr:CloseTickTimer()
     end
 end
 
+function SkillBuffMgr:GetMajorCurrentCarryID()
+    return self.CurrentCarryID
+end
+
 local SYSCHATMSGBATTLETYPE_BUFFUPDATE<const> = ChatDefine.SysChatMsgBattleType.BuffUpdate
 function SkillBuffMgr:OnCastBuff(Params)
     local EntityID = Params.ULongParam1
@@ -144,6 +152,14 @@ function SkillBuffMgr:OnCastBuff(Params)
         -- _G.UE.FProfileTag.UnsafeStaticBegin("MajorInfoRefreshBuff")
         _G.EventMgr:SendEvent(_G.EventID.MajorInfoRefreshBuff, self.BuffList, true)
         -- _G.UE.FProfileTag.UnsafeStaticEnd()
+
+        -- 处理添加buff时触发搬运的逻辑
+        if Cfg.CarryID and Cfg.CarryID ~= 0 then
+            local Major = ActorUtil.GetActorByEntityID(EntityID)
+            Major:EnterCarryState(Cfg.CarryID)
+            self.CurrentCarryID = Cfg.CarryID
+            CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommStatCarry, true)
+        end
     end
 
     ---BuffUI
@@ -160,8 +176,7 @@ function SkillBuffMgr:OnCastBuff(Params)
     --_G.UE.FProfileTag.UnsafeStaticEnd()
 
      --战斗日志
-    if nil ~= BuffInfo and BuffInfo.DisplayType ~= BuffDefine.BuffDisplayActiveType.Normal
-        and BuffInfo.BuffID ~= BuffDefine.SysChatMsgIgnoreBuffID then
+    if nil ~= BuffInfo and BuffInfo.DisplayType ~= BuffDefine.BuffDisplayActiveType.Normal then
        -- _G.UE.FProfileTag.UnsafeStaticBegin("AddBuffUpdateMsg")
         BuffInfo.ChatType = SYSCHATMSGBATTLETYPE_BUFFUPDATE
         _G.SkillLogicMgr:PushSysChatMsgBattle(BuffInfo)
@@ -231,6 +246,14 @@ function SkillBuffMgr:OnRemoveBuff(Params)
 
         -- _G.UE.FProfileTag.StaticBegin("SkillBuffMgr3")
         self:OnBuffInfoChange(Params.IntParam1, false)
+
+        local Cfg = BuffCfg:FindCfgByKey(BuffID)
+        if Cfg.CarryID and Cfg.CarryID ~= 0 then
+            local Major = ActorUtil.GetActorByEntityID(EntityID)
+            Major:ExitCarryState()
+            self.CurrentCarryID = 0
+            CommonStateUtil.SetIsInState(ProtoCommon.CommStatID.CommStatCarry, false)
+        end
     end
 end
 
@@ -405,9 +428,12 @@ end
 local BUFF_DISPLAY_TYPE_POSITIVE<const> = ProtoRes.BuffDisplayType.BUFF_DISPLAY_TYPE_POSITIVE
 function SkillBuffMgr:AddBuffUpdateMsg(Params)
     -- local _ <close> = CommonUtil.MakeProfileTag("AddBuffUpdateMsg")
-	if nil == Params.BuffName or nil == Params.DisplayType then
+	if nil == Params.BuffName or nil == Params.DisplayType or nil == Params.BuffID then
 		return
 	end
+    if self:IsBuffUpdateMsgIgnore(Params.BuffID) then
+        return
+    end
 	local BuffGiver = ActorUtil.GetActorName(Params.BuffGiverID)
 	if nil == BuffGiver or "" == BuffGiver then
 		return
@@ -431,6 +457,31 @@ function SkillBuffMgr:AddBuffUpdateMsg(Params)
     local Content = string.format("%s%s",ContentLSTR, BuffGiverRichText)
     
 	_G.ChatMgr:AddSysChatMsgBattle(Content)
+end
+
+function SkillBuffMgr:IsBuffUpdateMsgIgnore(BuffID)
+    local _ <close> = CommonUtil.MakeProfileTag("SkillBuffMgr:IsBuffUpdateMsgIgnore")
+    if nil == BuffID then
+        return true
+    end
+    local Condition = string.format("BuffID = %d", BuffID)
+    local Cfg = CombatChatIgnoreCfg:FindAllCfg(Condition)
+    if nil == Cfg or nil == Cfg[1] then
+        return false
+    end
+    local Cfg1 = Cfg[1]
+    if Cfg1.BuffID then
+        if Cfg1.IsPworldLimit == 1 then
+            local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
+            if Cfg1.PworldID == CurrPWorldResID then
+                return true
+            else
+                return false
+            end
+        end
+        return true
+    end
+    return false
 end
 
 local CS_ATTACK_EFFECT_BUFF_TRANSFER <const> = ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_BUFF_TRANSFER

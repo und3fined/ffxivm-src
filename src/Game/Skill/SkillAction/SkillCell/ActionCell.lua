@@ -14,6 +14,7 @@ local SkillActionUtil = require("Game/Skill/SkillAction/SkillActionUtil")
 local SkillLogicMgr = require("Game/Skill/SkillLogicMgr")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local SkillRaceReplaceAnimCfg = require("TableCfg/SkillRaceReplaceAnimCfg")
+local MajorUtil = require("Utils/MajorUtil")
 
 local role_gender = ProtoCommon.role_gender
 local race_type = ProtoCommon.race_type
@@ -91,7 +92,15 @@ function ActionCell:StartCell(TargetEntityID)
         end
     end
     local Blend = CellData.m_DynamicMontageBlend
-    local Montage = Me:GetAnimationComponent():PlayAnimation(
+    local AnimComp = Me:GetAnimationComponent()
+    if not AnimComp then
+        return
+    end
+    --处于Sequence中，不处理技能动作
+    if Me:GetIsSequenceing() then
+		return
+	end
+    local Montage = AnimComp:PlayAnimation(
         ActionName, 1 / SkillObject.PlayRate,
         Blend.m_BlendIn, Blend.m_BlendOut, not CellData.bDontStopAllMontages, AreaType, CellData.bUseTableData)
     if Montage then
@@ -202,9 +211,15 @@ end
 
 function ActionCell:StopCell()
     if self.CellData.MoveStopAnim then
-        self:EndAnim()
-        RemoveCellTimer(self.EndAnimTimerID)
-        RemoveCellTimer(self.DelayTimerID)
+        local EActorControllStat = _G.UE.EActorControllStat
+        local StateComp = MajorUtil.GetMajorStateComponent()
+        if StateComp then
+            if StateComp:GetActorControlState(EActorControllStat.CanMove) then
+                self:EndAnim()
+                RemoveCellTimer(self.EndAnimTimerID)
+                RemoveCellTimer(self.DelayTimerID)
+            end
+        end
     end
 end
 

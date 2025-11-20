@@ -3,8 +3,6 @@
 local CfgBase = require("TableCfg/CfgBase")
 
 local CS = {
-    _1_1 = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage.A_c1101a0001_bt_common-cbbm_abl144_Montage\'',
-    _2_1 = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage1.A_c1101a0001_bt_common-cbbm_abl144_Montage1\'',
     _3_1 = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c0901/a0001/bt_2ax_emp/A_c0901a0001_bt_2ax_emp-cbbm_atk03_01_Montage.A_c0901a0001_bt_2ax_emp-cbbm_atk03_01_Montage\'',
 }
 
@@ -331,14 +329,14 @@ local SkillRaceReplaceAnimCfg = {
         },
         {
             ID = 110150101,
-            LalafellM = CS._1_1,
-            LalafellW = CS._2_1,
+            LalafellM = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage.A_c1101a0001_bt_common-cbbm_abl144_Montage\'',
+            LalafellW = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage.A_c1101a0001_bt_common-cbbm_abl144_Montage\'',
             RoegadynM = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c0901/a0001/bt_dgr_dgr/A_c0901a0001_bt_nin_nin-cbbm_sp11_2_Montage.A_c0901a0001_bt_nin_nin-cbbm_sp11_2_Montage\'',
         },
         {
             ID = 110150102,
-            LalafellM = CS._1_1,
-            LalafellW = CS._2_1,
+            LalafellM = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage1.A_c1101a0001_bt_common-cbbm_abl144_Montage1\'',
+            LalafellW = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c1101/a0001/bt_common/A_c1101a0001_bt_common-cbbm_abl144_Montage1.A_c1101a0001_bt_common-cbbm_abl144_Montage1\'',
             RoegadynM = 'AnimMontage\'/Game/Assets/Character/Human/Animation/c0901/a0001/bt_dgr_dgr/A_c0901a0001_bt_nin_nin-cbbm_sp11_2_Montage_2.A_c0901a0001_bt_nin_nin-cbbm_sp11_2_Montage_2\'',
         },
 	},

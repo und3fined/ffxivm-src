@@ -41,18 +41,18 @@ function MountSlotVM:UpdateData(Mount)
     local IsInChocoboTransport = _G.ChocoboTransportMgr:GetIsTransporting() -- 运输陆行鸟使用的陆行鸟不是玩家的陆行鸟，额外判断处理
     self.IsChecked = self.ResID == MountVM.CurRideResID and not IsInChocoboTransport and not MountVM.bRideProbationState
     self.IsMountNew = MountVM:IsNew(self.ResID)
-    self.IsMountLike = self.IsMountNew == false and MountVM:IsFlagSet(self.Mount.Flag, ProtoCS.MountFlagBitmap.MountFlagLike)
+    self.IsMountLike = MountVM:IsFlagSet(self.Mount.Flag, ProtoCS.MountFlagBitmap.MountFlagLike)
     self.IsCustomMadeEnabled = _G.MountMgr:IsCustomMadeEnabled(self.ResID)
 
-    local RideCfg = RideCfgTable:FindCfgByKey(self.ResID)
+    local RideCfg = _G.MountMgr:GetRideCfg(self.ResID)
     if RideCfg then
         self.Icon = RideCfg.MountIcon
     end
     self:RefreshRedPoint()
 end
 
+--- 针对坐骑图鉴的图标状态更新
 function MountSlotVM:UpdateArchiveData(Mount)
-    --针对坐骑图鉴的图标状态更新
     self.Handbook = true
     self.ResID = Mount.ResID
     self.Mount = Mount
@@ -63,16 +63,21 @@ function MountSlotVM:UpdateArchiveData(Mount)
     self.IsShowBlack = self.IsMountNotOwn
     self.IsShowIcon = true
     self.IsChecked = self.ResID == MountVM.CurRideResID and not MountVM.bRideProbationState
+    self.NumVisible = false
+    self.IsMask = self.IsMountNotOwn
+    self.IsWearable = self.IsChecked
+
     -- 图标
-    local RideCfg = RideCfgTable:FindCfgByKey(self.ResID)
+    local RideCfg = _G.MountMgr:GetRideCfg(self.ResID)
     if RideCfg then
         self.Icon = RideCfg.MountIcon
     end
-     -- 剧情保护
-     if self.IsMountStory == 1 then
+
+    -- 剧情保护
+    if self.IsMountStory == 1 then
         self.ItemMountName = "???"
         self.IsShowBlack = false
-        --self.Icon = nil
+        self.Icon = "Texture2D'/Game/UI/Texture/Chocobo/UI_Mount_Icon_Hide.UI_Mount_Icon_Hide'"
         self.IsShowIcon = false
     end
 
@@ -82,10 +87,26 @@ function MountSlotVM:UpdateArchiveData(Mount)
     else
         self.IconColor = "FFFFFFFF"
     end
+
+    --红点相关
     self:RefreshRedPoint()
+    self.RedDotStyle = RedDotDefine.RedDotStyle.SecondStyle
+    if self.IsShowRedPoint ~= nil and self.IsShowRedPoint then
+        local RedDotName = MountCustomMadeVM:GetRedDotName(self.ResID)
+        if RedDotName == "" then
+            RedDotName = MountVM:GetRedDotName(self.ResID)
+        end
+        self.RedDotName = RedDotName
+    else
+        self.RedDotName = ""
+    end
 end
 
 function MountSlotVM:OnSelectedChange(IsSelected)
+    self.IsSelect = IsSelected
+end
+
+function MountSlotVM:OnSelectChanged(IsSelected)
     self.IsSelect = IsSelected
 end
 

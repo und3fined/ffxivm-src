@@ -39,6 +39,7 @@ local ChocoboBreedLightSystemID = 21 -- 天气表里的ID
 ---@field BtnMaleChange UFButton
 ---@field ChangePage ChocoboBreedChangePageView
 ---@field ChildLevel ChocoboLevelItemView
+---@field CommonTitle CommonTitleView
 ---@field FemaleLevel ChocoboLevelItemView
 ---@field FemaleModel ChocoboRenderToTextureView
 ---@field ForbidLevel ChocoboLevelItemView
@@ -68,7 +69,6 @@ local ChocoboBreedLightSystemID = 21 -- 天气表里的ID
 ---@field TextReason1 UFTextBlock
 ---@field TextReason2 UFTextBlock
 ---@field TextSlant UFTextBlock
----@field TextTitle UFTextBlock
 ---@field AnimBGLoop UWidgetAnimation
 ---@field AnimChangeFemale UWidgetAnimation
 ---@field AnimChangeMale UWidgetAnimation
@@ -86,6 +86,7 @@ function ChocoboBreedPanelView:Ctor()
 	--self.BtnMaleChange = nil
 	--self.ChangePage = nil
 	--self.ChildLevel = nil
+	--self.CommonTitle = nil
 	--self.FemaleLevel = nil
 	--self.FemaleModel = nil
 	--self.ForbidLevel = nil
@@ -115,7 +116,6 @@ function ChocoboBreedPanelView:Ctor()
 	--self.TextReason1 = nil
 	--self.TextReason2 = nil
 	--self.TextSlant = nil
-	--self.TextTitle = nil
 	--self.AnimBGLoop = nil
 	--self.AnimChangeFemale = nil
 	--self.AnimChangeMale = nil
@@ -131,6 +131,7 @@ function ChocoboBreedPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnConfirmBreed)
 	self:AddSubView(self.ChangePage)
 	self:AddSubView(self.ChildLevel)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.FemaleLevel)
 	self:AddSubView(self.FemaleModel)
 	self:AddSubView(self.ForbidLevel)
@@ -196,7 +197,7 @@ function ChocoboBreedPanelView:InitConstInfo()
 	self.IsInitConstInfo = true
 	
 	-- LSTR string: 竞赛陆行鸟配种
-	self.TextTitle:SetText(_G.LSTR(420043))  --竞赛陆行鸟配种
+	self.CommonTitle:SetTextTitleName(LSTR(420043))
 	-- LSTR string: 子鸟属性预想
 	self.TextChildPreview:SetText(_G.LSTR(420044))
 	-- LSTR string: 血统代数
@@ -310,6 +311,7 @@ function ChocoboBreedPanelView:InitDropDownSort()
         FilterTypeList[Index].Name = ChocoboDefine.OVERVIEW_FILTER_TYPE_NAME[FilterType]
     end
     self.ChangePage:PlayAnimRefresh()
+	self.ChangePage.DropDownSort:SetForceTrigger(true)
     self.ChangePage.DropDownSort:UpdateItems(FilterTypeList, 1)
 end
 

@@ -195,7 +195,11 @@ end
 
 --- @type 设置可移动img显隐
 function PuzzleMgr:SetMoveBreadVisible(ID, bVisible)
-    self.PuzzleGameInst:SetMoveBreadVisible(ID, bVisible)
+    local GameInst = self.PuzzleGameInst
+    if not GameInst then
+        return
+    end
+    GameInst:SetMoveBreadVisible(ID, bVisible)
 end
 
 --- @type 设置正确位置img显隐

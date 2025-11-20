@@ -20,6 +20,7 @@ local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local FriendsDefineCfg = require("TableCfg/FriendsDefineCfg")
 
 local LSTR = _G.LSTR
 local FVector2D = _G.UE.FVector2D
@@ -151,6 +152,8 @@ function FriendGroupManageWinView:InitConstText()
 	end
 
 	self.IsInitConstText = true
+
+	self.InputName:SetMaxNum(FriendsDefineCfg:GetMaxLengthGroupName())
 
 	self.Bg:SetTitleText(LSTR(30045)) -- "管理分组"
 	self.TextRenameTips:SetText(LSTR(30047)) -- "分组命名"

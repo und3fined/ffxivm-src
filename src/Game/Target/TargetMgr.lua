@@ -8,6 +8,7 @@ local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
+local ProtoCommon = require("Protocol/ProtoCommon")
 local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local AudioUtil = require("Utils/AudioUtil")
@@ -33,8 +34,9 @@ local FLOG_ERROR = _G.FLOG_ERROR
 
 local HardLockEffectZOrder <const> = -1
 
-local TargetLineEffectPathA = "VfxBlueprint'/Game/BluePrint/Skill/SkillEffect/BP_Common_HatredArrow_1.BP_Common_HatredArrow_1_C'"
-local TargetLineEffectPathB = "VfxBlueprint'/Game/BluePrint/Skill/SkillEffect/BP_Common_HatredArrow_2.BP_Common_HatredArrow_2_C'"
+local TargetLineEffectCommonPath = "VfxBlueprint'/Game/Assets/Effect/Particles/PlayerCommon/VBP/BP_Common_HatredArrow_1.BP_Common_HatredArrow_1_C'"
+--local TargetLineEffectPathA = "VfxBlueprint'/Game/BluePrint/Skill/SkillEffect/BP_Common_HatredArrow_1.BP_Common_HatredArrow_1_C'"
+--local TargetLineEffectPathB = "VfxBlueprint'/Game/BluePrint/Skill/SkillEffect/BP_Common_HatredArrow_2.BP_Common_HatredArrow_2_C'"
 local SoundEvent_Select    = "/Game/WwiseAudio/Events/UI/UI_INGAME/Play_UI_click_tape_1.Play_UI_click_tape_1"
 local SoundEvent_Miss      = "/Game/WwiseAudio/Events/UI/UI_INGAME/Play_UI_click_miss.Play_UI_click_miss"
 local SoundEvent_TargetLine = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Mini_Cactpot/Play_SE_UI_gumbit.Play_SE_UI_gumbit'"
@@ -55,9 +57,16 @@ function TargetMgr:OnInit()
 
 	-- 目标线相关
 	self.TargetLineMapping = {}  	-- 怪物有时会临时攻击非目标对象，故需要单独管理怪物的目标线
+	self.CurrentTargetLineVfxID = 0
+	self.CurrentTargetLineVfxColorID = 0
 
 	-- 强锁效果相关
 	self.HardLockEffectBitMask = 0
+
+	-- 仇恨订阅
+	self.SubscribeEnmityListSet = {}
+	self.CancelSubscribeEnmityListSet = {}
+	self.EnmityListReqTimer = nil
 end
 
 function TargetMgr:OnBegin()
@@ -106,6 +115,11 @@ function TargetMgr:OnRegisterGameEvent()
 	-- 切图重新把强锁UI显示出来
 	self:RegisterGameEvent(EventID.WorldPostLoad, self.OnWorldPostLoad)
 
+	self:RegisterGameEvent(EventID.VisionUpdateFirstAttacker, self.OnFirstAttackerUpdate)
+
+	-- 监听网络状态变化，处理怪物进入战斗状态时重新订阅仇恨列表
+	self:RegisterGameEvent(EventID.NetStateUpdate, self.OnNetStateUpdate)
+
 	-- self:RegisterGameEvent(EventID.PreEnterInteractionRange, self.OnGameEventPreEnterInteractionRange)
 end
 
@@ -135,7 +149,7 @@ function TargetMgr:OnNetMsgVisionEnter(MsgBody)
 
 	-- FLOG_INFO("TargetMgr.OnNetMsgVisionEnter(): Subscribe %d Entities.", #EntitiesToSubscribe)
 	if #EntitiesToSubscribe > 0 then
-		_G.CombatMgr:SubscribeEnmityListReq(EntitiesToSubscribe)
+		self:QueueSubscribeEnmityListReq(EntitiesToSubscribe)
 
 		for _, EntityID in ipairs(EntitiesToSubscribe) do
 			-- 手动拉取一次仇恨
@@ -160,7 +174,7 @@ function TargetMgr:OnNetMsgVisionLeave(MsgBody)
 	-- FLOG_INFO("TargetMgr.OnNetMsgVisionLeave(): Cancel Subscribe %d Entities.", #EntitiesToCancel)
 
 	if #EntitiesToCancel > 0 then
-		_G.CombatMgr:CancelSubscribeEnmityListReq(EntitiesToCancel)
+		self:QueueCancelSubscribeEnmityListReq(EntitiesToCancel)
 	end
 end
 
@@ -180,6 +194,8 @@ end
 
 function TargetMgr:OnGameEventCombatGetEnmityList(Params)
 	local EntityID = Params.EntityID
+
+	if nil == EntityID then return end
 
 	-- 主角仇恨列表
 	if EntityID == MajorUtil.GetMajorEntityID() then
@@ -222,6 +238,11 @@ function TargetMgr:OnGameEventPWorldExit(Params)
 	self.MajorEnmityCount = 0
 	self:SetMajorTarget(0)
 	self:EndHardLockEffect()
+
+	if nil ~= self.EnmityListReqTimer then
+		self:UnRegisterTimer(self.EnmityListReqTimer)
+		self:OnTimerEnmityListReq()
+	end
 end
 
 ---OnNetMsgTargetSetRsp
@@ -242,9 +263,39 @@ end
 function TargetMgr:OnGameEventMajorCreate(Params)
 	local EntityID = Params.ULongParam1
 	-- 订阅主角自己的仇恨列表
-	_G.CombatMgr:SubscribeEnmityListReq({EntityID})
+	self:QueueSubscribeEnmityListReq({EntityID})
 	-- 主动拉取一次
 	_G.CombatMgr:SendGetEnmityListReq(EntityID, 0, GetEnmityListReason.Target)
+end
+
+---OnNetStateUpdate 处理网络状态变化，当怪物进入战斗状态时重新订阅仇恨列表
+---@param Params FEventParams
+function TargetMgr:OnNetStateUpdate(Params)
+	local EntityID = Params.ULongParam1
+	local StateType = Params.IntParam1
+	local bInCombat = Params.BoolParam1
+
+	-- 只处理战斗状态变化
+	if StateType ~= ProtoCommon.CommStatID.COMM_STAT_COMBAT then
+		return
+	end
+
+	-- 只处理怪物进入战斗状态的情况
+	if not bInCombat or not ActorUtil.IsMonster(EntityID) then
+		return
+	end
+
+	-- 检查怪物配置是否允许仇恨
+	local ResID = ActorUtil.GetActorResID(EntityID)
+	if ResID then
+		local Cfg = MonsterCfg:FindCfgByKey(ResID)
+		if Cfg and Cfg.BeAttackedNoEnmity ~= 1 then
+			-- 怪物进入战斗状态，重新订阅仇恨列表
+			self:QueueSubscribeEnmityListReq({EntityID})
+			-- 主动拉取一次仇恨
+			_G.CombatMgr:SendGetEnmityListReq(EntityID, 0, GetEnmityListReason.Target)
+		end
+	end
 end
 
 -- 在主城选取其他玩家时 将选中周围的其他玩家也展示出来
@@ -438,6 +489,7 @@ function TargetMgr:UpdateTargetLine(EntityID, TargetID)
 		self.TargetLineMapping[EntityID] = (0 ~= TargetID) and TargetID or nil
 		self:PlayTargetLineEffect(EntityID, TargetID)
 	end
+
 end
 
 function TargetMgr:PlayTargetLineEffect(EntityID, TargetID)
@@ -462,22 +514,49 @@ function TargetMgr:PlayTargetLineEffect(EntityID, TargetID)
 
 	local StartActor = ActorUtil.GetActorByEntityID(EntityID)
 	local EndActor = ActorUtil.GetActorByEntityID(TargetID)
-	local ActorUIType = ActorUIUtil.GetActorUIType(EntityID)
+	local UIColorConfig = ActorUIUtil.GetUIColor(EntityID)
+	--print("PlayTargetLineEffect UIColorConfig ID=" .. UIColorConfig.ID .. "; Color=" .. tostring(UIColorConfig.ActorDecal) .. ": time=" .. _G.TimeUtil.GetLocalTimeMS())
 	local AttachPointType_Body = _G.UE.EVFXAttachPointType.AttachPointType_Body
 
-	local TargetLineEffectPath = TargetLineEffectPathB
-	if (ProtoRes.ActorUIType.ActorUITypeMonster2 == ActorUIType) then
-		TargetLineEffectPath = TargetLineEffectPathA
-	end
-
 	local VfxParameter = _G.UE.FVfxParameter()
-	VfxParameter.VfxRequireData.EffectPath = TargetLineEffectPath
+	VfxParameter.VfxRequireData.EffectPath = TargetLineEffectCommonPath
 	VfxParameter:SetCaster(StartActor, _G.UE.EVFXEID.EID_HEAD_CENTER, AttachPointType_Body, 0)
 	VfxParameter:AddTarget(EndActor, _G.UE.EVFXEID.EID_CHEST, AttachPointType_Body, 0)
-	EffectUtil.PlayVfx(VfxParameter)
+	local VfxID = EffectUtil.PlayVfx(VfxParameter)
+	local VfxColor = _G.UE.FLinearColor.FromHex(UIColorConfig.ActorDecal)
+	EffectUtil.SetVfxColor(VfxID, VfxColor)
+	self.CurrentTargetLineVfxID = VfxID
+	self.CurrentTargetLineVfxColorID = UIColorConfig.ID
 
 	local AudioMgr = _G.UE.UAudioMgr:Get()
 	AudioMgr:AsyncLoadAndPostEvent(SoundEvent_TargetLine, StartActor)
+end
+
+function TargetMgr:OnFirstAttackerUpdate(Params)
+	local EntityID = Params.ULongParam1
+    self:UpdateTargetLineVfxColor(EntityID)
+	--print("PlayTargetLineEffect OnFirstAttackerUpdate time=" .. _G.TimeUtil.GetLocalTimeMS())
+
+end
+
+--防止协议时序问题导致颜色不对, 不过只更新一次
+function TargetMgr:UpdateTargetLineVfxColor(EntityID)
+	if (self.CurrentTargetLineVfxID == nil or self.CurrentTargetLineVfxID == 0) then
+		return
+	end
+
+	local UIColorConfig = ActorUIUtil.GetUIColor(EntityID)
+	if (UIColorConfig.ID == self.CurrentTargetLineVfxColorID) then
+		return
+	end
+
+	local NewVfxColor = _G.UE.FLinearColor.FromHex(UIColorConfig.ActorDecal)
+	EffectUtil.SetVfxColor(self.CurrentTargetLineVfxID, NewVfxColor)
+
+	--print("PlayTargetLineEffect UpdateTargetLineVfxColor UIColorConfig ID=" .. UIColorConfig.ID .. "; Color=" .. tostring(UIColorConfig.ActorDecal) .. ": time=" .. _G.TimeUtil.GetLocalTimeMS())
+
+	self.CurrentTargetLineVfxID = 0
+	self.CurrentTargetLineVfxColorID = 0
 end
 
 ---GetTargetOfMonsters @获取怪物第一仇恨
@@ -589,6 +668,52 @@ function TargetMgr:SetHardLockEffectMask(MaskType, bHasMask)
 		self:UpdateHardLockEffectMask(self.HardLockEffectBitMask | (1 << MaskType))
 	else
 		self:UpdateHardLockEffectMask(self.HardLockEffectBitMask & ~(1 << MaskType))
+	end
+end
+
+function TargetMgr:QueueSubscribeEnmityListReq(EntityList)
+	for _, EntityID in ipairs(EntityList) do
+		self.CancelSubscribeEnmityListSet[EntityID] = nil
+		self.SubscribeEnmityListSet[EntityID] = true
+	end
+
+	if nil == self.EnmityListReqTimer then
+		self.EnmityListReqTimer = self:RegisterTimer(self.OnTimerEnmityListReq, 1)
+	end
+end
+
+function TargetMgr:QueueCancelSubscribeEnmityListReq(EntityList)
+	for _, EntityID in ipairs(EntityList) do
+		self.CancelSubscribeEnmityListSet[EntityID] = true
+		self.SubscribeEnmityListSet[EntityID] = nil
+	end
+
+	if nil == self.EnmityListReqTimer then
+		self.EnmityListReqTimer = self:RegisterTimer(self.OnTimerEnmityListReq, 1)
+	end
+end
+
+function TargetMgr:OnTimerEnmityListReq()
+	self.EnmityListReqTimer = nil
+
+	local SubscribeEnmityList = {}
+	for EntityID, _ in pairs(self.SubscribeEnmityListSet) do
+		table.insert(SubscribeEnmityList, EntityID)
+	end
+	self.SubscribeEnmityListSet = {}
+	if #SubscribeEnmityList > 0 then
+		_G.CombatMgr:SubscribeEnmityListReq(SubscribeEnmityList)
+		--FLOG_INFO("TargetMgr:OnTimerEnmityListReq SubscribeEnmityList=%s", table.concat(SubscribeEnmityList, ","))
+	end
+
+	local CancelSubscribeEnmityList = {}
+	for EntityID, _ in pairs(self.CancelSubscribeEnmityListSet) do
+		table.insert(CancelSubscribeEnmityList, EntityID)
+	end
+	self.CancelSubscribeEnmityListSet = {}
+	if #CancelSubscribeEnmityList > 0 then
+		_G.CombatMgr:CancelSubscribeEnmityListReq(CancelSubscribeEnmityList)
+		--FLOG_INFO("TargetMgr:OnTimerEnmityListReq CancelSubscribeEnmityList=%s", table.concat(CancelSubscribeEnmityList, ","))
 	end
 end
 

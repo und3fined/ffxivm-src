@@ -46,6 +46,10 @@ end
 ---UpdateVM
 ---@param Value DepotSimple
 function ArmyDepotPageItemVM:UpdateVM(Value)
+	---可能操作的时候被移出部队了，界面还没来得级关闭，所以仓库数据为空
+	if Value == nil then
+		return
+	end
 	self.PageIndex = Value.Index
 	self.ItemNum = Value.ItemNum
 	self.Capacity = Value.Capacity

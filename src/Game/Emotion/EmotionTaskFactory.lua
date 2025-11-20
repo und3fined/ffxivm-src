@@ -44,7 +44,7 @@ function EmotionTaskFactory:CreateTask(Params)
 	end
 
 	Task.bIsLastFace = EmotionMgr:IsBodyToFacePlaying(FromID)
-
+	Task.bLoadObjectSync = Params.bLoadObjectSync
 	return Task
 end
 

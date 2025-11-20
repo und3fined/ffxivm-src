@@ -38,8 +38,8 @@ local PersonChatTipsSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/sound/syst
 ---@field ButtonShow UFButton
 ---@field ComRedDotChat1 CommonRedDotView
 ---@field ComRedDotChat2 CommonRedDotView
----@field CommPlayerHeadSlot CommPlayerHeadSlotView
----@field CommPlayerHeadSlot2 CommPlayerHeadSlotView
+---@field CommPlayerHeadSlot CommHeadView
+---@field CommPlayerHeadSlot2 CommHeadView
 ---@field FBtnChat UFButton
 ---@field FBtnHead UFButton
 ---@field FBtnHead2 UFButton

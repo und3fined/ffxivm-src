@@ -3,12 +3,14 @@
 local CfgBase = require("TableCfg/CfgBase")
 
 local CS = {
-    _1_1 = '10315,10316',
-    _1_2 = '10314,10316',
-    _1_3 = '10312',
+    _1_1 = '5000,10000',
+    _1_2 = '10315,10316',
+    _1_3 = '10314,10316',
+    _1_4 = '10312',
     _2_1 = '[[84,86]]',
     _2_2 = '[[50,52],[64,66],[78,80]]',
     _2_3 = '[[1071,1072,1073],[1074,1075,1076]]',
+    _2_4 = '1501',
 }
 
 ---@class SpectrumCfg : CfgBase
@@ -50,7 +52,7 @@ local SpectrumCfg = {
             ResourceInc = 125,
             SpectrumMax = 5000,
             Type = 3,
-            TypeParam1 = '5000,10000',
+            TypeParam1 = CS._1_1,
         },
         {
             ID = 4,
@@ -81,21 +83,21 @@ local SpectrumCfg = {
             ID = 8,
             ResourceInc = 250,
             Type = 8,
-            TypeParam1 = CS._1_1,
+            TypeParam1 = CS._1_2,
             _TypeParam2 = CS._2_1,
         },
         {
             ID = 9,
             ResourceInc = 250,
             Type = 9,
-            TypeParam1 = CS._1_2,
+            TypeParam1 = CS._1_3,
             _TypeParam2 = CS._2_1,
         },
         {
             ID = 10,
             ResourceInc = 500,
             Type = 10,
-            TypeParam1 = CS._1_3,
+            TypeParam1 = CS._1_4,
             _TypeParam2 = CS._2_2,
         },
         {
@@ -144,21 +146,21 @@ local SpectrumCfg = {
             ID = 19,
             ResourceInc = 250,
             Type = 8,
-            TypeParam1 = CS._1_1,
+            TypeParam1 = CS._1_2,
             _TypeParam2 = CS._2_1,
         },
         {
             ID = 20,
             ResourceInc = 250,
             Type = 9,
-            TypeParam1 = CS._1_2,
+            TypeParam1 = CS._1_3,
             _TypeParam2 = CS._2_1,
         },
         {
             ID = 21,
             ResourceInc = 500,
             Type = 10,
-            TypeParam1 = CS._1_3,
+            TypeParam1 = CS._1_4,
             _TypeParam2 = CS._2_2,
         },
         {
@@ -244,15 +246,21 @@ local SpectrumCfg = {
         {
             ID = 35,
             Job = 19,
+            Type = 12,
+            TypeParam1 = CS._1_1,
+            _TypeParam2 = CS._2_4,
         },
         {
             ID = 36,
             Job = 19,
+            Type = 12,
+            TypeParam1 = CS._1_1,
+            _TypeParam2 = CS._2_4,
         },
         {
             ID = 37,
             Job = 11,
-            TypeParam1 = '50',
+            TypeParam1 = CS._1_1,
         },
         {
             ID = 38,

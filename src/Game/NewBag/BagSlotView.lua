@@ -22,12 +22,15 @@ local BagMgr
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnSlot UFButton
 ---@field CommonRedDot2 CommonRedDot2View
+---@field IconCollections UFImage
 ---@field IconEuipImprove UFImage
 ---@field IconExpired UFImage
 ---@field IconLimitedTime UFImage
+---@field ImgCheck UFImage
 ---@field ImgGlamours UFImage
 ---@field ImgIcon UFImage
 ---@field ImgMask UFImage
+---@field ImgPick1 UFImage
 ---@field ImgQuality UFImage
 ---@field ImgRadialCDBG URadialImage
 ---@field ImgSelect UFImage
@@ -47,12 +50,15 @@ function BagSlotView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnSlot = nil
 	--self.CommonRedDot2 = nil
+	--self.IconCollections = nil
 	--self.IconEuipImprove = nil
 	--self.IconExpired = nil
 	--self.IconLimitedTime = nil
+	--self.ImgCheck = nil
 	--self.ImgGlamours = nil
 	--self.ImgIcon = nil
 	--self.ImgMask = nil
+	--self.ImgPick1 = nil
 	--self.ImgQuality = nil
 	--self.ImgRadialCDBG = nil
 	--self.ImgSelect = nil
@@ -110,6 +116,9 @@ function BagSlotView:OnInit()
 		--可改良
 		{ "CanImprove", UIBinderSetIsVisible.New(self, self.IconEuipImprove) },
 
+		--收藏品
+		{ "IsCollections", UIBinderSetIsVisible.New(self, self.IconCollections) },
+
 	}
 	self.CommonRedDot2:SetIsCustomizeRedDot(true)
 	BagMgr = _G.BagMgr
@@ -140,7 +149,7 @@ function BagSlotView:OnShow()
 		return
 	end
 	
-	--BagMgr:SetShowCount()
+	BagMgr:SetShowCount()
 
 	local IsCD = BagMgr.FreezeCDTable[Cfg.FreezeGroup] ~= nil
 	ViewModel.IsCD = IsCD

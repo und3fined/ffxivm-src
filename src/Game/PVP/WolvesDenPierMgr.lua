@@ -179,13 +179,18 @@ function WolvesDenPierMgr:InviteDuel(TargetID)
 		FLOG_ERROR("[WolvesDenPierMgr][InviteDuel]Invalid target")
 		return
 	end
+	
+	local function Callback(Params, RoleVM)
+		if RoleVM then
+			if not self:CheckCanDuel(TargetID) then return end
 
-	if not self:CheckCanDuel(TargetID) then return end
-
-	local PvPColosseumInviteDuelReq = {
-		TgtID = TargetID
-	}
-	self:SendPVPNetMsg(PVP_COLOSSEUM_CMD.INVITE_DUEL, "InviteDuelReq", PvPColosseumInviteDuelReq)
+			local PvPColosseumInviteDuelReq = {
+				TgtID = TargetID
+			}
+			self:SendPVPNetMsg(PVP_COLOSSEUM_CMD.INVITE_DUEL, "InviteDuelReq", PvPColosseumInviteDuelReq)
+		end
+	end
+	RoleInfoMgr:QueryRoleSimple(TargetID, Callback, nil, false)
 end
 
 --- 取消决斗
@@ -211,15 +216,19 @@ function WolvesDenPierMgr:ReplyDuel(InviterID, IsAccept)
 		FLOG_ERROR("[WolvesDenPierMgr][ReplyDuel]Invalid isAccept")
 		return
 	end
-	
-	if not self:CheckCanDuel(InviterID) then return end
 
+	local function Callback(Params, RoleVM)
+		if RoleVM then
+			if not self:CheckCanDuel(InviterID) then return end
 
-	local PvPColosseumAcceptDuelReq = {
-		InviterID = InviterID,
-		IsAccept = IsAccept
-	}
-	self:SendPVPNetMsg(PVP_COLOSSEUM_CMD.ACCEPT_DUEL, "AcceptDuelReq", PvPColosseumAcceptDuelReq)
+			local PvPColosseumAcceptDuelReq = {
+				InviterID = InviterID,
+				IsAccept = IsAccept
+			}
+			self:SendPVPNetMsg(PVP_COLOSSEUM_CMD.ACCEPT_DUEL, "AcceptDuelReq", PvPColosseumAcceptDuelReq)
+		end
+	end
+	RoleInfoMgr:QueryRoleSimple(InviterID, Callback, nil, false)
 end
 
 --- 获取决斗邀请信息
@@ -248,8 +257,7 @@ end
 -- region NetMsgRes
 
 function WolvesDenPierMgr:OnNetRspInviteDuel(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp == nil then return end
 
 	local EndTime = self:GetInviteTimeoutTime() + Rsp.InviteTime / 1000
@@ -261,8 +269,7 @@ function WolvesDenPierMgr:OnNetRspInviteDuel(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetRspCancelDuel(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp then
 		-- 发起人取消时双方都会收到回包，需要按角色ID决定逻辑
 		local MajorRoleID = MajorUtil.GetMajorRoleID()
@@ -281,8 +288,7 @@ function WolvesDenPierMgr:OnNetRspCancelDuel(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetRspAcceptDuel(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp then
 		-- 接受/拒绝双方都会收到回包，需要按角色ID决定逻辑
 		local MajorRoleID = MajorUtil.GetMajorRoleID()
@@ -305,8 +311,7 @@ function WolvesDenPierMgr:OnNetRspAcceptDuel(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetNtyInviteDuel(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp == nil then return end
 
 	local MajorRoleID = MajorUtil.GetMajorRoleID()
@@ -321,8 +326,7 @@ function WolvesDenPierMgr:OnNetNtyInviteDuel(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetNtyAcceptDuel(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp == nil then return end
 
 	local Params = {}
@@ -335,8 +339,7 @@ function WolvesDenPierMgr:OnNetNtyAcceptDuel(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetNtyDuelBeginCountDown(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp == nil then return end
 
 	local CoundDownEndTime = Rsp.EndTime
@@ -346,8 +349,7 @@ function WolvesDenPierMgr:OnNetNtyDuelBeginCountDown(MsgBody)
 end
 
 function WolvesDenPierMgr:OnNetNtyDuelResult(MsgBody)
-	if MsgBody == nil then return end
-	local Rsp = MsgBody[MsgBody.Data]
+	local Rsp = MsgBody and MsgBody[MsgBody.Data]
 	if Rsp == nil then return end
 
 	-- 如果还在倒计时有一方退出了，直接停止计时并显示结果
@@ -368,6 +370,8 @@ function WolvesDenPierMgr:OnNetNtyDuelResult(MsgBody)
 	if TipsID then
 		MsgTipsUtil.ShowTipsByID(TipsID)
 	end
+
+	EventMgr:SendEvent(EventID.PVPDuelEnd, { WinnerID = Rsp.WinnerID, Loser = Rsp.FailedID })
 end
 
 function WolvesDenPierMgr:OnNetRspGetDuelInfo(MsgBody)
@@ -468,16 +472,66 @@ function WolvesDenPierMgr:CheckShowTips()
 end
 
 ---@private
-function WolvesDenPierMgr:CheckMajorState(IsNeedTips)
-	return CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_DUEL, IsNeedTips)
+function WolvesDenPierMgr:CheckMajorCanDuel(IsNeedTips)
+	-- 检查主角状态
+	local StateCheck = CommonStateUtil.CheckBehavior(ProtoCommon.CommBehaviorID.COMM_BEHAVIOR_DUEL, IsNeedTips)
+	if not StateCheck then return false end
+
+	-- 检查主角职业
+	local MajorProfID = MajorUtil.GetMajorProfID()
+	if MajorProfID then
+		-- 只在分支上屏蔽，2.2.0的忍者不开放PVP
+		if MajorProfID == ProtoCommon.prof_type.PROF_TYPE_NINJA then
+			if IsNeedTips then
+				MsgTipsUtil.ShowTipsByID(338057)
+			end
+			return false
+		end
+
+		local ProfCheck = ProfMgr.CheckProfClass(MajorProfID, 22)
+		if not ProfCheck then
+			if IsNeedTips then
+				MsgTipsUtil.ShowTipsByID(338023)
+			end
+			return false
+		end
+	end
+
+	return true
 end
 
 ---@private
-function WolvesDenPierMgr:CheckTargetState(TargetRoleID)
+function WolvesDenPierMgr:CheckTargetCanDuel(TargetRoleID, IsNeedTips)
 	local TargetEntityID = ActorUtil.GetEntityIDByRoleID(TargetRoleID)
 	if TargetEntityID == nil then return false end
 
-	if ActorUtil.IsDeadState(TargetEntityID) then return false end
+	-- 检查是否死亡
+	if ActorUtil.IsDeadState(TargetEntityID) then
+		if IsNeedTips then
+			MsgTipsUtil.ShowTips(LSTR(1330021))
+		end
+		return false
+	end
+
+	local TargetRoleVM = RoleInfoMgr:FindRoleVM(TargetRoleID)
+	if TargetRoleVM == nil then return false end
+
+	-- 只在分支上屏蔽，2.2.0的忍者不开放PVP
+	if TargetRoleVM.Prof == ProtoCommon.prof_type.PROF_TYPE_NINJA then
+		if IsNeedTips then
+			MsgTipsUtil.ShowTipsByID(338057)
+		end
+		return false
+	end
+
+	-- 检查目标职业
+	local ProfCheck = ProfMgr.CheckProfClass(TargetRoleVM.Prof, 22)
+	if not ProfCheck then
+		if IsNeedTips then
+			MsgTipsUtil.ShowTipsByID(338023)
+		end
+		return false
+	end
 
 	return true
 end
@@ -560,15 +614,9 @@ end
 ---@return boolean 是否允许
 function WolvesDenPierMgr:CheckCanDuel(TargetID, IsNeedTips)
 	IsNeedTips = IsNeedTips ~= false
-	local MajorCheck = self:CheckMajorState(IsNeedTips)
-	local TargetCheck = self:CheckTargetState(TargetID)
-	local Result = MajorCheck and TargetCheck
-	if MajorCheck and (not TargetCheck) then
-		if IsNeedTips then
-			MsgTipsUtil.ShowTips(LSTR(1330021))
-		end
-	end
-	return Result
+	local MajorCheck = self:CheckMajorCanDuel(IsNeedTips)
+	local TargetCheck = self:CheckTargetCanDuel(TargetID, IsNeedTips)
+	return MajorCheck and TargetCheck
 end
 
 --- 是否决斗中

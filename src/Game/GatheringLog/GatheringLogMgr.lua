@@ -1,3 +1,11 @@
+--[[
+Author: v_vvxinchen v_vvxinchen@tencent.com
+Date: 2025-05-23 11:39:36
+LastEditors: v_vvxinchen v_vvxinchen@tencent.com
+LastEditTime: 2025-05-23 15:01:10
+FilePath: \Client\Source\Script\Game\GatheringLog\GatheringLogMgr.lua
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+--]]
 ---
 --- Author: Leo
 --- DateTime: 2023-03-29 15:36:31
@@ -7,6 +15,7 @@
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local GatheringLogDefine = require("Game/GatheringLog/GatheringLogDefine")
+local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local ProtoCS = require("Protocol/ProtoCS")
 local GameNetworkMgr = require("Network/GameNetworkMgr")
 local GatherPointCfg = require("TableCfg/GatherPointCfg")
@@ -51,6 +60,7 @@ local FLOG_ERROR = _G.FLOG_ERROR
 local ActorMgr = _G.ActorMgr
 local MajorUtil = require("Utils/MajorUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local ItemGetaccesstypeCfg = require("TableCfg/ItemGetaccesstypeCfg")
 
 local UpdataType = {HistoryList = 1, CollectList = 2, ClockList = 3}
 
@@ -224,7 +234,7 @@ function GatheringLogMgr:OnGameEventLoginRes()
     if not _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDGatherNote) then
         return
     end
-    self:SendMsgMarkListinfo(GatheringLogDefine.GatheringLogNoteType)
+    self:SendMsgMarkListinfo(GatheringLogDefine.GatheringLogNoteType) 
     local RoleDetail = ActorMgr:GetMajorRoleDetail()
     local Prof = RoleDetail and RoleDetail.Prof
     local ProfList = Prof and Prof.ProfList
@@ -241,6 +251,9 @@ function GatheringLogMgr:OnGameEventLoginRes()
         self:SendMsgUpdateDropNewData(value)
     end
     self:SendMsgQueryVersion()
+    if MajorUtil.IsGatherProf() then
+        self:CheckShowInheritGuide(nil, {ProfList[ProfID.MinerJobID], ProfList[ProfID.BotanistJobID]})
+    end
 end
 
 function GatheringLogMgr:OnEventMajorProfSwitch()
@@ -251,12 +264,16 @@ function GatheringLogMgr:OnEventMajorProfSwitch()
 		_G.WorldMapMgr:CancelMapFollow()
 	end
     --切换职业时重置功能(笔记内通过采集追踪点切换除外)
-    if not UIViewMgr:IsViewVisible(UIViewID.GatheringLogMainPanelView) then
-        self.LastFilterState = {}
-        self.LastSelectProfessMiner = {}
-        self.LastSelectProfessBotanist = {}
-        self.AllHorbarsSelectData = {}
-    end
+    -- if not UIViewMgr:IsViewVisible(UIViewID.GatheringLogMainPanelView) then
+    --     self:ResetSelectedRecord() --关闭笔记的时候就重置了
+    -- end
+end
+
+function GatheringLogMgr:ResetSelectedRecord()
+    self.LastFilterState = {}
+    self.LastSelectProfessMiner = {}
+    self.LastSelectProfessBotanist = {}
+    self.AllHorbarsSelectData = {}
 end
 
 --region NetMsg
@@ -820,6 +837,9 @@ function GatheringLogMgr:OnNetMsgClockSettingInfo(MsgBody)
     if Set == nil then
         return
     end
+    if Set.NoteType ~= GatheringLogDefine.GatheringLogNoteType then
+        return
+    end
     local Setting = Set.Setting
     self.ClockSetting = Setting
     self:SetAdvanceRemindersTime(Setting)
@@ -1045,10 +1065,10 @@ function GatheringLogMgr:CheckAlarmExistProf(GatheringJob)
     local AlarmExistProf = self.AlarmExistProf
     if GatheringJob == ProfID.MinerJobID then
         AlarmExistProf.bMiner = true
-        return LSTR(70031) --采矿物
+        return LSTR(70063) --采矿闹钟提醒
     elseif GatheringJob == ProfID.BotanistJobID then
         AlarmExistProf.bBotanist = true
-        return LSTR(70032) --采集物
+        return LSTR(70035) --采集闹钟提醒
     end
 end
 
@@ -1103,9 +1123,10 @@ end
 ---@param CountDown number @持续多少s
 function GatheringLogMgr:OpenGatheringLogAlarmSidebar(StartTime, CountDown, TransData, Type)
     _G.FLOG_INFO("TransData.TipContent:%s", TransData.TipContent)
+    local GatherItem = TransData.GatherItem
     local Params = {
-        Title = LSTR(70035), --采集闹钟提醒
-        Desc1 = TransData.GatherItem.Name or "",
+        Title = self:CheckAlarmExistProf(GatherItem.GatheringJob),
+        Desc1 = GatherItem.Name or "",
         Desc2 = TransData.TipContent,
         StartTime = StartTime,
         CountDown = CountDown,
@@ -1139,6 +1160,9 @@ function GatheringLogMgr:AcceptCallBack(TransData)
         UIViewMgr:ShowView(UIViewID.GatheringLogMainPanelView)
         EventMgr:SendEvent(EventID.GatheringLogSetFiltraSelect, Params)
     else
+        if UIViewMgr:IsViewVisible(UIViewID.WorldMapPanel) then
+            UIViewMgr:HideView(UIViewID.WorldMapPanel)
+        end
         EventMgr:SendEvent(EventID.GatheringLogSetFiltraSelect, Params)
     end
 
@@ -1605,14 +1629,45 @@ function GatheringLogMgr:MajorProfActivate(Params)
     self:UpdateProfessionData()
 end
 
----@type 当升级时新增普通页签下拉选项红点
+---@type 升级
 function GatheringLogMgr:OnMajorLevelUpdate(Params)
-    local prof = Params.RoleDetail.Simple.Prof
     if not MajorUtil.IsGatherProf() then
         return
     end
+    local prof = Params.RoleDetail.Simple.Prof
     local Level = Params.RoleDetail.Simple.Level
-    local OldLevel = Params.OldLevel
+
+    self:CheckRedNode(prof, Level, Params.OldLevel)
+    if Level >= 40 then
+        self:CheckShowInheritGuide(prof)
+    end
+
+    --更新存储的职业等级信息
+    local ProfessType = ProtoCommon.prof_type
+    if prof == ProfessType.PROF_TYPE_MINER then
+        self.MinerLevel = Level
+    elseif prof == ProfessType.PROF_TYPE_BOTANIST then
+        self.BotanistLevel = Level
+    end
+
+    --更新界面选中
+    local LastSelectProfess = self.LastSelectProfessMiner
+    if prof == ProfessType.PROF_TYPE_MINER then
+        LastSelectProfess = self.LastSelectProfessMiner
+    elseif prof == ProfessType.PROF_TYPE_BOTANIST then
+        LastSelectProfess = self.LastSelectProfessBotanist
+    end
+
+    --切换职业也会收到此消息，采集笔记内追踪采集点切换职业时不要重置选中
+    if Params.OldLevel == nil and UIViewMgr:IsViewVisible(UIViewID.GatheringLogMainPanelView) then
+        return
+    end
+    LastSelectProfess.DropDownID = 1
+    self.LastFilterState.DropDownIndex = 1
+end
+
+---@type 当升级时新增普通页签下拉选项红点
+function GatheringLogMgr:CheckRedNode(prof, Level, OldLevel)
     if OldLevel == nil then --激活或转职
         if Level == 1 then
             OldLevel = 0
@@ -1622,7 +1677,6 @@ function GatheringLogMgr:OnMajorLevelUpdate(Params)
     end
 
     --新增等级段红点（由于采集笔记可预览功能单，等级段红点暂时屏蔽）
-    local ProfessType = ProtoCommon.prof_type
     --local DropListData = GatheringLogDefine.DropFilterTabData[HorBarIndex.NormalIndex]
     -- for Index, v1 in pairs(DropListData) do
     --     if not self.AddNewIndex or not self.AddNewIndex[prof] or not self.AddNewIndex[prof][Index] then
@@ -1643,32 +1697,11 @@ function GatheringLogMgr:OnMajorLevelUpdate(Params)
     --当收藏品解锁时新增特殊页签下拉选项红点（收藏品的解锁暂时用等级解锁）
     if
         self:GetQuestStatus() == true and Level >= GatheringLogDefine.CollectionUnLockLevel and
-            OldLevel < GatheringLogDefine.CollectionUnLockLevel
-     then
+        OldLevel < GatheringLogDefine.CollectionUnLockLevel
+        then
         --self:SendMsgUpdateDropNewData(prof, nil, SpecialType.SpecialTypeCollection,nil,false)
         self:SendMsgUpdateDropNewData(prof, 100)
     end
-
-    --更新存储的职业等级信息
-    if prof == ProfessType.PROF_TYPE_MINER then
-        self.MinerLevel = Level
-    elseif prof == ProfessType.PROF_TYPE_BOTANIST then
-        self.BotanistLevel = Level
-    end
-
-    --更新界面选中
-    local LastSelectProfess = self.LastSelectProfessMiner
-    if prof == ProfessType.PROF_TYPE_MINER then
-        LastSelectProfess = self.LastSelectProfessMiner
-    elseif prof == ProfessType.PROF_TYPE_BOTANIST then
-        LastSelectProfess = self.LastSelectProfessBotanist
-    end
-    --切换职业也会收到此消息，采集笔记内追踪采集点切换职业时不要重置选中
-    if Params.OldLevel == nil and UIViewMgr:IsViewVisible(UIViewID.GatheringLogMainPanelView) then
-        return
-    end
-    LastSelectProfess.DropDownID = 1
-    self.LastFilterState.DropDownIndex = 1
 end
 
 --- 在完成一流工匠的新工作后解锁收藏品交易列表
@@ -2015,9 +2048,11 @@ function GatheringLogMgr:GetGatherPlaceByItemData(ItemData)
         if #NeedGatherPlaceList > 0 then
             for i = 1, #NeedGatherPlaceList do
                 local Elem = NeedGatherPlaceList[i]
-                local LastElem = NeedGatherPlaceList[i - 1]
-                if Elem.MapID ~= LastElemMapID and LastElemMapID ~= 0 then
-                    LastElem.bImgLineVisible = false
+                if i > 1 then
+                    local LastElem = NeedGatherPlaceList[i - 1]
+                    if Elem.MapID ~= LastElemMapID and LastElemMapID ~= 0 then
+                        LastElem.bImgLineVisible = false
+                    end
                 end
                 Elem.bImgLineVisible = true
                 LastElemMapID = Elem.MapID
@@ -2671,6 +2706,7 @@ function GatheringLogMgr:GetItemDataByLevel()
                 Elem.Name = ItemUtil.GetItemName(Elem.ItemID)
                 table.insert(NeedData, Elem)
             elseif LineageVolume ~= 0 then
+                Elem.Name = ItemUtil.GetItemName(Elem.ItemID)
                 table.insert(LineageData, Elem)
             end
         end
@@ -2825,14 +2861,15 @@ function GatheringLogMgr.SortSearchRecord(Left, Right)
 end
 --endregion
 
+--region 对外
 ---@type 首次制作经验的提示
 function GatheringLogMgr:FirstGatherEXPBonus(Name, Score)
     local EXPValue = Score.Value
-    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e", 0, nil) --70029 获得了
+    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e") --70029 获得了
     local ScoreInfo = ScoreCfg:FindCfgByKey(19000099)
     local IconRichText = RichTextUtil.GetTexture(ScoreInfo.IconName, 40, 40, -10)
-    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF", 0, nil)
-    local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", _G.LootMgr.FormatCurrency(EXPValue)), "d1ba8e", 0, nil)
+    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF")
+    local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", _G.LootMgr.FormatCurrency(EXPValue)), "d1ba8e")
     local Content = string.format(LSTR(70030), Name, GetRitchText, IconRichText, ScoreRichText, SoceNumRichText) --70030 首次采集了[%s]%s%s%s%s
     if Score.Percent ~= 0 then
         Content = string.format("%s  ( + %d%s)", Content, Score.Percent, "%")
@@ -2857,6 +2894,23 @@ function GatheringLogMgr:SearchInGatheringLog(ItemID)
         EventMgr:SendEvent(EventID.GatheringLogSearch, Name)
     else
         FLOG_ERROR("GatheringLogMgr:SearchInGatheringLog Cfg is nil")
+    end
+end
+
+---@type 根据秘籍或传承录ItemID跳转工票商店购买
+function GatheringLogMgr:OnHyperlinkClicked(ItemID)
+	local AccessList = ItemUtil.GetItemAccess(ItemID)
+	if AccessList == nil then
+		_G.FLOG_INFO("GatheringLogMgr:OnHyperlinkClicked AccessList is nil")
+		return
+	end
+
+	local MajorLevel = MajorUtil.GetMajorLevel()
+	local Cfg = ItemGetaccesstypeCfg:FindCfgByKey(AccessList[1])
+	if Cfg ~= nil and (Cfg.UnLockLevel == nil or MajorLevel == nil or Cfg.UnLockLevel <= MajorLevel) and ItemUtil.QueryIsUnLock(Cfg.FunType, Cfg.FunValue, ItemID) then
+		_G.ShopMgr:JumpToShopGoods(Cfg.FunValue, ItemID)
+	else
+		_G.MsgTipsUtil.ShowTipsByID(157034)--完成40级任务一流工匠的新工作后开启
 	end
 end
 
@@ -2949,5 +3003,31 @@ function GatheringLogMgr:GetRecommendRareGatherPoint(Prof)
     end
     return RecommendList
 end
+--endregion
 
+---@type 新手指南_采集传承录实装
+function GatheringLogMgr:CheckShowInheritGuide(Prof, ProfList)
+    local InheritUnLock = false
+    if Prof ~= nil then
+        --采矿/园艺工升到40级的时候判断一下版本是否开放
+        InheritUnLock = self:IsUnLockInheritByVersion(Prof)
+    elseif ProfList ~= nil then
+        --刚登录判断一下是否有40级 & 版本是否开放
+        for _, Value in pairs(ProfList) do
+            if Value.Level >= 40 and self:IsUnLockInheritByVersion(Value.ProfID) then
+                InheritUnLock = true
+                break
+            end
+        end
+    end
+    if InheritUnLock then
+        local function ShowInheritGuide()
+            local EventParams = _G.EventMgr:GetEventParams()
+            EventParams.Type = TutorialDefine.TutorialConditionType.GatheringLogInherit
+            _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+        end
+        local Config = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowInheritGuide, Params = {}}
+        _G.TipsQueueMgr:AddPendingShowTips(Config)
+    end
+end
 return GatheringLogMgr

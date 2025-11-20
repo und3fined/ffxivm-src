@@ -1,19 +1,27 @@
+--[[
+Author: pengxingran_ds pengxingran@dasheng.tv
+Date: 2025-09-11 11:04:22
+LastEditors: pengxingran_ds pengxingran@dasheng.tv
+LastEditTime: 2025-09-12 10:43:07
+FilePath: \Script\Game\Photo\PhotoActorUtil\PhotoActorUtil.lua
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+--]]
 
-local Util = {}
+local PhotoActorUtil = {}
 
 local MajorUtil = require("Utils/MajorUtil")
 local ActorUtil = require("Utils/ActorUtil")
 local PhotoDefine = require("Game/Photo/PhotoDefine")
+local AnimationUtil = require("Utils/AnimationUtil")
 
 local FriendMgr = _G.FriendMgr
 local TeamMgr = _G.TeamMgr
 local ArmyMgr = _G.ArmyMgr
 local CompanionMgr = _G.CompanionMgr
-
 local EActorSubType = _G.UE.EActorSubType
+local EAvatarPartType = _G.UE.EAvatarPartType
 
-
-function Util.GetActorByEID(EID)
+function PhotoActorUtil.GetActorByEID(EID)
     return ActorUtil.GetActorByEntityID(EID)
 end
 
@@ -41,17 +49,11 @@ local function CheckMates(Player)
     return false
 end
 
-function Util.IsMates(Player)
+function PhotoActorUtil.IsMates(Player)
     return CheckMates(Player)
 end
 
-function Util.GetMateEIDSet(IgnoreMajor)
-
-    local FriendMgr = _G.FriendMgr
-    local TeamMgr = _G.TeamMgr
-    local ArmyMgr = _G.ArmyMgr
-
-
+function PhotoActorUtil.GetMateEIDSet(IgnoreMajor)
     local UActorManager = _G.UE.UActorManager:Get()
     local All = UActorManager:GetAllPlayers()
 
@@ -84,29 +86,28 @@ function Util.GetMateEIDSet(IgnoreMajor)
     end
 
     return Set
-
 end
 
 -- Region Ctrl
-function Util.GetMajor()
+function PhotoActorUtil.GetMajor()
     return MajorUtil.GetMajor()
 end
 
-function Util.GetMajorPet()
+function PhotoActorUtil.GetMajorPet()
     local EID = CompanionMgr.CallingOutCompanionEntityID
 
     if EID then
-        return Util.GetActorByEID(EID)
+        return PhotoActorUtil.GetActorByEID(EID)
     end
 end
 
 -- 陆行鸟
-function Util.GetMajorChocobo()
+function PhotoActorUtil.GetMajorChocobo()
     local UActorManager = _G.UE.UActorManager:Get()
     local EActorType = _G.UE.EActorType
 
     local All = UActorManager:GetAllActors()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -119,7 +120,7 @@ function Util.GetMajorChocobo()
 		
         if AttrComponent then
             local Owner = AttrComponent.Owner
-            if MateEIDSet[Owner] and AttrComponent.ObjType == _G.UE.EActorSubType.Buddy then
+            if MateEIDSet[Owner] and AttrComponent:GetActorSubType() == _G.UE.EActorSubType.Buddy then
                 return true
             end
         end
@@ -137,12 +138,12 @@ function Util.GetMajorChocobo()
     return Ret
 end
 
-function Util.GetMajorSummons()
+function PhotoActorUtil.GetMajorSummons()
     local UActorManager = _G.UE.UActorManager:Get()
     local EActorType = _G.UE.EActorType
 
     local All = UActorManager:GetAllActors()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -175,14 +176,14 @@ function Util.GetMajorSummons()
 end
 
 -- 亲信
-function Util.GetEntourates()
+function PhotoActorUtil.GetEntourates()
     -- 亲信还没做
     return {}
 end
 
 -- 伙伴 队友|部队|好友
-function Util.GetMates()
-    local Mates = Util.GetMateEIDSet(true)
+function PhotoActorUtil.GetMates()
+    local Mates = PhotoActorUtil.GetMateEIDSet(true)
 
     local Ret = {}
 
@@ -195,10 +196,10 @@ function Util.GetMates()
 end
 
 -- 队友的宠物
-function Util.GetMatePets()
+function PhotoActorUtil.GetMatePets()
     local UActorManager = _G.UE.UActorManager:Get()
     local All = UActorManager:GetAllCompanions()
-    local MateEIDSet = Util.GetMateEIDSet(true)
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -208,7 +209,6 @@ function Util.GetMatePets()
 
     local function Check(Pet)
 		local AttrComponent = Pet:GetAttributeComponent()
-		
         if AttrComponent then
             local Owner = AttrComponent.Owner
 
@@ -233,10 +233,10 @@ end
 -- Region Can not ctrl
 
 -- 除了玩家\队员
-function Util.GetPlayerOthers()
+function PhotoActorUtil.GetPlayerOthers()
     local UActorManager = _G.UE.UActorManager:Get()
     local All = UActorManager:GetAllPlayers()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -268,12 +268,12 @@ function Util.GetPlayerOthers()
     return Ret
 end
 
-function Util.GetPlayerOtherChocobos()
+function PhotoActorUtil.GetPlayerOtherChocobos()
     local UActorManager = _G.UE.UActorManager:Get()
     local EActorType = _G.UE.EActorType
 
     local All = UActorManager:GetAllActors()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -306,12 +306,12 @@ function Util.GetPlayerOtherChocobos()
     return Ret
 end
 
-function Util.GetPlayerOtherSummons()
+function PhotoActorUtil.GetPlayerOtherSummons()
     local UActorManager = _G.UE.UActorManager:Get()
     local EActorType = _G.UE.EActorType
 
     local All = UActorManager:GetAllActors()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -343,11 +343,11 @@ function Util.GetPlayerOtherSummons()
     return Ret
 end
 
-function Util.GetPlayerOtherPets()
+function PhotoActorUtil.GetPlayerOtherPets()
     local UActorManager = _G.UE.UActorManager:Get()
 
     local All = UActorManager:GetAllCompanions()
-    local MateEIDSet = Util.GetMateEIDSet()
+    local MateEIDSet = PhotoActorUtil.GetMateEIDSet()
 
     local Ret = {}
 
@@ -378,7 +378,7 @@ function Util.GetPlayerOtherPets()
     return Ret
 end
 
-function Util.GetNPCs()
+function PhotoActorUtil.GetNPCs()
     local UActorManager = _G.UE.UActorManager:Get()
 
     local Ret = {}
@@ -399,7 +399,7 @@ function Util.GetNPCs()
     return Ret
 end
 
-function Util.GetMonsters()
+function PhotoActorUtil.GetMonsters()
     local UActorManager = _G.UE.UActorManager:Get()
 
     local Ret = {}
@@ -423,7 +423,7 @@ end
 -------------------------------------------------------------------------------------------------------
 ---@region 所有Actor
 
-function Util.GetAllActorUEArray()
+function PhotoActorUtil.GetAllActorUEArray()
     local UActorManager = _G.UE.UActorManager:Get()
 
     local All = UActorManager:GetAllActors()
@@ -431,7 +431,7 @@ function Util.GetAllActorUEArray()
     return All
 end
 
-function Util.GetAllActor()
+function PhotoActorUtil.GetAllActor()
     local UActorManager = _G.UE.UActorManager:Get()
 
     local Ret = {}
@@ -447,34 +447,36 @@ end
 
 -------------------------------------------------------------------------------------------------------
 ---@region 暂停
+local OtherParts = {EAvatarPartType.RIDE_MASTER, EAvatarPartType.Ornament_Umbrella, EAvatarPartType.Ornament_Wing}
+function PhotoActorUtil.PauseAnim(Actor, IsPause)
+    AnimationUtil.SetPauseAnimAndOtherPart(Actor, IsPause, OtherParts)
+end
 
-local MountBone = 3001
-
-function Util.PauseActorAnim(Actor, IsPause)
-    local AnimComponent = Actor:GetAnimationComponent()
-
-    if AnimComponent then
-        AnimComponent:PauseAnimation(IsPause)
-        AnimComponent:PauseAnimationByPartType(MountBone, IsPause)
-    end
-
+function PhotoActorUtil.PauseActorAnim(Actor, IsPause)
+    if not Actor then return end
+    -- local AnimComponent = Actor:GetAnimationComponent()
+    -- if AnimComponent then
+    --     --AnimComponent:PauseAnimation(IsPause)
+    --     AnimComponent:PauseAnimationByPartType(EAvatarPartType.RIDE_MASTER, IsPause)
+    -- end
+    PhotoActorUtil.PauseAnim(Actor, IsPause)
     local EmojiAnimInst = Actor:GetEmojiAnimInst()
 	if EmojiAnimInst and EmojiAnimInst.SetNeedToPauseEye ~= nil then
 		EmojiAnimInst:SetNeedToPauseEye(IsPause)
 	end
 end
 
--- function Util.PauseAcotrAnim(Actor, IsPause)
---     local Major = Util.GetMajor()
---     Util.PauseActorAnim(Major, IsPause)
+-- function PhotoActorUtil.PauseAcotrAnim(Actor, IsPause)
+--     local Major = PhotoActorUtil.GetMajor()
+--     PhotoActorUtil.PauseActorAnim(Major, IsPause)
 -- end
 
-function Util.PauseAllActorAnim(IsPause)
+function PhotoActorUtil.PauseAllActorAnim(IsPause)
     local UActorManager = _G.UE.UActorManager:Get()
     local All = UActorManager:GetAllActors()
     for i = 1, All:Length() do
 		local Actor = All:Get(i)
-        Util.PauseActorAnim(Actor, IsPause)
+        PhotoActorUtil.PauseActorAnim(Actor, IsPause)
 	end
 
     if IsPause then
@@ -484,7 +486,7 @@ function Util.PauseAllActorAnim(IsPause)
     end
 end
 
-function Util.PauseActorMovement(Actor, IsPause)
+function PhotoActorUtil.PauseActorMovement(Actor, IsPause)
     local EActorType = _G.UE.EActorType
     if Actor ~= nil then
         local ActorType = Actor:GetActorType()
@@ -499,22 +501,22 @@ function Util.PauseActorMovement(Actor, IsPause)
     end
 end
 
-function Util.PauseActorMovementByEntityID(EntityID, IsPause)
+function PhotoActorUtil.PauseActorMovementByEntityID(EntityID, IsPause)
     local UActorManager = _G.UE.UActorManager:Get()
     local Actor = UActorManager:GetActorByEntityID(EntityID)
-    Util.PauseActorMovement(Actor, IsPause)
+    PhotoActorUtil.PauseActorMovement(Actor, IsPause)
 end
 
-function Util.PauseAllActorMovement(IsPause)
+function PhotoActorUtil.PauseAllActorMovement(IsPause)
     local UActorManager = _G.UE.UActorManager:Get()
     local All = UActorManager:GetAllActors()
     for i = 1, All:Length() do
 		local Actor = All:Get(i)
-        Util.PauseActorMovement(Actor, IsPause)
+        PhotoActorUtil.PauseActorMovement(Actor, IsPause)
 	end
 end
 
-function Util.IsActorMoving(EntityID)
+function PhotoActorUtil.IsActorMoving(EntityID)
     local UActorManager = _G.UE.UActorManager:Get()
     local Actor = UActorManager:GetActorByEntityID(EntityID)
     if Actor and Actor.CharacterMovement and Actor.CharacterMovement.Velocity then
@@ -525,12 +527,12 @@ end
 -------------------------------------------------------------------------------------------------------
 ---@region Major matters
 
-function Util.GetMajorRotator()
-    local Major = Util.GetMajor()
+function PhotoActorUtil.GetMajorRotator()
+    local Major = PhotoActorUtil.GetMajor()
     return Major:FGetActorRotation()
 end
 
-function Util.GetSettingTypeByEntityID(EntityID)
+function PhotoActorUtil.GetSettingTypeByEntityID(EntityID)
     local Actor = ActorUtil.GetActorByEntityID(EntityID)
     if not Actor then return end
 
@@ -575,4 +577,4 @@ function Util.GetSettingTypeByEntityID(EntityID)
     return SettingType, SubType
 end
 
-return Util
+return PhotoActorUtil

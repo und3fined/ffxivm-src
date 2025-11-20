@@ -280,7 +280,10 @@ function PuzzleGameBase:BeginCountDown()
         if GameCfg.bNeedPartRangeTip == 1 and not self.bIsDraging and not self:IsTimeOut() then
             self.NoRightOpTime = self.NoRightOpTime + Interval
             if self.NoRightOpTime >= GameCfg.TipWaitTime then
-                self.PuzzleMainPanel:ShowHelpTip()
+                local PuzzleMainPanel = self.PuzzleMainPanel
+                if PuzzleMainPanel then
+                    PuzzleMainPanel:ShowHelpTip()
+                end
                 self:ResetNoRightOpTime()
             end
         end
@@ -307,7 +310,10 @@ function PuzzleGameBase:OnTimeRunOut()
     local NeedText = LocalizationUtil.GetTimerForHighPrecision(0)
     PuzzleBurritosVM:SetTimeText(NeedText)
     if not self.bIsDraging and not self:GetbAutoMove() then
-        self.PuzzleMainPanel:OnTimeOut()
+        local PuzzleMainPanel = self.PuzzleMainPanel
+        if PuzzleMainPanel then
+            PuzzleMainPanel:OnTimeOut()
+        end
     end
 end
 
@@ -368,11 +374,13 @@ function PuzzleGameBase:OnMoveToTarget(PuzzleItem, bSuccess, MoveOp)
                 self:ReCheckIsFinish()
                 AudioUtil.LoadAndPlayUISound(self:GetCorrectAutioPath())
             else
-                AudioUtil.LoadAndPlayUISound(PuzzleDefine.BurritoAudioPath.AutoFinish)
+                --AudioUtil.LoadAndPlayUISound(PuzzleDefine.BurritoAudioPath.AutoFinish)
             end
             UIUtil.SetIsVisible(PuzzleItem, false)
-            PuzzleMainPanel:OnCheckPuzzleItemFinish(bSuccess)
-            PuzzleMainPanel:PlayAnimation(PuzzleMainPanel[string.format("AnimCorrect%d", PuzzleItem.ID)])
+            if (PuzzleMainPanel ~= nil) then
+                PuzzleMainPanel:OnCheckPuzzleItemFinish(bSuccess)
+                PuzzleMainPanel:PlayAnimation(PuzzleMainPanel[string.format("AnimCorrect%d", PuzzleItem.ID)])
+            end
             self:SetbAutoMove(false)
         end
         local Tmp2 = _G.TimerMgr:AddTimer(self, OnRotateFinish, WaitTime)
@@ -381,8 +389,11 @@ function PuzzleGameBase:OnMoveToTarget(PuzzleItem, bSuccess, MoveOp)
         -- 校验不成功回到初始位置
         UIUtil.CanvasSlotSetPosition(PuzzleItem, PuzzleItem.InitLocation)
         -- self:Reset
-        PuzzleMainPanel:OnCheckPuzzleItemFinish(bSuccess)
-        PuzzleMainPanel:ResetSelectBread(false)
+        if (PuzzleMainPanel ~= nil) then
+            PuzzleMainPanel:OnCheckPuzzleItemFinish(bSuccess)
+            PuzzleMainPanel:ResetSelectBread(false)
+        end
+        
         self:SetbAutoMove(false)
         if MoveOp ~= MoveToTargetOp.ByTimeOutAutoMove then
             self:ReCheckIsFinish()

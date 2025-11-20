@@ -35,7 +35,7 @@ function TableTools.RemoveTableElement(T, E, Name)
 			--FLOG_WARNING("remove table item num > 500 !!!, please use map!")
 
 			local TraceBack = debug.traceback()
-			FLOG_ERROR("TableTools.RemoveTableElement() "..TraceBack)
+			FLOG_WARNING("TableTools.RemoveTableElement() "..TraceBack)
 		end
 
 		for i = 1, Count do
@@ -707,7 +707,7 @@ table.compare_table = function(t, u)
 	if t == nil or u == nil then
 		return false
 	end
-	if #t ~= #u then
+	if table.size(t) ~= table.size(u) then
         return false
     end
     for k, v in pairs(t) do

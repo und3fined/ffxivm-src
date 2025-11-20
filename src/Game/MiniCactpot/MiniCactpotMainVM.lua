@@ -266,18 +266,23 @@ function MiniCactpotMainVM:OnMiniCactpotFinish(MiniCactpotFinishRsp)
     local Sum = 0
     --设置3个为select状态
     local AwardCoins = MiniCactpotFinishRsp.AwardCoins
-    local CellIdxList = self.Arrow2CellList[ArrowIdx]
-    local Select = MiniCactpotMainVM.CellState.Select
-    for idx = 1, #CellIdxList do
-        local CellVM = self.CellVMList:Get(CellIdxList[idx])
-        if AwardCoins == Select.MaxAward then
-            CellVM.SetCellState = Select.MaxAward
-        elseif AwardCoins >= Select.MiddleAward then
-            CellVM.SetCellState = Select.MiddleAward
-        elseif AwardCoins >= Select.OtherAward then
-            CellVM.SetCellState = Select.OtherAward
+    local Arrow2CellList = self.Arrow2CellList
+    if Arrow2CellList and AwardCoins then
+        local CellIdxList = Arrow2CellList[ArrowIdx]
+        if CellIdxList then
+            local Select = MiniCactpotMainVM.CellState.Select
+            for idx = 1, #CellIdxList do
+                local CellVM = self.CellVMList:Get(CellIdxList[idx])
+                if AwardCoins == Select.MaxAward then
+                    CellVM.SetCellState = Select.MaxAward
+                elseif AwardCoins >= Select.MiddleAward then
+                    CellVM.SetCellState = Select.MiddleAward
+                elseif AwardCoins >= Select.OtherAward then
+                    CellVM.SetCellState = Select.OtherAward
+                end
+                Sum = Sum + CellVM.Number
+            end
         end
-        Sum = Sum + CellVM.Number
     end
 
     local PreviewItemVM = self:GetPreviewItemVM(Sum)

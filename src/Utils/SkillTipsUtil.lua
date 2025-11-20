@@ -107,16 +107,18 @@ function SkillTipsUtil.GetSkillTagList(Params)
 end
 
 local function GetSkillCDDesc(Cfg, CDType)
+	local LSTR_None = LSTR(LocalStrID_None)
 	if CDType == ECDType.Step then
+		local CD = Cfg.CD
+		local Text = CD == 0 and LSTR_None or string.format(LSTR(150069), CD)
 		return {
-            Title = LSTR(LocalStrID_CD),                 -- 冷却
-            Text = string.format(LSTR(150069), Cfg.CD),  -- %d工次
+            Title = LSTR(LocalStrID_CD),  -- 冷却
+            Text = Text,                  -- %d工次
         }
 	end
 
 	local NormalCD = Cfg.CD
     local CD = 0
-	local LSTR_None = LSTR(LocalStrID_None)
 
     if NormalCD > 0 then
         CD = NormalCD

@@ -18,6 +18,7 @@ function GuideAwardItemVM:Ctor()
     self.IsCollectedAward = false
     self.AwardID = 0
     self.AwardIcon = ""
+    self.ItemQualityIcon = ""
 end
 
 
@@ -40,6 +41,7 @@ function GuideAwardItemVM:UpdateVM(Value)
 	if Cfg then
 		self.AwardIcon = UIUtil.GetIconPath(Cfg.IconID)
 	end
+    self.ItemQualityIcon = ItemUtil.GetItemColorIcon(self.AwardID)
 end
 
 return GuideAwardItemVM

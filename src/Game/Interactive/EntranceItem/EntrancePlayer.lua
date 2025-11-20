@@ -50,7 +50,7 @@ function EntrancePlayer:DistanceToMajor()
     return Res
 end
 
-function EntrancePlayer:CheckInterative(EnableCheckLog)
+function EntrancePlayer:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     return true
 end
 

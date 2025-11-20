@@ -10,7 +10,6 @@ local MajorUtil = require("Utils/MajorUtil")
 local ProfUtil = require("Game/Profession/ProfUtil")
 local TimeUtil = require("Utils/TimeUtil")
 local DateTimeTools = require("Common/DateTimeTools")
-local CrystallineParamCfg = require("TableCfg/CrystallineParamCfg")
 local PWorldEntDefine = require("Game/PWorld/Entrance/PWorldEntDefine")
 local PolUtil = require("Game/PWorld/Entrance/Policy/PWorldEntPolUtil")
 
@@ -42,7 +41,7 @@ function PWorldEntPolPVP:CheckJoinPre(EntID)
     local IsInEventTime = self:CheckIsInEventTime(EntID)
 
     local Cfg = SceneEnterCfg:FindCfgByKey(EntID)
-    local IsOpen = not (PWorldEntUtil.IsCrystallineRank(Cfg.TypeID) or PWorldEntUtil.IsCrystallineCustom(Cfg.TypeID))
+    local IsOpen = _G.PVPInfoMgr:GetPVPMatchAvailable(Cfg.TypeID)
     local Ret = {
         IsOpen = IsOpen,
         IsPassMem = IsCombatAdvancedProf,
@@ -161,79 +160,116 @@ end
 ---@alias NextIntervalData { StartTime: date, EndTime: date, Interval: integer, MapID: uint64, MapName: string }
 ---@return boolean, EventTimeData, CurIntervalData, NextIntervalData 是否在活动时间, 活动时间数据, 当前区间数据, 下一区间数据
 function PWorldEntPolPVP:CheckIsInEventTime(EntID)
-    EntID = EntID or 1218010
+    local EnterCfg = SceneEnterCfg:FindCfgByKey(EntID)
+    local Type = EnterCfg and EnterCfg.TypeID or 0
+    if PWorldEntUtil.IsCrystallineExercise(Type) then
+        return self:CheckExerciseIsInEventTime()
+    elseif PWorldEntUtil.IsCrystallineRank(Type) then
+        return self:CheckRankIsInEventTime()
+    end
+end
+
+function PWorldEntPolPVP:CheckExerciseIsInEventTime()
+    local PVPInfoMgr = _G.PVPInfoMgr
+    local StartTimeData = PVPInfoMgr:GetCrystallineExerciseStartTimeData()
+    local EndTimeData = PVPInfoMgr:GetCrystallineExerciseEndTimeData()
+    local PWorldOrderList = PVPInfoMgr:GetCrystallineExercisePWorldList()
+    return self:_CheckIsInEventTime(StartTimeData, EndTimeData, PWorldOrderList)
+end
+
+function PWorldEntPolPVP:CheckRankIsInEventTime()
+    local PVPInfoMgr = _G.PVPInfoMgr
+    local StartTimeData = PVPInfoMgr:GetCrystallineRankStartTimeData()
+    local EndTimeData = PVPInfoMgr:GetCrystallineRankEndTimeData()
+    local PWorldOrderList = PVPInfoMgr:GetCrystallineRankPWorldList()
+    return self:_CheckIsInEventTime(StartTimeData, EndTimeData, PWorldOrderList)
+end
+
+function PWorldEntPolPVP:_CheckIsInEventTime(StartTimeData, EndTimeData, PWorldOrderList)
     local IsInEventTime = false
     local EventTimeData = {}
     local CurIntervalData = {}
     local NextIntervalData = {}
-    local EnterCfg = SceneEnterCfg:FindCfgByKey(EntID)
-    local Type = EnterCfg and EnterCfg.TypeID or 0
-    if PWorldEntUtil.IsCrystalline(Type) then
-        -- 是否在活动时间
-        local StartTimeCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_ACTTIMEBEGIN)
-        local EndTimeCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_ACTTIMEEND)
-        local StartTimeHour = StartTimeCfg and StartTimeCfg.Value[1] or 10
-        local StartTimeMin = StartTimeCfg and StartTimeCfg.Value[2] or 0
-        local EndTimeHour = EndTimeCfg and EndTimeCfg.Value[1] or 1
-        local EndTimeMin = EndTimeCfg and EndTimeCfg.Value[2] or 0
+    -- 是否在活动时间
+    local CurServerTime = TimeUtil.GetServerLogicTime()
+    local ServerToLocalTimeTable = os.date("*t",CurServerTime)
+    local ServerTimeZone = 8    --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
+    local ServerTimeZoneSec = ServerTimeZone * 3600
+    local CurTimeZone = DateTimeTools.GetTimeZone()
+    local CurTimeZoneSec = CurTimeZone * 3600
+    local IsDst = os.date("*t", os.time()).isdst    -- 获取玩家是否在夏令时
+    if IsDst then
+        CurTimeZoneSec = CurTimeZoneSec + 3600  -- 夏令时会把时间往后调1个小时，所以计算时也要推迟1小时
+    end
 
-        local CurServerTime = TimeUtil.GetServerLogicTime()
-        local ServerToLocalTimeTable = os.date("*t",CurServerTime)
-        local ServerTimeZone = 8    --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
-        local ServerTimeZoneSec = ServerTimeZone * 3600
-        local CurTimeZone = DateTimeTools.GetTimeZone()
-        local CurTimeZoneSec = CurTimeZone * 3600
-        local IsDst = os.date("*t", os.time()).isdst    -- 获取玩家是否在夏令时
-        if IsDst then
-            CurTimeZoneSec = CurTimeZoneSec + 3600  -- 夏令时会把时间往后调1个小时，所以计算时也要推迟1小时
-        end
- 
-        local StartTimeTable = {
+    local StartTimeTable = {
+        year = ServerToLocalTimeTable.year,
+        month = ServerToLocalTimeTable.month,
+        day = ServerToLocalTimeTable.day,
+        hour = StartTimeData.hour,
+        min = StartTimeData.min,
+        sec = StartTimeData.sec - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
+        isdst = IsDst
+    }
+    local EndTimeTable = {
+        year = ServerToLocalTimeTable.year,
+        month = ServerToLocalTimeTable.month,
+        day = ServerToLocalTimeTable.day,
+        hour = EndTimeData.hour,
+        min = EndTimeData.min,
+        sec = EndTimeData.sec - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
+        isdst = IsDst
+    }
+
+    local StartTime = os.time(StartTimeTable)
+    local EndTime = os.time(EndTimeTable)
+
+    local function TimeToSec(Hour, Min, Sec)
+        return Hour * 3600 + Min * 60 + Sec
+    end
+
+    local StartTimeToSec = TimeToSec(StartTimeTable.hour, StartTimeTable.min, StartTimeTable.sec)
+    local EndTimeToSec = TimeToSec(EndTimeTable.hour, EndTimeTable.min, EndTimeTable.sec)
+    local IsCrossDay = EndTimeToSec <= StartTimeToSec
+
+    if not IsCrossDay then
+        IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
+    else
+        -- 已经转换为本地时间，可以直接使用
+        local StartHour = StartTimeTable.hour
+        local StartMin = StartTimeTable.min
+        local StartSec = StartTimeTable.sec
+        local EndHour = EndTimeTable.hour
+        local EndMin = EndTimeTable.min
+        local EndSec = EndTimeTable.sec
+
+        -- 跨天的情况先看看会不会在前一天开始的活动时间里
+        StartTimeTable = {
+            year = ServerToLocalTimeTable.year,
+            month = ServerToLocalTimeTable.month,
+            day = ServerToLocalTimeTable.day - 1,
+            hour = StartHour,
+            min = StartMin,
+            sec = StartSec,
+            isdst = IsDst
+        }
+        EndTimeTable = {
             year = ServerToLocalTimeTable.year,
             month = ServerToLocalTimeTable.month,
             day = ServerToLocalTimeTable.day,
-            hour = StartTimeHour,
-            min = StartTimeMin,
-            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
+            hour = EndHour,
+            min = EndMin,
+            sec = EndSec,
             isdst = IsDst
         }
-        local EndTimeTable = {
-            year = ServerToLocalTimeTable.year,
-            month = ServerToLocalTimeTable.month,
-            day = ServerToLocalTimeTable.day,
-            hour = EndTimeHour,
-            min = EndTimeMin,
-            sec = 0 - ServerTimeZoneSec + CurTimeZoneSec,    -- 减去原时区获得UTC时间再转到当前需要的时区
-            isdst = IsDst
-        }
+        IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
 
-        local StartTime = os.time(StartTimeTable)
-        local EndTime = os.time(EndTimeTable)
-
-        local function TimeToSec(Hour, Min, Sec)
-            return Hour * 3600 + Min * 60 + Sec
-        end
-
-        local StartTimeToSec = TimeToSec(StartTimeTable.hour, StartTimeTable.min, StartTimeTable.sec)
-        local EndTimeToSec = TimeToSec(EndTimeTable.hour, EndTimeTable.min, EndTimeTable.sec)
-        local IsCrossDay = EndTimeToSec <= StartTimeToSec
-
-        if not IsCrossDay then
-            IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
-        else
-            -- 已经转换为本地时间，可以直接使用
-            local StartHour = StartTimeTable.hour
-            local StartMin = StartTimeTable.min
-            local StartSec = StartTimeTable.sec
-            local EndHour = EndTimeTable.hour
-            local EndMin = EndTimeTable.min
-            local EndSec = EndTimeTable.sec
-
-            -- 跨天的情况先看看会不会在前一天开始的活动时间里
+        -- 如果不在前一天的活动时间里再判断是否在今天开始的活动时间里
+        if not IsInEventTime then
             StartTimeTable = {
                 year = ServerToLocalTimeTable.year,
                 month = ServerToLocalTimeTable.month,
-                day = ServerToLocalTimeTable.day - 1,
+                day = ServerToLocalTimeTable.day,
                 hour = StartHour,
                 min = StartMin,
                 sec = StartSec,
@@ -242,121 +278,85 @@ function PWorldEntPolPVP:CheckIsInEventTime(EntID)
             EndTimeTable = {
                 year = ServerToLocalTimeTable.year,
                 month = ServerToLocalTimeTable.month,
-                day = ServerToLocalTimeTable.day,
+                day = ServerToLocalTimeTable.day + 1,
                 hour = EndHour,
                 min = EndMin,
                 sec = EndSec,
                 isdst = IsDst
             }
             IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
-
-            -- 如果不在前一天的活动时间里再判断是否在今天开始的活动时间里
-            if not IsInEventTime then
-                StartTimeTable = {
-                    year = ServerToLocalTimeTable.year,
-                    month = ServerToLocalTimeTable.month,
-                    day = ServerToLocalTimeTable.day,
-                    hour = StartHour,
-                    min = StartMin,
-                    sec = StartSec,
-                    isdst = IsDst
-                }
-                EndTimeTable = {
-                    year = ServerToLocalTimeTable.year,
-                    month = ServerToLocalTimeTable.month,
-                    day = ServerToLocalTimeTable.day + 1,
-                    hour = EndHour,
-                    min = EndMin,
-                    sec = EndSec,
-                    isdst = IsDst
-                }
-                IsInEventTime, StartTime, EndTime = GetTimeAndCheck(CurServerTime, StartTimeTable, EndTimeTable)
-            end
         end
+    end
 
-        EventTimeData.IsCrossDay = not (EndTimeTable.hour == 0 and EndTimeTable.min == 0 and EndTimeTable.sec == 0) and StartTimeTable.day ~= EndTimeTable.day
-        EventTimeData.StartTime = StartTimeTable
-        EventTimeData.EndTime = EndTimeTable
+    EventTimeData.IsCrossDay = not (EndTimeTable.hour == 0 and EndTimeTable.min == 0 and EndTimeTable.sec == 0) and StartTimeTable.day ~= EndTimeTable.day
+    EventTimeData.StartTime = StartTimeTable
+    EventTimeData.EndTime = EndTimeTable
 
-        -- 练习赛和段位赛还需要知道目前时间段的副本名和时间
-        local IsCrystallineExercise = PWorldEntUtil.IsCrystallineExercise(Type)
-        local IsCrystallineRank = PWorldEntUtil.IsCrystallineRank(Type)
-        if IsCrystallineExercise or IsCrystallineRank then
-            local ChangeMapTimeCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_PVPMAPCYCLETIME)
-            local ChangeMapSecond = ChangeMapTimeCfg and ChangeMapTimeCfg.Value[1] or 5400
+    -- 时间区间信息
+    local ChangeMapSecond = _G.PVPInfoMgr:GetCrystallineChangeMapTime()
+    local TotalEventTime = EndTime - StartTime
+    local TotalIntervals = math.floor(TotalEventTime / ChangeMapSecond)
+    
+    local PassedInterval = 0
+    local CurInterval = 1
+    local NextInterval = 1
+    PassedInterval = math.floor((CurServerTime - StartTime) / ChangeMapSecond)
 
-            local TotalEventTime = EndTime - StartTime
-            local TotalIntervals = math.floor(TotalEventTime / ChangeMapSecond)
+    CurInterval = PassedInterval + 1
+    local PWorldCount = #PWorldOrderList
+
+    if IsInEventTime then
+        -- 当前区间开始时间等于已经过区间的结束时间
+        local CurMapIntervalStartTime = StartTime + PassedInterval * ChangeMapSecond
+        -- 当前区间结束时间等于开始时间加上间隔
+        local CurMapIntervalEndTime = CurMapIntervalStartTime + ChangeMapSecond
+        CurIntervalData.StartTime = os.date("*t", CurMapIntervalStartTime)
+        CurIntervalData.EndTime = os.date("*t", CurMapIntervalEndTime)
+        CurIntervalData.Interval = CurInterval
+        local CurMapIndex = CurInterval % PWorldCount
+        if CurMapIndex == 0 then
+            CurMapIndex = 3
+        end
+        CurIntervalData.MapID = PWorldOrderList[CurMapIndex]
+        CurIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[CurMapIndex])
+        
+        if CurInterval ~= TotalIntervals then
+            -- 下区间开始时间等于当前区间的结束时间
+            local NextMapIntervalStartTime = StartTime + CurInterval * ChangeMapSecond
+            -- 下区间结束时间等于开始时间加上间隔
+            local NextMapIntervalEndTime = NextMapIntervalStartTime + ChangeMapSecond
+            NextIntervalData.StartTime = os.date("*t", NextMapIntervalStartTime)
+            NextIntervalData.EndTime = os.date("*t", NextMapIntervalEndTime)
             
-            local CurInterval = 1
-            local NextInterval = 1
-            local PassedInterval = math.floor((CurServerTime - StartTime) / ChangeMapSecond)
-
-            CurInterval = PassedInterval + 1
-            local PWorldOrderList = {}
-            if IsCrystallineExercise then
-                local PWorldListCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_MAPCYCLE_EXERCISE)
-                PWorldOrderList = PWorldListCfg and PWorldListCfg.Value or {}
-            elseif IsCrystallineRank then
-                local PWorldListCfg = CrystallineParamCfg:FindCfgByKey(ProtoRes.Game.game_pvpcolosseum_params_id.PVPCOLOSSEUM_MAPCYCLE_SEG)
-                PWorldOrderList = PWorldListCfg and PWorldListCfg.Value or {}
+            NextInterval = CurInterval + 1
+            local NextMapIndex = NextInterval % PWorldCount
+            if NextMapIndex == 0 then
+                NextMapIndex = 3
             end
-            local PWorldCount = #PWorldOrderList
-
-            if IsInEventTime then
-                -- 当前区间开始时间等于已经过区间的结束时间
-                local CurMapIntervalStartTime = StartTime + PassedInterval * ChangeMapSecond
-                -- 当前区间结束时间等于开始时间加上间隔
-                local CurMapIntervalEndTime = CurMapIntervalStartTime + ChangeMapSecond
-                CurIntervalData.StartTime = os.date("*t", CurMapIntervalStartTime)
-                CurIntervalData.EndTime = os.date("*t", CurMapIntervalEndTime)
-                CurIntervalData.Interval = CurInterval
-                local CurMapIndex = CurInterval % PWorldCount
-                if CurMapIndex == 0 then
-                    CurMapIndex = 3
-                end
-                CurIntervalData.MapID = PWorldOrderList[CurMapIndex]
-                CurIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[CurMapIndex])
-                
-                if CurInterval ~= TotalIntervals then
-                    -- 下区间开始时间等于当前区间的结束时间
-                    local NextMapIntervalStartTime = StartTime + CurInterval * ChangeMapSecond
-                    -- 下区间结束时间等于开始时间加上间隔
-                    local NextMapIntervalEndTime = NextMapIntervalStartTime + ChangeMapSecond
-                    NextIntervalData.StartTime = os.date("*t", NextMapIntervalStartTime)
-                    NextIntervalData.EndTime = os.date("*t", NextMapIntervalEndTime)
-                    
-                    NextInterval = CurInterval + 1
-                    local NextMapIndex = NextInterval % PWorldCount
-                    if NextMapIndex == 0 then
-                        NextMapIndex = 3
-                    end
-                    NextIntervalData.MapID = PWorldOrderList[NextMapIndex]
-                    NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextMapIndex])
-                else
-                    -- 当前是最后一个区间则下区间开始时间为活动开始时间
-                    -- 展示上只取小时和分钟，所以就算是不在同一天也不影响，只要是活动开始时间就可以
-                    local NextMapIntervalEndTime = StartTime + ChangeMapSecond
-                    local NextMapIntervalEndTimeTable = os.date("*t", NextMapIntervalEndTime)
-                    NextIntervalData.StartTime = StartTimeTable
-                    NextIntervalData.EndTime = NextMapIntervalEndTimeTable
-                    
-                    NextInterval = 1
-                    NextIntervalData.MapID = PWorldOrderList[NextInterval]
-                    NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextInterval])
-                end
-            else
-                -- 当前非活动时间则下区间开始时间为活动开始时间
-                -- 展示上只取小时和分钟，所以就算是不在同一天也不影响，只要是活动开始时间就可以
-                local NextMapIntervalEndTime = StartTime + ChangeMapSecond
-                local NextMapIntervalEndTimeTable = os.date("*t", NextMapIntervalEndTime)
-                NextIntervalData.StartTime = StartTimeTable
-                NextIntervalData.EndTime = NextMapIntervalEndTimeTable
-                NextInterval = 1
-                NextIntervalData.MapID = PWorldOrderList[NextInterval]
-                NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextInterval])
-            end
+            NextIntervalData.MapID = PWorldOrderList[NextMapIndex]
+            NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextMapIndex])
+        else
+            -- 当前是最后一个区间则下区间开始时间为活动开始时间
+            -- 展示上只取小时和分钟，所以就算是不在同一天也不影响，只要是活动开始时间就可以
+            local NextMapIntervalEndTime = StartTime + ChangeMapSecond
+            local NextMapIntervalEndTimeTable = os.date("*t", NextMapIntervalEndTime)
+            NextIntervalData.StartTime = StartTimeTable
+            NextIntervalData.EndTime = NextMapIntervalEndTimeTable
+            
+            NextInterval = 1
+            NextIntervalData.MapID = PWorldOrderList[NextInterval]
+            NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextInterval])
         end
+    else
+        -- 当前非活动时间则下区间开始时间为活动开始时间
+        -- 展示上只取小时和分钟，所以就算是不在同一天也不影响，只要是活动开始时间就可以
+        local NextMapIntervalEndTime = StartTime + ChangeMapSecond
+        local NextMapIntervalEndTimeTable = os.date("*t", NextMapIntervalEndTime)
+        NextIntervalData.StartTime = StartTimeTable
+        NextIntervalData.EndTime = NextMapIntervalEndTimeTable
+        NextInterval = 1
+        NextIntervalData.MapID = PWorldOrderList[NextInterval]
+        NextIntervalData.MapName = PWorldEntUtil.GetPWorldEntName(PWorldOrderList[NextInterval])
     end
     return IsInEventTime, EventTimeData, CurIntervalData, NextIntervalData
 end

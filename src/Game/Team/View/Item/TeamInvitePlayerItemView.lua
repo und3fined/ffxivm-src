@@ -143,15 +143,6 @@ function TeamInvitePlayerItemView:OnRegisterGameEvent()
 		end
 	end)
 
-	self:RegisterGameEvent(EventID.OnlineStatusChangedInVision, function(_, Params)
-		if self:GetRoleID() and self:GetRoleID() == ActorUtil.GetRoleIDByEntityID(Params.EntityID) then
-			local RoleVM = _G.RoleInfoMgr:FindRoleVM(self:GetRoleID(), true)
-			if RoleVM then
-				RoleVM:SetOnlineStatus(Params.OnlineStatus)
-			end
-		end
-	end)
-
 	self:RegisterGameEvent(EventID.OnlineStatusMajorChanged, function(_, NewStatus, OldStatus)
 		if self:GetRoleID() and self:GetRoleID() == MajorUtil.GetMajorRoleID() then
 			local RoleVM = _G.RoleInfoMgr:FindRoleVM(self:GetRoleID(), true)

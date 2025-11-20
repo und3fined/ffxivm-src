@@ -33,6 +33,7 @@ local ProfMgr = require("Game/Profession/ProfMgr")
 local DirectUpgradeGlobalCfg = require("TableCfg/DirectUpgradeGlobalCfg")
 local ClientSetupMgr = require("Game/ClientSetup/ClientSetupMgr")
 local TutorialCheckConfig = require("Game/Tutorial/TutorialCheckConfig")
+local CommonUtil = require("Utils/CommonUtil")
 
 local USaveMgr = _G.UE.USaveMgr
 
@@ -147,6 +148,9 @@ function NewTutorialMgr:OnRegisterGameEvent()
     --- 监听任务事件
     self:RegisterGameEvent(EventID.UpdateQuest, self.CheckQuestUpdateEvent)
 
+    --- 监听任务接取事件
+    self:RegisterGameEvent(EventID.QuestAccept, self.CheckQuestAcceptEvent)
+
     ---转职
     self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnMajorProfSwitch)
 
@@ -188,10 +192,11 @@ function NewTutorialMgr:OnRegisterGameEvent()
 
     --动画播完触发指引
     self:RegisterGameEvent(EventID.EndPlaySequence, self.OnEndPlaySequence)
-
     self:RegisterGameEvent(EventID.JumpAndEndSequence, self.OnEndPlaySequence)
 
     self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldExit)
+
+    self:RegisterGameEvent(EventID.ForceFinishTutorial,self.OnForceFinishTutorial)
 
     --能工巧匠事件
     ---self:RegisterGameEvent(EventID.CrafterRandomEventSkill, self.OnRandomEventSkill)
@@ -211,8 +216,8 @@ function NewTutorialMgr:OnGameEventLoginRes(Params)
         --重连不需要重新更新数据
         self:ReconnectTutorialSchedule()
     else
-        -- EventMgr:SendEvent(EventID.ClientSetupQueryAll, QueryParams)
         ClientSetupMgr:SendQueryReq({TutorialDefine.TutorialStateKey})
+        -- EventMgr:SendEvent(EventID.ClientSetupQueryAll, QueryParams)
         if table.length(self.TutorialCfgTree) == 0 then
             self:LoadTutorialCfg()
         end
@@ -228,8 +233,6 @@ function NewTutorialMgr:ClientSetupPost(EventParams)
 
     local Key = Params.IntParam1
 	local Value = Params.StringParam1
-
-    self:CheckTutorialState()
 
     ---新手引导进程数据
     if Key == TutorialDefine.TutorialNetSyncKey then
@@ -618,6 +621,28 @@ function NewTutorialMgr:CheckQuestUpdateEvent(Params)
         self:OnCheckTutorialStartCondition(EventParams)
         --local Config = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = function(...) return self:OnCheckTutorialStartCondition(...) end, Params = EventParams}
         --_G.TipsQueueMgr:AddPendingShowTips(Config)
+    end
+end
+
+function NewTutorialMgr:CheckQuestAcceptEvent(QuestID)
+    -- 配置表不支持配置,这里特殊处理
+     local IsCheckHQGuide = self.IsCheckHQGuide
+    if IsCheckHQGuide == nil then
+        IsCheckHQGuide = _G.TutorialGuideMgr:CheckGuide(84)
+        self.IsCheckHQGuide = IsCheckHQGuide
+        self.CheckAcceptQuestList = {200085,151194,190005,190038,190076,190114,210006}
+    end
+    if not CommonUtil.IsShipping() then
+        FLOG_INFO("[NewTutorialMgr]CheckQuestAcceptEvent QuestID=%s IsCheckHQGuide=%s", tostring(QuestID), tostring(IsCheckHQGuide))
+    end
+    if false == IsCheckHQGuide then
+        for _, AcceptQuestID in ipairs(self.CheckAcceptQuestList) do
+            if QuestID == AcceptQuestID then
+                _G.TutorialGuideMgr:PlayGuide(84)
+                self.IsCheckHQGuide = true
+                break
+            end
+        end
     end
 end
 
@@ -1311,6 +1336,7 @@ function NewTutorialMgr:OnCheckUIMatchCondition(ViewID)
         --只能播那些没有参数的，有参数的说明要特殊触发
         if Group["Content"][1].Start.Condition == 0 then
             Group["Progress"] = -Group["Content"][1].TutorialID
+
             if self:CanPlayTutorial() and TutorialCheckConfig.IsPassTutorialCheck(Group["Content"][1]) then
                 self.CurRunningGuideGroupID = k
                 self.CurRunningGuideSubGroupID = m
@@ -1527,6 +1553,7 @@ function NewTutorialMgr:PlayTutorial(Cfg)
     end
 
     if not self.TutorialState then
+        FLOG_INFO("TutorialState is 0")
         --直接完成当前引导
         local Group = self:GetRunningSubGroup()
 
@@ -1550,7 +1577,14 @@ function NewTutorialMgr:PlayTutorial(Cfg)
     --FLOG_WARNING("PlayTutorial ID = %d",Cfg.TutorialID)
 
     ---如果是系统界面，则需要对其进行上下移动
+
     if Cfg.BPName == "Main2nd/Main2ndPanelNew_UIBP" then
+        local RightMenuItemsCfg = require("TableCfg/RightMenuItemsCfg")
+        local MenuItemsCfg = RightMenuItemsCfg:FindAllCfg(string.format("BtnEntranceID=%d", Cfg.BtnEntranceID))
+        if MenuItemsCfg and MenuItemsCfg[1] then
+            Cfg.StartParam = MenuItemsCfg[1].SortID or Cfg.StartParam
+        end
+        
         if Cfg.StartParam > 20 then
             local UIBPName = Cfg.BPName
             local ViewID = UIViewMgr:GetViewIDByName(UIBPName)
@@ -1596,6 +1630,7 @@ function NewTutorialMgr:PlayTutorial(Cfg)
     --打开轮盘
     elseif Cfg.WidgetPath == "ControlPanel/Sprint" then
         EventMgr:SendEvent(EventID.SwitchPeacePanel, 0)
+    --左上角任务盯关引导点击必须要点到任务那一栏
     elseif Cfg.WidgetPath == "MainTeamPanel/MainQuestPanel/MainlineQuest/BtnQuest" or
             Cfg.WidgetPath == "MainTeamPanel/MainQuestPanel/MainlineQuest/TableViewAdapter/IconSpanCoordinate" then
         EventMgr:SendEvent(EventID.SelectMainTeamPanelQuest)
@@ -1633,7 +1668,7 @@ function NewTutorialMgr:PlaySoftTutorial(Cfg)
     if Group ~= nil then
         Group["Progress"] = Cfg.TutorialID
 
-        --最后一个结点是软引用并且已经看过了这里可以将组设置为完成了不然永远结束不了了
+        --最后一个结点是并且已经看过了这里可以将组设置为完成了不然永远结束不了了
         if Cfg.TutorialID == Cfg.FinishedID and Cfg.IsShownNodeFinish == 1 then
             Group["Status"] = TutorialDefine.TutorialNodeStatus.Finish
             Group["Progress"] = 0
@@ -1686,7 +1721,7 @@ function NewTutorialMgr:PlaySoftTutorial(Cfg)
 
             --如果当前的UI不存在则不能播应该出错了直接结束当前引导组并打印错误日志
             if View == nil then
-                FLOG_ERROR("Play Current TutorialView is not Exist,BPName=%s",UIBPName)
+                FLOG_WARNING("Play Current TutorialView is not Exist,BPName=%s",UIBPName)
                 --直接结束当前引导组
                 self:FinishCurrentRunningGroup()
                 return
@@ -2008,10 +2043,9 @@ function NewTutorialMgr:OnMajorProfActivate(Params)
         EventParams.Type = TutorialDefine.TutorialConditionType.AdvanceProf
         _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
     end
-    local HasNorMalProfNum = ProfMgr:MajorHasNorMalProfNum()
 
-    -- 首次转职就行
-    if HasNorMalProfNum == 2 then
+    --是战斗职业并且是基础职业才会弹
+    if Type == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT then
         local TutorialConfig = {
             Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE,
             Callback = UnlockAdvanceProfTutorial,
@@ -2145,8 +2179,6 @@ function NewTutorialMgr:EndSoftTutorial(Cfg)
     local GuideUIName = Cfg.GuideBPName
     local GuideUIViewID = UIViewMgr:GetViewIDByName(GuideUIName)
 
-    --_G.TipsQueueMgr:Pause(false)
-
     self.TutorialCurID = nil
     UIViewMgr:HideView(GuideUIViewID)
 
@@ -2181,6 +2213,7 @@ function NewTutorialMgr:EndSoftTutorial(Cfg)
                         _G.TutorialGuideMgr:OnCheckTutorialStartCondition(Params)
                     end
                 end
+
                 --组结束时要保存到后台
                 self:SendTutorialProgress()
 
@@ -2250,6 +2283,7 @@ function NewTutorialMgr:EndForceTutorial(Cfg)
                                 _G.TutorialGuideMgr:OnCheckTutorialStartCondition(Params)
                             end
                         end
+
                         --组结束时要保存到后台
                         self:SendTutorialProgress()
 
@@ -2334,7 +2368,7 @@ end
 function NewTutorialMgr:ForceCloseTutorial()
     self.TutorialForceCloseNum = self.TutorialForceCloseNum + 1
     if self.TutorialForceCloseNum >= TutorialDefine.SkipTutorialClickNum then
-        self:FinishCurrentRunningGroup();
+        self:FinishCurrentRunningGroup()
         self.TutorialForceCloseNum = 0
     end
 end
@@ -2388,7 +2422,6 @@ function NewTutorialMgr:OnSkillGenAttack(Param)
 end
 
 function NewTutorialMgr:OnMainPanelInActive(Param)
-
     if self.TutorialCurID ~= nil then
         local RunningCfg = self:GetRunningCfg(self.TutorialCurID)
 
@@ -2443,7 +2476,7 @@ function NewTutorialMgr:OnGameEventPWorldExit(Params)
 end
 
 function NewTutorialMgr:OnForceFinishTutorial(Params)
-    self:FinishCurrentRunningGroup()
+    self:FinishCurrentRunningGroup();
     self.TutorialForceCloseNum = 0
 end
 

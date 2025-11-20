@@ -45,14 +45,14 @@ function CommChatMsgPanelView:OnDestroy()
 end
 
 function CommChatMsgPanelView:OnShow()
-	self.RichTextMsg:SetText("")
-	self.IsEmpty = self.ArrayChannel:Num() <= 0
+	self:SetMsgText("")
+	self.IsNoChannels = self.ArrayChannel:Num() <= 0
 end
 
 function CommChatMsgPanelView:OnHide()
 	self.Source = nil 
 	self.CurMsgItemVM = nil
-	self.RichTextMsg:SetText("")
+	self:SetMsgText("")
 end
 
 function CommChatMsgPanelView:OnRegisterUIEvent()
@@ -75,9 +75,29 @@ function CommChatMsgPanelView:OnRegisterBinder()
 
 end
 
+function CommChatMsgPanelView:SetMsgText(Text)
+	if self.CurMsgText == Text then
+		return
+	end
+
+	self.CurMsgText = Text
+	self.RichTextMsg:SetText(Text)
+end
+
+function CommChatMsgPanelView:ShowEmptyTips()
+	local Str = self.StrEmptyTips
+	if nil == Str then 
+		Str = _G.LSTR(50158) -- "当前频道暂无聊天消息"
+		self.StrEmptyTips = Str
+	end
+
+	self:SetMsgText(Str)
+end
+
 function CommChatMsgPanelView:UpdateMsg()
-	if self.IsEmpty then
+	if self.IsNoChannels then
 		self.CurMsgItemVM = nil
+		self:ShowEmptyTips()
 		return
 	end
 
@@ -95,6 +115,7 @@ function CommChatMsgPanelView:UpdateMsg()
 
 	local Num = #MsgList
 	if Num <= 0 then 
+		self:ShowEmptyTips()
 		return
 	end
 
@@ -130,9 +151,8 @@ function CommChatMsgPanelView:UpdateMsg()
 		end
 	end
 
-	self.RichTextMsg:SetText(Text)
+	self:SetMsgText(Text)
 end
-
 
 -------------------------------------------------------------------------------------------------------
 ---Component CallBack

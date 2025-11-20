@@ -82,6 +82,7 @@ end
 
 function EquipmentListPageView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.EquipRepairSucc, self.OnEquipRepairSucc)
+	self:RegisterGameEvent(_G.EventID.ExchangeNetEvent, self.OnEquipRepairSucc)
 end
 
 function EquipmentListPageView:OnRegisterBinder()
@@ -92,7 +93,7 @@ function EquipmentListPageView:OnRegisterBinder()
 		{ "bEmpty", UIBinderSetIsVisible.New(self, self.NoReplace) },
 		{ "bEmpty", UIBinderSetIsVisible.New(self, self.TableView, true) },
 		{ "ItemBindableList", UIBinderUpdateBindableList.New(self, self.EquipmentsTableView) },
-		{ "SelectIndex", UIBinderSetSelectedIndex.New(self, self.EquipmentsTableView) },
+		{ "SelectIndex", UIBinderSetSelectedIndex.New(self, self.EquipmentsTableView, false, true) },
 		{ "FilterType", UIBinderValueChangedCallback.New(self, nil, self.OnFilterTypeChange) },
 		{ "FilterTypeList", UIBinderValueChangedCallback.New(self, nil, self.OnFilterTypeListChanged) }
 	}

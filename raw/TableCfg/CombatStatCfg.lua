@@ -9,11 +9,7 @@ local CombatStatCfg = {
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {
-        Config = {
-            {
-                Name = 'Name',
-            },
-		}
+        Config = {}
     },
     DefaultValues = nil,
 	LuaData = nil,

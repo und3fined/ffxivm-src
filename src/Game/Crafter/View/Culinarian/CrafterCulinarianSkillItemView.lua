@@ -10,6 +10,8 @@ local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetP
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIBinderSetIsVisibleByBit = require("Binder/UIBinderSetIsVisibleByBit")
+local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIUtil = require("Utils/UIUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MsgTipsID = require("Define/MsgTipsID")
@@ -21,7 +23,9 @@ local ErrorCode_CulinarianPracticeNotValid <const> = CrafterConfig.SkillCheckErr
 ---@field BtnSkill UFButton
 ---@field ImgIcon UFImage
 ---@field MainPanel UFCanvasPanel
+---@field PanelNum UFCanvasPanel
 ---@field TextInfo UFTextBlock
+---@field TextNum UFTextBlock
 ---@field AnimInspirationStormHide UWidgetAnimation
 ---@field AnimInspirationStormShow UWidgetAnimation
 ---@field AnimLoop UWidgetAnimation
@@ -34,7 +38,9 @@ function CrafterCulinarianSkillItemView:Ctor()
 	--self.BtnSkill = nil
 	--self.ImgIcon = nil
 	--self.MainPanel = nil
+	--self.PanelNum = nil
 	--self.TextInfo = nil
+	--self.TextNum = nil
 	--self.AnimInspirationStormHide = nil
 	--self.AnimInspirationStormShow = nil
 	--self.AnimLoop = nil
@@ -48,6 +54,8 @@ function CrafterCulinarianSkillItemView:OnRegisterSubView()
 end
 
 function CrafterCulinarianSkillItemView:OnRegisterBinder()
+	local PanelNumBitData = {}
+
 	local Binders = {
 		{ "SkillIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon) },
 		{ "SkillIcon", UIBinderValueChangedCallback.New(self, nil, self.OnSkillIconPathChanged) },
@@ -56,10 +64,18 @@ function CrafterCulinarianSkillItemView:OnRegisterBinder()
 		{ "bLockedByLevel", UIBinderValueChangedCallback.New(self, nil, self.OnLevelTextVisibleChanged) },
 		{ "LevelText", UIBinderSetTextFormat.New(self, self.TextInfo, _G.LSTR(170061)) },  -- %d级
 		{ "bIsVisible", UIBinderSetIsVisible.New(self, self.BtnSkill, false, true, true ) },
+
+		{ "bLockedByLevel", UIBinderSetIsVisibleByBit.New(self, self.PanelNum, PanelNumBitData, true) },
+		{ "bShowMakeCost", UIBinderSetIsVisibleByBit.New(self, self.PanelNum, PanelNumBitData) },
+		{ "bMKEnough", UIBinderValueChangedCallback.New(self, nil, CrafterSkillItemView.OnMKEnoughChanged) },
+		{ "MakeCost", UIBinderSetText.New(self, self.TextNum) },
 	}
 
 	local BaseBtnVM = self.BaseBtnVM
 	BaseBtnVM.bIsVisible = true
+	BaseBtnVM.bShowMakeCost = false
+	BaseBtnVM.bMKEnough = true
+	BaseBtnVM.MakeCost = 0
 
 	self:RegisterBinders(self.BaseBtnVM, Binders)
 end

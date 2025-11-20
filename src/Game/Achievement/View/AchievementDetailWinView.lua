@@ -10,11 +10,15 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBindableList = require("UI/UIBindableList")
 local AchievementUtil = require("Game/Achievement/AchievementUtil")
+local AchievementDetailItemVM = require("Game/Achievement/VM/Item/AchievementDetailItemVM")
 local AchievementItemVM = require("Game/Achievement/VM/Item/AchievementItemVM")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local AchievementGroupCfg = require("TableCfg/AchievementGroupCfg")
+local AchievementDiyGruopCfg = require("TableCfg/AchievementDiyGruopCfg")
 local MsgTipsID = require("Define/MsgTipsID")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+
+
 
 local EToggleButtonState = _G.UE.EToggleButtonState
 local AchievementMgr = _G.AchievementMgr
@@ -23,7 +27,9 @@ local LSTR = _G.LSTR
 ---@class AchievementDetailWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnClose UFButton
+---@field PopUpBG CommonPopUpBGView
 ---@field TableViewDetail UTableView
+---@field TableViewDetailNew UTableView
 ---@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -33,7 +39,9 @@ local AchievementDetailWinView = LuaClass(UIView, true)
 function AchievementDetailWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnClose = nil
+	--self.PopUpBG = nil
 	--self.TableViewDetail = nil
+	--self.TableViewDetailNew = nil
 	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -42,10 +50,14 @@ end
 
 function AchievementDetailWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.PopUpBG)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function AchievementDetailWinView:OnInit()
+	self.DiyDetailDataList = UIBindableList.New( AchievementDetailItemVM )
+	self.AdapterNewDiyDetail = UIAdapterTableView.CreateAdapter(self, self.TableViewDetailNew)
+
 	self.AchievementTypeDataList = UIBindableList.New( AchievementItemVM )
 	self.AdapterTableViewDetail = UIAdapterTableView.CreateAdapter(self, self.TableViewDetail, nil , false)
 end
@@ -55,11 +67,13 @@ function AchievementDetailWinView:OnDestroy()
 end
 
 function AchievementDetailWinView:OnShow()
+	UIUtil.SetIsVisible(self.TableViewDetail, false)
+	UIUtil.SetIsVisible(self.TableViewDetailNew, false)
 	self.TextTitle:SetText(LSTR(720020))
 	local ShowAchievementDataList = {}
-	local Params = self.Params 
-	if Params and Params.AchievemwntGroupID then
-		local GroupCfg = AchievementGroupCfg:FindCfgByKey(Params.AchievemwntGroupID) or {}
+	local Params = self.Params or {}
+	if Params.AchievementGroupID then
+		local GroupCfg = AchievementGroupCfg:FindCfgByKey(Params.AchievementGroupID) or {}
 		local Details = GroupCfg.Details or {}
 		for i = 1, #Details do
 			local Data = AchievementMgr:GetAchievementInfo(Details[i]) 
@@ -68,10 +82,41 @@ function AchievementDetailWinView:OnShow()
 				table.insert(ShowAchievementDataList, Data)
 			end
 		end
+		ShowAchievementDataList = AchievementUtil.CheckShowFromHideType(ShowAchievementDataList)
+		self.AchievementTypeDataList:UpdateByValues(ShowAchievementDataList)
+		self.AdapterTableViewDetail:UpdateAll(self.AchievementTypeDataList)
+		UIUtil.SetIsVisible(self.TableViewDetail, true)
+	elseif Params.AchievementDiyGroup then
+		local SceneIDs = string.split(Params.AchievementDiyGroup, ";")
+		local SceneData = {}
+		local FinishSceneData = {}
+		local SortedData = {}
+		for i = 1, #(SceneIDs or {}) do
+			local DiyGroupCfg = AchievementDiyGruopCfg:FindCfgByKey(SceneIDs[i])
+			local FinishTime = 0
+			if DiyGroupCfg ~= nil then
+				local FinishJobNum = tonumber(DiyGroupCfg.Params[3] or 0)
+				local SceneId = tonumber(DiyGroupCfg.Params[1] or 0)
+				local ModeId = tonumber(DiyGroupCfg.Params[2] or 0)
+				FinishTime = AchievementMgr:GetSceneFinishState(SceneId, ModeId, FinishJobNum)
+				if FinishTime ~= 0 then
+					table.insert(FinishSceneData, { DiyGroupID = SceneIDs[i] })
+				else
+					table.insert(SceneData, { DiyGroupID = SceneIDs[i] })
+				end
+			end
+		end
+
+		for i = 1, #SceneData do
+			table.insert(SortedData, SceneData[i])
+		end
+		for i = 1, #FinishSceneData do
+			table.insert(SortedData, FinishSceneData[i])
+		end
+		self.DiyDetailDataList:UpdateByValues(SortedData)
+		self.AdapterNewDiyDetail:UpdateAll(self.DiyDetailDataList)
+		UIUtil.SetIsVisible(self.TableViewDetailNew, true)
 	end
-	ShowAchievementDataList = AchievementUtil.CheckShowFromHideType(ShowAchievementDataList)
-	self.AchievementTypeDataList:UpdateByValues(ShowAchievementDataList)
-	self.AdapterTableViewDetail:UpdateAll(self.AchievementTypeDataList)
 end
 
 function AchievementDetailWinView:OnHide()

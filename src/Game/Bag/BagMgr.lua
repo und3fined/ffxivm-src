@@ -38,6 +38,8 @@ local UIViewMgr = require("UI/UIViewMgr")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local ModuleOpenMgr = require("Game/ModuleOpen/ModuleOpenMgr")
 local AdventureRecordCfg = require("TableCfg/AdventureRecordCfg")
+local BonusStateBuffCfg = require("TableCfg/BonusStateBuffCfg")
+local StoreCfg = require("TableCfg/StoreCfg")
 
 local ScoreMgr = nil
 local MagicCardMgr = nil
@@ -141,6 +143,9 @@ function BagMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_BAG, SUB_MSG_ID.CS_CMD_ITEM_CD_ALL, self.OnNetMsgBagItemCdAllInfo) --Cd所有Group信息获取
 
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_BAG, SUB_MSG_ID.CS_CMD_ITEM_RECYC, self.OnNetBatchRecovery) --Cd所有Group信息获取
+
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_BAG, SUB_MSG_ID.CS_CMD_BATCH_USE, self.OnNetMsgBagBatchUseItem) --批量使用物品 只用于批量解锁外观
+	
 end
 
 function BagMgr:OnRegisterGameEvent()
@@ -190,6 +195,24 @@ function BagMgr:OnNetMsgBagUseItem(MsgBody)
 		_G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
 	end
 
+	if Cfg and Cfg.ShowObtainItems and Cfg.ShowObtainItems > 0 then
+		local Loots = Msg.Loots
+		if Loots and #Loots > 0 then
+			local Params = {}
+			Params.ItemList = {}
+			for i = 1, #Loots do
+				if Loots[i].ResID > 0 and Loots[i].Num > 0  then
+					table.insert(Params.ItemList, { ResID = Loots[i].ResID, Num = Loots[i].Num})
+				end
+			end
+
+			if #Params.ItemList > 0 then
+				_G.UIViewMgr:ShowView(_G.UIViewID.CommonRewardPanel, Params)
+			end
+		end
+
+	end
+
 	--道具使用成功
 	--if Cfg ~= nil and Cfg.ItemType == ITEM_TYPE_DETAIL.COLLAGE_BUDDYEQUIT
 		--or Cfg.ItemType == ITEM_TYPE_DETAIL.COLLAGE_TRIPLETRIADCARD
@@ -204,6 +227,24 @@ function BagMgr:OnNetMsgBagUseItem(MsgBody)
 	ChatParams.GID = self:GetItemGIDByResID(ResID)
 	ChatParams.ChatType = ChatDefine.SysChatMsgBattleType.UseItem
 	_G.SkillLogicMgr:PushSysChatMsgBattle(ChatParams)
+end
+
+function BagMgr:OnNetMsgBagBatchUseItem(MsgBody)
+	local Msg = MsgBody.BatchUse
+	if nil == Msg then
+		return
+	end
+	local Rsps = Msg.Rsps
+	if Rsps == nil then
+		return
+	end
+	for _, Value in ipairs(Rsps) do
+		local ChatParams = {}
+		ChatParams.ResID = Value.ResID
+		ChatParams.GID = self:GetItemGIDByResID(Value.ResID)
+		ChatParams.ChatType = ChatDefine.SysChatMsgBattleType.UseItem
+		_G.SkillLogicMgr:PushSysChatMsgBattle(ChatParams)
+	end
 end
 
 function BagMgr:OnNetMsgBagInfo(MsgBody)
@@ -271,10 +312,12 @@ function BagMgr:CalcBagUseCapacity()
 	local Length = #AllItemList
 	for i = 1, Length do
 		local Item = AllItemList[i]
-		local Cfg = ItemCfg:FindCfgByKey(Item.ResID)
-		if Cfg then
-			if Cfg.ItemType ~= ITEM_TYPE_DETAIL.MISCELLANY_TASKONLY then
-				UseCapacity = UseCapacity + 1
+		if Item then
+			local Cfg = ItemCfg:FindCfgByKey(Item.ResID)
+			if Cfg then
+				if Cfg.ItemType ~= ITEM_TYPE_DETAIL.MISCELLANY_TASKONLY then
+					UseCapacity = UseCapacity + 1
+				end
 			end
 		end
 	end
@@ -297,13 +340,15 @@ end
 
 function BagMgr:FilterItemByCondition(ConditionFun)
 	local FilterItemList = {}
-	table.sort(self.ItemList, self.SortBagItemPredicate)
-	local AllItemList = self.ItemList
-	local Length = #AllItemList
-	for i = 1, Length do
-		local Item = AllItemList[i]
-		if ConditionFun(Item) then
-			table.insert(FilterItemList, Item)
+	if self.ItemList then
+		table.sort(self.ItemList, self.SortBagItemPredicate)
+		local AllItemList = self.ItemList
+		local Length = #AllItemList
+		for i = 1, Length do
+			local Item = AllItemList[i]
+			if ConditionFun(Item) then
+				table.insert(FilterItemList, Item)
+			end
 		end
 	end
 
@@ -316,7 +361,18 @@ function BagMgr:OnNetMsgBagBuy(MsgBody)
 		return
 	end
 
-	MsgTipsUtil.ShowTips(string.format(LSTR(990001), Msg.BagCapacity - self.Capacity))
+	if Msg.ItemID > 0 and Msg.ItemNum > 0 and Msg.ScoreID > 0 and Msg.ScoreNum > 0 then
+		local UseText = string.format("%sx%d, %sx%d", ItemUtil.GetItemName(Msg.ItemID), Msg.ItemNum, _G.ScoreMgr:GetScoreNameText(Msg.ScoreID), Msg.ScoreNum)
+		MsgTipsUtil.ShowTipsByID(136012,nil, UseText)
+	elseif Msg.ItemID > 0 and Msg.ItemNum > 0 then
+		local UseText = string.format("%sx%d", ItemUtil.GetItemName(Msg.ItemID), Msg.ItemNum)
+		MsgTipsUtil.ShowTipsByID(136012,nil, UseText)
+	elseif Msg.ScoreID > 0 and Msg.ScoreNum > 0 then
+		local UseText = string.format("%sx%d", _G.ScoreMgr:GetScoreNameText(Msg.ScoreID), Msg.ScoreNum)
+		MsgTipsUtil.ShowTipsByID(136012, nil, UseText)
+	end
+
+	--MsgTipsUtil.ShowTips(string.format(LSTR(990001), Msg.BagCapacity - self.Capacity))
 
 	--扩充格子数量
 	self.Capacity = Msg.BagCapacity
@@ -342,6 +398,7 @@ function BagMgr:OnNetMsgBagUpdate(MsgBody, bForce)
 
 	--_G.UE.FProfileTag.StaticBegin("OnNetMsgBagUpdate")
 	local UpdateItem = Msg.UpdateItem
+	BagMgr:ShowFashionList(UpdateItem)
 	for _, v in ipairs(UpdateItem) do
 		if v.Type == ITEM_UPDATE_TYPE.ITEM_UPDATE_TYPE_ADD then
 			if v.IsTransfer == false then
@@ -358,9 +415,50 @@ function BagMgr:OnNetMsgBagUpdate(MsgBody, bForce)
 	end
 
 	--table.sort(self.ItemList, self.SortBagItemPredicate)
+	--这里房屋处理消息时必须要取当时背包信息，所以不能用postevent，postevent的背包信息是N条协议处理完的状态了
+	EventMgr:SendEvent(EventID.BagUpdateForHouse, UpdateItem)
 	EventMgr:PostEvent(EventID.BagUpdate, UpdateItem)
 
 	self:UpdateBagCapacityRed()
+end
+
+function BagMgr:ShowFashionList(UpdateItem)
+	local FashionMap = {}
+	local AllCfg = nil
+	for _, v in ipairs(UpdateItem) do
+		if v.Type == ITEM_UPDATE_TYPE.ITEM_UPDATE_TYPE_ADD or v.Type == ITEM_UPDATE_TYPE.ITEM_UPDATE_TYPE_RENEW  then
+			local Cfg = ItemCfg:FindCfgByKey(v.PstItem.ResID)
+			if Cfg and Cfg.ItemType == ITEM_TYPE_DETAIL.COLLAGE_FASHION and not self:IsItemUsed(Cfg) then
+				if AllCfg == nil then
+					AllCfg = StoreCfg:FindAllCfg("LabelMain = 1")
+				end
+				local Find = false
+				for _, StoreItem in ipairs(AllCfg) do
+					for _, Item in ipairs(StoreItem.Items) do
+						if Item.ID == v.PstItem.ResID and not _G.StoreMgr:CheckGoodsIsOwned(StoreItem) then
+							local ItemList = FashionMap[StoreItem.ID] or {}
+							table.insert(ItemList, v.PstItem)
+							FashionMap[StoreItem.ID] = ItemList
+							v.PstItem.HasFashinShow = true
+							Find = true
+							break
+						end
+					end
+					if Find == true then
+						break
+					end
+				end
+			end
+		end
+	end
+
+
+	for Key, Value in pairs(FashionMap) do
+		--弹出外观解锁
+		_G.SidePopUpMgr:AddSidePopUp(ProtoRes.side_popup_type.SIDE_POPUP_UNLOCK_FASHION, UIViewID.SidebarFashionWin, {ItemList = Value}) 
+	end
+	
+
 end
 
 function BagMgr:OnNetMsgBagDrop(MsgBody)
@@ -401,6 +499,18 @@ function BagMgr:SendMsgUseItemReq(GID, Num, UseType, ItemParams, InUseFrom)
 	self.UseItemTime = TimeUtil.GetServerTimeMS()
 end
 
+function BagMgr:SendMsgBatchUseItemReq(ItemInfoList)
+	local MsgID = CS_CMD.CS_CMD_BAG
+	local SubMsgID = SUB_MSG_ID.CS_CMD_BATCH_USE
+
+	local MsgBody = {}
+	MsgBody.Cmd = SubMsgID
+	MsgBody.BatchUse = { Reqs = ItemInfoList }
+
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+	self.UseItemTime = TimeUtil.GetServerTimeMS()
+end
+
 function BagMgr:SendMsgBagInfoReq()
 	local MsgID = CS_CMD.CS_CMD_BAG
 	local SubMsgID = SUB_MSG_ID.CS_CMD_BAG_INFO
@@ -429,7 +539,7 @@ function BagMgr:SendMsgBagTrimReq()
 
 	local MsgBody = {}
 	MsgBody.Cmd = SubMsgID
-	MsgBody.Trim = { }
+	MsgBody.Trim = {}
 
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
@@ -634,6 +744,9 @@ function BagMgr:DealWithEasyUse(Item)
 end
 
 function BagMgr:PopUpEasyUse(Item)
+	if Item.HasFashinShow == true then
+		return
+	end
 	_G.SidePopUpMgr:AddSidePopUp(ProtoRes.side_popup_type.SIDE_POPUP_EASY_USE, _G.UIViewID.SidePopUpEasyUse, Item, function(Item)
 		--FLOG_INFO("ShowConditional addItem: %s", ItemUtil.GetItemName(Item.ResID))
 		local ItemResID = Item.ResID
@@ -663,6 +776,10 @@ function BagMgr:PopUpEasyUse(Item)
 
 			if _G.AetherCurrentsMgr:IsTaskAetherCurrentItem(ItemResID) then
 				return _G.AetherCurrentsMgr:IsCanShowEasyUse(CurItemCfg, ItemGID)
+			end
+
+			if _G.MountMgr:IsMountSpeedItem(ItemResID) then
+				return _G.MountMgr:IsCanShowEasyUse(ItemResID)
 			end
 
 			return true
@@ -785,7 +902,6 @@ function BagMgr:OnNetMsgBagItemCdAllInfo(CdInfo)
 		self:UpdateFreezeCDTableDateAndStartTimer(GroupID, EndTime, FreezeCD)
 	end
 end
-
 
 function BagMgr:OnNetMsgBagItemCdInfo(CdInfo)
 	local CdData = CdInfo.Cd.CdList[1]
@@ -931,8 +1047,60 @@ function BagMgr:UseItemNoCD(GID, ItemParams)
 		MsgTipsUtil.ShowTips(CDMsg, nil)
 		return
 	end
+ 
+	if self:IsOverBonusStateTimeByUseItem(Item, Cfg, ItemParams) then
+		return
+	end
+
+	if self:IsOverGoldSauserBonusStateMaxNumByUseItem(Item, Cfg, ItemParams) then
+		return
+	end
+
+	self:SingOrInteractiveByUseItem(Item, Cfg, ItemParams)
 
 	-- 吟唱
+	--[[if Cfg.SingID ~= nil and Cfg.SingID ~= 0 then
+		local Func = FuncCfg:FindCfgByKey(Cfg.UseFunc)
+		if Func ~= nil and (Func.Func[1].Type == FuncType.UseAdventureRocord or Func.Func[2].Type == FuncType.UseAdventureRocord) then -- 使用冒险录
+			local Title = string.format(LSTR(990124), Cfg.ItemName)
+			local Msg = string.format(LSTR(990125), Cfg.ItemName)
+			MsgBoxUtil.ShowMsgBoxTwoOp(self, Title, Msg, function ()
+				if UIViewMgr:IsViewVisible(UIViewID.BagMain) then
+					UIViewMgr:HideView(UIViewID.BagMain)
+				end
+
+				if _G.MusicPlayerMgr:GetMajorIdleStat() then
+					self:UseSingItem(Item, Cfg.SingID, ItemParams)
+				else
+					self:ItemUseFunction(Item, ItemParams)
+				end
+			end)
+		else
+			if Func and Func.Func[1].Type == FuncType.TransScene then
+				if _G.SingBarMgr:GetMajorIsSinging() then --如果正在吟唱,不允许使用
+					_G.MsgTipsUtil.ShowTipsByID(109705) --109705("读条状态下，无法进行该操作")
+					return
+				end
+			end
+			if _G.MusicPlayerMgr:GetMajorIdleStat() then
+				self:UseSingItem(Item, Cfg.SingID, ItemParams)
+			else
+				self:ItemUseFunction(Item, ItemParams)
+			end
+		end
+	elseif Cfg.InteractiveID ~= nil and Cfg.InteractiveID ~= 0 and _G.MusicPlayerMgr:GetMajorIdleStat() then
+		self:UseInteractiveItem(Item , Cfg.InteractiveID, ItemParams)
+	else
+		self:ItemUseFunction(Item, ItemParams)
+	end]]--
+
+end
+
+function BagMgr:SingOrInteractiveByUseItem(Item, Cfg, ItemParams)
+	if Cfg == nil then
+		return
+	end
+
 	if Cfg.SingID ~= nil and Cfg.SingID ~= 0 then
 		local Func = FuncCfg:FindCfgByKey(Cfg.UseFunc)
 		if Func ~= nil and (Func.Func[1].Type == FuncType.UseAdventureRocord or Func.Func[2].Type == FuncType.UseAdventureRocord) then -- 使用冒险录
@@ -942,19 +1110,100 @@ function BagMgr:UseItemNoCD(GID, ItemParams)
 				if UIViewMgr:IsViewVisible(UIViewID.BagMain) then
 					UIViewMgr:HideView(UIViewID.BagMain)
 				end
-				self:UseSingItem(Item, Cfg.SingID, ItemParams)
+
+				if _G.MusicPlayerMgr:GetMajorIdleStat() then
+					self:UseSingItem(Item, Cfg.SingID, ItemParams)
+				else
+					self:ItemUseFunction(Item, ItemParams)
+				end
 			end)
 		else
-			self:UseSingItem(Item , Cfg.SingID, ItemParams)
+			if Func and Func.Func[1].Type == FuncType.TransScene then
+				if _G.SingBarMgr:GetMajorIsSinging() then --如果正在吟唱,不允许使用
+					_G.MsgTipsUtil.ShowTipsByID(109705) --109705("读条状态下，无法进行该操作")
+					return
+				end
+			end
+			if _G.MusicPlayerMgr:GetMajorIdleStat() then
+				self:UseSingItem(Item, Cfg.SingID, ItemParams, Cfg.SecondSingID)
+			else
+				self:ItemUseFunction(Item, ItemParams)
+			end
 		end
-	elseif Cfg.InteractiveID ~= nil and Cfg.InteractiveID ~= 0 then
+	elseif Cfg.InteractiveID ~= nil and Cfg.InteractiveID ~= 0 and _G.MusicPlayerMgr:GetMajorIdleStat() then
 		self:UseInteractiveItem(Item , Cfg.InteractiveID, ItemParams)
 	else
 		self:ItemUseFunction(Item, ItemParams)
 	end
-
 end
 
+function BagMgr:IsOverBonusStateTimeByUseItem(Item, Cfg, ItemParams)
+	if Cfg == nil then
+		return false
+	end
+	local Func = FuncCfg:FindCfgByKey(Cfg.UseFunc)
+	if Func ~= nil and (Func.Func[1].Type == FuncType.OpBonusState) then -- 加成物品
+		local BonusStateValue = Func.Func[1].Value[1]
+		local BonusStateCfg = BonusStateBuffCfg:FindCfgByKey(BonusStateValue)
+		if BonusStateCfg then
+			local LiveTime = BonusStateCfg.LiveTime or 0
+			local MaxPileTime = LiveTime * (BonusStateCfg.MaxPile or 0)
+			local CurTime = _G.BonusStateMgr:GetBonusStateEndTimeMajor(BonusStateValue) - TimeUtil.GetServerTime()
+			if MaxPileTime > 0 and CurTime > 0 and CurTime + LiveTime >= MaxPileTime then
+				local Title = LSTR(10032)
+				local Msg = string.format(LSTR(990154), _G.LocalizationUtil.GetCountdownTimeForSimpleTime(CurTime, ""), _G.LocalizationUtil.GetCountdownTimeForSimpleTime(MaxPileTime, ""))
+				MsgBoxUtil.ShowMsgBoxTwoOp(self, Title, Msg, function ()
+					self:SingOrInteractiveByUseItem(Item, Cfg, ItemParams)
+				end)
+
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+--- 是否超过金碟加成的奖励上限
+function BagMgr:IsOverGoldSauserBonusStateMaxNumByUseItem(Item, Cfg, ItemParams)
+	if Cfg == nil then
+		return false
+	end
+	local Func = FuncCfg:FindCfgByKey(Cfg.UseFunc)
+	if Func ~= nil and (Func.Func[1].Type == FuncType.OpBonusState) then -- 加成物品
+		local BonusStateValue = Func.Func[1].Value[1]
+		local BonusStateCfg = BonusStateBuffCfg:FindCfgByKey(BonusStateValue)
+		if BonusStateCfg then
+			local EffectItems = BonusStateCfg.EffectItems
+			if not EffectItems or not next(EffectItems) then
+				return false
+			end
+			local EffectItem = EffectItems[1]
+			if not EffectItem then
+				return false
+			end
+
+			local ItemVals = EffectItem.Values
+			if not ItemVals or not next(ItemVals) then
+				return false
+			end
+			local MaxCoinNum = ItemVals[4] or 0
+			local SingleCoinNum = ItemVals[3] or 0
+			local RemainScoreCanGet = _G.BonusStateMgr:GetBonusStateScoreUseMajor(BonusStateValue)
+			local RemainScoreAfterUseItem = RemainScoreCanGet + SingleCoinNum
+			if RemainScoreAfterUseItem > MaxCoinNum then
+				local Title = LSTR(10032)
+				local Msg = string.format(LSTR(990154), string.formatint(RemainScoreCanGet), string.formatint(RemainScoreAfterUseItem - MaxCoinNum))
+				MsgBoxUtil.ShowMsgBoxTwoOp(self, Title, Msg, function ()
+					self:SingOrInteractiveByUseItem(Item, Cfg, ItemParams)
+				end)
+				return true
+			end
+		end
+	end
+
+	return false
+end
 
 function BagMgr:IsItemUsed(ItemCfg)
 	if ItemCfg == nil then
@@ -1051,40 +1300,54 @@ function BagMgr:ItemUseFunction(Item, ItemParams)
 			end
 			_G.UIViewMgr:ShowView(UIViewID)
 		elseif FuncTypeCond[FuncType.WindPulseMapActive] then
-			local CurMapID = _G.PWorldMgr:GetCurrMapResID()
-			if not CurMapID then
-				return
-			end
-			if _G.AetherCurrentsMgr:IsMapPointsAllActived(CurMapID) ~= MapAllPointActivateState.NotComp then
-				_G.MsgTipsUtil.ShowTipsByID(306211)
-				
-			else
+			if _G.AetherCurrentsMgr:PointActiveMapCond(true) then
 				local bInSearchMachine
 				if ItemParams and type(ItemParams) == "table" then
 					bInSearchMachine = ItemParams.bInSearchMachine
 				end
 				_G.AetherCurrentsMgr:ShowSecondConfirmPanel(bInSearchMachine)
 			end
-		elseif FuncTypeCond[FuncType.UseAdventureRocord] then	-- 使用冒险录
-			_G.NewTutorialMgr:OnReadyUpgrade()
-			ModuleOpenMgr:SetIsOnDirectUpState(true)
+		elseif FuncTypeCond[FuncType.UseAdventureRecord] then	-- 使用冒险录
 			local AdventureRecordCfg = AdventureRecordCfg:FindCfg(string.format("ItemID = %d", Item.ResID))
 			if AdventureRecordCfg ~= nil then
 				if AdventureRecordCfg.DialogueID ~= 0 then
 					local function CallBack()
+						-- 物品使用条件
+						local LimitValue = nil
+						local EntityID = nil
+						if (ItemParams ~= nil) and (ItemParams.LimitValue ~= nil) then
+							LimitValue = ItemParams.LimitValue
+							EntityID = ItemParams.TargetEntityID
+						end
+						if Item == nil or not self:ItemUseCondition(Item, LimitValue, EntityID) then
+							return
+						end
+						_G.NewTutorialMgr:OnReadyUpgrade()
+						ModuleOpenMgr:SetIsOnDirectUpState(true)
 						_G.UpgradeMgr.IsOnDirectUpState = true
 						_G.UpgradeMgr.IsLevelUpgrade = false
+						_G.UpgradeMgr.LockGuideList = {}
 						self:SendMsgUseItemReq(Item.GID, 1, 0)
 					end
 					_G.NpcDialogMgr:PlayDialogLib(AdventureRecordCfg.DialogueID, nil, nil, CallBack)
+					if _G.UIViewMgr:IsViewVisible(_G.UIViewID.NpcDialogueMainPanel) then
+						local View = _G.UIViewMgr:FindView(_G.UIViewID.NpcDialogueMainPanel)
+						if View and View.Dialogue and View.Dialogue.UpgradeNpcDialogue then
+							View.Dialogue.UpgradeNpcDialogue:PlayAnimIn()
+						end
+					end
 				else
+					_G.NewTutorialMgr:OnReadyUpgrade()
+					ModuleOpenMgr:SetIsOnDirectUpState(true)
 					_G.UpgradeMgr.IsOnDirectUpState = true
 					_G.UpgradeMgr.IsLevelUpgrade = false
+					_G.UpgradeMgr.LockGuideList = {}
 					self:SendMsgUseItemReq(Item.GID, 1, 0)
 				end
 			end
 		else
-			if Item.Num > 1 and Func.BatchUseNum > 1 then
+			local CanBatchUse = (Item.Num or 0) > 1 and (Func.BatchUseNum or 0) > 1
+			if CanBatchUse then
 				Item.BatchUse = true
 				_G.UIViewMgr:ShowView(_G.UIViewID.BagDepotTransfer, {Item = Item}) -- 批量使用
 			else
@@ -1139,13 +1402,18 @@ function BagMgr:ItemUseCondition(Item, LimitValue, InEntityID, bHideErrorTips)
 	return CondRlt
 end
 
-function BagMgr:UseSingItem(Item, SingID, ItemParams)
+function BagMgr:UseSingItem(Item, SingID, ItemParams, SecondSingID)
 	local SingFinshCallback = function (IsBreak)
 		if not IsBreak then
 			self:ItemUseFunction(Item, ItemParams)
 		end
 	end
+
 	SingBarMgr:MajorSingBySingStateIDWithoutInteractiveID(SingID, SingFinshCallback, {ResID = Item.ResID})
+	if SecondSingID and SecondSingID > 0 then
+		local MajorEntityID = MajorUtil.GetMajorEntityID()
+		SingBarMgr:InsertSecondSingInfoManually(MajorEntityID, SecondSingID)
+	end
 end
 
 function BagMgr:UseInteractiveItem(Item, InteractiveID, ItemParams)
@@ -1321,6 +1589,14 @@ function BagMgr:IsMedicineItem(ResID)
 	return Cfg.ItemType == ITEM_TYPE_DETAIL.CONSUMABLES_MEDICINE and Cfg.UseFunc > 0
 end
 
+function BagMgr:SetShowCount()
+    self.bShowCount = (self.bShowCount or 0) + 1
+	if self.bShowCount >= 200 then
+		self.bShowCount = 0
+		_G.ObjectMgr:CollectGarbage(false, true, false)
+	end
+end
+
 function BagMgr:GetItemByCondition(ConditionFun)
 	if type(ConditionFun) ~= "function" then
 		return {}
@@ -1336,6 +1612,5 @@ function BagMgr:GetItemByCondition(ConditionFun)
 	end
 	return RetList
 end
-
 
 return BagMgr

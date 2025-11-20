@@ -31,6 +31,9 @@ end
 
 function PreviewCompanionVM:UpdateCompanionInfo(CompanionId)
     local Cfg = CompanionCfg:FindCfgByKey(CompanionId)
+    if Cfg == nil then
+        return
+    end
     self.IsMergeCompanion = Cfg.MergeGroupID and Cfg.MergeGroupID ~= 0 or false
     self.SelectedCompanionID = CompanionId
     self.CompanionName = Cfg.Name

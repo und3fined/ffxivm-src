@@ -40,4 +40,21 @@ function NetworkUtil.GetProtoResName(MsgID)
 	return Desc.res
 end
 
+-- MsgID反查协议名称
+local IdToNameMap
+
+---IDToName
+---@param MsgID table
+function NetworkUtil.IDToName(MsgID)
+	if not IdToNameMap then
+		IdToNameMap = {}
+		local ProtoCS = require("Protocol/ProtoCS")
+		for k, v in pairs(ProtoCS.CS_CMD) do
+			IdToNameMap[v] = k
+		end
+	end
+
+	return IdToNameMap[MsgID] or "Unknown"
+end
+
 return NetworkUtil

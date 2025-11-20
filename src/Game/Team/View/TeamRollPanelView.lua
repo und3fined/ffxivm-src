@@ -100,11 +100,11 @@ function TeamRollPanelView:OnShow()
 			end
 		end
 	end
-	if TeamRollItemVM.IsAllOperated then
+	if not _G.RollMgr:HasAssignedReward() then
 		self.IsNeedShowTips = false
-		self.TableViewGoodsAdapter:SetSelectedIndex(1)
 		-- EventMgr:SendEvent(EventID.TeamRollItemSelectEvent, {AwardID = self.CurrentSelectedItemVM.AwardID, IsSwitch = true, IsUpdate = true, Index = self.CurrentSelectedIndex, TeamID = self.CurrentSelectedItemVM.TeamID})
 	end
+	self.TableViewGoodsAdapter:SetSelectedIndex(1)
 
 	-- if self.CurrentSelectedItemVM ~= nil and TeamRollItemVM.IsShowTips then
 	-- 	self.ItemTips.ViewModel:UpdateVM(self.CurrentSelectedItemVM)
@@ -112,7 +112,17 @@ function TeamRollPanelView:OnShow()
 	-- self.IsShowView = false
 
 	UIViewMgr:HideView(UIViewID.ItemTips)
-	self:UpdateButtonState(TeamRollItemVM.IsAllOperated)
+	self:UpdateButtonState(self:OnCheckAwardsIsOperated())
+end
+
+function TeamRollPanelView:OnCheckAwardsIsOperated()
+	for i = 1, TeamRollItemVM.AwardList:Length() do
+		local AwardItemVM = TeamRollItemVM.AwardList:Get(i)
+		if not AwardItemVM.IsOperated then
+			return false
+		end
+	end
+	return true
 end
 
 function TeamRollPanelView:OnHide()
@@ -231,6 +241,7 @@ function TeamRollPanelView:UpdateButtonState(NewValue)
 		-- self.BtnNeed:UpdateBtnEnable(CommBtnColorType.Disable)
 		self.BtnNeed:UpdateImage(CommBtnColorType.Disable)
 		self.BtnNeed:UpdateTextColor(CommBtnColorType.Disable)
+		TeamRollItemVM.IsAllOperated = true
 	else
 		self.BtnGiveUp:UpdateImage(CommBtnColorType.Normal)
 		self.BtnGiveUp:UpdateTextColor(CommBtnColorType.Normal)

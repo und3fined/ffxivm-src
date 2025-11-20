@@ -63,5 +63,13 @@ function MapMarkerPVPPlayer:GetAreaMapPos()
 	end
 end
 
+function MapMarkerPVPPlayer:GetRoleID()
+	return self.RoleID
+end
+
+function MapMarkerPVPPlayer:CanDragSelect()
+	return true
+end
+
 
 return MapMarkerPVPPlayer

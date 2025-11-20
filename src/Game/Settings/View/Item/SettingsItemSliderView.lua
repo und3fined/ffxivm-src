@@ -11,6 +11,7 @@ local UIUtil = require("Utils/UIUtil")
 local SettingsUtils = require("Game/Settings/SettingsUtils")
 local SettingsDefine = require("Game/Settings/SettingsDefine")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 local LSTR = _G.LSTR
 local ItemDisplayStyle = SettingsDefine.ItemDisplayStyle
 
@@ -66,6 +67,7 @@ end
 
 function SettingsItemSliderView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.QualityLevelChg, self.OnQualityLevelChg)
+	self:RegisterGameEvent(_G.EventID.OnResetHandleCusAction, self.OnResetCursorSpeed)
 end
 
 function SettingsItemSliderView:OnRegisterBinder()
@@ -102,6 +104,16 @@ end
 
 -- 	self:SetSlider()
 -- end
+
+function SettingsItemSliderView:OnResetCursorSpeed(Param)
+	if Param == SettingsHandleDefine.HandleMainType.SkillType then
+		return
+	end
+	local SettingCfg = self.ItemVM.SettingCfg
+	if SettingCfg and SettingCfg.SaveKey == "HandleCursorSpeed" then
+		self:SetSlider()
+	end
+end
 
 ---进度条。Value[最大值、默认值]
 function SettingsItemSliderView:SetSlider()
@@ -159,8 +171,11 @@ function SettingsItemSliderView:SetSlider()
 					if Percent < 0 then
 						Percent = 0
 					end
-					self.SliderBar:SetValue(Percent)
-					self:SetCaptureEndCallBack(Percent)
+
+					if self.SliderBar and _G.CommonUtil.IsObjectValid(self.SliderBar) then
+						self.SliderBar:SetValue(Percent)
+						self:SetCaptureEndCallBack(Percent)
+					end
 				end
 
 				MsgBoxUtil.ShowMsgBoxTwoOp(

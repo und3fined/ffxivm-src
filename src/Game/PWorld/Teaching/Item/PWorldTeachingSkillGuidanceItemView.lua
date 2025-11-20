@@ -61,35 +61,33 @@ function PWorldTeachingSkillGuidanceItemView:OnShow()
 	UIUtil.SetIsVisible(self.GestureSelect.Btn, false)
 end
 
-function PWorldTeachingSkillGuidanceItemView:SetSkillInfo(SkillID)
-
+function PWorldTeachingSkillGuidanceItemView:SetSkillInfo(SkillID, TipsDir)
+	self.GestureSelect:SetFunc(true)
 	UIUtil.SetIsVisible(self.TextTipsD, false)
 	UIUtil.SetIsVisible(self.TextTipsL, false)
 	UIUtil.SetIsVisible(self.TextTipsR, false)
 	UIUtil.SetIsVisible(self.TextTipsS, false)
-
 	local SkillGuideCfg = PworldSkillGuideCfg:FindCfgByKey(SkillID)
-	if not SkillGuideCfg then
+	if not SkillGuideCfg or SkillGuideCfg.Content == "" then
 		return
 	end
-
-	local Arrow = SkillGuideCfg.Dir
-	if Arrow == 0 then
+	local Content = SkillGuideCfg.Content
+	if TipsDir == 0 then
 		UIUtil.SetIsVisible(self.TextTipsS, true)
-		self.TextTipsS:SetText(SkillGuideCfg.Content)
-		self.TextTipsS:NearBySkill(TutorialDefine.TutorialArrowDir.Bottom)
-	elseif Arrow == 1 then
+		self.TextTipsS:SetText(Content)
+		self.TextTipsS:NearBy(TutorialDefine.TutorialArrowDir.Top)
+	elseif TipsDir == 1 then
 		UIUtil.SetIsVisible(self.TextTipsD, true)
-		self.TextTipsD:SetText(SkillGuideCfg.Content)
-		self.TextTipsD:NearBySkill(TutorialDefine.TutorialArrowDir.Top)
-	elseif Arrow == 2 then
+		self.TextTipsD:SetText(Content)
+		self.TextTipsD:NearBy(TutorialDefine.TutorialArrowDir.Bottom)
+	elseif TipsDir == 2 then
 		UIUtil.SetIsVisible(self.TextTipsL, true)
-		self.TextTipsL:SetText(SkillGuideCfg.Content)
-		self.TextTipsL:NearBySkill(TutorialDefine.TutorialArrowDir.Right)
-	elseif Arrow == 3 then
+		self.TextTipsL:SetText(Content)
+		self.TextTipsL:NearBy(TutorialDefine.TutorialArrowDir.Left)
+	elseif TipsDir == 3 then
 		UIUtil.SetIsVisible(self.TextTipsR, true)
-		self.TextTipsR:SetText(SkillGuideCfg.Content)
-		self.TextTipsR:NearBySkill(TutorialDefine.TutorialArrowDir.Left)
+		self.TextTipsR:SetText(Content)
+		self.TextTipsR:NearBy(TutorialDefine.TutorialArrowDir.Right)
 	end
 end
 

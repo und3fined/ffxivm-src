@@ -22,8 +22,8 @@ function PerformanceAssistantNewPanelVM:Clear()
 	self.FinishPageVisible = false
 	self.Percent = 0
 
-	self.PanelTrackVisible = false
-	self.PanelTrackAllVisible = false
+	self.PanelTrackVisible = false	--单音阶的掉落音符背景
+	self.PanelTrackAllVisible = false  --全音阶的掉落音符背景
 	-- self.MonoKeyVisible = false
 	-- self.MonoLargeKeyVisible = false
 	-- self.PerformanceFullKeyVisible = false

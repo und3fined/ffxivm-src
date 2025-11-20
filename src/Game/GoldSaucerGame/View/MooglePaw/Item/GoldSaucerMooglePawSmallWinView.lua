@@ -95,7 +95,6 @@ function GoldSaucerMooglePawSmallWinView:OnShow()
 		return
 	end
 	self.bEnterGame = Params.bEnterGame
-	-- FLOG_INFO("GoldSaucerMooglePawSmallWinView:OnShow() bEnterGame = %s", self.bEnterGame)
 	local GameType = Params.GameType
 	self.GameType = GameType
 	self.ClientDefine = MiniGameClientConfig[GameType]

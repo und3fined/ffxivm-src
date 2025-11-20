@@ -47,7 +47,6 @@ function StoreEquipPartVM:Ctor()
 	self.EquipmentID = nil
 	self.IsSelect = false
 
-	self.BtnViewVisible = true
 end
 
 function StoreEquipPartVM:IsEqualVM(Value)
@@ -70,15 +69,15 @@ function StoreEquipPartVM:UpdateVM(Value)
 		-- if not self.bOwned then
 		-- 	self.bOwned = _G.HaircutMgr.CheckHairUnlock(self.ResID)
 		-- end
-		local HairUnlockCfg = HairUnlockCfg:FindCfgByItemID(Value.ItemID)
-		if HairUnlockCfg == nil then
+		local HairCfg = HairUnlockCfg:FindCfgByItemID(Value.ItemID)
+		if HairCfg == nil then
 			FLOG_ERROR("StoreEquipPartVM  ItemType is hair, But HairUnlockCfg is nil")
 			return
 		end
-		self.EquipmentID = HairUnlockCfg.HairID
+		self.EquipmentID = HairCfg.HairID
 		self.Part = ProtoCommon.equip_part.EQUIP_PART_BODY_HAIR
 
-		self.Icon = _G.StoreMgr:GetHairIconByHairID(HairUnlockCfg.HairID)
+		self.Icon = _G.StoreMgr:GetHairIconByHairID(HairCfg.HairID)
 	else
 		self.Icon = UIUtil.GetIconPath(Value.IconID)
 		self.EquipmentID = Value.EquipmentID
@@ -95,13 +94,6 @@ function StoreEquipPartVM:UpdateVM(Value)
     self.IsSelect = false
 	-- local SignIndex = StoreDefine.EquipPartEnum[TempEquipmentCfg.Part]
 	-- self.SignIcon = StoreDefine.EquipPartSign[SignIndex]
-
-	--- 外部指定是否显示小眼睛
-	if Value.BtnViewVisible == nil then
-		self.BtnViewVisible = true
-	else
-		self.BtnViewVisible = Value.BtnViewVisible
-	end
 
 end
 

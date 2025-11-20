@@ -1,12 +1,12 @@
-
-
-local Util = {}
+local PhotoEffectUtil = {}
 local EffectUtil = require("Utils/EffectUtil")
-local FadeInTime = 0
 local ActorUtil = require("Utils/ActorUtil")
-local MajorUtil = require("Utils/MajorUtil")
+local AnimationUtil = require("Utils/AnimationUtil")
 
-function Util.CreateEffect(EntityID, EffRes)
+local FadeInTime = 0
+local EAvatarPartType = _G.UE.EAvatarPartType
+
+function PhotoEffectUtil.CreateEffect(EntityID, EffRes)
     _G.FLOG_INFO(string.format('[Photo][PhotoEffectUtil][CreateEffect] EntityID = %s, EffRes = %s',
         tostring(EntityID),
         tostring(EffRes)
@@ -30,55 +30,53 @@ function Util.CreateEffect(EntityID, EffRes)
     return EffectUtil.PlayVfx(VfxParameter, FadeInTime)
 end
 
-function Util.DelEffect(VfxID)
+function PhotoEffectUtil.DelEffect(VfxID)
     EffectUtil.StopVfx(VfxID)
 end
 
-function Util.PlayAvatarEffect(Actor, EffName, IsShow)
+function PhotoEffectUtil.PlayAvatarEffect(Actor, EffName, IsShow)
     local Avatar = Actor:GetAvatarComponent()
     if Avatar then
         Avatar:SetEffect(IsShow, EffName);
     end
 end
 
-function Util.PauseAnim(Actor, IsPause)
-    local AnimComp = Actor:GetAnimationComponent()
-    if AnimComp then
-        AnimComp:PauseAnimation(IsPause);
-    end
+local OtherParts = {EAvatarPartType.RIDE_MASTER, EAvatarPartType.Ornament_Umbrella, EAvatarPartType.Ornament_Wing}
+function PhotoEffectUtil.PauseAnim(Actor, IsPause)
+    AnimationUtil.SetPauseAnimAndOtherPart(Actor, IsPause, OtherParts)
 end
 
 ---@region State function distribute
 
 -- 石化
-function Util.Rigidify(Actor)
-    Util.PlayAvatarEffect(Actor, "Petrify", true)
-    Util.PauseAnim(Actor, true)
+function PhotoEffectUtil.Rigidify(Actor)
+    PhotoEffectUtil.PlayAvatarEffect(Actor, "Petrify", true)
+    PhotoEffectUtil.PauseAnim(Actor, true)
 
     return function()
-        Util.PlayAvatarEffect(Actor, "Petrify", false)
-        Util.PauseAnim(Actor, false)
+        PhotoEffectUtil.PlayAvatarEffect(Actor, "Petrify", false)
+        PhotoEffectUtil.PauseAnim(Actor, false)
     end
 end
 
 -- 冰冻
-function Util.Frozen(Actor)
-    Util.PlayAvatarEffect(Actor, "Freeze", true)
-    Util.PauseAnim(Actor, true)
+function PhotoEffectUtil.Frozen(Actor)
+    PhotoEffectUtil.PlayAvatarEffect(Actor, "Freeze", true)
+    PhotoEffectUtil.PauseAnim(Actor, true)
 
     return function()
-        Util.PlayAvatarEffect(Actor, "Freeze", false)
-        Util.PauseAnim(Actor, false)
+        PhotoEffectUtil.PlayAvatarEffect(Actor, "Freeze", false)
+        PhotoEffectUtil.PauseAnim(Actor, false)
     end
 end
 
 -- -- 魅惑
--- function Util.Charm(Actor)
+-- function PhotoEffectUtil.Charm(Actor)
     
 --     return 
 -- end
 
-function Util.PlayStat(EntityID, ID)
+function PhotoEffectUtil.PlayStat(EntityID, ID)
     local Actor = ActorUtil.GetActorByEntityID(EntityID)
     if not Actor then
         _G.FLOG_ERROR(string.format("[Photo][PhotoEffectUtil][PlayStat] Entity = nil ID = %s",
@@ -87,12 +85,12 @@ function Util.PlayStat(EntityID, ID)
     end
 
     if ID == 1 then
-        return Util.Frozen(Actor)
+        return PhotoEffectUtil.Frozen(Actor)
     elseif ID == 2 then
-        return Util.Rigidify(Actor)
+        return PhotoEffectUtil.Rigidify(Actor)
     -- elseif ID == 5 then
-    --     return Util.Charm(Actor)
+    --     return PhotoEffectUtil.Charm(Actor)
     end
 end
 
-return Util
+return PhotoEffectUtil

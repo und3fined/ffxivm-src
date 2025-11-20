@@ -59,8 +59,8 @@ function OpsActivityTreasureChestBuyItemWinVM:SetTreasureChestBuyWinInfo()
     self.PropsImgIcon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(self.PropsSlotResID))
     self.FreeImgIcon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(self.FreeSlotResID))
 
-    local desc1 = RichTextUtil.GetText(string.format("%s×%d", self.PropsSlotName, self.PropsPerNum), "d1ba8e", 0, nil)
-    local desc2 = RichTextUtil.GetText(string.format("%s×%d", self.FreeSlotName, self.FreePerNum), "d1ba8e", 0, nil)
+    local desc1 = RichTextUtil.GetText(string.format("%s×%d", self.PropsSlotName, self.PropsPerNum), "d1ba8e")
+    local desc2 = RichTextUtil.GetText(string.format("%s×%d", self.FreeSlotName, self.FreePerNum), "d1ba8e")
     self.PurchaseDesc = string.format(ExchangeNode.NodeDesc, desc1, desc2)
 
 end

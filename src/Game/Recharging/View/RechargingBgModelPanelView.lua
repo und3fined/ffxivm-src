@@ -102,14 +102,14 @@ end
 function RechargingBgModelPanelView:OnActive()
 	local ShopKeeper = RechargingMgr:GetShopkeeper()
 	if nil ~= ShopKeeper then
-		ShopKeeper:SetActorVisibility(true, _G.UE.EHideReason.Common)
+		ShopKeeper:SetActorVisibility(true, _G.UE.EHideReason.Disable)
 	end
 end
 
 function RechargingBgModelPanelView:OnInactive()
 	local ShopKeeper = RechargingMgr:GetShopkeeper()
 	if nil ~= ShopKeeper then
-		ShopKeeper:SetActorVisibility(false, _G.UE.EHideReason.Common)
+		ShopKeeper:SetActorVisibility(false, _G.UE.EHideReason.Disable)
 	end
 end
 
@@ -119,11 +119,24 @@ function RechargingBgModelPanelView:OnRegisterUIEvent()
 end
 
 function RechargingBgModelPanelView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(_G.EventID.ShowUI, self.OnOtherViewShow)
+	self:RegisterGameEvent(_G.EventID.HideUI, self.OnOtherViewHide)
 end
 
 function RechargingBgModelPanelView:OnRegisterBinder()
 	self:RegisterBinders(RechargingBgModelVM, self.Binders)
+end
+
+function RechargingBgModelPanelView:OnOtherViewShow(ViewID)
+	if ViewID == UIViewID.PreviewMountView or ViewID == UIViewID.PreviewCompanionView or ViewID == UIViewID.PreviewRoleAppearanceView then
+		self:OnInactive()
+	end
+end
+
+function RechargingBgModelPanelView:OnOtherViewHide(ViewID)
+	if ViewID == UIViewID.PreviewMountView or ViewID == UIViewID.PreviewCompanionView or ViewID == UIViewID.PreviewRoleAppearanceView then
+		self:OnActive()
+	end
 end
 
 function RechargingBgModelPanelView:OnInGiftChanged(NewValue, OldValue)

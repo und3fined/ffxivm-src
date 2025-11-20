@@ -34,7 +34,8 @@ end
 function WardrobeConsumeItemVM:UpdateVM(Value)
     self.Num = Value.Num
     local Item = ItemUtil.CreateItem(Value.Item, 0)
-    self.BagSlotVM:UpdateVM(Item, {PanelBagVisible = true})
+    self.BagSlotVM:UpdateVM(Item, {PanelBagVisible = true, IsShowNum = false, IconChooseVisible = false})
+    self.BagSlotVM.IconChooseVisible = false
 end
 
 function WardrobeConsumeItemVM:UpdateItemNum(Num)

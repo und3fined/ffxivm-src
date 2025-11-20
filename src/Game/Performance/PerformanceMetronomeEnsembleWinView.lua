@@ -11,6 +11,8 @@ local UIUtil = require("Utils/UIUtil")
 local MusicPerformanceMetronomeSettingVM = require("Game/Performance/VM/MusicPerformanceMetronomeSettingVM")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanceUtil")
 
 local ProtoCS = require ("Protocol/ProtoCS")
@@ -24,28 +26,33 @@ local PERFORM_CMD = ProtoCS.PerformCmd
 ---@class PerformanceMetronomeEnsembleWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BG Comm2FrameLView
----@field BtnAssistantHelp CommHelpBtnView
----@field BtnBPMHelp CommHelpBtnView
----@field BtnBeatHelp CommHelpBtnView
+---@field BtnAssistantHelp CommInforBtnView
+---@field BtnBPMHelp CommInforBtnView
+---@field BtnBeatHelp CommInforBtnView
 ---@field BtnCancel CommBtnLView
 ---@field BtnDefault CommBtnLView
 ---@field BtnInitiate CommBtnLView
 ---@field DropDownAssistant CommDropDownListView
 ---@field DropDownCountDown CommDropDownListView
 ---@field Metronome PerformanceMetronomeItemView
----@field PanelAssistantIntro UFCanvasPanel
----@field PanelBPMIntro UFCanvasPanel
 ---@field PanelBPMSlider UFCanvasPanel
----@field PanelBeatIntro UFCanvasPanel
 ---@field PanelBeatSlider UFCanvasPanel
 ---@field SliderBPM CommSliderHorizontalView
 ---@field SliderBeat CommSliderHorizontalView
----@field TextAssistantIntro UFTextBlock
----@field TextBPMIntro UFTextBlock
+---@field TextAssistSetting UFTextBlock
+---@field TextAssistant UFTextBlock
+---@field TextBPMSetting UFTextBlock
 ---@field TextBPMValue UFTextBlock
----@field TextBeatIntro UFTextBlock
+---@field TextBeatSetting UFTextBlock
 ---@field TextBeatValue UFTextBlock
+---@field TextCountDown UFTextBlock
+---@field TextCountDownValue UFTextBlock
+---@field TextMetroSetting UFTextBlock
+---@field TextPreview UFTextBlock
 ---@field TextTempo UFTextBlock
+---@field TextTips UFTextBlock
+---@field AnimMetroBgShine UWidgetAnimation
+---@field AnimTempoBgShine UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceMetronomeEnsembleWinView = LuaClass(UIView, true)
 
@@ -61,19 +68,24 @@ function PerformanceMetronomeEnsembleWinView:Ctor()
 	--self.DropDownAssistant = nil
 	--self.DropDownCountDown = nil
 	--self.Metronome = nil
-	--self.PanelAssistantIntro = nil
-	--self.PanelBPMIntro = nil
 	--self.PanelBPMSlider = nil
-	--self.PanelBeatIntro = nil
 	--self.PanelBeatSlider = nil
 	--self.SliderBPM = nil
 	--self.SliderBeat = nil
-	--self.TextAssistantIntro = nil
-	--self.TextBPMIntro = nil
+	--self.TextAssistSetting = nil
+	--self.TextAssistant = nil
+	--self.TextBPMSetting = nil
 	--self.TextBPMValue = nil
-	--self.TextBeatIntro = nil
+	--self.TextBeatSetting = nil
 	--self.TextBeatValue = nil
+	--self.TextCountDown = nil
+	--self.TextCountDownValue = nil
+	--self.TextMetroSetting = nil
+	--self.TextPreview = nil
 	--self.TextTempo = nil
+	--self.TextTips = nil
+	--self.AnimMetroBgShine = nil
+	--self.AnimTempoBgShine = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -140,7 +152,7 @@ function PerformanceMetronomeEnsembleWinView:InitStaticText()
 	self.TextCountDown:SetText(_G.LSTR(830100))
 	self.TextCountDownValue:SetText(_G.LSTR(830101))
 	
-	self.BtnCancel:SetBtnName(_G.LSTR(830060))
+	self.BtnCancel:SetBtnName(_G.LSTR(10003))
 	self.BtnDefault:SetBtnName(_G.LSTR(830061))
 	self.BtnInitiate:SetBtnName(_G.LSTR(830102))
 end
@@ -209,6 +221,10 @@ function PerformanceMetronomeEnsembleWinView:OnRegisterUIEvent()
 end
 
 function PerformanceMetronomeEnsembleWinView:OnClickedBtnInitiate()
+	if _G.MusicPerformanceMgr:IsTeamMembersInPerformanceAssist() then
+		return
+	end
+	
 	-- 设置好了合奏设置后，点击确定按钮 向后台发送确认请求
 	local MsgID = CS_CMD.CS_CMD_PERFORM
 	local SubID = PERFORM_CMD.EnsembleCmdAskConfirm
@@ -253,6 +269,23 @@ function PerformanceMetronomeEnsembleWinView:OnClickedBtnCancel()
 	_G.UIViewMgr:HideView(_G.UIViewID.MusicPerformanceEnsembleMetronmeView)
 end
 
+--节拍tip(如1:1)背景特效
+function PerformanceMetronomeEnsembleWinView:OnIsPlayTempoTipBgEffectChanged(InIsPlayTempoTipBgEffect)
+	if InIsPlayTempoTipBgEffect == true then
+		self:PlayAnimation(self.AnimTempoBgShine)
+		self.MetronomeSettingVM.IsPlayTempoTipBgEffect = false
+	end
+end
+
+--节拍器item背景特效
+function PerformanceMetronomeEnsembleWinView:OnIsPlayMetronomeItemBgEffectChanged(InIsPlayMetronomeItemBgEffect)
+	if InIsPlayMetronomeItemBgEffect == true then
+		self:PlayAnimation(self.AnimMetroBgShine)
+		self.MetronomeSettingVM.IsPlayMetronomeItemBgEffect = false
+	end
+end
+
+
 function PerformanceMetronomeEnsembleWinView:OnRegisterGameEvent()
 
 end
@@ -260,12 +293,15 @@ end
 function PerformanceMetronomeEnsembleWinView:OnRegisterBinder()
 	local Binders = {
 		{ "TempoTip", UIBinderSetText.New(self, self.TextTempo) },
+		{ "TempoTipColor", UIBinderSetColorAndOpacityHex.New(self, self.TextTempo) },
 		{ "BeatValue", UIBinderSetText.New(self, self.TextBeatValue) },
 		{ "BPMValue", UIBinderSetText.New(self, self.TextBPMValue) },
 		{ "PanelBeatIntroVisible", UIBinderSetIsVisible.New(self, self.PanelBeatIntro, false, false) },
 		{ "PanelBPMIntroVisible", UIBinderSetIsVisible.New(self, self.PanelBPMIntro, false, false) },
 		{ "PanelAssistantIntroVisible", UIBinderSetIsVisible.New(self, self.PanelAssistantIntro, false, false) },
 		{ "BtnDefaultVisible", UIBinderSetIsVisible.New(self, self.BtnDefault, false, false) },
+		{ "IsPlayTempoTipBgEffect", UIBinderValueChangedCallback.New(self, nil, self.OnIsPlayTempoTipBgEffectChanged) },
+		{ "IsPlayMetronomeItemBgEffect", UIBinderValueChangedCallback.New(self, nil, self.OnIsPlayMetronomeItemBgEffectChanged) },
 	}
 
 	self:RegisterBinders(self.MetronomeSettingVM, Binders)

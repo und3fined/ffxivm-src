@@ -1,13 +1,14 @@
 ---
 --- Author: anypkvcai
 --- DateTime: 2022-12-27 10:30
---- Description: 点击地图放置标记项
+--- Description: 点击地图手动标记项
 ---
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local WorldMapVM = require("Game/Map/VM/WorldMapVM")
+local MapDefine = require("Game/Map/MapDefine")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 
 ---@class WorldMapPlacedMarkerItemView : UIView
@@ -53,6 +54,10 @@ function WorldMapPlacedMarkerItemView:OnShow()
 	local _, MapPlacedMarkerCfg = _G.WorldMapMgr:GetRecommendedTraceMarkerIndex()
 	local DefaultIconPath = MapPlacedMarkerCfg.IconPath
 	WorldMapVM:SetPlacedMarkerIconPath(DefaultIconPath)
+
+	if WorldMapVM.MapSendMarkWinLoctionPanelVisible then
+		WorldMapVM:SetPlacedMarkerIconPath(MapDefine.MapIconConfigs.SendLoction)
+	end
 
 	self:PlayAnimation(self.AnimClick)
 

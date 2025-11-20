@@ -387,6 +387,7 @@ function SkillSystemVM:OnShutdown()
     end
     self.RenderActorClassRef = nil
     self.SkillSystemDARef = nil
+    self.LevelSequenceActor = nil
 end
 
 function SkillSystemVM:OnActive()
@@ -408,6 +409,8 @@ function SkillSystemVM:OnActive()
         RenderActorSetHidden(self.RenderActor, false)
         USkillSystemUtil.ActivateSkillSystemParticles(self.RenderActor)
     end
+
+    self:RestoreCasterPosition()
 end
 
 function SkillSystemVM:OnInactive()
@@ -441,6 +444,7 @@ function SkillSystemVM:ClearAllSkillSystemEffectWithoutFade(bRemoveAllBuff)
 
     if Caster then
         _G.SkillSingEffectMgr:PlayerSingBreak(self.CasterEntityID, false)
+        _G.SkillSingEffectMgr:BreakSingEffect(self.CasterEntityID, -1)
         if ActorUtil.GetActorStateComponent(self.CasterEntityID):IsInState(UE.EActorState.Attack) then
             ActorUtil.GetActorCombatComponent(self.CasterEntityID):BreakSkill()
         end
@@ -539,6 +543,11 @@ end
 function SkillSystemVM:OnGameEventVisionEnter(Params)
     local ResID = Params.IntParam2
     local EntityID = Params.ULongParam1
+
+    if EntityID == self.CasterEntityID or EntityID == self.TargetEntityID then
+        return
+    end
+
     if self.CasterResID == ResID then
         self:OnPlayerCreateSuccess(EntityID)
     elseif self.TargetResID == ResID then
@@ -603,6 +612,7 @@ function SkillSystemVM:OnGameEventSkillStart(Params)
     self.CameraSequence = nil
     self:SetCameraConfig(SingleSkillData, SkillStartSmoothTime)
     self:ResetTargetLocation()
+    --FLOG_WARNING(string.format("##[SkillSystem] SkillID=%d, Rotation.Yaw=%f", SkillID, SingleSkillData.Rotation.Yaw))
     self:SyncTransform(self.CasterEntityID, SingleSkillData.Location + WorldOffset, SingleSkillData.Location + self.WorldCompositionOffset, SingleSkillData.Rotation)
 
 
@@ -791,13 +801,13 @@ function SkillSystemVM:SetSkillDetailVisible(bVisible, SkillID, Index, bPassiveS
     if not SkillID or SkillID == 0 then
         bSkillShowValid = false
     end
-    local SelectIdList = SkillMainCfg:FindValue(SkillID, "SelectIdList")
-    if SelectIdList and #SelectIdList > 0 then
-        if SelectIdList[1].ID > 0 and not bShowMultiSkill then
-            --多选一技能不显示详细面板
-            bSkillShowValid = false
-        end
-    end
+    -- local SelectIdList = SkillMainCfg:FindValue(SkillID, "SelectIdList")
+    -- if SelectIdList and #SelectIdList > 0 then
+    --     if SelectIdList[1].ID > 0 and not bShowMultiSkill then
+    --         --多选一技能不显示详细面板
+    --         bSkillShowValid = false
+    --     end
+    -- end
     local co = coroutine.create(self.SetSkillDetailVisibleAsync)
     
     local SkillSystemCastSkillTaskID = _G.UIAsyncTaskMgr:RegisterTask(co, self, bVisible or nil, bSkillShowValid)
@@ -905,11 +915,15 @@ local function ActorFadeIn(EntityID)
 end
 
 function SkillSystemVM:OnAssembleAllEnd(Params)
+    local EntityID = Params.ULongParam1
     if self.ActorFadeInCnt >= ActorNum then
+        -- 初始化完成后，木桩可能会因为变身buff再次触发该事件，这里设置一次位置
+        if EntityID == self.TargetEntityID then
+            self:ResetTargetLocation()
+        end
         return
     end
 
-    local EntityID = Params.ULongParam1
 	if EntityID == self.CasterEntityID then
         --FLOG_ERROR("Login OnAssembleAllEnd")
         local Major = MajorUtil.GetMajor()
@@ -931,8 +945,14 @@ function SkillSystemVM:OnAssembleAllEnd(Params)
 
         SkillSystemMgr.bCasterAssembleEnd = true
     elseif EntityID == self.TargetEntityID then
-        -- 修改木桩碰撞预设为BlockAll, 防止穿模
         local Target = ActorUtil.GetActorByEntityID(EntityID)
+
+        -- 木桩不允许位移
+        if Target then
+            Target:DoClientModeEnter()
+        end
+
+        -- 修改木桩碰撞预设为BlockAll, 防止穿模
         local CapsuleComp = Target and Target.CapsuleComponent
         if CapsuleComp then
             CapsuleComp:SetCollisionProfileName("BlockAll", true)
@@ -996,6 +1016,7 @@ function SkillSystemVM:UpdateSkillLogicData(EntityID)
         FLOG_ERROR("[SkillSystem] Cannot find SkillGroupData.")
         return
     end
+    
     local SkillList = SkillGroupData.SkillList
     local RebuildRedData = {} --经过技能替换后本地红点数据需要修改，这里记录一下index和原始SkillID
     for _, SkillInfo in pairs(SkillList) do
@@ -1006,7 +1027,7 @@ function SkillSystemVM:UpdateSkillLogicData(EntityID)
         end
     end
     SkillSystemMgr:SetRebuildRedData(RebuildRedData)
-
+    
     local PassiveList = SkillGroupData.PassiveList
     if self.bMakeProf or self.bProductionProf then
         PassiveList = GetSkillList(SkillGroupData.SkillList)
@@ -1078,6 +1099,13 @@ function SkillSystemVM:UpdatePassiveSkill(Data)
     end
 end
 
+function SkillSystemVM:RestoreCasterPosition()
+    local Actor = ActorUtil.GetActorByEntityID(self.CasterEntityID)
+    if Actor and self.DefaultCasterPosition then
+        Actor:K2_SetActorLocation(self.DefaultCasterPosition, false, nil, false)
+    end
+end
+
 function SkillSystemVM:SyncTransform(EntityID, ClientPosition, ServerLocation, Rotation)
     --TODO[chaooren] 这里能不能客户端改变位置后告诉服务器，服务器不需要和客户端再同步
     --ActorUtil.GetActorByEntityID(EntityID):FSetActorLocation("SkillSystemVM:SyncTransform", Position)
@@ -1085,6 +1113,7 @@ function SkillSystemVM:SyncTransform(EntityID, ClientPosition, ServerLocation, R
     if Actor then
         ClientPosition = ClientPosition + UE.FVector(0, 0, Actor:GetCapsuleHalfHeight())
         if Actor:K2_GetActorLocation() ~= ClientPosition or Actor:K2_GetActorRotation() ~= Rotation then
+            rawset(self, "DefaultCasterPosition", ClientPosition)
             Actor:K2_SetActorLocation(ClientPosition, false, nil, false)
             local AnimComp = Actor:GetAnimationComponent()
             if AnimComp then

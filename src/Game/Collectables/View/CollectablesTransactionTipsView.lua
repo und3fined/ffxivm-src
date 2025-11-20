@@ -9,6 +9,7 @@ local LuaClass = require("Core/LuaClass")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local CollectablesVM = require("Game/Collectables/CollectablesVM")
+
 local LSTR = _G.LSTR
 
 ---@class CollectablesTransactionTipsView : UIView

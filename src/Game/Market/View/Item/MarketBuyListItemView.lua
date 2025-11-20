@@ -11,6 +11,7 @@ local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMo
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 
 ---@class MarketBuyListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -46,6 +47,9 @@ function MarketBuyListItemView:OnInit()
 		{ "QuantitySoldText", UIBinderSetTextFormat.New(self, self.TextQuantitySold, _G.LSTR(1010045)) },
 		{ "ServerNameText", UIBinderSetText.New(self, self.TextServerName) },
 		{ "PlayerNameText", UIBinderSetText.New(self, self.TextPlayerName) },
+
+		{ "QuantitySoldColor", UIBinderSetColorAndOpacityHex.New(self, self.TextQuantitySold) },
+		{ "QuantitySoldColor", UIBinderSetColorAndOpacityHex.New(self, self.TextServerName) },
 	}
 end
 

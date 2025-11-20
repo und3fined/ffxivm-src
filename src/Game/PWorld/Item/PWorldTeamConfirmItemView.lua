@@ -164,9 +164,6 @@ function PWorldTeamConfirmItemView:OnPollTypeChange(NewValue, OldValue)
 		end
 	elseif NewValue == ProtoCS.PollType.PoolType_Tournament then
 		RegisterRoleBinders()
-		local MajorUtil = require("Utils/MajorUtil")
-		local Level = MajorUtil.GetMajorLevel() or ""
-		self.JobSlot.TextLevel:SetText(Level)
 	end
 end
 

@@ -7,9 +7,13 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local EventID = require("Define/EventID")
 local TeamInviteVM = require("Game/Team/VM/TeamInviteVM")
 local SocialSettings = require("Game/Social/SocialSettings")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local TeamRecruitVM = require("Game/TeamRecruit/VM/TeamRecruitVM")
+local TeamRecruitMgr = require("Game/TeamRecruit/TeamRecruitMgr")
+local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
 
 ---@class FriendListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -18,7 +22,7 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---@field BtnTeamRecruitShare UFButton
 ---@field CommPlayerItem CommPlayerItemView
 ---@field HorBoxBtns UFHorizontalBox
----@field ImgInvited UFImage
+---@field ImgSuc UFImage
 ---@field ProfSlot CommPlayerSimpleJobSlotView
 ---@field TextFavors UFTextBlock
 ---@field TextHide UFTextBlock
@@ -35,7 +39,7 @@ function FriendListItemView:Ctor()
 	--self.BtnTeamRecruitShare = nil
 	--self.CommPlayerItem = nil
 	--self.HorBoxBtns = nil
-	--self.ImgInvited = nil
+	--self.ImgSuc = nil
 	--self.ProfSlot = nil
 	--self.TextFavors = nil
 	--self.TextHide = nil
@@ -81,12 +85,14 @@ end
 function FriendListItemView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnChat, self.OnClickButtonChat)
 	UIUtil.AddOnClickedEvent(self, self.BtnTeamInvite, self.OnClickButtonTeamInvite)
+	UIUtil.AddOnClickedEvent(self, self.BtnTeamRecruitShare, self.OnClickButtonRecruitShare)
 
 	UIUtil.AddOnStateChangedEvent(self, self.ToggleBtnSignature, self.OnToggleStateChangedSignature)
 end
 
 function FriendListItemView:OnRegisterGameEvent()
-
+    self:RegisterGameEvent(EventID.TeamRecruitStateChanged, self.OnEventMsgTeamRecruitStateChanged)
+    self:RegisterGameEvent(EventID.TeamRecruitShareToPlayerSuc, self.OnEventMsgShareTeamRecruitToPlayerSuc)
 end
 
 function FriendListItemView:OnRegisterBinder()
@@ -128,22 +134,41 @@ function FriendListItemView:OnCurInvitedRoleChanged()
 end
 
 function FriendListItemView:UpdateBtnsVisible()
+	local BtnInvitedVisible = false 
+	local BtnRecruitVisible = false
+	local ImgSucVisible = false 
+
 	local VM = self.ViewModel or {}
 	local IsOnline = VM.IsOnline
 	if IsOnline then
-		local IsInvited = false
 		local RoleID = VM.RoleID
-		if RoleID then
-			IsInvited = table.contain(TeamInviteVM.CurInvitedRoleIDs, RoleID) 
+
+		if TeamRecruitMgr:IsRecruiting() then -- 招募中
+			local IsShared = RoleID and table.contain(TeamRecruitVM.CurSharedRoleIDs, RoleID) 
+			BtnRecruitVisible = not IsShared
+			ImgSucVisible = IsShared
+
+		else
+			local IsInvited = RoleID and table.contain(TeamInviteVM.CurInvitedRoleIDs, RoleID) 
+			BtnInvitedVisible = not IsInvited 
+			ImgSucVisible = IsInvited
 		end
-
-		UIUtil.SetIsVisible(self.BtnTeamInvite, not IsInvited, true)
-		UIUtil.SetIsVisible(self.ImgInvited, IsInvited)
-
-	else
-		UIUtil.SetIsVisible(self.BtnTeamInvite, false)
-		UIUtil.SetIsVisible(self.ImgInvited, false)
 	end
+
+	UIUtil.SetIsVisible(self.BtnTeamInvite, BtnInvitedVisible, BtnInvitedVisible)
+	UIUtil.SetIsVisible(self.BtnTeamRecruitShare, BtnRecruitVisible, BtnRecruitVisible)
+	UIUtil.SetIsVisible(self.ImgSuc, ImgSucVisible)
+end
+
+-------------------------------------------------------------------------------------------------------
+---Client Event CallBack 
+
+function FriendListItemView:OnEventMsgTeamRecruitStateChanged()
+	self:UpdateBtnsVisible()
+end
+
+function FriendListItemView:OnEventMsgShareTeamRecruitToPlayerSuc()
+	self:UpdateBtnsVisible()
 end
 
 -------------------------------------------------------------------------------------------------------
@@ -166,6 +191,10 @@ function FriendListItemView:OnToggleStateChangedSignature(ToggleButton, State)
 	else
 		SocialSettings.AddFriendHideSignInfo(self.RoleID)
 	end
+end
+
+function FriendListItemView:OnClickButtonRecruitShare()
+	TeamRecruitUtil.ShareSelfRecruitToPlayer(self.RoleID)
 end
 
 return FriendListItemView

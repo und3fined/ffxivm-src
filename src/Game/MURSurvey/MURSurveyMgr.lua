@@ -58,7 +58,7 @@ function MURSurveyMgr:OnRegisterGameEvent()
 end
 
 function MURSurveyMgr:BeginQueryQuestionnaire()
-    --local ServerTime = TimeUtil.GetServerTime()
+    --local ServerTime = self:GetServerTime()
     --FLOG_INFO("MURSurveyMgr:OnBegin, ServerTime:%d", ServerTime)
     self.MajorMaxLevel = self:GetMajorMaxLevel()
     _G.FLOG_INFO("MURSurveyMgr:BeginQueryQuestionnaire, MajorMaxLevel:%d", self.MajorMaxLevel)
@@ -93,6 +93,11 @@ function MURSurveyMgr:OnQuerySurveyListRsp(MsgBody)
         end
     end
     _G.FLOG_INFO("MURSurveyMgr:OnQuerySurveyListRsp, num:%d, list:%s", #self.MURSurveyList, table.tostring(self.MURSurveyList))
+
+    if not CommonUtil.IsAndroidPlatform() and not CommonUtil.IsIOSPlatform() then
+        return
+    end
+
     self:CheckSurveyEntranceAndRedDot()
     if self:HasUnvalidationQuestionnaire() and nil == self.CheckTimer then
         self.CheckTimer = self:RegisterTimer(self.CheckSurveyIDIsValid, 0.5, self.CheckInterval, 0)
@@ -119,7 +124,7 @@ function MURSurveyMgr:CheckSurveyIDIsValid()
 end
 
 function MURSurveyMgr:HasUnvalidationQuestionnaire()
-    local CurrentServerTime = TimeUtil.GetServerTime()
+    local CurrentServerTime = self:GetServerTime()
     for _, Value in ipairs(self.MURSurveyList) do
         if Value.NumberID > 0 then
             if CurrentServerTime < Value.StartTime then
@@ -220,7 +225,7 @@ function MURSurveyMgr:CheckSurveyEntranceAndRedDot(IsNeedValidation)
             end
         end)
 
-        local CurrentServerTime = TimeUtil.GetServerTime()
+        local CurrentServerTime = self:GetServerTime()
         self.MajorMaxLevel = self:GetMajorMaxLevel()
         local bHasUncheckedQuestionnaire = false
         self.SurveySid = 0
@@ -260,13 +265,13 @@ end
 
 function MURSurveyMgr:CancelCheckTimer()
     if nil ~= self.CheckTimer then
-        TimerMgr:CancelTimer(self.CheckTimer)
+        self:UnRegisterTimer(self.CheckTimer)
         self.CheckTimer = nil
     end
 end
 
 function MURSurveyMgr:SaveRedDotData(SurveySid)
-    local SaveTime = TimeUtil.GetServerTime()
+    local SaveTime = self:GetServerTime()
     local SaveValue = string.format("%s-%d", SurveySid, SaveTime)
     local RedDotData = _G.UE.USaveMgr.GetString(SaveKey.MURSurveyRedDot, "", true)
     local bHideRedDot = false
@@ -313,7 +318,7 @@ function MURSurveyMgr:IsNeedShowRedDot(SurveySid)
         return true
     end
     
-    local ServerTime = TimeUtil.GetServerTime()
+    local ServerTime = self:GetServerTime()
     local SaveDay = math.ceil(ServerTime / 86400)
     local LastSaveDay = math.ceil(SaveTime / 86400)
     if (SaveDay - LastSaveDay) >= 1 then
@@ -339,7 +344,7 @@ end
 
 function MURSurveyMgr:ShowOrHideRedDot(bShow)
     --_G.FLOG_INFO("MURSurveyMgr:ShowOrHideRedDot, bShow:%s", tostring(bShow))
-    _G.EventMgr:SendEvent(EventID.ShowMURSurveyRedDot, { bIsShow = bShow })
+    --_G.EventMgr:SendEvent(EventID.ShowMURSurveyRedDot, { bIsShow = bShow })
     self.bNeedShowRedDot = bShow
 
     self:ChangeRedDotShowStatus()
@@ -351,9 +356,7 @@ end
 
 function MURSurveyMgr:OnMainPanelShow(Params)
     if nil ~= Params and nil ~= Params.bShow and Params.bShow == true then
-        if CommonUtil.IsAndroidPlatform() or CommonUtil.IsIOSPlatform()then
-            self:BeginQueryQuestionnaire()
-        end
+        self:BeginQueryQuestionnaire()
     end
 end
 
@@ -418,8 +421,12 @@ function MURSurveyMgr:OpenMURSurvey(ScreenType, IsFullScreen, IsUseURLEncode, Ex
 
     local NewUrl = string.format("%s&openid=%s&seq_id=%d&role_id=%s", SurveyUrl, tostring(OpenId), SurveyId, tostring(MajorRoleID))
     _G.FLOG_INFO("MURSurveyMgr:OpenMURSurvey, url:%s", NewUrl)
-    _G.UE.UAccountMgr.Get():OpenMURSurvey(NewUrl, "", ScreenType, IsFullScreen, IsUseURLEncode, ExtraJson, IsBrowser, false)
     self:SaveRedDotData(self.SurveySid)
+    _G.UE.UAccountMgr.Get():OpenMURSurvey(NewUrl, "", ScreenType, IsFullScreen, IsUseURLEncode, ExtraJson, IsBrowser, false)
+end
+
+function MURSurveyMgr:GetServerTime()
+    return TimeUtil.GetServerTime()
 end
 
 return MURSurveyMgr

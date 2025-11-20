@@ -31,6 +31,13 @@ local UIBindableBuffList = require("Game/Buff/VM/UIBindableBuffList")
 local BuffDefine = require("Game/Buff/BuffDefine")
 local EventID = require("Define/EventID")
 local BuffUIUtil = require("Game/Buff/BuffUIUtil")
+local PathMgr = require("Path/PathMgr")
+local ActorUtil = require("Utils/ActorUtil")
+local CommonUtil = require("Utils/CommonUtil")
+local ScoreCfg = require("TableCfg/ScoreCfg")
+local HUDType = require("Define/HUDType")
+local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
+
 
 local ItemTypeDetail = ProtoCommon.ITEM_TYPE_DETAIL
 local UIViewID = _G.UIViewID
@@ -38,6 +45,10 @@ local UIViewMgr = _G.UIViewMgr
 local GMMgr = _G.GMMgr
 local TimerMgr = _G.TimerMgr
 local UE = _G.UE
+local UCameraMgr = _G.UE.UCameraMgr.Get()
+local MediaUtil = _G.UE.UMediaUtil
+local LOOT_TYPE = ProtoCS.LOOT_TYPE
+local HUDMgr = _G.HUDMgr
 
 local GMType = {
 	Information = 1,
@@ -129,8 +140,15 @@ function MultiLanguageTestPanelView:Ctor()
 	self.GMCounts = 0
 	self.SearchText = ""
 	self.SearchTextLength = 0
+	self.LastTableID = 0
 	self.GMType = GMType.Information
 	self.BuffList = UIBindableBuffList.New()
+	self.LastEobj = 0
+	self.BufferVMList = UIBindableBuffList.New()
+	self.TakeScreenshotTime = 0.5
+	self.LastMonsterEntityID = 0
+	self.LastNPCEntityID = 0
+	self.LastEobjEntityID = 0
 end
 
 function MultiLanguageTestPanelView:OnRegisterSubView()
@@ -175,23 +193,23 @@ function MultiLanguageTestPanelView:OnShow()
 		return
 	end
 
-	local ViewType = Params.ViewType
+	self.ViewType = Params.ViewType
 	self.TabVMList:Clear()
 
-	if ViewType == LSTR("信息自动化") then
+	if self.ViewType == LSTR("信息自动化") then
 		self.TabVMList:AddByValue({Key = 1, Name = "系统通知", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 2, Name = "balloon", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 3, Name = "气泡表", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 4, Name = "成就表", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 5, Name = "交互表", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.GMType = GMType.Information
-	elseif ViewType == LSTR("实体创建") then
+	elseif self.ViewType == LSTR("实体创建") then
 		self.TabVMList:AddByValue({Key = 1, Name = "怪物", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 2, Name = "NPC", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 3, Name = "EOBJ", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 4, Name = "buff表", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.GMType = GMType.Entity
-	elseif ViewType == LSTR("蓝图检查") then
+	elseif self.ViewType == LSTR("蓝图检查") then
 		self.TabVMList:AddByValue({Key = 1, Name = "物品弹窗", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 2, Name = "物品快捷", PanelView = self, CallBack = self.OnSelectedTabIndex})
 		self.TabVMList:AddByValue({Key = 3, Name = "物品详细", PanelView = self, CallBack = self.OnSelectedTabIndex})
@@ -222,6 +240,8 @@ function MultiLanguageTestPanelView:OnShow()
 	UIUtil.SetIsVisible(self.FSearchBar, true)
 	local Position = _G.UE.FVector2D(0, 0)
 	UIUtil.CanvasSlotSetPosition(self.MovePanel, Position)
+
+	CommonUtil.ConsoleCommand("r.HudZtest.Enable 0")
 end
 
 function MultiLanguageTestPanelView:OnHide()
@@ -229,6 +249,8 @@ function MultiLanguageTestPanelView:OnHide()
 		TimerMgr:CancelTimer(self.GMTimer)
 		self.GMTimer = nil
 	end
+	self:ClearClientActor()
+	CommonUtil.ConsoleCommand("r.HudZtest.Enable 1")
 end
 
 function MultiLanguageTestPanelView:OnRegisterUIEvent()
@@ -238,11 +260,67 @@ function MultiLanguageTestPanelView:OnRegisterUIEvent()
 end
 
 function MultiLanguageTestPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.UpdateBuff, self.OnGameEventUpdateBuff)
+	-- self:RegisterGameEvent(EventID.UpdateBuff, self.OnGameEventUpdateBuff)
+	self:RegisterGameEvent(EventID.GMReceiveRes, self.OnGMReceiveRes)
+	self:RegisterGameEvent(EventID.ShowUI, self.OnNotifyUIShow)
+	-- self:RegisterGameEvent(EventID.NPCCreate, self.OnNPCCreate)
+	-- self:RegisterGameEvent(EventID.MonsterCreate, self.OnMonsterCreate)
+	self:RegisterGameEvent(EventID.DealLootItem, self.OnDealLootItem)
 end
 
-function MultiLanguageTestPanelView:OnRegisterBinder()
 
+function MultiLanguageTestPanelView:GetActorCreateLoc()
+	local PosVector = _G.UE.FVector(0, 0, 0)
+
+	local Major = MajorUtil.GetMajor()
+
+    if (Major ~= nil) then
+		local CameraComp = UCameraMgr:GetCurrentCameraComp()
+		if not CameraComp then
+			return PosVector
+		end
+
+		local CameraForward = CameraComp:GetForwardVector()
+		local CameraRight = CameraComp:GetRightVector()
+		CameraForward.Z = 0
+		CameraForward:Normalize()
+		CameraRight.Z = 0
+		CameraRight:Normalize()
+
+		local CameraDown = -CameraForward
+		local CameraLeft = -CameraRight
+
+		local CameraData = CameraLeft + CameraDown
+
+		CameraData:Normalize()
+
+		local OffsetDistance = 360;
+
+		local Actorlocation = Major:K2_GetActorLocation()
+
+		local SpawnLocation = Actorlocation + CameraData * OffsetDistance;
+		SpawnLocation.Z = Actorlocation.Z - 70
+
+		PosVector = SpawnLocation
+
+	end
+
+	return PosVector
+end
+
+function MultiLanguageTestPanelView:ClearClientActor()
+	if self.LastMonsterEntityID ~= 0 then
+		_G.UE.UActorManager.Get():RemoveClientActor(self.LastMonsterEntityID)
+		self.LastMonsterEntityID = 0
+	end
+	if self.LastNPCEntityID ~= 0 then
+		_G.UE.UActorManager.Get():RemoveClientActor(self.LastNPCEntityID)
+		self.LastNPCEntityID = 0
+	end
+	if self.LastEobjEntityID ~= 0 then
+		_G.UE.UActorManager.Get():RemoveClientActor(self.LastEobjEntityID)
+		self.LastEobjEntityID = 0
+	end
 end
 
 function MultiLanguageTestPanelView:OnSelectedTabIndex(Index)
@@ -256,13 +334,32 @@ function MultiLanguageTestPanelView:OnSelectedTabIndex(Index)
 		self.GMTimer = nil
 	end
 	self.CurGM:SetText("")
+	self:ClearClientActor()
 end
 
-function MultiLanguageTestPanelView:OnMapEnter(Params)
-	if Params and Params.CurrMapResID ~= self.LastMapResID then
-		self:Hide()
+function MultiLanguageTestPanelView:TakeScreenshot(ShowText)
+	FLOG_INFO(string.format("koff MultiLanguageTestPanelView:TakeScreenshot"))
+	print(ShowText)
+
+	if ShowText:find("%^") ~= nil then
+		local DateTimestr = os.date("%Y-%m-%d")
+		local CurCultureName = CommonUtil.GetCurrentCultureName()
+		local CfgTableID = tostring(self.CfgTableID)
+		local FolderStr = self.ViewType.."_"..CfgTableID
+		local PathStr = DateTimestr.."/"..CurCultureName.."/"..self.ViewType.."_"..self.GMName.."/"
+		-- local TextStr = folderStr..string.format("MyScreenShot_%d", self.CfgTableID)
+		local TextStr = string.format("%d", self.CfgTableID)
+
+		TimerMgr:AddTimer(self, function() 
+			MediaUtil.TakeScreenshotRequest(TextStr, false, true, function(_, Width, Height, Colors)
+				local ScreenshotFilename = MediaUtil.BitmapToSaveFile(Width, Height, Colors, PathStr)
+				self.ScreenshotPath = MediaUtil.GetScreenshotPath() .. PathMgr.GetCleanFilename(ScreenshotFilename)
+				FLOG_INFO(string.format("koff self.ScreenshotPath:%s", self.ScreenshotPath))
+			end)
+		end, self.TakeScreenshotTime, 1, 1, nil)
 	end
 end
+
 
 function MultiLanguageTestPanelView:OnMinimizeClicked()
 	UIUtil.SetIsVisible(self.LeftPanel, false)
@@ -306,73 +403,100 @@ function MultiLanguageTestPanelView:StartGMCommand()
 	self.GMStartIndex = tonumber(self.Minimum:GetText())
 	self.GMStartIndex = math.max(1,self.GMStartIndex)
 	self.GMEndIndex = tonumber(self.Maximum:GetText())
-	local Timeinterval = tonumber(self.Timeinterval:GetText())
+	self.Timeintervals = tonumber(self.Timeinterval:GetText())
 
 	local GMStr = ""
-	local LastTableID = 0
-	if self.SubPanelID == 1 then
-		if self.GMType == GMType.Information then
+	self.LastTableID = 0
+	self.GMName = ""
+
+
+	if self.GMType == GMType.Information then
+		if self.SubPanelID == 1 then
 			CfgTable = SysnoticeCfgTable:FindAllCfg() or {}
 			GMStr = "client sysnotice %d"
-		elseif self.GMType == GMType.Entity then
-			CfgTable = MonsterCfgTable:FindAllCfg() or {}
-			GMStr = "scene monster create %d"
-		elseif self.GMType == GMType.BluePrint then
-			CfgTable = ItemCfgTable:FindAllCfg() or {}
-			GMStr = "role bag add %d 1"
-		end
-	elseif self.SubPanelID == 2 then
-		if self.GMType == GMType.Information then
+			self.GMName = "系统通知"
+		elseif self.SubPanelID == 2 then
 			CfgTable = BalloonCfgTable:FindAllCfg() or {}
 			GMStr = "client PlayBalloon %d"
-		elseif self.GMType == GMType.Entity then
-			CfgTable = NpcCfgTable:FindAllCfg() or {}
-			GMStr = "scene npc create %d"
-		elseif self.GMType == GMType.BluePrint then
-			CfgTable = ItemCfgTable:FindAllCfg() or {}
-			GMStr = "role bag add %d 1"
-		end
-	elseif self.SubPanelID == 3 then
-		if self.GMType == GMType.Information then
+			self.GMName = "balloon"
+		elseif self.SubPanelID == 3 then
 			CfgTable = YellCfgTable:FindAllCfg() or {}
 			GMStr = "client PlayYell %d"
-		elseif self.GMType == GMType.Entity then
-			CfgTable = EObjCfgTable:FindAllCfg() or {}
-			GMStr = "scene eobj create %d"
-		elseif self.GMType == GMType.BluePrint then
-			CfgTable = ItemCfgTable:FindAllCfg() or {}
-			GMStr = "role bag add %d 1"
-		end
-	elseif self.SubPanelID == 4 then
-		if self.GMType == GMType.Information then
+			self.GMName = "气泡表"
+		elseif self.SubPanelID == 4 then
 			GMMgr:ReqGM("role achieve clear")
 			CfgTable = AchievementCfgTable:FindAllCfg() or {}
 			GMStr = "role achieve setcomp %d"
-		elseif self.GMType == GMType.Entity then
+			self.GMName = "成就表"																		
+		elseif self.SubPanelID == 5 then
+			CfgTable = SingstateCfgTable:FindAllCfg() or {}
+			GMStr = "client sing %d"
+			self.GMName = "交互表"
+		end
+	elseif self.GMType == GMType.Entity then
+		if self.SubPanelID == 1 then
+			CfgTable = MonsterCfgTable:FindAllCfg() or {}
+			GMStr = "scene monster create %d"
+			self.GMName = "怪物"
+			local Major = MajorUtil.GetMajor()
+			if Major ~= nil then
+				local Camera = Major:GetCameraControllComponent()
+				if Camera ~= nil then
+					Camera:SetMaxCameraDistance(2000)
+					Camera:SetTargetArmLength(2000)
+				end
+			end
+		elseif self.SubPanelID == 2 then
+			CfgTable = NpcCfgTable:FindAllCfg() or {}
+			GMStr = "scene npc create %d"
+			self.GMName = "NPC"
+			local Major = MajorUtil.GetMajor()
+			if Major ~= nil then
+				local Camera = Major:GetCameraControllComponent()
+				if Camera ~= nil then
+					Camera:SetMaxCameraDistance(2000)
+					Camera:SetTargetArmLength(2000)
+				end
+			end
+		elseif self.SubPanelID == 3 then
+			CfgTable = EObjCfgTable:FindAllCfg() or {}
+			GMStr = "scene eobj create %d"
+			self.GMName = "EOBJ"
+		elseif self.SubPanelID == 4 then
 			CfgTable = BuffCfgTable:FindAllCfg() or {}
 			GMStr = "cell buff add %d"
-		elseif self.GMType == GMType.BluePrint then
+			self.GMName = "buff表"																	
+		end
+	elseif self.GMType == GMType.BluePrint then
+		if self.SubPanelID == 1 then
+			CfgTable = ItemCfgTable:FindAllCfg() or {}
+			GMStr = "role bag add %d 1"
+			self.GMName = "物品弹窗"
+		elseif self.SubPanelID == 2 then
+			CfgTable = ItemCfgTable:FindAllCfg() or {}
+			GMStr = "role bag add %d 1"
+			self.GMName = "物品快捷"
+		elseif self.SubPanelID == 3 then
+			CfgTable = ItemCfgTable:FindAllCfg() or {}
+			GMStr = "role bag add %d 1"
+			self.GMName = "物品详细"
+		elseif self.SubPanelID == 4 then
 			CfgTable = BuffCfgTable:FindAllCfg() or {}
 			GMStr = "cell buff add %d"
+			self.GMName = "buff表"																
 		end
-	elseif self.SubPanelID == 5 then
-		CfgTable = SingstateCfgTable:FindAllCfg() or {}
-		GMStr = "client sing %d"
-
-		FLOG_INFO(string.format("SingstateCfgTable Nums:%s", #CfgTable))
-		if self.GMType ~= GMType.Information then
-			local log = string.format("这里不该被点到!!!，self.GMType：%s",self.GMType)
-			MsgTipsUtil.ShowErrorTips(_G.LSTR(log))
-			return
-		end
-	end	
+	end
 
 	self.GMEndIndex = math.min(#CfgTable,self.GMEndIndex)
 
 	local MajorID = MajorUtil.GetMajorEntityID()
 	_G.SwitchTarget:SwitchToTarget(MajorID, true)
 
-	-- local FinshCallback
+	if self.GMType == GMType.BluePrint then
+		GMMgr:ReqGM("role bag clear")--蓝图检查前先把物品清理一遍
+	end
+
+
 	local FinshCallback = function ()
 		if self.GMStartIndex > self.GMEndIndex then
 			if self.GMTimer ~= nil then
@@ -380,40 +504,208 @@ function MultiLanguageTestPanelView:StartGMCommand()
 				self.GMTimer = nil
 			end
 		else
-			local CfgTableID
+			self.CfgTableID = 0
 			if self.GMType == GMType.BluePrint and self.SubPanelID ~= 4 then
-				CfgTableID = CfgTable[self.GMStartIndex].ItemID
+				self.CfgTableID = CfgTable[self.GMStartIndex].ItemID
 			else
-				CfgTableID = CfgTable[self.GMStartIndex].ID
+				self.CfgTableID = CfgTable[self.GMStartIndex].ID
 			end
 
-			if CfgTableID ~= nil then
-				local GMText = string.format(GMStr, CfgTableID)
+			if self.CfgTableID ~= nil then
+				local GMText = string.format(GMStr, self.CfgTableID)
 				local Data = {}
+				self.TakeScreenshotTime = 0.5
 
-				if self.SubPanelID == 1 then
-					UIViewMgr:HideView(UIViewID.MessageBox,true)
 
-					if self.GMType == GMType.Information then
-						_G.MsgTipsUtil.ShowTipsByID(CfgTableID)
-					elseif self.GMType == GMType.Entity then
-						local DestoryText = string.format("scene monster destroy %d", LastTableID)
-						GMMgr:ReqGM(DestoryText)
+				if self.GMType == GMType.Information then
+					if self.SubPanelID == 1 then
+						if UIViewMgr:IsViewVisible(UIViewID.CommonMsgBox) then
+							UIViewMgr:HideView(UIViewID.CommonMsgBox)
+						end
+						if UIViewMgr:IsViewVisible(UIViewID.InfoMissionTips) then
+							UIViewMgr:HideView(UIViewID.InfoMissionTips)
+						end
+						local Content = SysnoticeCfgTable:FindCfgByKey(self.CfgTableID).Content[1]
 
-						GMMgr:ReqGM(GMText)
-					elseif self.GMType == GMType.BluePrint then
-						GMMgr:ReqGM(GMText)
+						_G.MsgTipsUtil.ShowTipsByID(self.CfgTableID)
+						if Content then
+							self:TakeScreenshot(Content)
+						end
+					elseif self.SubPanelID == 2 then
+						local CloseTime = math.max(0.5,self.Timeintervals - 0.5)
+						TimerMgr:AddTimer(self, function() 
+							_G.SpeechBubbleMgr:HideBalloonByID(MajorID)
+						end, CloseTime, 1, 1, nil)
+
+
+						_G.SpeechBubbleMgr:ShowBalloonTest(self.CfgTableID)
+						local CurrBalloon = BalloonCfgTable:FindCfgByKey(self.CfgTableID)
+						if CurrBalloon ~= nil then
+							self:TakeScreenshot(CurrBalloon.Text)
+						end
+					elseif self.SubPanelID == 3 then
+						_G.SpeechBubbleMgr:ShowBubbleTest(self.CfgTableID)
+						local BubbleInfo = _G.SpeechBubbleMgr:GetBubbleInfoByBubbleID(self.CfgTableID)
+						if BubbleInfo ~= nil then
+							self:TakeScreenshot(BubbleInfo.Content)
+						end
+					elseif self.SubPanelID == 4 then
+						local AchievementMgr = _G.AchievementMgr
+						for i = self.GMStartIndex, #CfgTable do
+							if i > self.GMEndIndex then
+								if self.GMTimer ~= nil then
+									TimerMgr:CancelTimer(self.GMTimer)
+									self.GMTimer = nil
+									return
+								end
+							else
+								self.CfgTableID = CfgTable[i].ID
+								local Info = AchievementMgr:GetAchievementInfo(self.CfgTableID)
+								if Info == nil then
+									FLOG_INFO(string.format("无效的成就ID:%d", self.CfgTableID))
+									self.GMStartIndex = self.GMStartIndex + 1
+									goto continue
+								else
+									break
+								end
+							end
+							::continue::
+						end
+						GMText = string.format(GMStr, self.CfgTableID)
+						_G.LeftSidebarMgr:ResetDefaultStayTimeForTest(0.5)
+						GMMgr:ReqGM(GMText)																
+					elseif self.SubPanelID == 5 then
+						_G.SingBarMgr:MajorSingBySingStateIDWithoutInteractiveID(self.CfgTableID, nil)
+						local SingstateCfg = SingstateCfgTable:FindCfgByKey(self.CfgTableID)
+						if SingstateCfg ~= nil then
+							self:TakeScreenshot(SingstateCfg.SingName)
+						end
 					end
+				elseif self.GMType == GMType.Entity then
+					if self.SubPanelID == 1 then
+						if self.LastMonsterEntityID ~= 0 then
+							_G.UE.UActorManager.Get():RemoveClientActor(self.LastMonsterEntityID)
+						end
 
-				elseif self.SubPanelID == 2 then
-					if self.GMType == GMType.Information then
-						_G.SpeechBubbleMgr:ShowBalloonTest(CfgTableID)
-					elseif self.GMType == GMType.Entity then
-						local DestoryText = string.format("scene npc destroy %d", LastTableID)
-						GMMgr:ReqGM(DestoryText)
-						--FLOG_INFO(string.format("Destory:%s", DestoryText))
+						for i = self.GMStartIndex, #CfgTable do
+							if i > self.GMEndIndex then
+								if self.GMTimer ~= nil then
+									TimerMgr:CancelTimer(self.GMTimer)
+									self.GMTimer = nil
+									return
+								end
+							else
+								if CfgTable[i].IsHideName ~= 0 then
+									self.GMStartIndex = self.GMStartIndex + 1
+									goto continue
+								else
+									break
+								end
+							end
+							::continue::
+						end
+						self.CfgTableID = CfgTable[self.GMStartIndex].ID
+
+						local pos = self:GetActorCreateLoc()
+						local CreatedEntityID = _G.UE.UActorManager.Get():CreateClientActor(_G.UE.EActorType.Monster, 0, self.CfgTableID, pos,_G.UE.FRotator(0,0,0))
+
+						local Name = ActorUtil.GetActorName(CreatedEntityID)
+
+						self.LastMonsterEntityID = CreatedEntityID
+
+						self.TakeScreenshotTime = 1.5
+						self:TakeScreenshot(Name)
+					elseif self.SubPanelID == 2 then
+						if self.LastNPCEntityID ~= 0 then
+							_G.UE.UActorManager.Get():RemoveClientActor(self.LastNPCEntityID)
+						end
+
+						for i = self.GMStartIndex, #CfgTable do
+							if i > self.GMEndIndex then
+								if self.GMTimer ~= nil then
+									TimerMgr:CancelTimer(self.GMTimer)
+									self.GMTimer = nil
+									return
+								end
+							else
+								if CfgTable[i].Name == "" then
+									self.GMStartIndex = self.GMStartIndex + 1
+									goto continue
+								else
+									break
+								end
+							end
+							::continue::
+						end
+
+						self.CfgTableID = CfgTable[self.GMStartIndex].ID
+
+						local pos = self:GetActorCreateLoc()
+						local CreatedEntityID = _G.UE.UActorManager.Get():CreateClientActor(_G.UE.EActorType.NPC, 0, self.CfgTableID, pos,_G.UE.FRotator(0,0,0))
+
+						local Name = ActorUtil.GetActorName(CreatedEntityID)
+
+						self.LastNPCEntityID = CreatedEntityID
+
+						self.TakeScreenshotTime = 1.5
+						self:TakeScreenshot(Name)
+					elseif self.SubPanelID == 3 then
+						if self.LastEobjEntityID ~= 0 then
+							_G.UE.UActorManager.Get():RemoveClientActor(self.LastEobjEntityID)
+						end
+
+						for i = self.GMStartIndex, #CfgTable do
+							if i > self.GMEndIndex then
+								if self.GMTimer ~= nil then
+									TimerMgr:CancelTimer(self.GMTimer)
+									self.GMTimer = nil
+									return
+								end
+							else
+								if CfgTable[i].Name == "" then
+									self.GMStartIndex = self.GMStartIndex + 1
+									goto continue
+								else
+									break
+								end
+							end
+							::continue::
+						end
+
+						self.CfgTableID = CfgTable[self.GMStartIndex].ID
+
+						local pos = self:GetActorCreateLoc()
+						local CreatedEntityID = _G.UE.UActorManager.Get():CreateClientActor(_G.UE.EActorType.Eobj, 0, self.CfgTableID, pos,_G.UE.FRotator(0,0,0))
+						local Name = ActorUtil.GetActorName(CreatedEntityID)
+
+						self.LastEobjEntityID = CreatedEntityID
+
+						self.TakeScreenshotTime = 1.5
+						self:TakeScreenshot(Name)
+					elseif self.SubPanelID == 4 then
+						local DB = BuffCfgTable:FindCfgByKey(self.CfgTableID)
+						if nil ~= DB then 
+							local EntityID = MajorUtil.GetMajorEntityID()
+							local BufferID = DB.ID
+
+							if ProtoRes.BuffDisplayType.BUFF_DISPLAY_TYPE_POSITIVE == DB.DisplayType then
+								HUDMgr:ShowBufferEffect(EntityID, BufferID, HUDType.MajorBufferAdd, 0, 0)
+							else
+								HUDMgr:ShowBufferEffect(EntityID, BufferID, HUDType.MajorDBufferAdd, 0, 0)
+							end
+
+
+							self:TakeScreenshot(DB.BuffName)
+						end																
+					end
+				elseif self.GMType == GMType.BluePrint then
+					if self.SubPanelID == 1 then
+						if _G.BagMgr:GetBagLeftNum() <= 350 then
+							GMMgr:ReqGM("role bag clear")
+						end
+
 						GMMgr:ReqGM(GMText)
-					elseif self.GMType == GMType.BluePrint then
+					elseif self.SubPanelID == 2 then
 						for i = self.GMStartIndex, #CfgTable do
 							if i > self.GMEndIndex then
 								if self.GMTimer ~= nil then
@@ -433,23 +725,12 @@ function MultiLanguageTestPanelView:StartGMCommand()
 							::continue::
 						end
 
-						CfgTableID = CfgTable[self.GMStartIndex].ItemID
-						GMText = string.format(GMStr, CfgTableID)
-						local Item = ItemUtil.CreateItem(CfgTableID)
+						self.CfgTableID = CfgTable[self.GMStartIndex].ItemID
+						GMText = string.format(GMStr, self.CfgTableID)
+						local Item = ItemUtil.CreateItem(self.CfgTableID)
 						self:PopUpEasyUse(Item)
-						-- GMMgr:ReqGM(GMText)
-					end
-
-				elseif self.SubPanelID == 3 then
-					if self.GMType == GMType.Information then
-						_G.SpeechBubbleMgr:ShowBubbleTest(CfgTableID)
-					elseif self.GMType == GMType.Entity then
-						local DestoryText = string.format("scene eobj destroy %d", LastTableID)
-						GMMgr:ReqGM(DestoryText)
-						FLOG_INFO(string.format("Destory:%s", DestoryText))
-						GMMgr:ReqGM(GMText)
-					elseif self.GMType == GMType.BluePrint then
-						local Item = ItemUtil.CreateItem(CfgTableID)
+					elseif self.SubPanelID == 3 then
+						local Item = ItemUtil.CreateItem(self.CfgTableID)
 						Item.Attr = {
 							Equip = {
 								IsInScheme = false,
@@ -461,45 +742,78 @@ function MultiLanguageTestPanelView:StartGMCommand()
 
 						UIUtil.SetIsVisible(self.NewBagItemTips, true)
 						self.NewBagItemTips:UpdateItem(Item)
-					end
-
-				elseif self.SubPanelID == 4 then
-					if self.GMType == GMType.Information then
-						local AchievementMgr = _G.AchievementMgr
-						for i = self.GMStartIndex, #CfgTable do
-							if i > self.GMEndIndex then
-								if self.GMTimer ~= nil then
-									TimerMgr:CancelTimer(self.GMTimer)
-									self.GMTimer = nil
-									return
-								end
-							else
-								CfgTableID = CfgTable[i].ID
-								local Info = AchievementMgr:GetAchievementInfo(CfgTableID)
-								if Info == nil then
-									FLOG_INFO(string.format("无效的成就ID:%d", CfgTableID))
-									self.GMStartIndex = self.GMStartIndex + 1
-									goto continue
-								else
-									break
-								end
-							end
-							::continue::
+						local ItemName = ItemCfgTable:GetItemName(self.CfgTableID)
+						if ItemName ~= "" then
+							self:TakeScreenshot(ItemName)
 						end
-						GMText = string.format(GMStr, CfgTableID)
-						_G.LeftSidebarMgr:ResetDefaultStayTimeForTest(0.5)
-					elseif self.GMType == GMType.Entity then
-						local DestoryText = string.format("cell buff del %d", LastTableID)
-						GMMgr:ReqGM(DestoryText)
-						FLOG_INFO(string.format("Destory:%s", DestoryText))
-					elseif self.GMType == GMType.BluePrint then
-						local DestoryText = string.format("cell buff del %d", LastTableID)
-						GMMgr:ReqGM(DestoryText)
-					end
+						local EffectText = ItemCfgTable:GetItemEffectDesc(self.CfgTableID)
+						if EffectText ~= "" then
+							self:TakeScreenshot(EffectText)
+						end
+						local IntroText = ItemCfgTable:GetItemDesc(self.CfgTableID)
+						if IntroText ~= "" then
+							self:TakeScreenshot(IntroText)
+						end
+					elseif self.SubPanelID == 4 then
+						self.BufferVMList:Clear()
 
-					GMMgr:ReqGM(GMText)
-				elseif self.SubPanelID == 5 then
-					_G.SingBarMgr:MajorSingBySingStateIDWithoutInteractiveID(CfgTableID, nil)
+						local DB = BuffCfgTable:FindCfgByKey(self.CfgTableID)
+						if nil ~= DB then 
+							local Value = nil
+
+							local EntityID = MajorUtil.GetMajorEntityID()
+
+							local CombatBuffInfo = {
+								BuffID = DB.ID,
+								Giver = EntityID,
+								ExpdTime = 0,
+								Pile = 1,
+								AddTime = 0,
+							}
+
+
+							local BuffType = DB.Type
+							if BuffType ==  BuffDefine.BuffSkillType.Combat then
+								Value = BuffUIUtil.CombatBuff2BuffVMParams(EntityID, DB.ID, CombatBuffInfo)
+							elseif BuffType == BuffDefine.BuffSkillType.Life then
+								Value = BuffUIUtil.LifeSkillBuff2BuffVMParams(EntityID, DB.ID, CombatBuffInfo)
+							elseif BuffType == BuffDefine.BuffSkillType.BonusState then
+								Value = BuffUIUtil.BonusState2BuffVMParams(EntityID, DB.ID, CombatBuffInfo)
+							end
+
+							if Value == nil then
+								Value = BuffUIUtil.CombatBuff2BuffVMParams(EntityID, DB.ID, CombatBuffInfo)
+							end
+
+							self.BufferVMList:AddOrUpdateBuff(Value)
+
+							local BuffVM = self.BufferVMList.Items[1]
+
+							BuffVM.BuffIcon = DB.BuffIcon
+							BuffVM.IsEffective = true
+							BuffVM.LeftTime = DB.LiveTime / 1000
+							BuffVM.IsFromMajor = true
+							BuffVM.Name = DB.BuffName
+							BuffVM.Desc = DB.Desc
+							BuffVM.Pile = 1
+
+
+							local CloseTime = math.max(0.5,self.Timeintervals - 0.5)
+
+							UIUtil.SetIsVisible(self.MajorBuffInfoTips, true)
+							TimerMgr:AddTimer(self, function() 
+									UIUtil.SetIsVisible(self.MajorBuffInfoTips, false)
+							end, CloseTime, 1, 1, nil)
+
+							self.MajorBuffInfoTips:ChangeVMAndUpdate(BuffVM)
+
+							if DB.BuffName:find("%^") ~= nil then
+								self:TakeScreenshot(DB.BuffName)
+							else
+								self:TakeScreenshot(DB.Desc)
+							end
+						end														
+					end
 				end
 
 				Data.Text = GMText
@@ -510,14 +824,38 @@ function MultiLanguageTestPanelView:StartGMCommand()
 				self.GMCounts = self.GMCounts + 1
 				UIViewMgr:HideView(UIViewID.GMMain)
 
-				LastTableID = CfgTableID
+				self.LastTableID = self.CfgTableID
 				self:SetDataList(self.RecordList)
 			end
 		end
 		self.GMStartIndex = self.GMStartIndex + 1
 	end
 
-	self.GMTimer = TimerMgr:AddTimer(self, FinshCallback, 0, Timeinterval, 0, nil)
+	self.GMTimer = TimerMgr:AddTimer(self, FinshCallback, 0, self.Timeintervals, 0, nil)
+end
+
+function MultiLanguageTestPanelView:OnNotifyUIShow(InViewID)
+	FLOG_INFO(string.format("koff MultiLanguageTestPanelView:OnNotifyUIShow:%s", InViewID))
+	if InViewID == UIViewID.SidePopUpEasyUse then
+		local SidePopUpEasyUseView = _G.UIViewMgr:FindView(UIViewID.SidePopUpEasyUse)
+		if SidePopUpEasyUseView then
+			--物品快捷
+			if self.GMType == GMType.BluePrint and self.SubPanelID == 2 then
+				local Text = SidePopUpEasyUseView.TextTitle:GetText()
+				self:TakeScreenshot(Text)
+			end
+		end
+	end
+
+	if InViewID == UIViewID.SidebarLeft then
+		local SidebarLeftView = _G.UIViewMgr:FindView(UIViewID.SidebarLeft)
+		if SidebarLeftView then
+			if self.GMType == GMType.Information and self.SubPanelID == 4 then
+				local Text = SidebarLeftView.RichTextContent:GetShowText()
+				self:TakeScreenshot(Text)
+			end
+		end
+	end
 end
 
 function MultiLanguageTestPanelView:SetDataList(DataList)
@@ -599,31 +937,91 @@ function MultiLanguageTestPanelView:PopUpEasyUse(Item)
 	end)
 end
 
-function  MultiLanguageTestPanelView:OnGameEventUpdateBuff(Params)
-	-- FLOG_INFO(string.format("koff MultiLanguageTestPanelView:OnGameEventUpdateBuff"))
-	if self.GMType ~= GMType.BluePrint then
-		return
+
+function MultiLanguageTestPanelView:OnGMReceiveRes(MsgBody)
+    if nil ~= MsgBody then
+		if "eobj" == MsgBody.Cmd then
+			local function WaitCreateFinish()
+				local ActorTable =_G.UE.UActorManager.Get():GetActorsByResID(self.LastTableID)
+
+				local Length = ActorTable:Length()
+				if ActorTable and Length == 1 then
+					if self.LastEobj == self.LastTableID then
+						return
+					end
+
+					self.LastEobj = self.LastTableID
+
+					local Actor = ActorTable:Get(1)
+					local CameraComp = UCameraMgr:GetCurrentCameraComp()
+					if not CameraComp then
+						return
+					end
+
+					local CameraForward = CameraComp:GetForwardVector()
+					local CameraRight = CameraComp:GetRightVector()
+					CameraForward.Z = 0
+					CameraForward:Normalize()
+					CameraRight.Z = 0
+					CameraRight:Normalize()
+
+					local CameraDown = -CameraForward
+					local CameraLeft = -CameraRight
+
+					local CameraData = CameraLeft + CameraDown
+
+					CameraData:Normalize()
+
+					local OffsetDistance = 180;
+
+					local Actorlocation = Actor:K2_GetActorLocation()
+
+					local SpawnLocation = Actorlocation + CameraData * OffsetDistance;
+					SpawnLocation.Z = Actorlocation.Z
+
+					Actor:K2_SetActorLocation(SpawnLocation, false, nil, false)
+
+					local EntityID = Actor:GetAttributeComponent().EntityID
+					local Name = ActorUtil.GetActorName(EntityID)
+					-- FLOG_INFO(string.format("koff OnGMReceiveRes LastTableID:%d,Name:%s",self.LastTableID,Name))
+
+					if self.GMType == GMType.Entity and self.SubPanelID == 3 then
+						self:TakeScreenshot(Name)
+					end
+
+					-- FLOG_INFO(string.format("koff OnGMReceiveRes LastTableID:%d,location.x:%f,location.y:%f,location.z:%f",self.LastTableID,SpawnLocation.X,SpawnLocation.Y,SpawnLocation.Z))
+					-- FLOG_INFO(string.format("koff OnGMReceiveRes LastTableID:%d,location.x:%f,location.y:%f,location.z:%f",self.LastTableID,SpawnLocation.X,SpawnLocation.Y,SpawnLocation.Z))
+				end
+			end
+
+			self.AnimTimerID = _G.TimerMgr:AddTimer(nil, WaitCreateFinish, 0.05, 0, 1)
+        end
+    end
+end
+
+function MultiLanguageTestPanelView:OnDealLootItem(LootItem)
+	if LootItem.Type == LOOT_TYPE.LOOT_TYPE_ITEM then --物品
+		local Item = ItemCfgTable:FindCfgByKey(LootItem.Item.ResID)
+		if not Item then
+			return
+		end
+
+		local ItemName = ItemCfgTable:GetItemName(LootItem.Item.ResID)
+		-- FLOG_INFO(string.format("koff LOOT_TYPE.LOOT_TYPE_ITEM:%s",ItemName))
+		if self.GMType == GMType.BluePrint and self.SubPanelID == 1 then
+			self:TakeScreenshot(ItemName)
+		end
+	elseif LootItem.Type == LOOT_TYPE.LOOT_TYPE_SCORE then -- 积分
+		local ScoreInfo = ScoreCfg:FindCfgByKey(LootItem.Score.ResID)
+		if ScoreInfo == nil then
+			return
+		end
+		-- FLOG_INFO(string.format("koff LOOT_TYPE.LOOT_TYPE_SCORE:%s",ScoreInfo.NameText))
+		if self.GMType == GMType.BluePrint and self.SubPanelID == 1 then
+			self:TakeScreenshot(ScoreInfo.NameText)
+		end
 	end
 
-
-    local Values = BuffUIUtil.GetEntityBuffVMParamsList(MajorUtil.GetMajorEntityID(), true)
-    self.BuffList:UpdateByValues(Values, BuffUIUtil.SortBuffDisplay)
-
-	local BufferID = Params.IntParam1
-	local EntityID = Params.ULongParam1
-	local Giver = Params.ULongParam2
-
-	-- FLOG_INFO(string.format("koff MultiLanguageTestPanelView:OnGameEventUpdateBuff BufferID:%s,EntityID:%s,Giver:%s",BufferID,EntityID,Giver))
-
-	local VM = self.BuffList:FindBuffVM(BufferID, Giver, BuffDefine.BuffSkillType.Combat)
-	if nil == VM then
-		UIUtil.SetIsVisible(self.MajorBuffInfoTips, false)
-		FLOG_INFO(string.format("koff nil == VM!!!!!!"))
-		return
-	end
-
-	UIUtil.SetIsVisible(self.MajorBuffInfoTips, true)
-	self.MajorBuffInfoTips:ChangeVMAndUpdate(VM)
 end
 
 return MultiLanguageTestPanelView

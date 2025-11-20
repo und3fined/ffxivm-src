@@ -11,6 +11,7 @@ function MusicPerformanceMemberItemVM:Ctor()
 	self.Level = ""
 	self.RoleID = ""
 	self.IsMajor = nil
+	self.JoinTime = 0
 	
 	self.ImgBgNormalConfirmVisible = false
 	self.ImgBgSelfConfirmVisible = false

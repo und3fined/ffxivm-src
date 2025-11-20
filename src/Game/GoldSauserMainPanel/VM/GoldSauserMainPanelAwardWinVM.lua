@@ -79,18 +79,16 @@ function GoldSauserMainPanelAwardWinVM:CreateTabItemList(CfgList)
         local ItemValue = {
             AwardType = Cfg.AwardType,
             bChecked = false,
+            Icon = Cfg.AwardIcon,
+            IconSelected = Cfg.AwardIconSelected,
         }
         TabItemVMs:AddByValue(ItemValue)
     end
 end
 
 --- 修改页签标题
-function GoldSauserMainPanelAwardWinVM:ChangeTabTitle(AwardType)
-    local Cfg = GoldSaucerAwardTypeCfg:FindCfgByKey(AwardType)
-    if not Cfg then
-        return
-    end
-    self.TabTitle = Cfg.TypeTitle or ""
+function GoldSauserMainPanelAwardWinVM:ChangeTabTitle(AwardType, TypeTitle)
+    self.TabTitle = TypeTitle or ""
     self.AwardType = AwardType
 end
 
@@ -132,6 +130,7 @@ function GoldSauserMainPanelAwardWinVM:ChangeSelectBelongType(BelongType, Conten
     self:UpdatePartContent(ContentDatas)    
 end
 
+
 function GoldSauserMainPanelAwardWinVM:UpdatePartContent(ContentDatas)
     local ContentVMs = self.ContentItemVMs
     if not ContentVMs then
@@ -148,11 +147,8 @@ function GoldSauserMainPanelAwardWinVM:UpdatePartContent(ContentDatas)
         if BelongType == GoldSauserAwardBelongType.AwardBelongTypeAll then
             return true
         end
-        local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(Data.ID)
-        if not ItemCfg then
-            return
-        end
-        local CfgType = ItemCfg.BelongType
+
+        local CfgType = Data.BelongType
         return CfgType == BelongType
     end
 
@@ -174,9 +170,8 @@ function GoldSauserMainPanelAwardWinVM:UpdatePartContent(ContentDatas)
 end
 
 --- 选中对应奖励Item
-function GoldSauserMainPanelAwardWinVM:SelectTheContentItem(ItemVM, ExtraParams)
-    local ID = ItemVM.ID
-    local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(ID)
+function GoldSauserMainPanelAwardWinVM:SelectTheContentItem(ItemCfg, ItemVM, ExtraParams)
+    local ID = ItemVM.ID    
     if not ItemCfg then
         FLOG_ERROR("GoldSauserMainPanelAwardWinVM:SelectTheContentItem ItemVM is not In Config")
         return
@@ -220,6 +215,8 @@ function GoldSauserMainPanelAwardWinVM:SelectTheContentItem(ItemVM, ExtraParams)
         self.BtnGotoName = LSTR(350092)
     elseif AwardType == GoldSauserAwardSourceType.AwardSourceTypeShop then
         self.BtnGotoName = LSTR(350093)
+    elseif AwardType == GoldSauserAwardSourceType.AwardSourceTypeOther then
+        self.BtnGotoName = LSTR(350096)        
     end
 end
 

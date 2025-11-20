@@ -70,7 +70,9 @@ end
 function ChocoboFeeDingStatusItemView:PlaySadEffect(Listener, InCallBack)
     self.Listener = Listener
     self.Callback = InCallBack
-    self:PlayAnimation(self.AnimSad)
+    if not self:IsAnimationPlaying(self.AnimSad) then
+        self:PlayAnimation(self.AnimSad)
+    end
 end
 
 function ChocoboFeeDingStatusItemView:OnAnimationFinished(Anim)

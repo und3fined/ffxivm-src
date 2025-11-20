@@ -12,6 +12,7 @@ local BuddySkillDetailTipsVM = require("Game/Buddy/VM/BuddySkillDetailTipsVM")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 
 local UE = _G.UE
@@ -21,10 +22,11 @@ local UIViewID = _G.UIViewID
 
 ---@class BuddySkillDetailTipsView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field ImgLine01 UFImage
 ---@field PanelDetail UFCanvasPanel
 ---@field RichTextDiscribe URichTextBox
 ---@field SkillType SkillTypeTagItemView
----@field ImgSkillIcon UFImage
+---@field TableViewAttri UTableView
 ---@field TableViewSkillType UTableView
 ---@field TextSkillName UFTextBlock
 ---@field AnimIn UWidgetAnimation
@@ -33,20 +35,20 @@ local BuddySkillDetailTipsView = LuaClass(UIView, true)
 
 function BuddySkillDetailTipsView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.ImgLine01 = nil
 	--self.PanelDetail = nil
 	--self.RichTextDiscribe = nil
 	--self.SkillType = nil
 	--self.TableViewAttri = nil
+	--self.TableViewSkillType = nil
 	--self.TextSkillName = nil
 	--self.AnimIn = nil
-	--self.TableViewSkillType = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function BuddySkillDetailTipsView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	-- self:AddSubView(self.SkillType)
-	-- self:AddSubView(self.TableViewAttriAdapter)
+	self:AddSubView(self.SkillType)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -57,6 +59,7 @@ function BuddySkillDetailTipsView:OnInit()
 	self.Binders = {
 		{ "NameText", UIBinderSetText.New(self, self.TextSkillName) },
 		{ "DescText", UIBinderSetText.New(self, self.RichTextDiscribe) },
+		{ "ImgLine01Visible", UIBinderSetIsVisible.New(self, self.ImgLine01) },
 		{ "AttriVMList", UIBinderUpdateBindableList.New(self, self.TableViewAttriAdapter) },
 		{ "SkillTypeVMList", UIBinderUpdateBindableList.New(self, self.TableViewSkillTypeAdapter) },
 	}

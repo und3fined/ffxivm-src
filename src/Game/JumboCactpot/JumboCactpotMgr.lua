@@ -26,12 +26,11 @@ local ArmyMgr = require("Game/Army/ArmyMgr")
 local CommonDefine = require("Define/CommonDefine")
 local LocalizationUtil = require("Utils/LocalizationUtil")
 local NpcDialogMgr = _G.NpcDialogMgr
-local ProtoCommon = require("Protocol/ProtoCommon")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local GoldSauserGameClientType = ProtoRes.GoldSauserGameClientType
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
+local GoldSauserMapID = GoldSauserMainPanelDefine.GoldSauserMapID -- 12060
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
-local AudioUtil = require("Utils/AudioUtil")
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 
 local AsyncReqModuleType = GoldSauserMainPanelDefine.AsyncReqModuleType
@@ -60,7 +59,6 @@ local OnDaySeconds = 86400
 local JumboCactpotMgr = LuaClass(MgrBase)
 
 function JumboCactpotMgr:OnInit()
-    self.JDMapID = 12060
     self.JDResID = 1008204
     self.JumbState = FairyColorStatus.FairyColorStatusWait
     self.PlayerState = FairyColorPlayerStatus.FairyColorPlayerNotBuy
@@ -113,13 +111,17 @@ function JumboCactpotMgr:OnInit()
     self.WaitExchangeTime = GameGlobalCfg:FindCfgByKey(ProtoRes.Game.game_global_cfg_id.GAME_CFG_FAIRY_COLOR_OPEN_LOTTERY_FLOW_TIME).Value[1]-- 开奖仪式持续时间 1094
     self.XCTickNum = ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_FAIRY_COLOR_COUPONS) --当前拥有仙彩券数量
     self.RewardRankData = FairycolorgRankingCfg:FindAllCfg()
+    
+    -- 拆开推送信息内容，参与跨界判断
 end
 
 function JumboCactpotMgr:OnBegin()
     local XCTicketID = 19000501
     local Cfg = ScoreCfg:FindCfgByKey(XCTicketID)
-    self.MaxValue = Cfg.MaxValue
-    self.MaxXCTicketNum = Cfg.MaxValue
+    if Cfg then
+        self.MaxValue = Cfg.MaxValue
+        self.MaxXCTicketNum = Cfg.MaxValue
+    end
 
     local CostJdCoinID = 1010   -- ID可以拿到需要花费金碟币数量
     local ColorGlobalCfg = GameGlobalCfg:FindCfgByKey(CostJdCoinID)
@@ -199,18 +201,16 @@ function JumboCactpotMgr:OnBaseRes(Msg)
 
     local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = BaseInfo.CurrMapResID
-    if BaseInfo.CurrMapResID == self.JDMapID or BaseInfo.CurrMapResID == self.JDResID then
-        local NeedStage = self.JumbState == FairyColorStatus.FairyColorStatusAfoot and self.LastStage or self.CurrStage
-        JumboCactpotDynaMgr:UpdateDynItemByCurrStage(NeedStage, true)
-        if self.JumbState == FairyColorStatus.FairyColorStatusAfoot then
-            JumboCactpotDynaMgr:UpdateCenterPoleWhenCeremony(self.LastStage)
-        end
+    if BaseInfo.CurrMapResID == GoldSauserMapID or BaseInfo.CurrMapResID == self.JDResID then
+        local bInLottory = self.JumbState == FairyColorStatus.FairyColorStatusAfoot
+        local NeedStage = bInLottory and self.LastStage or self.CurrStage
+        JumboCactpotDynaMgr:UpdateDynItemByCurrStage(NeedStage, true, bInLottory)
     end
 
     self:UpdateJumboInfo()
 
     local BaseInfo = PWorldMgr.BaseInfo
-    if BaseInfo.CurrMapResID == self.JDMapID then
+    if BaseInfo.CurrMapResID == GoldSauserMapID then
         if self.ReconnectCallBack ~= nil and self.JumbState ~= FairyColorStatus.FairyColorStatusAfoot then
             self.ReconnectCallBack()
             self.ReconnectCallBack = nil
@@ -235,7 +235,8 @@ function JumboCactpotMgr:SetBaseData(Msg)
     self.LotteryTime = Msg.QueryBase.LotteryTime
     self.WinNumber = Msg.QueryBase.Number
     self.JumbState = QueryBase.Status
-    self.PlayerState = QueryBase.PlayerData.Status
+    local PlayerStatus = QueryBase.PlayerData.Status
+    self.PlayerState = PlayerStatus or FairyColorPlayerStatus.FairyColorPlayerNone
     self:UpdateDataByState(Msg)
     self.bPlayLottoryAnim = not QueryBase.IsPlayEff
     local Index = #self.PurchasedNumList + 1
@@ -251,6 +252,7 @@ function JumboCactpotMgr:UpdateDataByState(Msg)
     local JumbState = self.JumbState
     local PlayerState = self.PlayerState
     local Numbers = Msg.QueryBase.PlayerData.Numbers
+    
     if PlayerState == FairyColorPlayerStatus.FairyColorPlayerNotBuy then
         self.RemainPurchases = self.AllPurchasesNum
         self.PurchasedNumList = {}
@@ -290,11 +292,16 @@ function JumboCactpotMgr:OnONBuyRes()
 
     local RelatedNpcID = JumboCactpotDefine.RelatedNpcID.JumboDispenser
     _G.GoldSauserActivityMgr:CheckAndUpdateIconDissAppear(RelatedNpcID)
+    -- 仙人仙彩新增完成任务玩法节点
+    local Params = {
+        GameID = ProtoRes.Game.GameID.GameIDFairyColor
+    }
+    _G.EventMgr:SendEvent(EventID.QuestFinishGameplay, Params)
 end
 
 --- @type 在购买成功后更新基础数据
 function JumboCactpotMgr:UpdateBaseDataAfterBuy()
-    self.BuySum = self.BuySum + 1
+    self.BuySum = (self.BuySum or 0) + 1
     self.PlayerState = FairyColorPlayerStatus.FairyColorPlayerWait
     self:UpdataCurStagePro(self.BuySum)
 
@@ -331,18 +338,12 @@ end
 function JumboCactpotMgr:OnQueryRes(Msg)
     self.WinNumber = Msg.QueryLotteryResult.Number
     self.QueryLotteryResult = Msg.QueryLotteryResult
-
    
-   --local function CallBack()
     if self.bPlayLottoryAnim then
         self:OnLotteryOpen()
     else
         self:ShowExchangeRewardPanel()
     end
-    --end
-
-    -- local DialogLibID = JumboCactpotDefine.DialogLibID
-    -- NpcDialogMgr:PlayDialogLib(DialogLibID.CanExchangeReward, nil, false, CallBack)
 end
 
 function JumboCactpotMgr:ConstructPushReward(LotteryNumber)
@@ -377,7 +378,8 @@ function JumboCactpotMgr:OnExchangeRes(Msg)
     -- UIViewMgr:HideView(UIViewID.JumboCactpotGetRewardWin)
     -- UIViewMgr:HideView(UIViewID.JumboCactpotPlate)
 
-    self:UpdateJumboInfo()
+    --self:UpdateJumboInfo()
+    self:SendReqBaseMsg(false) -- 重新拉取服务器数据，以最新的服务器数据为准
     local RelatedNpcID = JumboCactpotDefine.RelatedNpcID.JumboDispenser
     _G.GoldSauserActivityMgr:UpdateMiniMapIcon(RelatedNpcID)
 end
@@ -519,7 +521,8 @@ end
 function JumboCactpotMgr:OnNetMsgPushStage(MsgBody)
     local PushStage = MsgBody.PushStage
     self.CurrStage = PushStage.CurrStage
-    JumboCactpotDynaMgr:UpdateDynItemByCurrStage(self.CurrStage, false)
+    local bInLottory = self.JumbState == FairyColorStatus.FairyColorStatusAfoot
+    JumboCactpotDynaMgr:UpdateDynItemByCurrStage(self.CurrStage, false, bInLottory)
     EventMgr:SendEvent(EventID.JumboCactpotUpdateBouns)
 end
 
@@ -535,7 +538,7 @@ function JumboCactpotMgr:OnLottery(Msg)
     JumboCactpotDynaMgr:UpdateCenterItemState(self.CurrStage, true)
     JumboCactpotLottoryCeremonyMgr:JumboCeremonyMgrReset()
     MsgTipsUtil.ShowTipsByID(MsgTipsID.JumbCountOnRaffleTip)
-    JumboCactpotDynaMgr:UpdateCenterPoleWhenCeremony(self.CurrStage)
+    JumboCactpotDynaMgr:UpdateCenterPoleState(self.CurrStage, false, true)
     self:UpdateJumboInfo()
 
     self:HideJumboPurPanel(LSTR(240007)) -- "抽奖即将开始, 快去参加抽奖吧!"
@@ -545,7 +548,10 @@ function JumboCactpotMgr:OnLottery(Msg)
     if JumboCactpotLottoryCeremonyMgr:GetbEnterJumbArea() then
         self:RegisterTimer(function() MsgTipsUtil.ShowTipsByID(MsgTipsID.JumboLottoryTip) end, 5)   
     end
+end
 
+function JumboCactpotMgr:TestCenterPoleDynState()
+    JumboCactpotDynaMgr:UpdateCenterPoleState(7, false, true)
 end
 
 --- @type 开奖仪式结束可以领奖
@@ -556,7 +562,7 @@ function JumboCactpotMgr:OnEndPlayDynamic(MsgBody)
     local PushReward = self.PushReward
     self.JumbState = FairyColorStatus.FairyColorStatusWait    -- 恢复正常仙彩状态
     self:OnCanAward(PushReward)
-    JumboCactpotDynaMgr:UpdateDynItemByCurrStage(0, false)
+    JumboCactpotDynaMgr:UpdateDynItemByCurrStage(0, false, false)
     JumboCactpotLottoryCeremonyMgr:JumboCeremonyMgrReset()
 
     self:UpdateJumboInfo()
@@ -1091,7 +1097,7 @@ function JumboCactpotMgr:OnPWorldEnter(Params)
     local BaseInfo = PWorldMgr.BaseInfo
     self.CurrMapResID = Params.CurrMapResID
     -- print()
-    if Params.CurrMapResID == self.JDMapID then
+    if Params.CurrMapResID == GoldSauserMapID then
         if self.bEnterWrold then
             return
         end
@@ -1102,10 +1108,12 @@ function JumboCactpotMgr:OnPWorldEnter(Params)
 end
 
 function JumboCactpotMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
-    if LeaveMapResID == self.JDMapID then
+    if LeaveMapResID == GoldSauserMapID then
         self.bEnterWrold = false
         self:ResetJumboInfo()
-        self:OnLeaveAreaTrigger({AreaID = JumboAreaID})
+        if _G.JumboCactpotLottoryCeremonyMgr:CheckIsInJumbArea(MajorUtil.GetMajorEntityID()) then
+            self:OnLeaveAreaTrigger({AreaID = JumboAreaID})
+        end
         JumboCactpotLottoryCeremonyMgr.bEnterJumbArea = false
     end
 end
@@ -1145,7 +1153,7 @@ function JumboCactpotMgr:OnGameEventLoginRes(Params)
     local bReconnect = Params.bReconnect
     if bReconnect then
         local BaseInfo = PWorldMgr.BaseInfo
-        if BaseInfo.CurrMapResID == self.JDMapID then
+        if BaseInfo.CurrMapResID == GoldSauserMapID then
             self.ReconnectCallBack = function() 
                 JumboCactpotDynaMgr:UpdateWheelOnReconnect()
                 JumboCactpotLottoryCeremonyMgr:DestroyJumboMonster()
@@ -1541,8 +1549,8 @@ end
 --- 更新右上角仙彩信息
 function JumboCactpotMgr:UpdateJumboInfo()
     local JumbState = self.JumbState
-    local AllPurchasesNum = self.AllPurchasesNum
-    local PurchasedNum = self:GetPurNumLocal()
+    local AllPurchasesNum = self.AllPurchasesNum or 0
+    local PurchasedNum = self:GetPurNumLocal() or 0
     self.XCTickNum = ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_FAIRY_COLOR_COUPONS)
 
     if PurchasedNum == nil or AllPurchasesNum == nil then
@@ -1777,7 +1785,6 @@ end
 function JumboCactpotMgr:GetLottoryNum()
     return self.WinNumber
 end
-
 
 function JumboCactpotMgr:GetNewTerm()
     return self.Term + 1

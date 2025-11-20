@@ -36,6 +36,7 @@ local PersonPortraitHeadMgr
 ---@class PersonInfoHeadWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnDelete UFButton
+---@field BtnHistoryHead UFButton
 ---@field BtnUnlockFrame CommBtnMView
 ---@field BtnUse CommBtnMView
 ---@field BtnUse2 CommBtnMView
@@ -68,6 +69,7 @@ local PersonInfoHeadWinView = LuaClass(UIView, true)
 function PersonInfoHeadWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnDelete = nil
+	--self.BtnHistoryHead = nil
 	--self.BtnUnlockFrame = nil
 	--self.BtnUse = nil
 	--self.BtnUse2 = nil
@@ -140,7 +142,7 @@ function PersonInfoHeadWinView:OnInit()
 	self.MajorVMBinders = 
 	{
 		{ "HeadInfo", 				UIBinderValueChangedCallback.New(self, nil, self.OnValChgRoleInfo) },
-		{ "HeadFrameID", 			UIBinderSetFrameIcon.New(self, self.PersonInfoPlayer.ImgFrame) },
+		{ "HeadFrameID", 			UIBinderValueChangedCallback.New(self, nil, self.SetHeadFrame) },
 	}
 
 	self:InitLSTR()
@@ -349,7 +351,9 @@ function PersonInfoHeadWinView:OnValChgCurFrame(Val)
 		return
 	end
 
-	UIUtil.ImageSetBrushFromAssetPath(self.PersonInfoPlayer2.ImgFrame, Val.FrameIcon)
+	if self.PersonInfoPlayer2.CommHead then
+		self.PersonInfoPlayer2.CommHead:SetFrameIcon(Val.FrameIcon)
+	end
 	self.TextPlayer2:SetText(Val.FrameName)
 	self.TextPlayer3:SetText(Val.FrameDesc)
 	-- UIUtil.SetIsVisible(self.TextTime, false)
@@ -376,10 +380,12 @@ function PersonInfoHeadWinView:UpdFrameLifeTimeAndAccess()
 	-- Cfg.LifeTimeDesc = "生命周期描述xx"
 
 	if Cfg.LifeTimeDesc and not string.isnilorempty(Cfg.LifeTimeDesc) then
+		self:EndTimerFrameCountDown()
 		self.TextTime:SetText(Cfg.LifeTimeDesc)
 	else
-		local LifeTime = tonumber(Cfg.Timelimit) or 0
+		local LifeTime = tonumber(Cfg.TimeLimit) or 0
 		if LifeTime == 0 then
+			self:EndTimerFrameCountDown()
 			self.TextTime:SetText(LSTR(960045))
 		else
 			self:StartTimerFrameCountDown()
@@ -421,13 +427,14 @@ function PersonInfoHeadWinView:OnValChgCurHead(Val)
 
 	if Val.HeadType == PersonPortraitHeadDefine.HeadType.Default then
 		self.AdpTableHeadCust:CancelSelected()
-        UIUtil.ImageSetMaterialTextureFromAssetPathSync(self.PersonInfoPlayer.ImgPlayer, Val.HeadIcon, 'Texture')
+        --UIUtil.ImageSetMaterialTextureFromAssetPathSync(self.PersonInfoPlayer.ImgPlayer, Val.HeadIcon, 'Texture')
+		self.PersonInfoPlayer.CommHead:SetIcon(Val.HeadIcon)
 		UIUtil.SetIsVisible(self.BtnDelete, false)
 		self.TextPlayer:SetText(Val.HeadName)
 	elseif Val.HeadType == PersonPortraitHeadDefine.HeadType.Custom then
 		self.AdpTableHeadFixed:CancelSelected()
 		UIUtil.SetIsVisible(self.BtnDelete, true, true)
-		PersonPortraitHeadHelper.SetHeadByUrl(self.PersonInfoPlayer.ImgPlayer, Val.HeadIconUrl, "PersonInfoHeadWinView:OnValChgCurHead")
+		PersonPortraitHeadHelper.SetCommHeadByUrl(self.PersonInfoPlayer.CommHead, Val.HeadIconUrl, "PersonInfoHeadWinView:OnValChgCurHead")
 		self.TextPlayer:SetText(LSTR(960044) .. tostring(Val.Idx))
 	end
 
@@ -451,7 +458,9 @@ function PersonInfoHeadWinView:UpdHeadUseBtnStat()
 end
 
 function PersonInfoHeadWinView:OnValChgRoleInfo(Val)
-	PersonPortraitHeadHelper.SetMajorHead(self.PersonInfoPlayer2.ImgPlayer)
+	if self.PersonInfoPlayer2.CommHead then
+		PersonPortraitHeadHelper.SetMajorHead(self.PersonInfoPlayer2.CommHead.ImageIcon)
+	end
 end
 
 -- function PersonInfoHeadWinView:OnValChgCurHead(Val)
@@ -506,7 +515,7 @@ end
 
 function PersonInfoHeadWinView:SeltCurFrame()
 	self.AdpTableFrame:CancelSelected()
-	local FrameList = PersonPortraitHeadVM.HeadMainCustVMList:GetItems()
+	local FrameList = PersonPortraitHeadVM.FrameVMList:GetItems()
 	local CurFrameID = PersonPortraitHeadMgr.CurFrameID or 1
 
 	local TargetIdx
@@ -518,6 +527,12 @@ function PersonInfoHeadWinView:SeltCurFrame()
 	end
 
 	self.AdpTableFrame:SetSelectedIndex(TargetIdx or 1)
+end
+
+function PersonInfoHeadWinView:SetHeadFrame(HeadFrameID)
+	if self.PersonInfoPlayer.CommHead then
+		self.PersonInfoPlayer.CommHead:SetFrameIconByHeadFrameID(HeadFrameID)
+	end
 end
 
 return PersonInfoHeadWinView

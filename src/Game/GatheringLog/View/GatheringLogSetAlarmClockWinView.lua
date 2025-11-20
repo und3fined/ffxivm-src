@@ -152,9 +152,9 @@ function GatheringLogSetAlarmClockWinView:OnBtnSingleBoxWPClick()
 	if not self.SingleBoxWP:GetChecked() then
 		--不设置提前提醒
 		--颜色置为灰色
-		self.CheckBox1M:UpdateColor(false)
-		self.CheckBox3M:UpdateColor(false)
-		self.CheckBox5M:UpdateColor(false)
+		-- self.CheckBox1M:UpdateColor(false)
+		-- self.CheckBox3M:UpdateColor(false)
+		-- self.CheckBox5M:UpdateColor(false)
 		--UIUtil.SetIsVisible(self.PanelWinPreTime, false)
 		self.CheckBox1M:SetChecked(false)
         self.CheckBox3M:SetChecked(false)
@@ -164,9 +164,9 @@ function GatheringLogSetAlarmClockWinView:OnBtnSingleBoxWPClick()
 		self.CheckBox5M:SetClickable(false)
 	else
 		--设置提前提醒
-		self.CheckBox1M:UpdateColor(true)
-		self.CheckBox3M:UpdateColor(true)
-		self.CheckBox5M:UpdateColor(true)
+		-- self.CheckBox1M:UpdateColor(true)
+		-- self.CheckBox3M:UpdateColor(true)
+		-- self.CheckBox5M:UpdateColor(true)
 		self.CheckBox1M:SetClickable(true)
 		self.CheckBox3M:SetClickable(true)
 		self.CheckBox5M:SetClickable(true)
@@ -175,8 +175,8 @@ function GatheringLogSetAlarmClockWinView:OnBtnSingleBoxWPClick()
         self.CheckBox1M:SetChecked(true)
         self.CheckBox3M:SetChecked(false)
         self.CheckBox5M:SetChecked(false)
-        self.CheckBox3M:UpdateColor(true)
-        self.CheckBox5M:UpdateColor(true)
+        -- self.CheckBox3M:UpdateColor(true)
+        -- self.CheckBox5M:UpdateColor(true)
 	end
 end
 
@@ -193,8 +193,8 @@ function GatheringLogSetAlarmClockWinView:OnBtnCheckBox1MClick()
 		self.CheckBox1M:SetChecked(true)
 		self.CheckBox3M:SetChecked(false)
 		self.CheckBox5M:SetChecked(false)
-		self.CheckBox3M:UpdateColor(true)
-		self.CheckBox5M:UpdateColor(true)
+		-- self.CheckBox3M:UpdateColor(true)
+		-- self.CheckBox5M:UpdateColor(true)
 	end
 end
 
@@ -211,8 +211,8 @@ function GatheringLogSetAlarmClockWinView:OnBtnCheckBox3MClick()
 		self.CheckBox3M:SetChecked(true)
 		self.CheckBox1M:SetChecked(false)
 		self.CheckBox5M:SetChecked(false)
-		self.CheckBox1M:UpdateColor(true)
-		self.CheckBox5M:UpdateColor(true)
+		-- self.CheckBox1M:UpdateColor(true)
+		-- self.CheckBox5M:UpdateColor(true)
 	end
 end
 
@@ -229,8 +229,8 @@ function GatheringLogSetAlarmClockWinView:OnBtnCheckBox5MClick()
 		self.CheckBox5M:SetChecked(true)
 		self.CheckBox3M:SetChecked(false)
 		self.CheckBox1M:SetChecked(false)
-		self.CheckBox3M:UpdateColor(true)
-		self.CheckBox1M:UpdateColor(true)
+		-- self.CheckBox3M:UpdateColor(true)
+		-- self.CheckBox1M:UpdateColor(true)
 	end
 end
 

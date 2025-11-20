@@ -37,6 +37,8 @@ local CommonDefine = {
 	bDelayCacheActorsWhenRefreshVision = false,	--客户端刷新视野时，是否等待收到回包才清理（缓存）客户端角色
 	bEnableNewAsyncTaskControl = true, --视野模块是否开启新的异步任务控制机制，解决异步任务无法取消，以及异步转同步时的卡顿问题
 	VisionIgnoreFadeInTime = 0.1,	--忽略淡入效果时，忽略的时间，BattleShowHide显示角色时给角色设置，避免显示后播的动画被淡入影响导致看不见
+	bEnableVisionVerify = false,	--是否开启视野状态验证，会比较角色的逻辑显隐状态与实际的是否一致，不一致则纠正
+	bAllowVisionEnterTwice = true,	--是否允许连续Enter两次，即没Leave就再次Enter，允许的话，会先将原来的角色Leave再Enter，这样就可以使用后台最新的数据
 
 	ReasonNeedUpdateVision = {_G.UE.EHideReason.TimelineClip, },
 
@@ -73,6 +75,8 @@ local CommonDefine = {
 
 	bVisionEnableBuddyControl = true,			--是否开启陆行鸟搭档的显隐控制，开启的话，只有附近陆行鸟进出视野时，会根据距离更新显示，且只显示几个（包括HUD）
 	VisionBuddyShowNum = 2,						--陆行鸟搭档的最大显示数量，不包括主角的，其余不显示（包括HUD也不显示）
+
+	bVisionEnableFixBugPlayerFootPrint = false,		--临时功能，用于修复外网玩家P3视角时装脚印特效看不见的问题，跟策划沟通后默认关闭，先不修，主干已通过C++修复
 
 	--开启视野玩家的模型数量控制，同时加载的Mesh数量为VisionPlayerMaxCount + VisionPlayerMaxCacheCount + VisionExtraCachePlayerMeshCount
 	bEnableVisionPlayerMeshCountControl = false,
@@ -251,6 +255,8 @@ local CommonDefine = {
 	bOpenLookAtMajor = false; -- 是否开启所有怪物和NPC强制注视主角测试
 
 	UIActorTag = "UIActorTag"; -- UI展示Actor所用的标签
+
+	FacadeCapsuleCollisionProfile = "PawnNoTriggerBox"; -- 角色Facade胶囊体使用的碰撞预设
 
 	bChsVersion = true; -- 是否为国服，目前没有区分国服和国际服的接口，此处接口暂时用于测试
 

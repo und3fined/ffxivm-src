@@ -192,6 +192,11 @@ function GoldSharpKnife:OnGameStateToInProgress(InGameMgr, InGameVM)
 end
 
 function GoldSharpKnife:TryPlayBGM(InGameMgr)
+    if (InGameMgr.Entertain == nil) then
+        _G.FLOG_ERROR("错误，尝试播放BGM ，但是 传入的 InGameMgr.Entertain 为空，请检查!")
+        return
+    end
+
     local GameState = InGameMgr.Entertain.State
     local bInProgress = GameState == ProtoCS.GoldSauserEntertainState.GoldSauserEntertainState_InProgress
     local bInSignUp = GameState == ProtoCS.GoldSauserEntertainState.GoldSauserEntertainState_SignUp
@@ -538,27 +543,12 @@ function GoldSharpKnife:OnShowInfoAfterSignup(InGameMgr)
         Callback = ShowGoldSauserCommTutorial,
         Params = {}
     }
+
     _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
     -- END
 
-    local SignUpEndTime = InGameMgr.SignUpEndTime
-    local ServerTime = TimeUtil.GetServerLogicTimeMS()
-    if (SignUpEndTime == nil) then
-        SignUpEndTime = ServerTime
-    end
-
-    local RemainTime = SignUpEndTime - ServerTime
-    local RemainSec = math.floor(RemainTime / 1000)
-
-    -- 大于倒计时2秒才显示，要不感受不好
-    if (RemainSec > (self:OnGetTimeCountDownRedTime() + 2)) then
-        -- 如果是快刀斩魔，那么播放文本 40200
-        local TipsID = 40200
-        MsgTipsUtil.ShowTipsByID(TipsID)
-
-        local WaitID = 40286 -- 挑战即将开始，请耐心等待
-        MsgTipsUtil.ShowTipsByID(WaitID)
-    end
+    local TipsID = 40200
+    MsgTipsUtil.ShowTipsByID(TipsID)
 end
 
 function GoldSharpKnife:CalculateCoin(StageValue, TargetTimes)

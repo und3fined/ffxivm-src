@@ -4,7 +4,6 @@ local SaveKey = require("Define/SaveKey")
 local Priority = 0x01000000
 local PriorityConsole = 0x09000000
 
-
 _G.PreRealStart =
 {
 
@@ -78,7 +77,7 @@ function PreRealStart.OnPreRealStart()
 
         return
     end
-    
+
     local LastQualityLevel = USaveMgr.GetInt(SaveKey.LastQualityLevel, DefauleValueNotSave, false)
 
     local function OverrideBeastFeatures()
@@ -101,7 +100,11 @@ function PreRealStart.OnPreRealStart()
         PreRealStart.RefreshPerformanceParams()
         return
     end
-
+    
+    local SelectQualityLevel = _G.UE.USaveMgr.GetInt(SaveKey.SelectQualityLevel, -1, false)
+    if SelectQualityLevel == -1 then
+        _G.UE.USaveMgr.SetInt(SaveKey.SelectQualityLevel, DefaultQualityLevel, false)
+    end
 
     local QualityLevel = USaveMgr.GetInt(SaveKey.QualityLevel, DefauleValueNotSave, false)
     print("QualityLevel:" .. tostring(QualityLevel))
@@ -110,7 +113,6 @@ function PreRealStart.OnPreRealStart()
         -- -1是没保存过，走下面的，会使用默认的
         USettingUtil.SetQualityLevel(QualityLevel - 1)
         PreRealStart.RefreshPerformanceParams()
-
         return
     elseif IsWithEmulatorMode and QualityLevel == 6 then
         USettingUtil.SetQualityLevel(4)

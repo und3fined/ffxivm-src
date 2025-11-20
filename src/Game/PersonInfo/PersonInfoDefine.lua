@@ -80,6 +80,9 @@ local PopupBtnType = {
     ArmyTransCap    = 16,   -- 转让队长
     MeetTrade       = 17,   -- 面对面交易
     ArmySign        = 18,   -- 署名邀请
+    AddNickName     = 19,   -- 备注
+    VisitingHouse   = 20,   --访问房屋
+
 }
 
 local DataReportType = {

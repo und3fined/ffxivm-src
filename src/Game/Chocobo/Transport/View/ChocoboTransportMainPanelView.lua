@@ -93,19 +93,12 @@ function ChocoboTransportMainPanelView:OnShow()
 	_G.WorldMapMgr:ChangeMap(UIMapID, CurrentMapResID, false)
 
 	self.TextCoordinate_1:SetText("")
-	local Position = MapVM:GetMajorLeftTopPosition()
-	local InfoText = string.format("%s  %s", MapUtil.GetCoordinateText(Position), MapUtil.GetMapFullName())
-
-	local CurrLineID = _G.PWorldMgr:GetCurrPWorldLineID()
-	if CurrLineID > 0 then
-		InfoText = string.format("%s（%02d）", InfoText, CurrLineID)
-	end
+	local InfoText = MapUtil.GetMajorCoordinateText()
 	self.TextCoordinate:SetText(InfoText)
 
 	_G.ChocoboTransportMgr:SetCurrentInteractiveNpcID(self.CurrentNpcID)
 
 	_G.ChocoboTransportMgr:ClearLastRequestInfo()
-
 end
 
 function ChocoboTransportMainPanelView:OnHide()

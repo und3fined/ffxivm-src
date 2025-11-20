@@ -163,7 +163,9 @@ function NewMapTaskTrackingTipsView:TrackTask()
 		else
 			MsgTipsUtil.ShowTips(LSTR(400004))
 		end
-		self:RefreshTraceStateShow(Params.QuestID == QuestMgr:GetTrackingQuest())
+		if self.Object and self.Object:IsValid() then
+			self:RefreshTraceStateShow(Params.QuestID == QuestMgr:GetTrackingQuest())
+		end
 	end
 
 	if WorldMapUIMapID == MapUIMapID then

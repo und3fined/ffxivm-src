@@ -15,12 +15,13 @@ local CEnvMgr = _G.UE.UEnvMgr
 ---@class GMWeatherView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field GMButtonCloseGM GMButtonView
----@field GMButtonDefaultWeather GMSwitchView
 ---@field GMButtonPause GMSwitchView
 ---@field GMButtonPlay GMButtonView
 ---@field GMButtonShowWeatherTime GMSwitchView
 ---@field GMSpeed UGMInputTextBox_C
 ---@field GMWeatherIDs UComboBoxString
+---@field SpeedText UTextBlock
+---@field SpeedText_1 UTextBlock
 ---@field WeatherTime GMSliderView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GMWeatherView = LuaClass(UIView, true)
@@ -28,12 +29,13 @@ local GMWeatherView = LuaClass(UIView, true)
 function GMWeatherView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.GMButtonCloseGM = nil
-	--self.GMButtonDefaultWeather = nil
 	--self.GMButtonPause = nil
 	--self.GMButtonPlay = nil
 	--self.GMButtonShowWeatherTime = nil
 	--self.GMSpeed = nil
 	--self.GMWeatherIDs = nil
+	--self.SpeedText = nil
+	--self.SpeedText_1 = nil
 	--self.WeatherTime = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -41,7 +43,6 @@ end
 function GMWeatherView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.GMButtonCloseGM)
-	self:AddSubView(self.GMButtonDefaultWeather)
 	self:AddSubView(self.GMButtonPause)
 	self:AddSubView(self.GMButtonPlay)
 	self:AddSubView(self.GMButtonShowWeatherTime)

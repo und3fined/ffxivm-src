@@ -27,7 +27,7 @@ local UIInteractiveUtil = {}
 -- end
 
 function UIInteractiveUtil.GetInteractiveConfig(UIType)
-	return PworldUiInteractiveCfg:FindAllCfgByUIType(UIType)
+	return PworldUiInteractiveCfg:FindAllCfg(string.format("UIType = %d", UIType))
 end
 
 function UIInteractiveUtil.SendInteractiveByGuideID(GuideID)
@@ -67,7 +67,7 @@ end
 
 function UIInteractiveUtil.InteractiveIsCompleted(InteractiveID)
 
-	local Cfg = PworldUiInteractiveCfg:FindCfgByInteractiveID(InteractiveID)
+	local Cfg = PworldUiInteractiveCfg:FindCfg(string.format("InteractiveID = %d", InteractiveID))
 
     if not Cfg or not Cfg.Param then
         FLOG_ERROR("Interactive descCfg id: %d need Cofig", InteractiveID)

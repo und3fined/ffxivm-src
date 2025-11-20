@@ -122,10 +122,15 @@ function NewBagRenameWinView:OnClickedRename()
 	_G.JudgeSearchMgr:QueryTextIsLegal(Name, function( IsLegal )
 		if not IsLegal then
 			_G.MsgTipsUtil.ShowTips(LSTR(10057)) 
-			self.InputBox:SetText("")
+			if self and self.InputBox then
+				self.InputBox:SetText("")
+			end
+			
 		else
 			DepotMgr:SendMsgDepotRename(Index, DepotRenameWinVM.CurrentIndex - 1, Name)
-			self:Hide()
+			if self then
+				self:Hide()
+			end
 		end
 	end)
 

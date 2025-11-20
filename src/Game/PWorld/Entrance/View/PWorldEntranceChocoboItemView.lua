@@ -86,10 +86,16 @@ function PWorldEntranceChocoboItemView:OnRegisterBinder()
         { "StatusImage",    UIBinderSetBrushFromAssetPath.New(self, self.StatusImage)},
         { "IsMatching",     UIBinderValueChangedCallback.New(self, nil, function (_, NewValue, OldValue)
             if NewValue then
+				if self:IsAnimationPlaying(self.AnimMatchingOut) then
+                    self:StopAnimation(self.AnimMatchingOut)
+                end
                 self:PlayAnimation(self.AnimMatchingIn)
                 self:PlayAnimation(self.AnimMatchingLoop, 0, 0)
             else
                 self:PlayAnimation(self.AnimMatchingOut)
+                if self:IsAnimationPlaying(self.AnimMatchingIn) then
+                    self:StopAnimation(self.AnimMatchingIn)
+                end
                 if self:IsAnimationPlaying(self.AnimMatchingLoop) then
                     self:StopAnimation(self.AnimMatchingLoop)
                 end

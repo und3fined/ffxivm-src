@@ -152,6 +152,24 @@ local HQItem152SlotColotType =
 	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/UI_Quality_152Slot_HQ_04_png.UI_Quality_152Slot_HQ_04_png'",
 }
 
+
+local LightSlotColotType =
+{
+	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Grey_152px_png.Ui_Img_LightSlot_NQ_Grey_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Green_152px_png.Ui_Img_LightSlot_NQ_Green_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Blue_152px_png.Ui_Img_LightSlot_NQ_Blue_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Purple_152px_png.Ui_Img_LightSlot_NQ_Purple_152px_png'",
+}
+
+local HQLightSlotColotType =
+{
+	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Grey_152px_png.Ui_Img_LightSlot_HQ_Grey_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Green_152px_png.Ui_Img_LightSlot_HQ_Green_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Blue_152px_png.Ui_Img_LightSlot_HQ_Blue_152px_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Purple_152px_png.Ui_Img_LightSlot_HQ_Purple_152px_png'",
+}
+
+
 local ItemSlotType =
 {
 	Item58Slot = 1,
@@ -181,6 +199,9 @@ local ItemDefine = {
 	HQItem126SlotColotType = HQItem126SlotColotType,
 	Item152SlotColotType = Item152SlotColotType,
 	HQItem152SlotColotType = HQItem152SlotColotType,
+	LightSlotColotType = LightSlotColotType,
+	HQLightSlotColotType = HQLightSlotColotType,
+
 	ItemSlotType = ItemSlotType
 }
 

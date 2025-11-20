@@ -19,6 +19,9 @@ local ButtonType = {
     PRE_DOWNLOAD = 9,       -- 预下载
     MUR_SURVEY = 10,        -- 调查问卷
     DEPART_OF_LIGHT = 11,   -- 光之启程
+
+    HOUSE_SYS = 12, --房屋系统
+    HOUSE_DECORATE = 13, --房屋装修
 }
 
 ---@class MainFunctionButtonConfig
@@ -72,6 +75,14 @@ local Configs = {
     [ButtonType.DEPART_OF_LIGHT] = {
         Icon = "Texture2D'/Game/UI/Texture/Departure/UI_Departure_Img_MainPanelEntrance.UI_Departure_Img_MainPanelEntrance'",
         RedDotID = 21000,
+    },
+
+    [ButtonType.HOUSE_DECORATE] = {
+        Icon = "PaperSprite'/Game/UI/Atlas/Main/Frames/UI_Main_Btn_House_png.UI_Main_Btn_House_png'",
+    },
+
+    [ButtonType.HOUSE_SYS] = {
+        Icon = "PaperSprite'/Game/UI/Atlas/Main/Frames/UI_Main_Btn_Home_png.UI_Main_Btn_Home_png'",
     },
 }
 

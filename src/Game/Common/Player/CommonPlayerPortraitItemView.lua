@@ -74,21 +74,39 @@ function CommonPlayerPortraitItemView:OnRegisterBinder()
 	self:RegisterBinders(self.RoleVM, self.Binders)
 end
 
+---回包后RoleVM可能有变更，重新绑定
+function CommonPlayerPortraitItemView:UpdateBinderByData(Data)
+	if not Data then
+		return
+	end
+	if self.RoleVM then
+		self:UnRegisterBinders(self.RoleVM, self.Binders)
+	end
+	local RoleVM = _G.RoleInfoMgr:FindRoleVM(Data.RoleID, true)
+	self.RoleVM = RoleVM
+	self:RegisterBinders(self.RoleVM, self.Binders)
+end
+
 function CommonPlayerPortraitItemView:SetDefaultIcon()
 	local RoleVM = self.RoleVM
 	if nil == RoleVM then
 		return
 	end
 
+	UIUtil.SetIsVisible(self.ScaleBoxLogin, false)
+	UIUtil.SetIsVisible(self.ScaleBoxEnpty, true)
+
+
 	local DefaultIcon = RoleVM.PortraitDefaultIcon
 	if string.isnilorempty(DefaultIcon) then
 		return
 	end
 
+	
+
 	-- UIUtil.ImageSetBrushFromAssetPath(self.ImgPortrait, DefaultIcon)
 	-- UIUtil.SetIsVisible(self.ImgPortrait, true)
 
-	UIUtil.SetIsVisible(self.ScaleBoxEnpty, true)
 end
 
 function CommonPlayerPortraitItemView:OnValueChangedPortraitUrlFlag()
@@ -99,6 +117,42 @@ function CommonPlayerPortraitItemView:OnValueChangedPortraitUrlFlag()
 	local RoleVM = self.RoleVM or {}
 	local Url = RoleVM.PortraitUrl
 	if string.isnilorempty(Url) then
+		self:SetDefaultIcon()
+		return
+	end
+
+    local ImageDownloader = UImageDownloader.MakeDownloader("PortraitImage", true, MaxSavedFileNum)
+    ImageDownloader.OnSuccess:Add(ImageDownloader,
+		function(_, texture)
+			FLOG_INFO("[CommonPlayerPortraitItemView:OnValueChangedPortraitUrlFlag] OnSuccess")
+
+			if texture and self:IsValid() then
+				UIUtil.SetIsVisible(self.ScaleBoxLogin, false)
+				UIUtil.ImageSetBrushResourceObject(self.ImgPortrait, texture)
+				UIUtil.SetIsVisible(self.ImgPortrait, true)
+			end
+		end
+    )
+
+    ImageDownloader.OnFail:Add(ImageDownloader,
+		function()
+			FLOG_INFO("[CommonPlayerPortraitItemView:OnValueChangedPortraitUrlFlag] OnFail")
+			if self:IsValid() then
+				self:SetDefaultIcon()
+			end
+		end
+	)
+
+    ImageDownloader:Start(Url, RoleVM.PortraitUrlHashEx or "", true)
+	self.ImageDownloader = ImageDownloader
+end
+
+function CommonPlayerPortraitItemView:SetPortraitUrlFlag(PortraitUrl)
+	UIUtil.SetIsVisible(self.ImgPortrait, false)
+	UIUtil.SetIsVisible(self.ScaleBoxEnpty, false)
+	UIUtil.SetIsVisible(self.ScaleBoxLogin, true)
+
+	if string.isnilorempty(PortraitUrl) then
 		self:SetDefaultIcon()
 		return
 	end
@@ -124,7 +178,7 @@ function CommonPlayerPortraitItemView:OnValueChangedPortraitUrlFlag()
 		end
 	)
 
-    ImageDownloader:Start(Url, RoleVM.PortraitUrlHashEx or "", true)
+    ImageDownloader:Start(PortraitUrl, "", true)
 	self.ImageDownloader = ImageDownloader
 end
 

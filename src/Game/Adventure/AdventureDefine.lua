@@ -56,6 +56,15 @@ local MainTabs = {
         NormalIconPath = "PaperSprite'/Game/UI/Atlas/Adventure/Frames/UI_Adventure_Tab_Note1_png.UI_Adventure_Tab_Note1_png'",
         SelectedIconPath = "PaperSprite'/Game/UI/Atlas/Adventure/Frames/UI_Adventure_Tab_Note2_png.UI_Adventure_Tab_Note2_png'",
         ChildWidget = "Adventure/AdventureProfCareerTask_UIBP"
+    },
+    {
+        Index = 5,
+        PageName = LSTR(520076),
+        -- RedDotID = RedDefines.ProfCareer,
+        -- ModuleID = ProtoCommon.ModuleID.ModuleIDJobQuest,
+        NormalIconPath = "PaperSprite'/Game/UI/Atlas/Adventure/Frames/UI_Adventure_Tab_Note1_png.UI_Adventure_Tab_Note1_png'",
+        SelectedIconPath = "PaperSprite'/Game/UI/Atlas/Adventure/Frames/UI_Adventure_Tab_Note2_png.UI_Adventure_Tab_Note2_png'",
+        ChildWidget = "Adventure/AdventureFateRecommendPanel_UIBP"
     }
 }
 

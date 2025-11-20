@@ -17,6 +17,7 @@ local RechargingGiftItemVM = LuaClass(UIViewModel)
 
 function RechargingGiftItemVM:Ctor()
 	self.GiftID = 0
+	self.ItemIndex = 0
 	self.Name = 0
 	self.RestAmountToApplyReward = 0
 	self.Icon = ""
@@ -45,6 +46,7 @@ end
 
 function RechargingGiftItemVM:UpdateVM(Value)
 	self.GiftID = Value.GiftID
+	self.ItemIndex = Value.ItemIndex
 	if nil == self.GiftID then
 		return
 	end

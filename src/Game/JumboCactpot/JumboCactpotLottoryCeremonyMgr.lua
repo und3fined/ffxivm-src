@@ -5,13 +5,15 @@ local ProtoCS = require("Protocol/ProtoCS")
 local ItemCfg = require("TableCfg/ItemCfg")
 local TimeUtil = require("Utils/TimeUtil")
 local JumboCactpotDefine = require("Game/JumboCactpot/JumboCactpotDefine")
+local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 local MajorUtil = require("Utils/MajorUtil")
 local DateTimeTools = require("Common/DateTimeTools")
 local FairycolorRaffleTimeCfg = require("TableCfg/FairycolorRaffleTimeCfg")
 local GoldSauserVM = require("Game/Gate/GoldSauserVM")
 local GameWeekCronCfg = require("TableCfg/GameWeekCronCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local FairycolorRaffleCfg = require("TableCfg/FairycolorRaffleCfg")
+--local FairycolorRaffleCfg = require("TableCfg/FairycolorRaffleCfg")
+local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
 local AudioUtil = require("Utils/AudioUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
@@ -28,9 +30,16 @@ local UE = _G.UE
 local ActorUtil = require("Utils/ActorUtil")
 local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local EffectUtil = require("Utils/EffectUtil")
+local GoldSauserMapID = GoldSauserMainPanelDefine.GoldSauserMapID -- 12060
+local JumboCeremoneyAssetPath = JumboCactpotDefine.JumboCeremoneyAssetPath
 local JumboAreaID = 1100000
 local MaxRound = 3
 local MaxPlayEffectDistance = 6000  --- 超过6000距离不再播放特效
+
+local NpcATLType = {
+    ["CongratulationAtl"] = 1,
+    ["ThrowMoneyAtl"] = 2
+}
 
 ---@class JumboCactpotLottoryCeremonyMgr : MgrBase
 local JumboCactpotLottoryCeremonyMgr = LuaClass(MgrBase)
@@ -38,7 +47,6 @@ local JumboCactpotLottoryCeremonyMgr = LuaClass(MgrBase)
 function JumboCactpotLottoryCeremonyMgr:OnInit()
     local EntertainGameID = ProtoRes.Game.GameID
     self.ID = EntertainGameID.GameIDFairyColor -- 仙人仙彩的ID
-    self.JDMapID = 12060
     self.JDResID = 1008204
     self.bEnterWrold = false
     self.RaffleRound = 0                -- 抽奖轮数
@@ -112,7 +120,7 @@ function JumboCactpotLottoryCeremonyMgr:OnlyExitWorldReset()
 end
 
 function JumboCactpotLottoryCeremonyMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
-    if LeaveMapResID == self.JDMapID then
+    if LeaveMapResID == GoldSauserMapID then
         self:UnRegisterAllTimer()
         self:JumboCeremonyMgrReset(true)
         self:OnlyExitWorldReset()
@@ -123,7 +131,7 @@ function JumboCactpotLottoryCeremonyMgr:OnGameEventLoginRes(Params)
     local bReconnect = Params.bReconnect
     if bReconnect then
         local BaseInfo = PWorldMgr.BaseInfo
-        if BaseInfo.CurrMapResID == self.JDMapID then
+        if BaseInfo.CurrMapResID == GoldSauserMapID then
             self:EndPlayLuckDrawEffectTimer()
             self:HideLastEffect()
         end
@@ -134,7 +142,7 @@ end
 function JumboCactpotLottoryCeremonyMgr:OnGameEventVisionEnter(Params)
     local BaseInfo = PWorldMgr.BaseInfo
     -- self.CurrMapResID = BaseInfo.CurrMapResID
-    if BaseInfo.CurrMapResID ~= self.JDMapID then
+    if BaseInfo.CurrMapResID ~= GoldSauserMapID then
         return
     end
 
@@ -145,7 +153,7 @@ function JumboCactpotLottoryCeremonyMgr:OnGameEventVisionEnter(Params)
         self.JumbNpcList[ResID] = EntityID
     end
 
-    if ActorType == _G.EActorType.Monster and self:CheckIsJumboMonster(ResID) then
+    if ActorType == _G.UE.EActorType.Monster and self:CheckIsJumboMonster(ResID) then
         self.JumbMonsterList[ResID] = EntityID
     end
 
@@ -222,8 +230,9 @@ function JumboCactpotLottoryCeremonyMgr:OnEndRaffle(MsgBody)
     self:PlayRaffleEffect(RoleList, true)
     self:PlayGetRaffleVfx(RoleList)
 
-    local JumboCeremoneyAssetPath = JumboCactpotDefine.JumboCeremoneyAssetPath
-    self:JumboNpcPlayMontage(JumboCeremoneyAssetPath.CongratulationAtl)
+    
+    --local CongratulationAt = JumboCeremoneyAssetPath.CongratulationAtl
+    self:JumboNpcPlayMontage(NpcATLType.CongratulationAtl)
     self.CachLottoryListID = EndRaffle.RoleIds
 
     local DelayShowCountDownTime = GameGlobalCfg:FindCfgByKey(ProtoRes.Game.game_global_cfg_id.GAME_CFG_FAIRY_COLOR_DELAY_SHOW_COUNTDOWN_TIP_TIME_ONEND).Value[1]
@@ -254,8 +263,8 @@ end
 
 --- @type 结束参与奖
 function JumboCactpotLottoryCeremonyMgr:OnEndJoinPrize(MsgBody)
-    local JumboCeremoneyAssetPath = JumboCactpotDefine.JumboCeremoneyAssetPath
-    self:JumboNpcPlayMontage(JumboCeremoneyAssetPath.ThrowMoneyAtl)
+    --local JumboCeremoneyAssetPath = JumboCactpotDefine.JumboCeremoneyAssetPath
+    self:JumboNpcPlayMontage(NpcATLType.ThrowMoneyAtl)
 end
 
 --- @type 停止播放特效
@@ -273,6 +282,7 @@ function JumboCactpotLottoryCeremonyMgr:BeginPlayRaffleEffect(InitNum)
     local RoleEntityIDList = self.RoleEntityIDList
     for _, v in pairs(RoleEntityIDList) do
         v.bAttendLuckDraw = self:CheckIsInJumbArea(v.EntityID)
+        FLOG_INFO("CheckConstantEffect JumboCactpotLottoryCeremonyMgr:BeginPlayRaffleEffect EntityID:%s bAttendLuckDraw:%s", v.EntityID, v.bAttendLuckDraw)
     end
     self:ResetEffectArrayIndex()
 
@@ -373,6 +383,7 @@ function JumboCactpotLottoryCeremonyMgr:PlayRaffleEffect(RoleList, bShowLottoryE
             local ID = EffectUtil.PlayVfx(VfxParameter)
 
             table.insert(self.EffectIDList, ID)
+            FLOG_INFO("CheckConstantEffect JumboCactpotLottoryCeremonyMgr:PlayRaffleEffect bShowLottoryEffect:%s", bShowLottoryEffect)
         end
     end
     if bShowLottoryEffect then
@@ -431,6 +442,7 @@ function JumboCactpotLottoryCeremonyMgr:ChoosePlayEffectList(InitNum)
         local Data = v
         local bInJumbArea = self:CheckIsInJumbArea(Data.EntityID)
         v.bAttendLuckDraw = bInJumbArea
+        FLOG_INFO("CheckConstantEffect JumboCactpotLottoryCeremonyMgr:ChoosePlayEffectList EntityID:%s bAttendLuckDraw:%s", Data.EntityID, bInJumbArea)
         if bInJumbArea then
             table.insert(self.InJumboAreaRoleList, Data)
         end
@@ -497,6 +509,7 @@ function JumboCactpotLottoryCeremonyMgr:GetJumbArea()
     return JumbArea
 end
 
+--- @deprecated
 --- @type 获取Major离仙彩区域多远
 function JumboCactpotLottoryCeremonyMgr:GetJumbAreaDistance()
     local JumbArea = self:GetJumbArea()
@@ -515,49 +528,83 @@ function JumboCactpotLottoryCeremonyMgr:GetJumbAreaDistance()
     return _G.UE.FVector.Dist(RoleLoc, AreaLoc)
 end
 
---- @type 检测是否在区域内(有十几厘米误差)
+--- @type 检测是否在区域内
 function JumboCactpotLottoryCeremonyMgr:CheckIsInJumbArea(RoleEntityID, NewLoc)
-    -- local RoleEntityID = RoleEntityID or MajorUtil.GetMajorEntityID()
     local JumbArea = self:GetJumbArea()
     if JumbArea == nil then
         return false
     end
     local Box = JumbArea.Box
-    local Rotator = Box.Rotator
+    if not Box then
+        return false
+    end
+    
     local Center = Box.Center
     local Extent = Box.Extent
-    local AreaRotator = UE.FRotator(Rotator.X, Rotator.Z, Rotator.Y)
+    if not Center or not Extent then
+        return false
+    end
+  
     local AreaLoc = UE.FVector(Center.X, Center.Y, Center.Z)
+   
     local Role = ActorUtil.GetActorByEntityID(RoleEntityID)
     if Role == nil then
         return false
     end
-    local RoleLoc = NewLoc or Role:FGetActorLocation() --(AreaLoc + UE.FVector(100, 0, 0)) 
-    -- local RoleLocIgoreZ = UE.FVector(RoleLoc.X, RoleLoc.Y)
-    local ToRoleVector = UE.FVector(RoleLoc.X, RoleLoc.Y, 0) - UE.FVector(AreaLoc.X, AreaLoc.Y, 0)  -- 方向从Area指向玩家的向量
-    -- local UnRotationRoleLoc = AreaRotator:UnrotateVector(ToRoleVector)
-    local UnRotationRoleLoc = AreaRotator:UnrotateVector(ToRoleVector)
 
-    local FirstQuadrantBoundaryPoints = UE.FVector(Extent.X, Extent.Y, 0)
-    local SecondQuadrantBoundaryPoints = UE.FVector(-Extent.X, Extent.Y, 0)
-    local ThirdQuadrantBoundaryPoints = UE.FVector(-Extent.X, -Extent.Y, 0)
-    local ForthQuadrantBoundaryPoints = UE.FVector(Extent.X, -Extent.Y, 0)
-    if UnRotationRoleLoc.X <= FirstQuadrantBoundaryPoints.X and UnRotationRoleLoc.X >= SecondQuadrantBoundaryPoints.X 
-    and UnRotationRoleLoc.Y <= FirstQuadrantBoundaryPoints.Y and UnRotationRoleLoc.Y >= ThirdQuadrantBoundaryPoints.Y
-    and RoleLoc.Z >= (AreaLoc.Z - 200) then
-        return true
+    local RoleLoc = NewLoc or Role:FGetActorLocation()
+    local RoleHalfHeight = Role:GetCapsuleHalfHeight()
+    local RoleFootLoc = UE.FVector(RoleLoc.X, RoleLoc.Y, RoleLoc.Z - RoleHalfHeight)
+ 
+    local RoleRelativeLoc = RoleFootLoc - AreaLoc -- 计算以长方体中心为坐标中心的人物脚底相对位置
+
+    local RectMinVec = UE.FVector(-Extent.X, -Extent.Y, -Extent.Z)
+    local RectMaxVec = UE.FVector(Extent.X, Extent.Y, Extent.Z)
+
+    local Tolerance = 100
+    if RoleRelativeLoc.X < RectMinVec.X - Tolerance or RoleRelativeLoc.X > RectMaxVec.X + Tolerance then
+        return false
     end
 
-    return false
+    if RoleRelativeLoc.Y < RectMinVec.Y - Tolerance or RoleRelativeLoc.Y > RectMaxVec.Y + Tolerance then
+        return false
+    end
+
+    if RoleRelativeLoc.Z < RectMinVec.Z - Tolerance or RoleRelativeLoc.Z > RectMaxVec.Z + Tolerance then
+        return false
+    end
+
+    return true
 end
 
-function JumboCactpotLottoryCeremonyMgr:JumboNpcPlayMontage(Path)
+function JumboCactpotLottoryCeremonyMgr:JumboNpcPlayMontage(ATLType)
+    local AssetPath = ""
+    if ATLType == NpcATLType.CongratulationAtl then
+        AssetPath = JumboCeremoneyAssetPath.CongratulationAtl
+    elseif ATLType == NpcATLType.ThrowMoneyAtl then
+        AssetPath = JumboCeremoneyAssetPath.ThrowMoneyAtl
+    end
+
+    if AssetPath == "" then
+        return
+    end
+
     local JumbNpcList = self.JumbNpcList
     for _, v in pairs(JumbNpcList) do
         local NpcEntityID = v
-        local Npc = ActorUtil.GetActorByEntityID(NpcEntityID)
-        if Npc then
-            _G.AnimMgr:PlayActionTimeLineByActor(Npc, Path, nil)
+        local AttrComp = ActorUtil.GetActorAttributeComponent(NpcEntityID)
+        local ChangeAnotherAnimNpcListID = 5653245 -- 此npc使用单独的动画防止穿模
+        if AttrComp and AttrComp.ListID == ChangeAnotherAnimNpcListID and ATLType == NpcATLType.CongratulationAtl then
+            local ChooseAnimTimeLineID = 709
+            local ActionCfg = ActiontimelinePathCfg:FindCfgByKey(ChooseAnimTimeLineID)
+            if ActionCfg then
+                _G.AnimMgr:PlayActionTimeLine(NpcEntityID, ActionCfg.Filename)
+            end
+        else
+            local Npc = ActorUtil.GetActorByEntityID(NpcEntityID)
+            if Npc then
+                _G.AnimMgr:PlayActionTimeLineByActor(Npc, AssetPath, nil)
+            end
         end
     end
 end
@@ -566,7 +613,7 @@ end
 function JumboCactpotLottoryCeremonyMgr:DestroyJumboMonster()
     local JumbMonsterList = JumboCactpotLottoryCeremonyMgr.JumbMonsterList
     for _, MonsterEntityID in pairs(JumbMonsterList) do
-        _G.ClientVisionMgr:DestoryClientActor(MonsterEntityID, _G.EActorType.Monster)
+        _G.ClientVisionMgr:DestoryClientActor(MonsterEntityID, _G.UE.EActorType.Monster)
     end
 end
 
@@ -658,7 +705,7 @@ function JumboCactpotLottoryCeremonyMgr:GetRemainSecondTime()
     --     FLOG_INFO("ServerTime = %s", ServerTime)
     -- end
 
-    local ServerTime = TimeUtil.GetServerTime()
+    local ServerTime = TimeUtil.GetServerLogicTime()
     local ServerZone = 8 --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
     local LocalServeTime = ServerTime + (DateTimeTools.GetTimeZone() - ServerZone) * 3600
 	local TmTime = os.date("*t",LocalServeTime)

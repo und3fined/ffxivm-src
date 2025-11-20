@@ -24,6 +24,7 @@ local EventMgr
 local ChatMgr
 local MsgTipsUtil
 local MonthCardMgr
+local ModuleOpenMgr
 
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.MarketOptCmd
@@ -43,6 +44,7 @@ function MarketMgr:OnBegin()
 	ChatMgr = _G.ChatMgr
 	MsgTipsUtil = _G.MsgTipsUtil
 	MonthCardMgr = _G.MonthCardMgr
+	ModuleOpenMgr = _G.ModuleOpenMgr
 
 	--免费摊位数量
 	local FreeStallCfg = TradeMarketSystemParamCfg:FindCfgByKey(ProtoRes.trade_market_param_cfg_id.TRADE_MAERKET_PARAM_FREE_STALL) 
@@ -150,6 +152,10 @@ function MarketMgr:OnNetMsgSaleGoodRsp(MsgBody)
 	if nil == Msg then
 		return
 	end
+
+	if self.StallItemList == nil then
+		self.StallItemList  = {}
+	end
 	table.insert(self.StallItemList, Msg.Stall)
 	table.sort(self.StallItemList, self.SortStallItemList)
 	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
@@ -164,6 +170,9 @@ function MarketMgr:OnNetMsgReSaleGoodRsp(MsgBody)
 	if nil == Msg then
 		return
 	end
+	if self.StallItemList == nil then
+		return
+	end
 	local Stall = Msg.Stall or {}
 	for i, v in ipairs(self.StallItemList) do
 		if v.SellID == Stall.SellID then
@@ -174,6 +183,7 @@ function MarketMgr:OnNetMsgReSaleGoodRsp(MsgBody)
 			v.ExpireTick = Stall.ExpireTick
 			v.TaxRate = Stall.TaxRate
 			v.BackedMoney = Stall.BackedMoney
+			v.Attr = Stall.Attr
 			break
 		end
 	end
@@ -182,8 +192,8 @@ function MarketMgr:OnNetMsgReSaleGoodRsp(MsgBody)
 	MsgTipsUtil.ShowTips(LSTR(1010002))
 
 	if self:HasBatchOnOrOffStall() and not self.NotShowBatchOnMsgTip then
-		local Params = { bUseNever = true,  NeverMindText = LSTR(1160073), bUseTips = true,
-		TipsText = LSTR(1010100) } --下次登陆不再提醒
+		local Params = { bUseNever = true,  NeverMindText = LSTR(1010107), bUseTips = true,
+		TipsText = LSTR(1010100) } 
 
 		_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1010098),  LSTR(1010099),
 				function(_, Info)
@@ -200,6 +210,9 @@ function MarketMgr:OnNetMsgBatchReSaleGoodRsp(MsgBody)
 	if nil == Msg then
 		return
 	end
+	if self.StallItemList == nil then
+		return
+	end
 	local Rsps = Msg.Rsps or {}
 	for _, Rsp in ipairs(Rsps) do
 		local Stall = Rsp.Stall
@@ -212,6 +225,7 @@ function MarketMgr:OnNetMsgBatchReSaleGoodRsp(MsgBody)
 				v.ExpireTick = Stall.ExpireTick
 				v.TaxRate = Stall.TaxRate
 				v.BackedMoney = Stall.BackedMoney
+				v.Attr = Stall.Attr
 				break
 			end
 		end
@@ -272,17 +286,29 @@ function MarketMgr:OnNetMsgStallStatusRsp(MsgBody)
 end
 
 function MarketMgr:UpdateRedDot()
-	if self:HasStallExpired() or self:GetAllStallIncome() > 0 then
-		RedDotMgr:AddRedDotByID(MarketDefine.MarketRedDotID.Stall)
-	else
-		RedDotMgr:DelRedDotByID(MarketDefine.MarketRedDotID.Stall)
+	if self.StallItemList == nil then
+		return
 	end
+	local StallName = RedDotMgr:GetRedDotNameByID(MarketDefine.MarketRedDotID.Stall)
+	for i, V in ipairs(self.StallItemList) do
+		if self:IsStallExpired(V) or self:GetStallIncome(V) > 0 then
+			RedDotMgr:AddRedDotByName(StallName.. '/' .. tostring(V.SellID))
+		
+		else
+			RedDotMgr:DelRedDotByName(StallName.. '/' .. tostring(V.SellID))
+		
+		end
+	end
+	
 end
 
 
 function MarketMgr:OnNetMsgCloseSaleGoodsRsp(MsgBody)
 	local Msg = MsgBody.Close
 	if nil == Msg then
+		return
+	end
+	if self.StallItemList == nil then
 		return
 	end
 
@@ -299,7 +325,7 @@ function MarketMgr:OnNetMsgCloseSaleGoodsRsp(MsgBody)
 	MsgTipsUtil.ShowTips(LSTR(1010105))
 
 	if self:HasBatchOnOrOffStall() and not self.NotShowBatchOffMsgTip then
-		local Params = { bUseNever = true,  NeverMindText = LSTR(1160073)} --下次登陆不再提醒
+		local Params = { bUseNever = true,  NeverMindText = LSTR(1010107)} --下次登陆不再提醒
 		_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(1010101),  LSTR(1010102),
 				function(_, Info)
 					self.NotShowBatchOffMsgTip = Info and Info.IsNeverAgain == true or false
@@ -314,6 +340,10 @@ end
 function MarketMgr:OnNetMsgBatchCloseSaleGoodsRsp(MsgBody)
 	local Msg = MsgBody.BatchClose
 	if nil == Msg then
+		return
+	end
+
+	if self.StallItemList == nil then
 		return
 	end
 
@@ -340,9 +370,11 @@ function MarketMgr:OnNetMsgStallChgNtfRsp(MsgBody)
 	if nil == Msg then
 		return
 	end
+
 	if self.StallItemList == nil then
 		return
 	end
+
 	local Stalls = Msg.Stalls or {}
 	for _, Stall in ipairs(Stalls) do
 		for _, v in ipairs(self.StallItemList) do
@@ -354,6 +386,7 @@ function MarketMgr:OnNetMsgStallChgNtfRsp(MsgBody)
 				v.ExpireTick = Stall.ExpireTick
 				v.TaxRate = Stall.TaxRate
 				v.BackedMoney = Stall.BackedMoney
+				v.Attr = Stall.Attr
 				break
 			end
 		end
@@ -367,6 +400,10 @@ end
 function MarketMgr:OnNetMsgGetBackMoneyRsp(MsgBody)
 	local Msg = MsgBody.Money
 	if nil == Msg then
+		return
+	end
+
+	if self.StallItemList == nil then
 		return
 	end
 
@@ -688,11 +725,13 @@ function MarketMgr:GetConcernGoodsByType(Type)
 	local TypeConcernList = {}
 	for _, v in ipairs(self.FollowResIDs) do
 		local Cfg = TradeMarketGoodsCfg:FindCfgByKey(v)
-		if Type == ProtoRes.TradeMainType.TRADE_CONCERN_TYPE then
-			table.insert(TypeConcernList,1, Cfg.ResID)
-		else
-			if Cfg.MainType == Type then
+		if Cfg then
+			if Type == ProtoRes.TradeMainType.TRADE_CONCERN_TYPE then
 				table.insert(TypeConcernList,1, Cfg.ResID)
+			else
+				if Cfg.MainType == Type then
+					table.insert(TypeConcernList,1, Cfg.ResID)
+				end
 			end
 		end
 	end
@@ -762,6 +801,19 @@ function MarketMgr:GetStallIncome(StallItem)
 	return math.floor(self:GetStallIncomeNoTax(StallItem)*(1 - StallItem.TaxRate))
 end
 
+function MarketMgr:IsStallExpired(StallItem)
+	if StallItem == nil then
+		return false
+	end
+
+	if StallItem.ExpireTick < TimeUtil.GetServerTime() then
+		return true
+	end
+
+	return false
+	
+end
+
 function MarketMgr:GetStallIncomeNoTax(StallItem)
 	if StallItem == nil then
 		return 0
@@ -781,27 +833,27 @@ function MarketMgr:ShowSysChatObtainScoreMsg(ScoreID, Value)
 	-- 获得了[图标][金币]×10000
 	local ScoreInfo = ScoreCfg:FindCfgByKey(ScoreID)
 
-	local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1010008)), "d1ba81", 0, nil)
+	local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1010008)), "d1ba81")
 	local IconRichText = RichTextUtil.GetTexture(ScoreInfo.IconName, 40, 40, nil)--EEDC83FF
-	local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF", 0, nil)
-	local SoceNumRichText = RichTextUtil.GetText(string.format("×%s", Value), "d1ba81", 0, nil)
+	local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF")
+	local SoceNumRichText = RichTextUtil.GetText(string.format("×%s", Value), "d1ba81")
 	local Text = string.format("%s%s%s%s", GetRitchText, IconRichText, ScoreRichText, SoceNumRichText)
 	ChatMgr:AddSysChatMsg(Text)
 end
 
 function MarketMgr:ShowSysChatObtainItemMsg(ResID, Value)
 	-- 从市场购买了[物品名字]×1
-	local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1010009)), "d1ba81", 0, nil)
-	local NameRichText = RichTextUtil.GetText(string.format("[%s]", ItemCfg:GetItemName(ResID)), "DAB53AFF", 0, nil)
-	local NumRichText = RichTextUtil.GetText(string.format("×%s", Value), "d1ba81", 0, nil)
+	local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1010009)), "d1ba81")
+	local NameRichText = RichTextUtil.GetText(string.format("[%s]", ItemCfg:GetItemName(ResID)), "DAB53AFF")
+	local NumRichText = RichTextUtil.GetText(string.format("×%s", Value), "d1ba81")
 	local Text = string.format("%s%s%s", GetRitchText, NameRichText, NumRichText)
 	ChatMgr:AddSysChatMsg(Text)
 end
 
 function MarketMgr:GetMarketItemLevelInfo(ItemCfg)
 	local LevelRichText = ItemCfg.ItemLevel
-	if ItemUtil.CheckIsEquipment(ItemCfg.Classify) and _G.BagMgr:DiffQualityWithEquipment(ItemCfg.ItemID) > 0 then
-		local GetRitchText = RichTextUtil.GetText(string.format("%d", ItemCfg.ItemLevel), "89bd88", 0, nil)
+	if ItemUtil.CheckIsEquipment(ItemCfg.Classify) and _G.EquipmentMgr:CanEquiped(ItemCfg.ItemID) and _G.BagMgr:DiffQualityWithEquipment(ItemCfg.ItemID) > 0 then
+		local GetRitchText = RichTextUtil.GetText(string.format("%d", ItemCfg.ItemLevel), "89bd88")
 		local Path = "PaperSprite'/Game/UI/Atlas/CommPic/Frames/UI_Comm_Icon_Arrow_Upgrade_png.UI_Comm_Icon_Arrow_Upgrade_png'"
 	 	local IconText = RichTextUtil.GetTexture(Path, 40, 40, -11) or ""
 		LevelRichText =  string.format("%s%s", GetRitchText, IconText)
@@ -811,7 +863,7 @@ function MarketMgr:GetMarketItemLevelInfo(ItemCfg)
 end
 
 function MarketMgr:GetMarketItemDesc(ItemCfg)
-	if ItemUtil.CheckIsEquipment(ItemCfg.Classify) or ItemCfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.CONSUMABLES_BAIT then
+	if ItemUtil.CheckIsEquipment(ItemCfg.Classify) then
 
 		local ProfText = ""
 		if #ItemCfg.ProfLimit > 0 then
@@ -831,7 +883,7 @@ function MarketMgr:GetMarketItemDesc(ItemCfg)
 			end
 		end
 	
-		local CanWearable, OtherProfWearable = ItemUtil.UpdateProfRestrictions(ItemCfg.ItemID)
+		local CanWearable, OtherProfWearable = ItemUtil.OnlyProfRestrictions(ItemCfg.ItemID)
 		local ProfDetailColor = "dc5868"
 		local GradeColor = ProfDetailColor
 		if CanWearable then

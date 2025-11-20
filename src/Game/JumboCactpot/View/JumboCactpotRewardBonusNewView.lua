@@ -48,6 +48,7 @@ local LSTR = _G.LSTR
 ---@field Node07 JumboCactpotBonusItemView
 ---@field PopUpBG CommonPopUpBGView
 ---@field Probar UProgressBar
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TableViewReward UTableView
 ---@field TextAll UFTextBlock
 ---@field TextBeginReward UFTextBlock
@@ -96,6 +97,7 @@ function JumboCactpotRewardBonusNewView:Ctor()
 	--self.Node07 = nil
 	--self.PopUpBG = nil
 	--self.Probar = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TableViewReward = nil
 	--self.TextAll = nil
 	--self.TextBeginReward = nil
@@ -128,6 +130,7 @@ function JumboCactpotRewardBonusNewView:OnRegisterSubView()
 	self:AddSubView(self.Node06)
 	self:AddSubView(self.Node07)
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

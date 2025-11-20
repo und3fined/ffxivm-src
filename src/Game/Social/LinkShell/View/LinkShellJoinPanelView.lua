@@ -98,6 +98,7 @@ end
 
 function LinkShellJoinPanelView:InitConstText()
 	if self.IsInitConstText then
+		self.IsInitConstText = false
 		return
 	end
 

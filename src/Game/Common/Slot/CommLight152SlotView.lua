@@ -11,44 +11,29 @@ local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetP
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local ProtoRes = require("Protocol/ProtoRes")
-local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
+local UIBinderSetItemNumFormat = require("Binder/UIBinderSetItemNumFormat")
+
+
 
 ---@class CommLight152SlotView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn UFButton
 ---@field Icon UFImage
 ---@field ImgBg UFImage
----@field ImgSelect UFImage
----@field PanelShowSelect UFCanvasPanel
+---@field PanelSelect UFCanvasPanel
 ---@field RedDot CommonRedDotView
 ---@field RichTextNum URichTextBox
 ---@field AnimSelect UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommLight152SlotView = LuaClass(UIView, true)
 
-CommLight152SlotView.ItemColorType =
-{
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Grey_152px_png.Ui_Img_LightSlot_NQ_Grey_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Green_152px_png.Ui_Img_LightSlot_NQ_Green_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Blue_152px_png.Ui_Img_LightSlot_NQ_Blue_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Purple_152px_png.Ui_Img_LightSlot_NQ_Purple_152px_png'",
-}
-
-CommLight152SlotView.ItemHQColorType =
-{
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Grey_152px_png.Ui_Img_LightSlot_HQ_Grey_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Green_152px_png.Ui_Img_LightSlot_HQ_Green_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Blue_152px_png.Ui_Img_LightSlot_HQ_Blue_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Purple_152px_png.Ui_Img_LightSlot_HQ_Purple_152px_png'",
-}
 
 function CommLight152SlotView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Btn = nil
 	--self.Icon = nil
 	--self.ImgBg = nil
-	--self.ImgSelect = nil
-	--self.PanelShowSelect = nil
+	--self.PanelSelect = nil
 	--self.RedDot = nil
 	--self.RichTextNum = nil
 	--self.AnimSelect = nil
@@ -64,9 +49,12 @@ end
 function CommLight152SlotView:OnInit()
 	self.Binders = {
 		{ "Icon", UIBinderSetBrushFromAssetPath.New(self, self.Icon)},
+		{ "ItemQualityIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgBg)},
+		{ "ItemNum",UIBinderSetItemNumFormat.New(self, self.RichTextNum)},
 		{ "NumVisible", UIBinderSetIsVisible.New(self, self.RichTextNum)},
-		{ "ItemData", UIBinderValueChangedCallback.New(self, nil, self.OnItemDataChanged) },
+		{ "IsMask",UIBinderSetIsVisible.New(self, self.ImgMask)},
 		{ "IsSelect", UIBinderValueChangedCallback.New(self, nil, self.OnItemSelectChanged)},
+		{ "IsWearable", UIBinderSetIsVisible.New(self, nil, self.ImgWearable)},
 	}
 end
 
@@ -85,6 +73,8 @@ function CommLight152SlotView:OnShow()
     if  not string.isnilorempty(self.ViewModel.RedDotName) then
         local RedDotName = self.ViewModel.RedDotName
         self.RedDot:SetRedDotNameByString(RedDotName)
+	else
+		self.RedDot:SetRedDotNameByString("")
     end
 end
 
@@ -129,23 +119,11 @@ function CommLight152SlotView:OnRegisterBinder()
     self:RegisterBinders(ViewModel, self.Binders)
 end
 
-function CommLight152SlotView:OnItemDataChanged(ItemData)
-	if ItemData ~= nil then
-		local IsHQ = (1 == ItemData.IsHQ)
-		local ColorType = IsHQ and self.ItemHQColorType or self.ItemColorType
-		UIUtil.ImageSetBrushFromAssetPath(self.ImgBg, ColorType[ItemData.ItemColor])
-	end
-end
 
-function CommLight152SlotView:OnItemSelectChanged(bSelect)
+function CommLight152SlotView:OnItemSelectChanged(bSelect) 
+	UIUtil.SetIsVisible(self.PanelSelect, bSelect)
 	if bSelect then
-		self:PlayAnimToEnd(self.AnimSelect)
-		self.IsPlayed = true
-	else
-		-- UnSelect动画反复执行导致创建大量Anim对象：UnSelect动画只对播过动画（处于选中态）的进行处理
-		if self.IsPlayed then
-			self:PlayAnimationTimeRange(self.AnimSelect, 0, 0.01, 1, nil, 1.0, false)
-		end
+		self:PlayAnimation(self.AnimSelect)
 	end
 end
 

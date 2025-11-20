@@ -36,7 +36,7 @@ function FateDefine.GetIconByFateID(InFateID)
     end
 
     if (TargetCfg.IsCelebrateFate and TargetCfg.IsCelebrateFate > 0) then
-        -- 庆典活动，用庆典专用的
+        -- 庆典和节日用的图标
         return FateDefine.GetIcon(ProtoRes.FateIconType.ICON_FATE_ACTIVITY)
     else
         return FateDefine.GetIcon(FateTypeToIconTable[TargetCfg.Type])

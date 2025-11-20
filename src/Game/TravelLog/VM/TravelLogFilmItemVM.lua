@@ -125,7 +125,7 @@ function TravelLogFilmItemVM:Play(TabIndex, ScrollOffset, SubGenreIndex)
     if _G.PWorldMatchMgr:IsMatching() then
         local function RightBtnCallback()
             _G.PWorldMatchMgr:CancelAllMatch()
-            _G.PWorldMatchMgr:CancelAllCrystallineMatches()
+            _G.PWorldMatchMgr:CancelAllPVPMatch()
             _G.PWorldMatchMgr:CancelAllChocobosMatches()
             PlayFilmList()
         end

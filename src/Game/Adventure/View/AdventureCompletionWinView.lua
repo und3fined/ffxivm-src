@@ -4,19 +4,18 @@
 --- Description:每周挑战完成奖励
 ---
 
-local UIView = require("UI/UIView")
+local BaseView = require("Game/Adventure/View/AdventureChildPageBaseView")
+local AdventureCompletionWinVM = require("Game/Adventure/View/AdventureCompletionWinVM") 
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local math = require('math')
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
-local AdventureItemVM = require("Game/Adventure/ItemVM/AdventureItemVM")
 local AdventureMgr = require("Game/Adventure/AdventureMgr")
 local RichTextUtil = require("Utils/RichTextUtil")
 local ChallengeLogRewardCfg = require("TableCfg/ChallengeLogRewardCfg")
 local ItemCfg = require("TableCfg/ItemCfg")
 local EventID = require("Define/EventID")
-local TimeUtil = require("Utils/TimeUtil")
-local AdventureDefine = require("Game/Adventure/AdventureDefine")
+local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 
 local TimerMgr = _G.TimerMgr
 local LSTR = _G.LSTR
@@ -33,7 +32,7 @@ local LSTR = _G.LSTR
 ---@field RichTextCycle URichTextBox
 ---@field TableViewList UTableView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
-local AdventureCompletionWinView = LuaClass(UIView, true)
+local AdventureCompletionWinView = LuaClass(BaseView, true)
 
 function AdventureCompletionWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
@@ -63,12 +62,17 @@ function AdventureCompletionWinView:OnRegisterSubView()
 end
 
 function AdventureCompletionWinView:OnInit()
+	self.VM = AdventureCompletionWinVM.New()
 	self.BG.HideOnClick = false
 	self.AdapterItemList = UIAdapterTableView.CreateAdapter(self, self.TableViewList)
 end
 
-function AdventureCompletionWinView:OnDestroy()
+function AdventureCompletionWinView:OnRegisterBinder()
+	local Binders = {
+		{"ItemList", UIBinderUpdateBindableList.New(self, self.AdapterItemList)},
+	}
 
+	self:RegisterBinders(self.VM, Binders)
 end
 
 function AdventureCompletionWinView:OnShow()
@@ -80,14 +84,11 @@ function AdventureCompletionWinView:OnShow()
 end
 
 function AdventureCompletionWinView:OnHide()
+	self.Super.OnHide(self)
 	if self.UpdateTimerID then
 		TimerMgr:CancelTimer(self.UpdateTimerID)
 		self.UpdateTimerID = nil
 	end
-end
-
-function AdventureCompletionWinView:OnRegisterUIEvent()
-
 end
 
 function AdventureCompletionWinView:OnRegisterGameEvent()
@@ -95,19 +96,14 @@ function AdventureCompletionWinView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.GetChallengeRewardCollect, self.OnUpdateView)
 end
 
-function AdventureCompletionWinView:OnRegisterBinder()
-
-end
-
 function AdventureCompletionWinView:UpdateItems()
-	local ItemVMList = {}
+	local ItemVMData = {}
 	local FinishCount = AdventureMgr:GetFinishCount()
 	local Cfgs = ChallengeLogRewardCfg:FindAllCfg()
 	local Percent = 0
 	local LastCount = 0
 	if Cfgs then
 		for K, V in ipairs(Cfgs) do
-			local ItemVM = AdventureItemVM.New()
 			local Count = (V.Count and V.Count or 0)
 			local IsFinish = FinishCount >= Count
 			local Collected = AdventureMgr:IsRewardCollected(V.Count)
@@ -133,7 +129,7 @@ function AdventureCompletionWinView:UpdateItems()
             elseif not IsFinish then
                 ItemParam.UnFinishText = LSTR(520036)
             end
-			
+
 			if IsFinish then
 				Percent = Percent + 0.2
 			else
@@ -141,7 +137,6 @@ function AdventureCompletionWinView:UpdateItems()
 			end
 
 			LastCount = Count
-			ItemVM:UpdateVM(ItemParam)
 			local RewardData = {}
 			local RewardItemList = AdventureMgr:GetLootItems(V.LootID)
 			for i = 1, #RewardItemList do
@@ -165,8 +160,9 @@ function AdventureCompletionWinView:UpdateItems()
 				table.insert(RewardData, Params)
             end
 
-			ItemVM:SetRewardData(RewardData)
-			table.insert(ItemVMList, ItemVM)
+			ItemParam.RewardData = RewardData
+
+			table.insert(ItemVMData, ItemParam)
 			---@type AdventureCompletionItemView
 			local NodeView = self[string.format("Node0%d", K)]
 			if NodeView then
@@ -177,10 +173,9 @@ function AdventureCompletionWinView:UpdateItems()
 		end
 	end
 
-	table.sort(ItemVMList, self.SortRewardLogPredicate)
-	self.AdapterItemList:UpdateAll(ItemVMList)
-
+	table.sort(ItemVMData, self.SortRewardLogPredicate)
 	self.ProBar:SetPercent(Percent)
+	self.VM:SetItemListData(ItemVMData)
 end
 
 function AdventureCompletionWinView:InitSurplusTime()

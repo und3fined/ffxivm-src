@@ -107,7 +107,8 @@ function HUDActorView:InitBinders()
 	self.Binders = {
 		{ "IsDraw", UIBinderValueChangedCallback.New(self, self.Object, self.OnIsDrawChanged), },
 		{ "EidMountPoint", UIBinderValueChangedCallback.New(self, self.Object, self.OnEidMountPointChanged), },
-		{ "OffsetY", UIBinderValueChangedCallback.New(self, self.Object, self.OnOffsetYChanged), },
+		{ "ExpdSmoothTimeMS", UIBinderValueChangedCallback.New(self, self.Object, self.OnExpdSmoothTimeMSChanged), },
+		{ "LocationOffsetZ", UIBinderValueChangedCallback.New(self, self.Object, self.OnLocationOffsetZChanged), },
 
 		{ "IsInteractiveTarget", UIBinderValueChangedCallback.New(self, nil, self.OnInteractiveTargetVisibleChanged), },
 		{ "OnlineStatusIcon", UIBinderValueChangedCallback.New(self, self.TextureOnlineStatus, self.SetOnlineStatusIcon), },
@@ -334,16 +335,19 @@ end
 
 function HUDActorView:OnEidMountPointChanged(NewValue, OldValue)
 	if nil ~= self.Object then
-		-- 坐骑相关的Eid变化，不启用平滑插值
-		local IsMountEID = string.match(tostring(NewValue), "^EID_UI_NAME_MNT") or
-			string.match(tostring(OldValue), "^EID_UI_NAME_MNT")
-		self.Object:SetEidMountPoint(NewValue, not IsMountEID)
+		self.Object:SetEidMountPoint(NewValue)
 	end
 end
 
-function HUDActorView:OnOffsetYChanged(NewValue, OldValue)
+function HUDActorView:OnExpdSmoothTimeMSChanged(NewValue, OldValue)
 	if nil ~= self.Object then
-		self.Object:SetOffset(0, NewValue)  -- loiafeng: 暂时不支持修改X轴偏移
+		self.Object:SetSmoothTime(math.max((NewValue - _G.TimeUtil.GetLocalTimeMS()) / 1000.0, 0.0))
+	end
+end
+
+function HUDActorView:OnLocationOffsetZChanged(NewValue, OldValue)
+	if nil ~= self.Object then
+		self.Object:SetLocationOffsetZ(NewValue)
 	end
 end
 

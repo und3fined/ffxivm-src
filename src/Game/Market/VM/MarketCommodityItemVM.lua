@@ -4,7 +4,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local MarketMgr = require("Game/Market/MarketMgr")
 local ShopDefine = require("Game/Shop/ShopDefine")
 local ItemUtil = require("Utils/ItemUtil")
-local ProtoCommon = require("Protocol/ProtoCommon")
+local TradeMarketGoodsCfg = require("TableCfg/TradeMarketGoodsCfg")
 local FLOG_WARNING = _G.FLOG_WARNING
 local LSTR = _G.LSTR
 local ShoWMaxNum = 999
@@ -36,7 +36,9 @@ function MarketCommodityItemVM:Ctor()
 	self.UpArrowVisible = nil
 	self.ImgXVisible = nil
 	self.ProfRestrictionsImgColor = nil
-		
+	self.IsSpecialVisible = nil
+
+	self.ImgTagBgVisible = nil
 end
 
 function MarketCommodityItemVM:UpdateVM(Value)
@@ -63,12 +65,14 @@ function MarketCommodityItemVM:UpdateVM(Value)
         self.QuotaNum = string.format("%d", AllSellNum)
     end
 
+	self.ImgTagBgVisible = AllSellNum > 0
+
 	local Price = Value.LowPrice or 0
 	if Price > 0 then
 		self.MoneyVisible = true
 		self.MoneyNum1 = _G.ScoreMgr.FormatScore(Price)
-		self.PriceInfoText = _G.LSTR(1010021)
 	else
+		self.PriceInfoText = _G.LSTR(1010021)
 		self.MoneyVisible = false
 		self.PriceInfoText = _G.LSTR(1010022)
 	end
@@ -88,7 +92,10 @@ function MarketCommodityItemVM:UpdateVM(Value)
 	end
 
 	self.UpArrowVisible = ItemUtil.CheckIsEquipment(Cfg.Classify) and _G.EquipmentMgr:CanEquiped(ResID) and _G.BagMgr:DiffQualityWithEquipment(ResID) > 0
-	
+	local GoodsCfg = TradeMarketGoodsCfg:FindCfgByKey(self.ResID)
+	if GoodsCfg then
+		self.IsSpecialVisible = GoodsCfg.IsSpecial == 1
+	end
 end
 
 function MarketCommodityItemVM:SetHQandColorImg(IsHQ,ItemColor)

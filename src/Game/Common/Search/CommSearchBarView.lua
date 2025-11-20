@@ -67,7 +67,7 @@ function CommSearchBarView:OnRegisterSubView()
 end
 
 function CommSearchBarView:OnInit()
-
+	self.CloseQueryTextIsLegal = false
 end
 
 function CommSearchBarView:OnDestroy()
@@ -173,15 +173,21 @@ function CommSearchBarView:OnTextCommitted(_, Text, CommitMethod)
 	end
 
 	---查询文本是否合法（敏感词）
-	_G.JudgeSearchMgr:QueryTextIsLegal(Text, function( IsLegal )
-		if IsLegal then
-			if nil ~= self.CommittedCallback then
-				self.CommittedCallback(self.View, Text, CommitMethod)
+	if not self.CloseQueryTextIsLegal then
+		_G.JudgeSearchMgr:QueryTextIsLegal(Text, function( IsLegal )
+			if IsLegal then
+				if nil ~= self.CommittedCallback then
+					self.CommittedCallback(self.View, Text, CommitMethod)
+				end
+			else
+				self:SetText("")
 			end
-		else
-			self:SetText("")
+		end, true, self.IllegalTipsText)
+	else
+		if nil ~= self.CommittedCallback then
+			self.CommittedCallback(self.View, Text, CommitMethod)
 		end
-	end, true, self.IllegalTipsText)
+	end
 
 	---隐藏虚拟键盘扩展UI
 	self:HideVirtualKeyboardExUI()
@@ -282,6 +288,10 @@ end
 
 function CommSearchBarView:SetFocus()
 	self.TextInput:SetFocus()
+end
+
+function CommSearchBarView:SetQueryTextIsLegal(IsQuery)
+	self.CloseQueryTextIsLegal = not IsQuery
 end
 
 --- 提交当前内容(用于自动化测试) 

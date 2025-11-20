@@ -35,6 +35,7 @@ local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local GatheringLogDefine = require("Game/GatheringLog/GatheringLogDefine")
 local ItemUtil = require("Utils/ItemUtil")
+local RichTextUtil = require("Utils/RichTextUtil")
 local CraftingLogState = CraftingLogDefine.CraftingLogState
 local FilterALLType = CraftingLogDefine.FilterALLType
 local LSTR = _G.LSTR
@@ -63,9 +64,11 @@ local CommUIStyleType = UIDefine.CommUIStyleType
 ---@field FTextBlock_61 UFTextBlock
 ---@field HorTabs CommHorTabsView
 ---@field IconMost UFImage
+---@field IconMostDisab UFImage
 ---@field ImgAdd UFImage
 ---@field ImgAddDisable UFImage
 ---@field ImgCollect UFImage
+---@field ImgMaxDisab UFImage
 ---@field ImgMaxNormal UFImage
 ---@field ImgSubtract UFImage
 ---@field ImgSubtractDisable UFImage
@@ -87,7 +90,7 @@ local CommUIStyleType = UIDefine.CommUIStyleType
 ---@field TextCraftTips UFTextBlock
 ---@field TextCrystal UFTextBlock
 ---@field TextDescription UFTextBlock
----@field TextListEmpty UFTextBlock
+---@field TextListEmpty URichTextBox
 ---@field TextMaterial UFTextBlock
 ---@field TextName UFTextBlock
 ---@field TextNotice UFTextBlock
@@ -125,9 +128,11 @@ function CraftingLogMainPanelView:Ctor()
 	--self.FTextBlock_61 = nil
 	--self.HorTabs = nil
 	--self.IconMost = nil
+	--self.IconMostDisab = nil
 	--self.ImgAdd = nil
 	--self.ImgAddDisable = nil
 	--self.ImgCollect = nil
+	--self.ImgMaxDisab = nil
 	--self.ImgMaxNormal = nil
 	--self.ImgSubtract = nil
 	--self.ImgSubtractDisable = nil
@@ -218,6 +223,8 @@ function CraftingLogMainPanelView:OnInit()
 		{"bBatchMakeShow", UIBinderSetIsVisible.New(self, self.PanelAmountSetting)},
 		{"bImgMaxNormalShow", UIBinderSetIsVisible.New(self, self.ImgMaxNormal)},
 		{"bImgMaxNormalShow", UIBinderSetIsVisible.New(self, self.IconMost)},
+		{"bImgMaxNormalShow", UIBinderSetIsVisible.New(self, self.ImgMaxDisab, true)},
+		{"bImgMaxNormalShow", UIBinderSetIsVisible.New(self, self.IconMostDisab, true)},
 		{"bTrainMakeShow", UIBinderSetIsVisible.New(self, self.BtnPractise)},
 		{"bBuyShow", UIBinderSetIsVisible.New(self, self.FCanvasPanel_93)},
 
@@ -278,11 +285,18 @@ function CraftingLogMainPanelView:OnShow()
 	self.InputSearch:SetHintText(LSTR(CraftingLogDefine.SearchHintLabel))
 	self.bPlayAnimation = true
 
+	self:RegisterTimer(function()
+		UIUtil.SetInputMode_UIOnly()
+		--_G.UE.UActorManager.Get():SetVirtualJoystickCanProcessAnalog(false)
+	end, 0, 0.02, 0)
 end
 
 function CraftingLogMainPanelView:OnHide()
 	CraftingLogMgr:ViewHide()
 	CraftingLogMgr:DelRedDotsOnHide()
+
+	UIUtil.SetInputMode_GameAndUI()
+	--_G.UE.UActorManager.Get():SetVirtualJoystickCanProcessAnalog(true)
 end
 
 function CraftingLogMainPanelView:OnRegisterUIEvent()
@@ -318,6 +332,22 @@ function CraftingLogMainPanelView:OnRegisterUIEvent()
 	self.CommLight152Slot:SetClickButtonCallback(self.CommLight152Slot, self.OnIconClick)
 	--排序按钮
 	UIUtil.AddOnClickedEvent(self, self.BtnSorting, self.OnBtnSorting)
+	--搜索未解锁的秘籍配方后链接跳转
+    UIUtil.AddOnHyperlinkClickedEvent(self, self.TextListEmpty, self.OnHyperlinkClicked)
+end
+
+function CraftingLogMainPanelView:OnHyperlinkClicked()
+    local SearchLineageData = CraftingLogMgr.SearchLineageData
+	if SearchLineageData == nil then
+		_G.FLOG_INFO("GatheringLogMainPanelView SearchLineageData is nil")
+		return
+	end
+	local ItemID = CraftingLogDefine.CategoryItemIDMap[SearchLineageData.Craftjob][SearchLineageData.CategoryNum]
+	if nil == ItemID then
+		_G.FLOG_INFO("GatheringLogMainPanelView CategoryItemID is nil")
+		return
+	end
+	_G.GatheringLogMgr:OnHyperlinkClicked(ItemID)
 end
 
 function CraftingLogMainPanelView:OnBtnSorting()
@@ -435,11 +465,16 @@ function CraftingLogMainPanelView:OnSureSearch(Info)
 	--显示搜索结果
 	CraftingLogVM.bPanelInfoShow = false
 	CraftingLogVM.bPanelListEmptyShow = false
-	local ResultDataList, PrecisionIndex = CraftingLogMgr:GetSearchData(Info)
+	local ResultDataList, PrecisionIndex, HaveMatchingSecret = CraftingLogMgr:GetSearchData(Info)
 	CraftingLogVM:UpdatePropItemListTab(ResultDataList, PrecisionIndex)
     self.PropItemTabsAdapter:ScrollToIndex(PrecisionIndex)
 	--self:PlayAnimation(self.AnimSearchResultUpdate)
 	self.StayCraftingState = false
+	if HaveMatchingSecret then
+		local ShopName = RichTextUtil.GetHyperlink(LSTR(80062), 1, "#d1906d", nil, nil, nil, nil, nil, false)
+		local TipsText = string.format(LSTR(CraftingLogDefine.UnUsedEsotericaText), ShopName)
+		self.TextListEmpty:SetText(TipsText)
+	end
 end
 
 function CraftingLogMainPanelView:OnTextFocusLost()
@@ -528,6 +563,7 @@ function CraftingLogMainPanelView:ExitSearchState()
 	else
 		self.TextListEmpty:SetText(LSTR(CraftingLogDefine.TextListEmpty))
 	end
+	CraftingLogMgr.SearchLineageData = nil
 end
 
 -- 职业更变

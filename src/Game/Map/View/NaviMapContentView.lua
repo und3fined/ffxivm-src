@@ -1,7 +1,7 @@
 ---
 --- Author: anypkvcai
 --- DateTime: 2023-03-13 19:11
---- Description:
+--- Description: 小地图内容
 ---
 
 local LuaClass = require("Core/LuaClass")
@@ -127,7 +127,7 @@ function NaviMapContentView:OnGameEventUpdateFogInfo()
 	self:UpdateMarkerByFogInfo()
 end
 
-function NaviMapContentView:OnGameEventUpdateQuest(Params) 
+function NaviMapContentView:OnGameEventUpdateQuest(Params)
 	if Params.UpdatedRspQuests ~= nil then
 		self:UpdateMarkerByOpenFlag()
 	end

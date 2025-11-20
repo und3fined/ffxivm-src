@@ -42,6 +42,7 @@ end
 
 local CommonBoxDefine = require("Game/CommMsg/CommonBoxDefine")
 local EBtnType = CommonBoxDefine.BtnType
+local ETextAlignment = CommonBoxDefine.TextAlignment
 
 ---@class MsgBoxExParams 					@MsgBox额外内容参数包
 ---@field bUseCloseOnClick boolean			@是否点击按钮自动关闭弹窗，默认是
@@ -79,24 +80,28 @@ function MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, LeftCB, MidCB, Righ
 				[EBtnType.Left] 	= LeftBtnName or CommonBoxDefine.BtnInitialName[EBtnType.Left],
 				[EBtnType.Right] 	= RightBtnName or CommonBoxDefine.BtnInitialName[EBtnType.Right],
 				[EBtnType.Middle] 	= MiddleBtnName or CommonBoxDefine.BtnInitialName[EBtnType.Middle],
+				[EBtnType.One] 	= RightBtnName or CommonBoxDefine.BtnInitialName[EBtnType.One], ---新的中弹窗单按钮状态下不分左右按钮，直接使用右按钮参数
 			},
 
 			["Callback"] = {
 				[EBtnType.Left] 	= LeftCB,
 				[EBtnType.Right] 	= RightCB,
 				[EBtnType.Middle] 	= MidCB,
+				[EBtnType.One] 	= RightCB,
 			},
 
 			["Style"] = {
 				[EBtnType.Left] 	= Params.LeftBtnStyle or CommBtnColorType.Normal,
 				[EBtnType.Right] 	= Params.RightBtnStyle or CommBtnColorType.Recommend,
 				[EBtnType.Middle] 	= Params.MidBtnStyle or CommBtnColorType.Recommend,
+				[EBtnType.One] 	= Params.RightBtnStyle or CommBtnColorType.Recommend,
 			},
 
 			["CounterDown"] = {
 				[EBtnType.Left] = Params.LeftBtnCD,
 				[EBtnType.Right] = Params.RightBtnCD,
 				[EBtnType.Middle] = Params.MidBtnCD,
+				[EBtnType.One] 	= Params.RightBtnCD,
 			}
 		},
 
@@ -131,6 +136,8 @@ function MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, LeftCB, MidCB, Righ
 		["TextSpentTotal"] 		= Params.TextSpentTotal,
 		["TextSpentTotalColor"] = Params.TextSpentTotalColor,
 		["MoneyData"]           = Params.MoneyData,
+		["TextAlignment"]       = Params.TextAlignment ~= nil and Params.TextAlignment or ETextAlignment.Middle,
+		["CheckBoxSetRightBtnDisableState"]       = Params.CheckBoxSetRightBtnDisableState
 	}
 
 	return Ret
@@ -219,7 +226,8 @@ end
 ---@param Params MsgBoxExParams				@额外参数包
 function MsgBoxUtil.ShowMsgBoxOneOpRightMustClick(UIView, Title, Message, Callback, BtnName, Params)
 	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, Callback, CommonBoxDefine.BtnUniformType.OneOpRight, nil, nil, BtnName, Params)
-	_G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxMustClick, BoxParams)
+	BoxParams.DontHideWhenLoadMap = true --动态设置
+	_G.UIViewMgr:ShowView(UIViewID.CommonMsgBox, BoxParams)
 end
 
 ---CloseMsgBox             					@关闭弹窗
@@ -227,6 +235,176 @@ function MsgBoxUtil.CloseMsgBox()
 	_G._G.UIViewMgr:HideView(UIViewID.CommonMsgBox)
 end
 
+----------------------------------- 新增中弹窗 start ---------------------------------------------
+function MsgBoxUtil.ShowMsgBoxM(UIView ,Title, Message, Params)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, nil, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, nil, Params)
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxM, BoxParams)
+end
+
+
+---ShowMsgBoxTwoOp             				@显示双选弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param RightCB function					@右按钮回调
+---@param LeftCB function 					@左按钮回调
+---@param RightBtnName string   			@右按钮名称，默认为国际化字符串 确认
+---@param LeftBtnName string   				@左按钮名称，默认为国际化字符串 取消
+---@param Params MsgBoxExParams				@额外参数包
+---@param CallbackOnHide function | nil
+function MsgBoxUtil.ShowMsgBoxMTwoOp(UIView ,Title, Message, RightCB, LeftCB, LeftBtnName, RightBtnName, Params, CallbackOnHide)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, LeftCB, nil, RightCB, CommonBoxDefine.BtnUniformType.TwoOp, LeftBtnName, nil, RightBtnName, Params)
+	BoxParams.CallbackOnHide = CallbackOnHide
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxM, BoxParams)
+end
+  
+---ShowMsgBoxOneOp             		@显示单选弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowMsgBoxMOneOp(UIView, Title, Message, Callback, BtnName, BtnStyle, Params)
+	Params.RightBtnStyle = BtnStyle
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, Callback, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, BtnName, Params)
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxM, BoxParams)
+end
+
+---ShowMsgBoxOneOpRight             		@显示单选确定风格弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowMsgBoxMOneOpRight(UIView, Title, Message, Callback, BtnName, Params)
+	return MsgBoxUtil.ShowMsgBoxMOneOp(UIView, Title, Message, Callback, BtnName, CommBtnColorType.Recommend, Params)
+end
+
+---ShowMsgBoxOneOpLeft             			@显示单选取消风格弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 取消
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowMsgBoxMOneOpLeft(UIView, Title, Message, Callback, BtnName, Params)
+	local OneBtnName = BtnName or CommonBoxDefine.BtnInitialName[EBtnType.Left]
+	MsgBoxUtil.ShowMsgBoxMOneOp(UIView, Title, Message, Callback, OneBtnName, CommBtnColorType.Normal, Params)
+end
+
+---ShowMsgBoxThreeOp             			@显示三选弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param LeftCB function 					@左按钮回调
+---@param MidCB function					@中间按钮回调
+---@param RightCB function					@右按钮回调
+---@param LeftBtnName string   				@左按钮名称，默认为国际化字符串 确认
+---@param MidBtnName string   				@中间按钮名称，默认为国际化字符串 保持
+---@param RightBtnName string   			@右按钮名称，默认为国际化字符串 取消
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowMsgBoxMThreeOp(UIView, Title, Message, RightCB, MidCB, LeftCB, LeftBtnName, MiddleBtnName, RightBtnName, Params)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, LeftCB, MidCB, RightCB, CommonBoxDefine.BtnUniformType.ThreeOp, LeftBtnName, MiddleBtnName, RightBtnName, Params)
+	_G._G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxM, BoxParams)
+end
+
+---ShowMsgBoxOneOpRightMustClick  @显示单选确定风格弹窗，只能点击关闭
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowMsgBoxMOneOpMustClick(UIView, Title, Message, Callback, BtnName, Params)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, Callback, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, BtnName, Params)
+	BoxParams.DontHideWhenLoadMap = true --动态设置
+	_G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxM, BoxParams)
+end
+
+---CloseMsgBoxM             					@关闭弹窗
+function MsgBoxUtil.CloseMsgBoxM()
+	_G._G.UIViewMgr:HideView(UIViewID.CommonMsgBoxM)
+end
+----------------------------------- 新增中弹窗 end ---------------------------------------------
+
+----------------------------------- 新增文本弹窗 start ---------------------------------------------
+function MsgBoxUtil.ShowTextMsgBox(UIView ,Title, Message, Params)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, nil, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, nil, Params)
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxText, BoxParams)
+end
+
+---ShowMsgBoxTwoOp             				@显示双选弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param RightCB function					@右按钮回调
+---@param LeftCB function 					@左按钮回调
+---@param RightBtnName string   			@右按钮名称，默认为国际化字符串 确认
+---@param LeftBtnName string   				@左按钮名称，默认为国际化字符串 取消
+---@param Params MsgBoxExParams				@额外参数包
+---@param CallbackOnHide function | nil
+function MsgBoxUtil.ShowTextMsgBoxTwoOp(UIView ,Title, Message, RightCB, LeftCB, LeftBtnName, RightBtnName, Params, CallbackOnHide)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, LeftCB, nil, RightCB, CommonBoxDefine.BtnUniformType.TwoOp, LeftBtnName, nil, RightBtnName, Params)
+	BoxParams.CallbackOnHide = CallbackOnHide
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxText, BoxParams)
+end
+  
+---ShowMsgBoxOneOp             		@显示单选弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowTextMsgBoxOneOp(UIView, Title, Message, Callback, BtnName, BtnStyle, Params)
+	Params.RightBtnStyle = BtnStyle
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, Callback, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, BtnName, Params)
+	return _G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxText, BoxParams)
+end
+
+---ShowMsgBoxOneOpRight             		@显示单选确定风格弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowTextMsgBoxOneOpRight(UIView, Title, Message, Callback, BtnName, Params)
+	return MsgBoxUtil.ShowTextMsgBoxOneOp(UIView, Title, Message, Callback, BtnName, CommBtnColorType.Recommend, Params)
+end
+
+---ShowMsgBoxOneOpLeft             			@显示单选取消风格弹窗
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 取消
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowTextMsgBoxOneOpLeft(UIView, Title, Message, Callback, BtnName, Params)
+	local OneBtnName = BtnName or CommonBoxDefine.BtnInitialName[EBtnType.Left]
+	MsgBoxUtil.ShowTextMsgBoxOneOp(UIView, Title, Message, Callback, OneBtnName, CommBtnColorType.Normal, Params)
+end
+
+---ShowMsgBoxOneOpRightMustClick  @显示单选确定风格弹窗，只能点击关闭
+---@param UIView UIView          			@调用者对象
+---@param Title string   					@标题，默认为 ""
+---@param Message string       				@文本信息，默认为 ""
+---@param Callback function					@按钮回调
+---@param BtnName string   					@按钮名称，默认为国际化字符串 确认
+---@param Params MsgBoxExParams				@额外参数包
+function MsgBoxUtil.ShowTextMsgBoxOneOpMustClick(UIView, Title, Message, Callback, BtnName, Params)
+	local BoxParams = MsgBoxUtil.MakeMsgBoxParams(UIView, Title, Message, nil, nil, Callback, CommonBoxDefine.BtnUniformType.OneOp, nil, nil, BtnName, Params)
+	BoxParams.DontHideWhenLoadMap = true --动态设置
+	_G.UIViewMgr:ShowView(UIViewID.CommonMsgBoxText, BoxParams)
+end
+
+---CloseMsgBoxM             					@关闭弹窗
+function MsgBoxUtil.CloseTextMsgBox()
+	_G._G.UIViewMgr:HideView(UIViewID.CommonMsgBoxText)
+end
+----------------------------------- 新增文本弹窗 end -----------------------------------------------
 
 function MsgBoxUtil.MakeCostBoxParams(UIView, Title, Message, ConsumeItemID, ConsumeNum, CostItemID, CostNum, LeftCB, RightCB, 
 															LeftBtnName, RightBtnName, CostStyle, Params)

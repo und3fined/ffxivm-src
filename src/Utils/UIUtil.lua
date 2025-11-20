@@ -9,6 +9,9 @@ local ObjectGCType = require("Define/ObjectGCType")
 local TimeUtil = require("Utils/TimeUtil")
 local CommonUtil = require("Utils/CommonUtil")
 local UTF8Util = require("Utils/UTF8Util")
+local ItemCfg = require("TableCfg/ItemCfg")
+local MajorUtil = require("Utils/MajorUtil")
+
 local UUIUtil = _G.UE.UUIUtil
 local ESlateVisibility = _G.UE.ESlateVisibility
 --local USlateBlueprintLibrary = _G.UE.USlateBlueprintLibrary
@@ -45,7 +48,9 @@ end
 ---@param IsHidden boolean @为true时 可见性设置为ESlateVisibility.Hidden 主要用在隐藏是仍需要占用空间的情况
 function UIUtil.SetIsVisible(Widget, bVisible, IsHitTestVisible, IsHidden)
 	if nil == Widget then
-		FLOG_WARNING("UIUtil.SetIsVisible Widget is nil traceback=%s", debug.traceback())
+		if _G.UE.UPlatformUtil.IsWithEditor() then	--log only in editor
+			FLOG_WARNING("UIUtil.SetIsVisible Widget is nil traceback=%s", debug.traceback())
+		end
 		return
 	end
 
@@ -104,6 +109,18 @@ function UIUtil.IsVisible(Widget)
 	local Visibility = Widget:GetVisibility()
 
 	return UIUtil.CheckVisible(Visibility)
+end
+
+---IsNotVisible
+---@param Widget UWidget
+function UIUtil.IsNotVisible(Widget)
+	if nil == Widget or not Widget:IsValid() then
+		return false
+	end
+
+	local Visibility = Widget:GetVisibility()
+
+	return Visibility == _G.UE.ESlateVisibility.Collapsed or Visibility == _G.UE.ESlateVisibility.Hidden
 end
 
 ---SetColorAndOpacity
@@ -1128,12 +1145,20 @@ function UIUtil.WidgetLocalToViewport(InWidget, X, Y)
 	return UIUtil.LocalToViewport(InWidget, FVector2D(X, Y))
 end
 
+--Reset只需要一次
+UIUtil.ResetControllerAnalog = false
 function UIUtil.SetInputMode_UIOnly(InWidgetToFocus, InMouseLockMode)
 	local PlayerController = GameplayStaticsUtil.GetPlayerController()
 	if nil == PlayerController then
 		return
 	end
-
+	if not UIUtil.ResetControllerAnalog then
+		local MajorController = MajorUtil.GetMajorController()
+		if MajorController then
+			MajorController:ResetControllerAnalog()
+		end
+		UIUtil.ResetControllerAnalog = true
+	end
 	UWidgetBlueprintLibrary.SetInputMode_UIOnlyEx(PlayerController, InWidgetToFocus, InMouseLockMode)
 end
 
@@ -1143,6 +1168,7 @@ function UIUtil.SetInputMode_GameOnly()
 		return
 	end
 	UWidgetBlueprintLibrary.SetInputMode_GameOnly(PlayerController)
+	UIUtil.ResetControllerAnalog = false
 end
 
 function UIUtil.SetInputMode_GameAndUI(InWidgetToFocus, InMouseLockMode, bHideCursorDuringCapture)
@@ -1151,6 +1177,7 @@ function UIUtil.SetInputMode_GameAndUI(InWidgetToFocus, InMouseLockMode, bHideCu
 		return
 	end
 	UWidgetBlueprintLibrary.SetInputMode_GameAndUIEx(PlayerController, InWidgetToFocus, InMouseLockMode, bHideCursorDuringCapture)
+	UIUtil.ResetControllerAnalog = false
 end
 
 ---GetScreenSize
@@ -1642,6 +1669,15 @@ function UIUtil.PlayAnimationTimePointPct(Widget, Anim, Pct, NumLoopsToPlay, Pla
 	local DeltaTime = EndTime - StartTime
 	local Time = StartTime + Pct * DeltaTime
 	return UIUtil.PlayAnimationTimePoint(Widget, Anim, Time, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState)
+end
+
+function UIUtil.GetItemIconPath(InItemID)
+    local Cfg = ItemCfg:FindCfgByKey(InItemID)
+	if Cfg then
+		return UIUtil.GetIconPath(Cfg.IconID)
+	end
+
+	return nil
 end
 
 ---GetIconPath 根据IconID获取图标资源路径

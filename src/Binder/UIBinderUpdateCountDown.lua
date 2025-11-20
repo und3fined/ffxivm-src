@@ -24,7 +24,9 @@ end
 ---@param OldValue ESlateVisibility
 function UIBinderUpdateCountDown:OnValueChanged(NewValue, OldValue)
 	local Time = NewValue
-
+	if type(Time) ~= "number" then
+		return
+	end
 	self.Widget:Start(Time, self.Interval, self.IsTimeStamp, self.IsMillisecond)
 end
 

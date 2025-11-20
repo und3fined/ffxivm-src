@@ -103,7 +103,7 @@ function AchievementItemView:OnInit()
 			{ "TextContent", UIBinderSetText.New(self, self.TextContent) },
 			{ "ID", UIBinderValueChangedCallback.New(self, nil, self.AchievementIDChanged) },
 			{ "BtnRequestDetailVisible", UIBinderSetIsVisible.New(self, self.BtnRequestDetail, false , true) },
-			{ "BtnRequestDetailVisible", UIBinderSetIsVisible.New(self, self.RedDot ) },
+			{ "BtnRequestDetailRedDotVisible", UIBinderSetIsVisible.New(self, self.RedDot ) },
 			{ "TrackedVisible", UIBinderValueChangedCallback.New(self, nil, self.OnTrackedVisibleChanged) },
 			{ "AchievePoint", UIBinderSetTextFormat.New(self, self.TextLevel, "%d" ) },
 			{ "ImgLevelPath", UIBinderSetBrushFromAssetPath.New(self, self.ImgLevel) },
@@ -158,7 +158,7 @@ end
 function AchievementItemView:OnSelectChangedTableViewReward(Index, ItemData, ItemView)
 	if ItemData.RewardType == 2 then 
 		local Gender = MajorUtil.GetMajorGender()
-		local Content = string.format( _G.LSTR(720013), _G.TitleMgr:GetDecoratedTitleText(ItemData.ResID, Gender ))
+		local Content = string.sformat( _G.LSTR(720013), _G.TitleMgr:GetDecoratedTitleText(ItemData.TitleID, Gender) or "")
 		local ItemSize = UIUtil.GetLocalSize(ItemView)
 		local View = TipsUtil.ShowInfoTips( Content, ItemView, _G.UE.FVector2D(-(ItemSize.X/2.0)-20, -(ItemSize.Y/2.0)), _G.UE.FVector2D(0.5, 0.5), false)
 		AchievementMainPanelVM:SetExendView(View)
@@ -195,8 +195,16 @@ end
 function AchievementItemView:OnBtnRequestDetailClicked()
 	local ViewModel = self.ViewModel
 	if ViewModel ~= nil then
-		if (ViewModel.GroupID or 0) ~= 0 then 
-			local Params = { AchievemwntGroupID = ViewModel.GroupID } 
+		local GroupID = ViewModel.GroupID or 0
+		local DiyGroup = ViewModel.DiyGroup or ""
+		if GroupID ~= 0 or DiyGroup ~= "" then 
+			local Params = {}
+			if GroupID ~= 0 then
+				Params.AchievementGroupID = GroupID
+			end
+			if DiyGroup ~= "" then
+				Params.AchievementDiyGroup = DiyGroup
+			end
 			_G.UIViewMgr:ShowView(UIViewID.AchievementDetailWin, Params)
 		end
 	end

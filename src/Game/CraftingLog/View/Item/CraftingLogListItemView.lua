@@ -236,14 +236,14 @@ end
 
 function CraftingLogListItemView:OnLeveQuestMarkedItem(ItemID)
 	local VM = self.Params and self.Params.Data
-	if VM and (VM.ProductID == ItemID or VM.HQProductIDD == ItemID) then
+	if VM and (VM.ProductID == ItemID or VM.HQProductID == ItemID) then
 		self.ViewModel.bLeveQuestMarked = true
 	end
 end
 
 function CraftingLogListItemView:OnLeveQuestCancelMarkedItem(ItemID)
 	local VM = self.Params and self.Params.Data
-	if VM and (VM.ProductID == ItemID or VM.HQProductIDD == ItemID) then
+	if VM and (VM.ProductID == ItemID or VM.HQProductID == ItemID) then
 		self.ViewModel.bLeveQuestMarked = false
 	end
 end

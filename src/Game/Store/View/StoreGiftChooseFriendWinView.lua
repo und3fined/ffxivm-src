@@ -12,6 +12,7 @@ local LocalizationUtil = require("Utils/LocalizationUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local StoreCfg = require("TableCfg/StoreCfg")
 local StorePropsItemVM = require("Game/Store/VM/ItemVM/StorePropsItemVM")
+local StoreUtil = require("Game/Store/StoreUtil")
 
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
@@ -202,7 +203,7 @@ function StoreGiftChooseFriendWinView:OnShow()
 	self.ShopGoods:SetParams({Data = self.StorePropsItemVM})
 	self.ShopGoods:SetBuyViewItemStateEx(false)
 	if nil ~= GoodsCfgData then
-		self.TextItemName:SetText(GoodsCfgData.Name)
+		self.TextItemName:SetText(StoreUtil.GetGoodsName(self.GoodsID))
 	end
 	StoreMainVM:UpdateGoodIcon()
 

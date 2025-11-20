@@ -78,7 +78,7 @@ function MagicCardGetWayItmeItemView:OnShow()
 	local IsRedirect = Item.IsRedirect and Item.IsRedirect > 0 or false --是否跳转
 	local IsUnLock = Item.IsUnLock
 	UIUtil.SetIsVisible(self.ImgArrow, IsRedirect and IsUnLock)
-	UIUtil.SetIsVisible(self.ImgArrowDisable, IsRedirect and not IsUnLock)
+	UIUtil.SetIsVisible(self.ImgArrowDisable, false) --IsRedirect and not IsUnLock)
 end
 
 function MagicCardGetWayItmeItemView:OnHide()

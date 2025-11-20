@@ -16,7 +16,7 @@ local EventMgr = require("Event/EventMgr")
 local ProtoRes = require("Protocol/ProtoRes")
 local ItemCfg = require("TableCfg/ItemCfg")
 local ItemTypeCfg = require("TableCfg/ItemTypeCfg")
-local CommLight152Slot = require("Game/Common/Slot/CommLight152SlotView")
+local ItemDefine = require("Game/Item/ItemDefine")
 local GatheringLogDefine = require("Game/GatheringLog/GatheringLogDefine")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local NoteParamCfg = require("TableCfg/NoteParamCfg")
@@ -223,7 +223,7 @@ function GatheringLogVM:UpdatePlaceTabList(PlaceData,GatherID)
     local GatherData = self:GetItemDataByID(GatherID)
     local GatheringJob = GatherData.GatheringJob
     local ProfLevel = MajorUtil.GetMajorLevelByProf(GatheringJob) or 0
-    local ProfbLock = GatheringLogMgr:GetCurProfbLock()
+    local ProfbLock = GatheringLogMgr:GetCurProfbLock(GatheringJob)
     for _, v in pairs(PlaceData) do
         local Elem = v
         Elem.GatherID = GatherID
@@ -250,8 +250,11 @@ function GatheringLogVM:UpdateGatheringItemTypesList(AllGatherLogItemVMs)
     -- if nil ~= CurLogItemVMList and CurLogItemVMList:Length() > 0 then
     --     CurLogItemVMList:Clear()
     -- end
-    local ProfID = GatheringLogMgr:GetChoiceProfID()
-    local MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(ProfID)
+    local MarkedItemID
+    if GatheringLogMgr.SearchState == 0 then
+        local ProfID = GatheringLogMgr:GetChoiceProfID()
+        MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(ProfID)
+    end
     local HistoryList = GatheringLogMgr.HistoryList or {}
     local CollectList = GatheringLogMgr.CollectList or {}
     local ClockList = GatheringLogMgr.ClockList or {}
@@ -306,9 +309,9 @@ function GatheringLogVM:UpdateSelectItemTab(ID)
             local Cfg = ItemCfg:FindCfgByKey(Elem.ItemID)
             if Cfg then
                 if 1 == Cfg.IsHQ then
-                    self.ItemQualityImg = CommLight152Slot.ItemHQColorType[Cfg.ItemColor]
+                    self.ItemQualityImg = ItemDefine.HQLightSlotColotType[Cfg.ItemColor]
                 else
-                    self.ItemQualityImg = CommLight152Slot.ItemColorType[Cfg.ItemColor]
+                    self.ItemQualityImg = ItemDefine.LightSlotColotType[Cfg.ItemColor]
                 end
                 self.TypeName = ItemTypeCfg:GetTypeName(Cfg.ItemType)
                 self.IconID = Cfg.IconID
@@ -497,9 +500,7 @@ function GatheringLogVM:GetItemDataByID(ID)
         return
     end
     local Cfg = GatherNoteCfg:FindCfgByKey(ID)
-    if Cfg ~= nil then
-        Cfg.Name = ItemUtil.GetItemName(Cfg.ItemID)
-    end
+    Cfg.Name = ItemUtil.GetItemName(Cfg.ItemID)
     return Cfg
 end
 

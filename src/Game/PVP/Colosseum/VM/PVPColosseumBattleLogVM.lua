@@ -9,12 +9,18 @@ local UIViewModel = require("UI/UIViewModel")
 local TimeUtil = require("Utils/TimeUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
+local EventID = require("Define/EventID")
 local PVPTeamMgr = require("Game/PVP/Team/PVPTeamMgr")
+
 local PVPColosseumDefine = require("Game/PVP/Colosseum/PVPColosseumDefine")
 local ColosseumTeam = PVPColosseumDefine.ColosseumTeam
 local ColosseumLogType = PVPColosseumDefine.ColosseumLogType
 local ColosseumLogIcon = PVPColosseumDefine.ColosseumLogIcon
 local ColosseumLogInfoID = PVPColosseumDefine.ColosseumLogInfoID
+
+local ProtoRes = require ("Protocol/ProtoRes")
+local PVPCommunicateMethod = ProtoRes.PVPCommunicateMethod
+local PVPCommunicateTarget = ProtoRes.PVPCommunicateTarget
 
 local LSTR = _G.LSTR
 local FLOG_INFO = _G.FLOG_INFO
@@ -93,6 +99,14 @@ function BattleLogVM:Ctor()
 	self.KO_ProfID1 = 0 -- Killer职业
 	self.KO_ProfID2 = 0 -- Deather职业
 
+	self.CO_Tips = ""-- Command提示
+	self.CO_Send_ProfID = 0 -- Command发送者职业
+	self.CO_Send_ProfBg = "" -- Command发送者职业背景
+	self.CO_Target_ProfID = 0 -- Command目标职业
+	self.CO_Target_ProfBg = "" -- Command目标职业背景
+	self.CO_TargetCrystal = false -- Command目标是否水晶
+	self.CO_TargetPlayer = false -- Command目标是否玩家
+
 	self.VMInstID = 0 -- 实例ID，用于调试
 	self.CopyShow = false -- 是否是拷贝显示
 	self.LogID = 0 -- 战场日志ID，用于标记唯一性
@@ -127,6 +141,8 @@ function BattleLogVM:ShowLogObj(LogObj)
 
 	if LogObj.LogType == ColosseumLogType.MKS_LOG_TYPE_KNOCKOUT then
 		self:ShowLogKnockOut()
+	elseif LogObj.LogType == ColosseumLogType.MKS_LOG_TYPE_COMMUNICATE then
+		self:ShowLogCommunicateInfo()
 	else
 		self:ShowLogEvent()
 	end
@@ -164,6 +180,14 @@ function BattleLogVM:CopyShowLogVM(OtherLogVM)
 	self.KO_ProfID1 = OtherLogVM.KO_ProfID1
 	self.KO_ProfID2 = OtherLogVM.KO_ProfID2
 
+	self.CO_Send_ProfID = OtherLogVM.CO_Send_ProfID
+	self.CO_Send_ProfBg = OtherLogVM.CO_Send_ProfBg
+	self.CO_Target_ProfID = OtherLogVM.CO_Target_ProfID
+	self.CO_Target_ProfBg = OtherLogVM.CO_Target_ProfBg
+	self.CO_TargetCrystal = OtherLogVM.CO_TargetCrystal
+	self.CO_TargetPlayer = OtherLogVM.CO_TargetPlayer
+	self.CO_Tips = OtherLogVM.CO_Tips
+
 	self.CopyShow = true
 	self.LogID = OtherLogVM.LogID
 	self:LogInfo("CopyShowLogVM")
@@ -186,6 +210,7 @@ end
 function BattleLogVM:ShowLogEvent()
 	self.VisibleEvent = true
 	self.VisibleKO = false
+	self.VisibleCommand = false
 
 	local EventBg = ColosseumLogIcon.LeftTipsGrey
 	local EventBgEffect = false
@@ -241,6 +266,7 @@ end
 function BattleLogVM:ShowLogKnockOut()
 	self.VisibleEvent = false
 	self.VisibleKO = true
+	self.VisibleCommand = false
 
 	self.KO_Count = string.format(LSTR(810033), self.LogObj.KOCount)
 
@@ -264,6 +290,59 @@ function BattleLogVM:ShowLogKnockOut()
 		self.KO_ProfID2 = DeatherMemberVM.ProfID
 	end
 end
+
+---显示局内沟通信息
+function BattleLogVM:ShowLogCommunicateInfo()
+	self.VisibleEvent = false
+	self.VisibleKO = false
+	self.VisibleCommand = true
+
+	local PVPCommunicateInfo = self.LogObj.PVPCommunicateInfo
+	local SendRoleID = PVPCommunicateInfo.SendRoleID
+	local CommandType = PVPCommunicateInfo.Command
+	local SendMethod = PVPCommunicateInfo.Method
+	local TargetType = PVPCommunicateInfo.Target
+	local ParamID = PVPCommunicateInfo.ParamID
+
+	self.CO_Tips = _G.PVPMapVM:GetCommunicateInfoTips(SendRoleID, CommandType, SendMethod, TargetType, ParamID)
+
+	local SendMemberVM = PVPTeamMgr:FindMemberVMByRoleID(SendRoleID)
+	if SendMemberVM then
+		self.CO_Send_ProfID = SendMemberVM.ProfID
+		self.CO_Send_ProfBg = ColosseumLogIcon.ProfBlueBg
+	end
+
+	local ShowTargetCrystal = false
+	local ShowTargetPlayer = false
+	if SendMethod == PVPCommunicateMethod.PVPCommunicateMethodMiniMap
+		or SendMethod == PVPCommunicateMethod.PVPCommunicateMethodTargetList then
+		if TargetType == PVPCommunicateTarget.PVPCommunicateTargetCrystal then
+			ShowTargetCrystal = true
+		elseif TargetType == PVPCommunicateTarget.PVPCommunicateTargetPlayerInView or TargetType == PVPCommunicateTarget.PVPCommunicateTargetPlayerOutView then
+			local TargetRoleID = ParamID
+			if TargetRoleID == SendRoleID then
+				ShowTargetPlayer = false
+			elseif PVPTeamMgr:IsTeamMemberByRoleID(TargetRoleID) then
+				ShowTargetPlayer = false
+			elseif PVPTeamMgr:IsEnemyTeamMemberByRoleID(TargetRoleID) then
+				local TargetMemberVM = PVPTeamMgr:FindMemberVMByRoleID(TargetRoleID)
+				if TargetMemberVM then
+					ShowTargetPlayer = true
+					self.CO_Target_ProfID = TargetMemberVM.ProfID
+					self.CO_Target_ProfBg = ColosseumLogIcon.ProfRedBg
+				end
+			end
+		end
+	end
+	self.CO_TargetCrystal = ShowTargetCrystal
+	self.CO_TargetPlayer = ShowTargetPlayer
+
+	_G.PVPMapVM:PlayCommunicateInfoAudio(CommandType)
+
+	-- 小地图显示局内沟通信息
+	_G.EventMgr:SendEvent(EventID.PVPColosseumCommunicateInfo, PVPCommunicateInfo)
+end
+
 
 
 ---@class PVPColosseumBattleLogVM : UIViewModel
@@ -389,10 +468,26 @@ function PVPColosseumBattleLogVM:PushLogKnockOut(KillerRoleID, DeatherRoleID, KO
 
 	LogObj:LogInfo()
 
-	-- 从左侧战斗日志区域去掉，换成tips表现
+	-- 从左侧战斗日志区域去掉，换成中间tips表现
 	--table.insert(self.LogObjQueue, LogObj)
 	--self:OnTimer()
 	MsgTipsUtil.ShowPVPColosseumKillTips(LogObj)
+end
+
+---显示局内沟通信息
+---@param PVPCommunicateInfo table
+function PVPColosseumBattleLogVM:PushLogCommunicateInfo(PVPCommunicateInfo)
+	local LogObj = BattleLogObj:New()
+	self.UniqueLogID = self.UniqueLogID + 1
+	LogObj.LogID = self.UniqueLogID
+	LogObj.LogType = ColosseumLogType.MKS_LOG_TYPE_COMMUNICATE
+
+	LogObj.PVPCommunicateInfo = PVPCommunicateInfo
+
+	LogObj:LogInfo()
+
+	table.insert(self.LogObjQueue, LogObj)
+	self:OnTimer()
 end
 
 

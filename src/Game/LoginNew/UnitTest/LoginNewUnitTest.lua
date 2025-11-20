@@ -4,6 +4,9 @@
 --- DateTime: 2025/4/24 21:41
 ---
 local LoginNewDefine = require("Game/LoginNew/LoginNewDefine")
+local Json = require("Core/Json")
+local ProtoCS = require("Protocol/ProtoCS")
+
 local FLOG_INFO = _G.FLOG_INFO
 
 local LoginNewUnitTest = {}
@@ -13,6 +16,177 @@ function LoginNewUnitTest:SetTreeInfoType(WorldId, NewFlag)
     self.WorldId = WorldId
     self.NewFlag = NewFlag
 end
+
+---------------------------------------- 中控测试 ----------------------------------------
+function LoginNewUnitTest:HopeTips()
+    FLOG_INFO("[LoginNewUnitTest:HopeTips] ")
+    --{
+    --    "Cmd": 1,
+    --    "Data": "ExecuteInstruction",
+    --    "ExecuteInstruction": {
+    --        "Modal": 0,
+    --        "Url": "",
+    --        "Title": "游戏温馨提示",
+    --        "Msg": "根据国家新闻出版署《关于防止未成年人沉迷网络游戏的通知》《关于进一步严格管理 切实防止未成年人沉迷网络游戏的通知》，您已被认证为未成年玩家，您可在周五、周六、周日及法定节假日的20时至21时登录游戏。根据腾讯健康系统管理规定，未成年用户将接受以下管理：未满12周岁的用户无法付费；12周岁以上未满16周岁的未成年人用户，单次充值金额不超过50元人民币，每月充值金额累计不超过200元人民币；16周岁以上未满18周岁的未成年人用户，单次充值金额不超过100元人民币，每月充值金额累计不超过400元人民币。请您合理安排时间，适度消费。",
+    --        "TraceId": "HP1747197868RWJRVQXOYDTLFMAMHR",
+    --        "LogoutType": 0,
+    --        "InstructionType": 1,
+    --        "RuleName": "9328_未成年登录提醒20210830",
+    --        "Data": "",
+    --        "LogoutTime": 0
+    --    }
+    --}
+    local ExecuteInstruction = {
+        Modal = 0,
+        Url = "",
+        Title = "游戏温馨提示",
+        Msg = "根据国家新闻出版署《关于防止未成年人沉迷网络游戏的通知》《关于进一步严格管理 切实防止未成年人沉迷网络游戏的通知》，您已被认证为未成年玩家，您可在周五、周六、周日及法定节假日的20时至21时登录游戏。根据腾讯健康系统管理规定，未成年用户将接受以下管理：未满12周岁的用户无法付费；12周岁以上未满16周岁的未成年人用户，单次充值金额不超过50元人民币，每月充值金额累计不超过200元人民币；16周岁以上未满18周岁的未成年人用户，单次充值金额不超过100元人民币，每月充值金额累计不超过400元人民币。请您合理安排时间，适度消费。",
+        TraceId = "HP1747206174FPYORNEPMKTBXRFYKT",
+        LogoutType = 0,
+        InstructionType = 1, -- ProtoCS.INSTRUCTIONTYPE.INSTRUCTIONTYPE_TIPS
+        RuleName = "9328_未成年登录提醒20210830",
+        Data = "ExecuteInstruction",
+        LogoutTime = 0,
+    }
+    local MsgBody = {}
+    MsgBody.Data = "ExecuteInstruction"
+    MsgBody.ExecuteInstruction = ExecuteInstruction
+    MsgBody.Cmd = 1
+
+    local MsgBodyString = Json.encode(MsgBody)
+    _G.LoginMgr:OnGameEventNetworkHopeRes(MsgBody)
+end
+
+function LoginNewUnitTest:HopeLogout()
+    FLOG_INFO("[LoginNewUnitTest:HopeLogout] ")
+    --{
+    --    "Cmd": 1,
+    --    "Data": "ExecuteInstruction",
+    --    "ExecuteInstruction": {
+    --        "Modal": 1,
+    --        "Url": "https://jiazhang.qq.com/healthy/dist/faceRecognition/game_no.html?action_type=3&trace_id=HP1747198761JCDBLMHHCLAFVFQIXY&authType=2&action_expire_time=1747267200&regOpenId=D09A6070B29D8294DB150A3CC3764DF1&hpappid=hp8aeabacbfa093d30&adultType=1&limitStyle=",
+    --        "Title": "游戏温馨提示",
+    --        "Msg": "根据国家新闻出版署《关于防止未成年人沉迷网络游戏的通知》《关于进一步严格管理 切实防止未成年人沉迷网络游戏的通知》，由于您是未成年人玩家，今天在线时间已超过时限，当前无法进入游戏。",
+    --        "TraceId": "HP1747198761JCDBLMHHCLAFVFQIXY",
+    --        "LogoutType": 0,
+    --        "InstructionType": 2,
+    --        "RuleName": "time_14413_2",
+    --        "Data": "",
+    --        "LogoutTime": 0
+    --    }
+    --}
+    local ExecuteInstruction = {
+        Modal = 1,
+        Url = "https://jiazhang.qq.com/healthy/dist/faceRecognition/game_no.html?action_type=3&trace_id=HP1747198761JCDBLMHHCLAFVFQIXY&authType=2&action_expire_time=1747267200&regOpenId=D09A6070B29D8294DB150A3CC3764DF1&hpappid=hp8aeabacbfa093d30&adultType=1&limitStyle=",
+        Title = "游戏温馨提示",
+        Msg = "根据国家新闻出版署《关于防止未成年人沉迷网络游戏的通知》《关于进一步严格管理 切实防止未成年人沉迷网络游戏的通知》，由于您是未成年人玩家，今天在线时间已超过时限，当前无法进入游戏。",
+        TraceId = "HP1747198761JCDBLMHHCLAFVFQIXY",
+        LogoutType = 0,
+        InstructionType = 2, -- ProtoCS.INSTRUCTIONTYPE.INSTRUCTIONTYPE_PRELOGOUT
+        RuleName = "time_14413_2",
+        Data = "",
+        LogoutTime = 0,
+    }
+    local MsgBody = {}
+    MsgBody.Data = "ExecuteInstruction"
+    MsgBody.ExecuteInstruction = ExecuteInstruction
+    MsgBody.Cmd = 1
+
+    local MsgBodyString = Json.encode(MsgBody)
+    _G.LoginMgr:OnGameEventNetworkHopeRes(MsgBody)
+end
+
+function LoginNewUnitTest:HopeOpenUrl()
+    FLOG_INFO("[LoginNewUnitTest:HopeOpenUrl] ")
+    local ExecuteInstruction = {
+        Modal = 1,
+        Url = "https://jiazhang.qq.com/wap/family/dist/msdk/demoTest.html?game=1",
+        Title = "游戏温馨提示",
+        Msg = "为保证你的游戏健康，请在进入游戏前完成人脸识别，否则你的游戏时长将受到限制。",
+        TraceId = "HP1747198761JCDBLMHHCLAFVFQIXY",
+        LogoutType = 0,
+        InstructionType = 3, -- ProtoCS.INSTRUCTIONTYPE.INSTRUCTIONTYPE_OPENURL
+        RuleName = "time_14413_2",
+        Data = "",
+        LogoutTime = 1747300215,
+    }
+    local MsgBody = {}
+    MsgBody.Data = "ExecuteInstruction"
+    MsgBody.ExecuteInstruction = ExecuteInstruction
+    MsgBody.Cmd = 1
+
+    local MsgBodyString = Json.encode(MsgBody)
+    _G.LoginMgr:OnGameEventNetworkHopeRes(MsgBody)
+end
+
+function LoginNewUnitTest:HopePreLogout()
+    FLOG_INFO("[LoginNewUnitTest:HopePreLogout] ")
+    local ExecuteInstruction = {
+        Modal = 1,
+        Url = "https://jiazhang.qq.com/healthy/dist/faceRecognition/game_no.html?action_type=3&trace_id=HP1747198761JCDBLMHHCLAFVFQIXY&authType=2&action_expire_time=1747267200&regOpenId=D09A6070B29D8294DB150A3CC3764DF1&hpappid=hp8aeabacbfa093d30&adultType=1&limitStyle=",
+        Title = "游戏温馨提示",
+        Msg = "根据国家新闻出版署《关于防止未成年人沉迷网络游戏的通知》《关于进一步严格管理 切实防止未成年人沉迷网络游戏的通知》，由于您是未成年人玩家，今天在线时间已超过时限，当前无法进入游戏。",
+        TraceId = "HP1747198761JCDBLMHHCLAFVFQIXY",
+        LogoutType = 0,
+        InstructionType = 8, -- ProtoCS.INSTRUCTIONTYPE.INSTRUCTIONTYPE_PRELOGOUT
+        RuleName = "time_14413_2",
+        Data = "",
+        LogoutTime = 1747300215,
+    }
+    local MsgBody = {}
+    MsgBody.Data = "ExecuteInstruction"
+    MsgBody.ExecuteInstruction = ExecuteInstruction
+    MsgBody.Cmd = 1
+
+    local MsgBodyString = Json.encode(MsgBody)
+    _G.LoginMgr:OnGameEventNetworkHopeRes(MsgBody)
+end
+
+function LoginNewUnitTest:ResLogout()
+    FLOG_INFO("[LoginNewUnitTest:ResLogout] ")
+    _G.LoginMgr.bShowHopeView = true
+
+    _G.LoginMgr:RoleLogOut(ProtoCS.LogoutReason.Logout)
+
+    _G.LoginMgr.IsNeedLogout = true
+    _G.EventMgr:SendEvent(_G.EventID.DoLogoutEvent)
+end
+
+function LoginNewUnitTest:Logout()
+    FLOG_INFO("[LoginNewUnitTest:Logout] ")
+    _G.LoginMgr.bShowHopeView = true
+
+    _G.NetworkStateMgr:ReturnToLogin()
+
+    _G.LoginMgr.IsNeedLogout = true
+    _G.EventMgr:SendEvent(_G.EventID.DoLogoutEvent)
+end
+
+
+---------------------------------------- 中控测试 ----------------------------------------
+
+--- 联调测试Demo
+--- https://doc.weixin.qq.com/doc/w3_AQMATgawABw7iFx6kHkTYylJw4cz0?scode=AJEAIQdfAAoclSSrGqAEwAlwbdAFw
+function LoginNewUnitTest:GetDynamicArkInfoDemo(FriendOpenIDList)
+    local DynamicData = {}
+    -- 最终幻想14水晶世界-水晶召唤令
+    --DynamicData.prompt = _G.HttpMgr:UrlEncode(LSTR("最终幻想14水晶世界-水晶召唤令"))
+    DynamicData.prompt = LSTR("最终幻想14水晶世界-水晶召唤令!")
+    -- 水晶召唤令
+    --DynamicData.title = _G.HttpMgr:UrlEncode(LSTR("水晶召唤令"))
+    DynamicData.title = LSTR("水晶召唤令")
+    -- 冒险者与我绑定，共同探险艾欧泽亚大陆!
+    --DynamicData.desc = _G.HttpMgr:UrlEncode(LSTR("冒险者与我绑定，共同探险艾欧泽亚大陆!"))
+    DynamicData.desc = LSTR("冒险者与我绑定，共同探险艾欧泽亚大陆!")
+    DynamicData.preview = "https://game.gtimg.cn/images/ff14/cp/a20250506fmweb/top-icon.png"
+    DynamicData.jumpUrl = "https://ff14m.qq.com/cp/a20250506fmweb/index.html?sCode=xxxx"
+
+    --local DynamicParams = string.format('{"area":"%d"}' , ChannelID)
+    local DynamicParams = Json.encode(DynamicData)
+    --print("[ShareMgr:GetDynamicArkInfo] DynamicParams:", DynamicParams)
+    self:GetArkInfo(FriendOpenIDList, DynamicParams)
+end
+
 
 _G.LoginNewUnitTest = LoginNewUnitTest
 

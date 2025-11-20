@@ -84,6 +84,7 @@ function AdventureDailyWeeklyVM:SetWeeklyItemData(Params)
         Params.ContentText = Log.Desc
         Params.UnFinishText = LSTR(520036)
         Params.MainIconPath = Log.Icon
+        Params.ChallengeType = Log.Type
 
         if Log.Collected then
             Params.DescriptionText = LSTR(520021)

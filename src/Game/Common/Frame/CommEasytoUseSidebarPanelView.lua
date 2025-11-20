@@ -38,6 +38,7 @@ end
 function CommEasytoUseSidebarPanelView:OnInit()
 	self.CurSelectType = nil
 	self.DisplayWidget = nil
+	self.CachePage = {}
 	Margin = UE.FMargin()
 	Margin.Left = 0
 	Margin.Top = 0
@@ -61,6 +62,7 @@ function CommEasytoUseSidebarPanelView:OnShow()
 	self.CommSidebarFrame:SetTabSideBarSelectCallBack(ClickSelectCallback)
 	local ShowTabData = self:GetSideBarShowDataByType(PanelType)
 	self.CommSidebarFrame:SetTabSideBarData(ShowTabData,  Params.ShowTabType or 1)
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(true)
 end
 
 function CommEasytoUseSidebarPanelView:GetSideBarShowDataByType(PanelType)
@@ -86,7 +88,6 @@ function CommEasytoUseSidebarPanelView:OnTabBtnClickSelectType(InIndex, ItemData
 		return
 	end
 
-
 	if self.CurPanelType == SideBarDefine.PanelType.EasyToUse then
 		if self.Params and self.Params.PageParams then
 			if self.Params.PageParams.bOpen then
@@ -97,10 +98,13 @@ function CommEasytoUseSidebarPanelView:OnTabBtnClickSelectType(InIndex, ItemData
 			self.Params.PageParams.bOpen = false
 		end
 	end
+
 	if ItemData.Type == SideBarDefine.EasyToUseTabType.Mount then
 		DataReportUtil.ReportMountInterSystemFlowData(1, 2)
 	end
+
 	if not self.CurSelectType or self.CurSelectType ~= ItemData.Type then
+		self:HideAllPage()
 		self.CurSelectType = ItemData.Type
 		self:AddChildByType(ItemData)
 		self.CommSidebarFrame:SetTitleText(ItemData.Title)
@@ -110,47 +114,70 @@ function CommEasytoUseSidebarPanelView:OnTabBtnClickSelectType(InIndex, ItemData
 end
 
 function CommEasytoUseSidebarPanelView:AddChildByType(TabData)
+	local CurPageType = TabData.Type
 	local function OnComplete(Widget)
 		if UE.UCommonUtil.IsObjectValid(self.ParentSlotPanel) then
-			self:HideCurTypeWidget()
 			if Widget then
 				self.ParentSlotPanel:AddChildToCanvas(Widget)
 				UIUtil.CanvasSlotSetAnchors(Widget, Anchor)
 				UIUtil.CanvasSlotSetOffsets(Widget, Margin)
 				self:AddSubView(Widget)
 				self.DisplayWidget = Widget
+				self.CachePage[CurPageType] = Widget
+				self:ShowPageByType(CurPageType)
 			end
 		else
 			WidgetPoolMgr:RecycleWidget(Widget)
 		end
 	end
 
-	if not string.isnilorempty(TabData.ChildWidget) then
+	if not self.CachePage[CurPageType] then
 		local Params = self.Params and self.Params.PageParams or {}
 		Params.TabData = TabData
-		WidgetPoolMgr:CreateWidgetAsyncByName(TabData.ChildWidget, nil, OnComplete, true, true, Params)
+		if not string.isnilorempty(TabData.ChildWidget) then
+			WidgetPoolMgr:CreateWidgetAsyncByName(TabData.ChildWidget, nil, OnComplete, true, true, Params)
+		end
+	else
+		self:ShowPageByType(CurPageType)
 	end
 end
 
-function CommEasytoUseSidebarPanelView:HideCurTypeWidget()
-	if self.DisplayWidget then
-		self.DisplayWidget:HideView()
-		self:RemoveSubView(self.DisplayWidget)
-		self.ParentSlotPanel:ClearChildren()
-		WidgetPoolMgr:RecycleWidget(self.DisplayWidget)
-		self.DisplayWidget = nil
+function CommEasytoUseSidebarPanelView:HideAllPage()
+	for k, v in pairs(self.CachePage) do
+		UIUtil.SetIsVisible(v, false)
 	end
+end
+
+function CommEasytoUseSidebarPanelView:ShowPageByType(Type)
+	if self.CachePage[Type] then
+		UIUtil.SetIsVisible(self.CachePage[Type], true)
+	end
+end
+
+function CommEasytoUseSidebarPanelView:ClearAllCachePage()	
+	for k, Widget in pairs(self.CachePage) do
+		Widget:HideView()
+		self:RemoveSubView(Widget)
+		WidgetPoolMgr:RecycleWidget(Widget)
+	end
+
+	self.ParentSlotPanel:ClearChildren()
+	self.CachePage = {}
 end
 
 function CommEasytoUseSidebarPanelView:OnHide()
-	self:HideCurTypeWidget()
-
 	if self.CurPanelType == SideBarDefine.PanelType.MapSetting then
 		-- 地图侧边栏界面关闭时需要重置部分状态
 		_G.WorldMapVM:SetMapSettingPanelVisible(false)
 	end
+
+	local CommSideBarUtil = require("Utils/CommSideBarUtil")
+	CommSideBarUtil.OnSideBarHide(self.CurPanelType, self.CurSelectType)
 	self.CurPanelType = nil
 	self.CurSelectType = nil
+	self:ClearAllCachePage()
+	self.DisplayWidget = nil
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 return CommEasytoUseSidebarPanelView

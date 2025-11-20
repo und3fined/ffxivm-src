@@ -45,12 +45,6 @@ local BuffEffectsAnimMap = {
 	["0110"] = "AnimLeftShowGreen"
 }
 
-local StateColor = {
-	Green = "61AD6BFF",
-	Blue = "5BAAD3FF",
-	Purple = "AE6AEFFF"
-}
-
 function CrafterGoldsmithItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgBlue = nil
@@ -131,7 +125,6 @@ function CrafterGoldsmithItemView:UpdateFeatures(Features)
 end
 
 function CrafterGoldsmithItemView:UpdateBuffEffects(State,bHasBuff)
-	self:SetImagePurple(bHasBuff)
 	local AnimToPlay = BuffEffectsAnimMap[State]
 	if AnimToPlay ~= nil then
 		self:PlayAnimation(self[AnimToPlay])
@@ -144,17 +137,17 @@ function CrafterGoldsmithItemView:UpdateBuffEffects(State,bHasBuff)
 	self.ValueAnimPointerStart = self.TensionSliderPercent
 end
 
-function CrafterGoldsmithItemView:SetImagePurple(bPurple)
-	if bPurple then
-		local LinearColor = FLinearColor.FromHex(StateColor.Purple)
-		self.ImgBlue:SetColorAndOpacity(LinearColor)
-		self.ImgGreen:SetColorAndOpacity(LinearColor)
-	else
-		local GreenLinearColor = FLinearColor.FromHex(StateColor.Green)
-		local BlueLinearColor = FLinearColor.FromHex(StateColor.Blue)
-		self.ImgBlue:SetColorAndOpacity(BlueLinearColor)
-		self.ImgGreen:SetColorAndOpacity(GreenLinearColor)
-	end
-end
+-- function CrafterGoldsmithItemView:SetImagePurple(bPurple)
+-- 	if bPurple then
+-- 		local LinearColor = FLinearColor.FromHex(StateColor.Purple)
+-- 		self.ImgBlue:SetColorAndOpacity(LinearColor)
+-- 		self.ImgGreen:SetColorAndOpacity(LinearColor)
+-- 	else
+-- 		local GreenLinearColor = FLinearColor.FromHex(StateColor.Green)
+-- 		local BlueLinearColor = FLinearColor.FromHex(StateColor.Blue)
+-- 		self.ImgBlue:SetColorAndOpacity(BlueLinearColor)
+-- 		self.ImgGreen:SetColorAndOpacity(GreenLinearColor)
+-- 	end
+-- end
 
 return CrafterGoldsmithItemView

@@ -8,16 +8,18 @@ local CameraMgr = _G.UE.UCameraMgr
 
 -- 相机是动态的，不能缓存
 function Util.GetCam()
-    return Util.GetCamCtr():GetTopDownCameraComponent()
+    local CamCtr = Util.GetCamCtr()
+    if CamCtr then
+        return CamCtr:GetTopDownCameraComponent()
+    end
 end
 
 function Util.GetCamCtr()
-    -- if MCamCtr then
-    --     return MCamCtr
-    -- end
     local Major = MajorUtil.GetMajor()
-    local MCamCtr = Major:GetCameraControllComponent()
-    return MCamCtr
+    if Major then
+        local MCamCtr = Major:GetCameraControllComponent()
+        return MCamCtr
+    end
 end
 
 function Util.GetCamMgr()
@@ -47,8 +49,8 @@ function Util.SetDOFScale(Scale)
             PostProcessSettings.bOverride_MobileDiaphragmDOF            = false
         end
 
-        _G.FLOG_INFO(string.format('[Photo][PhotoCameraUtil][SetDOFScale] DepthOfFieldScale = %s ', 
-            PostProcessSettings.DepthOfFieldScale
+        _G.FLOG_INFO(string.format('[Photo][PhotoCameraUtil][SetDOFScale] DepthOfFieldScale = %s DepthOfFieldFstop = %s ', 
+            PostProcessSettings.DepthOfFieldScale, PostProcessSettings.DepthOfFieldFstop 
         ))
     end
 end
@@ -74,15 +76,21 @@ end
 function Util.BeginCameraEnv()
     local CamMgr = Util.GetCamMgr()
     CamMgr:SwitchVirtual(true)
-    Util.GetCamCtr():SetDOFUpdateEnabled(false)
-    Util.GetCamCtr():SwitchRoll(true)
+    local CamCtr = Util.GetCamCtr()
+    if CamCtr then
+        CamCtr:SetDOFUpdateEnabled(false)
+        CamCtr:SwitchRoll(true)
+    end
 end
 
 function Util.EndCameraEnv()
     local CamMgr = Util.GetCamMgr()
     CamMgr:SwitchVirtual(false)
-    Util.GetCamCtr():SetDOFUpdateEnabled(true)
-    Util.GetCamCtr():SwitchRoll(false)
+    local CamCtr = Util.GetCamCtr()
+    if CamCtr then
+        CamCtr:SetDOFUpdateEnabled(true)
+        CamCtr:SwitchRoll(false)
+    end
 end
 
 -- 散景系数（景深）220cm距离以内才会开启，引擎那边的限制

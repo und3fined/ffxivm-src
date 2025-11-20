@@ -107,8 +107,18 @@ end
 
 --- 界面说明按钮
 function PersonInfoProfPanelView:OnItemClickedProfItem(Index, ItemData, ItemView)
-	local Aff = ItemData.Level == 0 and _G.LSTR(620139) or (tostring(ItemData.Level) .. _G.LSTR(620138))
-	local Content = string.format("%s%s",tostring(ItemData.Name),Aff)
+	local Aff = ""
+	if ItemData and ItemData.Level then
+		if ItemData.Level == 0 then
+			Aff = _G.LSTR(620139)
+		else
+			Aff = string.format(_G.LSTR(620138), tostring(ItemData.Level))
+		end
+	end
+	local Content = ""
+	if ItemData then
+		Content = string.format("%s%s",tostring(ItemData.Name),Aff)
+	end
 	TipsUtil.ShowInfoTips(Content, ItemView, _G.UE.FVector2D(-10, 0), _G.UE.FVector2D(0, 0))
 end
 

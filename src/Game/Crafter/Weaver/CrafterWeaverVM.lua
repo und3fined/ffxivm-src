@@ -65,14 +65,15 @@ function CrafterWeaverVM:InitCircleItemList(WeaverStates)
             self.WeaverCircleItemVMList:Insert(ItemVM,1)
             self.LastWeaverStates[#WeaverStates.Balls + 1 - i] = State
         end
+        self.LastIndex = WeaverStates.Index or 0
     else
         for i = 1, 7, 1 do
             local ItemVM = CrafterWeaverCircleItemVM.New()
             self.WeaverCircleItemVMList:Add(ItemVM)
             self.LastWeaverStates[i] = State
         end
+        self.LastIndex = 0
     end
-    self.LastIndex = WeaverStates.Index or 0
 end
 
 -- 状态球更新

@@ -169,6 +169,12 @@ local CenterPoleState = {
     UpRotate = 7,
 }
 
+-- 仙彩开奖中心柱缓慢移动结束时间
+local CenterPoleSlowMoveTime = {
+    [CenterPoleState.Down] = 2,
+    [CenterPoleState.Up] = 2,
+}
+
 local StagePoleState = {
     Default = 0,                -- 默认就是在下面的
     Down = 1,
@@ -258,7 +264,8 @@ local JumboCactpotDefine =
     JumbCondVal = JumbCondVal,
     JumboCeremoneyAssetPath = JumboCeremoneyAssetPath,
     MaxStage = MaxStage,
-    GetWardItemBgPath = GetWardItemBgPath
+    GetWardItemBgPath = GetWardItemBgPath,
+    CenterPoleSlowMoveTime = CenterPoleSlowMoveTime
 }
 
 return JumboCactpotDefine

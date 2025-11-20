@@ -60,6 +60,8 @@ function TeamRecruitContentSelectView:OnPostInit()
 		{ "EditRecruitType", UIBinderValueChangedCallback.New(self, nil, self.OnEditRecruitTypeChanged) },
 		{ "bShowEditDifficulty", UIBinderSetIsVisible.New(self, self.PanelSet)},
 	}
+
+	self.TeamRecruitDropBar:SetUpToggleType(true)
 end
 
 function TeamRecruitContentSelectView:OnShow()

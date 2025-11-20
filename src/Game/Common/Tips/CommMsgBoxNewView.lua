@@ -151,8 +151,8 @@ function CommMsgBoxNewView:UpdateView(Info)
 		return
 	end
 
+	self.RichTextBoxDesc:SetJustification(Info.TextAlignment)
 	self.CheckBoxNoReminder:SetText(Info.NeverMindText or "")
-
 	self.RichTextBoxDesc:SetText(Info.Message or "")
 	self.RichTextBoxTitle:SetText(Info.Title or "")
 
@@ -177,7 +177,7 @@ function CommMsgBoxNewView:UpdateView(Info)
 		UIUtil.ImageSetBrushFromAssetPath(self.ImgSpent, Icon)
 		local Num = GetItemNum(Info.CostItemID)
 		local ReqNum = Info.CostNum
-		self.TextSpentTotal:SetText(ReqNum)
+		self.TextSpentTotal:SetText(_G.ScoreMgr.FormatScore(ReqNum))
 		if Info.CostColor then
 			local LinearColor = _G.UE.FLinearColor.FromHex(Info.CostColor)
 			if LinearColor then
@@ -327,7 +327,11 @@ function CommMsgBoxNewView:OnTimer()
 				if nil ~= Callback then
 					--点了RightBtn，并且是点击才开始倒计时的，这个时候只是触发倒计时
 					--但是当倒计时结束了，就会触发RightBtn的响应逻辑
-					Callback(self.Params.UIView, {IsNeverAgain = self.IsNeverAgain})
+					----view存在且失效时会返回false
+					local IsViewValid = self:CheckViewValid()
+					if IsViewValid then
+						Callback(self.Params.UIView, {IsNeverAgain = self.IsNeverAgain})
+					end
 				end
 			end
 		end
@@ -354,13 +358,32 @@ function CommMsgBoxNewView:OnBtnClick(BtnType)
 				
 				return 
 			end
-			Callback(self.Params.UIView, {IsNeverAgain = self.IsNeverAgain})
+			----view存在且失效时会返回false
+			local IsViewValid = self:CheckViewValid()
+			if IsViewValid then
+				Callback(self.Params.UIView, {IsNeverAgain = self.IsNeverAgain})
+			end
 		end
 	end
 
 	if self.Params and self.Params.bUseOnLeftTimeClose == true then
 		UIViewMgr:HideView(self.ViewID)
 	end
+end
+
+----检查View是否失效
+function CommMsgBoxNewView:CheckViewValid()
+	----当view失效时，不触发回调函数/有部分调用传入的不是view,只对有IsValid函数的类做判断/View可能为nil，为nil的情况也返回true
+	local IsViewValid = true
+	---有系统会传boolean值，直接跳过view检查,正常走接口调用不可能为boolean，怀疑是直接showview
+	if type(self.Params) ~= "table" then
+		---考虑到self.Params如果不是表，回调传入self.Params.UIView也会报错，所以返回false
+		return false
+	end
+	if self.Params.UIView and self.Params.UIView.IsValid and not self.Params.UIView:IsValid() then
+		IsViewValid = false
+	end
+	return IsViewValid
 end
 
 function CommMsgBoxNewView:OnBtnClickL()
@@ -394,7 +417,7 @@ end
 
 function CommMsgBoxNewView:OnBtnClickClose()
 	if self.Params and self.Params.CloseClickCB then
-		self.Params.CloseClickCB(self.Params.UIView)
+		self.Params.CloseClickCB(self.Params.UIView, {IsNeverAgain = self.IsNeverAgain})
 	end
 	UIViewMgr:HideView(self.ViewID)
 end
@@ -426,6 +449,14 @@ function CommMsgBoxNewView:SetItemIcon(ResID)
 	self.Comm58Slot:SetNumVisible(false)
 	UIUtil.SetIsVisible(self.Comm58Slot.IconChoose, false)
 	UIUtil.SetIsVisible(self.Comm58Slot.RichTextLevel, false)
+end
+
+--[sammrli] 动态设置切图时是否关闭
+function CommMsgBoxNewView:GetConfigDontHideWhenLoadMap()
+	if self.Params and self.Params.DontHideWhenLoadMap ~= nil then
+		return self.Params.DontHideWhenLoadMap
+	end
+	return self.Super:GetConfigDontHideWhenLoadMap()
 end
 
 return CommMsgBoxNewView

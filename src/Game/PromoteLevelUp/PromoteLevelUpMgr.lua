@@ -10,10 +10,12 @@ local ItemUtil = require("Utils/ItemUtil")
 local ItemGetaccesstypeCfg = require("TableCfg/ItemGetaccesstypeCfg")
 local MajorUtil = require("Utils/MajorUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local EventMgr = require("Event/EventMgr")
 local EventID = require("Define/EventID")
 
 local LSTR = nil
 local UIViewMgr = nil
+local MsgTipsUtil = nil
 
 ---@class PromoteLevelUpMgr : MgrBase
 local PromoteLevelUpMgr = LuaClass(MgrBase)
@@ -22,6 +24,7 @@ function PromoteLevelUpMgr:OnInit()
 
     LSTR = _G.LSTR
     UIViewMgr = _G.UIViewMgr
+    MsgTipsUtil = _G.MsgTipsUtil
     if not ViewVM then
         ViewVM = _G.PromoteLevelUpVM
     end
@@ -46,6 +49,7 @@ end
 
 function PromoteLevelUpMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.ShowPromoteMainPanel, self.OnShowPromoteMainPanel)
+	self:RegisterGameEvent(EventID.CrafterFailed, self.OnGameEventCrafterFailed)
 end
 
 ---【入口】
@@ -54,7 +58,7 @@ function PromoteLevelUpMgr:OnShowPromoteMainPanel(Params)
 end
 
 --- 打开提升聚合界面
----@param Params.TypeNum 提升类型 1战斗职业,2生产职业,3装备
+---@param Params.TypeNum 提升类型 （ProtoRes.promote_type）
 ---@param Params.ProfID  职业 （选填，默认当前职业）
 function PromoteLevelUpMgr:ShowPromoteMainPanel(Params)
     if Params == nil then return end
@@ -137,6 +141,25 @@ function PromoteLevelUpMgr:ShowPromoteMainPanel(Params)
         ViewVM.RichTextHint = LSTR("1540005")   --"当前装备品级不足，可参与下方内容快速提升"
         ViewVM.IconJob = PromoteDefine.EquipIconPath
 
+    elseif TypeNum == ProtoRes.promote_type.PROMOTE_TYPE_ABILITY then  --能力提升
+        local ProfID
+        if table.is_array(Params) and nil ~= Params.Prof then
+            ProfID = Params.Prof
+        else
+            ProfID = MajorUtil.GetMajorProfID()
+        end
+        local ProfInfo = RoleInitCfg:FindCfgByKey(ProfID)
+        if ProfInfo then
+            IconPath = ProfInfo.SimpleIcon3
+            ProfName = ProfInfo.ProfName
+            ProfClass = ProfInfo.Class
+        end
+        ViewVM.TextTitle = LSTR("能力提升")      --"能力提升"
+        ViewVM.RichTextJobLevel = ProfName
+        ViewVM.RichTextHint = LSTR("当前能力不足，可参与下方内容快速提升")   --"当前能力不足，可参与下方内容快速提升"
+        ViewVM.IconJob = IconPath
+        ViewVM.ProfID = ProfID
+        ViewVM.ProfClass = ProfClass
     end
 
     if UIViewMgr:IsViewVisible(UIViewID.PromoteLevelUpMainPanel) then
@@ -178,9 +201,9 @@ function PromoteLevelUpMgr:JumpPanelByGetWayID(JumpID)
 		table.insert(CommGetWayItems, UnLockIndex, ViewParams)
 		-- UnLockIndex = UnLockIndex + 1
 	else
-		if Cfg.NotRedirectHide == 0 then
+		-- if Cfg.NotRedirectHide == 0 then
 			table.insert(CommGetWayItems,ViewParams)
-		end
+		-- end
 	end
 
 	if nil == CommGetWayItems[1] then
@@ -194,13 +217,14 @@ function PromoteLevelUpMgr:JumpPanelByGetWayID(JumpID)
 
     local ItemData = CommGetWayItems[1]
     if Cfg.FunType == ProtoRes.ItemAccessFunType.Fun_Mazechallenge then   --迷宫挑战
-		if _G.UIViewMgr:IsViewVisible(UIViewID.PWorldEntranceSelectPanel) then
+		if UIViewMgr:IsViewVisible(UIViewID.PWorldEntranceSelectPanel) then
             UIViewMgr:HideView(UIViewID.PWorldEntranceSelectPanel)
+            UIViewMgr:HideView(UIViewID.PWorldEntouragePanel)
             ItemUtil.JumpGetWayByItemData(ItemData)                       --重新跳转
 			return
 		end
     elseif Cfg.FunType == ProtoRes.ItemAccessFunType.Fun_Making then      --制作笔记
-		if _G.UIViewMgr:IsViewVisible(UIViewID.CraftingLog) then
+		if UIViewMgr:IsViewVisible(UIViewID.CraftingLog) then
             if 0 == ItemData.RepeatJumpTipsID then
                 MsgTipsUtil.ShowTipsByID(260610)
                 return
@@ -209,7 +233,7 @@ function PromoteLevelUpMgr:JumpPanelByGetWayID(JumpID)
 			return
 		end
     elseif Cfg.FunType == ProtoRes.ItemAccessFunType.Fun_DailyRandom then --每日随机
-        if _G.UIViewMgr:IsViewVisible(UIViewID.PWorldEntranceSelectPanel) then
+        if UIViewMgr:IsViewVisible(UIViewID.PWorldEntranceSelectPanel) then
             UIViewMgr:HideView(UIViewID.PWorldEntranceSelectPanel)
             ItemUtil.JumpGetWayByItemData(ItemData)
 			return
@@ -217,6 +241,12 @@ function PromoteLevelUpMgr:JumpPanelByGetWayID(JumpID)
     end
 
     ItemUtil.JumpGetWayByItemData(ItemData)
+end
+
+function PromoteLevelUpMgr:OnGameEventCrafterFailed(Params)
+    if Params and Params.ProfID then
+		EventMgr:SendEvent(EventID.ShowPromoteMainPanel, {TypeNum = ProtoRes.promote_type.PROMOTE_TYPE_ABILITY, ProfID = Params.ProfID})
+    end
 end
 
 return PromoteLevelUpMgr

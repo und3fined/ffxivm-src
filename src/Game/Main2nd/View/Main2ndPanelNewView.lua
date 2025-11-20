@@ -32,6 +32,7 @@ local SideBarDefine = require("Game/Common/Frame/Define/CommonSelectSideBarDefin
 local CommSideBarUtil = require("Utils/CommSideBarUtil")
 local CommonDefine = require("Define/CommonDefine")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local RedDotDefine = require("Game/CommonRedDot/RedDotDefine")
 local MsgTipsID = require("Define/MsgTipsID")
 
 local UIViewMgr = _G.UIViewMgr
@@ -80,6 +81,9 @@ function Main2ndPanelNewView:OnInit()
 		_G.FLOG_ERROR("RTagTable is Nil")
 		return
 	end
+	-- if self.ListKey == nil then
+	-- 	self.ListKey = _G.RedDotMgr:AddNewListKeyByID(1, RedDotDefine.ListRedDotStyleType.TopAndBottom)
+	-- end
 	-- local TableItems = {}
 	local Row = 1
 	local Column = 1
@@ -99,7 +103,7 @@ function Main2ndPanelNewView:OnInit()
 			Item.RecLockHelpID = Info.RecLockHelpID
 			Item.RecUnlockHelpID = Info.RecUnlockHelpID
 			Item.IsShowTaskUI = Info.IsShowTaskUI == 1
-
+			--Item.ListKey = self.ListKey 
 			Item.Row = math.ceil(index / 4)
 			if Row > EndRow then
 				Row = 1
@@ -113,7 +117,14 @@ function Main2ndPanelNewView:OnInit()
 			Item.BtnEntranceID = Item.BtnEntranceID
 
 			--DelayAllTime = DelayAllTime + Item.AnimInDelayTime
-			table.insert(TableItems, Item)
+			if MenuType.Announcement == Info.BtnEntranceID then
+				local IsAudit = _G.UE.UGCloudMgr.Get():IsAppAuditing()
+				if not IsAudit then
+					table.insert(TableItems, Item)
+				end
+			else
+				table.insert(TableItems, Item)
+			end
 		end
 	end
 	---二级界面按SortID排序，无SortID或者配置出错导致相等时使用ID排序
@@ -124,6 +135,15 @@ function Main2ndPanelNewView:OnInit()
 			return a.ID < b.ID
 		end
 	end)
+	-- local BorderRedDotPosData = {}
+	-- for Index, Item in ipairs(TableItems) do
+	-- 	local RedDotName = _G.RedDotMgr:GetRedDotNameByID(Item.BtnRedDotID)
+	-- 	if RedDotName then
+	-- 		BorderRedDotPosData[RedDotName] = Index
+	-- 	end
+	-- end
+	-- _G.RedDotMgr:AddBatchListRedDotIndexData(self.ListKey, BorderRedDotPosData)
+	-- _G.RedDotMgr:AddListRedDotOffsetByKey(self.ListKey, {X = -25, Y = 0})
 	-- TickCount = DelayAllTime / 0.3 + 5
 	self.TableViewMenuAdapter = UIAdapterTableView.CreateAdapter(self, self.TableView_Menu)
 	self.TableViewMenuAdapter:SetOnClickedCallback(self.OnMenuItemClicked)
@@ -133,6 +153,11 @@ function Main2ndPanelNewView:OnDestroy()
 	TableItems = nil
 	BarItems = nil
 	LstCameraMode = nil
+	-- if self.ListKey then
+	-- 	_G.RedDotMgr:ClearListIndexData(self.ListKey)
+	-- 	self.ListKey = nil
+	-- end
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 function Main2ndPanelNewView:OnShow()
@@ -141,14 +166,16 @@ function Main2ndPanelNewView:OnShow()
 
 	self.TableViewMenuAdapter:UpdateAll(TableItems)
 
-	--隐藏其他玩家,NPC名字
-	_G.HUDMgr:SetIsDrawHUD(false)
-	_G.UE.USelectEffectMgr.Get():ShowDecal(false)
-	_G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.SecondMenu, true)
+	--隐藏其他玩家,NPC名字 /新需求，不隐藏选中和hud
+	--_G.HUDMgr:SetIsDrawHUD(false)
+	--_G.UE.USelectEffectMgr.Get():ShowDecal(false)
+	--_G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.SecondMenu, true)
 	-- _G.HUDMgr:UpdateActorVisibility(MajorUtil.GetMajorEntityID(), false, false)
 	-- _G.HUDMgr:HideAllNpc()
 
 	_G.EventMgr:SendEvent(EventID.TutorialShowView, self.ViewID)
+	--self.TableViewMenuAdapter:ScrollToBottom()
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(true)
 end
 
 function Main2ndPanelNewView:PlayAnimDelayTime()
@@ -189,14 +216,16 @@ function Main2ndPanelNewView:OnEditableTextNameChanged(_, Text)
 end
 
 function Main2ndPanelNewView:OnHide()
+	--_G.RedDotMgr:RemoveListReddotByListKey(self.ListKey)
 	UIViewMgr:HideView(UIViewID.OperationChannelPanel)
-	--显示其他玩家,NPC名字
-	_G.HUDMgr:SetIsDrawHUD(true)
-	_G.UE.USelectEffectMgr.Get():ShowDecal(true)
-	_G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.SecondMenu, false)
+	--显示其他玩家,NPC名字/新需求，不隐藏选中和hud
+	--_G.HUDMgr:SetIsDrawHUD(true)
+	--_G.UE.USelectEffectMgr.Get():ShowDecal(true)
+	--_G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.SecondMenu, false)
 	-- _G.HUDMgr:ShowAllPlayer()
 	-- _G.HUDMgr:ShowAllNpc()
 	OperationUtil.HasInitOperationMenuItems = false
+	--_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 function Main2ndPanelNewView:OnRegisterUIEvent()
@@ -235,6 +264,7 @@ function Main2ndPanelNewView:OnMenuItemClicked(Index, ItemData, ItemView)
 		end
 	end
 
+
 	if ItemView and ItemView.RedDotID ~= nil then
 		_G.RedDotMgr:DelRedDotByID(ItemView.RedDotID)
 		_G.ModuleOpenMgr.NeesShowRedDotList[ItemView.ModuleID] = nil
@@ -256,7 +286,7 @@ function Main2ndPanelNewView:OnMenuItemClicked(Index, ItemData, ItemView)
 	elseif MenuType.Mount == ItemData.BtnEntranceID then
 		DataReportUtil.ReportMountInterfaceFlowData("MountInterfaceFlow", 2, 0)
 		DataReportUtil.ReportMountInterSystemFlowData(1, 1)
-		CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Mount, {bOpen = true})
+		CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Mount, {bOpen = true})
 	elseif MenuType.Glamours == ItemData.BtnEntranceID then
 		_G.WardrobeMgr:OpenWardrobeMainPanel()
 	elseif MenuType.GatheringLog == ItemData.BtnEntranceID then
@@ -287,7 +317,7 @@ function Main2ndPanelNewView:OnMenuItemClicked(Index, ItemData, ItemView)
 		UIViewMgr:ShowView(UIViewID.BuddyMainPanel)
 	elseif MenuType.Companion == ItemData.BtnEntranceID then
 		DataReportUtil.ReportEasyUseFlowData(1,3)
-		CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Companion, {bOpen = true})
+		CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Companion, {bOpen = true})
     elseif MenuType.GoldSauserMainPanel == ItemData.BtnEntranceID then
 		GoldSauserMainPanelMgr:OpenGoldSauserMainPanel()
 	elseif MenuType.LeveQuest == ItemData.BtnEntranceID then
@@ -321,7 +351,7 @@ function Main2ndPanelNewView:OnMenuItemClicked(Index, ItemData, ItemView)
 	elseif MenuType.TreasureHunt == ItemData.BtnEntranceID then
 		_G.WorldExploraMgr:OpenWorldExploreMain()
 	elseif MenuType.Ornament == ItemData.BtnEntranceID then
-		CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.FashionDeco, {bOpen = true})
+		CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.FashionDeco, {bOpen = true})
 	elseif MenuType.Store == ItemData.BtnEntranceID then
 		if _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_MALL, true) then
 		    _G.StoreMgr:ShowMainPanel()
@@ -348,6 +378,10 @@ function Main2ndPanelNewView:OnMenuItemClicked(Index, ItemData, ItemView)
 		OperationUtil.ShowGameBotRedDot(false, 1)
 	elseif MenuType.CompanySeal == ItemData.BtnEntranceID then
 		_G.CompanySealMgr:OpenCompanyTaskView()
+	elseif MenuType.House == ItemData.BtnEntranceID then
+		UIViewMgr:ShowView(UIViewID.HouseLandMianPanelView)
+	elseif (MenuType.Toy == ItemData.BtnEntranceID) then
+		CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Toy, {bOpen = true})
 	else
 		---LSTR 提示 LSTR 暂未开放，敬请期待!
 		--_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(10032), LSTR(10062), nil)
@@ -368,7 +402,16 @@ function Main2ndPanelNewView:OnAnimationFinished(Animation)
 	if self.AnimOut1 == Animation then
 		UIViewMgr:HideView(_G.UIViewID.Main2ndPanel)
 	end
+	-- if self.AnimIn == Animation then
+	-- 	---todo 需要滑动一下，获取到的位置才是正确的，先优先处理bug，代码滑动一下，后续排查
+	-- 	self.TableViewMenuAdapter:ScrollToTop()
+	-- 	self:RegisterTimer(self.ShowBorderRedDot, 0.1)
+	-- end
 end
+
+-- function Main2ndPanelNewView:ShowBorderRedDot()
+-- 	_G.RedDotMgr:ShowListReddotByListKey(self.ListKey, self, self.TableView_Menu)
+-- end
 
 function Main2ndPanelNewView:ShowLockTips(ItemData, ItemView)
 	if ItemView == nil then
@@ -450,6 +493,20 @@ function Main2ndPanelNewView:PosIsUpInViewport(Widget)
 	else
 		return true
 	end
+end
+
+function Main2ndPanelNewView:GetIndex(BtnEntranceID)
+	local Num = self.TableViewMenuAdapter:GetNum()
+
+	for i=1,Num do
+		local ItemData = self.TableViewMenuAdapter:GetItemIndex(i)
+
+		if ItemData ~= nil and ItemData.BtnEntranceID == BtnEntranceID then
+			return i
+		end
+	end
+
+	return 0
 end
 
 return Main2ndPanelNewView

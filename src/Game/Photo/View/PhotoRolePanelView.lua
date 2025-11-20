@@ -7,41 +7,21 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-
-local PhotoDefine = require("Game/Photo/PhotoDefine")
-local PhotoMgr
-local FVector2D = _G.UE.FVector2D
-local PhotoVM
-local PhotoCamVM
-local PhotoFilterVM
-local PhotoDarkEdgeVM
-local PhotoRoleSettingVM
-local PhotoSceneVM
-local PhotoTemplateVM
-local PhotoActionVM
-local PhotoEmojiVM
-local PhotoRoleStatVM
-
 local UIBinderSetSlider = require("Binder/UIBinderSetSlider")
 local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
-local UIBinderSetProfName = require("Binder/UIBinderSetProfName")
-local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
-local UIBinderSetSelectedItem = require("Binder/UIBinderSetSelectedItem")
-local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
-local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
-local UIBinderSetRenderTransformAngle = require("Binder/UIBinderSetRenderTransformAngle")
-local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
+local PhotoDefine = require("Game/Photo/PhotoDefine")
 
-local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
+local PhotoMgr
+local PhotoRoleSettingVM
 
 ---@class PhotoRolePanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field FTextBlock_112 UFTextBlock
+---@field PanelAngle UFCanvasPanel
 ---@field PanelRole UFCanvasPanel
 ---@field ProbarAngle UFProgressBar
 ---@field Slider USlider
@@ -54,6 +34,8 @@ local PhotoRolePanelView = LuaClass(UIView, true)
 
 function PhotoRolePanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.FTextBlock_112 = nil
+	--self.PanelAngle = nil
 	--self.PanelRole = nil
 	--self.ProbarAngle = nil
 	--self.Slider = nil
@@ -70,27 +52,25 @@ function PhotoRolePanelView:OnRegisterSubView()
 end
 
 function PhotoRolePanelView:OnInit()
+	PhotoRoleSettingVM = _G.PhotoRoleSettingVM
+	PhotoMgr = _G.PhotoMgr
 
 	self.FTextBlock_112:SetText(_G.LSTR(630058))
-
-
-	PhotoRoleSettingVM = _G.PhotoRoleSettingVM
-
-	self.AdpRoleSettingTree     = UIAdapterTreeView.CreateAdapter(self, self.TreeViewRole)
-
+	self.AdpRoleSettingTree = UIAdapterTreeView.CreateAdapter(self, self.TreeViewRole)
 	self.RoleSubPanelDict = {
 		[0] = self.PanelRoleFace,
 		[1] = self.TreeViewRole,
 	}
 
-	self.BinderRoleSetting = 
+	self.BinderRoleSetting =
 	{
 		{ "CtrlTypeTree", 		UIBinderUpdateBindableList.New(self, self.AdpRoleSettingTree) },
 		{ "MajorAngleIdx", 		UIBinderSetSlider.New(self, self.Slider) },
 		{ "MajorAngle", 		UIBinderSetText.New(self, self.TextAngleNumber) },
 		-- { "IsRepeatLastCast", 	UIBinderSetIsChecked.New(self, self.TogRepeatCast) },
 		-- { "IsCustomLookAt", 	UIBinderSetIsChecked.New(self, self.TogCustomLookAt) },
-		{ "SubUIIdx", 			UIBinderValueChangedCallback.New(self, nil, self.OnBindSubUIIdx) },
+		-- { "SubUIIdx", 			UIBinderValueChangedCallback.New(self, nil, self.OnBindSubUIIdx) },
+		{ "ProbarIsVisibility", UIBinderSetIsVisible.New(self, self.PanelAngle) },
 	}
 end
 
@@ -99,6 +79,7 @@ function PhotoRolePanelView:OnDestroy()
 end
 
 function PhotoRolePanelView:OnShow()
+	PhotoRoleSettingVM.ProbarIsVisibility = PhotoMgr:IsCurSeltMajor()
 end
 
 function PhotoRolePanelView:OnHide()
@@ -122,28 +103,10 @@ function PhotoRolePanelView:OnRegisterBinder()
 end
 
 function PhotoRolePanelView:OnTogGroupRoleSet(TogGroup, TogBtn, Idx, Stat)
-	-- print('Andre.PhotoMainView.OnTogGroupRoleSet Idx = ' .. tostring(Idx))
 	PhotoRoleSettingVM:SetSubUIIdx(Idx)
 end
 
-local LastShowTime = nil
-local function ShowTips(Content)
-    if LastShowTime then
-        local Now = TimeUtil.GetLocalTime()
-        if Now - LastShowTime <= 5 then
-            return
-        end
-    end
-
-    MsgTipsUtil.ShowTips(Content)
-    LastShowTime = TimeUtil.GetLocalTime()
-end
-
 function PhotoRolePanelView:OnValueChangedSlider(_, Value)
-	if not _G.PhotoMgr:IsCurSeltMajor() then
-        ShowTips(_G.LSTR(630057))
-    end
-
 	PhotoRoleSettingVM:SetMajorAngleIdx(Value)
 end
 

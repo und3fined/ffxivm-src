@@ -10,21 +10,39 @@ local UIUtil = require("Utils/UIUtil")
 
 ---@class MainOpsAnimView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field PanelFlowToEntrance UFCanvasPanel
 ---@field PanelOpsCeremony UFCanvasPanel
 ---@field PanelOpsHalloween UFCanvasPanel
+---@field PanelStarlightCelebration UFCanvasPanel
 ---@field AnimHalloweenFirst UWidgetAnimation
 ---@field AnimOpsCeremonyFirst UWidgetAnimation
+---@field AnimStarlightCelebrationFirst UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MainOpsAnimView = LuaClass(UIView, true)
 
+local AniDataMap = {
+	["Halloween"] = {
+		AniVar = "AnimHalloweenFirst",
+		ShowTime = 2.9
+	},
+	["Ceremony"] = {
+		AniVar = "AnimOpsCeremonyFirst",
+		ShowTime = 3.67
+	},
+	["Starlight"] = {
+		AniVar = "AnimStarlightCelebrationFirst",
+		ShowTime = 2.27
+	},
+	
+}
+
 function MainOpsAnimView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.PanelFlowToEntrance = nil
 	--self.PanelOpsCeremony = nil
 	--self.PanelOpsHalloween = nil
+	--self.PanelStarlightCelebration = nil
 	--self.AnimHalloweenFirst = nil
 	--self.AnimOpsCeremonyFirst = nil
+	--self.AnimStarlightCelebrationFirst = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -46,35 +64,34 @@ function MainOpsAnimView:OnShow()
 		return
 	end
 
-	if self.Params.Ani == "Halloween" then
-		self:PlayHalloweenFirstAni()
-	elseif self.Params.Ani == "Ceremony" then
-		self:PlayCeremonyFirstAni()
+	self:PlayActivityFirstAni()
+
+end
+
+function MainOpsAnimView:PlayActivityFirstAni()
+	if self.Params.Ani == nil then
+		return
 	end
-end
+	local AniData = AniDataMap[self.Params.Ani]
+	if AniData == nil then
+		return
+	end
+	local AniVar = AniData.AniVar
+	if AniData == nil then
+		return
+	end
+	self:PlayAnimation(self[AniVar])
 
-function MainOpsAnimView:PlayHalloweenFirstAni()
-	self:PlayAnimation(self.AnimHalloweenFirst)
-	local ShowTime = 2.9
 	self:RegisterTimer(function()
 		self:Hide()
 		if self.Params and self.Params.CallBack and type(self.Params.CallBack) == "function" then
 			self.Params.CallBack()
 		end
-	end, ShowTime, 0, 1)
+	end, AniData.ShowTime, 0, 1)
 
 end
 
-function MainOpsAnimView:PlayCeremonyFirstAni()
-	self:PlayAnimation(self.AnimOpsCeremonyFirst)
-	local ShowTime = 3.67
-	self:RegisterTimer(function()
-		self:Hide()
-		if self.Params and self.Params.CallBack and type(self.Params.CallBack) == "function" then
-			self.Params.CallBack()
-		end
-	end, ShowTime, 0, 1)
-end
+
 function MainOpsAnimView:OnHide()
 
 end

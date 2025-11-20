@@ -21,6 +21,7 @@ local LookAtMgr = LuaClass(MgrBase)
 
 function LookAtMgr:OnInit()
 	self.CachedLookAtParamsList = {}
+	self.CachedMajorLookAtParam = {}
 	self.bInPhoto = false
 end
 
@@ -31,8 +32,8 @@ function LookAtMgr:OnEnd()
 end
 
 function LookAtMgr:OnRegisterGameEvent()
-    self:RegisterGameEvent(EventID.PhotoStart,            self.OnPhotoStart)
-    self:RegisterGameEvent(EventID.PhotoEnd,              self.OnPhotoEnd)
+    -- self:RegisterGameEvent(EventID.PhotoStart,            self.OnPhotoStart)
+    -- self:RegisterGameEvent(EventID.PhotoEnd,              self.OnPhotoEnd)
     self:RegisterGameEvent(EventID.TargetChangeActor,     self.OnTargetChangeActor)
 	self:RegisterGameEvent(EventID.SelectTarget,          self.OnManualSelectTarget)
 	self:RegisterGameEvent(EventID.UnSelectTarget,        self.OnUnSelectTarget)
@@ -123,7 +124,7 @@ end
 
 -- 主角目标选择
 function LookAtMgr:OnManualSelectTarget(Params)
-	if self.bInPhoto then
+	if _G.PhotoMgr:IsNotLookAtActor() then
 		-- 拍照系统
 		-- 测试拍照LookAt，实际执行在拍照上层逻辑设置参数
 		-- local TargetID = Params.ULongParam1
@@ -157,8 +158,49 @@ function LookAtMgr:OnManualSelectTarget(Params)
 	end
 end
 
+-- 缓存主角的Lookat目标
+function LookAtMgr:RecordMajorLookAtParam()
+	local Major = MajorUtil.GetMajor()
+	if Major then
+		local AnimComp = Major:GetAnimationComponent()
+		if AnimComp then
+			local LookAtParam = AnimComp:GetLookAtParam()
+			if LookAtParam and LookAtParam.Target then
+				local TargetID = nil
+				local LookAtTarget = LookAtParam.Target.Target
+				if LookAtTarget then
+					local BaseCharacter = LookAtTarget:Cast(_G.UE.ABaseCharacter)
+					if BaseCharacter then
+						TargetID = BaseCharacter:GetAttributeComponent().EntityID
+					end
+				end
+				self.CachedMajorLookAtParam.TargetID = TargetID
+				self.CachedMajorLookAtParam.LookAtType = LookAtParam.LookAtType
+				self.CachedMajorLookAtParam.TargetType = LookAtParam.Target.Type
+			end
+		end
+	end
+end
+
+-- 恢复主角的Lookat目标
+function LookAtMgr:RecoverMajorLookAtParam()
+	local Major = MajorUtil.GetMajor()
+	if Major then
+		local AnimComp = Major:GetAnimationComponent()
+		if AnimComp then
+			local TargetCharacter = ActorUtil.GetActorByEntityID(self.CachedMajorLookAtParam.TargetID)
+			local LookAtParam = LookAtParams
+			LookAtParam.LookAtType = self.CachedMajorLookAtParam.LookAtType
+			LookAtParam.Target.Type = self.CachedMajorLookAtParam.TargetType
+			LookAtParam.Target.Target = TargetCharacter
+			AnimComp:SetLookAtParam(LookAtParam)
+		end
+	end
+	self.CachedMajorLookAtParam = {}
+end
+
 function LookAtMgr:OnUnSelectTarget()
-	if self.bInPhoto then
+	if _G.PhotoMgr:IsNotLookAtActor() then
 		return
 	end
 	local Major = MajorUtil.GetMajor()

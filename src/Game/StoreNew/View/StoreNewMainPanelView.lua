@@ -22,12 +22,12 @@ local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local StoreCfg = require("TableCfg/StoreCfg")
+local StoreRecommendCfg = require("TableCfg/StoreRecommendCfg")
 local CommonUtil = require("Utils/CommonUtil")
 local StoreMgr = require("Game/Store/StoreMgr")
 local HelpInfoUtil = require("Utils/HelpInfoUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local StoreDefine = require("Game/Store/StoreDefine")
-local SkillTipsMgr = require("Game/Skill/SkillTipsMgr")
 local StoreMainVM = require("Game/Store/VM/StoreMainVM")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local ModelDefine = require("Game/Model/Define/ModelDefine")
@@ -37,6 +37,7 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local CameraFocusCfgMap = require("Game/Equipment/VM/CameraFocusCfgMap")
 local DataReportUtil = require("Utils/DataReportUtil")
+local EmotionMgr = require("Game/Emotion/EmotionMgr")
 local FriendMgr = require("Game/Social/Friend/FriendMgr")
 local MountCustomMadeVM = require("Game/Mount/VM/MountCustomMadeVM")
 local MountMgr = require("Game/Mount/MountMgr")
@@ -47,8 +48,16 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local UIBinderSetTextFormatForScore = require("Binder/UIBinderSetTextFormatForScore")
+local ClosetSuitCfg = require("TableCfg/ClosetSuitCfg")
+local FashionDecorateCfg = require("TableCfg/FashionDecorateCfg")
+local FashionDecoDefine = require("Game/FashionDeco/VM/FashionDecoDefine")
+local FashionDecorateSkillCfg = require("TableCfg/FashionDecorateSkillCfg")
+local ObjectGCType = require("Define/ObjectGCType")
+local AnimationUtil = require("Utils/AnimationUtil")
 
--- local FLOG_INFO = _G.FLOG_INFO
+local FLOG_ERROR = _G.FLOG_ERROR
+local FLOG_INFO = _G.FLOG_INFO
+local FLOG_WARNING = _G.FLOG_WARNING
 local LSTR = _G.LSTR
 local UE = _G.UE
 
@@ -73,6 +82,13 @@ local RenderActorCreateCallbackType =
 	ViewCompanion = 3,
 }
 
+local AssembleAllEndCallbackType =
+{
+	View = 1, -- 相机相关
+	StagePose = 2, -- 亮相动作
+	IdlePose = 3, -- 待机动作
+}
+
 -- 待机动作类型
 local IdlePoseType =
 {
@@ -83,17 +99,24 @@ local IdlePoseType =
 
 local HideBuyBtnConfig =
 {
-	[StoreMall.STORE_MALL_PROPS] = true
+	[StoreMall.STORE_MALL_PROPS] = true,
+	[StoreMall.STORE_MALL_MYSTERYBOX] = true
 }
-local MysterBoxMaxBoughtCount = 6
 
+local BuyBtnType = {
+	Buy = 1,
+	CutHair = 2,
+	GoWardrobe = 3
+}
 ---@class StoreNewMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field Bkg CommonBkg01View
 ---@field BtnBuy CommBtnLView
 ---@field BtnBuyRedDot CommonRedDotView
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnEquipment UToggleButton
 ---@field BtnExpand UFButton
+---@field BtnFly UToggleButton
 ---@field BtnFullScreen UToggleButton
 ---@field BtnHand UToggleButton
 ---@field BtnHat UToggleButton
@@ -107,12 +130,14 @@ local MysterBoxMaxBoughtCount = 6
 ---@field BtnTag1 UFButton
 ---@field BtnTag2 UFButton
 ---@field Btn_Video UFButton
+---@field CommEmpty CommBackpackEmptyView
 ---@field CommInforBtn CommInforBtnView
 ---@field CommMenu CommMenuView
 ---@field CommTab USizeBox
 ---@field CommTabs CommTabsView
 ---@field CommodityExpandPanel StoreCommodityExpandPanelView
 ---@field CommonTitle CommonTitleView
+---@field FVerticalBox_1 UFVerticalBox
 ---@field IconVideco UFImage
 ---@field InforBtn CommInforBtnView
 ---@field Money StoreMoneyItemUBPView
@@ -129,8 +154,10 @@ local MysterBoxMaxBoughtCount = 6
 ---@field PanelPreview UFCanvasPanel
 ---@field PanelRoleBtn UFVerticalBox
 ---@field PanelTag UFCanvasPanel
+---@field PanelUI UFCanvasPanel
 ---@field PanelVideo UFCanvasPanel
 ---@field RichTextBoxBlindBoxHint URichTextBox
+---@field StoreFiterTips StoreFiterTipsView
 ---@field StoreRender2D StoreRender2DView
 ---@field TableViewCommodity UTableView
 ---@field TableViewMountsAction UTableView
@@ -145,6 +172,7 @@ local MysterBoxMaxBoughtCount = 6
 ---@field TextPreview UFTextBlock
 ---@field TextType UFTextBlock
 ---@field TextUnavailable UFTextBlock
+---@field ToggleBtnFilter UToggleButton
 ---@field UMGVideoPlayer_UIBP UMGVideoPlayerView
 ---@field UMGVideoPlayer_UIBP_Full UMGVideoPlayerView
 ---@field AnimCommodityFold UWidgetAnimation
@@ -152,6 +180,8 @@ local MysterBoxMaxBoughtCount = 6
 ---@field AnimCommodityFoldFullScreenOut UWidgetAnimation
 ---@field AnimCommodityIn UWidgetAnimation
 ---@field AnimCommodityUnfold UWidgetAnimation
+---@field AnimCommonBGHide UWidgetAnimation
+---@field AnimCommonBGShow UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimInfoIn UWidgetAnimation
 ---@field AnimPosterFullScreenIn UWidgetAnimation
@@ -164,11 +194,13 @@ local StoreNewMainPanelView = LuaClass(UIView, true)
 
 function StoreNewMainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.Bkg = nil
 	--self.BtnBuy = nil
 	--self.BtnBuyRedDot = nil
 	--self.BtnClose = nil
 	--self.BtnEquipment = nil
 	--self.BtnExpand = nil
+	--self.BtnFly = nil
 	--self.BtnFullScreen = nil
 	--self.BtnHand = nil
 	--self.BtnHat = nil
@@ -182,12 +214,14 @@ function StoreNewMainPanelView:Ctor()
 	--self.BtnTag1 = nil
 	--self.BtnTag2 = nil
 	--self.Btn_Video = nil
+	--self.CommEmpty = nil
 	--self.CommInforBtn = nil
 	--self.CommMenu = nil
 	--self.CommTab = nil
 	--self.CommTabs = nil
 	--self.CommodityExpandPanel = nil
 	--self.CommonTitle = nil
+	--self.FVerticalBox_1 = nil
 	--self.IconVideco = nil
 	--self.InforBtn = nil
 	--self.Money = nil
@@ -204,8 +238,10 @@ function StoreNewMainPanelView:Ctor()
 	--self.PanelPreview = nil
 	--self.PanelRoleBtn = nil
 	--self.PanelTag = nil
+	--self.PanelUI = nil
 	--self.PanelVideo = nil
 	--self.RichTextBoxBlindBoxHint = nil
+	--self.StoreFiterTips = nil
 	--self.StoreRender2D = nil
 	--self.TableViewCommodity = nil
 	--self.TableViewMountsAction = nil
@@ -220,6 +256,7 @@ function StoreNewMainPanelView:Ctor()
 	--self.TextPreview = nil
 	--self.TextType = nil
 	--self.TextUnavailable = nil
+	--self.ToggleBtnFilter = nil
 	--self.UMGVideoPlayer_UIBP = nil
 	--self.UMGVideoPlayer_UIBP_Full = nil
 	--self.AnimCommodityFold = nil
@@ -227,6 +264,8 @@ function StoreNewMainPanelView:Ctor()
 	--self.AnimCommodityFoldFullScreenOut = nil
 	--self.AnimCommodityIn = nil
 	--self.AnimCommodityUnfold = nil
+	--self.AnimCommonBGHide = nil
+	--self.AnimCommonBGShow = nil
 	--self.AnimIn = nil
 	--self.AnimInfoIn = nil
 	--self.AnimPosterFullScreenIn = nil
@@ -239,17 +278,20 @@ end
 
 function StoreNewMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.Bkg)
 	self:AddSubView(self.BtnBuy)
 	self:AddSubView(self.BtnBuyRedDot)
 	self:AddSubView(self.BtnClose)
+	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.CommInforBtn)
 	self:AddSubView(self.CommMenu)
 	self:AddSubView(self.CommTabs)
 	self:AddSubView(self.CommodityExpandPanel)
 	self:AddSubView(self.CommonTitle)
-	self:AddSubView(self.InforBtn)
+	--self:AddSubView(self.InforBtn)
 	self:AddSubView(self.Money)
 	self:AddSubView(self.Money1)
+	self:AddSubView(self.StoreFiterTips)
 	self:AddSubView(self.StoreRender2D)
 	self:AddSubView(self.UMGVideoPlayer_UIBP)
 	self:AddSubView(self.UMGVideoPlayer_UIBP_Full)
@@ -268,7 +310,6 @@ function StoreNewMainPanelView:OnInit()
 	self.CameraFocusCfgMap = CameraFocusCfgMap.New()
 	self.Binders = {
 		{ "EquipPartList", 				UIBinderUpdateBindableList.New(self, self.EquipTableViewAdapter) },
-		--{ "EquipPartList", 				UIBinderUpdateBindableList.New(self, self.PreviewTableViewAdapter) },
 		{ "GoodList", 					UIBinderUpdateBindableList.New(self, self.GoodsTableViewAdapter) },
 		{ "GoodList", 					UIBinderUpdateBindableList.New(self, self.PosterTableViewAdapter) },
 		{ "PropsList", 					UIBinderUpdateBindableList.New(self, self.PropsTableViewAdapter) },
@@ -281,12 +322,13 @@ function StoreNewMainPanelView:OnInit()
 		{ "PosterPanelVisible", 		UIBinderSetIsVisible.New(self, self.PanelPoster) },
 		{ "GoodsExpandPageVisible", 	UIBinderSetIsVisible.New(self, self.PanelCommodity, true) },
 		{ "PanelBuyVisible", 			UIBinderSetIsVisible.New(self, self.PanelBtnBuy) },
-		{ "PanelBuyVisible", 			UIBinderSetIsVisible.New(self, self.PanelInfo) },
 		{ "GoodsExpandPageVisible", 	UIBinderSetIsVisible.New(self, self.CommodityExpandPanel) },
 		{ "PanelPropsVisible", 			UIBinderSetIsVisible.New(self, self.TableViewProps) },
 		{ "PosterPanelVisible", 		UIBinderSetIsVisible.New(self, self.PanelCommodityFold, true) },
 		{ "DyeCommonInforBtnVisible", 	UIBinderSetIsVisible.New(self, self.BtnInfo) },
 		{ "bDyeInforPanelVisible", 		UIBinderSetIsVisible.New(self, self.PanelDyeing) },
+		{ "bIsFilterListShow", 			UIBinderSetIsVisible.New(self, self.StoreFiterTips) },
+		{ "bShowMainEmptyPanel", 		UIBinderSetIsVisible.New(self, self.CommEmpty) },
 
 		--- 购买按钮panel
 		{ "BuyBtnText", 				UIBinderSetText.New(self, self.BtnBuy.TextContent) },
@@ -298,13 +340,16 @@ function StoreNewMainPanelView:OnInit()
 		{ "bIsShowRawAvatar", 			UIBinderSetIsChecked.New(self, self.BtnEquipment) },
 		{ "bIsShowRawAvatar",           UIBinderValueChangedCallback.New(self, nil, self.OnShowRawAvatarChanged) },
 		{ "bIsPlayMountBgm", 			UIBinderSetIsChecked.New(self, self.BtnMusic) },
+		{ "bIsPlayFlyState", 			UIBinderSetIsChecked.New(self, self.BtnFly) },
 		{ "bIsShowBtnPose", 			UIBinderSetIsChecked.New(self, self.BtnPose, nil, true) },
+		{ "bIsFilterListShow", 			UIBinderSetIsChecked.New(self, self.ToggleBtnFilter) },
 
-		{ "ClothingPagePanelVisible", 	UIBinderSetIsVisible.New(self, self.BtnSwitch, nil, true) },
-		{ "ClothingPagePanelVisible", 	UIBinderSetIsVisible.New(self, self.BtnHat, nil, true) },
-		{ "ClothingPagePanelVisible", 	UIBinderSetIsVisible.New(self, self.BtnOrgan, nil, true) },
-		{ "ClothingPagePanelVisible", 	UIBinderSetIsVisible.New(self, self.BtnEquipment, nil, true) },
-		{ "ClothingPagePanelVisible", 	UIBinderSetIsVisible.New(self, self.BtnSwitchPosture, nil, true) },
+		{ "BtnSwitchVisible", 	UIBinderSetIsVisible.New(self, self.BtnSwitch, nil, true) },
+		{ "BtnHatVisible", 	UIBinderSetIsVisible.New(self, self.BtnHat, nil, true) },
+		{ "BtnOrganVisible", 	UIBinderSetIsVisible.New(self, self.BtnOrgan, nil, true) },
+		{ "BtnEquipmentVisible", 	UIBinderSetIsVisible.New(self, self.BtnEquipment, nil, true) },
+		{ "BtnSwitchPostureVisible", 	UIBinderSetIsVisible.New(self, self.BtnSwitchPosture, nil, true) },
+		{ "BtnFlyVisible", 				UIBinderSetIsVisible.New(self, self.BtnFly, nil, true) },
 		{ "MountPagePanelVisible", 		UIBinderSetIsVisible.New(self, self.BtnMusic, nil, true) },
 		{ "MountPagePanelVisible", 		UIBinderSetIsVisible.New(self, self.TableViewMountsAction) },
 		{ "EquipParVisible", 			UIBinderSetIsVisible.New(self, self.TableViewSlot) },
@@ -312,11 +357,13 @@ function StoreNewMainPanelView:OnInit()
 		{ "PosterPanelVisible", 		UIBinderSetIsVisible.New(self, self.PanelVideo) },
 		{ "PosterPanelVisible", 		UIBinderSetIsVisible.New(self, self.CommTabs, true) },
 
+		{ "bIsFilter",             		UIBinderValueChangedCallback.New(self, nil, self.OnIsFilterChanged) },
 		{ "TabSelecteType",             UIBinderValueChangedCallback.New(self, nil, self.OnSelectedTabTypeChanged) },
 		{ "GoodsExpandPageVisible",     UIBinderValueChangedCallback.New(self, nil, self.OnGoodsExpandPageVisibleChanged) },
 		{ "DyeCommonInforID",           UIBinderValueChangedCallback.New(self, nil, self.OnDyeCommonInforIDChanged) },
 		{ "bIsShowHat",                 UIBinderValueChangedCallback.New(self, nil, self.OnIsShowHatChanged) },
 		{ "bIsShowHatStyle",            UIBinderValueChangedCallback.New(self, nil, self.OnIsShowHatStyleChanged) },
+		{ "PanelBuyVisible", 			UIBinderValueChangedCallback.New(self, nil, self.OnPanelBuyVisibleChanged) },
 		{ "bTagPanelVisible", 			UIBinderSetIsVisible.New(self, self.PanelTag) },
 	}
 
@@ -333,13 +380,12 @@ function StoreNewMainPanelView:OnInit()
 	StoreMgr:GetGiftAllLimit()
 	self.IsNeedChangedYOffSet = true
 	self.IdlePoseNum = 0
-	self.SelectedGoodID = 0
 	self.IsNeedGotoMadePanel = false
 	self.TextPreview:SetText(LSTR(StoreDefine.LSTRTextKey.PrizePreview))
-	self.AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
-	-- self.NPCEntityID = StoreMgr:CreatNPCAndGetNPCModelEntityID(self.AttachType)
-	self.CurrentModelGender = MajorUtil:GetMajorGender()
+	self.DefaultModelGender = nil
+	self.CurrentModelGender = nil
 	self.IsSwitchedMount = false
+	self.IsSwitchedMysterBox = false
 	self.PreviewEquipIndex = 1
 	self.CurrentShowActorType = ShowActorType.Human
 	self.CompanionActor = nil -- 仅为宠物角色的引用，其生命周期由StoreRender2D管理
@@ -347,10 +393,14 @@ function StoreNewMainPanelView:OnInit()
 	self.RawSpringArmRotation = nil
 	self.AssembleAllEndCallbacks = {} -- 模型加载完后的回调，暂时只有时装展示用
 	self.RenderActorCreateCallback = {} -- RenderActor加载完后的回调
+	self.CurrentDecorationType = nil
 
 	self.Money1.RedDot:SetRedDotIDByID(18)
 	self.BtnBuyRedDot:SetIsCustomizeRedDot(true)
-	_G.StoreMgr:InitMsteryBoxData(true)
+
+	self.MysteryBoxWidget = nil
+
+	self.ActionPlayList = {}
 end
 
 function StoreNewMainPanelView:OnDestroy()
@@ -363,6 +413,7 @@ function StoreNewMainPanelView:OnShow()
 	end
 	--设置等待理发数据状态
 	self.WaitCutHairData = true
+	_G.EffectUtil.SetForceDisableCache(true)
 	if RechargingMgr:ShouldShowShopkeeper() then
 		RechargingMgr:PreloadScene()
 	end
@@ -371,6 +422,7 @@ function StoreNewMainPanelView:OnShow()
 
 	-- 提前请求好友数据，赠礼界面使用
 	FriendMgr:SendGetFriendListMsg()
+	self:CreatMysteryBoxWidget()
 
 	-- 设置角色原始外观数据
 	self.DefaultModelGender = MajorUtil.GetMajorGender()
@@ -380,6 +432,7 @@ function StoreNewMainPanelView:OnShow()
 		self.StoreRender2D:SetRawAvatar(RoleSimple.Avatar)
 	end
 
+	self.CommEmpty:SetTipsContent(LSTR(950097))
 	self.CommonTitle:SetSubTitleIsVisible(false)
 	StoreMgr:InitProductDataByReq()
 	_G.HaircutMgr:SendMsgHairQuery()
@@ -390,8 +443,15 @@ function StoreNewMainPanelView:OnShow()
 
 	-- 最后检查跳转，避免被前面的修改所影响
 	if nil ~= StoreMainVM.JumpToCategoryIndex then
-		self:JumpToGoods()
+		if nil ~= StoreMainVM.JumpToGoodsID then
+			self:JumpToGoods()
+		else
+			self:JumpToCategory(StoreMainVM.JumpToCategoryIndex)
+		end
 	end
+
+
+	UIUtil.SetIsVisible(self.MysteryBoxWidget, false)
 end
 
 function StoreNewMainPanelView:PostShowView()
@@ -466,7 +526,7 @@ function StoreNewMainPanelView:OnEquipPartSelectChanged(Index, ItemData, ItemVie
 		self.StoreRender2D:WearAppearance(ItemData)
 		self.PreviewEquipIndex = Index
 		StoreMainVM.bIsAllCameraState = false
-		-- ItemData.IsMask = ItemData.bOwned
+		ItemData.IsMask = ItemData.bOwned
 		if ItemData.SelectBtnState then
 			--- 预览时隐藏其他相同部位装备
 			local EquipPartList = StoreMainVM.EquipPartList.Items
@@ -478,9 +538,7 @@ function StoreNewMainPanelView:OnEquipPartSelectChanged(Index, ItemData, ItemVie
 			end
 		end
 		ItemData.SelectBtnState = false	--- 切换时强制显示
-		if StoreMainVM.CurrentSelectedTabType ~= StoreMall.STORE_MALL_MYSTERYBOX then
-			ItemData.IsMask = false
-		end
+		ItemData.IsMask = false
 		StoreMainVM:ChangeEquipPart(nil, false)
 		StoreMainVM:ChangeEquipPart(Index, true)
 	end
@@ -491,85 +549,127 @@ function StoreNewMainPanelView:OnEquipPartSelectChanged(Index, ItemData, ItemVie
 	end
 end
 
+function StoreNewMainPanelView:CheckGoodsItemType(GoodsData)
+	if not GoodsData or not next(GoodsData) then return end
+	local ItemPackage = GoodsData.Items
+
+	local IsMixPakage = false
+	local IsAllCoiffure = true
+	local NeedCheckSuit = true
+	local LocalSuitID = 0
+	local SuitID = 0
+	local AllSuitCfg = ClosetSuitCfg:FindAllCfg()
+	local SuitIDTable = {}
+	if ItemPackage and next(ItemPackage) then
+		for _, Item in pairs(ItemPackage) do
+			local Cfg = ItemCfg:FindCfgByKey(Item.ID)
+			if Cfg then
+				--先判断包中有没有发型，是发型的话，后续不用判断套装
+				if Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_COIFFURE then
+					NeedCheckSuit = false
+				else
+					--如果不是发型，且参数改变，则直接return 为不许要检查，是混合包
+					if not NeedCheckSuit then
+						IsAllCoiffure = false
+						IsMixPakage = true
+						return IsMixPakage, IsAllCoiffure, SuitID
+					end
+				end
+				--如果需要检查套装，则开始检查套装，如果不属于同一个套装则直接return0
+				if NeedCheckSuit then
+					--ID为0的时候赋新ID
+					IsAllCoiffure = false
+					for _, Data in pairs(AllSuitCfg) do
+						for _, AppID in pairs(Data.AppItems) do
+							if Cfg.EquipmentID == AppID then
+								if LocalSuitID == 0 then
+									LocalSuitID = Data.ID
+									table.insert(SuitIDTable, LocalSuitID)
+								else
+									if LocalSuitID ~= Data.ID then
+										LocalSuitID = Data.ID
+										table.insert(SuitIDTable, LocalSuitID)
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		if SuitIDTable and next(SuitIDTable) then
+			if #SuitIDTable > 1 then
+				--必须提出来重新遍历一次，目前没想到什么好办法
+				for _, value in pairs(SuitIDTable) do
+					local SuitCfg = ClosetSuitCfg:FindCfgByKey(value)
+					local SuitCheckTag = true
+					for _,Item in pairs(ItemPackage) do
+						local data = ItemCfg:FindCfgByKey(Item.ID)
+						if data then
+							local EquipmentID = data.EquipmentID
+							local CheckTag = false
+							for _, AppID in pairs(SuitCfg.AppItems) do
+								if AppID == EquipmentID then
+									CheckTag = true
+								end
+							end
+							--只要有一件不在套装内，则不是这个套装
+							if not CheckTag then
+								SuitCheckTag = false
+							end
+						end
+					end
+					if SuitCheckTag then
+						SuitID = value
+					end
+				end
+			else
+				SuitID = SuitIDTable[1]
+			end
+		end
+	end
+	return IsMixPakage, IsAllCoiffure, SuitID
+end
+
 --- 选中商品
 function StoreNewMainPanelView:OnGoodListSelectChanged(Index, ItemData, ItemView, bIsByClick)
-	StoreMainVM.bIsAllCameraState = true		--- 切换商品时重置按钮状态
 	StoreMainVM:ChangeEquipPart(nil, false)
-	-- StoreMainVM.bUseCoupon = true
 	StoreMainVM:ChangeGood(Index)
 	ItemData.bSelected = true
-	self.PreviewEquipIndex = 1
-	local bCurrentTabIsPet = StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_PET
-	if bCurrentTabIsPet then
-		self:UpdateCompanionModel(ItemData)
-	end
-	do
-		StoreMainVM.CurrentSelectedItem = self.GoodsTableViewAdapter:GetItemDataByIndex(Index)
-		local bCurrentTabIsMount = StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MOUNT
-		self:OnInitBtnState(ItemData)
-		StoreMainVM:InitBuyView()
-		StoreMainVM:UpdateCouponData()
-		StoreMainVM:CacheSelectedGoodsForCategory(StoreMainVM.TabSelecteIndex, ItemData.GoodID)
-		if not bCurrentTabIsMount and not bCurrentTabIsPet then
-			if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
-				self.StoreRender2D:WearSuit({})
-			else
-				if ItemData.GenderLimit == 0 or ItemData.GenderLimit == self.DefaultModelGender then
-					-- if self.SelectedGoodID ~= ItemData.GoodID then
-					self.CurrentModelGender = self.DefaultModelGender
-					self:WearSuit()
-					UIUtil.SetIsVisible(self.TableViewSlot, true)
-					-- end
-				else
-					self.CurrentModelGender = ItemData.GenderLimit
-					if bIsByClick then
-						_G.MsgTipsUtil.ShowTips(LSTR(950105))
-					end
-					UIUtil.SetIsVisible(self.TableViewSlot, false)
-					-- self:OnUpdateNPCModel() -- 异性服装逻辑待重构
-				end
-			end
-			if self:IsViewFirstPartByDefault(ItemData.GoodID) then
-				self.EquipTableViewAdapter:SetSelectedIndex(1)	--- 单件时默认选中部位
-			else
-				if StoreMainVM.CurrentSelectedTabType ~= StoreMall.STORE_MALL_MOUNT then
-					self:CheckFocusFullBody()
-				end
-			end
+	StoreMainVM.CurrentSelectedItem = self.GoodsTableViewAdapter:GetItemDataByIndex(Index)
+	StoreMainVM:InitBuyView()
+	StoreMainVM:UpdateCouponData()
+	StoreMainVM:CacheSelectedGoodsForCategory(StoreMainVM.TabSelecteIndex, ItemData.GoodID)
+
+	-- 公共显示内容更新
+	self:UpdatePreviewGoods(ItemData.GoodID)
+
+	-- 购买按钮更新
+	local bCurrentTabIsMount = StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MOUNT
+	self.IsNeedGotoMadePanel = false
+	if bCurrentTabIsMount and ItemData.IsOwned and self.MountID and _G.MountMgr:IsCustomMadeEnabled(self.MountID) then
+		StoreMainVM.BuyBtnText = LSTR(950054)	--- 个性定制
+		self.IsNeedGotoMadePanel = true
+		-- 个性定制红点
+		if self.BtnBuyRedDot.ItemVM == nil then
+			self.BtnBuyRedDot:InitData()
 		end
-		self:OnShowMount(bCurrentTabIsMount)
-		self.IsNeedGotoMadePanel = false
-		if bCurrentTabIsMount and ItemData.IsOwned and self.MountID and _G.MountMgr:IsCustomMadeEnabled(self.MountID) then
-			StoreMainVM.BuyBtnText = LSTR(950054)	--- 个性定制
-			self.IsNeedGotoMadePanel = true
-
-			-- 个性定制红点
-			if self.BtnBuyRedDot.ItemVM == nil then
-				self.BtnBuyRedDot:InitData()
-			end
-			self.BtnBuyRedDot:SetRedDotUIIsShow(MountCustomMadeVM:MountIsNew(self.MountID))
-
-			self.BtnBuy:SetIsRecommendState(true)
-		else
-			local IsOwned = ItemData.StateTextVisible and ItemData.GoodStateText == LSTR(StoreDefine.SoldOutText[ProtoRes.COUNTER_TYPE.COUNTER_TYPE_FOREVER])
-			if IsOwned then
-				self.BtnBuy:SetIsDoneState(true)
-			else
-				self.BtnBuy:SetIsRecommendState(true)
-			end
-
-			StoreMainVM.BuyBtnText = IsOwned and LSTR(StoreDefine.SecondScreenType.Owned) or LSTR(StoreDefine.StoreModeText[StoreMainVM.CurrentStoreMode])
-		end
+		self.BtnBuyRedDot:SetRedDotUIIsShow(MountCustomMadeVM:MountIsNew(self.MountID))
+		self.BuyBtnType = BuyBtnType.Buy
+		self.BtnBuy:SetIsRecommendState(true)
+	else
+		self:RefreshBuyButton(ItemData, ItemData)
 	end
-	self:PlayStagePose(ItemData.GoodID)
-	self.SelectedGoodID = ItemData.GoodID
 	UIUtil.SetIsVisible(self.BtnBuy.Button, true, true) -- 保证按钮可点击
+
+	-- 其他UI控件更新
 	UIUtil.SetIsVisible(self.BtnTag1, StoreMainVM.ImgTag1Visible, true)
 	UIUtil.SetIsVisible(self.BtnTag2, StoreMainVM.ImgTag2Visible, true)
 	UIUtil.ButtonSetBrush(self.BtnTag1, StoreMainVM.ImgTag1Path)
 	UIUtil.ButtonSetBrush(self.BtnTag2, StoreMainVM.ImgTag2Path)
 	UIUtil.SetIsVisible(self.Money, StoreMainVM.JumpID == 0 and not ItemData.IsOwned, nil, true)
-	self:UpdateVideoWidget(ItemData.VideoPath)
+
+	--TLOG上报
 	if bIsByClick then
 		if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
 			StoreUtil.ReportPurchaseClickFlow(ItemData.GoodID, StoreDefine.PurchaseOperationType.SelectGoods)
@@ -597,10 +697,11 @@ end
 --- 选中道具
 function StoreNewMainPanelView:OnPropsListSelectChanged(Index, ItemData, ItemView, bIsByClick)
 	StoreMainVM:OnClickProps(Index)
-	StoreMainVM:InitMultiBuyView()
 	if nil == ItemData then
 		return
 	end
+	local GoodsData = {Cfg = StoreCfg:FindCfgByKey(ItemData.GoodsId)}
+	StoreMainVM:InitMultiBuyView(GoodsData)
 	if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
 		_G.UIViewMgr:ShowView(_G.UIViewID.StoreBuyPropsWin)
 	else
@@ -624,45 +725,46 @@ function StoreNewMainPanelView:OnPosterSelectChanged(Index, ItemData, ItemView, 
 			table.insert(PreviewItems, Items[i])
 		end
 	end
+	-- 推荐页商品从推荐商品表读取子商品信息
+	if #PreviewItems == 0 then
+		local RecommendGoodsCfgData = StoreRecommendCfg:FindCfgByKey(ItemData.GoodID)
+		if nil ~= RecommendGoodsCfgData then
+			for _, ID in ipairs(RecommendGoodsCfgData.GoodsIDs) do
+				table.insert(PreviewItems, {ID = ID})
+			end
+		end
+	end
 	ItemData.bSelected = true
 	local IsHairBox = ItemData.Type == StoreMall.STORE_MALL_MYSTERYBOX and ItemData.Type ~= nil
-	UIUtil.SetIsVisible(self.PanelPreview, #PreviewItems > 1 and not IsHairBox)
 	-- UIUtil.SetIsVisible(self.TableViewSlot, #PreviewItems > 1 or IsHairBox)
-	StoreMainVM.EquipParVisible = #PreviewItems > 1 or IsHairBox
+	StoreMainVM.EquipParVisible = #PreviewItems > 1
 	self.PreviewTableViewAdapter:UpdateAll(PreviewItems)
-	self:OnInitBtnState(ItemData)
 	StoreMainVM:ChangeGood(Index)
+	StoreMainVM.CurrentSelectedItem = self.GoodsTableViewAdapter:GetItemDataByIndex(Index)
 	StoreMainVM:InitBuyView()
 	StoreMainVM:CacheSelectedGoodsForCategory(StoreMainVM.TabSelecteIndex, ItemData.GoodID)
 	UIUtil.SetIsVisible(self.Money, StoreMainVM.JumpID == 0 and not ItemData.IsOwned, nil, true)
-	self:UpdateVideoWidget(ItemData.VideoPath)
 	self.PreviewTableViewAdapter:SetSelectedIndex(1)
 	if IsHairBox then
 		if StoreMainVM.bIsShowHat then
 			self:OnChangedToggleBtnHat()
 		end
-
-		StoreMainVM.bIsShowRawAvatar = true
-		self.StoreRender2D:SetRawEquipsVisible(StoreMainVM.bIsShowRawAvatar)
 		self.StoreRender2D:WearSuit({})
 		self:WearSuit()
-		self:OnSelectEquipList()
-		self.RichTextBoxBlindBoxHint:SetText(ItemData.IsOwned and "" or string.format(ItemData.Desc, MysterBoxMaxBoughtCount - StoreMgr:GetMysterBoxBoughtCountByID(ItemData.MysterID)))
-	else
-		self.RichTextBoxBlindBoxHint:SetText("")
 	end
-	--- 950086  奇遇盲盒按钮文本：购买一次
 	local IsOwned = ItemData.IsOwned
 	local GoodsID = ItemData.GoodID
-	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
-	local BtnText = ""
-	if nil ~= GoodsCfgData then
-		BtnText = GoodsCfgData.BtnText
+	local RecommendGoodsCfgData = StoreRecommendCfg:FindCfgByKey(GoodsID)
+	if RecommendGoodsCfgData and RecommendGoodsCfgData.ProductType == ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_PURCHASE then
+		local GoodsId = RecommendGoodsCfgData.GoodsIDs[1]
+		local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsId)
+		self:RefreshBuyButton(ItemData, GoodsCfgData)
+	else
+		self.BuyBtnType = BuyBtnType.Buy
+		self.BtnBuy:SetIsRecommendState(true)
+		StoreMainVM.BuyBtnText = LSTR(StoreDefine.StoreModeText[StoreMainVM.CurrentStoreMode])
 	end
-	StoreMainVM.BuyBtnText = IsOwned and LSTR(StoreDefine.SecondScreenType.Owned) or ItemData.Type == StoreMall.STORE_MALL_MYSTERYBOX and LSTR(950086) or
-		BtnText ~= "" and BtnText or LSTR(StoreDefine.StoreModeText[StoreDefine.StoreMode.Buy])
-	self.BtnBuy:SetColorType(IsOwned and CommBtnColorType.Done or CommBtnColorType.Recommend)
-	UIUtil.SetIsVisible(self.BtnBuy.Button, true, not IsOwned)
+	UIUtil.SetIsVisible(self.BtnBuy.Button, true, true)
 	if bIsByClick then
 		if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
 			StoreUtil.ReportPurchaseClickFlow(GoodsID, StoreDefine.PurchaseOperationType.SelectGoods)
@@ -672,53 +774,39 @@ function StoreNewMainPanelView:OnPosterSelectChanged(Index, ItemData, ItemView, 
 	end
 end
 
---- 切换大奖预览
-function StoreNewMainPanelView:ChangedPreview(TempCfg)
-	if nil == TempCfg then
-		return
-	end
-
-	StoreMainVM.ClothingPagePanelVisible = TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION
-	StoreMainVM.EquipParVisible = TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION
-	StoreMainVM.MountPagePanelVisible = TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_MOUNT
-	local NewShowActorType = ShowActorType.Human
-	if StoreMainVM.MountPagePanelVisible then
-		NewShowActorType = ShowActorType.Mount
-		local TempItemCfg = ItemCfg:FindCfgByKey(TempCfg.Items[1].ID)
-		if TempItemCfg ~= nil then
-			local Func = FuncCfg:FindCfgByKey(TempItemCfg.UseFunc)
-			if Func ~= nil then
-				local MountID = Func.Func[1].Value[1]
-				if MountID ~= nil then
-					self:OnUpdateMontSkillList(MountID)
-					self.MountID = MountID
-					if StoreMainVM.bIsPlayMountBgm then
-						self:PlayMountBGM(MountID)
-					end
-					self:RideMount(MountID)
+function StoreNewMainPanelView:RefreshBuyButton(ViewData, GoodsData)
+	local IsOwned = ViewData.StateTextVisible and ViewData.GoodStateText == LSTR(StoreDefine.SoldOutText[ProtoRes.COUNTER_TYPE.COUNTER_TYPE_FOREVER])
+	if IsOwned then
+		local IsMixPakage, IsAllCoiffure, SuitID = self:CheckGoodsItemType(GoodsData)
+		--如果是混合包
+		if IsMixPakage then
+			self.BuyBtnType = BuyBtnType.Buy
+			self.BtnBuy:SetIsDoneState(true)
+			StoreMainVM.BuyBtnText = LSTR(StoreDefine.SecondScreenType.Owned)
+		else
+			--发型
+			if IsAllCoiffure then
+				self.BuyBtnType = BuyBtnType.CutHair
+				StoreMainVM.BuyBtnText = LSTR(StoreDefine.SecondScreenType.GoCutHair)
+				self.BtnBuy:SetIsRecommendState(true)
+			else
+				if SuitID ~= 0 then
+					self.HoldSuitID = SuitID
+					self.BuyBtnType = BuyBtnType.GoWardrobe
+					StoreMainVM.BuyBtnText = LSTR(StoreDefine.SecondScreenType.GoWardrobe)
+					self.BtnBuy:SetIsRecommendState(true)
+				else
+					self.BuyBtnType = BuyBtnType.Buy
+					self.BtnBuy:SetIsDoneState(true)
+					StoreMainVM.BuyBtnText = LSTR(StoreDefine.SecondScreenType.Owned)
 				end
 			end
 		end
 	else
-		self:StopMountBGM()
-		if TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION then
-			StoreMainVM:UpdateEquipPartList(TempCfg)
-			if self:IsViewFirstPartByDefault(TempCfg.ID) then
-				self.EquipTableViewAdapter:SetSelectedIndex(1)	--- 单件时默认选中部位
-			else
-				self:CheckFocusFullBody()
-			end
-			self:WearSuit()
-		elseif TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_PET then
-			NewShowActorType = ShowActorType.Companion
-			self:UpdateCompanionModel(TempCfg)
-		end
+		self.BuyBtnType = BuyBtnType.Buy
+		self.BtnBuy:SetIsRecommendState(true)
+		StoreMainVM.BuyBtnText = LSTR(StoreDefine.StoreModeText[StoreMainVM.CurrentStoreMode])
 	end
-	self:UpdateCurrentShowActorType(NewShowActorType)
-	if TempCfg.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION then
-		self:PlayStagePose(TempCfg.ID)
-	end
-	self:UpdateVideoWidget(TempCfg.VideoPath)
 end
 
 --- 坐骑技能
@@ -727,41 +815,35 @@ end
 
 --- 大奖预览
 function StoreNewMainPanelView:OnPreviewSelectChanged(Index, ItemData, ItemView, bIsByClick)
-	local GoodsCfgData = StoreCfg:FindCfgByKey(ItemData.ID)
-	if nil ~= GoodsCfgData then
-		self:ChangedPreview(GoodsCfgData)
-	end
+	self:UpdatePreviewGoods(ItemData.ID)
 end
 
 --- 切换菜单
 function StoreNewMainPanelView:OnMenuTreeViewTabsSelectChanged(Index, ItemData, ItemView, MainKey, SubKey, bIsByClick)
 	local OldTabType = StoreMainVM.TabSelecteType
-	self.RichTextBoxBlindBoxHint:SetText("")
 	UIUtil.SetIsVisible(self.TextType, false)
+
+	--- 坐骑飞行状态却换成其他的时候，在更新模型之前把飞行模式设置回去，不然模型是歪的
+	self:OnChangedBtnFly(nil, nil, _G.UE.EToggleButtonState.Unchecked)
 	StoreMainVM:ChangeTab(MainKey, SubKey)
 	-- 与TabSelecteType更新相关的逻辑如果不依赖商品列表更新，可以放到OnSelectedTabTypeChanged中
 	do
 		if StoreMainVM.TabSelecteType == StoreMall.STORE_MALL_MOUNT then
 			self.IsSwitchedMount = true
 		end
-		--- 道具/推荐/奇遇盲盒  隐藏物品tableview
-		UIUtil.SetIsVisible(self.PanelCommodityFold, StoreMainVM.TabSelecteType ~= StoreMall.STORE_MALL_PROPS and StoreMainVM.TabSelecteType ~= StoreMall.STORE_MALL_RECOMMEND and StoreMainVM.TabSelecteType ~= StoreMall.STORE_MALL_MYSTERYBOX)
-		UIUtil.SetIsVisible(self.InforBtn, StoreMainVM.TabSelecteType == StoreMall.STORE_MALL_MYSTERYBOX, true)
+		--- 道具/推荐  隐藏物品tableview
+		UIUtil.SetIsVisible(self.PanelCommodityFold, StoreMainVM.TabSelecteType ~= StoreMall.STORE_MALL_PROPS and StoreMainVM.TabSelecteType ~= StoreMall.STORE_MALL_RECOMMEND)
 		if StoreMainVM.TabSelecteType == StoreMall.STORE_MALL_MYSTERYBOX then
-			self:UpdateVideoWidget()
-			UIUtil.SetIsVisible(self.BtnSwitch, true, true)
-			UIUtil.SetIsVisible(self.BtnHat, true, true)
-			if StoreMainVM.bIsShowHat then
-				self:OnChangedToggleBtnHat()
-			end
-
-			self.CommRender2D:HideWeapon(true)
-			StoreMainVM.bIsShowRawAvatar = true
-			self:StopMountBGM()
-			self.IsNeedGotoMadePanel = false
+			self.IsSwitchedMysterBox = true
+			self:ChangeToMysterBoxPanel(true)
 		else
-			UIUtil.SetIsVisible(self.BtnSwitch, StoreMainVM.ClothingPagePanelVisible, true)
-			UIUtil.SetIsVisible(self.BtnHat, StoreMainVM.ClothingPagePanelVisible, true)
+			if self.IsSwitchedMysterBox then
+				--- 从盲盒切回来，恢复一下控件
+				self:ChangeToMysterBoxPanel(false)
+				self.IsSwitchedMysterBox = false
+			end
+			UIUtil.SetIsVisible(self.BtnSwitch, StoreMainVM.BtnSwitchVisible, true)
+			UIUtil.SetIsVisible(self.BtnEquipment, StoreMainVM.BtnEquipmentVisible, true)
 		end
 	end
 
@@ -770,29 +852,40 @@ function StoreNewMainPanelView:OnMenuTreeViewTabsSelectChanged(Index, ItemData, 
 		self.PanelBtnBuy:SetRenderOpacity(HideBuyBtnConfig[StoreMainVM.TabSelecteType] and 0 or 1.0)
 		UIUtil.SetIsVisible(self.PanelBtnBuy, not HideBuyBtnConfig[StoreMainVM.TabSelecteType])
 	end
-	if StoreMainVM.PanelBuyVisible then
-		self:PlayAnimation(self.AnimInfoIn)
-	else
-		self:StopAnimation(self.AnimInfoIn)
-		self:PlayAnimation(self.AnimInfoIn, 0, 1, UE.EUMGSequencePlayMode.Reverse, 1.0, false)
-	end
 	self:PlayAnimation(StoreMgr:CheckMallTypeByIndex(MainKey,
 					   StoreMall.STORE_MALL_PROPS) and self.AnimTableViewPropsIn or self.AnimCommodityIn)
 	if bIsByClick and nil ~= OldTabType and OldTabType ~= StoreMainVM.TabSelecteType then
 		StoreUtil.ReportInterfaceFlow(StoreDefine.InterfaceOperationType.SwitchTab, StoreMainVM.TabSelecteType, OldTabType)
 	end
+	
+	local CategoryData = _G.StoreMgr:GetCategoryData(MainKey)
+	if CategoryData and next(CategoryData) then
+		UIUtil.SetIsVisible(self.ToggleBtnFilter, CategoryData.IsDisplayHaveFilter == 1, true)
+		if not (CategoryData.IsDisplayHaveFilter == 1) then
+			StoreMainVM:SetSecondScreen(false)
+		else
+			StoreMainVM:SetSecondScreen(StoreMainVM.bIsFilter)
+		end
+	end
+	StoreMainVM.bIsFilterListShow = false
 end
 
+-- 筛选变换
+function StoreNewMainPanelView:OnIsFilterChanged(FilterType)
+	--if FilterType == StoreMainVM.bIsFilter then return end
+	StoreMainVM.bIsFilterListShow = false
+	StoreMainVM:SetSecondScreen(FilterType)
+end
 -- 商品大类切换
 function StoreNewMainPanelView:OnSelectedTabTypeChanged(NewTabType)
 	-- 切换展示角色
 	local NewShowActorType = ShowActorType.None
 	if NewTabType == StoreMall.STORE_MALL_PET then
 		NewShowActorType = ShowActorType.Companion
-	elseif NewTabType == StoreMall.STORE_MALL_MOUNT then
+	elseif NewTabType == StoreMall.STORE_MALL_MOUNT or (NewTabType == StoreMall.STORE_MALL_MYSTERYBOX and _G.StoreMysteryBoxVM:GetIsMountType()) then
 		NewShowActorType = ShowActorType.Mount
-	elseif NewTabType == StoreMall.STORE_MALL_RECOMMEND or NewTabType == StoreMall.STORE_MALL_CLOTHING or
-		NewTabType == StoreMall.STORE_MALL_MYSTERYBOX then
+	elseif NewTabType == StoreMall.STORE_MALL_RECOMMEND or NewTabType == StoreMall.STORE_MALL_CLOTHING or NewTabType == StoreMall.STORE_MALL_ORNAMENT or
+		(NewTabType == StoreMall.STORE_MALL_MYSTERYBOX and _G.StoreMysteryBoxVM:GetIsHumanType()) or NewTabType == StoreMall.STORE_MALL_ACTINGTEXTBOOK then
 		NewShowActorType = ShowActorType.Human
 	end
 	self:UpdateCurrentShowActorType(NewShowActorType)
@@ -815,15 +908,31 @@ function StoreNewMainPanelView:OnDyeCommonInforIDChanged(InforID)
 end
 
 function StoreNewMainPanelView:OnIsShowHatChanged(bIsShowHat)
-	self.CommRender2D:HideHead(not bIsShowHat)
+	self.StoreRender2D:HideHelmet(not bIsShowHat)
 	if bIsShowHat then
-		self.CommRender2D:SwitchHelmet(StoreMainVM.bIsShowHatStyle)
+		self.StoreRender2D:SwitchHelmet(StoreMainVM.bIsShowHatStyle)
 	end
 end
 
 function StoreNewMainPanelView:OnIsShowHatStyleChanged(bIsShowHatStyle)
 	-- if self.bBtnHatStyleDisabled then StoreMainVM.bIsShowHatStyle = false end    --- 禁用头部装饰功能  暂时不做
-	self.CommRender2D:SwitchHelmet(not bIsShowHatStyle)
+	self.StoreRender2D:SwitchHelmet(bIsShowHatStyle)
+end
+
+function StoreNewMainPanelView:OnPanelBuyVisibleChanged(bVisible)
+	if nil ~= self.PanelInfoHideTimer then
+		self:UnRegisterTimer(self.PanelInfoHideTimer)
+		self.PanelInfoHideTimer = nil
+	end
+	if bVisible then
+		UIUtil.SetIsVisible(self.PanelInfo, true)
+	else
+		self.PanelInfoHideTimer = self:RegisterTimer(function() UIUtil.SetIsVisible(self.PanelInfo, false) end,
+				self.AnimInfoIn:GetEndTime() + 0.01)
+	end
+	self:StopAnimation(self.AnimInfoIn)
+	self:PlayAnimation(self.AnimInfoIn, 0, 1,
+		bVisible and UE.EUMGSequencePlayMode.Forward or UE.EUMGSequencePlayMode.Reverse)
 end
 
 function StoreNewMainPanelView:OnClickBenExpand()
@@ -852,11 +961,14 @@ end
 
 function StoreNewMainPanelView:OnHide()
 	self.WaitCutHairData = true
+	_G.EffectUtil.SetForceDisableCache(false)
 	self:StopMountBGM()
 	_G.HUDMgr:SetIsDrawHUD(true)
 	self.BtnHand:SetIsChecked(true)
 	RechargingMgr:DestroyScene()
-	self:OnInitBtnState()
+	self:InitBtnState()
+	StoreMainVM.bIsFilter = false
+	StoreMainVM.bIsFilterListShow = false
 	StoreMainVM.bIsPlayMountBgm = true
 	StoreMainVM.JumpToCategoryIndex = nil
 	StoreMainVM.TabSelecteIndex = 1
@@ -864,15 +976,21 @@ function StoreNewMainPanelView:OnHide()
 	StoreMainVM.GoodFilterDataList = nil
 	StoreMainVM.bIsFullScreen = false
 	StoreMainVM.GoodsExpandPageVisible = false
+	StoreMainVM.bSecondScreen = false
+	self.CurrentDecorationType = nil
 	StoreMainVM.CurrentSelectedTabType = ProtoRes.StoreMall.STORE_MALL_INVALID
-	self.SelectedGoodID = 0
 	_G.LightMgr:DisableUIWeather()
 	if self.BackgroundActor then
 		CommonUtil.DestroyActor(self.BackgroundActor)
     end
     self.BackgroundActor = nil
+	self.CompanionActor = nil
 	self.RenderActorCreateCallback = {}
+	self.AssembleAllEndCallbacks = {}
 	_G.StoreMgr:UnRegisterAllTimer()
+	self:ClearJumpData()
+	_G.UIViewMgr:HideView(_G.UIViewID.StoreBlindBoxPanel_UIBP)
+	self.ActionPlayList = {}
 end
 
 function StoreNewMainPanelView:OnRegisterUIEvent()
@@ -886,7 +1004,6 @@ function StoreNewMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.Btn_Video, self.OnClickBtn_Video)
 	UIUtil.AddOnClickedEvent(self, self.UMGVideoPlayer_UIBP_Full.CloseButton, self.OnClick_Full_Close)
 	self.CommTabs:SetCallBack(self, self.OnChangedPurchaseMethod)
-	self.InforBtn:SetCallback(self, self.OnClickInforBtn)
 
 	UIUtil.AddOnStateChangedEvent(self, self.BtnFullScreen, self.OnChangedToggleBtnFullScreen)
 	UIUtil.AddOnStateChangedEvent(self, self.BtnSwitch, self.OnChangedToggleBtnSwitch)
@@ -896,6 +1013,9 @@ function StoreNewMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnStateChangedEvent(self, self.BtnMusic, self.OnChangedToggleBtnMusic)
 	UIUtil.AddOnStateChangedEvent(self, self.BtnPose, self.OnChangedBtnPose)
 	UIUtil.AddOnStateChangedEvent(self, self.BtnHand, self.OnChangedBtnHand)
+	UIUtil.AddOnStateChangedEvent(self, self.BtnFly, self.OnChangedBtnFly)
+	UIUtil.AddOnStateChangedEvent(self, self.ToggleBtnFilter, self.OnChangedToggleBtnFilter)
+	
 	
 	self.CommRender2D:SetClick(self, self.OnRender2DClicked)
 end
@@ -906,9 +1026,11 @@ function StoreNewMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.StoreUpdateTabListByTimer, self.OnStoreUpdateTabListByTimer)
 	self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
 	self:RegisterGameEvent(EventID.CompanionCreate, self.OnCompanionCreated)
-	self:RegisterGameEvent(EventID.StoreUpdateBlindText, self.OnStoreUpdateBlindText)
 	self:RegisterGameEvent(EventID.UpdateScore, self.OnScoreUpdate)
+	self:RegisterGameEvent(EventID.CounterUpdate, self.OnCounterUpdate)
+	self:RegisterGameEvent(EventID.BagUpdate, self.OnBagUpdate)
 	self:RegisterGameEvent(EventID.HairUnlockListChange, self.OnHairUnlockListChange)
+	self:RegisterGameEvent(EventID.StorePlaySkillEvent, self.PlayFashionSkill)
 	self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
 	self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
 end
@@ -941,19 +1063,17 @@ function StoreNewMainPanelView:OnAssembleAllEnd(Params)
 	if Params.ULongParam1 == ActorUtil.GetActorEntityID(self.CommRender2D.ChildActor) then
 		bIsStoreActorAssembled = true
 		if self.bFirstAvatarAssemble then
-			self.CommRender2D.ChildActor:StartFadeIn(0.7, true)
+			if self.CurrentShowActorType == ShowActorType.Human then
+				self.CommRender2D.ChildActor:StartFadeIn(0.7, true)
+			end
 			self.bFirstAvatarAssemble = false
 		end
 		if self.CurrentShowActorType == ShowActorType.Mount then
-			self.CommRender2D:SetRideMeshComponent()
-			self.StoreRender2D:InitMountTransform()
-			if nil ~= self.CommRender2D.ChildActor then
-				self.CommRender2D.ChildActor:GetAnimationComponent():SetSitBlendOutTime(0)
-			end
+			self:OnMountAssembleAllEnd()
 		else
 			self.CommRender2D:UpdateAllLights()
-			if next(self.AssembleAllEndCallbacks) then
-				for _, Callback in ipairs(self.AssembleAllEndCallbacks) do
+			if not table.is_nil_empty(self.AssembleAllEndCallbacks) then
+				for _, Callback in pairs(self.AssembleAllEndCallbacks) do
 					Callback()
 				end
 				self.AssembleAllEndCallbacks = {}
@@ -964,6 +1084,28 @@ function StoreNewMainPanelView:OnAssembleAllEnd(Params)
 	if bIsStoreActorAssembled then
 		self:CheckActorsVisibility()
 		self:CheckShadowType()
+	end
+end
+
+function StoreNewMainPanelView:OnMountAssembleAllEnd()
+	self.CommRender2D:SetRideMeshComponent()
+	self.StoreRender2D:InitMountTransform()
+	if nil ~= self.CommRender2D.ChildActor then
+		local AnimComp = self.CommRender2D.ChildActor:GetAnimationComponent()
+		if nil ~= AnimComp then
+			AnimComp:SetSitBlendOutTime(0)
+		end
+		local RideCfgData = RideCfg:FindCfgByKey(self.MountID)
+		if nil ~= RideCfgData then
+			local RideComponent = self.CommRender2D.ChildActor:GetRideComponent()
+			if nil ~= RideComponent then
+				if RideCfgData.HideParts == 1 then
+					RideComponent:HideRod()
+				else
+					RideComponent:ShowRod()
+				end
+			end
+		end
 	end
 end
 
@@ -979,30 +1121,6 @@ function StoreNewMainPanelView:OnCompanionCreated(Params)
 	end
 end
 
---- 刷新盲盒购买后n次获得所有奖励
-function StoreNewMainPanelView:OnStoreUpdateBlindText(Params)
-	local MysteryboxCfg = require("TableCfg/MysteryboxCfg")
-	local BlindBoxID = Params.BlindBoxID
-	local DrawCount = Params.DrawCount
-	local ItemData = MysteryboxCfg:FindCfgByKey(BlindBoxID)
-	if not ItemData then return end
-
-	if StoreMainVM.GoodSelecteIndex and StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex] then
-		local GoodData = StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex]
-		if not GoodData or not GoodData.Cfg or GoodData.Cfg.ID ~= BlindBoxID then return end
-
-		if MysterBoxMaxBoughtCount - DrawCount > 0 then
-			self.RichTextBoxBlindBoxHint:SetText(string.format(ItemData.Desc, MysterBoxMaxBoughtCount - DrawCount))
-		else
-			self.RichTextBoxBlindBoxHint:SetText("")
-		end
-	end
-end
-
-function StoreNewMainPanelView:OnHairUnlockListChange()
-	self.WaitCutHairData = false
-end
-
 function StoreNewMainPanelView:OnScoreUpdate(Params)
 	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
 		return
@@ -1011,6 +1129,70 @@ function StoreNewMainPanelView:OnScoreUpdate(Params)
 	local MainPriceVM = _G.StoreMgr:GetMainPriceVM()
 	if nil ~= MainPriceVM then
 		MainPriceVM:UpdatePriceData(GoodsCfgData, self.CurrentStoreMode == StoreDefine.StoreMode.Buy, true)
+	end
+end
+
+function StoreNewMainPanelView:OnCounterUpdate(Params)
+	local bIsStoreCounterUpdated = false
+	for Key, _ in pairs(Params.UpdatedCounters) do
+		if nil ~= StoreMgr.LimitCounterMap[Key] then
+			bIsStoreCounterUpdated = true
+			break
+		end
+	end
+	if bIsStoreCounterUpdated then
+		StoreMainVM:RefreshProductsInfo()
+	end
+end
+
+function StoreNewMainPanelView:OnHairUnlockListChange()
+	self.WaitCutHairData = false
+end
+
+function StoreNewMainPanelView:OnBagUpdate(Params)
+	if nil == Params then
+		return
+	end
+	-- 优惠券变动，商品列表全量刷新
+	local CouponIDs = {}
+	if nil == StoreMgr.CouponCfg then
+		StoreMgr:InitData()
+	end
+	for _, CouponCfgData in ipairs(StoreMgr.CouponCfg) do
+		CouponIDs[CouponCfgData.ID] = true
+	end
+	local bCouponsUpdated = false
+	for _, Item in ipairs(Params) do
+		if nil ~= CouponIDs[Item.PstItem.ResID] then
+			bCouponsUpdated = true
+			break
+		end
+	end
+	if bCouponsUpdated then
+		--- 刷新优惠券数据
+		StoreMgr:UpdateCouponData()
+		StoreMainVM:UpdateCouponData()
+		StoreMainVM:RefreshProductsInfo()
+		FLOG_INFO("[StoreMgr:OnBagUpdate] Update product list.")
+		return -- 全列表刷新过，无需再单独刷新，直接返回
+	end
+
+	-- 当前购买的商品信息刷新
+	local GoodsID = StoreMainVM:GetCurrentGoodsID()
+	if nil == GoodsID then
+		return
+	end
+	local bHasItem = false
+	for _, Item in ipairs(Params) do
+		bHasItem = StoreMgr.HasItem(GoodsID, Item.PstItem.ResID)
+		if bHasItem then
+			break
+		end
+	end
+
+	if bHasItem then
+		StoreMainVM:UpdateSingleGoods(GoodsID)
+		FLOG_INFO("[StoreMgr:OnBagUpdate] Bag update goods " .. tostring(GoodsID))
 	end
 end
 
@@ -1036,6 +1218,9 @@ function StoreNewMainPanelView:OnGameEventAppEnterForeground(Params)
 end
 
 function StoreNewMainPanelView:OnRefreshGoodsSelected()
+	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
+		return
+	end
 	if StoreMainVM.bPendingJumpToGoods then
 		if self:JumpToGoods() then
 			return
@@ -1045,7 +1230,7 @@ function StoreNewMainPanelView:OnRefreshGoodsSelected()
 	local _, Index = self.GoodsTableViewAdapter:GetItemDataByPredicate(
 		function(VM) return VM.GoodID == SelectedGoods end)
 	Index = Index or 1
-	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND or StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
+	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND then
 		self.PosterTableViewAdapter:CancelSelected()
 		self.PosterTableViewAdapter:SetSelectedIndex(Index)
 		-- TableView异步加载时ScrollToIndex存在问题，通过延迟调用临时解决，待系统侧修复后复原
@@ -1060,34 +1245,67 @@ end
 function StoreNewMainPanelView:OnStoreUpdateTabListByTimer()
 	self.CommMenu:UpdateItems(StoreMainVM.TabList, false)
 
-	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
-		local GoodData
-		if StoreMainVM.GoodSelecteIndex and StoreMainVM.GoodFilterDataList and StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex] then
-			GoodData = StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex]
-		end
+	-- if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then
+	-- 	local GoodData
+	-- 	if StoreMainVM.GoodSelecteIndex and StoreMainVM.GoodFilterDataList and StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex] then
+	-- 		GoodData = StoreMainVM.GoodFilterDataList[StoreMainVM.GoodSelecteIndex]
+	-- 	end
 
-		local MainPriceVM = _G.StoreMgr:GetMainPriceVM()
-		if MainPriceVM and GoodData.Cfg then
-			MainPriceVM:UpdatePriceData(GoodData.Cfg, false, false)
-			UIViewMgr:HideView(UIViewID.StoreNewBuyWinPanel)
-			StoreMainVM:UpdateGoodList(StoreMainVM.GoodFilterDataList)
-		end
-	end
+	-- 	local MainPriceVM = _G.StoreMgr:GetMainPriceVM()
+	-- 	if MainPriceVM and GoodData.Cfg then
+	-- 		MainPriceVM:UpdatePriceData(GoodData.Cfg, false, false)
+	-- 		UIViewMgr:HideView(UIViewID.StoreNewBuyWinPanel)
+	-- 		StoreMainVM:UpdateGoodList(StoreMainVM.GoodFilterDataList)
+	-- 	end
+	-- end
 end
 
---- 获取途径跳转
+function StoreNewMainPanelView:PlayFashionSkill(InFashionDecorateID, ActionID)
+	local Actor = self.StoreRender2D.CommRender2D.ChildActor
+	local AvatarPartType = _G.UE.EAvatarPartType.Ornament_Wing
+    if Actor then
+		local InEntityID = self.StoreRender2D.CommRender2D.ChildActor:GetActorEntityID()
+        local itemCurrentSelectedCfg = FashionDecorateCfg:FindCfgByKey(InFashionDecorateID)
+        if itemCurrentSelectedCfg ~= nil then
+            local itemSkillcfg = FashionDecorateSkillCfg:FindCfgByKey(ActionID)
+            if itemSkillcfg ~= nil then
+                local UseAnimName = AnimMgr:GetActionTimeLinePath(itemSkillcfg.HumanActiontimeline)
+                local UseAnim = _G.ObjectMgr:LoadObjectSync(UseAnimName, ObjectGCType.LRU)
+                local AnimComp =  ActorUtil.GetActorAnimationComponent(InEntityID)
+				if AnimComp then
+					AnimationUtil.PlayAnyAsMontage(InEntityID, UseAnim, "WholeBody", nil, nil, "")
+                	AnimComp:PlayAnimation(AnimMgr:GetActionTimeLinePath(itemSkillcfg.OtherActiontimeline), 1.0,0.25,0.25,true, AvatarPartType,true,true)
+				end
+            end
+        end
+
+    end
+end
+
+-- 跳转到分类
+function StoreNewMainPanelView:JumpToCategory(CategoryIndex)
+	if nil == CategoryIndex then
+		FLOG_ERROR("[StoreNewMainPanelView:JumpToCategory] Jump to category index is nil")
+		return
+	end
+	-- 默认切换到购买模式
+	if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Gift then
+		self.CommTabs:SetSelectedIndex(StoreDefine.StoreMode.Buy + 1)
+	end
+	local MenuKey = _G.StoreMainVM:GetDefaultMenuKey(CategoryIndex)
+	if MenuKey == 0 then
+		MsgTipsUtil.ShowTipsByID(138006) -- 分类不存在
+	end
+	self.CommMenu:SetSelectedKey(MenuKey, true)
+end
+
+-- 跳转到商品
 function StoreNewMainPanelView:JumpToGoods()
 	if nil == StoreMainVM.JumpToCategoryIndex then
 		return false
 	end
 
-	-- 默认切换到购买模式
-	-- _G.StoreMainVM:OnChangedPurchaseMethod(StoreDefine.StoreMode.Buy + 1)
-	if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Gift then
-		self.CommTabs:SetSelectedIndex(StoreDefine.StoreMode.Buy + 1)
-	end
-	local MenuKey = _G.StoreMainVM:GetDefaultMenuKey(_G.StoreMainVM.JumpToCategoryIndex)
-	self.CommMenu:SetSelectedKey(MenuKey, true)
+	self:JumpToCategory(_G.StoreMainVM.JumpToCategoryIndex)
 
 	local bJumpSucceeded = false
 	if StoreMgr:CheckMallTypeByIndex(StoreMainVM.JumpToCategoryIndex, StoreMall.STORE_MALL_PROPS) then
@@ -1105,11 +1323,19 @@ function StoreNewMainPanelView:JumpToGoods()
 		end
 	else
 		local TableViewAdapter = StoreMainVM.PosterPanelVisible and self.PosterTableViewAdapter or self.GoodsTableViewAdapter
+		if StoreMainVM.bIsJumpMysteryBox then
+			TableViewAdapter = self.MysteryBoxWidget.GoodsTableViewAdapter
+			self.MysteryBoxWidget:OnRegisterBinder()
+		end
 		local Predicate = function(VM)
+			-- return not StoreMainVM.bIsJumpMysteryBox and VM.GoodID == StoreMainVM.JumpToGoodsID or asdasd --预留盲盒数据
 			return VM.GoodID == StoreMainVM.JumpToGoodsID
 		end
 		local _, Index = TableViewAdapter:GetItemDataByPredicate(Predicate)
 		bJumpSucceeded = nil ~= Index
+		if StoreMainVM.bIsJumpMysteryBox then
+			_G.StoreMysteryBoxVM.JumpToIndex = Index
+		end
 		if bJumpSucceeded then
 			-- TableView异步加载时ScrollToIndex存在问题，通过延迟调用临时解决，待系统侧修复后复原
 			self:RegisterTimer(function() TableViewAdapter:ScrollToIndex(Index) end, 0.1)
@@ -1121,12 +1347,9 @@ function StoreNewMainPanelView:JumpToGoods()
 		end
 	end
 
-	if bJumpSucceeded then
-		-- 跳转成功后清空跳转数据
-		StoreMainVM.JumpToCategoryIndex = nil
-		StoreMainVM.JumpToGoodsID = nil
-		StoreMainVM.bIsOpenBuyWinPanel = true
-		StoreMainVM.bPendingJumpToGoods = false
+	if bJumpSucceeded and not StoreMainVM.bIsJumpMysteryBox then
+		-- 跳转成功后清空跳转数据,如果是盲盒，就先不清，因为界面打开的晚，打开之后再清空
+		self:ClearJumpData()
 	else
 		-- 商品列表尚未刷新，待异步刷新后再跳转到商品
 		StoreMainVM.bPendingJumpToGoods = true
@@ -1135,13 +1358,30 @@ function StoreNewMainPanelView:JumpToGoods()
 	return bJumpSucceeded
 end
 
+function StoreNewMainPanelView:ClearJumpData()
+	StoreMainVM.JumpToCategoryIndex = nil
+	StoreMainVM.JumpToGoodsID = nil
+	StoreMainVM.bIsOpenBuyWinPanel = true
+	StoreMainVM.bPendingJumpToGoods = false
+end
+
 function StoreNewMainPanelView:OnChangedToggleBtnFullScreen(ToggleGroup, ToggleButton, BtnState)
 	local State = BtnState == _G.UE.EToggleButtonState.Unchecked
 	StoreMainVM.bIsFullScreen = State
-	local AnimIn = (StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND or StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX) and self.AnimPosterFullScreenIn or self.AnimCommodityFoldFullScreenIn
-	local AnimOut = (StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND or StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX) and self.AnimPosterFullScreenOut or self.AnimCommodityFoldFullScreenOut
+	local AnimIn = StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND and self.AnimPosterFullScreenIn or self.AnimCommodityFoldFullScreenIn
+	local AnimOut = StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_RECOMMEND and self.AnimPosterFullScreenOut or self.AnimCommodityFoldFullScreenOut
 	self:PlayAnimation(State and AnimIn or AnimOut)
 	self.ReportBrowseFlow(StoreDefine.BrowseOperationType.ClickFullScreen)
+
+	if self.MysteryBoxWidget ~= nil then
+		UIUtil.SetIsVisible(self.MysteryBoxWidget.PanelPoster, not State)
+		self.MysteryBoxWidget:PlayAnimation(State and self.MysteryBoxWidget.AnimPosterFullScreenIn or self.MysteryBoxWidget.AnimPosterFullScreenOut)
+	end
+end
+
+function StoreNewMainPanelView:OnChangedToggleBtnFilter(ToggleGroup, ToggleButton, BtnState)
+	local State = BtnState == _G.UE.EToggleButtonState.Unchecked
+	StoreMainVM.bIsFilterListShow = State
 end
 
 --- 全/半身视角切换
@@ -1150,7 +1390,14 @@ function StoreNewMainPanelView:OnChangedToggleBtnSwitch(ToggleGroup, ToggleButto
 	if not StoreMainVM.bIsAllCameraState then
 		--- 上一次选中的部位镜头
 		-- self.EquipTableViewAdapter:SetSelectedIndex(self.PreviewEquipIndex)
-		local TempEquipItem = self.EquipTableViewAdapter:GetItemDataByIndex(self.PreviewEquipIndex)
+		local TempEquipItem, PreviewIndex
+		if UIUtil.IsVisible(self.MysteryBoxWidget) then
+			TempEquipItem = self.MysteryBoxWidget.EquipTableViewAdapter:GetItemDataByIndex(self.MysteryBoxWidget.PreviewIndex)
+			PreviewIndex = self.MysteryBoxWidget.PreviewIndex
+		else
+			TempEquipItem = self.EquipTableViewAdapter:GetItemDataByIndex(self.PreviewEquipIndex)
+			PreviewIndex = self.PreviewEquipIndex
+		end
 		StoreMainVM:ChangeEquipPart(self.PreviewEquipIndex, true)
 		self:FocusView(TempEquipItem.Part)
 	else
@@ -1177,6 +1424,7 @@ end
 function StoreNewMainPanelView:OnChangedToggleBtnEquipment(ToggleButton, BtnState)
 	if self.DefaultModelGender ~= self.CurrentModelGender then
 		-- 异性角色禁止原装备显示
+		MsgTipsUtil.ShowTipsByID(138007)
 		StoreMainVM.bIsShowRawAvatar = false
 		self.BtnEquipment:SetChecked(false) -- UToggleButton::SlateOnToggleButtonClicked会默认切换按钮状态，这里强制给他切走
 		return
@@ -1208,61 +1456,90 @@ function StoreNewMainPanelView:OnChangedBtnHand(ToggleGroup, ToggleButton, BtnSt
 	self.CommRender2D:HideWeapon(BtnState ~= _G.UE.EToggleButtonState.Unchecked)
 end
 
---- 点击购买
-function StoreNewMainPanelView:OnClickBuy()
-	local GoodsCfgData = StoreMainVM.SkipTempData
-	local bIsJump = StoreMainVM.JumpID ~= 0 or (nil ~= GoodsCfgData and GoodsCfgData.ProductType ==
-		ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_PURCHASE) -- 待拆推荐表
-	if nil ~= StoreMainVM.SkipTempData and nil ~= StoreMainVM.SkipTempData.LabelMain and
-		StoreMainVM.SkipTempData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND then
-		if nil ~= StoreMainVM.SkipTempData.Items[1] then -- 待拆推荐表
-			GoodsCfgData = StoreCfg:FindCfgByKey(StoreMainVM.SkipTempData.Items[1].ID)
+--- 切换坐骑飞行状态
+function StoreNewMainPanelView:OnChangedBtnFly(ToggleGroup, ToggleButton, BtnState)
+	local bFly = BtnState ~= _G.UE.EToggleButtonState.Unchecked
+	StoreMainVM.bIsPlayFlyState = not bFly
+	local UIComplexCharacter = self.CommRender2D:GetUIComplexCharacter()
+	if _G.StoreMysteryBoxVM.CurBoxType == ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_MOUNT_SKIN then
+		if UIComplexCharacter ~= nil then
+			UIComplexCharacter:SwitchFly(bFly, false)
 		end
 	end
-	if bIsJump then
-		if StoreMainVM.JumpID ~= 0 then
-			JumpUtil.JumpTo(StoreMainVM.JumpID, true)
-		elseif nil ~= GoodsCfgData then
-			StoreMgr:JumpToGoods(nil, GoodsCfgData.ID, true)
+end
+
+--- 点击购买
+function StoreNewMainPanelView:OnClickBuy()
+	if self.BuyBtnType == BuyBtnType.Buy then
+		local GoodsCfgData = StoreMainVM.SkipTempData
+		if self.WaitCutHairData then
+			return
 		end
-		StoreUtil.ReportInterfaceFlow(StoreDefine.InterfaceOperationType.RecommendJump, StoreMainVM:GetCurrentMainTabType(),
-			nil, StoreMainVM:GetCurrentGoodsID())
-	else
-		if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
-			if self.WaitCutHairData then
-				return
+		local RecommendGoodsCfgData = StoreMgr.GetRecommendGoodsCfgData(GoodsCfgData)
+		local bIsJump = StoreMainVM.JumpID ~= 0 or (nil ~= RecommendGoodsCfgData and RecommendGoodsCfgData.ProductType ==
+			ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_PURCHASE)
+		if bIsJump then
+			if StoreMainVM.JumpID ~= 0 then
+				FLOG_INFO("[StoreNewMainPanelView:OnClickBuy] Jump to " .. tostring(StoreMainVM.JumpID))
+				JumpUtil.JumpTo(StoreMainVM.JumpID, true)
+			elseif nil ~= RecommendGoodsCfgData and nil ~= RecommendGoodsCfgData.GoodsIDs[1] then
+				FLOG_INFO("[StoreNewMainPanelView:OnClickBuy] Jump to goods " .. tostring(RecommendGoodsCfgData.GoodsIDs[1]))
+				StoreMgr:JumpToGoods(nil, RecommendGoodsCfgData.GoodsIDs[1], true)
+			else
+				FLOG_ERROR("[StoreNewMainPanelView:OnClickBuy] Jump failed.")
 			end
-			if self.IsNeedGotoMadePanel then
-				if not MountMgr:IsMountOwned(self.MountID) then
-					MsgTipsUtil.ShowTipsByID(157046)
-					return
-				end
-				_G.MountMgr:JumpToCustomMadePanel(self.MountID)
-				if self.BtnBuyRedDot.ItemVM == nil then
-					self.BtnBuyRedDot:InitData()
-				end
-				self.BtnBuyRedDot:SetRedDotUIIsShow(MountCustomMadeVM:MountIsNew(self.MountID))
-				DataReportUtil.ReportCustomizeUIFlowData(1, self.MountID, self.TextName:GetText(),"","",3)
-			elseif StoreMainVM:GetGoodSelectIndex() ~= 0 then
-				if nil ~= GoodsCfgData then
-					if StoreMainVM.CurrentSelectedTabType ~= ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
+			StoreUtil.ReportInterfaceFlow(StoreDefine.InterfaceOperationType.RecommendJump, StoreMainVM:GetCurrentMainTabType(),
+				nil, StoreMainVM:GetCurrentGoodsID())
+		else
+			if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
+				if self.IsNeedGotoMadePanel then
+					if not MountMgr:IsMountOwned(self.MountID) then
+						MsgTipsUtil.ShowTipsByID(157046)
+						return
+					end
+					_G.MountMgr:JumpToCustomMadePanel(self.MountID)
+					if self.BtnBuyRedDot.ItemVM == nil then
+						self.BtnBuyRedDot:InitData()
+					end
+					self.BtnBuyRedDot:SetRedDotUIIsShow(MountCustomMadeVM:MountIsNew(self.MountID))
+					DataReportUtil.ReportCustomizeUIFlowData(1, self.MountID, self.TextName:GetText(),"","",3)
+				elseif StoreMainVM:GetGoodSelectIndex() ~= 0 then
+					if nil ~= GoodsCfgData then
 						StoreBuyWinVM:UpdateByGoodsID(GoodsCfgData.ID)
-					else
-						StoreBuyWinVM:UpdateByMysteryBoxData(GoodsCfgData)
+					end
+					UIViewMgr:ShowView(UIViewID.StoreNewBuyWinPanel)
+					if nil ~= StoreMainVM.CurrentSelectedItem then
+						StoreUtil.ReportPurchaseClickFlow(StoreMainVM.CurrentSelectedItem.GoodID,
+							StoreDefine.PurchaseOperationType.ClickMainPanelBuyButton)
 					end
 				end
-				UIViewMgr:ShowView(UIViewID.StoreNewBuyWinPanel)
-				if nil ~= StoreMainVM.CurrentSelectedItem then
-					StoreUtil.ReportPurchaseClickFlow(StoreMainVM.CurrentSelectedItem.GoodID,
-						StoreDefine.PurchaseOperationType.ClickMainPanelBuyButton)
+			else
+				if StoreMainVM.CurrentSelectedItem ~= nil then
+					UIViewMgr:ShowView(UIViewID.StoreGiftChooseFriendWin, {GoodsID = StoreMainVM.CurrentSelectedItem.GoodID})
+					StoreUtil.ReportGiftClickFlow(StoreMainVM.CurrentSelectedItem.GoodID,
+						StoreDefine.GiftOperationType.ClickMainPanelGiftButton)
 				end
 			end
+		end
+	elseif self.BuyBtnType == BuyBtnType.CutHair then
+		if _G.PWorldMgr:CurrIsInDungeon() then
+			_G.MsgTipsUtil.ShowTipsByID(198011)		--- 当前场景无法前往旅馆
 		else
-			if StoreMainVM.CurrentSelectedItem ~= nil then
-				UIViewMgr:ShowView(UIViewID.StoreGiftChooseFriendWin, {GoodsID = StoreMainVM.CurrentSelectedItem.GoodID})
-				StoreUtil.ReportGiftClickFlow(StoreMainVM.CurrentSelectedItem.GoodID,
-					StoreDefine.GiftOperationType.ClickMainPanelGiftButton)
+			--- 点击前往理发，跳转到地图选中旅馆
+        	local IsUnLock = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDBarberShop)
+			if IsUnLock then
+				--- 已解锁，打开地图选中乌尔达哈旅馆
+				_G.WorldMapMgr:ShowWorldMapFixPoint(12001, 706)
+			else
+				--- 未解锁弹窗
+				_G.HaircutMgr:OnBeauticiansNotUnlock()
 			end
+		end
+	elseif self.BuyBtnType == BuyBtnType.GoWardrobe then
+		if _G.PWorldMgr:CurrIsInDungeon() then
+			_G.MsgTipsUtil.ShowTipsByID(1080013)		--- 当前场景无法进入衣橱界面
+		else
+			UIViewMgr:ShowView(UIViewID.WardrobeMainPanel, {SuitID = self.HoldSuitID})
 		end
 	end
 end
@@ -1315,6 +1592,9 @@ function StoreNewMainPanelView:UpdateVideoWidget(VideoPath)
 		self.UMGVideoPlayer_UIBP:InitVideoPlayer()
 		self.UMGVideoPlayer_UIBP_Full:SetVideoPath(VideoPath)
 		self.UMGVideoPlayer_UIBP_Full:InitVideoPlayer()
+	else
+		self.UMGVideoPlayer_UIBP:OnPause()
+		self.UMGVideoPlayer_UIBP_Full:OnPause()
 	end
 	UIUtil.SetIsVisible(self.PanelVideo, IsHaveVideo)
 	UIUtil.SetIsVisible(self.UMGVideoPlayer_UIBP, IsHaveVideo)
@@ -1324,7 +1604,11 @@ end
 function StoreNewMainPanelView:SwitchIdlePose(PoseType)
 	PoseType = PoseType or 1
 	local Render2DCharcter = self.CommRender2D.ChildActor
+	local FailCallback = function()
+		self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.IdlePose, function() self:SwitchIdlePose(PoseType) end)
+	end
 	if nil == Render2DCharcter then
+		FailCallback()
 		return
 	end
 	local AnimComp = Render2DCharcter:GetAnimationComponent()
@@ -1333,6 +1617,7 @@ function StoreNewMainPanelView:SwitchIdlePose(PoseType)
 	end
 	local AnimInst = AnimComp:GetPlayerAnimInstance()
 	if nil == AnimInst then
+		FailCallback()
 		return
 	end
 	local PlayerAnimParam = AnimInst:GetPlayerAnimParam()
@@ -1360,21 +1645,44 @@ function StoreNewMainPanelView:PlayStagePose(GoodID)
 	if string.isnilorempty(CfgAnimPath) then return end
 	local AnimPath = AnimMgr:GetActionTimeLinePath(CfgAnimPath)
 	local Render2DCharcter = self.CommRender2D.ChildActor
-	if nil == Render2DCharcter then
-		self:AddAssembleAllEndCallback(function() self:PlayStagePose(GoodID) end)
+	if nil == Render2DCharcter or not Render2DCharcter:IsMeshLoaded() then
+		self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.StagePose, function() self:PlayStagePose(GoodID) end)
 		return
 	end
 	local AnimComp = Render2DCharcter:GetAnimationComponent()
 	if nil == AnimComp then
-		self:AddAssembleAllEndCallback(function() self:PlayStagePose(GoodID) end)
 		return
 	end
 	AnimComp:PlayAnimation(AnimPath)
 end
 
+--- 播放TimeLine
+function StoreNewMainPanelView:PlayOrStopEnterAnim(AnimPath, bStop)
+	if AnimPath == nil then return end
+	local Render2DCharcter = self.CommRender2D.ChildActor
+	local AnimComp = Render2DCharcter:GetAnimationComponent()
+	if nil == AnimComp then
+		return
+	end
+	if nil == Render2DCharcter or not Render2DCharcter:IsMeshLoaded() then
+		if bStop then
+			AnimComp:StopAnimation()
+		else
+			self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.StagePose, function() self:PlayOrStopEnterAnim(AnimPath, bStop) end)
+		end
+		return
+	end
+	if bStop then
+		AnimComp:StopAnimation()
+	else
+		AnimComp:PlayAnimation(AnimPath)
+	end
+end
+
 function StoreNewMainPanelView:StopStagePose()
 	local Render2DCharcter = self.CommRender2D.ChildActor
-	if nil == Render2DCharcter then
+	if nil == Render2DCharcter or not Render2DCharcter:IsMeshLoaded() then
+		self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.StagePose, function() self:StopStagePose() end)
 		return
 	end
 	local AnimComp = Render2DCharcter:GetAnimationComponent()
@@ -1398,11 +1706,6 @@ function StoreNewMainPanelView:OnChangedPurchaseMethod(Index)
 	self.CommMenu:SetSelectedKey(MenuKey, true)
 end
 
---- 奇遇盲盒Tips
-function StoreNewMainPanelView:OnClickInforBtn()
-	UIViewMgr:ShowView(UIViewID.StoreNewBlindBoxDescription)
-end
-
 --region 坐骑独有
 --- 坐骑BGM
 function StoreNewMainPanelView:PlayMountBGM(MountID)
@@ -1415,7 +1718,7 @@ function StoreNewMainPanelView:PlayMountBGM(MountID)
 		if TempBgmCfg ~= nil then
 			self.CurrentMountBGMID = TempRideCfg.MountBgm
 			self:StopMountBGM()
-			self.PlayingID = UE.UAudioMgr.Get():PlayBGM(tonumber(self.CurrentMountBGMID), UE.EBGMChannel.Mount)
+			self.PlayingID = UE.UAudioMgr.Get():PlayBGM(tonumber(self.CurrentMountBGMID), UE.EBGMChannel.UI)
 		end
 	end
 end
@@ -1438,6 +1741,7 @@ function StoreNewMainPanelView:OnUpdateMontSkillList(MountID)
 				MountSkillData.MountID = MountID
 				MountSkillData.SkillID = TempRideCfg.PlayAction[i]
 				MountSkillData.Index = i
+				MountSkillData.Type = 1
 				table.insert(TempActionList, MountSkillData)
 			end
 		end
@@ -1446,14 +1750,32 @@ function StoreNewMainPanelView:OnUpdateMontSkillList(MountID)
 	end
 end
 
---endregion
-
-function StoreNewMainPanelView:OnInitBtnState(ItemData)
-	local bShowRawAvatar = false
-	if ItemData ~= nil then
-		bShowRawAvatar = ItemData.IsBringEquip == 1
+function StoreNewMainPanelView:OnUpdateFashionSkillList(Cfg)
+	local TempActionList = {}
+	if Cfg and next (Cfg) then
+		for i = 1, #Cfg.Action do
+			if Cfg.Action[i] ~= 0 then
+				local FashionSkillData = {}
+				FashionSkillData.SkillID = Cfg.Action[i]
+				FashionSkillData.Index = i
+				FashionSkillData.Type = 2
+				FashionSkillData.ID = Cfg.ID
+				table.insert(TempActionList, FashionSkillData)
+			end
+		end
 	end
-	StoreMainVM.bIsShowHat = true
+	StoreMainVM:UpdateMountActionList(TempActionList)
+	StoreMainVM.MountPagePanelVisible = true
+end
+
+function StoreNewMainPanelView:InitBtnState(GoodsCfgData)
+	local bShowRawAvatar = false
+	local bShowHelmet = true
+	if nil ~= GoodsCfgData then
+		bShowRawAvatar = GoodsCfgData.IsBringEquip == 1 and (GoodsCfgData.GenderLimit == 0 or GoodsCfgData.GenderLimit == self.DefaultModelGender)
+		bShowHelmet = GoodsCfgData.HideHelmet == 0
+	end
+	StoreMainVM.bIsShowHat = bShowHelmet
 	StoreMainVM.bIsShowHatStyle = false
 	StoreMainVM.bIsShowRawAvatar = bShowRawAvatar
 	StoreMainVM.bIsShowBtnPose = false
@@ -1470,7 +1792,7 @@ function StoreNewMainPanelView:CreateCompanion(CompanionID)
 	local Rotation = nil ~= self.CommRender2D.RenderActor and self.CommRender2D.RenderActor:K2_GetActorRotation() or
 		ModelDefine.DefaultRotation
 	self.StoreRender2D:CreateCompanion(CompanionID, {Location = Location,
-		Rotation = Rotation})
+		Rotation = Rotation, bNoFadeInOut = true})
 end
 
 function StoreNewMainPanelView:UpdateCompanionModel(ItemData)
@@ -1500,38 +1822,43 @@ function StoreNewMainPanelView:CreateRenderActor(EntityID, bSyncLoad)
 			for _, Callback in pairs(self.RenderActorCreateCallback) do
 				Callback()
 			end
+			self.RenderActorCreateCallback = {}
 		end
 	end
 	self.StoreRender2D:CreateRenderActor({EntityID = EntityID, Callback = Callback, bSyncLoad = bSyncLoad})
 end
 
-function StoreNewMainPanelView:OnShowMount(IsShowMount)
-	StoreMainVM.MountPagePanelVisible = IsShowMount
-	if IsShowMount then
-		if nil == StoreMainVM.EquipPartList then
+-- 检查坐骑模型与BGM
+function StoreNewMainPanelView:CheckMount(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	StoreMainVM.MountPagePanelVisible = nil ~= GoodsCfgData and GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_MOUNT
+	if StoreMainVM.MountPagePanelVisible then
+		local ItemData = GoodsCfgData.Items[1]
+		if nil == ItemData then -- 默认坐骑类商品只包含一个坐骑物品，配其他物品是非法的（如搭售物品）
 			return
 		end
 		--- 点击坐骑标签
-		local ItemData = StoreMainVM.EquipPartList.Items[1]
-		local Cfg = nil
-		if nil ~= ItemData then
-			Cfg = ItemCfg:FindCfgByKey(ItemData.ResID)
+		local ItemCfgData = ItemCfg:FindCfgByKey(ItemData.ID)
+		if nil == ItemCfgData then
+			return
 		end
-		if Cfg ~= nil then
-			local Func = FuncCfg:FindCfgByKey(Cfg.UseFunc)
-			if Func ~= nil then
-				local MountID = Func.Func[1].Value[1]
-				if MountID ~= nil then
-					if StoreMainVM.bIsPlayMountBgm then
-						self:PlayMountBGM(MountID)
-					end
-					self:OnUpdateMontSkillList(MountID)
-					self.MountID = MountID
-					StoreMainVM.CurrentSelectedItem.MountID = MountID
-					self:RideMount(MountID)
-				end
-			end
+		local FuncCfgData = FuncCfg:FindCfgByKey(ItemCfgData.UseFunc)
+		if nil == FuncCfgData then
+			return
 		end
+		local MountID = FuncCfgData.Func[1].Value[1]
+		if nil == MountID then
+			return
+		end
+		if StoreMainVM.bIsPlayMountBgm then
+			self:PlayMountBGM(MountID)
+		end
+		self:OnUpdateMontSkillList(MountID)
+		self.MountID = MountID
+		if nil ~= StoreMainVM.CurrentSelectedItem then
+			StoreMainVM.CurrentSelectedItem.MountID = MountID
+		end
+		self:RideMount(MountID)
 	else
 		self:StopMountBGM()
 	end
@@ -1542,21 +1869,13 @@ function StoreNewMainPanelView:WearSuit()
 	-- if self.IsHidePlayer then 
 	-- 	return
 	-- end
-	--- 盲盒逻辑：不显示遮罩，这里拦截一下
-	if StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_MYSTERYBOX then 
-		return
-	end
 	local EquipPartList = StoreMainVM.EquipPartList.Items
-	local Gender = MajorUtil.GetMajorGender()
+	local Gender = self.CurrentModelGender
 	local IsMale = Gender == ProtoCommon.role_gender.GENDER_MALE
 
 	local SuitData = {}
 	local Start, End, Step
-	if IsMale then
-		Start, End, Step = #EquipPartList, 1, -1  -- 倒序遍历
-	else  
-		Start, End, Step = 1, #EquipPartList, 1  -- 正序遍历
-	end
+	Start, End, Step = 1, #EquipPartList, 1  -- 正序遍历
 	for i = Start, End, Step do
 		local TempItemData = EquipPartList[i]
 		local IsCanPreView = true
@@ -1608,9 +1927,97 @@ end
 -- 	self.bBtnHatStyleDisabled = not EquipmentMgr:IsEquipHasGimmick(ResID)
 -- end
 
+-- 预览商品时的公共显示内容更新（共用UI与3D场景）
+function StoreNewMainPanelView:UpdatePreviewGoods(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil == GoodsCfgData then
+		return
+	end
+
+	-- 共用UI
+	self:InitBtnState(GoodsCfgData)
+	self:UpdateVideoWidget(GoodsCfgData.VideoPath)
+
+	-- 3D场景
+	self.PreviewEquipIndex = 1
+	StoreMainVM:SetLeftButtonVisible(GoodsCfgData.LabelMain)
+	StoreMainVM.EquipParVisible = GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION
+	StoreMainVM.MountPagePanelVisible = GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_MOUNT
+	self:CheckMount(GoodsCfgData.ID)
+	self.StoreRender2D:StopEmotion()
+	local NewShowActorType = ShowActorType.None
+	if GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_MOUNT then
+		NewShowActorType = ShowActorType.Mount
+	elseif GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION then
+		StoreMainVM:UpdateEquipPartList(GoodsCfgData)
+		NewShowActorType = ShowActorType.Human
+		self:CheckGenderModel(GoodsCfgData.GenderLimit)
+		self:WearSuit()
+		if self:IsViewFirstPartByDefault(GoodsCfgData.ID) then
+			self.EquipTableViewAdapter:SetSelectedIndex(1)	--- 单件时默认选中部位
+		else
+			self:CheckFocusFullBody(GoodsCfgData.ID)
+		end
+	elseif GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_ACTINGTEXTBOOK then
+		NewShowActorType = ShowActorType.Human
+		self.StoreRender2D:WearSuit({})
+		StoreMainVM.bIsShowRawAvatar = true
+		self.StoreRender2D:PlayEmotion(EmotionMgr:GetEmotionIDByItemID(GoodsCfgData.Items[1].ID))
+		self:CheckFocusFullBody(GoodsCfgData.ID)
+	elseif GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_PET then
+		NewShowActorType = ShowActorType.Companion
+		self:UpdateCompanionModel(GoodsCfgData)
+	elseif GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_ORNAMENT then
+		NewShowActorType = ShowActorType.Human
+		self.StoreRender2D:WearSuit({})
+		StoreMainVM.bIsShowRawAvatar = true
+		self:CheckFocusFullBody(GoodsCfgData.ID)
+		local itemcfg = FashionDecorateCfg:FindCfgByKey(GoodsCfgData.SpecialID)
+		if itemcfg.DecorationType == FashionDecoDefine.FashionDecoType.Umbrella then
+			self:PlayOrStopEnterAnim("AnimMontage'/Game/Assets/Character/Action/ornament_sp/m6001/onm_sp02.onm_sp02'")
+		else	
+			self:PlayOrStopEnterAnim("AnimMontage'/Game/Assets/Character/Action/ornament_sp/m6001/onm_sp02.onm_sp02'", true)
+		end
+		self:OnUpdateFashionSkillList(itemcfg)
+		if self.CurrentDecorationType then
+			self.StoreRender2D:DeleteOrnamentData(self.CurrentDecorationType)
+			self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.View,
+			function()
+				self.StoreRender2D:SetOrnamentCompData(itemcfg.DecorationType, GoodsCfgData.SpecialID) 
+			end)
+		else
+			self.StoreRender2D:SetOrnamentCompData(itemcfg.DecorationType, GoodsCfgData.SpecialID)
+		end
+		self.CurrentDecorationType = itemcfg.DecorationType
+		--self:OnUpdateSkillList(GoodsCfgData.SpecialID)
+	end
+	if GoodsCfgData.LabelMain ~= Store_Label_Type.STORE_LABEL_MAIN_ORNAMENT then
+		if self.CurrentDecorationType then
+			self.StoreRender2D:DeleteOrnamentData(self.CurrentDecorationType)
+			self.CurrentDecorationType = nil
+		end
+	end
+	if self.StoreRender2D.EmotionTimer and GoodsCfgData.LabelMain ~= Store_Label_Type.STORE_LABEL_MAIN_ACTINGTEXTBOOK then
+		self.StoreRender2D:UnRegisterEmotionTimer()
+	end
+	self:UpdateCurrentShowActorType(NewShowActorType)
+	if GoodsCfgData.LabelMain == Store_Label_Type.STORE_LABEL_MAIN_FASHION then
+		self:PlayStagePose(GoodsCfgData.ID)
+	else
+		self:ResetToDefaultGenderModel()
+	end
+
+	StoreMainVM.ProductName = StoreUtil.GetGoodsName(GoodsCfgData.ID)
+end
+
 -- 展示对应部位镜头
 function StoreNewMainPanelView:FocusView(Part)
-	self.StoreRender2D:FocusView(Part)
+	local Character = self.CommRender2D:GetCharacter()
+	if nil ~= Character and Character:IsMeshLoaded() then
+		self.StoreRender2D:FocusView(Part)
+	else
+		self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.View, function() self.StoreRender2D:FocusView(Part) end)
+	end
 	self:StopStagePose()
 	self:SwitchIdlePose(IdlePoseType.Default)
 end
@@ -1625,7 +2032,7 @@ function StoreNewMainPanelView:ViewCompanion()
 	self.CommRender2D:SetSpringArmDistance(Render2DConfig.CompanionViewDistance, true)
 	local ViewportPos = self:GetViewportPosOfModel()
 	local FOV = self.CommRender2D.FOVTarget or self.CommRender2D:GetFOV()
-	local OffsetY = self.StoreRender2D.GetCameraOffsetY(ViewportPos, FOV,
+	local OffsetY = CameraUtil.GetCameraOffsetY(ViewportPos.X, FOV,
 		Render2DConfig.CompanionViewDistance + Render2DConfig.CompanionSpringArmLocation.X)
 	self.CommRender2D:SetSpringArmLocation(Render2DConfig.CompanionSpringArmLocation.X, -OffsetY,
 		Render2DConfig.CompanionSpringArmLocation.Z, true)
@@ -1647,7 +2054,7 @@ function StoreNewMainPanelView:ViewMount()
 	self.CommRender2D:SetSpringArmDistance(MountViewDistance, true)
 	local ViewportPos = self:GetViewportPosOfModel()
 	local FOV = self.CommRender2D.FOVTarget or self.CommRender2D:GetFOV()
-	local OffsetY = self.StoreRender2D.GetCameraOffsetY(ViewportPos, FOV,
+	local OffsetY = CameraUtil.GetCameraOffsetY(ViewportPos.X, FOV,
 		MountViewDistance + Render2DConfig.MountSpringArmLocation.X)
 	self.CommRender2D:SetSpringArmLocation(Render2DConfig.MountSpringArmLocation.X, -OffsetY,
 		Render2DConfig.MountSpringArmLocation.Z, true)
@@ -1665,20 +2072,18 @@ function StoreNewMainPanelView:ResetSpringArmRotation(bInterp)
 end
 
 --- 切换到全身镜头
-function StoreNewMainPanelView:FocusFullBody()
-	--- 选中道具或宠物时不切换镜头
-	if (StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_PROPS) or (StoreMainVM.CurrentSelectedTabType == StoreMall.STORE_MALL_PET) then
-		return
-	end
+function StoreNewMainPanelView:FocusFullBody(GoodsID)
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	self.StoreRender2D:UpdateViewGroupID(GoodsCfgData and GoodsCfgData.ViewGroupID or 0)
 	self.StoreRender2D:ResetView(true, self:GetViewportPosOfModel())
 end
 
-function StoreNewMainPanelView:CheckFocusFullBody()
+function StoreNewMainPanelView:CheckFocusFullBody(GoodsID)
 	local Character = self.CommRender2D:GetCharacter()
-	if nil ~= Character and Character:IsMeshLoaded() then
-		self:FocusFullBody()
+	if nil ~= Character and not Character:IsMeshLoaded() then
+		self:FocusFullBody(GoodsID)
 	else
-		self:AddAssembleAllEndCallback( function() self:FocusFullBody() end)
+		self:AddAssembleAllEndCallback(AssembleAllEndCallbackType.View, function() self:FocusFullBody(GoodsID) end)
 	end
 end
 
@@ -1710,23 +2115,38 @@ function StoreNewMainPanelView:HidePlayer()
 	self.CommRender2D:HidePlayer(IsHidePlayer)
 end
 
-function StoreNewMainPanelView:OnUpdateNPCModel()
-	if StoreMgr:CheckMallTypeByIndex(StoreMainVM.TabSelecteIndex, StoreMall.STORE_MALL_MYSTERYBOX) then
+function StoreNewMainPanelView:CheckGenderModel(GenderLimit)
+	if nil == GenderLimit or GenderLimit == 0 or GenderLimit == self.DefaultModelGender then
+		self:ResetToDefaultGenderModel()
+	else
+		self:SwitchToOppositeGenderModel()
+	end
+end
+
+function StoreNewMainPanelView:SwitchToOppositeGenderModel()
+	if self.CurrentModelGender ~= self.DefaultModelGender then
+		return
+	end 
+	self.CurrentModelGender = self.DefaultModelGender == ProtoCommon.role_gender.GENDER_MALE and ProtoCommon.role_gender.GENDER_FEMALE or
+		ProtoCommon.role_gender.GENDER_MALE
+	self.StoreRender2D:SwitchToPresetModel(MajorUtil.GetMajorRaceID(), self.CurrentModelGender)
+end
+
+function StoreNewMainPanelView:ResetToDefaultGenderModel()
+	if self.CurrentModelGender == self.DefaultModelGender then
 		return
 	end
-	self.CommRender2D:ReleaseActor()
-	if MajorUtil:GetMajorGender() == self.CurrentModelGender then
-		self:CreateRenderActor(self.NPCEntityID)
-	else
-		self:CreateRenderActor(MajorUtil.GetMajorEntityID())
-	end
-	self:WearSuit()
-	self.CurrentModelGender = self.CurrentModelGender == ProtoCommon.role_gender.GENDER_MALE and ProtoCommon.role_gender.GENDER_FEMALE or ProtoCommon.role_gender.GENDER_MALE
+	local RoleSimple = MajorUtil.GetMajorRoleSimple()
+	self.StoreRender2D:ResetToDefaultModel(RoleSimple)
+	self.CurrentModelGender = self.DefaultModelGender
 end
 
 function StoreNewMainPanelView:UpdateCurrentShowActorType(InCurrentShowActorType)
+	local OldShowActorType = self.CurrentShowActorType
 	self.CurrentShowActorType = InCurrentShowActorType
-	self:OnShowActorTypeChanged()
+	if OldShowActorType ~= self.CurrentShowActorType then
+		self:OnShowActorTypeChanged()
+	end
 end
 
 function StoreNewMainPanelView:OnShowActorTypeChanged()
@@ -1810,11 +2230,17 @@ function StoreNewMainPanelView:OnRender2DClicked(View)
 	end
 end
 
-function StoreNewMainPanelView:AddAssembleAllEndCallback(Callback)
-	table.insert(self.AssembleAllEndCallbacks, Callback)
+function StoreNewMainPanelView:AddAssembleAllEndCallback(CallbackType, Callback)
+	if nil == CallbackType or nil == Callback then
+		return
+	end
+	self.AssembleAllEndCallbacks[CallbackType] = Callback
 end
 
 function StoreNewMainPanelView:AddRenderActorCreateCallback(CallbackType, Callback)
+	if nil == CallbackType or nil == Callback then
+		return
+	end
 	self.RenderActorCreateCallback[CallbackType] = Callback
 end
 
@@ -1828,6 +2254,7 @@ function StoreNewMainPanelView:RideMount(MountID)
 		return
 	end
 	self.CommRender2D:SetUIRideCharacter(MountID)
+	self.CommRender2D:HidePlayer(true)
 end
 
 --enregion
@@ -1852,5 +2279,55 @@ function StoreNewMainPanelView.ReportBrowseFlow(BrowseOperationType)
 end
 
 --endregion
+
+--- 切换盲盒界面
+function StoreNewMainPanelView:ChangeToMysterBoxPanel(BlindBoxVisible)
+	UIUtil.SetIsVisible(self.PanelCommodity, not BlindBoxVisible)
+	UIUtil.SetIsVisible(self.PanelBtnBuy, not BlindBoxVisible)
+	UIUtil.SetIsVisible(self.FVerticalBox_1, not BlindBoxVisible)
+	self:UpdateVideoWidget()
+	self.StoreRender2D:StopEmotion()
+	if BlindBoxVisible then
+		if self.CurrentDecorationType then
+			self.StoreRender2D:DeleteOrnamentData(self.CurrentDecorationType)
+			self.CurrentDecorationType = nil
+		end
+		StoreMainVM.bIsAllCameraState = false
+		_G.StoreMysteryBoxMgr:InitMsteryBoxData(false)
+		self.StoreRender2D:WearSuit({})
+		if StoreMainVM.bIsShowHat then
+			self:OnChangedToggleBtnHat()
+		end
+		self.CommRender2D:HideWeapon(true)
+		self:StopMountBGM()
+		self.IsNeedGotoMadePanel = false
+	else
+		local MountCharacter = self.CommRender2D.ChildActor
+		if MountCharacter then
+			_G.MountMgr:SetCustomMadeID(MountCharacter, _G.StoreMysteryBoxVM.CurMountID, 1)
+		end
+	end
+	UIUtil.SetIsVisible(self.MysteryBoxWidget, BlindBoxVisible)
+end
+
+function StoreNewMainPanelView:CreatMysteryBoxWidget()
+	local ObjectGCType = require("Define/ObjectGCType")
+	local BPName = "StoreNew/StoreBlindBoxPanel_UIBP"
+	local PageView = _G.UIViewMgr:CreateViewByName(BPName, ObjectGCType.NoCache, self, true, false)
+	if not PageView then
+		_G.FLOG_ERROR("EquipmentNewMainView:CreateViewByName failed, BPName=%s", BPName)
+		return
+	end
+	PageView.SuperView = self
+	self.PanelUI:AddChildToCanvas(PageView)
+	self.MysteryBoxWidget = PageView
+	local Anchor = _G.UE.FAnchors()
+	Anchor.Minimum = _G.UE.FVector2D(0, 0)
+	Anchor.Maximum = _G.UE.FVector2D(1, 1)
+	UIUtil.CanvasSlotSetAnchors(PageView, Anchor)
+	UIUtil.CanvasSlotSetPosition(PageView, _G.UE.FVector2D(0, 0))
+	local Offset = UIUtil.CanvasSlotGetOffsets(self)
+	UIUtil.CanvasSlotSetOffsets(PageView, Offset)
+end
 
 return StoreNewMainPanelView

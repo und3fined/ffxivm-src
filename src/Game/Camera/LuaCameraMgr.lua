@@ -328,6 +328,9 @@ function LuaCameraMgr:ChangeViewByParams(Params)
             _G.UE.UCameraMgr.Get():SwitchCamera(DialogCamera, 0) -- 每次都切一下避免调用者忘了切
             -- 设置FOV要放在 SwitchCamera 后面，因为里面会拷贝主摄像机的FOV
             if (FOV ~= nil and FOV > 0) then
+                local UIUtil = require("Utils/UIUtil")
+                local DPIScale = UIUtil.GetViewportScale()
+                FOV = FOV / DPIScale -- 屏幕适配
                 DialogCamera:SetFOVY(FOV)
             end
         end,
@@ -451,6 +454,27 @@ function LuaCameraMgr:UpdateAmbientOcclusionParam(bEnable, AORadius, AOIntensity
             UCameraPostEffectMgr:UpdateAmbientOcclusionParam(EAmbientOcclusionType, FAmbientOcclusionParam)
         end
     end
+end
+
+-- 镜头在顶视角与切换前视角间切换，仅测试场景使用
+function LuaCameraMgr:TestModifyMajorCameraPitch(bToLowestPitch)
+	if self.bToLowestPitch == bToLowestPitch then
+		return
+	end
+	self.bToLowestPitch = bToLowestPitch
+	local CamControlComp = MajorUtil.GetMajorCameraControlComponent()
+	if nil == CamControlComp then
+		return
+	end
+	local TargetCameraRotation = self.CachedCameraRotation
+	if self.bToLowestPitch then
+		TargetCameraRotation = CamControlComp:GetCameraBoomRelativeRotation()
+		TargetCameraRotation.Pitch = CamControlComp:GetViewPitchMin()
+		self.CachedCameraRotation = CamControlComp:GetCameraBoomRelativeRotation()
+	end
+	if nil ~= TargetCameraRotation then
+		CamControlComp:SetCameraBoomRelativeRotation(TargetCameraRotation)
+	end
 end
 
 return LuaCameraMgr

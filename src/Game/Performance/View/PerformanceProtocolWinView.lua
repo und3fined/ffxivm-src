@@ -62,7 +62,7 @@ function PerformanceProtocolWinView:InitStaticText()
 	self.TextSingleBox:SetText(_G.LSTR(830086))
 
 	self.LeftBtnOp:SetBtnName(_G.LSTR(830085))
-	self.RightBtnOp:SetBtnName(_G.LSTR(830060))
+	self.RightBtnOp:SetBtnName(_G.LSTR(10003))
 end
 
 function PerformanceProtocolWinView:OnDestroy()
@@ -116,6 +116,10 @@ function PerformanceProtocolWinView:OnClientSetupPost(Params)
 	local RoleID = Params.ULongParam1
 	local Key = Params.IntParam1
 	local Value = Params.StringParam1
+
+	if Key ~= ProtoCS.ClientSetupKey.CSKPerformAgreement then
+		return
+	end
 
 	if not _G.MusicPerformanceMgr:CheckProf() then
 		self:Hide()

@@ -21,7 +21,9 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 ---@field ImgItemSelect UFImage
 ---@field ImgLock UFImage
 ---@field ImgMatching UFImage
+---@field PanelFight UFCanvasPanel
 ---@field Panelhighlydifficult UFCanvasPanel
+---@field TextFight UFTextBlock
 ---@field TextHighlyDifficult UFTextBlock
 ---@field TextNormal UFTextBlock
 ---@field AnimLoop UWidgetAnimation
@@ -34,7 +36,9 @@ function PWorldSelectChildItemView:Ctor()
 	--self.ImgItemSelect = nil
 	--self.ImgLock = nil
 	--self.ImgMatching = nil
+	--self.PanelFight = nil
 	--self.Panelhighlydifficult = nil
+	--self.TextFight = nil
 	--self.TextHighlyDifficult = nil
 	--self.TextNormal = nil
 	--self.AnimLoop = nil
@@ -54,6 +58,7 @@ function PWorldSelectChildItemView:OnInit()
 		{ "IsMatching", UIBinderSetIsVisible.New(self, self.ImgMatching) },
 		{ "BackgroudImageIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgItemNormal) },
 		{ "bPrettyHard", UIBinderValueChangedCallback.New(self, nil, self.OnPrettyHardChanged)},
+		{ "bBattlePWorld", UIBinderSetIsVisible.New(self, self.PanelFight)},
 	}
 end
 

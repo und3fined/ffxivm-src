@@ -86,7 +86,7 @@ function MapMarkerMsgMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.CrystalActivated, self.OnGameEventCrystalActivated)
 
 	self:RegisterGameEvent(EventID.MapFollowAdd, self.OnGameEventFollowUpdate)
-	self:RegisterGameEvent(EventID.MapFollowDelete, self.OnGameEventFollowUpdate)
+	self:RegisterGameEvent(EventID.MapFollowDelete, self.OnGameEventFollowRemove)
 	self:RegisterGameEvent(EventID.MapFollowUpdate, self.OnGameEventFollowUpdate)
 	self:RegisterGameEvent(EventID.MapFollowTargetUpdate, self.OnGameEventFollowTargetUpdate)
 
@@ -110,6 +110,7 @@ function MapMarkerMsgMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.LoadWildBoxRangeCheckData, self.OnGameEventWildBoxDataUpdate)
 	self:RegisterGameEvent(EventID.RemoveWildBoxRangeCheckDataByBoxOpened, self.OnGameEventWildBoxDataUpdate)
 	self:RegisterGameEvent(EventID.AetherCurrentSingleActive, self.OnGameEventAetherCurrentDataUpdate)
+	self:RegisterGameEvent(EventID.AetherCurrentMapFlyOpen, self.OnGameEventAetherCurrentDataUpdate)
 	self:RegisterGameEvent(EventID.TimeToUpdateMapPointPerfectCond, self.OnGameEventDiscoverNoteDataUpdate)
 	self:RegisterGameEvent(EventID.NoteSinglePerfectActive, self.OnGameEventDiscoverNoteDataUpdate)
 
@@ -117,6 +118,10 @@ function MapMarkerMsgMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.PWorldEntityAdd, self.OnGameEventPWorldEntityAdd)
 	self:RegisterGameEvent(EventID.PWorldEntityRemove, self.OnGameEventPWorldEntityRemove)
 	self:RegisterGameEvent(EventID.PWorldEntityUpdate, self.OnGameEventPWorldEntityUpdate)
+
+	self:RegisterGameEvent(EventID.HouseLandMapDataUpdate, self.OnGameEventHouseLandMapDataUpdate)
+
+	self:RegisterGameEvent(EventID.MiniGameMarkerBlessStateChange, self.OnGameEventMiniGameMarkerBlessStateChange)
 end
 
 function MapMarkerMsgMgr:UpdateProviders(MarkerType, FunctionName, ...)
@@ -165,6 +170,17 @@ function MapMarkerMsgMgr:OnGameEventClearQuest(Params)
 	self:UpdateProviders(MapMarkerType.Tracking, "ClearMarkers")
 end
 
+function MapMarkerMsgMgr:OnGameEventMiniGameMarkerBlessStateChange(Params)
+	local ExitMarkerParams = Params.ExitMarkerParams
+	if ExitMarkerParams then
+		self:UpdateProviders(MapMarkerType.GSMiniGame, "UpdateMarker", ExitMarkerParams.GameID, ExitMarkerParams)
+	end
+	
+	local EnterMarkerParams = Params.EnterMarkerParams
+	if EnterMarkerParams then
+		self:UpdateProviders(MapMarkerType.GSMiniGame, "UpdateMarker", EnterMarkerParams.GameID, EnterMarkerParams)
+	end
+end
 
 function MapMarkerMsgMgr:OnGameEventFateUpdate(Params)
 	if nil == Params then
@@ -350,6 +366,17 @@ end
 
 function MapMarkerMsgMgr:OnGameEventFollowUpdate(Params)
 	local FollowInfo = Params
+	FollowInfo.IsFollow = true
+	self:UpdateProviders(FollowInfo.FollowType, "UpdateFollowMarker", FollowInfo)
+	if FollowInfo.FollowType == MapMarkerType.FixPoint then
+		--传送大水晶追踪状态更新
+		self:UpdateProviders(MapMarkerType.Telepo, "UpdateFollowMarker", FollowInfo)
+	end
+end
+
+function MapMarkerMsgMgr:OnGameEventFollowRemove(Params)
+	local FollowInfo = Params
+	FollowInfo.IsFollow = false
 	self:UpdateProviders(FollowInfo.FollowType, "UpdateFollowMarker", FollowInfo)
 end
 
@@ -460,6 +487,10 @@ end
 
 function MapMarkerMsgMgr:OnGameEventPWorldEntityUpdate(Params)
 	self:UpdateProviders(MapMarkerType.Gameplay, "UpdatePWorldEntity", Params)
+end
+
+function MapMarkerMsgMgr:OnGameEventHouseLandMapDataUpdate(Params)
+	self:UpdateProviders(MapMarkerType.HouseLand, "ClearAndUpdateMarkers")
 end
 
 

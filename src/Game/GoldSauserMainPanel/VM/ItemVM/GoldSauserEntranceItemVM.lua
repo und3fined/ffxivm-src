@@ -13,6 +13,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 local GoldSauserMainPanelBombItemVM = require("Game/GoldSauserMainPanel/VM/ItemVM/GoldSauserMainPanelBombItemVM")
 local GoldSaucerBirdGameCfg = require("TableCfg/GoldSaucerBirdGameCfg")
 local GoldSaucerAirplaneGameCfg = require("TableCfg/GoldSaucerAirplaneGameCfg")
+local GoldSaucerBodyguardGameCfg = require("TableCfg/GoldSaucerBodyguardGameCfg")
 local CSMiniGameType = ProtoCS.MiniGameType
 local GoldSauserGameClientType = ProtoRes.GoldSauserGameClientType
 local BirdBombState = GoldSauserMainPanelDefine.BirdBombState
@@ -67,11 +68,11 @@ function GoldSauserEntranceItemVM:SetInfo(InBtnId, InGameType, InState)
     self.GameType = InGameType
     self.State = InState
     self.RedDotName = string.format("%s/%s", RedDotBaseName, InBtnId)
-    self:BindTheMiniGameType()
-    self:CreateMiniGameVariable()
 end
 
 ------ 小游戏部分 ------
+
+---@deprecated 演出广场会有两种小游戏非一一对应（改为外部传入）
 function GoldSauserEntranceItemVM:BindTheMiniGameType()
     local ClientType = self.BtnID
     if not ClientType then
@@ -82,6 +83,8 @@ function GoldSauserEntranceItemVM:BindTheMiniGameType()
         self.MiniGameType = CSMiniGameType.MiniGameTypeAirForceOne
     elseif ClientType == GoldSauserGameClientType.GoldSauserGameTypeGateMagic then
         self.MiniGameType = CSMiniGameType.MiniGameTypeCliffHanger
+    elseif ClientType == GoldSauserGameClientType.GoldSauserGameTypeGateShow then
+        self.MiniGameType = CSMiniGameType.MiniGameTypeBodyGuard
     end
 end
 
@@ -92,8 +95,13 @@ function GoldSauserEntranceItemVM:CreateMiniGameVariable()
     end
 
     if CSMiniGameType.MiniGameTypeCliffHanger == MiniGameType then
-        --self.BombListVMs = UIBindableList.New(GoldSauserMainPanelBombItemVM)
-        self:CreateBirdGameBombListViewModel()
+        -- 如果界面未关闭，不需要重新创建炸弹Item的VM列表
+        local BombListVMs = self.BombListVMs
+        if not BombListVMs or not next(BombListVMs) then
+            self:CreateBirdGameBombListViewModel()
+        else
+            self:ClearBombListViewModel()
+        end
         self.BombRound = 1
         self.RoundCounter = nil
         self.BombCreatedPosList = {} -- 炸弹生成的序号列表
@@ -112,6 +120,11 @@ end
 
 function GoldSauserEntranceItemVM:GetIsGameStart()
     return self.IsGameStart
+end
+
+function GoldSauserEntranceItemVM:SetCurRunMiniGameType(Type)
+    self.MiniGameType = Type
+    self:CreateMiniGameVariable()
 end
 
 function GoldSauserEntranceItemVM:SetCurLevel(Level)
@@ -143,13 +156,21 @@ function GoldSauserEntranceItemVM:ConstructRandomLevelRoundCfgs(Level)
                table.insert(DstIDs, ID)
             end
         end
+    elseif CSMiniGameType.MiniGameTypeBodyGuard == MiniGameType then
+        SrcCfgs = GoldSaucerBodyguardGameCfg:FindAllCfg(string.format("Level = %d", Level))
+        for _, Cfg in ipairs(SrcCfgs) do
+            local ID = Cfg.ID
+            if ID then
+               table.insert(DstIDs, ID)
+            end
+        end
     end
     table.shuffle(DstIDs)
     for Index = 1, RandomNeedRoundNum do
         local ID = DstIDs[Index]
         if ID then
             table.insert(RltList, ID)
-        else
+    else
             break
         end
     end
@@ -159,9 +180,11 @@ end
 
 function GoldSauserEntranceItemVM:GetRoundTableCfg(Round)
     local CurLevel = self.CurLevel
-    if not Round or not CurLevel then
+    if not CurLevel then
         return
     end
+
+    local TargetRound = (Round and Round > 0) and Round or 1
     local MiniGameType = self.MiniGameType
     if not MiniGameType or MiniGameType == CSMiniGameType.MiniGameTypeNone then
         return
@@ -169,16 +192,18 @@ function GoldSauserEntranceItemVM:GetRoundTableCfg(Round)
 
     if CurLevel < RandomStartLevel then
         if MiniGameType == CSMiniGameType.MiniGameTypeAirForceOne then
-            return GoldSaucerAirplaneGameCfg:FindCfg(string.format("Level = %d AND Round = %d", CurLevel, Round))
+            return GoldSaucerAirplaneGameCfg:FindCfg(string.format("Level = %d AND Round = %d", CurLevel, TargetRound))
         elseif CSMiniGameType.MiniGameTypeCliffHanger == MiniGameType then
-            return GoldSaucerBirdGameCfg:FindCfg(string.format("Level = %d AND Round = %d", CurLevel, Round))
+            return GoldSaucerBirdGameCfg:FindCfg(string.format("Level = %d AND Round = %d", CurLevel, TargetRound))
+        elseif CSMiniGameType.MiniGameTypeBodyGuard == MiniGameType then
+            return GoldSaucerBodyguardGameCfg:FindCfg(string.format("Level = %d ", CurLevel)) -- 目前没有Round概念
         end
     else
         local RandomRoundIDList = self.RandomRoundIDList
         if not RandomRoundIDList or not next(RandomRoundIDList) then
             return
         end
-        local CfgKey = RandomRoundIDList[Round]
+        local CfgKey = RandomRoundIDList[TargetRound]
         if not CfgKey then
             return
         end
@@ -186,6 +211,8 @@ function GoldSauserEntranceItemVM:GetRoundTableCfg(Round)
             return GoldSaucerAirplaneGameCfg:FindCfgByKey(CfgKey)
         elseif CSMiniGameType.MiniGameTypeCliffHanger == MiniGameType then
             return GoldSaucerBirdGameCfg:FindCfgByKey(CfgKey)
+        elseif MiniGameType == CSMiniGameType.MiniGameTypeBodyGuard then
+            return GoldSaucerBodyguardGameCfg:FindCfgByKey(CfgKey)
         end
     end
 end
@@ -219,20 +246,6 @@ function GoldSauserEntranceItemVM:CreateBirdGameBombListViewModel()
         end
         self.BombListVMs = BombListVMs
     end
-end
-
---- 创建炸弹VM
-function GoldSauserEntranceItemVM:DestoryBirdGameBombListViewModel()
-    if self.MiniGameType ~= CSMiniGameType.MiniGameTypeCliffHanger then
-        return
-    end
-
-    local BombListVMs = self.BombListVMs
-    if not BombListVMs then
-        return
-    end
-
-    self.BombListVMs = nil
 end
 
 --- 清除炸弹状态
@@ -549,6 +562,10 @@ function GoldSauserEntranceItemVM:GetBtnID()
     return self.BtnID
 end
 
+function GoldSauserEntranceItemVM:GetIsEntranceLocked()
+    return self.IsEntranceLocked
+end
+
 function GoldSauserEntranceItemVM:GetGameType()
     return self.GameType
 end
@@ -562,7 +579,7 @@ function GoldSauserEntranceItemVM:GetIsHighlight()
 end
 
 function GoldSauserEntranceItemVM:SetEventAwardRedDotVisible(bVisible)
-    self.EventAwardRedDotVisible = bVisible
+    self.EventAwardRedDotVisible = bVisible and (not self.IsEntranceLocked)
 end
 
 function GoldSauserEntranceItemVM:SetIsEventAward(IsEventAward)

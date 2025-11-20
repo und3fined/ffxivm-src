@@ -81,6 +81,9 @@ function NewBagSelectQuantityWinView:OnShow()
 			UIUtil.SetIsVisible(self.AmountSlider, true)
 			UIUtil.SetIsVisible(self.BatchUseQuantity, true)
 			UIUtil.SetIsVisible(self.EditQuantity, false)
+			UIUtil.SetIsVisible(self.AmountSlider.TextQuantity, false)
+			UIUtil.SetIsVisible(self.AmountSlider.BtnAdd, true, true)
+			UIUtil.SetIsVisible(self.AmountSlider.BtnSub, true, true)
 
 			self.AmountSlider:SetSliderValueMaxMin(self.MaxValue, self.MinValue)
 			self.AmountSlider:SetSliderValueMaxTips(LSTR(990098)) -- 已达到最大数量， 不能再增加
@@ -120,8 +123,8 @@ function NewBagSelectQuantityWinView:OnShow()
 			self.EditQuantity:SetInputLowerLimit(self.MinValue)
 			self.EditQuantity:SetInputUpperLimit(self.MaxValue)
 
-			self.EditQuantity:SetCurValue(self.MinValue)
-			self.Quantity = self.MinValue
+			self.EditQuantity:SetCurValue(self.MaxValue)
+			self.Quantity = self.MaxValue
 
 			self.EditQuantity:SetModifyValueCallback(function (ConfirmValue)
 				self.Quantity = ConfirmValue
@@ -133,7 +136,7 @@ function NewBagSelectQuantityWinView:OnShow()
 				self:OnValueChangedSlider(v)
 			end)
 
-			self.SliderHorizontal:SetValue(0)
+			self.SliderHorizontal:SetValue(self.MaxValue)
 		end
 	end
 end

@@ -13,8 +13,9 @@ local UIBinderSetSelectedIndex = LuaClass(UIBinder)
 ---Ctor
 ---@param View UIView
 ---@param Widget UIAdapterTableView
-function UIBinderSetSelectedIndex:Ctor(View, Widget, IsAllowNil)
+function UIBinderSetSelectedIndex:Ctor(View, Widget, IsAllowNil, ScrollToSelect)
 	self.IsAllowNil = IsAllowNil
+	self.ScrollToSelect = ScrollToSelect
 end
 
 ---OnValueChanged
@@ -23,6 +24,9 @@ function UIBinderSetSelectedIndex:OnValueChanged(NewValue, OldValue)
 
 	if nil ~= NewIndex or self.IsAllowNil then
 		self.Widget:SetSelectedIndex(NewIndex)
+		if self.ScrollToSelect then
+			self.Widget:ScrollToIndex(NewIndex)
+		end
 	end
 end
 

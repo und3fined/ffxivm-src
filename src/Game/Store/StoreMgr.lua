@@ -23,8 +23,11 @@ local RichTextUtil = require("Utils/RichTextUtil")
 local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local ItemUtil = require("Utils/ItemUtil")
 local UIUtil = require("Utils/UIUtil")
+local StoreUtil = require("Game/Store/StoreUtil")
+local HairCfg = require("TableCfg/HairCfg")
 
 local StoreCfg = require("TableCfg/StoreCfg")
+local StoreRecommendCfg = require("TableCfg/StoreRecommendCfg")
 -- local StoreGiftstyleCfg = require("TableCfg/StoreGiftstyleCfg")
 local StoreMallCfg = require("TableCfg/StoreMallCfg")
 local ScoreCfg = require("TableCfg/ScoreCfg")
@@ -38,29 +41,26 @@ local GlobalCfg = require("TableCfg/GlobalCfg")
 local StoreCouponCfg = require("TableCfg/StoreCouponCfg")
 local ClosetSuitCfg = require("TableCfg/ClosetSuitCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
-local HairCfg = require("TableCfg/HairCfg")
 local MysteryboxCfg = require("TableCfg/MysteryboxCfg")
-local CommercializationRandConsumeCfg = require("TableCfg/CommercializationRandConsumeCfg")
 local CommercializationRandCfg = require("TableCfg/CommercializationRandCfg")
 local UIViewID = require("Define/UIViewID")
 local StoreDefine = require("Game/Store/StoreDefine")
 local ObjectGCType = require("Define/ObjectGCType")
 local SaveKey = require("Define/SaveKey")
-local ItemVM = require("Game/Item/ItemVM")
-local UIBindableList = require("UI/UIBindableList")
 local StorePriceVM = require("Game/Store/VM/StorePriceVM")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 
+local FLOG_ERROR = _G.FLOG_ERROR
 local FLOG_INFO = _G.FLOG_INFO
 local FLOG_WARNING = _G.FLOG_WARNING
 local LSTR = _G.LSTR
 
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.CsMallAndStoreCmd
-local MysterBoxSubCmd = ProtoCS.Game.BlindBox.CS_BLINDBOX_CMD
 local RoleGender = ProtoCommon.role_gender
 local ItemCondType = ProtoRes.CondType
 local Store_CouponType = ProtoRes.Store_CouponType
+
 local BuyIconPath = {
 	[1] = "Texture2D'/Game/UI/Texture/Store/UI_Store_Goods_42.UI_Store_Goods_42'",
 	[2] = "Texture2D'/Game/UI/Texture/Store/UI_Store_Goods_41.UI_Store_Goods_41'",
@@ -88,15 +88,9 @@ function StoreMgr:OnInit()
 	self.ProductCategory = nil
 	self.GiftModeProductCategory = nil
 	self.MeshKeyWordList = nil
-	self.MysteryBoxDownTimerList = {}
-	self.MysteryBoxUpTimerList = {}
-	self.RedDotPathList = {}
 	self.LimitCounterMap = {} -- 限购计数器到商品的映射
-	--- CommRewardPanel内部逻辑不适配发型Icon,所以这里初始化ItemVMList传进去
-	self.MysterBoxRewardList = UIBindableList.New(ItemVM)
 	self.CommRewardPannelResPath = "WidgetBlueprint'/Game/UI/BP/Common/Reward/CommRewardPanel_UIBP.CommRewardPanel_UIBP_C'"
 	self.CommRewardPannel = nil
-	self.MysterBoxBoughtCount = nil
 end
 
 function StoreMgr:OnBegin()
@@ -107,8 +101,6 @@ function StoreMgr:OnEnd()
 	self.ProductCategory = nil
 	self.GiftModeProductCategory = nil
 	self.MeshKeyWordList = nil
-	self.MysterBoxRewardList = nil
-	self.MysterBoxBoughtCount = nil
 end
 
 function StoreMgr:OnShutdown()
@@ -116,26 +108,17 @@ function StoreMgr:OnShutdown()
 	self.ProductCategory = nil
 	self.GiftModeProductCategory = nil
 	self.MeshKeyWordList = nil
-	self.MysterBoxRewardList = nil
-	self.MysterBoxBoughtCount = nil
 end
 
 function StoreMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_MALL_AND_STORE, SUB_MSG_ID.CS_MALL_AND_STORE_CMD_MALL_PURCHASE, self.OnNetBuyGood)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_MALL_AND_STORE, SUB_MSG_ID.CS_MALL_AND_STORE_CMD_MALL_QUERY, self.OnNetQueryInfo)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_MALL_AND_STORE, SUB_MSG_ID.CS_MALL_AND_STORE_CMD_MALL_GIFT, self.OnNetNetGift)
-
-	--- 奇遇盲盒
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_BLINDBOX, MysterBoxSubCmd.GETLIST, self.OnNetMysterBoxGetList)
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_BLINDBOX, MysterBoxSubCmd.BUY, self.OnNetBuyMysterBox)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_MALL_AND_STORE, SUB_MSG_ID.CS_MALL_AND_STORE_CMD_BATCH_PRUCHASE_EX, self.OnNetMsgBatchPruchase)
 end
 
 function StoreMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventRoleLoginRes)
-	self:RegisterGameEvent(EventID.MajorCreate, self.OnGameEventMajorCreate)
-	self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnModuleOpenNotify)
-	self:RegisterGameEvent(EventID.CounterUpdate, self.OnCounterUpdate)
-	self:RegisterGameEvent(EventID.BagUpdate, self.OnBagUpdate)
 end
 --endregion
 
@@ -143,7 +126,7 @@ end
 function StoreMgr:InitData()
 	local ProductCfg = StoreCfg:FindAllCfg()
 	local TempCouponCfg = StoreCouponCfg:FindAllCfg()
-	self.TempCouponCfg = TempCouponCfg
+	self.CouponCfg = TempCouponCfg
 	self.ProductDataList = {}
 	self.MeshKeyWordList = {}
 
@@ -191,11 +174,6 @@ function StoreMgr:InitData()
 	-- for i = 1, #UnlockedList do
 	-- 	table.insert(self.DefaultUnlockedStyleList, UnlockedList[i].StyleID, UnlockedList[i].StyleID)
 	-- end
-	local TempServerRedDotData = _G.ClientSetupMgr:GetSetupValue(MajorUtil.GetMajorRoleID(), ClientSetupID.StoreMasterBoxReddot)
-	self.MasteryBoxServerUpValue = {}
-	if TempServerRedDotData ~= nil then
-		self.MasteryBoxServerUpValue = FuncStringToTable(TempServerRedDotData)
-	end
 	self:InitProductDataByReq()
 	-- self:InitMsteryBoxData()
 end
@@ -204,7 +182,7 @@ function StoreMgr:GetScoreCfg(ID)
 	return ScoreCfg:FindCfgByKey(ID)
 end
 
-function StoreMgr:GetItemCfg(ID, BtnViewVisible)
+function StoreMgr:GetItemCfg(ID)
 	local TempItemCfg = ItemCfg:FindCfgByKey(ID)
 	if TempItemCfg == nil then
 		return
@@ -217,19 +195,30 @@ function StoreMgr:GetItemCfg(ID, BtnViewVisible)
 		ItemID = TempItemCfg.ItemID,
 		ItemType = TempItemCfg.ItemType,
 		EquipmentID = TempItemCfg.EquipmentID,
-		BtnViewVisible = BtnViewVisible,
 	}
 	return ItemData
 end
 
-function StoreMgr:GetHairCfg(ID, BtnViewVisible)
+function StoreMgr:GetHairIconByHairID(HairID)
+	local RaceID = MajorUtil.GetMajorRaceID()
+	local RoleID = MajorUtil.GetMajorRoleID()
+	local RoleVM, IsValid = _G.RoleInfoMgr:FindRoleVM(RoleID, true)
+	local TempHairCfg = HairCfg:FindAllCfg(string.format("RaceID=%d AND Tribe=%d AND Gender=%d AND HaircutType=%d", RaceID, RoleVM.Tribe, RoleVM.Gender, HairID))
+	if TempHairCfg == nil or TempHairCfg[1] == nil then
+		FLOG_ERROR("StoreEquipPartVM  ItemType is hair, But TempHairCfg is nil")
+		return ""
+	end
+	return TempHairCfg[1].IconPath
+end
+
+function StoreMgr:GetHairCfg(ID)
 	local TempHairCfg = HairUnlockCfg:FindCfgByID(ID)
 	if TempHairCfg == nil then
 		-- FLOG_ERROR("StoreMgr  GetHairCfg  ID is nil")
 		return
 	end
 	
-	return self:GetItemCfg(TempHairCfg.UnlockItemID, BtnViewVisible)
+	return self:GetItemCfg(TempHairCfg.UnlockItemID)
 end
 
 function StoreMgr:GetMallCfg(ID)
@@ -262,7 +251,11 @@ function StoreMgr:GetProductDataByCategory(Category, StoreMode)
 	local ProductResult = {}
 	
 	if Category.Type == ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
-		return self.MysteryboxData
+		if StoreMode ~= StoreDefine.StoreMode.Gift then
+			return _G.StoreMysteryBoxMgr:GetMysteryBoxData()
+		else
+			return nil
+		end
 	end
 	local bBuyMode = StoreMode == nil or StoreMode == StoreDefine.StoreMode.Buy or
 		Category.Type == ProtoRes.StoreMall.STORE_MALL_RECOMMEND
@@ -300,6 +293,9 @@ end
 
 function StoreMgr:GetProductDataByLabelSub(DataList, LabelSub)
 	local TempDataList = {}
+	if nil == DataList then
+		return TempDataList
+	end
 	for _, Product in ipairs(DataList) do
 		if Product.Cfg.LabelSub == LabelSub then
 			table.insert(TempDataList, Product)
@@ -310,7 +306,7 @@ end
 
 function StoreMgr:CheckGoodsIsValid(DataList)
 	if DataList == nil then
-		return
+		return {}
 	end
 	local TempDataList = {}
 	for i = 1, #DataList do
@@ -482,6 +478,16 @@ function StoreMgr:IsCanShow(GoodsId)
 	return true
 end
 
+-- 是否可赠送
+function StoreMgr:CanGift(GoodsID)
+	local bCanGift = false
+	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
+	if nil ~= GoodsCfgData then
+		bCanGift = GoodsCfgData.BuyForOther == 1 and GoodsCfgData.GoodsCounterFirst == 0
+	end
+	return bCanGift
+end
+
 function StoreMgr:IsCanShowMysteryBox(MysteryBoxID)
 	local MysterBoxCfgData = MysteryboxCfg:FindCfgByKey(MysteryBoxID)
 	if nil == MysterBoxCfgData then
@@ -492,16 +498,6 @@ function StoreMgr:IsCanShowMysteryBox(MysteryBoxID)
 	local TimeData = {OnTime = OnTime, OffTime = OffTime}
 	return self:CheckWorldID(MysterBoxCfgData.ZoneBlackList) and self:CheckOnTimeLimit(TimeData)
 		and _G.UE.UVersionMgr.IsBelowOrEqualGameVersion(MysterBoxCfgData.OnVersion)
-end
-
--- 是否可赠送
-function StoreMgr:CanGift(GoodsID)
-	local bCanGift = false
-	local GoodsCfgData = StoreCfg:FindCfgByKey(GoodsID)
-	if nil ~= GoodsCfgData then
-		bCanGift = GoodsCfgData.BuyForOther == 1 and GoodsCfgData.GoodsCounterFirst == 0
-	end
-	return bCanGift
 end
 
 --[[
@@ -626,6 +622,20 @@ function StoreMgr:CheckMallTypeByIndex(Index, MallType)
 	return Category.Type == MallType
 end
 
+function StoreMgr:GetCategoryData(Index)
+	local TempProductCategory = self:GetProductCategoryList()
+	if TempProductCategory == nil then
+		return false
+	end
+	local Category = nil
+	if _G.StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
+		Category =  TempProductCategory[Index]
+	else
+		Category =  self.GiftModeProductCategory[Index]
+	end
+	return Category
+end
+
 function StoreMgr:GetIsShowEquipList(Good)
 	local Items = Good.Items
 	local Result = 0
@@ -683,36 +693,6 @@ end
 
 --region Server Message
 
---- 盲盒购买记录
-function StoreMgr:SendGetMysterBoxList(ID)
-	if not ID then return end
-	if table.is_nil_empty(self.MysterBoxBoughtCount) or not self.MysterBoxBoughtCount[ID] then
-		local MsgID = CS_CMD.CS_CMD_BLINDBOX
-		local SubMsgID = MysterBoxSubCmd.GETLIST
-		local MsgBody = {}
-		MsgBody.Cmd = SubMsgID
-		MsgBody.GetListReq = {ID = ID}
-		GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-	end
-end
-
----@type 购买请求
----@param ID number 商品ID
----@param Count number 购买数量
-function StoreMgr:SendMsgBuyMysterBox(ID)
-	local MsgID = CS_CMD.CS_CMD_BLINDBOX
-	local SubMsgID = MysterBoxSubCmd.BUY
-	local MsgBody = {}
-
-	MsgBody.Cmd = SubMsgID
-	MsgBody.BuyReq = {
-		BlindBoxID = ID,
-	}
-
-	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-	UIViewMgr:HideView(UIViewID.StoreNewBuyWinPanel)
-end
-
 ---@type 购买请求
 ---@param ID number 商品ID
 ---@param Count number 购买数量
@@ -754,7 +734,7 @@ function StoreMgr:OnNetBuyGood(MsgBody)
 	if TempCfg == nil then
 		return
 	end
-	local TempCfgItems = TempCfg.Items
+	local TempCfgItems = StoreUtil.GetSortedItems(TempCfg.Items)
 	if TempCfgItems ~= nil then
 		for i = 1, #TempCfgItems do
 			local TempItemID = TempCfgItems[i].ID 
@@ -770,9 +750,7 @@ function StoreMgr:OnNetBuyGood(MsgBody)
 		Params.ItemList = TempTable
 		UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
 	end
-	--- 刷新优惠券数据
-	self:UpdateCouponData()
-	StoreMainVM:UpdateCouponData()
+
 	-- GoodFilterDataList好像没有更新数据先注释掉
 	--StoreMainVM:UpdateGoodList(StoreMainVM.GoodFilterDataList)
 	-- 性能优化：从更新全量列表改为更新单个商品
@@ -784,128 +762,54 @@ function StoreMgr:OnNetBuyGood(MsgBody)
 	self:RecordActivityBuy(Msg)
 end
 
-function StoreMgr:OnNetMysterBoxGetList(MsgBody)
-	if MsgBody == nil then
-		return
-	end
-	
-	local Msg = MsgBody.GetListRsp
-	if Msg == nil then
-		return
-	end
-	local BlindBoxID = Msg.BlindBoxID
-	local DrawCount = Msg.DrawCount
-	self:SetMysterBoxBoughtCount(BlindBoxID, DrawCount)
+--- 批量购买请求
+---@param BatchList table  @批量购买数组 类型为{{GoodID = x, Num = x},{GoodID = x1, Num = x1}}
+function StoreMgr:SendMsgMallInfoBatchPruchase(BatchList)
+	local MsgID = CS_CMD.CS_CMD_MALL_AND_STORE
+	local SubMsgID = SUB_MSG_ID.CS_MALL_AND_STORE_CMD_BATCH_PRUCHASE_EX
+
+	local MsgBody = {
+		Cmd = SubMsgID,
+		BatchPruchase = {Infos = BatchList}
+	}
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
-function StoreMgr:SetMysterBoxBoughtCount(BlindBoxID, DrawCount)
-	if self.MysterBoxBoughtCount == nil then
-		self.MysterBoxBoughtCount = {}
+function StoreMgr:OnNetMsgBatchPruchase(MsgBody)
+	if nil == MsgBody then
+		return
 	end
-	if self.MysterBoxBoughtCount[BlindBoxID] == nil then
-		self.MysterBoxBoughtCount[BlindBoxID] = 0
-	end
-	self.MysterBoxBoughtCount[BlindBoxID] = DrawCount
-	EventMgr:SendEvent(EventID.StoreUpdateBlindText, {BlindBoxID = BlindBoxID, DrawCount = DrawCount})
+	EventMgr:SendEvent(_G.EventID.StoreBatchBuyParams, MsgBody)
+	-- local MallInfo = MsgBody.BatchPruchase
+	-- local PurchasedIDList = MallInfo.Infos
+	--self:ShowCommonRewardPanel(PurchasedIDList)
 end
 
-function StoreMgr:GetMysterBoxBoughtCountByID(BlindBoxID)
-	if self.MysterBoxBoughtCount == nil then
-		self.MysterBoxBoughtCount = {}
-	end
-	return self.MysterBoxBoughtCount[BlindBoxID] or 0
-end
-
-function StoreMgr:OnNetBuyMysterBox(MsgBody)
-	if MsgBody == nil then
-		return
-	end
-
-	local Msg = MsgBody.BuyRsp
-	if Msg == nil then
-		return
-	end
-	local BlindBoxID = Msg.BlindBoxID
-	local DrawCount = Msg.DrawCount
-	local TempMysteryboxData = MysteryboxCfg:FindCfgByKey(BlindBoxID)
-	if TempMysteryboxData == nil then
-		return
-	end
-	local TempLootCfg = CommercializationRandCfg:FindAllCfg(string.format("DropID=%d", TempMysteryboxData.PrizePoolID))
-	if TempLootCfg == nil then
-		return
-	end
-
-	local ItemIDList = Msg.BuyItem
-	local TempTable = {}
-	for i = 1, #ItemIDList do
-		local TempItemID = ItemIDList[i].ItemID 
-		local TempLootCfg = CommercializationRandCfg:FindAllCfg(string.format("DropID=%d", TempItemID))
-		if TempLootCfg ~= nil then
-			local ItemNum = ItemIDList[i].ItemNum
-			local IsMustBeGet = TempLootCfg.ProbMode == ProtoRes.PROBABILITY_TYPE.PROBABILITY_TYPE_GUARANTEED
-			if TempItemID ~= 0 and not ItemUtil.ItemIsScore(TempItemID)  then
-				table.insert(TempTable,
-				{
-					ResID = TempItemID,
-					Num = ItemNum,
-					IsMustBeGet = IsMustBeGet
-				})
-			end
+--预留接口，只弹恭喜获得没有其他处理
+function StoreMgr:ShowCommonRewardPanel(PurchasedIDList)
+	local ItemList = {}
+	for i = 1, #PurchasedIDList do
+		local MallInfo = PurchasedIDList[i]
+		local GoodID = MallInfo.GoodID
+		local GoodsInfo
+		GoodsInfo = StoreCfg:FindCfgByKey(GoodID)
+		if GoodsInfo == nil then
+			return
+		end
+		local ItemID = GoodsInfo.Items[1].ID
+		if GoodID and GoodID ~= 0 then
+			local GetNum = MallInfo.Num
+			table.insert(ItemList,
+			{
+				ResID = ItemID,
+				Num = GetNum,
+			})
 		end
 	end
-	table.sort(TempTable, function(a,b) return a.IsMustBeGet and (not b.IsMustBeGet) end)
-	local Params = {}
-	local RaceID = MajorUtil.GetMajorRaceID()
-	local RoleID = MajorUtil.GetMajorRoleID()
-	local RoleVM, IsValid = _G.RoleInfoMgr:FindRoleVM(RoleID, true)
-	self.MysterBoxRewardList:UpdateByValues(TempTable)
-	for _, value in ipairs(self.MysterBoxRewardList.Items) do
-		local TempCfg = HairUnlockCfg:FindCfgByItemID(value.ResID)
-			if TempCfg ~= nil then
-			local TempHairCfg = HairCfg:FindAllCfg(string.format("RaceID=%d AND Tribe=%d AND Gender=%d AND HaircutType=%d", RaceID, RoleVM.Tribe, RoleVM.Gender, TempCfg.HairID))
-			if TempHairCfg ~= nil and TempHairCfg[1] ~= nil then
-				value.Icon = TempHairCfg[1].IconPath
-			end
-		end
+
+	if not table.is_nil_empty(ItemList) then
+		UIViewMgr:ShowView(UIViewID.CommonRewardPanel, {ItemList = ItemList, Title = LSTR(1200077)})
 	end
-	Params.ItemVMList = self.MysterBoxRewardList
-	Params.BtnLeftText = LSTR(950033)	--- 确认
-    Params.BtnRightText = LSTR(950087) --- 再买一个
-	Params.IsByMasterBoxReset = true	--- 从盲盒打开的恭喜获得，关闭时需要重置下背景点击事件
-    Params.BtnLeftCB = function() UIViewMgr:HideView(UIViewID.CommonRewardPanel) end
-	Params.BtnRightCB = function() UIViewMgr:HideView(UIViewID.CommonRewardPanel) _G.StoreBuyWinVM:UpdateByMysteryBoxData(_G.StoreMainVM.SkipTempData) UIViewMgr:ShowView(UIViewID.StoreNewBuyWinPanel) end
- 	local TempCommRewardView = UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
-	TempCommRewardView.CommonPopUpBG:SetHideOnClick(false)
-	UIUtil.SetIsVisible(TempCommRewardView.TextHint, false)
-	UIUtil.SetIsVisible(TempCommRewardView.TextCloseTips, false)
-	local GoodsCfg = self:GetMysterBoxDataByID(BlindBoxID)
-	self:RegisterTimer(function()
-		--- 0.9秒后  找到发型Item播放翻转动画
-		for index, value in ipairs(self.MysterBoxRewardList.Items) do
-			if value.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_COIFFURE then
-				EventMgr:SendEvent(EventID.StoreMysteryAnimEvent, index)
-				break
-			end
-		end
-	end, 0.9, 0, 1)
-	self:RegisterTimer(function(_, TempGoodsCfg)
-		local CanContinuePurchase = self:CheckGoodsIsOwned(TempGoodsCfg)
-		UIUtil.SetIsVisible(TempCommRewardView.TextHint, CanContinuePurchase)
-		UIUtil.SetIsVisible(TempCommRewardView.TextCloseTips, CanContinuePurchase)
-		UIUtil.SetIsVisible(TempCommRewardView.PanelBtn, not CanContinuePurchase)
-		UIUtil.SetIsVisible(TempCommRewardView.BtnLeft, not CanContinuePurchase)
-		UIUtil.SetIsVisible(TempCommRewardView.BtnRight, not CanContinuePurchase)
-		UIUtil.SetIsVisible(TempCommRewardView.BtnRight, not CanContinuePurchase)
-		TempCommRewardView.CommonPopUpBG:SetHideOnClick(CanContinuePurchase)
-		TempCommRewardView = nil
-	end, 1.4, 0, 1, GoodsCfg)
-	--- 刷新界面
-	UIViewMgr:HideView(UIViewID.StoreNewBuyWinPanel)
-	self:UpdateCouponData()
-	_G.StoreMainVM:UpdateCouponData()
-	_G.StoreMainVM:UpdateGoodList(_G.StoreMainVM.GoodFilterDataList)
-	self:SetMysterBoxBoughtCount(BlindBoxID, DrawCount)
 end
 
 function StoreMgr:SendMsgQueryInfo(MallID)
@@ -1142,6 +1046,20 @@ function StoreMgr:CheckProf(GoodsCfgData)
 	end
 end
 
+---检查当前商品性别限制
+function StoreMgr:CheckProductClassLimit(GoodsId)
+	local GoodData = StoreCfg:FindCfgByKey(GoodsId)
+	if not GoodData or not next(GoodData) then
+		return false
+	end
+
+	if GoodData.GenderLimit ~= 0 then
+		return true
+	else
+		return false
+	end
+end
+
 --- 判断性别与种族
 ---@param LimitType CondFailReason  限制类型 性别/种族
 ---@param GoodsCfgData table @StoreCfg数据
@@ -1272,34 +1190,38 @@ function StoreMgr.CheckItemOwned(ItemID)
 	return bIsInBag or bIsActivated
 end
 
---- 检查奇遇盲盒是否已拥有
-function StoreMgr:CheckGoodsIsOwned(GoodsCfg)
-
-	--- 遍历Item 发型检查HaircutMgr.CheckHairUnlock(HairLockID)/其他物品暂定检查背包仓库
-	--- 奇遇盲盒已拥有检查
-	local Items = GoodsCfg.Items
-	if Items ~= nil then
-		for _, value in ipairs(Items) do
-			local ItemResID = value.ID
-			if ItemResID ~= 0 then
-				local IsHadItem = true
-				if GoodsCfg.GoodType == ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_HAIRSTYLE then
-					IsHadItem = self.CheckItemOwned(ItemResID) or _G.HaircutMgr.CheckHairUnlock(ItemResID)
+--- 检查商品/奇遇盲盒是否已拥有
+function StoreMgr:CheckGoodsIsOwned(GoodsCfgData)
+	local Items = GoodsCfgData.Items
+	local RecommendGoodsCfgData = self.GetRecommendGoodsCfgData(GoodsCfgData)
+	if nil ~= RecommendGoodsCfgData then
+		if RecommendGoodsCfgData.ProductType ~= ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_PURCHASE then
+			-- 非直购类推荐商品不检查已拥有
+			return false
+		end
+		local InnerGoodsCfgData = StoreCfg:FindCfgByKey(RecommendGoodsCfgData.GoodsIDs[1])
+		if nil ~= InnerGoodsCfgData then
+			Items = InnerGoodsCfgData.Items
+		end
+	end
+	local bOwned = true
+	if not table.is_nil_empty(Items) then
+		for _, Item in ipairs(Items) do
+			local ItemResID = Item.ID
+			if ItemResID ~= 0 and not Item.IsBundled then -- 捆绑销售商品不检查已拥有
+				if GoodsCfgData.GoodType == ProtoRes.SpecialMysteryBoxTypes.SPECIAL_MYSTERYBOXTYPE_HAIRSTYLE then
+					bOwned = self.CheckItemOwned(ItemResID) or _G.HaircutMgr.CheckHairUnlock(ItemResID)
 				else
-					IsHadItem = self.CheckItemOwned(ItemResID)
+					bOwned = self.CheckItemOwned(ItemResID)
 				end
 				--- 有一个Item未拥有，即视为当前商品未拥有
-				if not IsHadItem then
-					return false
+				if not bOwned then
+					break
 				end
-
 			end
 		end
-
-		--- 这里代表检查了所有Item，但无一个未拥有
-		return true
 	end
-	return true
+	return bOwned
 end
 
 --- 商品是否可购买
@@ -1333,25 +1255,11 @@ function StoreMgr:IsCanBuy(GoodsId, BoughtCount)
 	end
 	if not bIsProp or GoodsCfgData.CheckAlreadyHave == 1 then
 		-- 已拥有检查
-		local Items = GoodsCfgData.Items
-		if GoodsCfgData.LabelMain == ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND and GoodsCfgData.JumpID == 0 then
-			-- 推荐页直购商品仅配置一个, 待拆推荐表
-			if nil ~= Items and nil ~= Items[1] then
-				local InnerGoodsCfgData = StoreCfg:FindCfgByKey(Items[1].ID)
-				Items = InnerGoodsCfgData and InnerGoodsCfgData.Items or Items
-			end
-		end
-		if nil ~= Items then
-			for _, Item in ipairs(Items) do
-				local ItemResID = Item.ID
-				if ItemResID ~= 0 then
-					local bItemOwned = self.CheckItemOwned(ItemResID)
-					--- 有一个Item未拥有，即视为当前套装可购买
-					if not bItemOwned then
-						return true
-					end
-				end
-			end
+		local bOwned = self:CheckGoodsIsOwned(GoodsCfgData)
+		if not bOwned then
+			-- 有一个Item未拥有，即视为当前套装可购买
+			return true
+		else
 			local CanNotReason = LSTR(StoreDefine.SecondScreenType.Owned)
 			return false, CanNotReason
 		end
@@ -1502,11 +1410,17 @@ function StoreMgr:JumpToGoods(ItemID, GoodsID, bIsOpenBuyWinPanel, bIsMysteryBox
 		GoodsMallType = self.LabelMainToMallType(GoodsCfgData.LabelMain)
 	end
 
+	_G.StoreMainVM.JumpToCategoryIndex = nil
 	for i = 1, ProductCategoryLength do
 		if TempProductCategory[i].Type == GoodsMallType then
 			_G.StoreMainVM.JumpToCategoryIndex = i
 		end
 	end
+	if nil == _G.StoreMainVM.JumpToCategoryIndex then
+		FLOG_ERROR("[StoreMgr:JumpToGoods] Cannot find category of mall type " .. tostring(GoodsMallType))
+		return
+	end
+	_G.StoreMainVM.bIsJumpMysteryBox = bIsMysteryBox
 	_G.StoreMainVM.JumpToItemID = ItemID
 	_G.StoreMainVM.JumpToGoodsID = GoodsID
 	local StoreMainView = UIViewMgr:FindVisibleView(UIViewID.StoreNewMainPanel)
@@ -1525,7 +1439,7 @@ function StoreMgr:FindGoodsIDByItemID(ItemID)
 	for _, GoodsCfgRow in ipairs(GoodsCfgRows) do
 		local bHasItem = false
 		for Index = 1, #GoodsCfgRow.Items do
-			if ItemID == GoodsCfgRow.Items[Index].ID then
+			if not GoodsCfgRow.Items[Index].IsBundled and ItemID == GoodsCfgRow.Items[Index].ID then -- 捆绑销售商品不检查跳转
 				bHasItem = true
 				break
 			end
@@ -1550,7 +1464,7 @@ function StoreMgr:FindMysteryBoxIDByItemID(ItemID)
 		local PrizePoolID = CommercRandCfgRow.PrizePoolID
 		local MysteryBoxCfgRows = MysteryboxCfg:FindAllCfg(string.format("PrizePoolID = %d", PrizePoolID))
 		for _, MysteryBoxCfgRow in ipairs(MysteryBoxCfgRows) do
-			if StoreMgr:IsCanShowMysteryBox(MysteryBoxCfgRow.ID) then
+			if self:IsCanShowMysteryBox(MysteryBoxCfgRow.ID) then
 				MysterboxID = MysteryBoxCfgRow.ID
 				break
 			end
@@ -1564,21 +1478,27 @@ function StoreMgr:FindMysteryBoxIDByItemID(ItemID)
 end
 
 --- 跳转至商店类型 时装、坐骑等
----@param CategoryID number ProtoRes.Store_Label_Type
-function StoreMgr:JumpToCategoryPage(CategoryID)
+---@param MallID number @商城商店表ID
+function StoreMgr:JumpToCategoryPage(MallID)
 	if not _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_MALL, true) then
 		return
 	end
+	FLOG_INFO(string.format("[StoreMgr:JumpToCategoryPage] Jump to category by ID %d.", MallID or 0))
 	local TempProductCategory = self:GetProductCategoryList()
 	local ProductCategoryLength = self:GetProductCategoryLength()
+	_G.StoreMainVM.JumpToCategoryIndex = nil
 	for i = 1, ProductCategoryLength do
-		if TempProductCategory[i].DisplayID == CategoryID then
+		if nil ~= TempProductCategory[i] and TempProductCategory[i].ID == MallID then
 			_G.StoreMainVM.JumpToCategoryIndex = i
 		end
 	end
+	if nil == _G.StoreMainVM.JumpToCategoryIndex then
+		MsgTipsUtil.ShowTipsByID(138006) -- 分类不存在
+		return
+	end
 	local StoreMainView = UIViewMgr:FindVisibleView(UIViewID.StoreNewMainPanel)
 	if nil ~= StoreMainView then
-		StoreMainView:JumpToGoods()
+		StoreMainView:JumpToCategory(_G.StoreMainVM.JumpToCategoryIndex)
 	else
 		self:ShowMainPanel()
 	end
@@ -1690,91 +1610,9 @@ function StoreMgr:OnGameEventRoleLoginRes()
 		self:SendMsgQueryInfo(1)
 	end
 
-	self.MysterBoxBoughtCount = nil
-end
-
-function StoreMgr:OnGameEventMajorCreate()
-	self:InitMsteryBoxData(true)
-end
-
-function StoreMgr:OnModuleOpenNotify(ModuleID)
-	if ModuleID == ProtoCommon.ModuleID.ModuleIDMall then
-		self:InitMsteryBoxData(true)
-	end
-end
-
-function StoreMgr:OnCounterUpdate(Params)
-	local bIsStoreCounterUpdated = false
-	for Key, _ in pairs(Params.UpdatedCounters) do
-		if nil ~= self.LimitCounterMap[Key] then
-			bIsStoreCounterUpdated = true
-			break
-		end
-	end
-	if bIsStoreCounterUpdated then
-		_G.StoreMainVM:UpdateProductList()
-	end
-end
-
-function StoreMgr:OnBagUpdate(Params)
-	if nil == Params then
-		return
-	end
-	local GoodsID = _G.StoreMainVM:GetCurrentGoodsID()
-	if nil == GoodsID then
-		return
-	end
-	local bHasItem = false
-	for _, Item in ipairs(Params) do
-		if Item.PstItem and Item.PstItem.ResID then
-			bHasItem = StoreMgr.HasItem(GoodsID, Item.PstItem.ResID)
-			if bHasItem then
-				break
-			end
-		end
-	end
-
-	if bHasItem then
-		_G.StoreMainVM:UpdateSingleGoods(GoodsID)
-		FLOG_INFO("[StoreMgr:OnBagUpdate] Bag update goods " .. tostring(GoodsID))
-	end
 end
 
 --endregion
-
-function StoreMgr:ChangeModelPositon(PosX, PosY, PosZ, RotZ, Distance)
-	local Params = {}
-	Params.PosX = PosX
-	Params.PosY = PosY
-	Params.PosZ = PosZ
-	Params.RotZ = RotZ
-	Params.Distance = Distance
-	EventMgr:SendEvent(EventID.StoreChangeModelEvent, Params)
-end
-
---- 测试创建NPC
-function StoreMgr:TestCreatNPC(PosX, PosY, PosZ, NPCID)
-	local CreateClientActorParam = _G.UE.FCreateClientActorParams()
-	local NpcLocation = _G.UE.FVector(PosX, PosY, PosZ)
-	local NpcRotation = _G.UE.FRotator(0, 0, 0)
-	CreateClientActorParam.bUIActor = false
-	local CreatedNPCEntityID = _G.UE.UActorManager:Get():CreateClientActorByParams(_G.UE.EActorType.Npc, 
-	0, NPCID, NpcLocation, NpcRotation, CreateClientActorParam)
-end
-
--- 待废弃
-function StoreMgr:CreatNPCAndGetNPCModelEntityID(AttachType)
-	local NpcID = StoreDefine.StoreNPCID[AttachType]
-	local CreateClientActorParam = _G.UE.FCreateClientActorParams()
-	local NpcLocation = _G.UE.FVector(-100000, 0, 100000)
-	local NpcRotation = _G.UE.FRotator(0, 0, 0)
-	CreateClientActorParam.bUIActor = true
-	local CreatedNPCEntityID = _G.UE.UActorManager:Get():CreateClientActorByParams(_G.UE.EActorType.Npc, 
-	0, NpcID, NpcLocation, NpcRotation, CreateClientActorParam)
-	if CreatedNPCEntityID ~= nil then
-		return CreatedNPCEntityID
-	end
-end
 
 ---@param ID int 商品表里的ID
 ---@param IsCalculateDisCount boolean 是否计算折扣  为true时 计算当前价格  折扣生效就是折扣价，为false时直接返回原价
@@ -1790,7 +1628,7 @@ function StoreMgr:GetGoodsPriceByID(ID, IsCalculateDisCount)
 	local CfgPrice = TempGoodCfg.Price
 	if Discount ~= StoreDefine.DiscountMaxValue and Discount ~= StoreDefine.DiscountMinValue and IsCalculateDisCount then
 		--- 折后价
-		Price = TempGoodCfg.DisCountedPrice
+		StoreUtil.GetGoodsDiscountedPrice(TempGoodCfg.ID)
 	else
 		Price = CfgPrice[StoreDefine.PriceDefaultIndex].Count
 	end
@@ -1883,7 +1721,7 @@ function StoreMgr:OnGetStoreGoodsByPriceLimit(LabelMain, MinPrice, MaxPrice)
 	local TempCfg = {}
 	local SearchConditions = ""
 	if LabelMain ~= 0 then
-		SearchConditions = string.format("LabelMain == %d", LabelMainCond)
+		SearchConditions = string.format("LabelMain == %d and Hide == 0", LabelMainCond)
 	end
 	local AllCfg = StoreCfg:FindAllCfg(SearchConditions)
 	if table.is_nil_empty(AllCfg) then
@@ -1970,7 +1808,7 @@ end
 function StoreMgr:UpdateCouponData()
 
 	local CouponList = {}
-	for _, CouponCfgData in ipairs(self.TempCouponCfg) do
+	for _, CouponCfgData in ipairs(self.CouponCfg) do
 		local ItemList = _G.BagMgr:FilterItemByCondition(function (Item) return Item.ResID == CouponCfgData.ID end)
 		for _, Item in ipairs(ItemList) do
 			local CouponData = {Cfg = CouponCfgData, GID = Item.GID, ExpireTime = Item.ExpireTime}
@@ -2090,7 +1928,7 @@ function StoreMgr:OpenExternalPurchaseInterface(GoodsID, Param)
 end
 
 --- 打开商城新购买界面 非道具StoreNewBuyWinPanel/道具StoreBuyPropsWin
-function StoreMgr:OpenExternalPurchaseInterfaceByNewUIBP(GoodsID)
+function StoreMgr:OpenExternalPurchaseInterfaceByNewUIBP(GoodsID, Param)
 	if table.is_nil_empty(self.ProductDataList) then
 		self:InitData()
 	end
@@ -2102,7 +1940,7 @@ function StoreMgr:OpenExternalPurchaseInterfaceByNewUIBP(GoodsID)
 	_G.StoreMainVM:UpdateTabList()
 	if TempCfg.LabelMain == ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_PROP then
 		_G.StoreMainVM:InitMultiBuyView(self.ProductDataList[GoodsID])
-		UIViewMgr:ShowView(UIViewID.StoreBuyPropsWin)
+		UIViewMgr:ShowView(UIViewID.StoreBuyPropsWin, self.ProductDataList[GoodsID])
 	else
 		_G.StoreBuyWinVM:UpdateByGoodsID(GoodsID)
 		local PriceVM = self:GetBuyPriceVM()
@@ -2135,166 +1973,6 @@ function StoreMgr:InitProductDataByReq()
 		EventMgr:SendEvent(EventID.StoreRefreshGoods)
 	end
 end
-
-function StoreMgr:InitMsteryBoxData(IsCheckTimer)
-	self.MysteryboxData = {}
-	local TempMysteryboxData = MysteryboxCfg:FindAllCfg()
-	
-	local IsNeedHideRedDot = true
-	--- 发型盲盒，不走商城表
-	for _, Item in ipairs(TempMysteryboxData) do
-		local TempItem = {}
-		local TempItemCfg = {}
-		for index, value in pairs(Item) do
-			TempItemCfg[index] = value
-		end
-		TempItemCfg.Name = Item.Name
-		TempItemCfg.LabelSub = LSTR(StoreDefine.LSTRTextKey.AllFilterText)	--- 全部
-		local TempLootCfg = CommercializationRandConsumeCfg:FindAllCfg(string.format("PoolID=%d", Item.PrizePoolID))[1]
-		TempItemCfg.Price = {[1] = {ID = TempLootCfg.ConsumeResID, Count = TempLootCfg.ConsumeResNum[1]}}
-		TempItemCfg.DisCountedPrice = TempLootCfg.ConsumeResNumAfterDiscount
-		TempItemCfg.DiscountDurationStart = string.gsub(TempLootCfg.DiscountStartTime, " ", "_")
-		TempItemCfg.DiscountDurationEnd = string.gsub(TempLootCfg.DiscountEndTime, " ", "_")
-		TempItemCfg.Discount = TempLootCfg.DiscountValue
-		TempItemCfg.Desc = Item.Desc
-		TempItemCfg.MysterID = Item.ID
-		TempItemCfg.Note = Item.Note
-		TempItemCfg.BuyNote = Item.BuyNote
-		TempItemCfg.OnVersion = Item.OnVersion
-		-- TempItemCfg.BuyIcon = Item.BuyIcon
-		TempItemCfg.BuyIcon = BuyIconPath[Item.ID]
-		TempItemCfg.Items = {}
-		for i = 1, #Item.ItemID do
-			local TempItemID = Item.ItemID[i]
-			local TempHairCfg = HairUnlockCfg:FindCfgByID(TempItemID)
-			if TempHairCfg ~= nil then
-				table.insert(TempItemCfg.Items, {ID = TempHairCfg.UnlockItemID})
-			end
-		end
-		TempItemCfg.DisplayID = TempItemCfg.Sort
-		TempItemCfg.Icon = TempItemCfg.PictureAddr
-		TempItemCfg.GoodType = Item.Type
-		TempItemCfg.Type = ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX
-		TempItem.Cfg = TempItemCfg
-		local OnTime = string.gsub(TempItemCfg.ListingTime, " ", "_")
-		local OffTime = string.gsub(TempItemCfg.RemovalTime, " ", "_")
-		TempItem.Counter = 0
-		TempItem.RestrictionType = 0
-		TempItem.RestrictionCount = 0
-		-- local OnTime = string.gsub(TempItemCfg.ListingTime, " ", "_")
-		-- local OffTime = string.gsub(TempItemCfg.RemovalTime, " ", "_")
-		-- local OnTime = "2025-04-02_02:20:00"
-		-- local OffTime = "2025-08-20_20:21:00"
-		-- TempItemCfg.DiscountDurationStart = "2025-03-20_16:49:00"
-		-- TempItemCfg.DiscountDurationEnd = "2025-03-20_16:50:00"
-		if IsCheckTimer then
-			self:UnRegisterAllTimer()
-			self:CheckRegsterOnTimeTimer(TempItemCfg.ID, OnTime)
-			self:CheckRegsterOffTimeTimer(TempItemCfg.ID, OffTime)
-			--- 检测折扣开始结束时间，注册事件   到时间刷新物品列表
-			self:CheckRegsterOffTimeTimer(TempItemCfg.ID, TempItemCfg.DiscountDurationStart)
-			self:CheckRegsterOffTimeTimer(TempItemCfg.ID, TempItemCfg.DiscountDurationEnd)
-		end
-		local IsEnable = StoreMgr:IsCanShowMysteryBox(Item.ID)
-		if IsEnable then
-			self.MysteryboxData[Item.ID] = TempItem
-		end
-		if StoreMgr:GetServerRedDotData(Item.ID) == 1 and IsNeedHideRedDot then
-			IsNeedHideRedDot = false
-		end
-	end
-
-	if IsNeedHideRedDot then
-		_G.RedDotMgr:DelRedDotByID(19)
-	end
-end
-
----------------奇遇盲盒-------------
-function StoreMgr:CheckTime(Time)
-	local TempServerTime = TimeUtil:GetServerLogicTime()
-	local TempTime = 0
-	if Time ~= "" then
-		local year, month, day, hour, min, sec = Time:match(TimePattern)
-		local timestamp = os.time({ year = year, month = month, day = day, hour = hour, min = min, sec = sec})
-		TempTime =  timestamp
-	end
-	return TempTime > TempServerTime, TempTime - TempServerTime
-end
-
---- 上架事件
-function StoreMgr:CheckRegsterOnTimeTimer(ID, OnTime)
-	if not _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMall) then
-		return
-	end
-	--- 上架时间有可能在离线过程中，这里把所有没有取消过红点的物品都显示
-	local TimeIsNeedTimer, DelayTime = self:CheckTime(OnTime)
-	if DelayTime < 0 then DelayTime = 0 end
-	if self:GetServerRedDotData(ID) ~= 0 then
-		self.MysteryBoxDownTimerList[ID] = self:RegisterTimer(function()
-			self:InitMsteryBoxData(false)
-			_G.StoreMainVM:UpdateTabList()
-			_G.EventMgr:SendEvent(_G.EventID.StoreUpdateTabListByTimer)
-			self.RedDotPathList[ID] = _G.RedDotMgr:AddRedDotByParentRedDotID(19, ID, true)
-			_G.EventMgr:SendEvent(_G.EventID.StoreMysteryBoxRedDotEvent, ID)
-		end, DelayTime, 0, 1)
-	end
-end
-
---- 下架事件
-function StoreMgr:CheckRegsterOffTimeTimer(ID, OffTime)
-	if not _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMall) then
-		return
-	end
-	local TimeIsNeedTimer, DelayTime = self:CheckTime(OffTime)
-	if TimeIsNeedTimer then
-		self.MysteryBoxUpTimerList[ID] = self:RegisterTimer(function() 
-			-- self:UnRegisterAllTimer()
-			self:InitMsteryBoxData(false)
-			_G.StoreMainVM:UpdateTabList()
-			_G.EventMgr:SendEvent(_G.EventID.StoreUpdateTabListByTimer)
-			_G.EventMgr:SendEvent(_G.EventID.StoreRefreshGoods)
-		end, DelayTime + 1.2, 0, 1)
-	end
-end
-
-function StoreMgr:ChangeRedDotState(Index, IsShow)
-	self.MasteryBoxServerUpValue[Index] = IsShow
-	_G.ClientSetupMgr:SendSetReq(ClientSetupID.StoreMasterBoxReddot, _G.TableTools.table_to_string(self.MasteryBoxServerUpValue))
-end
-
---- 获取保存在服务器的红点数据，返回0就视为点过红点 就不再显示了，其他值都需要显示
-function StoreMgr:GetServerRedDotData(ID)
-	if table.is_nil_empty(self.MasteryBoxServerUpValue) or self.MasteryBoxServerUpValue[ID] == nil then
-		local TempServerRedDotData = _G.ClientSetupMgr:GetSetupValue(MajorUtil.GetMajorRoleID(), ClientSetupID.StoreMasterBoxReddot)
-		self.MasteryBoxServerUpValue = {}
-		if TempServerRedDotData ~= nil then
-			self.MasteryBoxServerUpValue = FuncStringToTable(TempServerRedDotData)
-		end
-	end
-	return self.MasteryBoxServerUpValue[ID] == 0 and 0 or 1
-end
-
-function StoreMgr:GetHairIconByHairID(HairID)
-	local RaceID = MajorUtil.GetMajorRaceID()
-	local RoleID = MajorUtil.GetMajorRoleID()
-	local RoleVM, IsValid = _G.RoleInfoMgr:FindRoleVM(RoleID, true)
-	local TempHairCfg = HairCfg:FindAllCfg(string.format("RaceID=%d AND Tribe=%d AND Gender=%d AND HaircutType=%d", RaceID, RoleVM.Tribe, RoleVM.Gender, HairID))
-	if TempHairCfg == nil or TempHairCfg[1] == nil then
-		FLOG_ERROR("StoreEquipPartVM  ItemType is hair, But TempHairCfg is nil")
-		return ""
-	end
-	return TempHairCfg[1].IconPath
-end
-
-function StoreMgr:GetMysterBoxDataByID(BlindBoxID)
-	for _, value in ipairs(self.MysteryboxData) do
-		if value.Cfg.ID == BlindBoxID then
-			return value.Cfg
-		end
-	end
-end
-
----------------奇遇盲盒-------------
 
 --region 售价
 
@@ -2333,7 +2011,7 @@ function StoreMgr:GetGoodPriceInfo(GoodCfgData, bUseDiscount, bUseCoupon, InCoup
 	local RawPrice = GoodCfgData.Price[StoreDefine.PriceDefaultIndex].Count
 	local PriceWithDiscount = RawPrice
 	if bUseDiscount and GoodCfgData.Discount > 0 and self:IsDuringSaleTime(GoodCfgData) then
-		PriceWithDiscount = GoodCfgData.DisCountedPrice
+		PriceWithDiscount = StoreUtil.GetGoodsDiscountedPrice(GoodCfgData.ID)
 	end
 	local PriceWithCoupon = PriceWithDiscount
 	local bHasCoupon = false
@@ -2407,7 +2085,13 @@ function StoreMgr:GetCounterRestore(GoodsID, CounterIndex)
 	end
 	CounterIndex = CounterIndex or 1
 	local CounterID = CounterIndex == 1 and GoodsCfgData.GoodsCounterFirst or GoodsCfgData.GoodsCounterSecond
-	return CounterMgr:GetCounterRestore(CounterID) or 0
+	local CounterRestore = CounterMgr:GetCounterRestore(CounterID)
+	if CounterRestore and CounterRestore == 0 then
+		--永久计数器的话取总限额
+		return CounterMgr:GetCounterLimit(CounterID)
+	else
+		return CounterRestore or 0
+	end
 end
 
 --endregion
@@ -2436,6 +2120,8 @@ local LabelToMallTypeMap =
 	[ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_PROP] = ProtoRes.StoreMall.STORE_MALL_PROPS,
 	[ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_PET] = ProtoRes.StoreMall.STORE_MALL_PET,
 	[ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND] = ProtoRes.StoreMall.STORE_MALL_RECOMMEND,
+	[ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_ACTINGTEXTBOOK] = ProtoRes.StoreMall.STORE_MALL_ACTINGTEXTBOOK,
+	[ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_ORNAMENT] = ProtoRes.StoreMall.STORE_MALL_ORNAMENT,
 }
 ---@param LabelMain ProtoRes.Store_Label_Type
 ---@return ProtoRes.StoreMall
@@ -2460,6 +2146,13 @@ function StoreMgr.HasItem(GoodsID, ItemID)
 		end
 	end
 	return bHasItem
+end
+
+function StoreMgr.GetRecommendGoodsCfgData(GoodsCfgData)
+	if nil == GoodsCfgData or GoodsCfgData.LabelMain ~= ProtoRes.Store_Label_Type.STORE_LABEL_MAIN_RECOMMEND then
+		return nil
+	end
+	return StoreRecommendCfg:FindCfgByKey(GoodsCfgData.ID)
 end
 
 --endregion

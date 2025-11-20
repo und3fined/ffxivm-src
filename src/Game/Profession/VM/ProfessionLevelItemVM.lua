@@ -20,6 +20,7 @@ function ProfessionLevelItemVM:Ctor()
 	self.LevelColor = ColorInactive
 	self.NameColor = ColorInactive
 	self.ProfIcon = ""
+	self.bIsQuestProf = false
 end
 
 function ProfessionLevelItemVM:SetActive(bIsActive)

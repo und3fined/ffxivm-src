@@ -37,9 +37,11 @@ local MapCfg = require("TableCfg/MapCfg")
 ---@field BtnReading CommBtnLView
 ---@field BtnRecruit UFButton
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonBkg02 CommonBkg02View
+---@field CommonBkgMask CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field ImgTitleDecoAdvanced UFImage
 ---@field ImgTitleDecoOrdinary UFImage
----@field InforBtn CommInforBtnView
 ---@field MapInfoPanel UFCanvasPanel
 ---@field PanelMapInfo UFCanvasPanel
 ---@field PanelNoGet UFCanvasPanel
@@ -51,15 +53,14 @@ local MapCfg = require("TableCfg/MapCfg")
 ---@field RichTextLevel URichTextBox
 ---@field TableViewReward UTableView
 ---@field TableViewWay UTableView
+---@field TableViewWidget UFCanvasPanel
 ---@field TextMapName UFTextBlock
 ---@field TextMapReward UFTextBlock
 ---@field TextNoGet UFTextBlock
 ---@field TextNotOpen UFTextBlock
 ---@field TextNumber UFTextBlock
----@field TextTitle UFTextBlock
 ---@field TextVigour UFTextBlock
 ---@field TextWay UFTextBlock
----@field TipsBtn CommInforBtnView
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local TreasureHuntMainView = LuaClass(UIView, true)
@@ -72,9 +73,11 @@ function TreasureHuntMainView:Ctor()
 	--self.BtnReading = nil
 	--self.BtnRecruit = nil
 	--self.CloseBtn = nil
+	--self.CommonBkg02 = nil
+	--self.CommonBkgMask = nil
+	--self.CommonTitle = nil
 	--self.ImgTitleDecoAdvanced = nil
 	--self.ImgTitleDecoOrdinary = nil
-	--self.InforBtn = nil
 	--self.MapInfoPanel = nil
 	--self.PanelMapInfo = nil
 	--self.PanelNoGet = nil
@@ -86,15 +89,14 @@ function TreasureHuntMainView:Ctor()
 	--self.RichTextLevel = nil
 	--self.TableViewReward = nil
 	--self.TableViewWay = nil
+	--self.TableViewWidget = nil
 	--self.TextMapName = nil
 	--self.TextMapReward = nil
 	--self.TextNoGet = nil
 	--self.TextNotOpen = nil
 	--self.TextNumber = nil
-	--self.TextTitle = nil
 	--self.TextVigour = nil
 	--self.TextWay = nil
-	--self.TipsBtn = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -105,9 +107,10 @@ function TreasureHuntMainView:OnRegisterSubView()
 	self:AddSubView(self.BtnGoFind)
 	self:AddSubView(self.BtnReading)
 	self:AddSubView(self.CloseBtn)
-	self:AddSubView(self.InforBtn)
+	self:AddSubView(self.CommonBkg02)
+	self:AddSubView(self.CommonBkgMask)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.PopUpBG)
-	self:AddSubView(self.TipsBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -118,8 +121,6 @@ function TreasureHuntMainView:OnInit()
 	self.RewardTableView:SetScrollbarIsVisible(false)
 	self.GetWayTableView = UIAdventureAdapterTableView.CreateAdapter(self, self.TableViewWay, nil, true)
 	self.GetWayTableView:SetScrollbarIsVisible(false)
-	self.InforBtn.HelpInfoID = 13
-
     for i = 1,self.MapCount do
 		local MapItemVM = _G.TreasureHuntMainVM:GetMapItemVM(i)
 		self.AutoMap[string.format("Map%02d", i)].ViewModel = MapItemVM
@@ -131,10 +132,11 @@ function TreasureHuntMainView:OnDestroy()
 end
 
 function TreasureHuntMainView:OnShow()
+	self.CommonTitle.CommInforBtn:SetHelpInfoID(13)
 	self.TextMapReward:SetText(_G.LSTR(640039)) --奖励
 	self.TextNoGet:SetText(_G.LSTR(640041))    --未拥有
 	self.TextNotOpen:SetText(_G.LSTR(640042))  --尚未开放
-	self.TextTitle:SetText(_G.LSTR(640037))    --寻宝
+	self.CommonTitle:SetTextTitleName(_G.LSTR(640037))    --寻宝
 	self.TextVigour:SetText(_G.LSTR(640038))   -- 今日获取宝图：
 	self.TextWay:SetText(_G.LSTR(640040))      -- 获取途径
 	self.BtnReading:SetBtnName(_G.LSTR(640046)) -- 解读
@@ -155,8 +157,6 @@ function TreasureHuntMainView:OnHide()
 end
 
 function TreasureHuntMainView:OnRegisterUIEvent()
-	self.TipsBtn:SetCallback(self, self.OnTipsBtnClick)
-
 	for i = 1,self.MapCount do
 		local BtnSelect = self.AutoMap[string.format("Map%02d", i)].BtnSelect
 		UIUtil.AddOnClickedEvent(self,BtnSelect, self.OnClickBtnSelected,i)
@@ -199,12 +199,6 @@ function TreasureHuntMainView:OnRegisterBinder()
 		{ "GetWayList", UIBinderUpdateBindableList.New(self, self.GetWayTableView) },
 	}
 	self:RegisterBinders(_G.TreasureHuntMainVM, self.Binders)
-end
-
-function TreasureHuntMainView:OnTipsBtnClick()
-	--点击小图标时，在左上侧显示通用提示tips
-	local tipsContent = RichTextUtil.GetText(_G.LSTR(640034), "D5D5D5").."\n"..RichTextUtil.GetText(_G.LSTR(640035), "D5D5D5")..RichTextUtil.GetText(string.format("%s", "00：00"), "D1BA8E")..RichTextUtil.GetText(_G.LSTR("640036"), "D5D5D5")
-	TipsUtil.ShowInfoTips(tipsContent, self.TipsBtn, _G.UE.FVector2D(0, 60), _G.UE.FVector2D(0, 0))
 end
 
 function TreasureHuntMainView:OnClickedBtnRecruit()
@@ -255,13 +249,11 @@ end
 function TreasureHuntMainView:OnClickBtnGOMap(mapIndex)
 	self.CurSelectIndex = mapIndex
 	_G.TreasureHuntMainVM:UpdateMapItemData(mapIndex)
-	_G.ObjectMgr:CollectGarbage(false)
 end
 
 function TreasureHuntMainView:OnClickBtnSelected(mapIndex)
 	self.CurSelectIndex = mapIndex
 	_G.TreasureHuntMainVM:UpdateMapItemData(mapIndex)
-	_G.ObjectMgr:CollectGarbage(false)
 end
 
 function TreasureHuntMainView:OnTableViewRewardsAdapterChange(Index, ItemData, ItemView)

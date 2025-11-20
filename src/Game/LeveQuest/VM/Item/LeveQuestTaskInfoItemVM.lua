@@ -70,8 +70,8 @@ function LeveQuestTaskInfoItemVM:UpdateVM(Params)
 	self.Title = Params.QuestName
 	local NPCName = (Params and Params.NPCName) and Params.NPCName or ""
 	-- self.Content = string.format(_G.LSTR(880014), Params.CityNPCTitle or "", NPCName, Params.QuestDesc)  --- 委托人：%s %s \n %s
-	-- local Subtitle =  RichTextUtil.GetText(string.format(_G.LSTR(880014), Params.CityNPCTitle or "", NPCName), "313131")
-	local Subtitle =  RichTextUtil.GetText(string.format("委托人：%s %s", Params.CityNPCTitle or "", NPCName), "313131")
+	local Subtitle =  RichTextUtil.GetText(string.format(_G.LSTR(880014), Params.CityNPCTitle or "", NPCName), "313131")
+	-- local Subtitle =  RichTextUtil.GetText(string.format("委托人：%s %s", Params.CityNPCTitle or "", NPCName), "313131")
 	local Content =  RichTextUtil.GetText(string.format("%s", Params.QuestDesc or ""), "6c6964")
 	self.Content = string.format("%s\n%s", Subtitle, Content)
 	self.Cfg = Params
@@ -146,6 +146,7 @@ function LeveQuestTaskInfoItemVM:UpdateRewardProbabilityList(IsHQ)
 			Item.Num = Num
 			Item.TextPerVisible = true
 			Item.TextPer = string.format("%d%s", v.Rate,"%")
+			Item.IsShowNum = true
 			table.insert(ItemList, Item)
 		end
 	end

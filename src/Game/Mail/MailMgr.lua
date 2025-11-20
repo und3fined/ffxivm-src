@@ -20,7 +20,6 @@ local Json = require("Core/Json")
 local ObjectGCType = require("Define/ObjectGCType")
 local MailMainVM = require("Game/Mail/View/MailMainVM")
 
-
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.Mail.Mail.CmdMail
 
@@ -144,6 +143,7 @@ function MailMgr:OnTimerUpdate()
 end
 
 function MailMgr:ClearCreatedNPCEntityID()
+	_G.UE.UActorManager.Get():RemoveClientActor(self.CreatedNPCEntityID)
 	self.CreatedNPCEntityID = nil
 end
 
@@ -268,20 +268,22 @@ end
 
 function MailMgr:GetServerAllTypeMailList()
 	for _, Value in pairs(MailTypeList) do
-		table.insert(self.SeverStoreMailNum, { Type = Value, MailNumber = 0 } )
-        self.MailTotalNum[Value] = LetterCfg:FindValue(Value, "ShowLimit") or 0
-		local OutBoxID = MailUtil.GetOutBoxID(Value)
-		local MailRedDotName = RedDotMgr:GetRedDotNameByID(MailDefine.MailMenuRedDotID)
-		if MailRedDotName ~= nil then
-			local TypeName = MailRedDotName .. "/" .. tostring(Value)
-			self.MailTypeRedDotNameList[Value] = {  RedDotName = TypeName, Count = 0 }
+		if MailDefine.MailTypeInfo[Value].IsVisible then
+			table.insert(self.SeverStoreMailNum, { Type = Value, MailNumber = 0 } )
+			self.MailTotalNum[Value] = LetterCfg:FindValue(Value, "ShowLimit") or 0
+			local OutBoxID = MailUtil.GetOutBoxID(Value)
+			local MailRedDotName = RedDotMgr:GetRedDotNameByID(MailDefine.MailMenuRedDotID)
+			if MailRedDotName ~= nil then
+				local TypeName = MailRedDotName .. "/" .. tostring(Value)
+				self.MailTypeRedDotNameList[Value] = {  RedDotName = TypeName, Count = 0 }
+			end
+			if OutBoxID ~= nil then
+				table.insert(self.SeverStoreMailNum, { Type = OutBoxID, MailNumber = 0 } )
+				self.MailTotalNum[OutBoxID] = LetterCfg:FindValue(Value, "ShowLimit") or 0
+				self:GetMailReq(OutBoxID, self.MailTotalNum[OutBoxID])
+			end
+			self:GetMailReq(Value, self.MailTotalNum[Value])
 		end
-		if OutBoxID ~= nil then
-			table.insert(self.SeverStoreMailNum, { Type = OutBoxID, MailNumber = 0 } )
-			self.MailTotalNum[OutBoxID] = LetterCfg:FindValue(Value, "ShowLimit") or 0
-			self:GetMailReq(OutBoxID, self.MailTotalNum[OutBoxID])
-		end
-		self:GetMailReq(Value, self.MailTotalNum[Value])
 	end
 end
 
@@ -296,7 +298,7 @@ end
 ---@field Attachment repeated Attach @邮件附件列表
 ---@field ExpiresTime number @过期时间戳 0不过期
 ---@field Readed bool @是否已读
----@field Attach bool @是否有附件
+---@field Attach bool @是否有附件 或者 贺卡
 ---@field SendTime number @发送时间
 ---@field GetDataTime number @展示前获取数据的时间
 ---@field GiftData bytes @商城赠礼数据
@@ -329,9 +331,22 @@ function MailMgr:GetReceiveMailCacheRsp(AllMailRsp)
 			StyleID = 1,
 		}
 
-		local Attach = ProtoBuff:Decode("csproto.MailAttachment", MailData.Mail.AttachmentByte)
-		if LocalMailData.MailType == MailDefine.MailType.Gift then
-			LocalMailData.GiftData = ProtoBuff:Decode("csproto.MallGift", Attach.ExtraData) or {}
+		local _, Attach = pcall(function()
+			return ProtoBuff:Decode("csproto.MailAttachment", MailData.Mail.AttachmentByte)
+		end)
+		Attach = Attach or {}
+		if LocalMailData.MailType == MailDefine.MailType.Gift or LocalMailData.MailType == MailUtil.GetOutBoxID(MailDefine.MailType.Gift) then
+			if Attach.Type == ProtoCS.AttachmentType.GreetingCardMailType then
+				local _, Result = pcall(function()
+					return ProtoBuff:Decode("csproto.GreetingCardExtraData", Attach.ExtraData)
+				end)
+				LocalMailData.GreetingCardData = Result or {}
+			else
+				local _, Result = pcall(function()
+					return ProtoBuff:Decode("csproto.MallGift", Attach.ExtraData)
+				end)
+				LocalMailData.GiftData = Result or {}
+			end
 		end
 		LocalMailData.Attachment = Attach.MailItemList or {}
 		local InBoxID = MailUtil.GetInBoxID(MailType)
@@ -495,16 +510,15 @@ function MailMgr:CheckScoreUpperLimit(MailID, MailType)
 	local MailList = self.CacheMailList[MailType] or {}
 	local MailInfo, _ = table.find_by_predicate(MailList, function(Item) return MailID == Item.ID end )
 	if MailInfo ~= nil and MailInfo.Attachment ~= nil then
+		local MsgBoxOpRightCB = function ()
+			self:GetMailAttch({MailID}, MailType)
+		end
 		for i = 1, #MailInfo.Attachment do
 			local Attachment = MailInfo.Attachment[i]
 			local ScoreCfg = ScoreSummaryCfg:FindCfgByKey(Attachment.ResID)
 			if ScoreCfg ~= nil then
-				local MsgBoxOpRightCB = function ()
-					self:GetMailAttch({MailID}, MailType)
-				end
-				local MaxValue = ScoreMgr:GetScoreMaxValue(Attachment.ResID)
-				local CurValue = ScoreMgr:GetScoreValueByID(Attachment.ResID)
-				if MaxValue < CurValue + Attachment.Num then
+				local MaxValue = ScoreMgr:GetScoreResidualValue(Attachment.ResID)
+				if MaxValue < Attachment.Num then
 					local HintText = string.format( LSTR(740002), ScoreCfg.NameText)
 					MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(740005), HintText, MsgBoxOpRightCB,  nil, LSTR(740007), LSTR(740014))
 					return
@@ -860,9 +874,15 @@ end
 
 --- 打开邮件主界面
 function MailMgr:OpenMailMainView()
+	if self.LoadModeling ~= nil or UIViewMgr:FindView(UIViewID.MailMainView) then
+		return
+	end
+	if self.CreatedNPCEntityID ~= nil then
+		self:ClearCreatedNPCEntityID()
+	end
+
 	local UE = _G.UE
 	local ObjectMgr = _G.ObjectMgr
-	self.CreatedNPCEntityID = nil
 	local UActorManager = UE.UActorManager.Get()
 	local finalRotator = UE.FRotator(0, 0, 0)
 	local Params = UE.FCreateClientActorParams()
@@ -931,6 +951,31 @@ function MailMgr:QueryMailAttachByItemID(ItemID)
 	end
 
 	return false
+end
+
+---查询任务状态
+---@param QuestID number@任务ID
+---@return QUEST_STATUS,table<RestrictedDialogType, string> @任务状态,不可接取原因列表
+function MailMgr:QueryQuestStatus(QuestID)
+	return _G.QuestMgr:GetQuestStatus(QuestID)
+	--[[
+	local Resons = {}
+	if Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED then
+		-- 如果是未接取,进一步判断能否接取
+		if not QuestHelper.CheckCanActivate(QuestID) then
+			Resons[RestrictedDialogType.PreTask] = ""
+		else
+			if not QuestHelper.CheckCanAccept(QuestID) then
+				local QuestCfgItem = QuestHelper.GetQuestCfgItem(QuestID)
+				if QuestCfgItem then
+					local ChapterCfgItem = QuestHelper.GetChapterCfgItem(QuestCfgItem.ChapterID)
+					Resons = QuestHelper.MakeRestrictedDialog(1, ChapterCfgItem, QuestCfgItem)
+				end
+			end
+		end
+	end
+	return Status, Resons
+	]]--
 end
 
 ------ Interface END ------

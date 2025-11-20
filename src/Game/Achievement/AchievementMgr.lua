@@ -36,6 +36,7 @@ local RedDotMgr
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.CsAchievementCmd
 local AchievementStatus = ProtoCS.AchievementStatus
+local NOTE_SUB_ID = ProtoCS.CS_NOTE_CMD 
 
 ---@class AchievementMgr : MgrBase
 local AchievementMgr = LuaClass(MgrBase)
@@ -95,14 +96,18 @@ function AchievementMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACHIEVEMENT, SUB_MSG_ID.CS_ACHIEVEMENT_UPDATE, 		self.OnNetMsgUpdateRsp)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACHIEVEMENT, SUB_MSG_ID.CS_ACHIEVEMENT_SHOWED_COMPLETED, 		self.OnNetMsgShowedCompletedRsp)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACHIEVEMENT, SUB_MSG_ID.CS_ACHIEVEMENT_OTHER_COMPLETE, 		self.OnNetMsgOtherCompletRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_ACHIEVEMENT, SUB_MSG_ID.CS_ACHIEVEMENT_ONE_KEY_LEVEL_AWARD, 		self.OnNetMsgOneKeyLevelAwardRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_NOTE, NOTE_SUB_ID.CS_CMD_SCENE_MODEL_FINISH_LOG, self.OnSceneFinishLogRsp)
 end
 
 function AchievementMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes) 
+	self:RegisterGameEvent(EventID.PWorldFinished, self.SendSceneModelFinishLogReq)
 end
 
 function AchievementMgr:OnGameEventLoginRes()
 	self:OnNetMsgQueryReq()
+	self:SendSceneModelFinishLogReq()
 end
 
 --------------------------------------------------------- 数据结构读取
@@ -117,6 +122,7 @@ end
 ---@field IsItemIcon int32 @是否使用道具图标
 ---@field Sort int32 @显示优先级
 ---@field GroupID number @成就组ID
+---@field DiyGroup number @定制进度ID组
 ---@field IsFinish number @是否完成
 ---@field AchievePoint number @成就点数
 ---@field AchievePointIcon number @成就点数图标
@@ -135,11 +141,18 @@ end
 ---@field Progress number    @进度
 ---@field TotalProgress number  @进度类型需要完成的总数  并是叠加的
 
+-- 开启版本判断
+function AchievementMgr:CheckOpenVersion(OpenVersion)
+	if string.isnilorempty(OpenVersion) then
+		return false
+	end
+	return _G.ClientVisionMgr:CheckVersionByGlobalVersion(OpenVersion)
+end
 
 function AchievementMgr:LoadAllCfgData()
 	local AllCfg = AchievementCfg:FindAllCfg() or {}
 	for i = 1, #AllCfg do
-		if AllCfg[i].OnOff == 1 then
+		if AllCfg[i] ~= nil and self:CheckOpenVersion(AllCfg[i].OpenVersion) then
 			local NewAchieveMent = {}
 			NewAchieveMent.ID = AllCfg[i].ID
 			NewAchieveMent.TypeID = AllCfg[i].Type
@@ -149,6 +162,7 @@ function AchievementMgr:LoadAllCfgData()
 			NewAchieveMent.IconPath = ""
 			NewAchieveMent.IsItemIcon = 0
 			NewAchieveMent.GroupID = 0
+			NewAchieveMent.DiyGroup = ""
 			NewAchieveMent.Sort = 0
 			NewAchieveMent.IsFinish = false
 			NewAchieveMent.AchievePoint = 0
@@ -209,6 +223,7 @@ function AchievementMgr:LoadAllAchieveShowData()
 				AchieveInfo.IconPath = AllShowInfoCfg[i].Icon
 				AchieveInfo.IsItemIcon = AllShowInfoCfg[i].IsItemIcon
 				AchieveInfo.GroupID = AllShowInfoCfg[i].Group
+				AchieveInfo.DiyGroup = AllShowInfoCfg[i].DiyGroup
 				local StatisticsInfo = AllShowInfoCfg[i].StatisticsInfo or {}
 				AchieveInfo.ConditionIsAnd = AllShowInfoCfg[i].IsAnd
 				AchieveInfo.Sort = AllShowInfoCfg[i].Sort
@@ -610,6 +625,53 @@ function AchievementMgr:OnNetMsgOtherCompletRsp(MsgBody)
 	self.OtherPlayerAchievementMap[PlayerName] = NotifyList
 end
 
+function AchievementMgr:OnNetMsgOneKeyLevelAwardRsp(MsgBody)
+	if nil == MsgBody or nil == MsgBody.OneKeyLevelAward then
+		return
+	end
+	local Levels = MsgBody.OneKeyLevelAward.Levels
+	if #(Levels or {}) <= 0 then
+		return
+	end
+	local AwardList = {}
+	local Item, Index = table.find_item(self.LevelData, 0, "TypeID")
+	if Item ~= nil then
+		local LevelAwardInfo = self.LevelData[Index].LevelAwardInfo or {}
+		for i = 1, #LevelAwardInfo do
+			if table.contain(Levels, LevelAwardInfo[i].Level) then 
+				LevelAwardInfo[i].Received = true
+				for j = 1, #LevelAwardInfo[i].RewardList do
+					table.insert(AwardList, LevelAwardInfo[i].RewardList[j])
+				end
+			end
+		end
+	end
+	self:RefreshLevelRedDot()
+	AchievementMainPanelVM:ReceiveLevelAwardSucceed(Levels)
+	AchievementUtil.OpenRewardPanel(AwardList)
+end
+
+function AchievementMgr:OnSceneFinishLogRsp(MsgBody)
+    if MsgBody and MsgBody.SceneModelLog then
+	    local SceneModelLogs = MsgBody.SceneModelLog.SceneModelLogs or {}
+		local SceneFinishMap = {}
+		if SceneModelLogs then
+			for SceneId, ProfMap in pairs(SceneModelLogs) do
+				local SelfProfMap = {}
+				local FirstLogs = ProfMap.FirstLogs or {}
+				for ProfId, ModeData in pairs(FirstLogs) do
+					local SceneMode = ModeData.SceneMode or {}
+					table.sort(SceneMode, function(A, B) return A.FinishTime < B.FinishTime end)
+					SelfProfMap[tonumber(ProfId)] = SceneMode
+				end
+				SceneFinishMap[tonumber(SceneId)] = SelfProfMap
+			end
+		end
+
+		self.SceneFinishMap = SceneFinishMap
+    end
+end
+
 function AchievementMgr:OnNetMsgQueryReq()
 	local MsgID = CS_CMD.CS_CMD_ACHIEVEMENT
 	local SubMsgID = SUB_MSG_ID.CS_ACHIEVEMENT_QUERY
@@ -672,6 +734,27 @@ function AchievementMgr:OnNetMsgShowedCompletedReq(AchievementIDs)
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
+function AchievementMgr:OnNetMsgOneKeyLevelAwardReq(Levels)
+	local MsgID = CS_CMD.CS_CMD_ACHIEVEMENT
+	local SubMsgID = SUB_MSG_ID.CS_ACHIEVEMENT_ONE_KEY_LEVEL_AWARD
+	local MsgBody = { 
+		Cmd = SUB_MSG_ID.CS_ACHIEVEMENT_ONE_KEY_LEVEL_AWARD,
+		OneKeyLevelAward = {
+			Levels = Levels,
+		}
+	}
+
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function AchievementMgr:SendSceneModelFinishLogReq()
+	local MsgID = CS_CMD.CS_CMD_NOTE
+	local SubMsgID = NOTE_SUB_ID.CS_CMD_SCENE_MODEL_FINISH_LOG
+
+	local MsgBody = {}
+	MsgBody.Cmd = SubMsgID
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
 
 ------------------------------------ 红点
 function AchievementMgr:RefreshLevelRedDot()
@@ -974,12 +1057,21 @@ function AchievementMgr:GetAchievementReward( AchievementIDList )
 end
 
 --  领取成就等级奖励  
----@param TypeID number      @类型ID
 ---@param Level number    @等级值
-function AchievementMgr:GetAchievementLevelReward(TypeID, Level )
+function AchievementMgr:GetAchievementLevelReward( )
 	LootMgr:SetDealyState(true)
 	-- 将typeid 转为后台定义的 LevelType
-	self:OnNetMsgLevelAwardyReq(TypeID, Level)
+	local Levels = { }
+	local LevelInfo = self:GetAchievementLevelRewardInfo(0)
+    if LevelInfo ~= nil then
+		for i = 1, #LevelInfo.LevelAwardInfo do
+			if LevelInfo.CurrentLevel >= LevelInfo.LevelAwardInfo[i].Level and not LevelInfo.LevelAwardInfo[i].Received then
+				table.insert(Levels, LevelInfo.LevelAwardInfo[i].Level)
+			end
+		end
+	end
+
+	self:OnNetMsgOneKeyLevelAwardReq( Levels )
 end
 
 -- 根据成就类别Id 拿成就数据列表
@@ -1067,6 +1159,47 @@ function AchievementMgr:CheckInterfaceActivation(Params)
 	return false
 end
 
+-- 获取副本完成状态
+--- @return  FinishTime@完成时间  ProfIdList@职业id列表
+function AchievementMgr:GetSceneFinishState(SceneId, ModeId, FinishCount)
+	local ProfIdList = {}
+	local FinishTime = 0
+	ModeId = tonumber(ModeId)
+	FinishCount = tonumber(FinishCount)
+	SceneId = tonumber(SceneId)
+
+	if self.SceneFinishMap ~= nil then
+		local SceneIdMap = self.SceneFinishMap[SceneId]
+		if SceneIdMap then
+			for ProfId, ModeMap in pairs(SceneIdMap) do
+				if ModeMap then
+					for _, ModeData in pairs(ModeMap) do
+						if ModeData then
+							if ModeId == 999 or ModeData.Mode == ModeId then
+								table.insert(ProfIdList, { ProfId = ProfId, FinishTime = ModeData.FinishTime })
+								break
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	table.sort(ProfIdList, function(A, B) return A.FinishTime < B.FinishTime end)
+
+	for i = #ProfIdList, 1, -1 do
+		if i > FinishCount then
+			table.remove(ProfIdList, i)
+		else
+			break
+		end
+	end
+	if #ProfIdList >= FinishCount and FinishCount > 0 then
+		FinishTime = ProfIdList[FinishCount].FinishTime
+	end
+
+	return FinishTime, ProfIdList
+end
 ------------------------------------ 界面
 
 -- 打开成就等级奖励界面

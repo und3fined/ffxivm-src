@@ -470,15 +470,16 @@ function SkillTriggerBtnView:UpdateCanUse(CanUse)
 		local TriggerData = _G.MajorTriggerSkillMgr:GetTriggerDataByIndex(self.ButtonIndex)
 		CanUse = (TriggerData.IsTrigger and TriggerData.IsShow) or false
 	end
-	self.BaseBtnVM.bCanUseQTE = CanUse
 	
 	local BtnSkillID = self.BtnSkillID
     if BtnSkillID ~= rawget(self, "BLMQTESkillID") then
+		self.BaseBtnVM.bCanUseQTE = true
         UIUtil.SetIsVisible(self, CanUse, true)
 		if BtnSkillID ~= 0 then
 			self:PlayAnimation(self.AnimSkillTriggerLoop, 0, 0)
 		end
     else
+		self.BaseBtnVM.bCanUseQTE = CanUse
 		UIUtil.SetIsVisible(self, true, true)
 		local LogicData = SkillLogicMgr:GetSkillLogicData(self.EntityID)
 		if LogicData ~= nil then
@@ -542,9 +543,11 @@ function SkillTriggerBtnView:SimulateTriggerSkill(SkillID,DisplayDuration)
 	-- local Params = {SkillID=SkillID,Index= self.ButtonIndex}
 	-- self:OnPlayerUseSkill(Params)
 	if self.SmimulateSkillTimerID > 0 then
+		self.SmimulateSkillTimerID = 0
 		self:UnRegisterTimer(self.SmimulateSkillTimerID)
 	end
 	self.SmimulateSkillTimerID = self:RegisterTimer(function()
+	    self.SmimulateSkillTimerID = 0
 		self:UnRegisterTimer(self.SmimulateSkillTimerID)
 		UIUtil.SetIsVisible(self, false, false)
 	end, RemainTime, RemainTime, 1)

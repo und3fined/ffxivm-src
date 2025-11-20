@@ -41,7 +41,8 @@ function FashionEquipItemVM:UpdateVM(Value)
         end
         self.AppearanceName = AppInfo.AppearanceName
     else
-        self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
+        --self.AppearanceIcon = EquipmentMgr:GetPartIcon(self.Part) -- 装备部位底图
+        self.AppearanceIcon = FashionEvaluationVMUtils.GetPartIcon(self.Part)
         self.AppearanceName = self.AppearanceID
 	end
 end

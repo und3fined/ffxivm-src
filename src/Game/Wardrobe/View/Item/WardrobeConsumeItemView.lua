@@ -86,8 +86,10 @@ function WardrobeConsumeItemView:OnClickButtonItem()
 	end
 
 	local Item = ItemUtil.CreateItem(ViewModel.BagSlotVM.ResID)
-	Item.NeedBuyNum = ViewModel.ItemNum
-	ItemTipsUtil.ShowTipsByItem(Item, self.BagSlot)
+	if Item ~= nil then
+		Item.NeedBuyNum = ViewModel.ItemNum
+		ItemTipsUtil.ShowTipsByItem(Item, self.BagSlot)
+	end
 end
 
 return WardrobeConsumeItemView

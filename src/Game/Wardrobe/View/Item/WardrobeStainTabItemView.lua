@@ -21,41 +21,42 @@ local OutlineSelectedColor = "#8066447F"
 
 ---@class WardrobeStainTabItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field ImgSelect UFImage
+---@field ImgSelect UFCanvasPanel
+---@field SizeBox_0 USizeBox
 ---@field TextName UFTextBlock
 ---@field WardrobeStainTag WardrobeStainTagItemView
+---@field WardrobeStainTagNew WardrobeStainStyleItem2View
+---@field WardrobeStainTagNew2 WardrobeStainStyleItem2View
+---@field AnimSelect UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local WardrobeStainTabItemView = LuaClass(UIView, true)
 
 function WardrobeStainTabItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgSelect = nil
+	--self.SizeBox_0 = nil
 	--self.TextName = nil
 	--self.WardrobeStainTag = nil
+	--self.WardrobeStainTagNew = nil
+	--self.WardrobeStainTagNew2 = nil
+	--self.AnimSelect = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function WardrobeStainTabItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.WardrobeStainTag)
+	self:AddSubView(self.WardrobeStainTagNew)
+	self:AddSubView(self.WardrobeStainTagNew2)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function WardrobeStainTabItemView:OnInit()
-	self.Binders = {
-		{ "Name", UIBinderSetText.New(self, self.TextName)},
-		{ "Color", UIBinderSetBrushTintColorHex.New(self, self.WardrobeStainTag.ImgStainColor) },
-		{ "IsStain", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgStainColor) },
-		{ "IsMetal", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgMetal)},
-		{ "IsNormalcy", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgNormalcy)},
-		{ "IsSelected", UIBinderSetIsVisible.New(self, self.ImgSelect)},
-		{ "TabSelectedColor", UIBinderSetColorAndOpacityHex.New(self, self.TextName)},
-		{ "TabOutlineSelectedColor", UIBinderSetOutlineColor.New(self, self.TextName)},
-	}
+	UIUtil.SetIsVisible(self.WardrobeStainTag, false)
+	UIUtil.SetIsVisible(self.WardrobeStainTagNew, true)
 end
 
 function WardrobeStainTabItemView:OnDestroy()
-
 end
 
 function WardrobeStainTabItemView:OnShow()
@@ -85,7 +86,26 @@ function WardrobeStainTabItemView:OnRegisterBinder()
 		return
 	end
 
-	self:RegisterBinders(ViewModel, self.Binders)
+
+	local Binders = {
+		{ "Name", UIBinderSetText.New(self, self.TextName)}, --
+		{ "IsSelected", UIBinderSetIsVisible.New(self, self.ImgSelect)},
+		{ "TabSelectedColor", UIBinderSetColorAndOpacityHex.New(self, self.TextName)},
+		{ "TabOutlineSelectedColor", UIBinderSetOutlineColor.New(self, self.TextName)},
+		-- 新增逻辑
+		{ "IsPreStained", UIBinderSetIsVisible.New(self, self.SizeBox_0) }, -- 是否有预览色
+		{ "IsPreStained", UIBinderSetIsVisible.New(self, self.WardrobeStainTagNew2) }, --是否有预览色
+
+		{ "IsPreColorEmpty", UIBinderSetIsVisible.New(self, self.WardrobeStainTagNew2.ImgStainColor, true) },
+		{ "PreColorHex", UIBinderSetBrushTintColorHex.New(self, self.WardrobeStainTagNew2.ImgStainColor) },
+		{ "PreColorIsMetal", UIBinderSetIsVisible.New(self, self.WardrobeStainTagNew2.ImgMetal) },
+
+		{ "ColorIsMetal", UIBinderSetIsVisible.New(self, self.WardrobeStainTagNew.ImgMetal) },
+		{ "IsColorEmpty", UIBinderSetIsVisible.New(self, self.WardrobeStainTagNew.ImgStainColor, true) },
+		{ "ColorHex", UIBinderSetBrushTintColorHex.New(self, self.WardrobeStainTagNew.ImgStainColor) },
+	}
+
+	self:RegisterBinders(ViewModel, Binders)
 end
 
 function WardrobeStainTabItemView:OnSelectChanged(bSelected)
@@ -102,6 +122,10 @@ function WardrobeStainTabItemView:OnSelectChanged(bSelected)
 	ViewModel.IsSelected = bSelected
 	ViewModel.TabSelectedColor = bSelected and SelectedColor or NormalColor
 	ViewModel.TabOutlineSelectedColor = bSelected and OutlineSelectedColor or OutlineNormalColor
+end
+
+function WardrobeStainTabItemView:PlaySelectedAnim()
+	self:PlayAnimation(self.AnimSelect)
 end
 
 return WardrobeStainTabItemView

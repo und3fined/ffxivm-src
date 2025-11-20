@@ -36,6 +36,10 @@ function MapEditDataMgr:GetMapEditCfg()
     return self.MapEditCfg
 end
 
+function MapEditDataMgr:GetFestivalEditCfg()
+    return self.FestivalCfgMap
+end
+
 function MapEditDataMgr:InitAdjacentMapEditCfg(InAdjacentMapEditCfg)
     if InAdjacentMapEditCfg and InAdjacentMapEditCfg.MapID then
         self.AdjacentMapEditCfgMap[InAdjacentMapEditCfg.MapID] = InAdjacentMapEditCfg
@@ -48,7 +52,17 @@ end
 
 function MapEditDataMgr:InitFestivalMapEditCfg(InFestivalMapEditCfg)
     if InFestivalMapEditCfg then
-        self.FestivalCfgMap[InFestivalMapEditCfg.MapID] = InFestivalMapEditCfg
+        if self.FestivalCfgMap[InFestivalMapEditCfg.MapID] == nil then
+            self.FestivalCfgMap[InFestivalMapEditCfg.MapID] = {}
+        end
+
+        for k,v in pairs(self.FestivalCfgMap[InFestivalMapEditCfg.MapID]) do
+            if v.LayerSetID == InFestivalMapEditCfg.LayerSetID then
+                return
+            end
+        end
+
+        table.insert(self.FestivalCfgMap[InFestivalMapEditCfg.MapID],InFestivalMapEditCfg)
     end
 end
 
@@ -267,6 +281,21 @@ function MapEditDataMgr:GetTriggerAction(ActionID)
     return nil
 end
 
+function MapEditDataMgr:GetEventByID(InIDValue)
+    if (self.MapEditCfg == nil) then
+        return nil
+    end
+    local EventGroupList = self.MapEditCfg.EventGroupList
+    for _, EventGroup in ipairs(EventGroupList) do
+        for _, Event in ipairs(EventGroup.EventList) do
+            if (Event.ID == InIDValue) then
+                return Event
+            end
+        end
+    end
+    return nil
+end
+
 function MapEditDataMgr:GetMapMin()
     local MapMin = _G.UE.FVector(0.0, 0.0, 0.0)
     if (self.MapEditCfg == nil) then
@@ -308,6 +337,20 @@ function MapEditDataMgr:GetMapPoint(PointID, InMapEditCfg)
                 end
             end
         end
+
+        --festival相关Point
+        for _,f in pairs(self.FestivalCfgMap) do
+            for k,MapEditor in pairs(f) do
+                PointGroupList = MapEditor.PointGroupList
+                for x, MapPointGroup in ipairs(PointGroupList) do
+                    for y, MapPoint in ipairs(MapPointGroup.PointList) do
+                        if (MapPoint.ID == PointID) then
+                            return MapPoint
+                        end
+                    end
+                end
+            end
+        end
     end
 
     return nil
@@ -328,11 +371,14 @@ function MapEditDataMgr:GetNpc(NpcID, InMapEditCfg)
         end
     end
 
-    for _, EditCfg in pairs(self.FestivalCfgMap) do
-        NpcList = EditCfg.NpcList
-        for k,Npc in ipairs(NpcList) do
-            if (Npc.NpcID == NpcID) then
-                return Npc
+    --festival相关NPC
+    for _,f in pairs(self.FestivalCfgMap) do
+        for k,MapEditor in pairs(f) do
+            NpcList = MapEditor.NpcList
+            for v,Npc in ipairs(NpcList) do
+                if (Npc.NpcID == NpcID) then
+                    return Npc
+                end
             end
         end
     end
@@ -354,6 +400,19 @@ function MapEditDataMgr:GetNpcByListID(ListID, InMapEditCfg)
             return Npc
         end
     end
+
+    --festival相关NPC
+    for _,f in pairs(self.FestivalCfgMap) do
+        for k,MapEditor in pairs(f) do
+            NpcList = MapEditor.NpcList
+            for v, Npc in ipairs(NpcList) do
+                if (Npc.ListId == ListID) then
+                    return Npc
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -371,6 +430,19 @@ function MapEditDataMgr:GetGatherByResID(ResID, InMapEditCfg)
             return MapPickItem
         end
     end
+
+    --festival相关NPC
+    for _,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            PickItemList = MapEditor.PickItemList
+            for x, MapPickItem in ipairs(PickItemList) do
+                if MapPickItem.ResID == ResID then
+                    return MapPickItem
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -389,6 +461,20 @@ function MapEditDataMgr:GetValidGatherByResID(ResID, InMapEditCfg)
             return MapPickItem
         end
     end
+
+    --festival相关PickItem
+    for k,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            MapID = MapEditor.MapID
+            PickItemList = MapEditor.PickItemList
+            for _, MapPickItem in ipairs(PickItemList) do
+                if MapPickItem.ResID == ResID and _G.GatherMgr:IsRefreshed(MapPickItem.ListId, MapID) then
+                    return MapPickItem
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -405,6 +491,19 @@ function MapEditDataMgr:GetArea(AreaID, InMapEditCfg)
             return Area
         end
     end
+
+    --festival相关AREA
+    for k,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            AreaList = MapEditor.AreaList
+            for _, Area in ipairs(AreaList) do
+                if (Area.ID == AreaID) then
+                    return Area
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -462,6 +561,19 @@ function MapEditDataMgr:GetPath(PathID)
             return Path
         end
     end
+
+    --festival相关Path
+    for k,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            PathList = MapEditor.PatrolPathList
+            for _, Path in ipairs(PathList) do
+                if (Path.ID == PathID) then
+                    return Path
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -479,6 +591,19 @@ function MapEditDataMgr:GetEObjByResID(ResID, InMapEditCfg)
             return EObjData
         end
     end
+
+    --festival相关EOBJ
+    for k,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            EObjList = MapEditor.EObjList
+            for _, EObjData in ipairs(EObjList) do
+                if EObjData.ResID == ResID then
+                    return EObjData
+                end
+            end
+        end
+    end
+
     return nil
 end
 
@@ -496,6 +621,19 @@ function MapEditDataMgr:GetEObjByListID(ListID, InMapEditCfg)
             return EObjData
         end
     end
+
+    --festival相关EOBJ
+    for k,f in pairs(self.FestivalCfgMap) do
+        for v,MapEditor in pairs(f) do
+            EObjList = MapEditor.EObjList
+            for _, EObjData in ipairs(EObjList) do
+                if EObjData.ID == ListID then
+                    return EObjData
+                end
+            end
+        end
+    end
+
     return nil
 end
 
