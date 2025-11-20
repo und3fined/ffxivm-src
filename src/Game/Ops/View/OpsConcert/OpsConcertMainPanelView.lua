@@ -485,7 +485,7 @@ function OpsConcertMainPanelView:ShareMiniApp(Params, UserOpenID)
 			Path,
 			WeChatMiniAppCfg.TumbPath,
 			WeChatMiniAppCfg.AppID,
-			2,
+			0,
 			"MSG_INVITE",
 			Path,
 			"")
