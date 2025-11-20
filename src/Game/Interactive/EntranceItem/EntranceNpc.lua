@@ -7,8 +7,9 @@ local FunctionItemFactory = require("Game/Interactive/FunctionItemFactory")
 local ProtoRes = require("Protocol/ProtoRes")
 local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
 local QuestDefine = require("Game/Quest/QuestDefine")
-local MsgTipsID = require("Define/MsgTipsID")
+--local MsgTipsID = require("Define/MsgTipsID")
 local DataReportUtil = require("Utils/DataReportUtil")
+--local FuncCfg = require("TableCfg/FuncCfg")
 
 local CHAPTER_STATUS = QuestDefine.CHAPTER_STATUS
 local QUEST_TYPE = ProtoRes.QUEST_TYPE
@@ -37,19 +38,36 @@ function EntranceNpc:OnInit()
 
     self.InteractiveQuestEntranceItems = {}
     self.FunctionItemsList = {}
+    self.CustomFunctionList = {}
 
+    self:RefreshEntranceDisplay()
+end
+
+function EntranceNpc:RefreshEntranceDisplay()
     self.DisplayName = _G.LSTR(90014)
+    self.IconPath = "PaperSprite'/Game/UI/Atlas/NPCTalk/Frames/UI_Icon_NPC_Dialogue_png.UI_Icon_NPC_Dialogue_png'"
 
-    if nil ~= Cfg.InteractiveIDList and #Cfg.InteractiveIDList > 0 then
-        local FisrtCfg = InteractivedescCfg:FindCfgByKey(Cfg.InteractiveIDList[1])
+    local FuncItemList = self:OnGenFunctionList()
+    local IsKeepDefaultDisplay = false
+    local ReallyFuncItemNum = 0
+    if nil ~= FuncItemList and #FuncItemList > 0 then
+        for i = 1, #FuncItemList do
+            local Item = FuncItemList[i]
+            if Item.FuncType ~= LuaFuncType.QUIT_FUNC and Item.FuncType ~= LuaFuncType.NPCQUIT_FUNC then
+                ReallyFuncItemNum = ReallyFuncItemNum + 1
+            end
+        end
+    end
+    IsKeepDefaultDisplay = ReallyFuncItemNum > 1
+
+    if not IsKeepDefaultDisplay and  nil ~= self.Cfg.InteractiveIDList and #self.Cfg.InteractiveIDList > 0 then
+        local FisrtCfg = InteractivedescCfg:FindCfgByKey(self.Cfg.InteractiveIDList[1])
 
         if FisrtCfg and FisrtCfg.IsUseIconAndName == 1 then
             self.IconPath = FisrtCfg.IconPath
             self.DisplayName = FisrtCfg.DisplayName
         end
     end
-
-    self.CustomFunctionList = {}
 end
 
 function EntranceNpc:OnUpdateDistance()
@@ -99,11 +117,11 @@ end
 function EntranceNpc:PrintCheckLog(LogStr)
     if nil ~= self.EnableCheckLog and self.EnableCheckLog == true then
         local NpcName = ActorUtil.GetActorName(self.EntityID) or ""
-        _G.FLOG_INFO(string.format("%s-->(%s)", LogStr, NpcName))
+        _G.FLOG_INFO(string.format("%s-->(%d,%d,%s)", LogStr, self.EntityID, self.ResID, NpcName))
     end
 end
 
-function EntranceNpc:CheckInterative(EnableCheckLog)
+function EntranceNpc:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     self.EnableCheckLog = EnableCheckLog
 
     if not self.Cfg then
@@ -143,7 +161,18 @@ function EntranceNpc:CheckInterative(EnableCheckLog)
         self:PrintCheckLog("EntranceNpc:CheckInterative, npc is blocked by eyeline!")
         return false
     end
-    
+
+    if _G.InteractiveMgr:IsMajorInCarryState() and not _G.InteractiveMgr:IsEnableCarryInteractive(1, self.ResID) then
+        -- 如果主角处于搬运状态，且当前NPC未配置在搬运交互限制表中，则不允许交互
+        self:PrintCheckLog("EntranceNpc:CheckInterative, major is in carry state!")
+        return false
+    end
+
+    if IsFromQuestUpdate then
+        self:RefreshEntranceDisplay()
+        self:UpdateUI()
+    end
+
     local ResID = ActorUtil.GetActorResID(self.EntityID)
     local HintTalkData =  _G.QuestMgr:GetHintTalk(ResID)
     if HintTalkData and next (HintTalkData) then
@@ -278,22 +307,50 @@ function EntranceNpc:ResetParams()
 end
 
 function EntranceNpc:GetInteractiveIDList()
-    if self.Cfg.Type == ProtoRes.NPC_TYPE.ARMY then
+    local NpcType = self.Cfg.Type
+    if NpcType == ProtoRes.NPC_TYPE.ARMY or NpcType == ProtoRes.NPC_TYPE.HOUSING then
         local IdList = {}
         for _, ID in ipairs(self.Cfg.InteractiveIDList) do
             local FisrtCfg = InteractivedescCfg:FindCfgByKey(ID)
             if nil ~= FisrtCfg then
                 local FuncType = FisrtCfg.FuncType
-                if (FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_RANK) or
-                    (FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_TRANSFER and _G.CompanySealMgr:IsShowTransfer(self.EntityID)) or
-                    ((FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_RANK_PROMOTION or 
-                    FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_PREPARATORY) and _G.CompanySealMgr:IsShowTaskAndPromotion(self.EntityID)) then
-                    --"查看军衔信息": 按钮一直显示，无条件判断
-                    --"军队调动": 当玩家属于非当前NPC的军队时，显示交互项；当玩家属于当前NPC的军队或未加入任何军队，不显示交互项
-                     --"筹备任务"和"军衔晋升": 若玩家属于当前NPC的军队，显示交互项；若玩家不属于当前NPC的军队或未加入军队，不显示交互项。
-                    table.insert(IdList, ID)
+                if NpcType == ProtoRes.NPC_TYPE.ARMY then
+                    if (FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_RANK) or
+                        (FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_TRANSFER and _G.CompanySealMgr:IsShowTransfer(self.EntityID)) or
+                        ((FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_RANK_PROMOTION or 
+                        FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_ARMY_PREPARATORY) and _G.CompanySealMgr:IsShowTaskAndPromotion(self.EntityID)) then
+                        --"查看军衔信息": 按钮一直显示，无条件判断
+                        --"军队调动": 当玩家属于非当前NPC的军队时，显示交互项；当玩家属于当前NPC的军队或未加入任何军队，不显示交互项
+                        --"筹备任务"和"军衔晋升": 若玩家属于当前NPC的军队，显示交互项；若玩家不属于当前NPC的军队或未加入军队，不显示交互项。
+                        table.insert(IdList, ID)
+                    end
+                -- elseif NpcType == ProtoRes.NPC_TYPE.HOUSING then
+                --     if (FuncType == INTERACT_FUCN_TYPE.INTERACT_FUNC_HOUSING_TRANS) then
+                --         local IsValidInteractiveID = false
+                --         -- local FuncID = FisrtCfg.FuncID
+                --         -- local FuncCfgData = FuncCfg:FindCfgByKey(FuncID)
+                --         -- if nil ~= FuncCfgData then
+                --         --     local AreaID = FuncCfgData.Func[1].Value[1]
+                --         --     if AreaID then
+                --         --     end
+                --         -- end
+                --         if ID == _G.InteractiveMgr.TransToPersonalHouseID and _G.HouseLandMgr:IsCurAreaHasMajorPersonalHouse() then
+                --             -- 当前区域有玩家的个人房屋
+                --             IsValidInteractiveID = true
+                --         end
+                --         if ID == _G.InteractiveMgr.TransToArmyHouseID and _G.HouseLandMgr:IsCurAreaHasMajorArmyHouse() then
+                --             -- 当前区域有玩家的部队房屋
+                --             IsValidInteractiveID = true
+                --         end
+                --         if IsValidInteractiveID then
+                --             table.insert(IdList, ID)
+                --         end
+                --     else
+                --         table.insert(IdList, ID)
+                --     end
                 end
             end
+
         end
         return IdList
     end
@@ -397,7 +454,7 @@ function EntranceNpc:GetQuestAndCustomFunctionList()
 
         if not ReUse then
             local InteractFunctionUnit = FunctionItemFactory:CreateInteractiveDescFunc(
-                { FuncValue = IdList[i], EntityID = self.EntityID, ResID = NpcResID })
+                { FuncValue = IdList[i], EntityID = self.EntityID, ResID = NpcResID, IsNpcFunc = true })
             if InteractFunctionUnit then
                 if NavInteractiveID ~= 0 and IdList[i] == NavInteractiveID then
                     self:SetEntranceItemIcon(InteractFunctionUnit)

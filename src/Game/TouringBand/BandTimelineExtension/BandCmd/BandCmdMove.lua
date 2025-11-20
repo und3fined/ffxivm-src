@@ -169,6 +169,11 @@ function BandCmdMove:OnEnd()
     local IsComeOnState = _G.BandTimelineMgr:GetTimelineState(self.TimelineID, TouringBandDefine.STATES_TYPE.COME_ON)
     _G.EventMgr:SendEvent(EventID.TouringBandStatesChange, { TimelineID = self.TimelineID, Key = TouringBandDefine.STATES_TYPE.COME_ON , Value = not IsComeOnState })
     _G.EventMgr:SendEvent(EventID.TouringBandStatesChange, { TimelineID = self.TimelineID, Key = TouringBandDefine.STATES_TYPE.MOVE_IN_END , Value = true })
+
+    local EobjActor = ActorUtil.GetActorByEntityID(Member[ProtoRes.TOURING_BAND_TIMELINE_EVENT_TARGET_TYPE.TB_TARGET_EOBJ])
+    if EobjActor then
+        EobjActor:SetSharedGroupTimelineState(11)
+    end
 end
 
 function BandCmdMove:OnTriggerEventAfterStartTime()

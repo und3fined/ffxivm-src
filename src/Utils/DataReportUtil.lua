@@ -13,15 +13,19 @@ DataReportUtil.LastReportTime = 0
 
 DataReportUtil.ASAAdInfoUrlTest = "http://119.147.3.250:31010/rpc.fgame.profile.Forward/ForwardEvent"
 DataReportUtil.ASAAdInfoUrl = "https://profile.fmgame.qq.com:30443/rpc.fgame.profile.Forward/ForwardEvent"
-DataReportUtil.IPCheckUrl = "https://api64.ipify.org?format=json"
+DataReportUtil.IPCheckUrl1 = "https://api64.ipify.org?format=json"
+DataReportUtil.IPCheckUrl2 = "https://ipinfo.io/json"
+DataReportUtil.IPCheckUrl3 = "https://httpbin.org/ip"
 DataReportUtil.IPCheckUrlList = {
 	"https://ipinfo.io/json",
-	"https://httpbin.org/ip"
+	"https://httpbin.org/ip",
 }
 
 DataReportUtil.IsIPAddressInfoInited = false
 DataReportUtil.IPV4Address = ""
 DataReportUtil.IPV6Address = ""
+DataReportUtil.DeviceID = ""
+DataReportUtil.ClientIPV6 = ""
 
 local CommonStringDataCache
 
@@ -44,7 +48,40 @@ function DataReportUtil.GetIPAddressInfo()
 				end
 			end
 		end
-		if DataReportUtil.IPV4Address ~= "" or DataReportUtil.IPV4Address ~= "" then
+		if DataReportUtil.IPV4Address ~= "" or DataReportUtil.IPV6Address ~= "" then
+			DataReportUtil.IsIPAddressInfoInited = true
+		end
+	end
+end
+
+function DataReportUtil.RequestPublicIPAddress()
+	_G.UE.UPlatformUtil.RequestPublicIPAddress(DataReportUtil.IPCheckUrl)
+end
+
+function DataReportUtil.GetPublicIPAddressInfo()
+	if not DataReportUtil.IsIPAddressInfoInited then
+		local IPAddressInfoJson = _G.UE.UPlatformUtil.GetPublicIPAddress()
+		local IPAddressInfo = Json.decode(IPAddressInfoJson)
+		if nil ~= IPAddressInfo and not string.isnilorempty(IPAddressInfo.ip) then
+			local IPAddress = IPAddressInfo.ip
+			local LocalPattern = "^192%.168%.%d+%.%d+$"
+			local IPV4Pattern = "^%d+%.%d+%.%d+%.%d+$"
+			local IPV6Pattern = "^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$"
+			if string.match(IPAddress, IPV4Pattern) and not string.match(IPAddress, LocalPattern) then
+				DataReportUtil.IPV4Address = IPAddress
+			end
+			if string.match(IPAddress, IPV6Pattern) then
+				DataReportUtil.IPV6Address = IPAddress
+			end
+			if DataReportUtil.IPV6Address == "" then
+				DataReportUtil.IPV6Address = DataReportUtil.IPV4Address
+			end
+		else
+			_G.FLOG_WARNING("DataReportUtil.GetPublicIPAddressInfo, Failed to get public IP address info.")
+		end
+		_G.FLOG_INFO("DataReportUtil.GetPublicIPAddressInfo, IPV4Address: %s, IPV6Address: %s",
+			DataReportUtil.IPV4Address, DataReportUtil.IPV6Address)
+		if DataReportUtil.IPV4Address ~= "" or DataReportUtil.IPV6Address ~= "" then
 			DataReportUtil.IsIPAddressInfoInited = true
 		end
 	end
@@ -52,14 +89,15 @@ end
 
 function DataReportUtil.SendPublicIPAddressInfoRequest()
 	--if not DataReportUtil.IsIPAddressInfoInited then
-		-- if _G.HttpMgr:Get(DataReportUtil.IPCheckUrl, "", "", DataReportUtil.SendPublicIPAddressInfoRequestCallback, DataReportUtil, false) then
-		-- 	_G.FLOG_INFO("DataReportUtil.SendPublicIPAddressInfoRequest success")
-		-- end
-		for _, Url in ipairs(DataReportUtil.IPCheckUrlList) do
-			if _G.HttpMgr:Get(Url, "", "", DataReportUtil.SendPublicIPAddressInfoRequestCallback, DataReportUtil, false) then
-				_G.FLOG_INFO("DataReportUtil.SendPublicIPAddressInfoRequest success, url: %s", Url)
-			end
+	for _, Url in ipairs(DataReportUtil.IPCheckUrlList) do
+		if _G.HttpMgr:Get(Url, "", "", DataReportUtil.SendPublicIPAddressInfoRequestCallback, DataReportUtil, false) then
+			_G.FLOG_INFO("DataReportUtil.SendPublicIPAddressInfoRequest success, url: %s", Url)
 		end
+	end
+
+	-- if _G.HttpMgr:Get(DataReportUtil.IPCheckUrl3, "", "", DataReportUtil.SendPublicIPAddressInfoRequestCallback, DataReportUtil, false) then
+	-- 		_G.FLOG_INFO("DataReportUtil.SendPublicIPAddressInfoRequest success, url: %s", DataReportUtil.IPCheckUrl3)
+	-- 	end
 	--end
 end
 
@@ -69,6 +107,7 @@ function DataReportUtil.SendPublicIPAddressInfoRequestCallback(MsgBody, Result)
 	if not string.isnilorempty(IPAddressInfoStr) then
 		local IPAddressInfo = Json.decode(IPAddressInfoStr)
 		if nil ~= IPAddressInfo then
+			--local IPAddress = "2409:895b:3460:ba7d:f03d:3d30:39bd:8133"
 			local IPAddress = ""
 
 			if not string.isnilorempty(IPAddressInfo.ip) then
@@ -76,9 +115,10 @@ function DataReportUtil.SendPublicIPAddressInfoRequestCallback(MsgBody, Result)
 			elseif not string.isnilorempty(IPAddressInfo.origin) then
 				IPAddress = IPAddressInfo.origin
 			end
+
+			--local IPAddress = IPAddressInfo.ip
 			local LocalPattern = "^192%.168%.%d+%.%d+$"
 			local IPV4Pattern = "^%d+%.%d+%.%d+%.%d+$"
-			--local IPV6Pattern = "^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$"
 			if string.match(IPAddress, IPV4Pattern) and not string.match(IPAddress, LocalPattern) then
 				DataReportUtil.IPV4Address = IPAddress
 			end
@@ -97,10 +137,11 @@ function DataReportUtil.SendPublicIPAddressInfoRequestCallback(MsgBody, Result)
 
 	_G.FLOG_INFO("DataReportUtil.SendPublicIPAddressInfoRequestCallback, IPV4Address: %s, IPV6Address: %s",
 		DataReportUtil.IPV4Address, DataReportUtil.IPV6Address)
-	-- if DataReportUtil.IPV4Address ~= "" then
+	-- if DataReportUtil.IPV4Address ~= "" or DataReportUtil.IPV6Address ~= "" then
 	-- 	DataReportUtil.IsIPAddressInfoInited = true
 	-- end
 end
+
 
 function DataReportUtil.InitBaseReportData()
 	if nil == DataReportUtil.TGLogBaseReportData then
@@ -142,9 +183,11 @@ function DataReportUtil.InitBaseReportData()
 		IosCAID = _G.UE.UTDMMgr.Get():GetDeviceInfo("CAID")
 	end
 	DataReportUtil.DeviceTGLogReportData:Add("TelecomOper", "")  -- 获取不到(GCloud和MSDK均无此功能)
-	local DeviceId = _G.UE.UPlatformUtil.GetDeviceId()
-	DataReportUtil.DeviceTGLogReportData:Add("DeviceId", DeviceId)
-	--DataReportUtil.GetIPAddressInfo()
+	if DataReportUtil.DeviceID == "" then
+		DataReportUtil.DeviceID = _G.UE.UPlatformUtil.GetDeviceId()
+	end
+	DataReportUtil.DeviceTGLogReportData:Add("DeviceId", DataReportUtil.DeviceID)
+	--DataReportUtil.GetPublicIPAddressInfo()
 	DataReportUtil.DeviceTGLogReportData:Add("ClientIP", DataReportUtil.IPV4Address)
 	DataReportUtil.DeviceTGLogReportData:Add("ClientIPV6", DataReportUtil.IPV6Address)
 	DataReportUtil.DeviceTGLogReportData:Add("ANDROID_OAID", AndroidOAID)
@@ -206,23 +249,115 @@ function DataReportUtil.InitBaseReportData()
 end
 
 function DataReportUtil.InsertBaseReportData(ReportData, IsNeedTGLogBase, IsNeedDeviceBase, IsNeedRoleBase)
-	DataReportUtil.InitBaseReportData()
-	if nil ~= IsNeedTGLogBase and IsNeedTGLogBase == true and nil ~= DataReportUtil.TGLogBaseReportData then
-		for Key, Value in pairs(DataReportUtil.TGLogBaseReportData) do
-			ReportData:Add(Key, Value)
+	-- DataReportUtil.InitBaseReportData()
+	-- if nil ~= IsNeedTGLogBase and IsNeedTGLogBase == true and nil ~= DataReportUtil.TGLogBaseReportData then
+	-- 	for Key, Value in pairs(DataReportUtil.TGLogBaseReportData) do
+	-- 		ReportData:Add(Key, Value)
+	-- 	end
+	-- end
+
+	-- if nil ~= IsNeedDeviceBase and IsNeedDeviceBase == true and nil ~= DataReportUtil.DeviceTGLogReportData then
+	-- 	for Key, Value in pairs(DataReportUtil.DeviceTGLogReportData) do
+	-- 		ReportData:Add(Key, Value)
+	-- 	end
+	-- end
+
+	-- if nil ~= IsNeedRoleBase and IsNeedRoleBase == true and nil ~= DataReportUtil.RoleBaseReportData then
+	-- 	for Key, Value in pairs(DataReportUtil.RoleBaseReportData) do
+	-- 		ReportData:Add(Key, Value)
+	-- 	end
+	-- end
+
+	local Platform = CommonUtil.GetPlatformName()
+	if nil ~= IsNeedTGLogBase and IsNeedTGLogBase == true then
+		local WorldID = _G.LoginMgr:GetWorldID()
+		local OpenID = _G.LoginMgr:GetOpenID()
+		ReportData:Add("GameSvrId", "")
+		--local GameAppId = _G.UE.UTDMMgr.Get():GetGameAppId()
+		if _G.LoginMgr:IsQQLogin() then
+			ReportData:Add("GameAppId", MSDKDefine.Config.QQAPPID)
+		elseif _G.LoginMgr:IsWeChatLogin() then
+			ReportData:Add("GameAppId", MSDKDefine.Config.WechatAppID)
+		else
+			ReportData:Add("GameAppId", "")
 		end
+		if Platform == "Android" then
+			ReportData:Add("PlatID", "1")
+		elseif Platform == "IOS" then
+			ReportData:Add("PlatID", "0")
+		end
+		ReportData:Add("WorldID", tostring(WorldID))
+		ReportData:Add("OpenID", tostring(OpenID))
 	end
 
-	if nil ~= IsNeedDeviceBase and IsNeedDeviceBase == true and nil ~= DataReportUtil.DeviceTGLogReportData then
-		for Key, Value in pairs(DataReportUtil.DeviceTGLogReportData) do
-			ReportData:Add(Key, Value)
+	if nil ~= IsNeedDeviceBase and IsNeedDeviceBase == true then
+		local AndroidOAID = ""
+		local IosCAID = ""
+		if Platform == "Android" then
+			AndroidOAID = _G.UE.UTDMMgr.Get():GetDeviceInfo("OAID")
+		elseif Platform == "IOS" then
+			IosCAID = _G.UE.UTDMMgr.Get():GetDeviceInfo("CAID")
 		end
+		ReportData:Add("TelecomOper", "")  -- 获取不到(GCloud和MSDK均无此功能)
+		if DataReportUtil.DeviceID == "" then
+			DataReportUtil.DeviceID = _G.UE.UPlatformUtil.GetDeviceId()
+		end
+		ReportData:Add("DeviceId", DataReportUtil.DeviceID)
+		--DataReportUtil.GetPublicIPAddressInfo()
+		ReportData:Add("ClientIP", DataReportUtil.IPV4Address)
+		ReportData:Add("ClientIPV6", DataReportUtil.IPV6Address)
+		ReportData:Add("ANDROID_OAID", AndroidOAID)
+		ReportData:Add("IOS_CAID", IosCAID)
+		local IsWithEmulatorMode = _G.UE.UUIMgr.Get():IsWithEmulator()
+		if IsWithEmulatorMode then
+			ReportData:Add("IsSimulator", "1")
+		else
+			ReportData:Add("IsSimulator", "0")
+		end
+
+		--选填
+		local AppVersion = _G.UE.UVersionMgr.GetAppVersion()
+		ReportData:Add("ClientVersion", AppVersion)
+		local OSVersion = _G.UE.UPlatformUtil.GetOSVersion()
+		ReportData:Add("SystemSoftware", OSVersion)
+		local DeviceName = _G.UE.UPlatformUtil.GetDeviceName()
+		ReportData:Add("SystemHardware", DeviceName)
+		local NetworkType = CommonUtil.GetNetworkConnectionType()
+		ReportData:Add("Network", NetworkType)
+		local ViewportSize = UIUtil.GetViewportSize()
+		ReportData:Add("ScreenWidth", tostring(ViewportSize.X))
+		ReportData:Add("ScreenHight", tostring(ViewportSize.Y))
+		ReportData:Add("Density", "")
+		local DeviceMakeAndModel = _G.UE.UPlatformUtil.GetDeviceMakeAndModel()
+		ReportData:Add("CpuHardware", DeviceMakeAndModel)
+		local TotalMemory = _G.UE.UPlatformUtil.GetAvailablePhysicalMemory() + _G.UE.UPlatformUtil.GetUsedPhysicalMemory()
+		ReportData:Add("Memory", tostring(TotalMemory))
+		ReportData:Add("GLRender", "")
+		ReportData:Add("GLVersion", "")
+		ReportData:Add("IsGamematrix", "")
 	end
 
-	if nil ~= IsNeedRoleBase and IsNeedRoleBase == true and nil ~= DataReportUtil.RoleBaseReportData then
-		for Key, Value in pairs(DataReportUtil.RoleBaseReportData) do
-			ReportData:Add(Key, Value)
+	if nil ~= IsNeedRoleBase and IsNeedRoleBase == true then
+		local AttributeComponent = MajorUtil.GetMajorAttributeComponent()
+		if nil ~= AttributeComponent then
+			ReportData:Add("RoleID", tostring(AttributeComponent.RoleID))
+			ReportData:Add("RoleName", AttributeComponent.ActorName)
+			ReportData:Add("Level", tostring(AttributeComponent.Level))
+			ReportData:Add("ProfID", tostring(AttributeComponent.ProfID))
+			ReportData:Add("Gender", tostring(AttributeComponent.Gender))
+			ReportData:Add("Race", tostring(AttributeComponent.RaceID))
+			ReportData:Add("Branch", tostring(AttributeComponent.TribeID))
+		else
+			ReportData:Add("RoleID", "")
+			ReportData:Add("RoleName", "")
+			ReportData:Add("Level", "")
+			ReportData:Add("ProfID", "")
+			ReportData:Add("Gender", "")
+			ReportData:Add("Race", "")
+			ReportData:Add("Branch", "")
 		end
+		--选填
+		ReportData:Add("VipLevel", "")
 	end
 end
 

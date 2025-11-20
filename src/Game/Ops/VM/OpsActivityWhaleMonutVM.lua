@@ -91,7 +91,7 @@ function OpsActivityWhaleMonutVM:SetActGoodsHasBought(ProgressData)
         local GoodsData = _G.StoreMgr:GetProductDataByID(self.GoodsID)
         local IsCan, CanNotReason = _G.StoreMgr:IsCanBuy(self.GoodsID)
         self.IsBuy = CanNotReason == _G.LSTR(StoreDefine.SecondScreenType.Owned)
-        local TempCfg = StoreCfg:FindCfgByKey(self.GoodsID)
+        local TempCfg = StoreCfg:FindCfgByKey(self.GoodsID) or {}
         local TempCfgItems = TempCfg.Items or {}
         if not self.IsBuy and TempCfgItems[1] and TempCfgItems[1].ID then
             local Cfg = ItemCfg:FindCfgByKey(TempCfgItems[1].ID)

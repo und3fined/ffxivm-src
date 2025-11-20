@@ -1,7 +1,7 @@
 ---
 --- Author: sammrli
 --- DateTime: 2024-02-26 10:12
---- Description:运输陆行鸟地图
+--- Description:运输陆行鸟地图内容
 ---
 
 local LuaClass = require("Core/LuaClass")
@@ -244,14 +244,18 @@ function ChocoboTransportMapContentView:OnShow()
 	MapMarkerMgr:CreateProviders(self.ContentType)
 	self:CreateAllMarkers(UIMapID)
 
+	local X = 0
+	local Y = 0
 	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
 	if Cfg then
 		UIUtil.ImageSetBrushFromAssetPath(self.ImgMap, Cfg.Path)
 		--UIUtil.ImageSetBrushFromAssetPath(self.ImgBackground, Cfg.Background, false, true)
+		X = Cfg.UIMapOffsetX
+		Y = Cfg.UIMapOffsetY
+	else
+		FLOG_ERROR("[ChocoboTransportMapContentView] onshow cant found mapuicfg, uimapid= %s", tostring(UIMapID))
 	end
 
-	local X = Cfg.UIMapOffsetX
-	local Y = Cfg.UIMapOffsetY
 	local CommGesture = self.CommGesture_UIBP
 	CommGesture:SetOffset(X, Y)
 	self:OnPositionChanged(X, Y)

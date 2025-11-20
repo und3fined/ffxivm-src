@@ -114,6 +114,7 @@ function ArmyInfoPageVM:OnInit()
     self.SEList = UIBindableList.New(ArmySpecialEffectsItemVM)
     self.TrendList = UIBindableList.New(ArmyInfoTrendsItemVM)
     self.GainExpWay = GroupStoreUitextCfg:FindCfgByKey(ArmyDefine.ArmyUITextID.GainExpWay).TextStr or ""
+    self.IsShowReportBtn = nil
 end
 
 function ArmyInfoPageVM:OnBegin()
@@ -182,6 +183,8 @@ function ArmyInfoPageVM:UpdateArmyInfo(ArmyInfo, CategoryData, LeaderRoleID, bLe
     --self:UpdatePrivilegeList(Level)
     ---特效处理
     self:UpdateSEList(ArmyInfo.BonusStateUps)
+
+    self.IsShowReportBtn = not ArmyMgr:IsLeader()
 end
 
 function ArmyInfoPageVM:FormatNumber(Number)
@@ -311,8 +314,13 @@ function ArmyInfoPageVM:SetLeaderID(LeaderRoleID)
         end
     end)
     _G.ArmyMgr:GetMemberDataByRoleID(LeaderRoleID, function(Member)
-        local LoaderMember = Member
-        local CategoryID = LoaderMember.Simple.CategoryID
+        local LeaderMember = Member
+        if LeaderMember == nil then
+            ---一般不会出现无部队长的情况，可能是部队长转让后退出了，数据未跟新
+            _G.FLOG_WARNING("ArmyInfoPageVM:SetLeaderID LeaderMember is nil LeaderRoleID:"..tostring(LeaderRoleID))
+            return
+        end
+        local CategoryID = LeaderMember.Simple.CategoryID
         local CategoryData = _G.ArmyMgr:GetCategoryDataByID(CategoryID)
         if CategoryData then
             local CategoryName = CategoryData.Name

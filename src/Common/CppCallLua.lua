@@ -25,6 +25,7 @@ local TipsUtil = require("Utils/TipsUtil")
 local SettingsTabRole = require("Game/Settings/SettingsTabRole")
 local DataReportUtil = require("Utils/DataReportUtil")
 local AudioUtil = require("Utils/AudioUtil")
+local LuaFuncInSeq = require("Game/Story/LuaFuncInSeq")
 -- local ActorUtil = require("Utils/ActorUtil")
 
 local LSTR = _G.LSTR
@@ -126,7 +127,7 @@ end
 --- 返回切换关卡时, 需要保留的BGM通道
 function CppCallLua.GetRetainedBGMChannelsOnWorldChange()
 	local EBGMChannel = UE.EBGMChannel
-	return EBGMChannel.BaseZone  -- # TODO - 后续坐骑EBGMChannel.Mount可能也需要跨地图
+	return EBGMChannel.BaseZone, EBGMChannel.Mount  -- # TODO - 后续坐骑EBGMChannel.Mount可能也需要跨地图
 end
 
 function CppCallLua.PauseSequence(bDelay)
@@ -166,8 +167,8 @@ function CppCallLua.PreLoadWorld(CurWorldName, NextWorldName)
 end
 
 --加载后事件
-function CppCallLua.PostLoadWorld(LastWorldName, CurWorldName, bChangeMap, LoadWorldReason)
-	_G.FLOG_INFO("CppCallLua.PostLoadWorld LastWorldName:%s, CurWorldName:%s, bChangeMap:%s, LoadWorldReason:%s", LastWorldName, CurWorldName, tostring(bChangeMap), tostring(LoadWorldReason))
+function CppCallLua.PostLoadWorld(LastWorldName, CurWorldName, LoadWorldReason)
+	_G.FLOG_INFO("CppCallLua.PostLoadWorld LastWorldName:%s, CurWorldName:%s, LoadWorldReason:%s", LastWorldName, CurWorldName, tostring(LoadWorldReason))
 	local WorldMsgMgr = _G.WorldMsgMgr
 	WorldMsgMgr:PostLoadWorld(LastWorldName, CurWorldName, LoadWorldReason)
 end
@@ -276,6 +277,14 @@ end
 ---@param SubMsgID number
 function CppCallLua.IsMsgEnableResend(MsgID, SubMsgID)
 	return _G.GameNetworkMgr:IsMsgEnableResend(MsgID, SubMsgID)
+end
+
+---OnTrySendMsg
+---是可以发包
+---@param MsgID number
+---@param SubMsgID number
+function CppCallLua.OnTrySendMsg(MsgID, SubMsgID)
+	return _G.NetworkImplMgr:OnTrySendMsg(MsgID, SubMsgID)
 end
 
 ---GetMoveConfig
@@ -688,6 +697,10 @@ function CppCallLua.OnVirtualKeyboardHidden()
 	_G.UIViewMgr:OnVirtualKeyboardHidden()
 end
 
+function CppCallLua.CheckFSafeZoneEnableNotch(ResX, ResY)
+	_G.UIViewMgr:CheckFSafeZoneEnableNotch(ResX, ResY)
+end
+
 ---GetPayConfig 获取支付配置
 ---@param Key string 配置关键字
 ---@return string 配置值
@@ -907,6 +920,9 @@ end
 ---@return boolean
 function CppCallLua.PreloadUIView(ViewName)
 	local ViewID = UIViewMgr:GetViewIDByName(ViewName)
+	if ViewID == 0 then
+		return false
+	end
 	return UIViewMgr:PreLoadWidgetByViewID(ViewID)
 end
 
@@ -986,6 +1002,15 @@ end
 
 function CppCallLua.IsMoundOpened(ID)
 	return _G.WildBoxMoundMgr:IsMoundOpened(ID)
+end
+
+function CppCallLua.IsMysterMerchantActive(IsFinish)
+	-- 没触发奇遇的情况下直接返回false
+	if _G.MysterMerchantMgr:GetCurrActiveMerchant() == nil then
+		return false
+	end
+	local bCheckIsFinish = (IsFinish > 0)
+	return bCheckIsFinish == _G.MysterMerchantMgr:IsFinishMerchatTask()
 end
 
 function CppCallLua.IsInActiveFate(Position)
@@ -1132,6 +1157,11 @@ function CppCallLua.MountCancelCall()
 	_G.MountMgr:ForceSendMountCancelCall()
 end
 
+function CppCallLua.GetMaxGroundMaxSpeed()
+	local MaxSpeed = _G.MountMgr:GetMaxGroundMaxSpeed()
+	return MaxSpeed
+end
+
 local TargetMgr
 
 function CppCallLua.StartHardLockEffect()
@@ -1182,6 +1212,29 @@ function CppCallLua.SetSettingsValueBySaveKey(InSaveKey, InValue)
 	_G.SettingsMgr:SetValueBySaveKey(InSaveKey, InValue)
 end
 
+------------------手柄设置相关------------------------------------
+function CppCallLua.GamePadConnectionChange(bConnect)
+	if _G.SettingsHandleMgr:CanStartHandleMode(bConnect) then
+		_G.SettingsHandleMgr:IsStartHandleMode(bConnect)
+	end
+end
+
+function CppCallLua.GetHandleInputActionByCusAction(CusAction)
+	return _G.SettingsHandleMgr:GetHandleInputActionByCusAction(CusAction)
+end
+
+function CppCallLua.SwitchVirtualCursorWidget(bShowVirtualCursorWidget)
+	if bShowVirtualCursorWidget then
+		UIViewMgr:ShowView(_G.UIViewID.VirtualCursorView)
+	else
+		UIViewMgr:HideView(_G.UIViewID.VirtualCursorView)
+	end
+end
+
+function CppCallLua.GamePadKeyPressedOrReleased(Param)
+	_G.PowerSavingMgr:OnGamePadKeyPressedOrReleased(Param)
+end
+-----------------------------------------------------------------
 function CppCallLua.ShowTipsByID(TipID)
 	_G.MsgTipsUtil.ShowTipsByID(TipID)
 end
@@ -1190,15 +1243,25 @@ function CppCallLua.IsViewVisible(ViewID)
 	return UIViewMgr:IsViewVisible(ViewID)
 end
 
-function CppCallLua.OnGameBotCallBack(Params)
-	_G.FLOG_INFO("CppCallLua.OnGameBotCallBack, Params:%s", Params)
+function CppCallLua.GetQuestSetEObjState(EObjID)
+	return _G.QuestMgr:GetQuestSetEObjState(EObjID)
+end
+
+-----------------GameBot相关-----------------
+function CppCallLua.OnGameBotUrlCallBack(Params)
+	_G.FLOG_INFO("CppCallLua.OnGameBotUrlCallBack, Params:%s", Params)
 	local JumpUtil = require("Utils/JumpUtil")
 	JumpUtil.OnGameBotJump(Params)
 end
 
-function CppCallLua.GetQuestSetEObjState(EObjID)
-	return _G.QuestMgr:GetQuestSetEObjState(EObjID)
+function CppCallLua.OnGameBotShowCallBack()
+	_G.FLOG_INFO("CppCallLua.OnGameBotShowCallBack")
 end
+
+function CppCallLua.OnGameBotCloseCallBack()
+	_G.FLOG_INFO("CppCallLua.OnGameBotCloseCallBack")
+end
+-----------------GameBot相关-----------------
 
 -----------------Pandora相关-----------------
 function CppCallLua.OnRecievedPandoraMsg(Msg)
@@ -1206,60 +1269,85 @@ function CppCallLua.OnRecievedPandoraMsg(Msg)
 	_G.PandoraMgr:OnRecievedPandoraMsg(Msg)
 end
 
-function CppCallLua.PandoraClosePanel(AppId)
-	_G.FLOG_INFO("CppCallLua.PandoraClosePanel, AppId:%s", AppId)
-	_G.PandoraMgr:CloseMainPanel(AppId)
-end
-
-function CppCallLua.PandoraShowActivityRedDot(AppId, IsShow)
-	_G.FLOG_INFO("CppCallLua.PandoraShowActivityRedDot, AppId:%s, IsShow:%s", AppId, tostring(IsShow))
-	_G.PandoraMgr:ShowActivityRedDot(AppId, IsShow)
-end
-
-function CppCallLua.PandoraGoSystem(Params)
-	_G.FLOG_INFO("CppCallLua.PandoraGoSystem, Params:%s", Params)
-	_G.PandoraMgr:GoToSystem(Params)
-end
-
-function CppCallLua.PandoraShowReceivedItems(ReceivedItems)
-	_G.FLOG_INFO("CppCallLua.PandoraShowReceivedItems, ReceivedItems:%s", ReceivedItems)
-	_G.PandoraMgr:ShowReceivedItems(ReceivedItems)
-end
-
-function CppCallLua.PandoraShareMiniApp(Params)
-	_G.FLOG_INFO("CppCallLua.PandoraShareMiniApp, Params:%s", Params)
-	_G.PandoraMgr:PandoraShareMiniApp(Params)
-end
-
-function CppCallLua.PandoraGetUserInfo(OpenIDs, Source)
-	_G.FLOG_INFO("CppCallLua.PandoraGetUserInfo, OpenIds:%s, Source:%s", OpenIDs, Source)
-	_G.PandoraMgr:GetUserInfo(OpenIDs, Source)
-end
-
-function CppCallLua.PandoraIsPopPanelAllowed(AppId, AppName, ActivityClassification)
-	_G.FLOG_INFO("CppCallLua.PandoraIsPopPanelAllowed, AppId:%s, AppName:%s, ActivityClassification:%s", AppId, AppName, ActivityClassification)
-	_G.PandoraMgr:PandoraIsPopPanelAllowed(AppId, AppName, ActivityClassification)
-end
-
-function CppCallLua.PandoraOpenAnotherPandoraApp(TargetAppId, OpenArgs)
-	-- _G.FLOG_INFO("CppCallLua.PandoraOpenAnotherPandoraApp, TargetAppId:%s, OpenArgs:%s", TargetAppId, OpenArgs)
-	-- _G.PandoraMgr:OpenAnotherPandoraApp(TargetAppId, OpenArgs)
-end
-
-function CppCallLua.PandoraNotifySinkToBottom(AppId, AppName)
-	_G.FLOG_INFO("CppCallLua.PandoraNotifySinkToBottom, AppId:%s, AppName:%s", AppId, AppName)
-	_G.PandoraMgr:NotifyActivitySinkToBottom(AppId, AppName)
-end
-
-function CppCallLua.PandoraShowItemDetailTips(ItemID, ScreenPosition)
-	_G.FLOG_INFO("CppCallLua.PandoraShowItemDetailTips, ItemID:%d, ScreenOffset:(%f, %f)", ItemID, ScreenPosition.X, ScreenPosition.Y)
-	_G.PandoraMgr:ShowItemDetailTips(ItemID, ScreenPosition)
-end
-
 function CppCallLua.PandoraGetItemIconId(ItemID)
 	_G.FLOG_INFO("CppCallLua.PandoraGetItemIconId, ItemID:%d", ItemID)
 	return _G.PandoraMgr:GetItemIconId(ItemID)
 end
+
+function CppCallLua.PandoraRefreshUserdata()
+	_G.PandoraMgr:RefreshUserdata()
+end
 -----------------Pandora相关-----------------
+
+function CppCallLua.InitAndroidAudioAPI()
+	local AndroidAudioAPIDefine = require("Define/AndroidAudioAPIDefine")
+	return AndroidAudioAPIDefine.InitAndroidAudioAPI()
+end
+
+function CppCallLua.GetPlaceErrorStatus(Status)
+	_G.HousingMgr:GetPlaceErrorStatus(Status)
+end
+
+function CppCallLua.GetYardFixIndex(BlockID,YardObjIndex)
+	return _G.HousingMgr:GetYardFixIndex(BlockID,YardObjIndex)
+end
+
+function CppCallLua.SetPickError()
+	_G.HousingMgr:SetPickError()
+end
+
+function CppCallLua.OnAppendEnd(X,Y,Z,Yaw)
+	_G.HousingMgr:OnAppendEnd(X,Y,Z,Yaw)
+end
+
+function CppCallLua.OnPickStart(FixIndex)
+	_G.HousingMgr:OnPickStart(FixIndex)
+end
+
+function CppCallLua.OnPickEnd(FixIndex,X,Y,Z,Yaw)
+	_G.HousingMgr:OnPickEnd(FixIndex,X,Y,Z,Yaw)
+end
+
+function CppCallLua.OnPickOther()
+	_G.HousingMgr:OnPickOther()
+end
+
+function CppCallLua.CanPick(FixIndex)
+	return _G.HousingMgr:CanPick(FixIndex)
+end
+
+function CppCallLua.OnPickEndMulti(FixIndexs,PosXs,PosYs,PosZs,Yaws)
+	_G.HousingMgr:OnPickEndMulti(FixIndexs,PosXs,PosYs,PosZs,Yaws)
+end
+
+function CppCallLua.OnRefreshPickObjectsInfo(FixIndexs, PosXs, PosYs, PosZs, Yaws)
+    _G.HousingMgr:OnRefreshPickObjectsInfo(FixIndexs, PosXs, PosYs, PosZs, Yaws)
+end
+
+function CppCallLua.GetPlayerHousingBlockID()
+	return _G.HousingMgr:GetPlayerHousingBlockID()
+end
+
+function CppCallLua.GetEnableCameraMove()
+	return _G.HousingMgr:GetEnableCameraMove()
+end
+
+function CppCallLua.CheckCreateFurnitureEObj(Key, FixIndex)
+    return _G.HousingMgr:CheckCreateFurnitureEObj(Key, FixIndex)
+end
+
+function CppCallLua.GetFurnitureEObjEntityID(EntityID, FixIndex)
+    _G.HousingMgr:GetFurnitureEObjEntityID(EntityID, FixIndex)
+end
+
+function CppCallLua.RemoveFurnitureEObj(EntityID)
+    _G.HousingMgr:RemoveFurnitureEObj(EntityID)
+end
+
+function CppCallLua.ExecLuaFuncInSeq(FuncName, Params)
+	if LuaFuncInSeq[FuncName] then
+		LuaFuncInSeq[FuncName](Params)
+	end
+end
 
 return CppCallLua

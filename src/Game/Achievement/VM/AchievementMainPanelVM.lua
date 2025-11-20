@@ -493,17 +493,15 @@ function AchievementMainPanelVM:OpenTypeLevelRewardView()
 				return
 			end
             if ItemData.IsGetProgress and not ItemData.IsCollectedAward then
-                AchievementMgr:GetAchievementLevelReward(0, LevelAwardInfo.Level )
+                AchievementMgr:GetAchievementLevelReward( )
             end
         end
     end
 
 	local function ItemClickCallback(Index, ItemData, ItemView)
 		if ItemData then
-			local LevelAwardInfoList = AchievementUtil.GetLevelRewardList(0) or {}
-			local LevelAwardInfo = table.find_item(LevelAwardInfoList, ItemData.CollectTargetNum, "BasicAchievePoint")
 			if ItemData.IsGetProgress and not ItemData.IsCollectedAward then
-				AchievementMgr:GetAchievementLevelReward(0, LevelAwardInfo.Level )
+				AchievementMgr:GetAchievementLevelReward( )
 			else
 				local ItemTipsUtil = require("Utils/ItemTipsUtil")
 				ItemTipsUtil.ShowTipsByResID(ItemData.AwardID, ItemView)
@@ -552,22 +550,24 @@ function AchievementMainPanelVM:OpenTypeLevelRewardView()
 end
 
 -- 领取等级奖励成功
-function AchievementMainPanelVM:ReceiveLevelAwardSucceed(Level)
+function AchievementMainPanelVM:ReceiveLevelAwardSucceed(Levels)
 	self:SetLevelRewardEFFVisible(0)
-
 	local AwardView = UIViewMgr:FindVisibleView(UIViewID.CollectionAwardPanel)
+
 	if AwardView and AwardView.AwardVMList then
 		local LevelAwardInfoList = AchievementUtil.GetLevelRewardList(0) or {}
-		local LevelAwardInfo = table.find_item(LevelAwardInfoList, Level, "Level") or {}
-		local AwardVM = AwardView.AwardVMList:Find(function(Item) return Item.CollectTargetNum == LevelAwardInfo.BasicAchievePoint end )
-		if AwardVM ~= nil then
-			AwardVM.IsCollectedAward = true
-			AwardVM.IsGetProgress = false
-		end
-		local AwardItem = table.find_item(AwardView.AwardList or {}, LevelAwardInfo.BasicAchievePoint, "CollectTargetNum") or {}
-		if AwardItem ~= nil then
-			AwardItem.IsCollectedAward = true
-			AwardItem.IsGetProgress = false
+		for i = 1, #(Levels or {}) do
+			local LevelAwardInfo = table.find_item(LevelAwardInfoList, Levels[i], "Level") or {}
+			local AwardVM = AwardView.AwardVMList:Find(function(Item) return Item.CollectTargetNum == LevelAwardInfo.BasicAchievePoint end )
+			if AwardVM ~= nil then
+				AwardVM.IsCollectedAward = true
+				AwardVM.IsGetProgress = false
+			end
+			local AwardItem = table.find_item(AwardView.AwardList or {}, LevelAwardInfo.BasicAchievePoint, "CollectTargetNum") or {}
+			if AwardItem ~= nil then
+				AwardItem.IsCollectedAward = true
+				AwardItem.IsGetProgress = false
+			end
 		end
 	end
 end

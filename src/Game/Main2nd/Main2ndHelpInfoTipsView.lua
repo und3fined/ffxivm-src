@@ -85,6 +85,9 @@ function Main2ndHelpInfoTipsView:OnShow()
 		local HelpCfgs = HelpCfg:FindAllHelpIDCfg(Params.ID)
 		Params.Data = {{Content = {HelpCfgs[1].SecContent}}}
 	end
+	if Params.Content then
+		Params.Data = {{Content = {Params.Content}}}
+	end
 	if Params.Data then
 		self.VM:UpdateVM(Params.Data)
 	end
@@ -165,6 +168,15 @@ function Main2ndHelpInfoTipsView:OnShow()
 				Offset.Y = Offset.Y + TargetWidgetSize.Y
 			else
 				Alignment.Y = 0
+			end
+
+			if Params.IsAdaptationX then
+				if TragetAbsolute.X - WindowAbsolute.X  > ViewportSize.X / 2 then
+					Alignment.X = 1
+				else
+					Alignment.X = 0
+					Offset.X = Offset.X + TargetWidgetSize.X
+				end
 			end
 		end
 

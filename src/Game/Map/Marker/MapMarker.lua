@@ -230,6 +230,12 @@ function MapMarker:IsControlByOpenFlag()
 	return false
 end
 
+---是否可以拖拽选中（目前PVP地图用到），默认不可以
+---@return boolean
+function MapMarker:CanDragSelect()
+	return false
+end
+
 
 ---GetAlpha
 ---@return number
@@ -419,18 +425,18 @@ function MapMarker:GetSubType()
 	return 0
 end
 
----OnTriggerMapEvent 点击地图标记
+---点击地图标记
 function MapMarker:OnTriggerMapEvent(EventParams)
 
 end
 
 ---@return string
 function MapMarker:ToString()
-	return string.format("MapMarker ID=%d, Type=%d, Name=%s, TipsName=%s"
-		, self:GetID(), self:GetType(), self:GetName(), self:GetTipsName())
+	return string.format("MapMarker ID=%d, Type=%d, SubType=%d, Name=%s, TipsName=%s"
+		, self:GetID(), self:GetType(), self:GetSubType(), self:GetName(), self:GetTipsName())
 end
 
----UpdateView 更新显示,一些需要动态刷新的显示的
+---更新显示,一些需要动态刷新的显示的
 function MapMarker:UpdateView()
 end
 

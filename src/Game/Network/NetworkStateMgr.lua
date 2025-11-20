@@ -128,6 +128,8 @@ end
 function NetworkStateMgr:OnNetMsgReconnect(MsgBody)
 	FLOG_INFO("NetworkStateMgr:OnNetMsgReconnect ErrorCode=%s DemoMajorType=%s", MsgBody.ErrorCode, _G.DemoMajorType)
 
+	GameNetworkMgr:SetEnableSendMsg(true)
+
 	if MsgBody.ErrorCode then
 		self:ReturnToLogin()
 		return
@@ -189,6 +191,7 @@ function NetworkStateMgr:OnGameEventNetworkConnected(Params)
 	local bReconnecting = self.bReconnecting
 
 	NetworkImplMgr:StopAllWaiting()
+	GameNetworkMgr:SetEnableSendMsg(true)
 
 	if bSuccess then
 		self.bReconnectEnable = true
@@ -205,6 +208,7 @@ function NetworkStateMgr:OnGameEventNetworkConnected(Params)
 			end
 		else
 			self:SendReconnectMsg(MajorUtil.GetMajorRoleID(), _G.UE.UGameNetworkMgr.Get():GetServerMsgSeq())
+			GameNetworkMgr:SetEnableSendMsg(false)
 		end
 
 		self:StopReconnect()
@@ -247,6 +251,8 @@ end
 function NetworkStateMgr:OnTimerTimeout()
 	local bLoading = _G.PWorldMgr:IsLoadingWorld() or _G.LoadingMgr:IsLoadingView()
 	FLOG_INFO("NetworkStateMgr:OnTimerTimeout bLoading=%s", bLoading)
+
+	EventMgr:SendEvent(EventID.NetworkStopHeartBeat)
 
 	local ReconnectCount = self.ReconnectCount + 1
 	self.ReconnectCount = ReconnectCount
@@ -329,6 +335,7 @@ function NetworkStateMgr:StartReconnect(bRelay, bAutoReconnect)
 	self.bReconnecting = true
 	self.ReconnectCount = 0
 	self:Reconnect(bRelay, bAutoReconnect)
+	GameNetworkMgr:SetEnableSendMsg(false)
 end
 
 function NetworkStateMgr:StopReconnect()
@@ -396,6 +403,7 @@ end
 
 ---Disconnect
 function NetworkStateMgr:Disconnect()
+	FLOG_INFO("NetworkStateMgr:Disconnect")
 	EventMgr:SendEvent(EventID.NetworkStopHeartBeat)
 	self:StopReconnect()
 	GameNetworkMgr:Disconnect()

@@ -15,19 +15,23 @@ local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 
 ---@class ChocoboNewBornDetailItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field EFF_4 UFCanvasPanel
 ---@field ImgIcon UFImage
 ---@field ProBar UProgressBar
 ---@field TextStat UFTextBlock
 ---@field TextValue UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ChocoboNewBornDetailItemView = LuaClass(UIView, true)
 
 function ChocoboNewBornDetailItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.EFF_4 = nil
 	--self.ImgIcon = nil
 	--self.ProBar = nil
 	--self.TextStat = nil
 	--self.TextValue = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

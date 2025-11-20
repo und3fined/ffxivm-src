@@ -1,13 +1,12 @@
 ---
 --- Author: Administrator
---- DateTime: 2023-10-20 20:49
+--- DateTime: 2025-08-19 20:53
 --- Description:
 ---
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
-local UIBinderSetText = require("Binder/UIBinderSetText")
-local EmoActPanelVM = require("Game/EmoAct/EmoActPanelVM")
+local UIUtil = require("Utils/UIUtil")
 
 ---@class EmoActContentItemMView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -27,9 +26,7 @@ function EmoActContentItemMView:OnRegisterSubView()
 end
 
 function EmoActContentItemMView:OnInit()
-	self.Binders = {
-		{ "RichTextContent", UIBinderSetText.New(self, self.RichTextContent) },
-	}
+
 end
 
 function EmoActContentItemMView:OnDestroy()
@@ -37,10 +34,7 @@ function EmoActContentItemMView:OnDestroy()
 end
 
 function EmoActContentItemMView:OnShow()
-	-- 没有使用到
-	-- if self.RichTextContent and self.Params.Data then
-	-- 	self.RichTextContent:SetText(self.Params.Data)
-	-- end
+
 end
 
 function EmoActContentItemMView:OnHide()
@@ -49,7 +43,6 @@ end
 
 function EmoActContentItemMView:OnRegisterUIEvent()
 
-	self:RegisterBinders(EmoActPanelVM, self.Binders)
 end
 
 function EmoActContentItemMView:OnRegisterGameEvent()

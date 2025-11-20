@@ -470,6 +470,10 @@ function LegendaryWeaponMgr:GetVersions()
             end
         end
     end
+
+    print("[LegendaryWeaponMgr]Global Versions:", table.tostring(self.GlobalVersions))
+    print("[LegendaryWeaponMgr]Topic Version:", table.tostring(self.TopicVersion))
+    print("[LegendaryWeaponMgr]Chapter Version:", table.tostring(self.ChapterVersion))
 end
 
 ------------- ↓ 红点相关 ↓ ------------------
@@ -536,6 +540,7 @@ function LegendaryWeaponMgr:UpdateMainPanelRedDot()
     local VM = LegendaryWeaponMainPanelVM
     self:UpdateChapterRedDot(VM)
     self:UpdateTopicRedDot(VM)
+    self:UpdateSwitchMakeRedDot(VM)
     self:UpdateMakeRedDot(VM)
     self:UpdateProfRedDot(VM)
 end
@@ -636,7 +641,7 @@ function LegendaryWeaponMgr:UpdateTopicRedDot(ViewModel)
 end
 
 --- 更新红点：切换到材料制作页按钮
-function LegendaryWeaponMgr:UpdateMakeRedDot(ViewModel)
+function LegendaryWeaponMgr:UpdateSwitchMakeRedDot(ViewModel)
     if not ViewModel then return end
     local WeaponCfg = ViewModel.WeaponCfg   --当前选中的武器
     if WeaponCfg and WeaponCfg.ID then
@@ -646,6 +651,20 @@ function LegendaryWeaponMgr:UpdateMakeRedDot(ViewModel)
         if not self.RedDotListID[WeaponCfg.ID] then
             self:SetRedDot(LegendaryWeaponDefine.RedDotID.Make, false)
         end
+    end
+end
+
+--- 更新红点：制作与强化按钮
+function LegendaryWeaponMgr:UpdateMakeRedDot(ViewModel)
+    if not ViewModel then return end
+    local WeaponCfg = ViewModel.WeaponCfg
+    local ID = WeaponCfg and WeaponCfg.ID or nil   --当前选中的武器
+    if not ID then return end
+
+    if self.RedDotListID[ID] == true and ViewModel.IsComposeMode then
+        self:SetRedDot(LegendaryWeaponDefine.RedDotID.MakeBtn, true)
+    else
+        self:SetRedDot(LegendaryWeaponDefine.RedDotID.MakeBtn, false)
     end
 end
 

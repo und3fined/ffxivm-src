@@ -24,10 +24,10 @@ BattlePassRewardSlotVM.ItemColorType =
 	-- ITEM_COLOR_BLUE = 3,	-- 蓝
 	-- ITEM_COLOR_PURPLE = 4,	-- 紫
 	-- ITEM_COLOR_RED = 6,	-- 红,
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_01.UI_Quality_Slot_NQ_01'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_02.UI_Quality_Slot_NQ_02'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_03.UI_Quality_Slot_NQ_03'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_04.UI_Quality_Slot_NQ_04'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Grey_png.UI_BattlePass_Img_RewardSlot_Grey_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Green_png.UI_BattlePass_Img_RewardSlot_Green_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Blue_png.UI_BattlePass_Img_RewardSlot_Blue_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Purple_png.UI_BattlePass_Img_RewardSlot_Purple_png'",
 }
 
 BattlePassRewardSlotVM.ItemHQColorType =
@@ -38,10 +38,10 @@ BattlePassRewardSlotVM.ItemHQColorType =
 	-- ITEM_COLOR_PURPLE = 4,	-- 紫
 	-- ITEM_COLOR_ORANGE = 5,	-- 橙
 	-- ITEM_COLOR_RED = 6,	-- 红,
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_01.UI_Quality_Slot_HQ_01'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_02.UI_Quality_Slot_HQ_02'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_03.UI_Quality_Slot_HQ_03'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_04.UI_Quality_Slot_HQ_04'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Grey_png.UI_BattlePass_Img_RewardSlot_Grey_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Green_png.UI_BattlePass_Img_RewardSlot_Green_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Blue_png.UI_BattlePass_Img_RewardSlot_Blue_png'",
+	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Img_RewardSlot_Purple_png.UI_BattlePass_Img_RewardSlot_Purple_png'",
 }
 
 
@@ -86,7 +86,7 @@ function BattlePassRewardSlotVM:UpdateVM(Value)
     self.Grade = Value.Grade
     self.IsGot = Value.IsGot
     self.ResID = Value.ResID
-    self.Num = Value.Num
+    self.Num = ItemUtil.GetItemNumText(Value.Num)
     self.IsAvailable = Value.IsAvailable
     self.IsShow =not( Value.ResID == 0)
 

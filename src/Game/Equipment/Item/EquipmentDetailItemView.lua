@@ -101,7 +101,7 @@ function EquipmentDetailItemView:OnSelectChanged(bSelect)
 end
 
 function EquipmentDetailItemView:OnInlaySucc(Params)
-	if (Params.GID == self.ViewModel.GID) then
+	if self.ViewModel and Params.GID == self.ViewModel.GID then
 		self.InforCommItem:UpdateInlayAllSlot()
 	end
 end

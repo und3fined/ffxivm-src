@@ -8,22 +8,9 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local PhotoDefine = require("Game/Photo/PhotoDefine")
-
-local UIBinderSetSlider = require("Binder/UIBinderSetSlider")
-local UIAdapterTreeView = require("UI/Adapter/UIAdapterTreeView")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
-local UIBinderSetProfName = require("Binder/UIBinderSetProfName")
-local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
-local UIBinderSetSelectedItem = require("Binder/UIBinderSetSelectedItem")
-local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
-local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
-local UIBinderSetRenderTransformAngle = require("Binder/UIBinderSetRenderTransformAngle")
-local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 
 
 ---@class PhotoTemplateItemView : UIView
@@ -52,10 +39,10 @@ function PhotoTemplateItemView:OnRegisterSubView()
 end
 
 function PhotoTemplateItemView:OnInit()
-	self.Binders = 
+	self.Binders =
 	{
 		{ "Name", 				UIBinderSetText.New(self, self.TextName) },
-		{ "IsShowDelete", 			UIBinderSetIsVisible.New(self, self.BtnDelete, nil, true) },
+		{ "IsShowDelete", 		UIBinderSetIsVisible.New(self, self.BtnDelete, nil, true) },
 
 		{ "IsCust", 			UIBinderSetIsVisible.New(self, self.ImgPic, true) },
 		{ "IsCust", 			UIBinderSetIsVisible.New(self, self.ImgPic02) },
@@ -93,7 +80,6 @@ function PhotoTemplateItemView:OnRegisterBinder()
 	if nil == Params then
 		return
 	end
-	
 	local VM = Params.Data
 	if nil == VM then
 		return
@@ -112,7 +98,7 @@ function PhotoTemplateItemView:OnBinderPortUrl()
 		UIUtil.ImageSetBrushFromAssetPath(self.ImgPic, self.ViewModel.Icon)
 		return
 	end
-	
+
 	local ViewModel = self.ViewModel or {}
 	local Url = ViewModel.Icon or ""
 	_G.FLOG_INFO('[Photo][PhotoTemplateItemView][OnBinderPortUrl] Download image start url = ' .. tostring(Url))
@@ -140,7 +126,7 @@ function PhotoTemplateItemView:OnBinderPortUrl()
 			self:SetDefaultTemplateIcon()
 		end
 	)
-		
+
     ImageDownloader:Start(Url, "", true)
 	self.ImageDownloader = ImageDownloader
 end
@@ -167,7 +153,7 @@ end
 
 function PhotoTemplateItemView:OnBtnDelete()
 	local VM = self.ViewModel
-	_G.MsgBoxUtil.ShowMsgBoxTwoOp(UIView , _G.LSTR(630006), _G.LSTR(630007), function()
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self , _G.LSTR(630006), _G.LSTR(630007), function()
 		_G.PhotoMgr:RemCustTemplate(VM.ID)
 		_G.MsgTipsUtil.ShowTipsByID(PhotoDefine.PhotoTipsID.TemplateDelete, nil)
 

@@ -15,6 +15,7 @@ local DialogueUtil = require("Utils/DialogueUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local CommonUtil = require("Utils/CommonUtil")
 local ColorUtil = require("Utils/ColorUtil")
+local ItemUtil = require("Utils/ItemUtil")
 
 local ProtoCS = require("Protocol/ProtoCS")
 local QuestDefine = require("Game/Quest/QuestDefine")
@@ -77,6 +78,22 @@ function TargetGetItem:Ctor(_, Properties)
     QuestRegister = QuestMgr.QuestRegister
 end
 
+local function IsEquipmentBind(ItemData)
+    if ItemData == nil then
+        return false
+    end
+
+    if not ItemUtil.CheckIsEquipmentByResID(ItemData.ResID) then
+        return false
+    end
+
+    local IsEquip = _G.EquipmentMgr:IsEquiped(ItemData.GID)
+    if not IsEquip then
+        return ItemData.IsBind
+    end
+    return false
+end
+
 function TargetGetItem:DoStartTarget()
     self:RegisterEvent(EventID.BagUpdate, self.OnEventBagUpdate)
     self:RegisterEvent(EventID.MagicsparInlaySucc, self.OnEventBagUpdate)
@@ -102,10 +119,10 @@ function TargetGetItem:DoStartTarget()
 
         local OwnedNum = 0
         self:ProcessOnRequiredIndex(i, function(ItemData)
-            if IsShowMoreOwned or OwnedNum < RequiredNum then
+            if not IsEquipmentBind(ItemData) and (IsShowMoreOwned or OwnedNum < RequiredNum) then
                 table.insert(self.OwnedItemDataList, ItemData)
+                OwnedNum = OwnedNum + ItemData.Num
             end
-            OwnedNum = OwnedNum + ItemData.Num
         end)
 
         QuestHelper.PrintQuestInfo("TargetGetItem %d init item %d, num %d/%d", self.TargetID, ItemResID, OwnedNum, RequiredNum)
@@ -150,10 +167,10 @@ function TargetGetItem:OnEventBagUpdate(UpdateItem)
         local OwnedNum = 0
         local RequiredNum = self.RequiredNumList[i] or 0
         self:ProcessOnRequiredIndex(i, function(ItemData)
-            if IsShowMoreOwned or OwnedNum < RequiredNum then
+            if not IsEquipmentBind(ItemData) and (IsShowMoreOwned or OwnedNum < RequiredNum) then
                 table.insert(self.OwnedItemDataList, ItemData)
+                OwnedNum = OwnedNum + ItemData.Num
             end
-            OwnedNum = OwnedNum + ItemData.Num
         end)
 
         local OldNum = self.OwnedItemCountList[i]

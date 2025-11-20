@@ -1,13 +1,13 @@
 local JumpCfg = require("TableCfg/JumpCfg")
 local MiniappWechatParamsCfg = require("TableCfg/MiniappWechatParamsCfg")
 local MiniappQQParamsCfg = require("TableCfg/MiniappQqParamsCfg")
-local UIViewMgr = _G.UIViewMgr
 local ClientGlobalCfg = require("TableCfg/ClientGlobalCfg")
 local AccountUtil = require("Utils/AccountUtil")
 local QuestChapterCfg = require("TableCfg/QuestChapterCfg")
 local ProtoCS = require("Protocol/ProtoCS")
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 local FVector2D = _G.UE.FVector2D
+local UIViewID = require("Define/UIViewID")
 
 local JumpUtil = {}
 local Jump_Type = {
@@ -32,6 +32,9 @@ local Jump_Type = {
     MusicPerformance = 19,          --- 乐器演奏
     MiniApp = 20,                   --- 拉起小程序 Params[1] QQ小程序ID Param[2]微信小程序ID(小程序参数配置在跳转表的小程序参数页签)
     ShowMapCustomPos = 21,          --- 打开地图指定Pos Params[1] 地图ID Params[2]Posx Params[3]PosY
+    StoreGoods = 22,                --- 跳转至商城的商品
+	StoreCategory = 23,             --- 跳转至商城的分类
+    Activity = 24                   --- 跳转至活动
 }
 
 JumpUtil.JumpType = Jump_Type
@@ -87,13 +90,19 @@ local function CheckEmotionActActivited(JumpParams)
     return _G.EmotionMgr:IsActivatedID(EmotionID)
 end
 
+local function CheckActivityOpen(JumpParams)
+    local ActID = JumpParams and tonumber(JumpParams[1]) or 0
+    return _G.OpsActivityMgr:IsOpsActivityOnShelf(ActID) or _G.OpsActivityMgr:IsClassifyID(ActID)
+end
+
 ---- 可以在这里加 也可以在表格中配置 CheckOpenFunc字段
 local JumpCheckOpenCondition = {
-    [Jump_Type.JumpWorldEnt]   = CheckWorldEntOpen,
-    [Jump_Type.Shop]           = CheckShopOpenByShopID,
-    [Jump_Type.Task]           = CheckCanGoTask,
-    [Jump_Type.PwordTeaching]  = CheckPwordTeaching,
-    [Jump_Type.Emotion]        = CheckEmotionActActivited,
+    [Jump_Type.JumpWorldEnt]    = CheckWorldEntOpen,
+    [Jump_Type.Shop]            = CheckShopOpenByShopID,
+    [Jump_Type.Task]            = CheckCanGoTask,
+    [Jump_Type.PwordTeaching]   = CheckPwordTeaching,
+    [Jump_Type.Emotion]         = CheckEmotionActActivited,
+    [Jump_Type.Activity]        = CheckActivityOpen,
 }
 
 local function DoLuaFuncByStr(LuaFuncStr)
@@ -160,9 +169,9 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------- JumpFuncStart -------------------------------------------------------
 local function JumpView(JumpData, ...)
-    local View = UIViewMgr:FindVisibleView(JumpData.ViewID)
+    local View = _G.UIViewMgr:FindVisibleView(JumpData.ViewID)
     if not View then
-        UIViewMgr:ShowView(JumpData.ViewID, {JumpData = {...}})
+        _G.UIViewMgr:ShowView(JumpData.ViewID, {JumpData = {...}})
     else
         local Params = View.Params or {}
         Params.JumpData = {...}
@@ -272,7 +281,7 @@ end
 
 local function ShowMusicPerformance(JumpData, ...)
     if _G.MusicPerformanceMgr:CanPerformance() then
-        UIViewMgr:ShowView(_G.UIViewID.MusicPerformanceSelectPanelView)
+        _G.UIViewMgr:ShowView(UIViewID.MusicPerformanceSelectPanelView)
     end
 end
 
@@ -297,28 +306,51 @@ local function JumpMapByPos(JumpData, ...)
     _G.WorldMapMgr:OpenMapFromChatHyperlink(JumpParam[1] or 1001, FVector2D(JumpParam[2] or 0, JumpParam[3] or 0))
 end
 
+local function JumpStoreGoods(JumpData, ...)
+    local JumpParam = {...}
+    local ItemID = tonumber(JumpParam[1]) ~= 0 and tonumber(JumpParam[1]) or nil
+    local GoodsID = tonumber(JumpParam[2]) ~= 0 and tonumber(JumpParam[2]) or nil
+    local IsOpenBuyWinPanel = tonumber(JumpParam[3]) and tonumber(JumpParam[3]) == 1 or false
+    local IsMysteryBox = tonumber(JumpParam[4]) and tonumber(JumpParam[4]) == 1 or false
+    _G.StoreMgr:JumpToGoods(ItemID, GoodsID, IsOpenBuyWinPanel, IsMysteryBox)
+end
+
+local function JumpStoreCategory(JumpData, ...)
+    local JumpParam = {...}
+	local MallID = tonumber(JumpParam[1]) ~= 0 and tonumber(JumpParam[1]) or nil
+	_G.StoreMgr:JumpToCategoryPage(JumpParam[1])
+end
+
+local function JumpActivity(JumpData, ...)
+    JumpData.ViewID = UIViewID.OpsActivityMainPanel
+    JumpView(JumpData, ...)
+end
+
 local JumpMethodsList = {
-    [Jump_Type.JumpView]                = JumpView,
-    [Jump_Type.JumpWorldEnt]            = JumpWorldEnt,
-    [Jump_Type.CustomJumpFunc]          = CustomJumpFunc,
-    [Jump_Type.ShowMapNpc]              = ShowMapNpc,
-    [Jump_Type.PageLink]                = JumpWebPage,
-    [Jump_Type.Pandora]                 = JumpPandora,
-    [Jump_Type.Mount]                   = JumpMount,
-    [Jump_Type.MapCrystal]              = JumpMapCrystal,
-    [Jump_Type.PreView]                 = JumpPreView,
-    [Jump_Type.Shop]                    = JumpShop,
-    [Jump_Type.Task]                    = JumpTaskOnMapByChapterID,
-    [Jump_Type.GameBot]                 = JumpGameBot,
-    [Jump_Type.PwordTeaching]           = JumpPwordTeaching,
-    [Jump_Type.ShareMiniAppToFriend]    = JumpShareMiniAppToFriend,
-    [Jump_Type.GoldSauser]              = JumpGoldSauserByType,
-    [Jump_Type.ActivityPicShare]        = JumpActivityPicShare,
-    [Jump_Type.Emotion]                 = JumpEmotion,
-    [Jump_Type.ShowMapPoint]            = ShowMapPoint,
-    [Jump_Type.MusicPerformance]        = ShowMusicPerformance,
-    [Jump_Type.MiniApp]                 = JumpMiniApp,
-    [Jump_Type.ShowMapCustomPos]        = JumpMapByPos,
+    [Jump_Type.JumpView]                = {Func = JumpView},
+    [Jump_Type.JumpWorldEnt]            = {Func = JumpWorldEnt},
+    [Jump_Type.CustomJumpFunc]          = {Func = CustomJumpFunc},
+    [Jump_Type.ShowMapNpc]              = {Func = ShowMapNpc},
+    [Jump_Type.PageLink]                = {Func = JumpWebPage},
+    [Jump_Type.Pandora]                 = {Func = JumpPandora},
+    [Jump_Type.Mount]                   = {Func = JumpMount},
+    [Jump_Type.MapCrystal]              = {Func = JumpMapCrystal},
+    [Jump_Type.PreView]                 = {Func = JumpPreView},
+    [Jump_Type.Shop]                    = {Func = JumpShop, ViewID = UIViewID.ShopMainPanelView},
+    [Jump_Type.Task]                    = {Func = JumpTaskOnMapByChapterID},
+    [Jump_Type.GameBot]                 = {Func = JumpGameBot},
+    [Jump_Type.PwordTeaching]           = {Func = JumpPwordTeaching},
+    [Jump_Type.ShareMiniAppToFriend]    = {Func = JumpShareMiniAppToFriend},
+    [Jump_Type.GoldSauser]              = {Func = JumpGoldSauserByType},
+    [Jump_Type.ActivityPicShare]        = {Func = JumpActivityPicShare},
+    [Jump_Type.Emotion]                 = {Func = JumpEmotion},
+    [Jump_Type.ShowMapPoint]            = {Func = ShowMapPoint},
+    [Jump_Type.MusicPerformance]        = {Func = ShowMusicPerformance},
+    [Jump_Type.MiniApp]                 = {Func = JumpMiniApp},
+    [Jump_Type.ShowMapCustomPos]        = {Func = JumpMapByPos},
+    [Jump_Type.StoreGoods]              = {Func = JumpStoreGoods},
+    [Jump_Type.StoreCategory]           = {Func = JumpStoreCategory},
+    [Jump_Type.Activity]                = {Func = JumpActivity, ViewID = UIViewID.OpsActivityMainPanel}
 }   
 
 --- 跳转至对应系统
@@ -334,13 +366,31 @@ function JumpUtil.JumpTo(JumpID, IsShowTips)
             return 
         end
 
-        if JumpMethodsList[JumpData.JumpType] then
+        local JumpFunc = JumpMethodsList[JumpData.JumpType] and JumpMethodsList[JumpData.JumpType].Func or nil
+        if JumpFunc then
+            local ViewID = JumpMethodsList[JumpData.JumpType].ViewID or JumpData.ViewID or -1
+            if ViewID ~= -1 and _G.UIViewMgr:IsViewVisible(ViewID) then
+                local MsgTipsUtil = require("Utils/MsgTipsUtil")
+                MsgTipsUtil.ShowTipsByID(260610)
+                return
+            end
+
             local ParamsData = {}
             for i, v in ipairs(JumpData.Params) do
                 ParamsData[i] = tonumber(v) and tonumber(v) or v
             end
 
-            JumpMethodsList[JumpData.JumpType](JumpData, table.unpack(ParamsData))
+            -- local Config = _G.UIViewMgr:FindConfig(ViewID)
+            -- if Config and Config.Layer then
+            --     local RootView = _G.UIViewMgr.RootView
+            --     local TopView = RootView:GetTopView(Config.Layer)
+            --     if TopView and TopView.ViewID ~= ViewID and _G.UIViewMgr:IsViewVisible(ViewID) then
+            --         _G.UIViewMgr:HideView(ViewID)
+            --         FLOG_INFO("JumpUtil.JumpTo The UI at the same Layer Needed closed first because It Was covered")
+            --     end
+            -- end
+
+            JumpFunc(JumpData, table.unpack(ParamsData))
         else
             FLOG_ERROR("JumpUtil.JumpTo, Undefine JumpType") 
         end
@@ -361,8 +411,9 @@ function JumpUtil.JumpToByTypeWithJumpParams(JumpType, ...)
 
     if JumpUtil.IsCurJumpTypeCanJump(JumpType, {...}) then
         local TypeJumpData = JumpCfg:FindCfg(string.format("JumpType = %d", JumpType)) or {}
-        if JumpMethodsList[TypeJumpData.JumpType] then
-            JumpMethodsList[TypeJumpData.JumpType](TypeJumpData, ...)
+        local JumpFunc = JumpMethodsList[JumpData.JumpType] and JumpMethodsList[JumpData.JumpType].Func or nil
+        if JumpFunc then
+            JumpFunc(TypeJumpData, ...)
         else
             FLOG_ERROR("JumpUtil.JumpToByTypeWithJumpParams, Undefine JumpType") 
         end

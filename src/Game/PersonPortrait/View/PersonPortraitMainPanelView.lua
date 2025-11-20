@@ -33,6 +33,7 @@ local LSTR = _G.LSTR
 local TabTypes = PersonPortraitDefine.TabTypes
 local UnlockTypes = ProtoRes.PortraitUnlockType
 local PortraitResState = ProtoCS.Role.Portrait.PortraitResState
+local AdvancedProfLevel = ProtoRes.prof_level.PROF_LEVEL_ADVANCED
 
 local AppearTipsIcon = "Texture2D'/Game/UI/Texture/PersonPortrait/UI_PersonPortrait_Icon_NewAttire.UI_PersonPortrait_Icon_NewAttire'"
 local LockIcon = "Texture2D'/Game/UI/Texture/PersonPortrait/UI_PersonPortrait_Icon_Lock.UI_PersonPortrait_Icon_Lock'"
@@ -47,15 +48,15 @@ local ResTipsType = {
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Bkg CommonBkg01View
 ---@field BtnBack CommBackBtnView
----@field Btnsave CommBtnLView
+---@field BtnSave CommBtnLView
 ---@field Comm58Slot CommBackpack58SlotView
 ---@field CommMenu CommMenuView
+---@field CommonTitleNew CommonTitleView
 ---@field DecoratePanel PersonPortraitDecoratePanelView
 ---@field DropDownListProf CommDropDownListView
 ---@field EmotionPanel PersonPortraitEmotionPanelView
 ---@field FBtnGoToTask UFButton
 ---@field FBtnSaveStrategySettings UFButton
----@field FHorizontalTitle UFHorizontalBox
 ---@field ImgObtainBg UFImage
 ---@field ImgTaskIcon UFImage
 ---@field LightingPanel PersonPortraitLightingPanelView
@@ -68,18 +69,19 @@ local ResTipsType = {
 ---@field PlayProbarPanel UFCanvasPanel
 ---@field PortraitDesignRet PersonPortraitDesignRetView
 ---@field ProgressBarPlay UProgressBar
+---@field RichTextTime URichTextBox
 ---@field RightPanel UFCanvasPanel
 ---@field SliderPlay USlider
 ---@field TaskPanel UFCanvasPanel
 ---@field TextName UFTextBlock
 ---@field TextPanel UFCanvasPanel
----@field TextTitle UFTextBlock
 ---@field TextUnlockDesc UFTextBlock
 ---@field TextUseTips UFTextBlock
 ---@field TipsPanel UFCanvasPanel
 ---@field ToggleBtnPlayState UToggleButton
 ---@field TopPanel UFCanvasPanel
 ---@field AnimIn UWidgetAnimation
+---@field AnimModelEditPageIn UWidgetAnimation
 ---@field AnimRefresh UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PersonPortraitMainPanelView = LuaClass(UIView, true)
@@ -88,16 +90,15 @@ function PersonPortraitMainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Bkg = nil
 	--self.BtnBack = nil
-	--self.BtnInfor = nil
 	--self.BtnSave = nil
 	--self.Comm58Slot = nil
 	--self.CommMenu = nil
+	--self.CommonTitleNew = nil
 	--self.DecoratePanel = nil
 	--self.DropDownListProf = nil
 	--self.EmotionPanel = nil
 	--self.FBtnGoToTask = nil
 	--self.FBtnSaveStrategySettings = nil
-	--self.FHorizontalTitle = nil
 	--self.ImgObtainBg = nil
 	--self.ImgTaskIcon = nil
 	--self.LightingPanel = nil
@@ -110,18 +111,19 @@ function PersonPortraitMainPanelView:Ctor()
 	--self.PlayProbarPanel = nil
 	--self.PortraitDesignRet = nil
 	--self.ProgressBarPlay = nil
+	--self.RichTextTime = nil
 	--self.RightPanel = nil
 	--self.SliderPlay = nil
 	--self.TaskPanel = nil
 	--self.TextName = nil
 	--self.TextPanel = nil
-	--self.TextTitle = nil
 	--self.TextUnlockDesc = nil
 	--self.TextUseTips = nil
 	--self.TipsPanel = nil
 	--self.ToggleBtnPlayState = nil
 	--self.TopPanel = nil
 	--self.AnimIn = nil
+	--self.AnimModelEditPageIn = nil
 	--self.AnimRefresh = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -130,10 +132,10 @@ function PersonPortraitMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.Bkg)
 	self:AddSubView(self.BtnBack)
-	self:AddSubView(self.BtnInfor)
 	self:AddSubView(self.BtnSave)
 	self:AddSubView(self.Comm58Slot)
 	self:AddSubView(self.CommMenu)
+	self:AddSubView(self.CommonTitleNew)
 	self:AddSubView(self.DecoratePanel)
 	self:AddSubView(self.DropDownListProf)
 	self:AddSubView(self.EmotionPanel)
@@ -160,10 +162,11 @@ function PersonPortraitMainPanelView:OnInit()
 		{ "CurSelectEmotionID", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedCurSelectEmotionID) },
 	}
 
-	self.TextTitle:SetText(LSTR(60009)) -- "肖像编辑"
 	self.TextUseTips:SetText(LSTR(60010)) -- "使用中"
 
 	self.BtnSave:SetBtnName(LSTR(10011)) -- "保  存"
+	self.CommonTitleNew:SetSubTitleIsVisible(false)
+	self.CommonTitleNew:SetTextTitleName(LSTR(60009))-- "肖像编辑"
 end
 
 function PersonPortraitMainPanelView:OnDestroy()
@@ -171,6 +174,10 @@ function PersonPortraitMainPanelView:OnDestroy()
 end
 
 function PersonPortraitMainPanelView:OnShow()
+	---临时处理，修复主干限时bug,限时肖像框功能合入后需要删除
+	if self.RichTextTime then
+		UIUtil.SetIsVisible(self.RichTextTime, false)
+	end
 	PersonPortraitVM:UpdateUnreadRedDots()
 
 	-- Tabs
@@ -313,10 +320,17 @@ function PersonPortraitMainPanelView:GetProfDropDownParms()
 		local Prof = v.Prof
 		local Name = v.ProfName
 		if Prof and not string.isnilorempty(Name) then
-			-- 职业对应的特职
-			local AdvancedProf = v.AdvancedProf 
-			if nil == AdvancedProf or nil == UnlockProfMap[AdvancedProf] then
-				table.insert(DataList, { Prof = Prof, Name = Name })
+			if v.ProfLevel == AdvancedProfLevel then -- 特职
+				if UnlockProfMap[Prof] then
+					table.insert(DataList, { Prof = Prof, Name = Name })
+				end
+
+			else
+				-- 职业对应的特职
+				local AdvancedProf = v.AdvancedProf 
+				if nil == AdvancedProf or nil == UnlockProfMap[AdvancedProf] then
+					table.insert(DataList, { Prof = Prof, Name = Name })
+				end
 			end
 		end
 	end

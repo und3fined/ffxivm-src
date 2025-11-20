@@ -58,6 +58,9 @@ local ActorZLocation = 100100
 local MonsterLocation = nil
 local Rotation = nil
 
+local MapScaleMinValue = 0.5
+local MapScaleMaxValue = 2.0
+
 -- local TELEPORT_CRYSTAL_TYPE = ProtoRes.TELEPORT_CRYSTAL_TYPE
 -- local TELEPORT_CRYSTAL_ACROSSMAP = TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP
 local ScaleMin = MapDefine.MapConstant.MAP_SCALE_MIN
@@ -76,10 +79,13 @@ local MapTransferCategory = MapDefine.MapTransferCategory
 ---@field CanvasPanelForMap UFCanvasPanel
 ---@field CommEmpty CommBackpackEmptyView
 ---@field CommEmpty02 CommBackpackEmptyView
+---@field CommonTitle CommonTitleView
 ---@field Common_ModelToImage_UIBP CommonModelToImageView
 ---@field DropDownList2 CommDropDownListView
 ---@field EFF_Reward UFCanvasPanel
 ---@field EFF_RewardFull UFCanvasPanel
+---@field IconBlank USpacer
+---@field IconTitle UFImage
 ---@field ImgChestIcon UImage
 ---@field ImgMonster_1 UFImage
 ---@field ImgMountBG UFImage
@@ -88,6 +94,7 @@ local MapTransferCategory = MapDefine.MapTransferCategory
 ---@field ModelAdjustUI ModelAdjustUIView
 ---@field MonsterRender2D_UIBP MonsterRender2DView
 ---@field PanelChallenge UFCanvasPanel
+---@field PanelIcon UFCanvasPanel
 ---@field PanelList2 UFCanvasPanel
 ---@field PanelReward UFCanvasPanel
 ---@field PanelRight UFCanvasPanel
@@ -113,12 +120,12 @@ local MapTransferCategory = MapDefine.MapTransferCategory
 ---@field TextViewMap UFTextBlock
 ---@field TextZoneName UFTextBlock
 ---@field VerIconTabs CommVerIconTabsView
----@field mapContent AetherCurrentMapPanelView
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field AnimReturn UWidgetAnimation
 ---@field AnimSwitcherInfoIn UWidgetAnimation
 ---@field AnimSwitcherInfoOut UWidgetAnimation
+---@field AnimTableViewEventTabSelectionChanged UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local FateArchiveNewMainView = LuaClass(UIView, true)
 
@@ -134,10 +141,13 @@ function FateArchiveNewMainView:Ctor()
 	--self.CanvasPanelForMap = nil
 	--self.CommEmpty = nil
 	--self.CommEmpty02 = nil
+	--self.CommonTitle = nil
 	--self.Common_ModelToImage_UIBP = nil
 	--self.DropDownList2 = nil
 	--self.EFF_Reward = nil
 	--self.EFF_RewardFull = nil
+	--self.IconBlank = nil
+	--self.IconTitle = nil
 	--self.ImgChestIcon = nil
 	--self.ImgMonster_1 = nil
 	--self.ImgMountBG = nil
@@ -146,6 +156,7 @@ function FateArchiveNewMainView:Ctor()
 	--self.ModelAdjustUI = nil
 	--self.MonsterRender2D_UIBP = nil
 	--self.PanelChallenge = nil
+	--self.PanelIcon = nil
 	--self.PanelList2 = nil
 	--self.PanelReward = nil
 	--self.PanelRight = nil
@@ -176,6 +187,7 @@ function FateArchiveNewMainView:Ctor()
 	--self.AnimReturn = nil
 	--self.AnimSwitcherInfoIn = nil
 	--self.AnimSwitcherInfoOut = nil
+	--self.AnimTableViewEventTabSelectionChanged = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -184,6 +196,7 @@ function FateArchiveNewMainView:OnRegisterSubView()
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.CommEmpty02)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Common_ModelToImage_UIBP)
 	self:AddSubView(self.DropDownList2)
 	self:AddSubView(self.InputSearchBar)
@@ -342,8 +355,11 @@ function FateArchiveNewMainView:InitLeftSiderBar(ListData, SelectedIndex)
 end
 
 function FateArchiveNewMainView:OnShow()
+    UIUtil.SetIsVisible(self.CommonTitle, true)
+    UIUtil.SetIsVisible(self.TextZoneName, false)
+    UIUtil.SetIsVisible(self.TextBigTitle, false)
     UIUtil.SetIsVisible(self.BtnViewMap, true, true)
-    self.TextBigTitle:SetText(LSTR(190026))
+    self.CommonTitle:SetTextTitleName(LSTR(190026))
     self.TextUndone:SetText(LSTR(190027))
     self.InputSearchBar:SetHintText(LSTR(190025))
     self.TextViewMap:SetText(LSTR(190028))
@@ -432,7 +448,7 @@ function FateArchiveNewMainView:TrySelectTargetMapByID(InMapID)
     local MapId = InMapID
     local MapToAreaData = MapMap2areaCfg:FindCfgByKey(MapId)
     if (MapToAreaData == nil) then
-        FLOG_ERROR("无法获取 MapMap2areaCfg 数据，当前地图ID是:" .. MapId)
+        FLOG_ERROR("无法获取 MapMap2areaCfg 数据，当前地图ID是:%s",tostring(MapId))
         return
     end
 
@@ -539,6 +555,23 @@ function FateArchiveNewMainView:OnRegisterUIEvent()
     self.InputSearchBar:SetCallback(self, self.ChangeCallback, self.OnSearchInputFinish, self.OnSearchCancel)
     UIUtil.AddOnClickedEvent(self, self.BtnReward, self.OnBtnRewardClicked)
     UIUtil.AddOnSelectionChangedEvent(self, self.VerIconTabs, self.OnLeftSideSelectChanged)
+
+    UIUtil.AddOnClickedEvent(self, self.MapScale.BtnAdd, self.OnClickedBtnScaleAdd)
+	UIUtil.AddOnClickedEvent(self, self.MapScale.BtnSub, self.OnClickedBtnScaleSub)
+end
+
+function FateArchiveNewMainView:OnClickedBtnScaleAdd()
+	local Value = self.MapScale.Slider:GetValue()
+	local NewValue = Value + 0.2
+	NewValue = math.clamp(NewValue, MapScaleMinValue, MapScaleMaxValue)
+	ModuleMapContentVM.MapScale = NewValue
+end
+
+function FateArchiveNewMainView:OnClickedBtnScaleSub()
+	local Value = self.MapScale.Slider:GetValue()
+	local NewValue = Value - 0.2
+    NewValue = math.clamp(NewValue, MapScaleMinValue, MapScaleMaxValue)
+	ModuleMapContentVM.MapScale = NewValue
 end
 
 function FateArchiveNewMainView:OnSearchCancel()
@@ -599,7 +632,7 @@ function FateArchiveNewMainView:SetSearchState(bInSearchState)
         self.DropDownList2.TextContent:SetText(LSTR(190114))
         UIUtil.SetIsVisible(self.PanelReward, false)
         UIUtil.SetIsVisible(self.PanelChallenge, false)
-        UIUtil.SetIsVisible(self.TextZoneName, false)
+        self.CommonTitle:SetSubTitleIsVisible(false)
     else
         self.SearchText = nil
         --self.DropDownList2.ToggleBtnExtend:SetIsChecked(true)
@@ -607,7 +640,7 @@ function FateArchiveNewMainView:SetSearchState(bInSearchState)
         self.DropDownList2.TextContent:SetText(self.DropDownTextBeforeSearch)
         UIUtil.SetIsVisible(self.PanelReward, true)
         UIUtil.SetIsVisible(self.PanelChallenge, true)
-        UIUtil.SetIsVisible(self.TextZoneName, true)
+        self.CommonTitle:SetSubTitleIsVisible(true)
         UIUtil.SetIsVisible(self.TableViewEventTab, true)
     end
 end
@@ -627,10 +660,6 @@ end
 function FateArchiveNewMainView:GetRewardInfoForCurMap()
     local MapID = self.viewModel.MapID
     local TempRewardList = self:InternalSetMapRewardList(MapID, self.viewModel.CurMapRewardFinishedCount)
-    if (TempRewardList == nil) then
-        _G.FLOG_ERROR("错误，无法获取FATE地图进度奖励，地图ID : " .. MapID)
-        return
-    end
     local Params = {}
     Params.AwardList = TempRewardList
     local MapCfg = MapMap2areaCfg:FindCfgByKey(MapID)
@@ -638,71 +667,84 @@ function FateArchiveNewMainView:GetRewardInfoForCurMap()
     Params.ModuleID = self.ViewID
     Params.TextCurrent = LSTR(190089)
     local TargetView = self
+
     -- 这里是点击回调
-    local function ClickCallback(Index, ItemData, ItemView)
-        local CalbackRewardList = self:InternalSetMapRewardList(MapID, self.viewModel.CurMapRewardFinishedCount)
-        local TempData = CalbackRewardList[Index]
+    local function ClickCallback(ItemIndex, ItemData, ItemView)
+        local CallbackRewardList = self:InternalSetMapRewardList(MapID, self.viewModel.CurMapRewardFinishedCount)
+        local TempData = ItemData
         local bGetted = TempData.IsCollectedAward
         local bCanGet = TempData.IsGetProgress
         if not bGetted and bCanGet then
-            local bScoreOverflow = false
-            if (ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM == TempData.AwardID) then
-                local ScoreMaxValue = _G.ScoreMgr:GetScoreMaxValue(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
-                local CurScoreValue = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
-                CurScoreValue = CurScoreValue + TempData.AwardNum
-                if (CurScoreValue >= ScoreMaxValue) then
-                    bScoreOverflow = true
+            local TargetList = {}
+            local bAnyScore = false
+            local ScoreMaxValue = _G.ScoreMgr:GetScoreMaxValue(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
+            local CurScoreValue = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
+            for Index = 1, #CallbackRewardList do
+                if (CallbackRewardList[Index].IsGetProgress and not CallbackRewardList[Index].IsCollectedAward) then
+                    local AwardID = CallbackRewardList[Index].AwardID
+                    if (AwardID == ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM) then
+                        bAnyScore = true
+                        CurScoreValue = CurScoreValue + CallbackRewardList[Index].AwardNum
+                    end
+
+                    table.insert(TargetList, Index - 1)
                 end
             end
-            if (bScoreOverflow) then
+            if (bAnyScore and CurScoreValue > ScoreMaxValue) then
                 -- 这里弹出提示
                 MsgBoxUtil.ShowMsgBoxTwoOp(
                     TargetView,
                     LSTR(10032), --"提示",
                     LSTR(190146),--"确定要领取奖励吗？\n双色宝石的持有数量已达到上限，无法获得全部奖励",
                     function()
-                        _G.FateMgr:SendGetMapReward(MapID, Index)
+                        _G.FateMgr:SendGetMapReward(MapID, TargetList)
                     end,
                     nil,
                     LSTR(10003), -- "取 消",
                     LSTR(10002) -- "确 认"
                 )
             else
-                _G.FateMgr:SendGetMapReward(MapID, Index)
+                _G.FateMgr:SendGetMapReward(MapID, TargetList)
             end
         end
     end
 
-    local function ItemClickCallback(Index, ItemData, ItemView)
-        local CalbackRewardList = self:InternalSetMapRewardList(MapID, self.viewModel.CurMapRewardFinishedCount)
-        local TempData = CalbackRewardList[Index]
+    local function ItemClickCallback(ItemIndex, ItemData, ItemView)
+        local CallbackRewardList = self:InternalSetMapRewardList(MapID, self.viewModel.CurMapRewardFinishedCount)
+        local TempData = ItemData
         local bGetted = TempData.IsCollectedAward
         local bCanGet = TempData.IsGetProgress
         if not bGetted and bCanGet then
-            local bScoreOverflow = false
-            if (ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM == TempData.AwardID) then
-                local ScoreMaxValue = _G.ScoreMgr:GetScoreMaxValue(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
-                local CurScoreValue = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
-                CurScoreValue = CurScoreValue + TempData.AwardNum
-                if (CurScoreValue >= ScoreMaxValue) then
-                    bScoreOverflow = true
+            local TargetList = {}
+            local bAnyScore = false
+            local ScoreMaxValue = _G.ScoreMgr:GetScoreMaxValue(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
+            local CurScoreValue = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM)
+            for Index = 1, #CallbackRewardList do
+                if (CallbackRewardList[Index].IsGetProgress and not CallbackRewardList[Index].IsCollectedAward) then
+                    local AwardID = CallbackRewardList[Index].AwardID
+                    if (AwardID == ProtoRes.SCORE_TYPE.SCORE_TYPE_TWO_TONE_GEM) then
+                        bAnyScore = true
+                        CurScoreValue = CurScoreValue + CallbackRewardList[Index].AwardNum
+                    end
+
+                    table.insert(TargetList, Index - 1)
                 end
             end
-            if (bScoreOverflow) then
+            if (bAnyScore and CurScoreValue > ScoreMaxValue) then
                 -- 这里弹出提示
                 MsgBoxUtil.ShowMsgBoxTwoOp(
                     TargetView,
                     LSTR(10032), --"提示",
                     LSTR(190146),--"确定要领取奖励吗？\n双色宝石的持有数量已达到上限，无法获得全部奖励",
                     function()
-                        _G.FateMgr:SendGetMapReward(MapID, Index)
+                        _G.FateMgr:SendGetMapReward(MapID, TargetList)
                     end,
                     nil,
                     LSTR(10003), -- "取 消",
                     LSTR(10002) -- "确 认"
                 )
             else
-                _G.FateMgr:SendGetMapReward(MapID, Index)
+                _G.FateMgr:SendGetMapReward(MapID, TargetList)
             end
         else
             local ItemTipsUtil = require("Utils/ItemTipsUtil")
@@ -722,12 +764,11 @@ end
 function FateArchiveNewMainView:InternalSetMapRewardList(MapID, CurFinishedCount)
     local MapState = _G.FateMgr:GetMapState(MapID)
     local LootMappingCfg = require("TableCfg/LootMappingCfg")
-    local ItemCfg = require("TableCfg/ItemCfg")
 
     local RewardCfg = FateAchievementRewardCfg:FindCfgByKey(MapID)
     if (RewardCfg == nil) then
         _G.FLOG_ERROR("没有配置FATE地图奖励，ID是 : " .. MapID)
-        return nil
+        return {}
     end
 
     -- 从后台数据获取当前的进度
@@ -827,6 +868,8 @@ function FateArchiveNewMainView:OnRegisterBinder()
     self:RegisterMultiBinders(self.MultiBinders)
 
     self:PlayAnimation(self.AnimShow)
+
+    self.MapScale:UpdateSlider(MapScaleMinValue, MapScaleMaxValue)
 end
 
 function FateArchiveNewMainView:OnSingleBoxClick(IsChecked)
@@ -844,7 +887,7 @@ function FateArchiveNewMainView:OnTabSelectChanged(Index, ItemData, ItemView)
     if (Cfg == nil) then
         FLOG_ERROR("错误，无法获取 MapRegionIconCfg:FindCfgByKey, ID : " .. MapTabInfo.ID)
     else
-        self.TextZoneName:SetText(Cfg.Name)
+        self.CommonTitle:SetTextSubtitle(Cfg.Name)
     end
 
     -- 这里去取消一下新发现的FATE

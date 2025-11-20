@@ -24,6 +24,7 @@ function MusicPerformanceEnsembleWinVM:Ctor()
 	self.TextAssistant = ""
 	self.TextTips = ""
 	self.TextBtnStart = ""
+	self.TextBtnCancel = ""
 	self.TextEL = ""
 end
 

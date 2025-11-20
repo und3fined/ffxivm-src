@@ -33,12 +33,14 @@ local USkillDecalMgr = UE.USkillDecalMgr.Get()
 ---@field StartUpTime number
 ---@field CurAttackData table
 ---@field WarningID number
+---@field WarningDelayTimer number
 local DamageWarningCell = LuaClass(SkillCellBase, false)
 
 function DamageWarningCell:Init(CellData, SkillObject)
     local bCanStart = CellData.DamageIndexID == 0
     self.StartUpTime = TimeUtil.GetServerTimeMS()
     self.WarningID = 0
+    self.WarningDelayTimer = 0
     SuperInit(self, CellData, SkillObject, bCanStart)
 end
 
@@ -59,9 +61,11 @@ function DamageWarningCell:StartCell()
     RangeInfo.LuaWarningPath = CellData.m_WarningActor
     RangeInfo.Location = Me:FGetActorLocation() - FVector(0, 0, Me:GetCapsuleHalfHeight())
     RangeInfo.Rotation = Me:FGetActorRotation() + FRotator(0, CellData.m_DamageDegOffset, 0)
-    RangeInfo.EndTime = CellData.m_EndTime - CellData.m_StartTime
+    RangeInfo.EndTime = CellData.m_EndTime - CellData.m_StartTime - CellData.WarningDelayTime
     RangeInfo.ZHighDiff = CellData.ZHighDiff
-    RangeInfo.bScaleWithFloor = CellData.ZHighDiff <= 0
+    if nil ~= CellData.ZHighDiff then
+        RangeInfo.bScaleWithFloor = CellData.ZHighDiff <= 0
+    end
     RangeInfo.TexPath = CellData.m_Texture
     RangeInfo.Angle = 10
     RangeInfo.Range = 30
@@ -80,6 +84,9 @@ function DamageWarningCell:StartCell()
     local DurationMic = self.StartUpTime + math.floor(CellData.m_EndTime * 1000) - TimeUtil.GetServerTimeMS()
     if DurationMic <= 0 then
         DurationMic = 1
+    end
+    if RangeInfo.EndTime < 0 then
+        RangeInfo.EndTime = 0
     end
     local RealDuration = RangeInfo.EndTime
     local Duration = DurationMic / 1000
@@ -113,7 +120,7 @@ function DamageWarningCell:StartCell()
     if not SkillObject.bIsSingSkillObject then
         local Params = EventMgr:GetEventParams()
         Params.IntParam1 = SkillObject.CurrentSkillID
-        Params.FloatParam1 = RangeInfo.EndTime
+        Params.FloatParam1 = CellData.m_EndTime - CellData.m_StartTime
         Params.BoolParam1 = CellData.m_IsGuidedReading
         Params.BoolParam2 = CellData.m_IsAllowBreak
         Params.ULongParam1 = OwnerEntityID
@@ -136,7 +143,19 @@ function DamageWarningCell:StartCell()
         RangeInfo.AttachedComponent = Me:K2_GetRootComponent()
     end
 
-    self.WarningID = USkillDecalMgr:PlaySkillDecal(RangeInfo, nil)
+    if(self.WarningDelayTimer) then
+        _G.TimerMgr:CancelTimer(self.WarningDelayTimer)
+    end
+    
+    if(CellData.WarningDelayTime) then
+        self.WarningDelayTimer = _G.TimerMgr:AddTimer(self, self.OnPlaySkillDecal, CellData.WarningDelayTime, 1, 1, RangeInfo)
+    else
+        self:OnPlaySkillDecal(RangeInfo)
+    end
+end
+
+function DamageWarningCell:OnPlaySkillDecal(DecalInfo)
+    self.WarningID = USkillDecalMgr:PlaySkillDecal(DecalInfo, nil)
 end
 
 function DamageWarningCell:OnAttackPresent(AttackData)
@@ -149,6 +168,11 @@ end
 
 function DamageWarningCell:EndDamageWarning()
 
+    if(self.WarningDelayTimer) then
+        _G.TimerMgr:CancelTimer(self.WarningDelayTimer)
+        self.WarningDelayTimer = nil
+    end
+    
     local Params = EventMgr:GetEventParams()
     Params.ULongParam1 = self.SkillObject.OwnerEntityID
     EventMgr:SendCppEvent(EventID.EndDamageWarning, Params)

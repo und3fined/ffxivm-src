@@ -249,7 +249,7 @@ function LoginMapMgr:IsNeedShadowActorMap()
 		return false
 	end
 
-	if self.CurLoginMapCfg.ID == LoginConfig.SelectRoleMap or self.CurLoginMapCfg.ID == LoginConfig.EquipmentMapID then
+	if self.CurLoginMapCfg.ID == LoginConfig.EquipmentMapID then
 		return true
 	end
 

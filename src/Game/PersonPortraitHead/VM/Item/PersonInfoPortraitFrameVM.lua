@@ -25,6 +25,7 @@ function PersonInfoPortraitFrameVM:Ctor( )
     self.UnlockType = nil
     self.IsInUse = false
     self.IsShowLockIcon = false
+    self.IsLimitedTime = false
 end
 
 function PersonInfoPortraitFrameVM:IsEqualVM( Value )
@@ -58,6 +59,7 @@ function PersonInfoPortraitFrameVM:UpdateVM( Value )
                 return
             end
         end
+        self.IsLimitedTime = self.IsUnlock and  Cfg.TimeLimit ~= 0
         self.PropID    = nil
         self.CanUnlock = false
     end

@@ -24,7 +24,9 @@ local LSTR = _G.LSTR
 ---@field HorizontalInlay5 UFHorizontalBox
 ---@field ImgCurrency UFImage
 ---@field ImgCurrency02 UFImage
----@field InlaySlot UFWrapBox
+---@field InlaySlot UFCanvasPanel
+---@field InlaySlotBox UFWrapBox
+---@field InlaySlotBtn UFButton
 ---@field InlaySlotItem1 MagicsparInlaySlotView
 ---@field InlaySlotItem10 MagicsparInlaySlotView
 ---@field InlaySlotItem2 MagicsparInlaySlotView
@@ -39,11 +41,13 @@ local LSTR = _G.LSTR
 ---@field PanelEuipImprove UFCanvasPanel
 ---@field PanelGlamours UFCanvasPanel
 ---@field PanelInlay UFCanvasPanel
+---@field PanelInlayBtn UFButton
 ---@field PanelInlayDetail UFCanvasPanel
 ---@field PanelLimitation UFCanvasPanel
 ---@field PanelMaker UFCanvasPanel
 ---@field PanelOther UFCanvasPanel
 ---@field PanelRepair UFCanvasPanel
+---@field SizeBoxArrow USizeBox
 ---@field TextAttri UFTextBlock
 ---@field TextAttri1 UFTextBlock
 ---@field TextAttri2 UFTextBlock
@@ -106,6 +110,8 @@ function ItemTipsEquipmentItemView:Ctor()
 	--self.ImgCurrency = nil
 	--self.ImgCurrency02 = nil
 	--self.InlaySlot = nil
+	--self.InlaySlotBox = nil
+	--self.InlaySlotBtn = nil
 	--self.InlaySlotItem1 = nil
 	--self.InlaySlotItem10 = nil
 	--self.InlaySlotItem2 = nil
@@ -120,11 +126,13 @@ function ItemTipsEquipmentItemView:Ctor()
 	--self.PanelEuipImprove = nil
 	--self.PanelGlamours = nil
 	--self.PanelInlay = nil
+	--self.PanelInlayBtn = nil
 	--self.PanelInlayDetail = nil
 	--self.PanelLimitation = nil
 	--self.PanelMaker = nil
 	--self.PanelOther = nil
 	--self.PanelRepair = nil
+	--self.SizeBoxArrow = nil
 	--self.TextAttri = nil
 	--self.TextAttri1 = nil
 	--self.TextAttri2 = nil
@@ -341,7 +349,7 @@ function ItemTipsEquipmentItemView:UpdateInlayAllSlot()
 
 	local lst = {}
     if Item and Item.Attr and Item.Attr.Equip and Item.Attr.Equip.GemInfo then
-		lst = Item.Attr.Equip.GemInfo.CarryList or {} 
+		lst = Item.Attr.Equip.GemInfo.CarryList or {}
 	end
 
 	local iNomalCount = MagicsparCfg.NomalCount

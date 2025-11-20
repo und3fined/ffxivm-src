@@ -50,7 +50,14 @@ function LinkShellMemVM:UpdateByReqJoin(Value)
 end
 
 function LinkShellMemVM:UpdateRoleInfo(Value)
-    self.Name = Value.Name
+    local CurNickName = _G.FriendMgr:GetFriendNickname(Value.RoleID)
+    --有昵称优先显示昵称
+    if CurNickName and CurNickName ~= "" then
+        self.Name = CurNickName
+    else
+        self.Name = Value.Name
+    end
+
     self.MapResName = Value.MapResName
     self.LoginTime = Value.LoginTime
 

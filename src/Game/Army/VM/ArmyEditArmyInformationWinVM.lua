@@ -169,7 +169,11 @@ function ArmyEditArmyInformationWinVM:UpdateCurData(InformationData)
                     local ItemVM = self.ActivityList:GetItemByPredicate(function(VM)
                         return VM.ID == Index + 1
                     end)
-                    ItemVM:SetIsChecked(true)
+                    if ItemVM then
+                        ItemVM:SetIsChecked(true)
+                    else
+                        _G.FLOG_WARNING(string.format("ArmyEditArmyInformationWinVM:UpdateCurData() 错误活动下标 Index = %s", tostring(Index)))
+                    end
 				end
             end
         end
@@ -187,7 +191,11 @@ function ArmyEditArmyInformationWinVM:UpdateCurData(InformationData)
                     local ItemVM = self.JobList:GetItemByPredicate(function(VM)
                         return VM.ID == Index + 1
                     end)
-                    ItemVM:SetIsChecked(true)
+                    if ItemVM then
+                        ItemVM:SetIsChecked(true)
+                    else
+                        _G.FLOG_WARNING(string.format("ArmyEditArmyInformationWinVM:UpdateCurData() 错误职业下标 Index = %s", tostring(Index)))
+                    end
 				end
             end
         end

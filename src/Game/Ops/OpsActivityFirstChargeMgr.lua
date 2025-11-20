@@ -7,6 +7,7 @@ local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCS = require("Protocol/ProtoCS")
 local ActivityNodeCfg = require("TableCfg/ActivityNodeCfg")
+local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 local GameNetworkMgr
 
 local CS_CMD = ProtoCS.CS_CMD
@@ -136,6 +137,15 @@ end
 
 function OpsActivityFirstChargeMgr:SetFirstChargerStatus(Status)
     self.RewardStatus = Status
+end
+
+function OpsActivityFirstChargeMgr:SetRedDot()
+	local Status = OpsActivityFirstChargeMgr:GetFirstChargerStatus()
+    if Status == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then
+        RedDotMgr:AddRedDotByID(24000)
+    else
+        RedDotMgr:DelRedDotByID(24000)
+    end
 end
 
 

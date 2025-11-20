@@ -78,7 +78,13 @@ function MountActionItemView:SetActionData()
 		self.SingTime2 = self.Params.Data.Cfg.SingTime2
 		self.SkillDescribe = self.Params.Data.Cfg.SkillDescribe
 		self.SelectedMountID = self.Params.Data.ViewModel.SelectedMountID
-		UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, self.Params.Data.Cfg.Icon)
+
+		if self.Params.Data.Cfg.Icon then
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, self.Params.Data.Cfg.Icon)
+		else
+			print("MountActionItemView:SetActionData  坐骑表演技能为空，请检查")
+		end
+		
 	end
 end
 
@@ -91,7 +97,7 @@ function MountActionItemView:OnClicked()
 	Params.SkillInfoList[1] = LSTR(1090042)..self.Distance..LSTR(1090044)
 	Params.SkillInfoList[2] = LSTR(1090043)..self.Range..LSTR(1090044)
 	Params.SkillInfoList[3] = "      "
-	Params.SkillInfoList[4] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090045)..self.SingTimeDescribe)
+	-- Params.SkillInfoList[4] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090045)..self.SingTimeDescribe)
 	Params.SkillInfoList[5] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090046)..self.SingTime2..LSTR(1090047))
 	Params.SkillInfoList[6] = "      "
 	Params.SkillInfoList[7] = self.SkillDescribe
@@ -105,6 +111,8 @@ function MountActionItemView:OnClicked()
 
 	self:SetHideCallback()
 	DataReportUtil.ReportMountInterSystemFlowData(6, self.SelectedMountID, self.ID)
+
+	--变更按钮选中状态
 	_G.EventMgr:SendEvent(_G.EventID.ActionSelectChanged, { ID = self.ID } )
 end
 
@@ -116,6 +124,7 @@ function MountActionItemView:SetHideCallback()
 	end
 end
 
+--若存在1、2、3个表演技能，在选中1时，要取消2、3的选中状态
 function MountActionItemView:SkillCallbackChanged(Params)
 	if Params and Params.ID == self.ID then
 		UIUtil.SetIsVisible(self.ImgSelect, true)

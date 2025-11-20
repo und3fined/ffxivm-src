@@ -197,7 +197,8 @@ local function OnShowUIAction(ActionParams)
             end
         else
             --_G.UIViewMgr:HideAllLayer()
-            _G.UIViewMgr:UpdateLayerBit(UILayer.Tips)
+            local TargetLayer = UILayer.Tips | UILayer.Highest
+            _G.UIViewMgr:UpdateLayerBit(TargetLayer)
             if(bIncludeJoyStick) then
                 CommonUtil.HideJoyStick()
                 CommonUtil.DisableShowJoyStick(true)
@@ -519,7 +520,7 @@ local function OnPWorldATLSwitch(ActionParams)
         --FLOG_INFO(string.format("OnPWorldATLSwitch , EntityID : [%s],  TimelineID : [%s]", EntityID, TimelineID))
         AnimComp:PlayActionTimeline(TimelineID, 1.0, 0.25, 0.25, true, 99999, true)
     end
-
+    
     if (ActionParams.Entities ~= nil and #ActionParams.Entities > 0) then
         for _, EntityID in pairs(ActionParams.Entities) do
             ATLSwitch(EntityID,TimelineID)
@@ -587,22 +588,57 @@ end
 
 --动态物件状态变化
 local function OnSgStateChange(ActionParams)
-    FLOG_WARNING("OnSgStateChange ActionParams.Param1=%d, ActionParams.Param2=%d, ActionParams.Param4=%d, ActionParams.Param5=%d", ActionParams.Param1,ActionParams.Param2, ActionParams.Param4, ActionParams.Param5)
+    --FLOG_WARNING("OnSgStateChange ActionParams.Param1=%d, ActionParams.Param2=%d, ActionParams.Param4=%d, ActionParams.Param5=%d", ActionParams.Param1,ActionParams.Param2, ActionParams.Param4, ActionParams.Param5)
     --参数1为2是动态物件
-    if (ActionParams.Param1 ~= 2) then
-        return
-    end
+    -- if (ActionParams.Param1 ~= 2) then
+    --     return
+    -- end
 
-    local SgEditorID = ActionParams.Param2
     local State = ActionParams.Param4
     local PlayState = ActionParams.Param5
 
-    if SgEditorID > 0 then
-        local ContentSgMgrInstance = ContentSgMgr:Get()
-        if ContentSgMgrInstance ~= nil then
-            ContentSgMgrInstance:ChangeSgStateFromLua(SgEditorID,State,PlayState)
+    if (ActionParams.Param1 == 1) then
+        --Eobj
+        local EobjType = ActionParams.Param2
+        local EobjID = ActionParams.Param3    
+
+        if EobjID > 0 then
+            local Eobj = nil
+            if EobjType == 1 then
+                Eobj = ActorUtil.GetActorByListID(EobjID)
+            else
+                Eobj = ActorUtil.GetActorByResID(EobjID)
+            end
+            
+            if Eobj ~= nil then
+                --转换成以2为底的对数
+                local result = {}
+                local i = 0
+                while State > 0 do
+                    if State % 2 == 1 then
+                        table.insert(result, i)
+                    end
+                    State = math.floor(State / 2)
+                    i = i + 1
+                end
+
+                for _, Timeline in ipairs(result) do
+                    -- FLOG_WARNING("koff PlaySharedGroupTimelineByIndex, Timeline=%d", Timeline)
+                    Eobj:PlaySharedGroupTimelineByIndex(Timeline, 0)
+                end
+            end
+        end
+    else
+        local SgEditorID = ActionParams.Param2
+    
+        if SgEditorID > 0 then
+            local ContentSgMgrInstance = ContentSgMgr:Get()
+            if ContentSgMgrInstance ~= nil then
+                ContentSgMgrInstance:ChangeSgStateFromLua(SgEditorID,State,PlayState)
+            end
         end
     end
+
 end
 
 
@@ -622,13 +658,15 @@ local TriggerActionRespFunctions = {
     [ProtoRes.trigger_action_type.TRIGGER_ACTION_TYPE_SCREEN_SHAKE] = OnScreenShake,    
     --[ProtoRes.trigger_action_type.TRIGGER_ACTION_TYPE_EXP_HEIGHTFOG_CHANGE] = OnChangeExpHeightFog,
     [ProtoRes.trigger_action_type.TRIGGER_ACTION_TYPE_CHANGE_AUDIO] = OnChangeAudio,
-    [ProtoRes.trigger_action_type.TRIGGER_ACTION_TYPE_CLIENT_CHANGE_EOBJ_STATE] = OnSgStateChange,
+    [ProtoRes.trigger_action_type.TRIGGER_ACTION_TYPE_CLIENT_CHANGE_EOBJ_STATE] = OnSgStateChange, 
 }
 
 function PWorldTriggerActionExecMgr:OnTriggerActionExec(ActionType, ActionParams)
     local RespFunction = TriggerActionRespFunctions[ActionType]
     if (RespFunction) then
         RespFunction(ActionParams)
+    else
+        _G.FLOG_ERROR("OnTriggerActionExec 没有对应的处理函数 ， Type : %s", ActionType)
     end
 end
 

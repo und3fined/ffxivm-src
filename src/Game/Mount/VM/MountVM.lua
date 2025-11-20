@@ -7,6 +7,7 @@ local MountUtil = require("Game/Mount/MountUtil")
 local RideCfg = require("TableCfg/RideCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local prof_type = ProtoCommon.prof_type
+local ProtoCS = require("Protocol/ProtoCS")
 
 local BtnRideIcon = {
 	"PaperSprite'/Game/UI/Atlas/MainSkill/Frames/UI_Skill_Mount_Btn_Lately_png.UI_Skill_Mount_Btn_Lately_png'",
@@ -55,6 +56,7 @@ function MountVM:Reset()
     self.MountList = nil
     self.CustomMadeUnlockList = nil
     self.MountSpeedLevelMap = {}
+    self.MountSpeedItemMap = {}
     self.GetwayFilterValue = (0xffff)
     self.VersionFilterValue = (0xffff)
     self.LikeFilterValue = (0xffff)
@@ -64,6 +66,7 @@ function MountVM:Reset()
 
     self.CallSetting = 1
     self.CurRideResID = 0
+    self.CurCustomMadeID = 0
     self.PlayActionList = nil
     self.MountSkillVMList = {}
     self.RecentCall = 0
@@ -101,6 +104,8 @@ function MountVM:Reset()
     self.CombatPanelState = false
     self.bRideProbationState = false
     self.RedDotNameMap = {}
+
+    self.HandleSkillViewFight = false
 end
 
 function MountVM:OnShutdown()
@@ -135,14 +140,18 @@ function MountVM:LoadSavedSettings()
     self.RecentCall = USaveMgr.GetInt(SaveKey.MountRecentCall, 0, true)
 end
 
-function MountVM:AddNew(InResID)
+function MountVM:AddNew(MountData)
+    if MountData == nil then return end
     -- FLOG_ERROR("self.NewMap = %s", table_to_string(self.NewMap))
-    if self.NewMap[InResID] ~= nil then
+    if not self:IsFlagSet(MountData.Flag, ProtoCS.MountFlagBitmap.MountFlagNew) then
+        return
+    end
+    if self.NewMap[MountData.ResID] ~= nil then
         return
     end
 
-    self.NewMap[InResID] = 1
-    self.RedDotNameMap[InResID] = RedDotMgr:AddRedDotByParentRedDotName(ParentRedDotName)
+    self.NewMap[MountData.ResID] = 1
+    self.RedDotNameMap[MountData.ResID] = RedDotMgr:AddRedDotByParentRedDotName(ParentRedDotName)
     self:SaveNewInfo()
 end
 
@@ -171,7 +180,7 @@ end
 
 -- FlagBit的类型为ProtoCS.MountFlagBitmap
 function MountVM:IsFlagSet(Flag, FlagBit)
-    return Flag & FlagBit == FlagBit
+    return Flag ~= nil and (Flag & FlagBit == FlagBit)
 end
 
 function MountVM:IsNotOwnedMount(InResID)
@@ -184,12 +193,10 @@ function MountVM:SetRideState()
     local RideComp = Major:GetRideComponent()
     if RideComp == nil then return end
 
-    local Cfg = RideCfg:FindCfgByKey(RideComp:GetRideResID())
-    if Cfg ~= nil then
-        self.PlayActionList = Cfg.PlayAction
-    else
-        self.PlayActionList = nil
-    end
+
+    --这里可能有问题MountCustomMadeVM:GetCustomMadeID(MountID, ImeChanID, PatternID)
+    --在坐骑组件中保存的ImeChanID并不一定是坐骑动作外观表ID
+    self.PlayActionList = _G.MountMgr:GetPlayActionList(RideComp:GetRideResID(), RideComp:GetImeChanID(RideComp:GetRideResID()))
 
     self.OldIsInOtherRide = self.IsInOtherRide
     self.IsInOtherRide = RideComp:IsInOtherRide()
@@ -290,6 +297,10 @@ end
 
 function MountVM:SetCustomMadeID(MountResID, CustomMadeID)
     self.MountMap[MountResID].Facade = CustomMadeID
+end
+
+function MountVM:SetHandleSkillViewFight(bFight)
+    self.HandleSkillViewFight = bFight
 end
 
 return MountVM

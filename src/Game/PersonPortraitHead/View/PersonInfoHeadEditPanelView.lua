@@ -35,6 +35,7 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 
 local PersonPortraitHeadDefine = require("Game/PersonPortraitHead/PersonPortraitHeadDefine")
+local ELookAtType = _G.UE.ELookAtType
 
 local MinFOV = PersonPortraitHeadDefine.MinFOV
 local MaxFOV = PersonPortraitHeadDefine.MaxFOV
@@ -58,21 +59,27 @@ local WeatgerTODID = 26
 ---@field BottomPanel UFCanvasPanel
 ---@field BtnBack UFButton
 ---@field BtnCameraReset UFButton
----@field BtnDelete UFButton
+---@field BtnDelete UFImage
+---@field BtnDragReset UFButton
 ---@field BtnFaceReset UFButton
----@field BtnInfo CommInforBtnView
 ---@field BtnLookReset UFButton
+---@field BtnQuit UFImage
 ---@field BtnSave CommBtnLView
 ---@field CameraPanel UFCanvasPanel
 ---@field CommSingleBox CommSingleBoxView
+---@field CommonBkg01_UIBP CommonBkg01View
+---@field CommonTitle CommonTitleView
 ---@field IconLookCameraX UFImage
 ---@field ImgDashedBox UFImage
 ---@field ImgModelMask UFImage
+---@field ImgModelMask2 UFImage
+---@field ImgModelMask3 UFImage
 ---@field ImgModelMaskB UFImage
 ---@field ImgModelMaskL UFImage
 ---@field ImgModelMaskR UFImage
 ---@field ImgModelMaskT UFImage
 ---@field ImgModelMaskWhite UFImage
+---@field InnerPanel UFCanvasPanel
 ---@field MainPanel UFCanvasPanel
 ---@field MaskPanel UFCanvasPanel
 ---@field MiddlePanel UFCanvasPanel
@@ -80,19 +87,22 @@ local WeatgerTODID = 26
 ---@field PanelSave UFCanvasPanel
 ---@field PanelSaveBtn UFCanvasPanel
 ---@field RectPanel UFCanvasPanel
----@field ScaleBox UScaleBox
 ---@field SliderFOV PersonPortraitSliderOneView
 ---@field SliderRoll PersonPortraitSliderOneView
+---@field Stick CommStickView
 ---@field TableViewCustom UTableView
 ---@field TableViewEmo UTableView
 ---@field TextNum UFTextBlock
 ---@field TextSave UFTextBlock
 ---@field TextSave2 UFTextBlock
----@field TextTitle UFTextBlock
+---@field ToggleBtn UToggleButton
 ---@field ToggleBtnFace UToggleButton
+---@field ToggleBtnHat UToggleButton
 ---@field ToggleBtnLook UToggleButton
+---@field ToggleBtnPullWeapon UToggleButton
 ---@field WarningPanel UFCanvasPanel
 ---@field AnimIn UWidgetAnimation
+---@field AnimLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PersonInfoHeadEditPanelView = LuaClass(UIView, true)
 
@@ -102,20 +112,26 @@ function PersonInfoHeadEditPanelView:Ctor()
 	--self.BtnBack = nil
 	--self.BtnCameraReset = nil
 	--self.BtnDelete = nil
+	--self.BtnDragReset = nil
 	--self.BtnFaceReset = nil
-	--self.BtnInfo = nil
 	--self.BtnLookReset = nil
+	--self.BtnQuit = nil
 	--self.BtnSave = nil
 	--self.CameraPanel = nil
 	--self.CommSingleBox = nil
+	--self.CommonBkg01_UIBP = nil
+	--self.CommonTitle = nil
 	--self.IconLookCameraX = nil
 	--self.ImgDashedBox = nil
 	--self.ImgModelMask = nil
+	--self.ImgModelMask2 = nil
+	--self.ImgModelMask3 = nil
 	--self.ImgModelMaskB = nil
 	--self.ImgModelMaskL = nil
 	--self.ImgModelMaskR = nil
 	--self.ImgModelMaskT = nil
 	--self.ImgModelMaskWhite = nil
+	--self.InnerPanel = nil
 	--self.MainPanel = nil
 	--self.MaskPanel = nil
 	--self.MiddlePanel = nil
@@ -123,27 +139,31 @@ function PersonInfoHeadEditPanelView:Ctor()
 	--self.PanelSave = nil
 	--self.PanelSaveBtn = nil
 	--self.RectPanel = nil
-	--self.ScaleBox = nil
 	--self.SliderFOV = nil
 	--self.SliderRoll = nil
+	--self.Stick = nil
 	--self.TableViewCustom = nil
 	--self.TableViewEmo = nil
 	--self.TextNum = nil
 	--self.TextSave = nil
 	--self.TextSave2 = nil
-	--self.TextTitle = nil
+	--self.ToggleBtn = nil
 	--self.ToggleBtnFace = nil
+	--self.ToggleBtnHat = nil
 	--self.ToggleBtnLook = nil
+	--self.ToggleBtnPullWeapon = nil
 	--self.WarningPanel = nil
 	--self.AnimIn = nil
+	--self.AnimLoop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function PersonInfoHeadEditPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.BtnInfo)
 	self:AddSubView(self.BtnSave)
 	self:AddSubView(self.CommSingleBox)
+	self:AddSubView(self.CommonBkg01_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.ModelToImage)
 	self:AddSubView(self.SliderFOV)
 	self:AddSubView(self.SliderRoll)
@@ -186,6 +206,8 @@ function PersonInfoHeadEditPanelView:OnInit()
 		{ "IsLook", 	UIBinderSetIsChecked.New(self, self.ToggleBtnLook) },
 		{ "FOV", 		UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedFOV) },
 		{ "Roll", 		UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedRoll) },
+		{ "MoveResetBtnVisible", UIBinderSetIsVisible.New(self, self.BtnDragReset, false, true) },
+
 	}
 
 	self.SliderFOV:SetValueChangedCallback(function(Value)
@@ -207,7 +229,7 @@ function PersonInfoHeadEditPanelView:OnInit()
 	self:InitLSTR()
 	
 	self.MoveDelta = _G.UE.FVector2D(0, 0)
-	local MoveStep = 0.5
+	local MoveStep = 0.2
 	local MoveCB = function(NormVec)
 
 		local ComImageView = self.ModelToImage
@@ -237,10 +259,16 @@ function PersonInfoHeadEditPanelView:OnInit()
 		ComImageView:SetSpringArmLocation(X, Y, Z, false)
 		CurModelEditVM:SetMove(X, Y, Z)
 		-- UIUtil.CanvasSlotSetPosition(self.ModelToImage, Pos)
+		if PersonPortraitHeadDefine.IsShowMovePos then
+			---GM用，方便策划配置位置
+			print("PersonInfoHeadEditPanelView MoveCB X:"..tostring(X).." Y:"..tostring(Y).." Z:"..tostring(Z))
+		end
 	end
 
 	local StartCB = function()
 		self:OnMoveStat(true)
+
+		PersonPortraitHeadVM.CurModelEditVM:SetMoveResetBtnVisible(true)
 	end
 
 	local EndCB = function()
@@ -255,12 +283,11 @@ function PersonInfoHeadEditPanelView:OnMoveStat(bOpen)
 end
 
 function PersonInfoHeadEditPanelView:InitLSTR()
-	self.TextTitle:SetText(LSTR(960032))
-	self.TextTitle:SetText(LSTR(960032))
 	self.TextSave:SetText(LSTR(960033))
 	self.TextSave2:SetText(LSTR(960034))
 	self.BtnSave:SetText(LSTR(960035))
-	self.TextTitle:SetText(LSTR(960032))
+    self.CommonTitle:SetSubTitleIsVisible(false)
+	self.CommonTitle:SetTextTitleName(LSTR(960032))
 end
 
 local DebugLOG = _G.FLOG_INFO
@@ -301,12 +328,17 @@ function PersonInfoHeadEditPanelView:OnShow()
 
 	PersonPortraitHeadVM:UpdIsEnableUse()
 
-	local CurModelEditVM = PersonPortraitHeadVM.CurModelEditVM
+	local CurModelEditVM = PersonPortraitHeadVM.CurModelEditVM or {}
 	self.OriRot = CurModelEditVM.Rotate
+	if CurModelEditVM.SetMoveResetBtnVisible then
+		CurModelEditVM:SetMoveResetBtnVisible(false)
+	end
 end
 
 function PersonInfoHeadEditPanelView:OnHide()
 	_G.LightMgr:DisableUIWeather()
+	---退出时更新一下头像数据，防止头像不刷新/保存时不一定使用，不在保存时处理
+	_G.PersonPortraitHeadMgr:ReqGetHead()
 end
 
 function PersonInfoHeadEditPanelView:OnRegisterUIEvent()
@@ -412,11 +444,17 @@ function PersonInfoHeadEditPanelView:OnStateChangedToggleDecorate(ToggleButton, 
 end
 
 function PersonInfoHeadEditPanelView:OnStateChangedToggleFace(ToggleButton, State)
-	-- if self:CheckIsDraging() then
-	-- 	return
-	-- end
+
 
 	local IsChecked = UIUtil.IsToggleButtonChecked(State)
+
+	self:UpdateFaceState(IsChecked)
+
+	MsgTipsUtil.ShowTips(IsChecked and LSTR(960014) or LSTR(960012))
+
+end
+
+function PersonInfoHeadEditPanelView:UpdateFaceState(IsChecked)
 	local ComImageView = self.ModelToImage
 	if ComImageView then
 		ComImageView:SetUseAnimLookAtWithHead(IsChecked)
@@ -424,17 +462,7 @@ function PersonInfoHeadEditPanelView:OnStateChangedToggleFace(ToggleButton, Stat
 
 	PersonPortraitHeadVM.CurModelEditVM:SetIsFace(IsChecked)
 
-	-- if self.IsFaceReset then
-	-- 	self.IsFaceReset = nil
-
-	-- 	MsgTipsUtil.ShowTips(LSTR(960018))
-
-	-- else
-	-- end
-
 	self:UpdateLookAtType()
-	MsgTipsUtil.ShowTips(IsChecked and LSTR(960014) or LSTR(960012))
-
 
     PersonPortraitHeadVM:UpdateSaveBtnState()
 	PersonPortraitHeadVM.IsEditShowDelete = false
@@ -471,11 +499,13 @@ function PersonInfoHeadEditPanelView:OnStateChangedToggleUse(ToggleButton, State
 end
 
 function PersonInfoHeadEditPanelView:OnStateChangedToggleLook(ToggleButton, State)
-	-- if self:CheckIsDraging() then
-	-- 	return
-	-- end
 
 	local IsChecked = UIUtil.IsToggleButtonChecked(State)
+	self:UpdateLookState(IsChecked)
+	MsgTipsUtil.ShowTips(IsChecked and LSTR(960013) or LSTR(960011))
+end
+
+function PersonInfoHeadEditPanelView:UpdateLookState(IsChecked)
 	local ComImageView = self.ModelToImage
 	if ComImageView then
 		ComImageView:SetUseAnimLookAtWithEye(IsChecked)
@@ -483,15 +513,7 @@ function PersonInfoHeadEditPanelView:OnStateChangedToggleLook(ToggleButton, Stat
 
 	PersonPortraitHeadVM.CurModelEditVM:SetIsLook(IsChecked)
 
-	-- if self.IsLookReset then
-	-- 	self.IsLookReset = nil
-
-	-- 	MsgTipsUtil.ShowTips(LSTR(960015))
-
-	-- else
-	-- end
 	self:UpdateLookAtType()
-	MsgTipsUtil.ShowTips(IsChecked and LSTR(960013) or LSTR(960011))
 
 
     PersonPortraitHeadVM:UpdateSaveBtnState()
@@ -499,15 +521,23 @@ function PersonInfoHeadEditPanelView:OnStateChangedToggleLook(ToggleButton, Stat
 end
 
 function PersonInfoHeadEditPanelView:OnClickButtonRend2DReset()
+	if self.MoveDelta.X == 0 and self.MoveDelta.Y == 0 then
+		return
+	end
+
+	self.MoveDelta = _G.UE.FVector2D(0, 0)
+
 	local ComImageView = self.ModelToImage
 	if nil == ComImageView then 
 		return
 	end
 
-	local X, Y, Z = table.unpack(PersonPortraitHeadUtil.GetDefaultMove())
-	ComImageView:SetSpringArmLocation(X, Y, Z, false)
-	PersonPortraitVM.CurModelEditVM:SetMove(X, Y, Z)
+	-- local X, Y, Z = table.unpack(PersonPortraitHeadUtil.GetDefaultMove())
+	-- ComImageView:SetSpringArmLocation(X, Y, Z, false)
+	-- PersonPortraitHeadVM.CurModelEditVM:SetMove(X, Y, Z)
 	self:HeadCentered()
+
+	PersonPortraitHeadVM.CurModelEditVM:SetMoveResetBtnVisible(false)
 end
 
 function PersonInfoHeadEditPanelView:OnClickButtonFaceReset()
@@ -518,8 +548,11 @@ function PersonInfoHeadEditPanelView:OnClickButtonFaceReset()
 	-- self:HeadCentered()
 
 	self.IsFaceReset = true
-	self.ToggleBtnFace:SetChecked(false, true)
+	self.ToggleBtnFace:SetChecked(false, false)
+	self:UpdateFaceState(false)
 	PersonPortraitHeadVM.IsEditShowDelete = false
+	self:ResetLookAtType()
+	MsgTipsUtil.ShowTips(LSTR(60020)) -- "已重置面向镜头"
 end
 
 function PersonInfoHeadEditPanelView:OnClickButtonLookReset()
@@ -528,8 +561,11 @@ function PersonInfoHeadEditPanelView:OnClickButtonLookReset()
 	-- end
 
 	self.IsLookReset = true
-	self.ToggleBtnLook:SetChecked(false, true)
+	self.ToggleBtnLook:SetChecked(false, false)
+	self:UpdateLookState(false)
 	PersonPortraitHeadVM.IsEditShowDelete = false
+	self:ResetLookAtType()
+	MsgTipsUtil.ShowTips(LSTR(60023)) -- "已重置看向镜头"
 end
 
 function PersonInfoHeadEditPanelView:OnClickButtonCameraReset()
@@ -562,7 +598,8 @@ function PersonInfoHeadEditPanelView:OnClickButtonCameraReset()
 	self:HeadCentered()
 	-- 平移 
 	-- self:ResetMove()
-
+	PersonPortraitHeadVM.CurModelEditVM:SetMoveResetBtnVisible(false)
+	
 	MsgTipsUtil.ShowTips(LSTR(960017))
 	PersonPortraitHeadVM.IsEditShowDelete = false
 end
@@ -712,6 +749,7 @@ function PersonInfoHeadEditPanelView:InitModel()
 		self:UpdateModelEquipments()
 		self.bIsInitialized = true
 		UIUtil.SetIsVisible(self.ModelToImage.ImageRole, true)
+		ModelToImage:OpenSelfShadowing()
 		-- ModelToImage:SwitchOtherLights(false)
 		-- ModelToImage:DisableEnvironmentLights()
 
@@ -721,6 +759,7 @@ function PersonInfoHeadEditPanelView:InitModel()
 
 		self.OriRot = ModelToImage.Common_Render2D_UIBP.Rotation
 
+		ModelToImage.Common_Render2D_UIBP:EnableViewDistPostProcess(false)
     end, false, false)
 
 	local MaxZOffset = PersonPortraitHeadUtil.GetDefaultFarZOffset()
@@ -902,7 +941,16 @@ function PersonInfoHeadEditPanelView:CheckPositionsIsValid()
 end
 
 function PersonInfoHeadEditPanelView:HeadCentered()
-	self.ModelToImage:UpdateFocusLocation()
+	--self.ModelToImage:UpdateFocusLocation()
+	local ComImageView = self.ModelToImage
+	if nil == ComImageView then 
+		return
+	end
+	local X, Y, Z = table.unpack(PersonPortraitHeadUtil.GetDefaultMove())
+	if X and Y and Z then
+		ComImageView:SetSpringArmLocation(X, Y, Z, false)
+		PersonPortraitHeadVM.CurModelEditVM:SetMove(X, Y, Z)
+	end
 end
 
 function PersonInfoHeadEditPanelView:CalculateCaptureRect()
@@ -1107,5 +1155,22 @@ function PersonInfoHeadEditPanelView:HatVisibleSwitch()
 	local bHideHead = PersonPortraitHeadVM.CurModelEditVM.bIsShowHead
 	self.ModelToImage.Common_Render2D_UIBP:HideHead(not bHideHead)
 end
+
+function PersonInfoHeadEditPanelView:ResetLookAtType()
+	local IsFace = self.ToggleBtnFace:GetChecked()
+	local IsLook = self.ToggleBtnLook:GetChecked()
+	if IsFace == IsLook then
+		self.ModelToImage:SetMajorAnimLookAtType(ELookAtType.None, false, false)
+	else
+		if IsFace then
+			self.ModelToImage:SetMajorAnimLookAtType(ELookAtType.Head, false, false)
+			self.ModelToImage:SetMajorAnimLookAtType(ELookAtType.Eye, false, true, true) -- 重置eye
+		elseif IsLook then
+			self.ModelToImage:SetMajorAnimLookAtType(ELookAtType.Eye, false, false)
+			self.ModelToImage:SetMajorAnimLookAtType(ELookAtType.Head, false, true, true) -- 重置head
+		end
+	end
+end
+
 
 return PersonInfoHeadEditPanelView

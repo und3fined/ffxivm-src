@@ -11,6 +11,7 @@ local MajorUtil = require("Utils/MajorUtil")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
+local SkillBuffMgr = require("Game/Skill/SkillBuffMgr")
 
 local NinjaHutonImgConfig = {
 	["Day"] = {
@@ -111,8 +112,17 @@ function JobSkillNinjaItemView:OnDestroy()
 
 end
 
-function JobSkillNinjaItemView:OnShow()
+function JobSkillNinjaItemView:DoAnimWaitClickOut()
+	self:PlayAnimationToEndTime(self.AnimWaitClickOut)
+	self.bAnimWaitClick = false
+end
 
+function JobSkillNinjaItemView:OnShow()
+	if self.bAnimWaitClick then
+		if not SkillBuffMgr:GetBuffInfo(SealBuffID) then
+			self:DoAnimWaitClickOut()
+		end
+	end
 end
 
 function JobSkillNinjaItemView:UpdateView(Params)
@@ -149,7 +159,7 @@ function JobSkillNinjaItemView:OnRemoveBuff(Params)
 	end
 
 	if BuffID == SealBuffID then
-		self:PlayAnimation(self.AnimWaitClickOut)
+		self:DoAnimWaitClickOut()
 	end
 end
 
@@ -198,8 +208,9 @@ function JobSkillNinjaItemView:OnSkillReplace(Params)
 end
 
 function JobSkillNinjaItemView:OnMajorUseSkill(Params)
-	self:PlayAnimation(self["AnimClick" .. self.HutonType])
-	self:PlayAnimation(self.AnimWaitClickIn)
+	self:PlayAnimationToEndTime(self["AnimClick" .. self.HutonType])
+	self:PlayAnimationToEndTime(self.AnimWaitClickIn)
+	self.bAnimWaitClick = true
 end
 
 function JobSkillNinjaItemView:RechargeUpdate(Params)
@@ -256,9 +267,9 @@ function JobSkillNinjaItemView:SetEnergyState(bHasEnergy)
 	end
 
 	if bHasEnergy then
-		self:PlayAnimation(self.AnimEnergy1)
+		self:PlayAnimationToEndTime(self.AnimEnergy1)
 	else
-		self:PlayAnimation(self.AnimEnergy0)
+		self:PlayAnimationToEndTime(self.AnimEnergy0)
 	end
 	self.bHasEnergy = bHasEnergy
 end
@@ -293,7 +304,7 @@ function JobSkillNinjaItemView:OnChargeCountChanged(NewChargeCount)
 
 	-- 层数加1, 播放Ready动效
 	if CurChargeCount - LastChargeCount == 1 then
-		self:PlayAnimation(self["AnimReady" .. self.HutonType])
+		self:PlayAnimationToEndTime(self["AnimReady" .. self.HutonType])
 	end
 end
 

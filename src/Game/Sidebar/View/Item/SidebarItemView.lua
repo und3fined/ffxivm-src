@@ -68,6 +68,9 @@ function SidebarItemView:OnInit()
 		{ "Type", 				UIBinderValueChangedCallback.New(self, nil, self.OnTypeChanged) },
 		{ "CountDown", 			UIBinderValueChangedCallback.New(self, nil, self.OnCountDownChanged) },
 		{ "LoopAnimName", 		UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedLoopAnimName) },
+		{ "StartTime",			UIBinderValueChangedCallback.New(self, nil, function(View)
+			View:OnCountDownChanged(View.ViewModel.CountDown)
+		end)},
 
 		{ "TransData",			UIBinderValueChangedCallback.New(self, nil, self.OnTransDataChanged)},
 	}

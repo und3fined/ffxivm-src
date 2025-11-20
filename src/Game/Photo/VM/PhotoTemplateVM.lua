@@ -17,6 +17,7 @@ function PhotoTemplateVM:Ctor()
     self.Templates = UIBindableList.New(PhotoTemplateItemVM)
     self.BtnImage = ""
     self.CurItemVM = nil
+    self.CurItemIdx = nil
 end
 
 function PhotoTemplateVM:OnInit()
@@ -37,14 +38,18 @@ end
 
 function PhotoTemplateVM:Clear()
     self.CurItemVM = nil
+    self.CurItemIdx = nil
 end
 
 function PhotoTemplateVM:UpdateVM()
-    self:UpdTemplates()
+    self.CurItemIdx = nil
+    self.TemplateData = {}
+    --self:UpdTemplates()
 end
 
 function PhotoTemplateVM:UpdTemplates()
     -- self.CurItemVM = nil
+    self.CurItemIdx = nil
     self.TemplateData = {}
 
     local CustList = PhotoMgr.CustTemplateList
@@ -61,6 +66,7 @@ function PhotoTemplateVM:UpdTemplates()
         end
     end
 
+    local CfgTemps = {}
     for Idx, Temp in pairs(CfgList) do
         local BaseInfo = PhotoTemplateUtil.GetBaseInfo(Temp)
         if BaseInfo then
@@ -68,14 +74,29 @@ function PhotoTemplateVM:UpdTemplates()
                 IsCust = false,
                 ID = BaseInfo.ID
             }
-
-            table.insert(self.TemplateData, Item)
+            table.insert(CfgTemps, Item)
         end
     end
+
+    table.sort(CfgTemps, function (A, B)
+        return A.ID < B.ID
+    end)
+
+    table.move(CfgTemps, 1, #CfgTemps, #self.TemplateData + 1, self.TemplateData)
 
     self.BtnImage = #CustList >= 5 and "PaperSprite'/Game/UI/Atlas/Button/Frames/UI_Comm_Btn_Plus_Disab_png.UI_Comm_Btn_Plus_Disab_png'" or "PaperSprite'/Game/UI/Atlas/Button/Frames/UI_Comm_Btn_Plus_png.UI_Comm_Btn_Plus_png'"
 
     self.Templates:UpdateByValues(self.TemplateData)
+end
+
+function PhotoTemplateVM:UpdateSelItem(Index)
+    if not Index then
+        return
+    end
+    for i = 1, self.Templates:Length() do
+        local ItemVM = self.Templates:Get(i)
+		ItemVM:UpdateIconState(i == Index)
+	end
 end
 
 -- function PhotoTemplateVM:OnTimer()

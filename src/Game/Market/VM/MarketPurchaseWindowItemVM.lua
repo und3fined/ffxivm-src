@@ -4,7 +4,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local ItemUtil = require("Utils/ItemUtil")
 local ShopDefine = require("Game/Shop/ShopDefine")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local TradeMarketGoodsCfg = require("TableCfg/TradeMarketGoodsCfg")
+local ConditionMgr = require("Game/Interactive/ConditionMgr")
 
 ---@class MarketPurchaseWindowItemVM : UIViewModel
 local MarketPurchaseWindowItemVM = LuaClass(UIViewModel)
@@ -35,6 +35,10 @@ function MarketPurchaseWindowItemVM:UpdateVM(ResID, InfoStr)
 	self.PreviewBtnVisible = self:CanPreview(Cfg)
 end
 
+function MarketPurchaseWindowItemVM:SetItemMaker(Maker)
+	self.Maker = Maker
+end
+
 function MarketPurchaseWindowItemVM:CanPreview(Cfg)
 	if nil == Cfg then
         return false
@@ -58,6 +62,12 @@ function MarketPurchaseWindowItemVM:CanPreview(Cfg)
 			local EquipmentCfg = require("TableCfg/EquipmentCfg")
 			local ECfg = EquipmentCfg:FindCfgByKey(Cfg.EquipmentID)
 			if ECfg and ECfg.ItemMainType == ProtoCommon.ItemMainType.ItemArm then
+				return false
+			end
+
+			local ConditionID = Cfg.UseCond
+			local bCanEquip, ConditionFailReasonList = ConditionMgr:CheckConditionByID(ConditionID)
+			if not bCanEquip and ConditionFailReasonList[CondFailReason.GenderLimit] then
 				return false
 			end
 		end

@@ -143,6 +143,7 @@ end
 ---将UI显示在人物头顶
 function FateEmoTipsItemView:UpdatePos(InEntityID)
     if InEntityID == nil then
+        _G.FLOG_ERROR("FateEmoTipsItemView:UpdatePos 错误 , InEntityID 为空")
         return false
     end
     local FromActor = ActorUtil.GetActorByEntityID(InEntityID)
@@ -161,6 +162,7 @@ function FateEmoTipsItemView:UpdatePos(InEntityID)
         self.ScreenLocation.X - BubbleSize.X * 0.22,
         self.ScreenLocation.Y - BubbleSize.Y
     )
+
     self.Slot:SetPosition(CorrectScreeLocation)
 
     return true

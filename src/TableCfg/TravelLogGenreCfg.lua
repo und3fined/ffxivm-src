@@ -47,7 +47,16 @@ local TravelLogGenreCfg = {
             JournaltGenreID = 30102,
         },
         {
+            JournaltGenreID = 30103,
+        },
+        {
             JournaltGenreID = 30201,
+        },
+        {
+            JournaltGenreID = 30202,
+        },
+        {
+            JournaltGenreID = 30301,
         },
         {
             JournaltGenreID = 40101,
@@ -93,6 +102,9 @@ local TravelLogGenreCfg = {
         },
         {
             JournaltGenreID = 50305,
+        },
+        {
+            JournaltGenreID = 50306,
         },
         {
             JournaltGenreID = 50401,

@@ -513,34 +513,39 @@ local function DoVMAction(Action, ID, Param)
 end
 
 function CompanionMgr:OnNetRspCompanionCmdOps(MsgBody)
-	if MsgBody == nil then return end
+	local OpsRsp = MsgBody and MsgBody.Update
+	if OpsRsp == nil then return end
 
-	local OpsRsp = MsgBody.Update
+	local Operation = OpsRsp.Op
+	local CompanionID = OpsRsp.Param
 
-	if OpsRsp.Op == COMPANION_OPS.CompanionOpsRead then
-		DoVMAction(CompanionVM.RemoveCompanionNew, OpsRsp.Param)
-		EventMgr:SendEvent(EventID.CompanionNewListUpdate)
-	elseif OpsRsp.Op == COMPANION_OPS.CompanionOpsArchiveRead then
-		DoVMAction(CompanionVM.RemoveCompanionArchiveNew, OpsRsp.Param)
-		EventMgr:SendEvent(EventID.CompanionArchiveNewListUpdate)
-	elseif OpsRsp.Op == COMPANION_OPS.CompanionOpsAuto then
-		CompanionVM:SetOnlineAutoCallingType(OpsRsp.Param)
-	elseif OpsRsp.Op == COMPANION_OPS.CompanionOpsLike then
-		local CompanionID = OpsRsp.Param
+	local Params = {
+		CompanionID = CompanionID
+	}
+
+	if Operation == COMPANION_OPS.CompanionOpsRead then
+		DoVMAction(CompanionVM.RemoveCompanionNew, CompanionID)
+		EventMgr:SendEvent(EventID.CompanionNewListUpdate, Params)
+	elseif Operation == COMPANION_OPS.CompanionOpsArchiveRead then
+		DoVMAction(CompanionVM.RemoveCompanionArchiveNew, CompanionID)
+		EventMgr:SendEvent(EventID.CompanionArchiveNewListUpdate, Params)
+	elseif Operation == COMPANION_OPS.CompanionOpsLike then
 		DoVMAction(CompanionVM.AddCompanionFavourite, CompanionID)
 		self:ShowLikeOpsMsg(CompanionID, true)
-		EventMgr:SendEvent(EventID.CompanionFavouriteListUpdate)
-	elseif OpsRsp.Op == COMPANION_OPS.CompanionOpsUnlike then
-		local CompanionID = OpsRsp.Param
+		EventMgr:SendEvent(EventID.CompanionFavouriteListUpdate, Params)
+	elseif Operation == COMPANION_OPS.CompanionOpsUnlike then
 		DoVMAction(CompanionVM.RemoveCompanionFavourite, CompanionID)
 		self:ShowLikeOpsMsg(CompanionID, false)
-		EventMgr:SendEvent(EventID.CompanionFavouriteListUpdate)
+		EventMgr:SendEvent(EventID.CompanionFavouriteListUpdate, Params)
 
 		-- 清空收藏宠物时判断一下上线自动召唤是否仍然适用
 		if CompanionVM:HasCompanionFavourite() == false and CompanionVM:GetOnlineAutoCallingType() == COMPANION_AUTO.CompanionAutoLike then
 			self:SetOnlineAutoCallingType(COMPANION_AUTO.CompanionAutoLast)
 			ShowMsgTips(LSTR(120006))
 		end
+	elseif Operation == COMPANION_OPS.CompanionOpsAuto then
+		local OperationParam = OpsRsp.Param
+		CompanionVM:SetOnlineAutoCallingType(OperationParam)
 	end
 end
 
@@ -838,7 +843,7 @@ end
 function CompanionMgr:OpenCompanionView()
 	local SideBarDefine = require("Game/Common/Frame/Define/CommonSelectSideBarDefine")
 	local CommSideBarUtil = require("Utils/CommSideBarUtil")
-	CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Companion, {bOpen = true})
+	CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Companion, {bOpen = true})
 end
 
 return CompanionMgr

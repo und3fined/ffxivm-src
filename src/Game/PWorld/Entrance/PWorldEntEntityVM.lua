@@ -30,6 +30,7 @@ function PWorldEntEntityVM:Ctor()
     self.bShowLock = false
     
     self.bPrettyHard = false
+    self.bBattlePWorld = false
 end
 
 function PWorldEntEntityVM:UpdateNormPol()
@@ -73,6 +74,7 @@ function PWorldEntEntityVM:UpdateVM(Value)
     local IsCrystalline = PWorldEntUtil.IsCrystalline(self.Type)
 
     self.bPrettyHard = PWorldEntUtil.IsPrettyHardPWorld(self.ID)
+    local bBattlePWorld
 
     if self.IsDailyRandom then
         self:UpdateDailyRandomPol()
@@ -82,8 +84,10 @@ function PWorldEntEntityVM:UpdateVM(Value)
         self:UpdateCrystallinePol()
     else
         self:UpdateNormPol()
+        bBattlePWorld = PWorldEntUtil.IsBattlePWorld(self.EntranceCfg)
     end
     
+    self.bBattlePWorld = bBattlePWorld
     local BannerImagePath = self.EntranceCfg and self.EntranceCfg.BackgroudImageIcon or ""
     if self.IsChocoboRandomTrack then
         BannerImagePath = PWorldEntDefine.ChocoboRandomTrackBannerImagePath

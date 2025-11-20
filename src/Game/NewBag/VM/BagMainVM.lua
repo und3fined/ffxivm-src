@@ -10,6 +10,8 @@ local ProtoRes = require("Protocol/ProtoRes")
 local BagMgr = require("Game/Bag/BagMgr")
 local ItemCfg = require("TableCfg/ItemCfg")
 local ScoreCfg = require("TableCfg/ScoreCfg")
+local HouseCommon = require("Game/House/HouseCommon")
+local HouseUtil = require("Game/House/HouseUtil")
 
 local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
 local ITEM_CLASSIFY_TYPE = ProtoRes.ITEM_CLASSIFY_TYPE
@@ -455,6 +457,35 @@ function BagMainVM:SetRecoveryPanelVisible(Visible)
 	self.RecoveryList = {}
 
 	self:UpdateRecoveryItemList()
+end
+
+function BagMainVM:GetHouseItems(ItemDetailTypeList)
+	local TableItemDetailList = {}
+	for _,v in ipairs(ItemDetailTypeList) do
+		table.insert(TableItemDetailList,HouseUtil.ConvertHouseItemTabCategoryToItemTypeDetail(v))
+	end
+
+	local AllItemList = BagMgr.ItemList
+	local Length = #AllItemList
+	local ItemList = {}
+
+	for i = 1, Length do
+		local Item = AllItemList[i]
+		local Cfg = ItemCfg:FindCfgByKey(Item.ResID)
+
+		if Cfg then
+			if Cfg.Classify == ITEM_CLASSIFY_TYPE.ITEM_CLASSIFY_HOUSE then
+				for _,v in ipairs(TableItemDetailList) do
+					if Cfg.ItemType == v then
+						table.insert(ItemList, Item)
+						break
+					end
+				end
+			end
+		end
+	end
+
+	return ItemList
 end
 
 --要返回当前类

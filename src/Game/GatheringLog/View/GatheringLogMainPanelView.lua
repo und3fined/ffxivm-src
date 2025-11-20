@@ -24,6 +24,7 @@ local LSTR = _G.LSTR
 local UIDefine = require("Define/UIDefine")
 local CommUIStyleType = UIDefine.CommUIStyleType
 local DataReportUtil = require("Utils/DataReportUtil")
+local RichTextUtil = require("Utils/RichTextUtil")
 
 ---@class GatheringLogMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -160,8 +161,9 @@ end
 
 function GatheringLogMainPanelView:OnHide()
     GatheringLogMgr:DelRedDotsOnHide()
-    local GatheringJobID = GatheringLogMgr:GetChoiceProfID()
-    self:SaveLastSelectProfessJob(GatheringJobID)
+    --local GatheringJobID = GatheringLogMgr:GetChoiceProfID()
+    --self:SaveLastSelectProfessJob(GatheringJobID)
+    GatheringLogMgr:ResetSelectedRecord()
 end
 
 function GatheringLogMainPanelView:OnRegisterUIEvent()
@@ -174,6 +176,8 @@ function GatheringLogMainPanelView:OnRegisterUIEvent()
     self.InputSearch:SetCallback(self, nil, self.OnSearchTextCommitted, self.OnSearchCloseBtnClick)
     UIUtil.AddOnFocusReceivedEvent(self, self.InputSearch.TextInput, self.OnBtnSearchClick)
     UIUtil.AddOnFocusLostEvent(self, self.InputSearch.TextInput, self.OnTextFocusLost)
+
+    self:AddEmptyTextHyperlink()
 end
 
 function GatheringLogMainPanelView:OnRegisterGameEvent()
@@ -386,6 +390,13 @@ function GatheringLogMainPanelView:OnSelectionChangedHorTabs(HorTabindex)
                     DefaultDropDownIndex = Total + 1 - DefaultDropDownIndex
                 end
             end
+        elseif HorTabindex == GatheringLogDefine.HorBarIndex.SpecialIndex then
+            for index, value in ipairs(DropData) do
+                if value.TotalNum > 0 then
+                    DefaultDropDownIndex = index
+                    break
+                end
+            end
         end
     end
     --更新下拉框的显示
@@ -560,8 +571,13 @@ function GatheringLogMainPanelView:UpdateDropDownItemsProgress()
     local GatheringJobID = GatheringLogMgr:GetChoiceProfID()
     local DropData = GatheringLogMgr:UpdateDropData(GatheringJobID, LastFilterState.HorTabsIndex)
     local DropDownIndex = LastFilterState.DropDownIndex
-    self.DropDown:UpdateItems(DropData, DropDownIndex)
-    self.DropDown.TextQuantity:SetText(DropData[DropDownIndex].TextQuantityStr or "")
+    if DropData and DropData[DropDownIndex] then
+        self.DropDown:UpdateItems(DropData, DropDownIndex)
+        self.DropDown.TextQuantity:SetText(DropData[DropDownIndex].TextQuantityStr or "")
+    else
+        --搜索状态下会走到这，不用刷新下拉框及列表的表现
+        LastFilterState.DropDownIndex = 1
+    end
 end
 
 ---@type 当没有下拉筛选列表数据时
@@ -714,13 +730,36 @@ function GatheringLogMainPanelView:OnSearchTextCommitted(SearchText)
     GatheringLogMgr.LastFilterState.IDofSearchItem = nil
 
     --显示搜索结果
-    local Result =  GatheringLogVM:GetSearchResultList(SearchText)
+    local Result, HaveMatchingLineage =  GatheringLogVM:GetSearchResultList(SearchText)
     GatheringLogVM:UpdateGatheringItemTypesList(Result)
     self:SetItemEmptyTipAndSelect()
     self.TableViewListAdapter:ScrollToTop()
-    if table.is_nil_empty(Result) then
+    if HaveMatchingLineage then
+        --80062"[工票商店]"
+        local ShopName = RichTextUtil.GetHyperlink(LSTR(80062), 1, "#d1906d", nil, nil, nil, nil, nil, false)
+        local TipsContent = string.format(LSTR(GatheringLogDefine.UnUsedInheritText), ShopName)
+        self.BackpackEmpty:SetTipsContent(TipsContent)
+    elseif table.is_nil_empty(Result) then
         self.BackpackEmpty:SetTipsContent(LSTR(GatheringLogDefine.GetNoSearchResult))
     end
+end
+
+function GatheringLogMainPanelView:AddEmptyTextHyperlink()
+    local Empty = self.BackpackEmpty
+    local EmptyText = Empty.IsBrightText and Empty.RichTextNoneBright or Empty.RichTextNone
+    UIUtil.AddOnHyperlinkClickedEvent(self, EmptyText, function ()
+        local SearchLineageData = GatheringLogVM.SearchLineageData
+        if SearchLineageData == nil then
+            _G.FLOG_INFO("GatheringLogMainPanelView SearchLineageData is nil")
+            return
+        end
+        local ItemID = GatheringLogDefine.CategoryItemIDMap[SearchLineageData.GatheringJob][SearchLineageData.LineageVolume]
+        if nil == ItemID then
+            _G.FLOG_INFO("GatheringLogMainPanelView CategoryItemID is nil")
+            return
+        end
+        GatheringLogMgr:OnHyperlinkClicked(ItemID)
+    end)
 end
 
 function GatheringLogMainPanelView:OnTextFocusLost()
@@ -769,6 +808,7 @@ function GatheringLogMainPanelView:ExitSearchState()
     UIUtil.SetIsVisible(self.DropDown.TextQuantity,true)
     UIUtil.SetIsVisible(self.InputSearch.BtnCancelNode, false)
     GatheringLogVM.GatherItemProf = nil
+    GatheringLogVM.SearchLineageData = nil
 end
 
 return GatheringLogMainPanelView

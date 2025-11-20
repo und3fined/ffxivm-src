@@ -53,6 +53,7 @@ function MusicAtlasMainItemVM:Ctor()
 	self.ImgNormalType = nil
 	self.ImgNormalSelectType = nil
 	self.ImgNormalSelect2Type = nil
+	self.ImgNormalVisible = nil
 end
 
 function MusicAtlasMainItemVM:OnInit()
@@ -131,6 +132,7 @@ function MusicAtlasMainItemVM:UpdateSelectState(NewValue)
 		self.NormalSelect2 = NewValue
 		self.GreySlect = not NewValue
 		self.GreySlect2 = not NewValue
+		self.ImgNormalVisible = not NewValue
 	else
 		self.NormalSelect = not NewValue
 		self.NormalSelect2 = not NewValue
@@ -164,7 +166,7 @@ function MusicAtlasMainItemVM:SetNumber(Num)
 end
 
 function MusicAtlasMainItemVM:IsEqualVM(Value)
-	return true
+	return nil ~= Value and Value.MusicID == self.MusicID
 end
 
 return MusicAtlasMainItemVM

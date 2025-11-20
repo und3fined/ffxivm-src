@@ -133,7 +133,10 @@ function FishNewSlotItem126pxView:FishReleaseTipInfoInit(FishID, FishCount)
     if FishID > 0 then
         ItemID = Cfg and Cfg.ItemID or 0
     end
-    self.ItemVM:UpdateVM({ResID = ItemID, Num = FishCount})
+
+    if (self.ItemVM ~= nil) then
+        self.ItemVM:UpdateVM({ResID = ItemID, Num = FishCount})
+    end
 end
 
 function FishNewSlotItem126pxView:SetItemSelected(bSelected)

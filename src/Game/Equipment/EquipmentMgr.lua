@@ -311,6 +311,7 @@ function EquipmentMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_EQUIPMENT, EQUIP_SUB_ID.CS_CMD_EQUIP_EXCHANGE_RECEIPT, self.OnEquipExchangeReceipt)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_EQUIPMENT, EQUIP_SUB_ID.CS_CMD_EQUIP_IMPROVE, self.OnEquipImproveBack)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_NOTE, NOTE_SUB_ID.CS_CMD_SCENE_FINISH_LOG, self.OnSceneFinishLogRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_EQUIPMENT, EQUIP_SUB_ID.CS_CMD_EQUIP_SCHEME_UPDATE, self.OnSchemeUpdate)
 end
 
 function EquipmentMgr:OnRegisterGameEvent()
@@ -351,6 +352,10 @@ function EquipmentMgr:OnEquipOn(MsgBody)
 		MsgTipsUtil.ShowTips(LSTR(1050106))
 		return
 	end
+	if self.HoldTips ~= nil then
+		MsgTipsUtil.ShowTips(self.HoldTips)
+		self.HoldTips = nil
+	end
 	MsgTipsUtil.ShowTips(LSTR(1050107))
 	---更新已穿戴装备数据
 	for Part, Item in pairs(MsgBody.On.OnList) do
@@ -369,6 +374,15 @@ function EquipmentMgr:OnEquipOn(MsgBody)
 	self:CheckTipsForEndureDeg()
 end
 
+local UpdateCurrntList = function (TakeOffItem)
+	local MainPanel = _G.UIViewMgr:FindView(_G.UIViewID.EquipmentMainPanel)
+	if MainPanel then
+		if MainPanel.CurrrentEquipList then
+			local ListPageVM = MainPanel.CurrrentEquipList.EquipmentListPage.ViewModel
+			ListPageVM.GIDToSelect = TakeOffItem.GID
+		end
+	end
+end
 function EquipmentMgr:OnEquipOff(MsgBody)
 	if MsgBody.Off.OffList == nil or table.size(MsgBody.Off.OffList) == 0 then
 		local BagLeftNum = _G.BagMgr:GetBagLeftNum()
@@ -382,6 +396,9 @@ function EquipmentMgr:OnEquipOff(MsgBody)
 	for _, EquipInfo in pairs(MsgBody.Off.OffList) do
 		local TakeOffItem = EquipmentVM.ItemList[EquipInfo.Part]
 		EquipmentVM.ItemList[EquipInfo.Part] = nil
+		if #MsgBody.Off.OffList == 1 then
+			UpdateCurrntList(TakeOffItem)
+		end
 		self:UpdateStrongestEquip(EquipInfo.Part, TakeOffItem, true, false)
 	end
 	EquipmentVM.OffList = MsgBody.Off.OffList
@@ -484,7 +501,13 @@ function EquipmentMgr:SendSceneFinishLogReq()
 end
 
 function EquipmentMgr:OnSceneFinishLogRsp(MsgBody)
-	self.SceneFinishLog = MsgBody.SceneFinishLog.SceneFinishLogs
+	if MsgBody and MsgBody.SceneFinishLog and MsgBody.SceneFinishLog.SceneFinishLogs then
+		self.SceneFinishLog = MsgBody.SceneFinishLog.SceneFinishLogs
+	end
+end
+
+function EquipmentMgr:OnSchemeUpdate()
+	--没有处理，监听为了上级log
 end
 
 function EquipmentMgr:GetProfLevelItemIcon(Prof)
@@ -592,11 +615,13 @@ function EquipmentMgr:OnLoadingFinishMainViewActive()
 end
 
 function EquipmentMgr:NeedCheckTipsForEndureDeg()
+	self.LockEndureDegEventSend = true
 	self:LocalSetWeaponVisible(true)
 	self:CheckTipsForEndureDeg()
 end
 
 function EquipmentMgr:OnCrafterExit()
+	self.LockEndureDegEventSend = false
 	self:LocalSetWeaponVisible(false)
 end
 
@@ -628,12 +653,18 @@ function EquipmentMgr:OnEnduredegChange()
 	end
 	local IsInDungeon = _G.PWorldMgr:CurrIsInDungeon() or _G.PWorldMgr:CurrIsInPVPColosseum()
 	local Cfg = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_CFG_EQUIPMENT_ENDDUREDEG)
-	for Key, Item in pairs(ItemList) do
-		if Item.Attr.Equip.EndureDeg <= Cfg.Value[1] * 100 then
-			if not IsInDungeon and not self.LockEndureDegEventSend then
-				_G.EventMgr:SendEvent(_G.EventID.EnduredegChange, Cfg.Value[1] or 40)
-				self:UnRegisterGameEvent(EventID.HideUI, self.OnGameEventHideUI)
-				return
+	local TargetValue = 40
+	if Cfg and Cfg.Value and next(Cfg.Value) then
+		TargetValue = Cfg.Value[1]
+	end
+	for _, Item in pairs(ItemList) do
+		if Item and Item.Attr and Item.Attr.Equip and Item.Attr.Equip.EndureDeg then
+			if Item.Attr.Equip.EndureDeg <= TargetValue * 100 then
+				if not IsInDungeon and not self.LockEndureDegEventSend then
+					_G.EventMgr:SendEvent(_G.EventID.EnduredegChange, TargetValue or 40)
+					self:UnRegisterGameEvent(EventID.HideUI, self.OnGameEventHideUI)
+					return
+				end
 			end
 		end
 	end
@@ -641,7 +672,11 @@ end
 
 function EquipmentMgr:OnGameEventHideUI(Params)
 	local ViewID = Params
-	if ViewID == _G.UIViewID.GatheringJobPanel or ViewID == _G.UIViewID.CraftingLog then
+	local ProfID = MajorUtil.GetMajorProfID()
+	local ProfClass = ProfUtil.GetProfClass(ProfID)
+	if ProfClass == ProtoCommon.class_type.CLASS_TYPE_CARPENTER and  ViewID == _G.UIViewID.CraftingLog then
+		self:OnEnduredegChange()
+	elseif ProfClass == ProtoCommon.class_type.CLASS_TYPE_EARTHMESSENGER and ViewID == _G.UIViewID.GatheringJobPanel then 
 		self:OnEnduredegChange()
 	end
 end
@@ -759,6 +794,10 @@ function EquipmentMgr:CheckStrongestEquipByItem(Item, bOn)
 
 	-- 查找装备相关部位
 	local ItemCfgData = ItemCfg:FindCfgByKey(Item.ResID)
+	if not ItemCfgData or not next(ItemCfgData) then
+		return
+	end
+	
 	local Parts = ItemTypeDetailToEquipParts[ItemCfgData.ItemType]
 	if nil == Parts then
 		-- 主副手ItemType与职业有关
@@ -933,6 +972,12 @@ function EquipmentMgr:SendEquipRepair(lstEquipGID, InIsOn)
 	self:SendEquipCommon(EQUIP_SUB_ID.CS_CMD_EQUIP_REPAIR, "Repair", EquipRepairReq)
 end
 
+function EquipmentMgr:SendEquioSchemeChange(DataTable)
+	if DataTable and next(DataTable) then
+		local Schemes = {Schemes = DataTable}
+		self:SendEquipCommon(EQUIP_SUB_ID.CS_CMD_EQUIP_SCHEME_UPDATE, "Scheme", Schemes)
+	end
+end
 -- function EquipmentMgr:SendEquipInfo()
 -- 	self:SendEquipCommon(EQUIP_SUB_ID.CS_CMD_EQUIP_INFO, "Info", nil)
 -- end
@@ -950,6 +995,27 @@ end
 function EquipmentMgr:SendEquipOnChecked(EquipReqInfo, CurEquipItem, NewEquipItem)
 	if not _G.EquipmentMgr:CheckCanOperate(LSTR(1050178), true) then
 		return
+	end
+	--先查当前装备有没有魔晶石
+	if CurEquipItem and CurEquipItem.Attr and CurEquipItem.Attr.Equip
+	and CurEquipItem.Attr.Equip and  CurEquipItem.Attr.Equip.GemInfo and
+	CurEquipItem.Attr.Equip.GemInfo.CarryList and next(CurEquipItem.Attr.Equip.GemInfo.CarryList) then
+		--新装备可以
+		if NewEquipItem then
+			if self:CheckCanMosic(NewEquipItem.ResID) then
+				if NewEquipItem.Attr and NewEquipItem.Attr.Equip
+				and NewEquipItem.Attr.Equip and  NewEquipItem.Attr.Equip.GemInfo and
+				NewEquipItem.Attr.Equip.GemInfo.CarryList and not next(NewEquipItem.Attr.Equip.GemInfo.CarryList) then
+					self.HoldTips = LSTR(1050234)
+				elseif NewEquipItem.Attr and NewEquipItem.Attr.Equip
+				and NewEquipItem.Attr.Equip and  NewEquipItem.Attr.Equip.GemInfo and
+				NewEquipItem.Attr.Equip.GemInfo.CarryList and next(NewEquipItem.Attr.Equip.GemInfo.CarryList) then
+					self.HoldTips = LSTR(1050236)
+				end
+			else
+				self.HoldTips = LSTR(1050235)
+			end
+		end
 	end
 	self:SendEquipOn(EquipReqInfo)
 end
@@ -1038,6 +1104,8 @@ function EquipmentMgr:GetEquipmentsByPart(InPart, ProfID, bCanUse, bWithEquiped)
 		InPart = ProtoCommon.equip_part.EQUIP_PART_FINGER
 	end
 
+	--如果传入ProfID则拿对应职业等级
+	local Level = ProfID == MajorUtil.GetMajorProfID() and MajorUtil.GetTrueMajorLevel() or MajorUtil.GetMajorLevelByProf(ProfID)
 	local lstEquipments = BagMgr:FindItemsByItemType(ProtoCommon.ITEM_TYPE.ITEM_TYPE_EQUIP)
 	local Ret = {}
 	local ItemTypeDetail = self:GetItemType(InPart, ProfID)
@@ -1047,7 +1115,7 @@ function EquipmentMgr:GetEquipmentsByPart(InPart, ProfID, bCanUse, bWithEquiped)
 			if ItemCfg and ItemCfg.ItemType == ItemTypeDetail then
 				if bCanUse == nil then
 					Ret[#Ret + 1] = v
-				elseif self:CanEquiped(v.ResID) == bCanUse then
+				elseif self:CanEquiped(v.ResID, false, ProfID, Level) == bCanUse then
 					Ret[#Ret + 1] = v
 				end
 			end
@@ -1371,7 +1439,6 @@ function EquipmentMgr:CanEquiped(ResID, IsShowTips, ProfID, Level)
 end
 
 function EquipmentMgr:CheckCanMosic(ResID)
-	local EquipmentCfg = require("TableCfg/EquipmentCfg")
 	local MateID = 0
 	local Cfg = EquipmentCfg:FindCfgByEquipID(ResID)
 	if Cfg ~= nil then
@@ -1487,7 +1554,7 @@ function EquipmentMgr:GetCanImproveEquipment()
 	local TableList = {}
 	for key, value in pairs(lstEquipments) do
 		local Cfg = EquipImproveCfg:FindCfgByKey(value.ResID)
-		if Cfg ~= nil then
+		if Cfg ~= nil and self:CheckEquipImproveInVersion(value.ResID) then
 			local ResCfg = ItemCfg:FindCfgByKey(value.ResID)
 			if ResCfg ~= nil then
 				table.insert(TableList, {ResID = value.ResID, ItemLevel = ResCfg.ItemLevel or 0, Part = ResCfg.Classify or 0})
@@ -1500,6 +1567,9 @@ end
 
 function EquipmentMgr:GetImproveMaterialEnough(ResID)
 	local Cfg = EquipImproveCfg:FindCfgByKey(ResID)
+	if not self:CheckEquipImproveInVersion(ResID) then
+		return false
+	end
 	--MarterialID
 	if Cfg and next(Cfg) then
 		local MarterialID = Cfg.MaterialID
@@ -1549,6 +1619,11 @@ local function StrongestCondition(Item, StrongestItem, MaxScore, bEquiped)
 
 	---绑定状态相同， 优先选高耐久
 	if StrongestItem then
+		local itemEndureDeg = Item.Attr and Item.Attr.Equip and Item.Attr.Equip.EndureDeg
+		local strongestEndureDeg = StrongestItem.Attr and StrongestItem.Attr.Equip and StrongestItem.Attr.Equip.EndureDeg
+		if not itemEndureDeg or not strongestEndureDeg then
+			return false
+		end
 		return Item.Attr.Equip.EndureDeg > StrongestItem.Attr.Equip.EndureDeg, c_item_cfg.ItemLevel
 	end
 	return false
@@ -1556,9 +1631,9 @@ end
 
 ---获取背包里可装备的最强装备数组
 ---Strongest元素：{Current = Item, Strongest = Item1, CurrentScore = ItemScore, StrongestScore = Item1Score}
-function EquipmentMgr:GetStrongest()
+function EquipmentMgr:GetStrongest(Prof)
 	local Strongest = {}
-	local ProfID = MajorUtil.GetMajorProfID()
+	local ProfID = Prof and Prof or MajorUtil.GetMajorProfID()
 	local StrongestGIDMap = {}
 	for v = ProtoCommon.equip_part.EQUIP_PART_NONE + 1, ProtoCommon.equip_part.EQUIP_PART_MAX - 1 do
 		---从背包找Part部位可用装备
@@ -1572,8 +1647,12 @@ function EquipmentMgr:GetStrongest()
 				MaxScore = Score
 			end
 		end
-		
-		local EquipedItem = EquipmentMgr:GetEquipedItemByPart(v)
+		local EquipedItem
+		if Prof then
+			EquipedItem = self:GetEquipSchemeByProfAndPart(Prof, v)
+		else
+			EquipedItem = EquipmentMgr:GetEquipedItemByPart(v)
+		end
 		local EquipedItemScore = 0
 		if EquipedItem then
 			local EquipedItemCfg = ItemCfg:FindCfgByKey(EquipedItem.ResID)
@@ -1596,9 +1675,136 @@ function EquipmentMgr:GetStrongest()
         return EquipmentUtil.SortComparison(LeftPart, RightPart)
     end
     table.sort(Strongest, SortComparison)
-
 	return Strongest
 end
+
+---一键最强
+function EquipmentMgr:ChangeAllProfSchemeForStrongest()
+	local RoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+	local DataTable = {}
+	--遍历所有职业
+	for _, value in pairs(RoleDetail.Prof.ProfList) do
+		if value.ProfID ~= MajorUtil.GetMajorProfID() then
+			local Strongest = EquipmentMgr:GetStrongest(value.ProfID)
+			local NeedChange = false
+			local Schemes = {}
+			--有更强的装备再进行下一步
+			if Strongest and next(Strongest) then
+				local Scheme = {}
+				for v = ProtoCommon.equip_part.EQUIP_PART_NONE + 1, ProtoCommon.equip_part.EQUIP_PART_MAX - 1 do
+					for _, strongEquip in pairs(Strongest) do
+						if v == strongEquip.Part then
+							local tmp = {}
+							--套装有且GID不同就用最强装备的，没有就直接用
+							if value.EquipScheme[v] then
+								local equip = value.EquipScheme[v]
+								if equip.GID ~= strongEquip.Strongest.GID then
+									tmp.Part = strongEquip.Part
+									tmp.GID = strongEquip.Strongest.GID
+									NeedChange = true
+									table.insert(Scheme, tmp)
+								end
+							else
+								tmp.Part = strongEquip.Part
+								tmp.GID = strongEquip.Strongest.GID
+								NeedChange = true
+								table.insert(Scheme, tmp)
+							end
+						end
+					end
+				end
+				if next(Scheme) and NeedChange then
+					Schemes.Prof = value.ProfID
+					Schemes.Scheme = Scheme
+				end
+			end
+			if next(Schemes) then
+				table.insert(DataTable, Schemes)
+			end
+		end
+	end
+	if next(DataTable) then
+		self:SendEquioSchemeChange(DataTable)
+	end
+	local MajorStrongest = self:GetStrongest()
+	local lstEquipInfo = {}
+	if MajorStrongest and next(MajorStrongest) then
+		for _,v in pairs(MajorStrongest) do
+			local StrongestItem = v.Strongest
+			lstEquipInfo[#lstEquipInfo + 1] = {Part = v.Part, GID = StrongestItem.GID}
+		end
+		self:SendEquipOn(lstEquipInfo)
+	else
+		_G.FLOG_INFO("Equip Is Strongest")
+	end
+end
+
+---获取所有职业最强装备数据
+function EquipmentMgr:GetAllStrongest()
+	local RoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+	local AllStrongest = {}
+	for _, value in pairs(RoleDetail.Prof.ProfList) do
+		local Strongest = EquipmentMgr:GetStrongest(value.ProfID)
+		local ProfStrongest = {}
+		local ItemData = {}
+		for v = ProtoCommon.equip_part.EQUIP_PART_NONE + 1, ProtoCommon.equip_part.EQUIP_PART_MAX - 1 do
+			if value.EquipScheme and next(value.EquipScheme) then
+				for part, data in pairs(value.EquipScheme) do
+					if v == part then
+						local Item = self:GetItemByGID(data.GID)
+						if Item then
+							local tmp = {}
+							tmp.ResID = Item.ResID
+							tmp.GID = data.GID
+							table.insert(ItemData, tmp)
+						end
+					end
+				end
+			end
+			if Strongest and next(Strongest) then
+				for _, strongEquip in pairs(Strongest) do
+					if v == strongEquip.Part then
+						if value.EquipScheme and value.EquipScheme[strongEquip.Part] and next(value.EquipScheme[strongEquip.Part]) then
+							if strongEquip.Strongest.GID ~= value.EquipScheme[strongEquip.Part].GID then
+								local tmp = {}
+								tmp.ResID = strongEquip.Strongest.ResID
+								tmp.GID = strongEquip.Strongest.GID
+								table.insert(ItemData, tmp)
+							end
+						else
+							local tmp = {}
+							tmp.ResID = strongEquip.Strongest.ResID
+							tmp.GID = strongEquip.Strongest.GID
+							table.insert(ItemData, tmp)
+						end
+					end
+				end
+			end
+		end
+		ProfStrongest.ProfID = value.ProfID
+		ProfStrongest.ItemData = ItemData
+		table.insert(AllStrongest, ProfStrongest)
+	end
+	return AllStrongest
+end
+
+
+function EquipmentMgr:GetEquipSchemeByProfAndPart(Prof, Part)
+	local RoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+	for key, value in pairs(RoleDetail.Prof.ProfList) do
+		if Prof == value.ProfID then
+			for part, equip in pairs(value.EquipScheme) do
+				if part == Part then
+					local ItemData = self:GetItemByGID(equip.GID)
+					if ItemData then
+						return ItemData
+					end
+				end
+			end
+		end
+	end
+end
+
 
 function EquipmentMgr:OnMajorLevelUpdate(Params)
 	for Part = ProtoCommon.equip_part.EQUIP_PART_NONE + 1, ProtoCommon.equip_part.EQUIP_PART_MAX - 1 do
@@ -1686,7 +1892,12 @@ function EquipmentMgr:IsStrongest()
 			--如果当前穿戴是两件一样的装备，不管耐久度
 			local EquipedItem = EquipmentMgr:GetEquipedItemByPart(Part)
 			if EquipedItem and EquipInfo.Item.ResID ~= EquipedItem.ResID then
+				--这里需要判断一下两件的装备品级
+				local EquipCfg = ItemCfg:FindCfgByKey(EquipedItem.ResID)
 				bIsStrongest = false
+				if EquipInfo.ItemLevel == EquipCfg.ItemLevel then
+					bIsStrongest = true
+				end
 				break
 				--卸下装备且最强装备有记录，则最强为false
 			elseif not EquipedItem and EquipInfo.Item then
@@ -2139,6 +2350,7 @@ function EquipmentMgr:UpdateRoleRedDot()
 		local IsAdvancedProf = ProfUtil.IsAdvancedProf(ProfID)
 		--是基职且等级大于12，则加入红点
 		local IsProductionProf = ProfUtil.IsProductionProf(ProfID)
+		local IsModuleOpen = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDAdventure)
 		if not IsProductionProf then
 			if not IsAdvancedProf then
 				if Level and Level > 12 then
@@ -2151,7 +2363,7 @@ function EquipmentMgr:UpdateRoleRedDot()
 						ProfRedData[ProfID] = false
 						self:SetRedDot(tonumber("71"..string.format("%02d", ProfID)), false) 
 					else
-						if not IsSameDay then
+						if not IsSameDay and IsModuleOpen then
 							ProfRedData[ProfID] = true
 							self:SetRedDot(tonumber("71"..string.format("%02d", ProfID)), true)
 						else

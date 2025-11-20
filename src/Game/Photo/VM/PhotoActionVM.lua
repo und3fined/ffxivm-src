@@ -2,15 +2,16 @@ local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
 local PhotoActionItemVM = require("Game/Photo/VM/Item/PhotoActionItemVM")
-local PhotoActionVM = LuaClass(UIViewModel)
-local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
 local PhotoDefine = require("Game/Photo/PhotoDefine")
-local LSTR = _G.LSTR
 local PhotoTemplateUtil = require("Game/Photo/Util/PhotoTemplateUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
-local ShowTips = MsgTipsUtil.ShowTips
 local PhotoUtil = require("Game/Photo/PhotoUtil")
 
+local PhotoActionVM = LuaClass(UIViewModel)
+local AnimType = PhotoDefine.AnimType
+local ShowTips = MsgTipsUtil.ShowTips
+local LSTR = _G.LSTR
+local PhotoMgr = _G.PhotoMgr
 PhotoActionVM.ActionType = {Motion = 1,  Movement = 2} -- 动作，移动
 
 function PhotoActionVM:Ctor()
@@ -33,51 +34,80 @@ function PhotoActionVM:UpdateVM()
     self.IsShowSlider = false
 end
 
+function PhotoActionVM:ChangedSelecteActor()
+    self.IsShowSlider = false
+    self:UpdateListVM()
+end
+
+function PhotoActionVM:MakeDataList(InType)
+    local ActionList = {}
+    if InType == PhotoActionVM.ActionType.Motion then
+        local AllEmotion = PhotoMgr:GetActionCfgList()
+        for k,v in ipairs(AllEmotion) do
+            local IsUseMouth = PhotoMgr:GetEmotionIsUseMouth(v.ID)
+			table.insert(ActionList, {
+                ID = v.ID,
+                NameText = v.EmotionName,
+                ImgIcon = v.IconPath,
+                Type = AnimType.Motion,
+                IsUseMouth = IsUseMouth,
+            })
+		end
+    elseif InType == PhotoActionVM.ActionType.Movement then
+        local AllEmotion = PhotoMgr:GetMoveOrMouthList(PhotoDefine.MoveMouthType.Movement)
+        for k,v in ipairs(AllEmotion) do
+			table.insert(ActionList, {
+                ID = v.ID,
+                NameText = v.Name,
+                ImgIcon = v.Path,
+                Type = AnimType.Movement
+            })
+		end
+    end
+    return ActionList
+end
+
 function PhotoActionVM:UpdateListVM()
     local ActionList = {}
-    local SeltEntID = _G.PhotoMgr.SeltEntID
-    local IsPlayer = _G.PhotoMgr:IsCurSeltPlayer()
-
-    -- print('debug lockscreen [1] IsPlayer = ' .. tostring(IsPlayer))
-    -- print('debug lockscreen [2] SeltEntID = ' .. tostring(SeltEntID))
-
     if self.Type == PhotoActionVM.ActionType.Motion then
-        local AllEmotion = _G.PhotoMgr:GetActionCfgList()
-        for k,v in ipairs(AllEmotion) do
-            local IsEnable = IsPlayer and _G.EmotionMgr:IsEnableID(v.ID, SeltEntID)
-            -- local Test = _G.EmotionMgr:IsEnableID(v.ID, SeltEntID)
-            -- print('debug lockscreen ID = ' .. tostring(v.ID) .. ' Enable = ' .. tostring(Test))
-
-			table.insert(ActionList, {ID = v.ID, NameText = v.EmotionName, ImgIcon = v.IconPath, IsEnable = IsEnable, Type = PhotoActionItemVM.ItemType.Motion})
-		end
+        if table.is_nil_empty(self.MotionItemList) then
+            self.MotionItemList = self:MakeDataList(self.Type)
+        end
+        ActionList = self.MotionItemList
     elseif self.Type == PhotoActionVM.ActionType.Movement then
-        local AllEmotion = _G.PhotoMgr:GetMoveOrMouthList(PhotoDefine.MoveMouthType.Movement)
-        
-        for k,v in ipairs(AllEmotion) do
-            local IsEnable = IsPlayer and PhotoUtil.IsEnableIDMovement(SeltEntID)
-			table.insert(ActionList, {ID = v.ID, NameText = v.Name, ImgIcon = v.Path, IsEnable = IsEnable, Type = PhotoActionItemVM.ItemType.Movement})
-		end
+        if table.is_nil_empty(self.MovementItemList) then
+            self.MovementItemList = self:MakeDataList(self.Type)
+        end
+        ActionList = self.MovementItemList
     end
     self.ActionItemVMList:UpdateByValues(ActionList)
 end
 
-function PhotoActionVM:UpdateCurIdx()
+function PhotoActionVM:ClearVMData()
+    self.MotionItemList = nil
+    self.MovementItemList = nil
+end
+
+function PhotoActionVM:UpdateCurIdx(bIgSync)
     self.CurSeltItemIdx = self.ItemIdxMap[self.Type]
 
     local ID = nil
     self.CurItem = nil
     for i = 1, self.ActionItemVMList:Length() do
-		local ItemVM = self.ActionItemVMList:Get(i)
+        local ItemVM = self.ActionItemVMList:Get(i)
         if i == self.CurSeltItemIdx then
             ID = ItemVM.ID
             self.CurItem = ItemVM
         end
-		ItemVM:UpdateIconState(ID)	
+		ItemVM:UpdateIconState(ID)
 	end
 
     self.CurID = ID
     self.IsShowSlider = (ID ~= nil)
-    self:OnActChg(self.CurItem)
+
+    if not bIgSync then
+        self:OnActChg(self.CurItem)
+    end
 end
 
 function PhotoActionVM:OnActChg(ItemData)
@@ -86,26 +116,25 @@ function PhotoActionVM:OnActChg(ItemData)
 		return
 	end
     local GiveType = _G.PhotoVM.GiveType
-	if ItemData.Type == PhotoActionItemVM.ItemType.Motion then
+	if ItemData.Type == AnimType.Motion then
 		if GiveType == PhotoDefine.PhotoGiveType.Movement then
 			ShowTips(LSTR(630047))
 		end
         if not self.IsPauseAnim then
-		    _G.PhotoMgr:SetActionID(ItemData.ID)
+		    PhotoMgr:SetActionID(ItemData.ID)
         end
-	elseif ItemData.Type == PhotoActionItemVM.ItemType.Movement then
+	elseif ItemData.Type == AnimType.Movement then
 		if GiveType == PhotoDefine.PhotoGiveType.Action then
 			ShowTips(LSTR(630046))
 		end
         if not self.IsPauseAnim then
-		    _G.PhotoMgr:SetMoveID(ItemData.ID)
+		    PhotoMgr:SetMoveID(ItemData.ID)
         end
 	end
 end
 
 function PhotoActionVM:SetSelectedActionItem(Idx, ID)
     self:SetSelectedActionItemInner(Idx, ID)
-
     _G.PhotoRoleStatVM:TryRptStat()
 end
 
@@ -140,11 +169,8 @@ end
 
 function PhotoActionVM:ResetRoleActAni()
     self:SetSelectedActionItemInner()
-    if self.Type == PhotoActionVM.ActionType.Motion then
-		_G.PhotoMgr:SetActionID(nil)
-	elseif self.Type == PhotoActionVM.ActionType.Movement then
-		_G.PhotoMgr:SetMoveID(nil)
-	end
+    PhotoMgr:SetActionID(nil)
+    PhotoMgr:SetMoveID(nil)
 end
 
 function PhotoActionVM:SetAmimIsPause(IsPause)
@@ -153,11 +179,8 @@ function PhotoActionVM:SetAmimIsPause(IsPause)
     end
 
     self.IsPauseAnim = IsPause
-
-    if self.IsPauseAnim then
-        _G.PhotoMgr:PauseCurMontage()
-    else
-        _G.PhotoMgr:ResumeCurMontage()
+    if not PhotoMgr:GetIsDirectPause() then
+        PhotoMgr:PauseAllMontage(self.IsPauseAnim)
     end
 end
 
@@ -165,23 +188,29 @@ end
 ---@region template setting
 
 function PhotoActionVM:TemplateSave(InTemplate)
-    PhotoTemplateUtil.SetActAndMove(InTemplate, self.TypeIdx, self.CurSeltItemIdx, self.CurAniPct)
+    PhotoTemplateUtil.SetActOrMove(InTemplate, self.TypeIdx, self.CurSeltItemIdx, self.CurAniPct, self.CurID)
 end
 
 function PhotoActionVM:TemplateApply(InTemplate)
-    local Info = PhotoTemplateUtil.GetActAndMove(InTemplate)
+    local Info = PhotoTemplateUtil.GetActOrMove(InTemplate)
     -- _G.FLOG_INFO('[Photo][PhotoCamVM][TemplateApply] Info = ' .. table.tostring(Info))
     if Info then
         local TypeIdx = Info.Type
         local Idx = Info.Idx
+        local ID = Info.ID
+        local SeltEntID = PhotoMgr.SeltEntID
+        if not ID or not _G.EmotionMgr:IsEnableID(ID, SeltEntID) then
+            PhotoUtil.ShowAnimTips(AnimType.Motion, ID)
+            return
+        end
+
         self:SetActionType(TypeIdx)
         self:SetSelectedActionItem(Idx)
         local Pct = Info.Pct
 
         if Pct then
             self.CurAniPct = Pct
-            self:SetAmimIsPause(true)
-	        _G.PhotoMgr:SetCurMontagePct(Pct)
+	        PhotoMgr:SetPlayingActionMontagePct(Pct)
         end
     else
         self:ResetRoleActAni()

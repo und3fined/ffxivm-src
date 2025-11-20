@@ -2,7 +2,7 @@ local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
 local ItemTypeCfg = require("TableCfg/ItemTypeCfg")
-local CommLight152Slot = require("Game/Common/Slot/CommLight152SlotView")
+local ItemDefine = require("Game/Item/ItemDefine")
 local ItemCfg = require("TableCfg/ItemCfg")
 local CraftingLogPropItemVM = require("Game/CraftingLog/ItemVM/CraftingLogPropItemVM")
 local CraftingLogConditionItemVM = require("Game/CraftingLog/ItemVM/CraftingLogConditionItemVM")
@@ -88,7 +88,7 @@ function CraftingLogVM:Reset()
     self.TextNoticeTips = ""
     self.InUseItemRecipeDetail = ""
     self.CraftingTextAmount = ""
-    self.CraftingTextAmountColor = "FFFFFFFF"
+    self.CraftingTextAmountColor = "#313131"
     self.bBorderNoticeShow = false
     self.IconID = nil
     self.ItemQualityImg = nil
@@ -147,26 +147,51 @@ function CraftingLogVM:GetPropItemByID(ID)
     end
 end
 
+---更新Lock状态
+function CraftingLogVM:UpdatePropItemLockState(ProfID)
+    local AllItemList = self:GetPropItemList()
+    for _, ItemVM in pairs(AllItemList) do
+        if ItemVM.Craftjob == ProfID then
+            ItemVM.bLockGray = ItemVM:SetLockState()
+        end
+    end
+end
+
 ---获取当前显示的道具列表
 function CraftingLogVM:GetPropItemList()
     local AllItemList = self.PropItemTabAdapter:GetItems() or {}
     return AllItemList
 end
 
+function CraftingLogVM:PropDataSet(PropData)
+    if CraftingLogMgr.CraftingState == CraftingLogDefine.CraftingLogState.Picking then
+        local ProfID = CraftingLogMgr.LastChoiceCareer
+        local MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(ProfID)
+        for _, value in pairs(PropData) do
+            value.bSelect = false
+            value.bLeveQuestMarked = MarkedItemID and (MarkedItemID == value.ProductID or MarkedItemID == value.HQProductID)
+        end
+    else
+        local MarkedItemList = {}
+        local MarkedItemID
+        for _, value in pairs(PropData) do
+            local ProfID = value.Craftjob
+            MarkedItemID = MarkedItemList[ProfID]
+            if MarkedItemID == nil then
+                MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(ProfID)
+                MarkedItemList[ProfID] = MarkedItemID
+            end
+            value.bSelect = false
+            value.bLeveQuestMarked = MarkedItemID and (MarkedItemID == value.ProductID or MarkedItemID == value.HQProductID)
+        end
+    end
+end
+
 ---刷新装备列表
 ---@param PropData table<number, PropData> @道具数据
 function CraftingLogVM:UpdatePropItemListTab(PropData, NowRecipeIndex)
     PropData = PropData or {}
-    local ProfID = CraftingLogMgr.LastChoiceCareer
-    local MarkedItemID = _G.LeveQuestMgr:GetMarkedItemByProfID(ProfID)
-    for _, value in pairs(PropData) do
-        value.bSelect = false
-        value.bLeveQuestMarked = MarkedItemID and (MarkedItemID == value.ProductID or MarkedItemID == value.HQProductID)
-    end
-    local ThisPropData = PropData[NowRecipeIndex]
-    if ThisPropData then
-        ThisPropData.bSelect = true
-    end
+    self:PropDataSet(PropData)
     if self.PropItemTabAdapter == nil then
         _G.FLOG_ERROR("CraftingLogVM.PropItemTabAdapter is nil")
         return
@@ -194,7 +219,20 @@ function CraftingLogVM:UpdatePropItemListTab(PropData, NowRecipeIndex)
         end
         return
     end
-    self:PropItemOnClick(ThisPropData)
+
+    local ThisPropData = PropData[NowRecipeIndex]
+    if ThisPropData and ThisPropData.TextTips ~= nil then
+        for _, Elem in pairs(PropData) do
+            if Elem.TextTips == nil then
+                ThisPropData = Elem
+                break
+            end
+        end
+    end
+    if ThisPropData then
+        ThisPropData.bSelect = true
+        self:PropItemOnClick(ThisPropData)
+    end
     local StatePick = CraftingLogDefine.CraftingLogState.Picking
     if CraftingLogMgr.CraftingState == StatePick then
         CraftingLogVM:PanleInit()
@@ -316,9 +354,9 @@ function CraftingLogVM:PropItemChoiceRefiesh(Data)
     local Cfg = ItemCfg:FindCfgByKey(ProductID)
     if Cfg then
         if 1 == Cfg.IsHQ then
-            self.ItemQualityImg = CommLight152Slot.ItemHQColorType[Cfg.ItemColor]
+            self.ItemQualityImg = ItemDefine.HQLightSlotColotType[Cfg.ItemColor]
         else
-            self.ItemQualityImg = CommLight152Slot.ItemColorType[Cfg.ItemColor]
+            self.ItemQualityImg = ItemDefine.LightSlotColotType[Cfg.ItemColor]
         end
         self.TypeName = ItemTypeCfg:GetTypeName(Cfg.ItemType)
         self.IconID = Cfg.IconID
@@ -483,7 +521,7 @@ function CraftingLogVM:OnAmountPromptChange(Type)
         self.bImgSubtractDisableShow = true
         self.bImgAddShow = false
         self.bImgAddDisableShow = true
-        self.CraftingTextAmountColor = "FF0000FF"
+        self.CraftingTextAmountColor = "#af4c58"
         return
     else
         self.bImgSubtractShow = true
@@ -491,11 +529,11 @@ function CraftingLogVM:OnAmountPromptChange(Type)
         self.bImgAddShow = true
         self.bImgAddDisableShow = false
     end
-    self.CraftingTextAmountColor = "DAB371FF"
+    self.CraftingTextAmountColor = "#313131"
 
     -- 如果当前选择数量大于最大可制作数量
     if CraftingLogMgr.NowMakeCount > CraftingLogMgr.MaxMakeCount then
-        self.CraftingTextAmountColor = "FF0000FF"
+        self.CraftingTextAmountColor = "#af4c58"
         self.bImgAddShow = false
         self.bImgAddDisableShow = true
         return

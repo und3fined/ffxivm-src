@@ -181,7 +181,7 @@ function ActorUIUtil.GetActorUIType(EntityID)
 	elseif EActorType.Npc == ActorType then
 		local ResID = ActorUtil.GetActorResID(EntityID)
 		local NpcType = NpcCfg:FindValue(ResID, "Type")
-		if NPC_TYPE.NPC == NpcType then
+		if NPC_TYPE.NPC == NpcType or NpcType == NPC_TYPE.HOUSING then
 			return ACTOR_UI_TYPE.ActorUITypeNPC
 		else
 			return ACTOR_UI_TYPE.ActorUITypeOther

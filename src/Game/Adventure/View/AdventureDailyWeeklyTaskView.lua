@@ -84,10 +84,18 @@ function AdventureDailyWeeklyTaskView:OnShow()
 	self:UpdateCountTimeShow()
 end
 
+function AdventureDailyWeeklyTaskView:DelayUpdateWeeklyChallenge(DelayTime)
+	if self.VM and self.VM.Type ~= MainTabIndex.Weekly then return end
+	local Time = DelayTime
+	self:RegisterTimer(function()
+		AdventureMgr:SendChallengeLog(0)
+		AdventureMgr:SendChallengelogReward()
+	end ,0, Time, 1)
+end
+
 function AdventureDailyWeeklyTaskView:OnActive()
 	if self.VM and self.VM.Type ~= MainTabIndex.Weekly then return end
-	AdventureMgr:SendChallengeLog(0)
-	AdventureMgr:SendChallengelogReward()
+	self:DelayUpdateWeeklyChallenge(math.random(1, 3))
 end
 
 function AdventureDailyWeeklyTaskView:UpdateCountTimeShow()
@@ -96,14 +104,13 @@ function AdventureDailyWeeklyTaskView:UpdateCountTimeShow()
 	self:RegisterTimer(function()
 		self.SurplusTime = self.SurplusTime - 1
 		CountTime = CountTime + 1
-		if CountTime >= 2 and self.ScrollTargetIndex then
+		if self.CreatSucess and self.ScrollTargetIndex then
 			self.AdapterNoteRandomList:ScrollToIndex(self.ScrollTargetIndex)
 			self.ScrollTargetIndex = nil
 		end
 
 		if self.SurplusTime < 0 then
-			AdventureMgr:SendChallengeLog(0)
-			AdventureMgr:SendChallengelogReward()
+			self:DelayUpdateWeeklyChallenge(math.random(1, 5))
 			self.SurplusTime = self.VM:GetSurplusTime()
 		end
 

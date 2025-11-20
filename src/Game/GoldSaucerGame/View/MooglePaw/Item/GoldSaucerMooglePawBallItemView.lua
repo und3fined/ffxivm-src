@@ -20,14 +20,20 @@ local FLOG_INFO = _G.FLOG_INFO
 ---@field MI_DX_Common_GoldSaucerGame_MonsterToss_4a UFImage
 ---@field MI_DX_Common_GoldSaucerGame_MonsterToss_4b UFImage
 ---@field P_DX_GoldSaucerGame_MonsterToss UUIParticleEmitter
+---@field P_DX_GoldSaucerGame_MonsterToss_1 UUIParticleEmitter
 ---@field P_DX_GoldSaucerGame_MonsterToss_4 UUIParticleEmitter
 ---@field PanelBallBlue UFCanvasPanel
 ---@field PanelBallEffectPurple UFCanvasPanel
 ---@field PanelBallEffectRed UFCanvasPanel
+---@field PanelBallGreen UFCanvasPanel
 ---@field PanelBallPurple UFCanvasPanel
 ---@field PanelBallRad UFCanvasPanel
+---@field AnimEffectCloseGreen UWidgetAnimation
 ---@field AnimEffectClosePuple UWidgetAnimation
 ---@field AnimEffectCloseRed UWidgetAnimation
+---@field AnimEffectGreen1 UWidgetAnimation
+---@field AnimEffectGreen2 UWidgetAnimation
+---@field AnimEffectGreen3 UWidgetAnimation
 ---@field AnimEffectPuple UWidgetAnimation
 ---@field AnimEffectRed UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -38,14 +44,20 @@ function GoldSaucerMooglePawBallItemView:Ctor()
 	--self.MI_DX_Common_GoldSaucerGame_MonsterToss_4a = nil
 	--self.MI_DX_Common_GoldSaucerGame_MonsterToss_4b = nil
 	--self.P_DX_GoldSaucerGame_MonsterToss = nil
+	--self.P_DX_GoldSaucerGame_MonsterToss_1 = nil
 	--self.P_DX_GoldSaucerGame_MonsterToss_4 = nil
 	--self.PanelBallBlue = nil
 	--self.PanelBallEffectPurple = nil
 	--self.PanelBallEffectRed = nil
+	--self.PanelBallGreen = nil
 	--self.PanelBallPurple = nil
 	--self.PanelBallRad = nil
+	--self.AnimEffectCloseGreen = nil
 	--self.AnimEffectClosePuple = nil
 	--self.AnimEffectCloseRed = nil
+	--self.AnimEffectGreen1 = nil
+	--self.AnimEffectGreen2 = nil
+	--self.AnimEffectGreen3 = nil
 	--self.AnimEffectPuple = nil
 	--self.AnimEffectRed = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -59,7 +71,7 @@ end
 function GoldSaucerMooglePawBallItemView:OnInit()
 	self.Binders = {
 		{"Position", UIBinderValueChangedCallback.New(self, nil, self.OnBallPositionChange)},
-		{"ShowStateChange", UIBinderValueChangedCallback.New(self, nil, self.OnShowStateChange)},
+		--{"ShowStateChange", UIBinderValueChangedCallback.New(self, nil, self.OnShowStateChange)},
 		{"BallType", UIBinderValueChangedCallback.New(self, nil, self.OnBallTypeChange)},
 	}
 end
@@ -69,7 +81,7 @@ function GoldSaucerMooglePawBallItemView:OnDestroy()
 end
 
 function GoldSaucerMooglePawBallItemView:OnShow()
-
+	
 end
 
 function GoldSaucerMooglePawBallItemView:OnHide()
@@ -105,51 +117,28 @@ function GoldSaucerMooglePawBallItemView:OnBallPositionChange(NewValue)
 	UIUtil.CanvasSlotSetPosition(self.PanelBallBlue, Vector)
 	UIUtil.CanvasSlotSetPosition(self.PanelBallPurple, Vector)
 	UIUtil.CanvasSlotSetPosition(self.PanelBallRad, Vector)
-	FLOG_INFO("MoogleRedBallHide: Reason: PositionError  Position:%s, %s", Vector.X, Vector.Y)
+	UIUtil.CanvasSlotSetPosition(self.PanelBallGreen, Vector)
 end
 
-function GoldSaucerMooglePawBallItemView:OnBallTypeChange(NewType, OldType)
-	-- Red
-	UIUtil.SetIsVisible(self.PanelBallRad, NewType == MogulBallType.MogulBallTypeRed)
-	UIUtil.SetIsVisible(self.PanelBallEffectRed, NewType == MogulBallType.MogulBallTypeRed)
-	-- Blue
-	UIUtil.SetIsVisible(self.PanelBallBlue, NewType == MogulBallType.MogulBallTypeBlue)
-	-- Purple
-	UIUtil.SetIsVisible(self.PanelBallPurple, NewType == MogulBallType.MogulBallTypeOrange)
-	UIUtil.SetIsVisible(self.PanelBallEffectPurple, NewType == MogulBallType.MogulBallTypeOrange)
-
-	-- 处理旧类型
-	if OldType == MogulBallType.MogulBallTypeRed then
-		self:PlayAnimation(self.AnimEffectCloseRed)
-		FLOG_INFO("MoogleRedBallHide: Reason: TypeChangeAnim OldHide Time:%s", TimeUtil.GetServerLogicTime())
-	elseif OldType == MogulBallType.MogulBallTypeOrange then
-		self:PlayAnimation(self.AnimEffectClosePuple)
-	end
-	-- 处理新的类型
-	if NewType == MogulBallType.MogulBallTypeRed then
-		self:PlayAnimation(self.AnimEffectRed)
-		FLOG_INFO("MoogleRedBallHide: Reason: TypeChangeAnim NewShow Time:%s", TimeUtil.GetServerLogicTime())
-	else
-		self:ResetRedParticle()
-	end
-	if NewType == MogulBallType.MogulBallTypeOrange then
-		self:PlayAnimation(self.AnimEffectPuple)
-	else
-		self:ResetPurpleParticle()
-	end
+function GoldSaucerMooglePawBallItemView:OnBallTypeChange(_, _)
+	self:UpdateBallShow()
 end
 
 function GoldSaucerMooglePawBallItemView:OnShowStateChange(NewValue)
+	if not NewValue then
+		return
+	end
 	if NewValue == MoogleBallShowState.Strong then
 		-- 2024.10.23 隐藏抓中球体，使用莫古力主体抓住的球代替
 		UIUtil.SetIsVisible(self.PanelBallBlue, false)
 		UIUtil.SetIsVisible(self.PanelBallPurple, false)
 		UIUtil.SetIsVisible(self.PanelBallRad, false)
+		UIUtil.SetIsVisible(self.PanelBallGreen, false)
 	elseif NewValue == MoogleBallShowState.Weak then
 		-- TODO 弱化或者隐藏球体的显示
 	elseif NewValue == MoogleBallShowState.Normal then
 		-- 正常显示
-
+		self:UpdateBallShow()
 	end
 end
 
@@ -160,13 +149,18 @@ function GoldSaucerMooglePawBallItemView:OnAnimationFinished(Anim)
 		self:ResetPurpleParticle()
 	elseif Anim == self.AnimEffectCloseRed then
 		self:ResetRedParticle()
+	elseif Anim == self.AnimEffectCloseGreen then
+		self:ResetStarParticle()
 	end
 end
 
-function GoldSaucerMooglePawBallItemView:ShowCatchResult(BallType)
+--- 莫古力上显示抓取结果
+---@param AnimIndex number@BallItemVM里存储的AnimIndex，保持动画一致
+function GoldSaucerMooglePawBallItemView:ShowCatchResult(BallType, AnimIndex)
 	UIUtil.SetIsVisible(self.PanelBallBlue, false)
 	UIUtil.SetIsVisible(self.PanelBallPurple, false)
 	UIUtil.SetIsVisible(self.PanelBallRad, false)
+	UIUtil.SetIsVisible(self.PanelBallGreen, false)
 
 	if BallType == MogulBallType.MogulBallTypeBlue then
 		UIUtil.SetIsVisible(self.PanelBallBlue, true)
@@ -176,6 +170,10 @@ function GoldSaucerMooglePawBallItemView:ShowCatchResult(BallType)
 		UIUtil.SetIsVisible(self.PanelBallRad, true)
 		UIUtil.SetIsVisible(self.MI_DX_Common_GoldSaucerGame_MonsterToss_4a, false)
 		self:PlayAnimation(self.AnimEffectRed)
+	elseif BallType == MogulBallType.MogulBallTypeStar then
+		UIUtil.SetIsVisible(self.PanelBallGreen, true)
+		local AnimToPlay = self[string.format("AnimEffectGreen%d", AnimIndex)]
+		self:PlayAnimation(AnimToPlay)
 	end
 end
 
@@ -197,6 +195,61 @@ function GoldSaucerMooglePawBallItemView:ResetPurpleParticle()
 		return
 	end
 	self.P_DX_GoldSaucerGame_MonsterToss:ResetParticle()
+end
+
+function GoldSaucerMooglePawBallItemView:ResetStarParticle()
+	if self.P_DX_GoldSaucerGame_MonsterToss_1 == nil then
+		return
+	end
+	if not self.P_DX_GoldSaucerGame_MonsterToss_1.IsPlaying then
+		return
+	end
+	self.P_DX_GoldSaucerGame_MonsterToss_1:ResetParticle()
+end
+
+function GoldSaucerMooglePawBallItemView:UpdateBallShow()
+	local Params = self.Params
+	if Params == nil then
+		return
+	end
+
+	local ViewModel = Params.Data
+	if ViewModel == nil then
+		return
+	end
+
+	local BallType = ViewModel.BallType or MogulBallType.MogulBallTypeInvalid
+	-- Red
+	UIUtil.SetIsVisible(self.PanelBallRad, BallType == MogulBallType.MogulBallTypeRed)
+	UIUtil.SetIsVisible(self.PanelBallEffectRed, BallType == MogulBallType.MogulBallTypeRed)
+	-- Blue
+	UIUtil.SetIsVisible(self.PanelBallBlue, BallType == MogulBallType.MogulBallTypeBlue)
+	-- Purple
+	UIUtil.SetIsVisible(self.PanelBallPurple, BallType == MogulBallType.MogulBallTypeOrange)
+	UIUtil.SetIsVisible(self.PanelBallEffectPurple, BallType == MogulBallType.MogulBallTypeOrange)
+	-- Star
+	UIUtil.SetIsVisible(self.PanelBallGreen, BallType == MogulBallType.MogulBallTypeStar)
+
+	-- 处理特效
+	self:PlayAnimation(self.AnimEffectCloseRed)
+	self:PlayAnimation(self.AnimEffectClosePuple)
+	self:PlayAnimation(self.AnimEffectCloseGreen)
+	self:ResetRedParticle()
+	self:ResetPurpleParticle()
+	self:ResetStarParticle()
+	if BallType == MogulBallType.MogulBallTypeRed then
+		self:PlayAnimation(self.AnimEffectRed)
+	elseif BallType == MogulBallType.MogulBallTypeOrange then
+		self:PlayAnimation(self.AnimEffectPuple)
+	elseif BallType == MogulBallType.MogulBallTypeStar then
+		local AnimIndex = ViewModel.StarAnimIndex
+		if type(AnimIndex) == "number" then
+			local AnimToPlay = self[string.format("AnimEffectGreen%d", AnimIndex)]
+			if AnimToPlay then
+				self:PlayAnimation(AnimToPlay)
+			end
+		end
+	end
 end
 
 return GoldSaucerMooglePawBallItemView

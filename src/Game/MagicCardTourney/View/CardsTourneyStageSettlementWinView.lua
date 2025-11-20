@@ -55,9 +55,9 @@ local UE = _G.UE
 ---@field PanelRankContent UFCanvasPanel
 ---@field PopUpBG CommonPopUpBGView
 ---@field Probar UProgressBar
----@field ScaleSelf UScaleBox
----@field SelfReward01 CommBackpackSlotView
----@field SelfReward02 CommBackpackSlotView
+---@field Reward01 CommBackpack58SlotView
+---@field Reward02 CommBackpack58SlotView
+---@field ScaleReward UScaleBox
 ---@field TableViewRankList UTableView
 ---@field Text01 UFTextBlock
 ---@field Text02 UFTextBlock
@@ -122,9 +122,9 @@ function CardsTourneyStageSettlementWinView:Ctor()
 	--self.PanelRankContent = nil
 	--self.PopUpBG = nil
 	--self.Probar = nil
-	--self.ScaleSelf = nil
-	--self.SelfReward01 = nil
-	--self.SelfReward02 = nil
+	--self.Reward01 = nil
+	--self.Reward02 = nil
+	--self.ScaleReward = nil
 	--self.TableViewRankList = nil
 	--self.Text01 = nil
 	--self.Text02 = nil
@@ -176,8 +176,8 @@ function CardsTourneyStageSettlementWinView:OnRegisterSubView()
 	self:AddSubView(self.NodeReward07)
 	self:AddSubView(self.NodeReward08)
 	self:AddSubView(self.PopUpBG)
-	self:AddSubView(self.SelfReward01)
-	self:AddSubView(self.SelfReward02)
+	self:AddSubView(self.Reward01)
+	self:AddSubView(self.Reward02)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -238,8 +238,8 @@ function CardsTourneyStageSettlementWinView:OnInit()
 
 	self.SelfRewardWidgetRef = 
 	{
-		[1] = self.SelfReward02,
-		[2] = self.SelfReward01,
+		[1] = self.Reward02,
+		[2] = self.Reward01,
 	}
 	self.ScoreGrowDuration = 2
 	self.NodeScoreList = {}
@@ -298,7 +298,8 @@ function CardsTourneyStageSettlementWinView:OnShow()
 				local Cfg = ItemCfg:FindCfgByKey(NodeAward.ResID or 0 )
 				local ImgPath = Cfg and ItemCfg.GetIconPath(Cfg.IconID or 0) or ""
 				AwardWidget:SetIconImg(ImgPath)
-				AwardWidget:SetNum(NodeAward.Num)
+				local NumText = _G.ScoreMgr.FormatScore(NodeAward.Num)
+				AwardWidget:SetNum(NumText)
 				AwardWidget:SetClickButtonCallback(self, self.OnNodeRewardClicked)
 			end
 			-- 刷新玩家积分对应的奖励
@@ -334,10 +335,11 @@ function CardsTourneyStageSettlementWinView:OnShow()
 	end
 
 	-- 右侧阶段效果信息
-	local EffectInfo = MagicCardTourneyVMUtils.GetEffectInfoByEffectID(self.EffectID)
+	local EffectID = TourneyVM:GetCurStageEffectID()
+	local EffectInfo = MagicCardTourneyVMUtils.GetEffectInfoByEffectID(EffectID)
 	if EffectInfo then
 		local EffectIconPath = EffectInfo.IconPath
-		UIUtil.ImageSetBrushFromAssetPath(self.Widget, EffectIconPath)
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgcardIcon, EffectIconPath)
 	end
 
 end
@@ -439,19 +441,33 @@ function CardsTourneyStageSettlementWinView:OnPlayerRankChanged(Rank)
 		UIUtil.SetIsVisible(self.ImgRankIcon, false)
 		return
 	end
-	
+	local CupIcon = MagicCardTourneyVMUtils.GetRankIcon(Rank)
+	UIUtil.ImageSetBrushFromAssetPath(self.ImgRankIcon, CupIcon)
+
 	for index, RankAward in ipairs(self.RankAwardList) do
 		local SelfRewardWidget = self.SelfRewardWidgetRef[index]
 		if SelfRewardWidget then
 			UIUtil.SetIsVisible(SelfRewardWidget, true)
-			UIUtil.SetIsVisible(SelfRewardWidget.FImg_Select, true)
+			local IsReward = MagicCardTourneyMgr:IsCanGetReward()
+			UIUtil.SetIsVisible(SelfRewardWidget.IconChoose, false)
+			UIUtil.SetIsVisible(SelfRewardWidget.ImgSelect, false)
+			UIUtil.SetIsVisible(SelfRewardWidget.PanelAvailable, IsReward)
 			SelfRewardWidget:SetClickButtonCallback(self, self.OnRewardClicked)
 			local Cfg = ItemCfg:FindCfgByKey(RankAward.ResID or 0 )
 			local ImgPath = Cfg and ItemCfg.GetIconPath(Cfg.IconID or 0) or ""
 			SelfRewardWidget:SetIconImg(ImgPath)
 			local RewardNum = RankAward.Num
 			if RewardNum > 1 then
-				SelfRewardWidget:SetNum(RewardNum)
+				local NumText = RewardNum
+				local ProtoCommon = require("Protocol/ProtoCommon")
+				local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
+				if Cfg.ItemType == ITEM_TYPE_DETAIL.MISCELLANY_CURRENCY then
+					NumText = _G.ScoreMgr.FormatScore(RewardNum)
+				end
+				SelfRewardWidget:SetNumVisible(true)
+				SelfRewardWidget:SetNum(NumText)
+			else
+				SelfRewardWidget:SetNumVisible(false)
 			end
 		end
 	end

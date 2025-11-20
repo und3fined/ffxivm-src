@@ -224,4 +224,20 @@ function AnimationUtil.GetAnimMontageLength(Montage)
 	return Montage:GetPlayLength()
 end
 
+-- OtherPartList需要暂停其他部位动画的列表
+function AnimationUtil.SetPauseAnimAndOtherPart(Actor, IsPause, OtherPartList)
+	local AnimComp = Actor and Actor:GetAnimationComponent()
+	if not AnimComp then
+		return
+	end
+	AnimComp:PauseAnimation(IsPause)
+	-- other
+	if table.is_nil_empty(OtherPartList) then
+		return
+	end
+	for i = 1, #OtherPartList, 1 do
+		AnimComp:PauseAnimationByPartType(OtherPartList[i], IsPause)
+	end
+end
+
 return AnimationUtil

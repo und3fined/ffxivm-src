@@ -72,7 +72,7 @@ function PhotoTouchItem:OnTouchStarted(InGeometry, InTouchEvent)
 
 	local ScreenSpacePosition = UE.UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(InTouchEvent)
 	local LocalPosition = UE.USlateBlueprintLibrary.AbsoluteToLocal(InGeometry, ScreenSpacePosition)
-
+	FLOG_INFO("[PhotoEdit][PhotoTouchItem:OnTouchStarted]OnTouchStart X=%f, Y=%f", ScreenSpacePosition.X, ScreenSpacePosition.Y)
 	if self.CapCondFunc then
 		if not self.CapCondFunc(self.View, LocalPosition) then
 			return UWidgetBlueprintLibrary.UnHandled()

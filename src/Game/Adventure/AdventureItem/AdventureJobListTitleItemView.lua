@@ -12,7 +12,6 @@ local LevelExpCfg = require("TableCfg/LevelExpCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local FUNCTION_TYPE = ProtoCommon.function_type
 local AdventureCareerMgr = require("Game/Adventure/AdventureCareerMgr")
-local AdventureProfCareerItemVM = require("Game/Adventure/ItemVM/AdventureProfCareerItemVM")
 local ProtoCS = require("Protocol/ProtoCS")
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 
@@ -61,8 +60,11 @@ function AdventureJobListTitleItemView:OnShow()
 
 end
 
+local function IsMaxLevel(Level)
+	return Level >= LevelExpCfg:GetMaxLevel()
+end
+
 function AdventureJobListTitleItemView:UpdateProfData(Data)
-	local MaxLevel = LevelExpCfg:GetMaxLevel()
 	self.TextName:SetText(Data.Name or "")
 	self.TextLv:SetText(string.format(_G.LSTR(520002), Data.ProfLevel or 1))
 	local AdvProf = RoleInitCfg:FindProfAdvanceProf(Data.Prof) or 0	
@@ -72,7 +74,11 @@ function AdventureJobListTitleItemView:UpdateProfData(Data)
 	UIUtil.ImageSetBrushFromAssetPath(self.ImgTaskIcon, ProfIcon)
 	self.TextTips:SetVisibility(_G.UE.ESlateVisibility.HitTestInvisible)
 	if Data.IsBaseProf and AdvProf ~= 0 then
-		self.TextTips:SetText(string.format(_G.LSTR(520016), RoleInitCfg:FindRoleInitProfName(AdvProf)))
+		if IsMaxLevel(Data.ProfLevel) then
+			self.TextTips:SetText(_G.LSTR(520075))
+		else
+			self.TextTips:SetText(string.format(_G.LSTR(520016), RoleInitCfg:FindRoleInitProfName(AdvProf)))
+		end
 	else
 		local TaskList = AdventureCareerMgr:GetAdventureCareerTaskDataByProf(Data)
 		local IsAllDone = true
@@ -88,7 +94,11 @@ function AdventureJobListTitleItemView:UpdateProfData(Data)
 		if IsAllDone then
 			self.TextTips:SetText(_G.LSTR(520068))
 		else
-			self.TextTips:SetText(_G.LSTR(520028))
+			if IsMaxLevel(Data.ProfLevel) then
+				self.TextTips:SetText(_G.LSTR(520075))
+			else
+				self.TextTips:SetText(_G.LSTR(520028))
+			end
 		end
 	end
 end

@@ -260,7 +260,7 @@ local UIViewConfig = {
 	[UIViewID.IntegrationView] = {
 		BPName = "LoginNew/LoginNewAssemblePanel_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
+		Layer = UILayer.AboveNormal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
@@ -362,6 +362,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
+		ListToSetInvisible = { UIViewID.SkillCancelJoyStick },
 	},
 
 	[UIViewID.LoginRoleName] = {
@@ -494,6 +495,14 @@ local UIViewConfig = {
 		DontHideWhenRevive = true,
 	},
 
+	[UIViewID.MainFullScreenButtonView] = {
+		BPName = "Main/MainFullScreenButton_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
 	[UIViewID.Main2ndPanel] = {
 		BPName = "Main2nd/Main2ndPanelNew_UIBP",
 		ShowType = UIShowType.HideOthers,
@@ -501,7 +510,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.Hold,
 		bInputModeUIOnly = false,
 		bUnique = true,
-		ListToSetVisible = { UIViewID.MainPanel},
+		ListToSetVisible = { UIViewID.MainPanel, UIViewID.InteractiveMainPanel, UIViewID.CommonRunningTips},
 	},
 
 	[UIViewID.Main2ndHelpInfoTips] = {
@@ -645,7 +654,10 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
-		ListToHideOnShow = { UIViewID.ProfessionToggleJobTab },
+		ListToHideOnShow = {
+			UIViewID.ProfessionToggleJobTab, UIViewID.StoreNewMainPanel, UIViewID.EquipmentMainPanel, UIViewID.MountArchivePanel, UIViewID.CompanionArchivePanel,
+			UIViewID.BuddySurfacePanel, UIViewID.WardrobeMainPanel, UIViewID.ChocoboCodexArmorPanelView,
+		},
 	},
 
 	[UIViewID.PWorldMainPanel] = {
@@ -667,6 +679,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	[UIViewID.PWorldEntranceSelectPanel] = {
@@ -674,6 +687,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.HideOthers,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	[UIViewID.PWorldCardsMatchPanel] = {
@@ -908,11 +922,19 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.InfoCountdownTipsViewNormal] = {
+		BPName = "InfoTips/Text/InfoCountdownTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.InfoCountdownTipsForPVPView] = {
 		BPName = "InfoTips/Text/InfoCountdownTipsForPVP_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Low,
 		GCType = ObjectGCType.LRU,
+		DontHideWhenRevive = true,
 	},
 
 	[UIViewID.CommonRunningTips] = {
@@ -975,6 +997,14 @@ local UIViewConfig = {
 		BPName = "GatheringJob/GatheringJobSkillPanel_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Low,
+		GCType = ObjectGCType.LRU,
+	},
+
+	--采集收藏品面板tips
+	[UIViewID.GatheringJobSkillTips] = {
+		BPName = "GatheringJob/GatheringJobSkillTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Tips,
 		GCType = ObjectGCType.LRU,
 	},
 
@@ -1075,6 +1105,14 @@ local UIViewConfig = {
 
 	[UIViewID.ItemTips] = {
 		BPName = "ItemTips/ItemTipsFrameNew_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Tips,
+		GCType = ObjectGCType.LRU,
+		bForceGC = true,
+	},
+
+	[UIViewID.ItemBtnTips] = {
+		BPName = "ItemTips/ItemTipsFrameBtn_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Tips,
 		GCType = ObjectGCType.LRU,
@@ -1234,6 +1272,15 @@ local UIViewConfig = {
 		bInputModeUIOnly = true,
 	},
 
+	[UIViewID.TeamReadyConfirm] = {
+		BPName = "Team/TeamReadytoconfirmWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+		-- bInputModeUIOnly = true,
+		ListToHideOnShow = {UIViewID.TeamSignsMainPanel, UIViewID.SceneMarkersMainPanel}
+	},
+
 	[UIViewID.TeamRollPanel] = {
 		BPName = "Team/TeamRollPanel_UIBP",
 		ShowType = UIShowType.Normal,
@@ -1284,6 +1331,8 @@ local UIViewConfig = {
 			UIViewID.EmotionMainPanel,
 			UIViewID.BuddyMainPanel,
 			UIViewID.Main2ndPanel,
+			UIViewID.MusicAtlasRevertPanelView,
+			UIViewID.TeamReadyConfirm,
 		},
 	},
 	[UIViewID.SceneMarkersMainPanel] = {
@@ -1291,7 +1340,8 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.AboveLow,
 		GCType = ObjectGCType.LRU,
-		ListToHideOnShow = {UIViewID.TeamSignsMainPanel, UIViewID.TeamRollPanel, UIViewID.EmotionMainPanel, UIViewID.TeamRollPanel, UIViewID.ChatMainPanel, UIViewID.BuddyMainPanel, UIViewID.Main2ndPanel},
+		ListToHideOnShow = {UIViewID.TeamSignsMainPanel, UIViewID.TeamRollPanel, UIViewID.EmotionMainPanel, UIViewID.TeamRollPanel, 
+		UIViewID.ChatMainPanel, UIViewID.BuddyMainPanel, UIViewID.Main2ndPanel, UIViewID.MusicAtlasRevertPanelView, UIViewID.TeamReadyConfirm},
 	},
 	[UIViewID.MainTeamChatTip] = {
 		BPName = "Main/MainTeamChatTips_UIBP",
@@ -1639,6 +1689,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
+		--ListToHideOnShow = {UIViewID.MusicAtlasRevertPanelView},
 	},
 
 	[UIViewID.MagicCardTourneyEffectSelectView] = {
@@ -1703,6 +1754,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	[UIViewID.CollectionAwardPanel] = {
@@ -1726,10 +1778,18 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	[UIViewID.MysterMerchantBuyPropsWinView] = {
 		BPName = "MysterMerchant/Item/MysterMerchantBuyPropsWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.MysterMerchantRewardView] = {
+		BPName = "MysterMerchant/MysterMerchantRewardsWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
@@ -1750,6 +1810,12 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
+	},
+	[UIViewID.BagTidyWin] = {
+		BPName = "NewBag/BagTidyWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
 	},
 
 	[UIViewID.BagItemTips] = {
@@ -1836,7 +1902,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
-		ListToHideOnShow = {UIViewID.TeamSignsMainPanel, UIViewID.SceneMarkersMainPanel, UIViewID.EmotionMainPanel, UIViewID.TeamRollPanel, UIViewID.ChatMainPanel, UIViewID.BuddyMainPanel, UIViewID.Main2ndPanel},
+		ListToHideOnShow = {UIViewID.TeamSignsMainPanel, UIViewID.SceneMarkersMainPanel, UIViewID.EmotionMainPanel, UIViewID.TeamRollPanel, UIViewID.ChatMainPanel, UIViewID.BuddyMainPanel, UIViewID.Main2ndPanel, UIViewID.MusicAtlasRevertPanelView},
 	},
 
 	[UIViewID.QuestAcceptTips] = {
@@ -1869,6 +1935,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.Hold,
 	},
 
+	--不同ViewID公用同一个BP, 如果配置在新手引导会有问题，新手引导是通过名字来找的。剧情提示和系统提示比较特殊，没有新手引导功能，应该不影响目前功能。
 	[UIViewID.StoryTips] = {
 		BPName = "InfoTips/ActiveSysteamErrorTips_UIBP",
 		ShowType = UIShowType.Normal,
@@ -1881,9 +1948,12 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Exclusive,
 		GCType = ObjectGCType.Hold,
-		ListToSetVisible = {UIViewID.InfoJobNulockTipsView, UIViewID.CGMovieMainPanel, UIViewID.FashionEvaluationProgressPanel, UIViewID.StoryTips, UIViewID.CommonMsgBox, UIViewID.PowerSavingMode, UIViewID.PVPColosseumIntroduction},
+		ListToSetVisible = {UIViewID.InfoJobNulockTipsView, UIViewID.CGMovieMainPanel, UIViewID.FashionEvaluationProgressPanel, UIViewID.StoryTips, UIViewID.CommonMsgBox, UIViewID.PVPColosseumIntroduction, UIViewID.PowerSavingMode},
 		bInputModeUIOnly = true,
 		bIgnoreInReconnect = true,
+		--关闭带有tod的界面，防止对剧情天气产生影响。 角色界面-技能页签会加载子level（包含CullDistanceVolume，位置不够大），可能会影响渲染
+		ListToHideOnShow = {UIViewID.EquipmentMainPanel, UIViewID.StoreNewMainPanel, UIViewID.MailMainView, UIViewID.WardrobeMainPanel, UIViewID.LegendaryWeaponPanel, UIViewID.CompanionArchivePanel,
+							UIViewID.ChocoboCodexArmorPanelView, UIViewID.MountArchivePanel, UIViewID.MagicsparInlayMainPanel, UIViewID.RechargingMainPanel, UIViewID.RechargingBgModelPanel, UIViewID.BuddySurfacePanel}
 	},
 
 	[UIViewID.NpcDialogueMainPanel] = {
@@ -1941,6 +2011,19 @@ local UIViewConfig = {
 		bInputModeUIOnly = true,
 	},
 
+	-- 目前寻宝神殿在使用，该黑幕出现的时候，会有其他的TIPS弹出，所以层级是在Tips
+	[UIViewID.CommonFadePanelLowLayer] = {
+		BPName = "Common/CommonFade_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Tips,
+		GCType = ObjectGCType.LRU,
+		ListToSetVisible = { UIViewID.InfoAreaTipsInCutScene, UIViewID.SidebarLeft},
+		DontHideWhenRevive = true,
+		DontHideWhenLoadMap = true,
+		bEnableUpdateView = true,
+		bInputModeUIOnly = true,
+	},
+
 	[UIViewID.ChatMainPanel] = {
 		BPName = "Chat/ChatMainPanel_UIBP",
 		ShowType = UIShowType.Normal,
@@ -1952,9 +2035,10 @@ local UIViewConfig = {
 		bEnableUpdateView = true,
 		bEnableChangeLayer = true,
 		bForceGC = true,
-		ListToSetVisible = { UIViewID.MainPanel},
-		ListToHideOnShow = { UIViewID.ChatNewbieMemberPanel, UIViewID.EmotionMainPanel, UIViewID.BuddyMainPanel, UIViewID.TeamSignsMainPanel, UIViewID.SceneMarkersMainPanel, UIViewID.TeamRollPanel, UIViewID.TeamInvite},
+		ListToSetVisible = { UIViewID.MainPanel, UIViewID.CommonRunningTips},
+		ListToHideOnShow = { UIViewID.ChatNewbieMemberPanel, UIViewID.EmotionMainPanel, UIViewID.BuddyMainPanel, UIViewID.TeamSignsMainPanel, UIViewID.SceneMarkersMainPanel, UIViewID.TeamRollPanel, UIViewID.TeamInvite, UIViewID.PersonInfoMainPanel},
 		--ListToSetInvisible = { UIViewID.MagicCardMainPanel } --如果启用了 UIShowType.HideOthers，但是有希望不隐藏的，加这个List
+		ListToHideOnHide = { UIViewID.FishGuideChatTips}
 	},
 
 	[UIViewID.ChatSettingPanel] = {
@@ -2035,13 +2119,15 @@ local UIViewConfig = {
 			UIViewID.FishInghole,
 			UIViewID.GatherDrugSkillPanel,
 			UIViewID.GatheringLogMainPanelView,
-			UIViewID.GateMainCountDownPanel
 		},
-		ListToHideOnShow = {			
+		ListToHideOnShow = {
 			UIViewID.BagMain,
 			UIViewID.WorldMapPanel,
 			UIViewID.WorldExploraMainPanel,
 			UIViewID.WorldExploraWin,
+			UIViewID.QuestLogMainPanel,
+			UIViewID.NewMapTaskDetailPanel,
+			UIViewID.NewMapTaskTrackingTips,
 		}
 	},
 
@@ -2053,6 +2139,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
+		ListToHideOnShow = {UIViewID.ProfessionToggleJobTab},
 	},
 
 	[UIViewID.SkillMainPanel] = {
@@ -2309,8 +2396,18 @@ local UIViewConfig = {
 		DontHideWhenLoadMap = true,
 	},
 
-	[UIViewID.CommonMsgBoxMustClick] = {
-		BPName = "Common/Tips/CommMsgBoxMustClick_UIBP",
+	[UIViewID.CommonMsgBoxM] = {
+		BPName = "Common/Tips/CommMsgBoxM_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.High,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		DontHideWhenRevive = true,
+		DontHideWhenLoadMap = true,
+	},
+
+	[UIViewID.CommonMsgBoxText] = {
+		BPName = "Common/Tips/CommTextWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.High,
 		GCType = ObjectGCType.LRU,
@@ -2400,6 +2497,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	--微彩 奖励界面
@@ -2408,6 +2506,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.High,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 
 	----------------- 生产职业相关 begin
@@ -2724,6 +2823,20 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+	[UIViewID.OpsSeanceScratchCardMainView] = {
+		BPName = "Seance/SeanceMainPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.OpsSeanceScratchCardTaskView] = {
+		BPName = "Seance/SeanceTaskWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
 	[UIViewID.OpsVersionNoticeContentPanelView] = {
 		BPName = "Ops/OpsVersionNotice/OpsVersionNoticeContentPanel_UIBP",
 		ShowType = UIShowType.Normal,
@@ -2738,7 +2851,80 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
-	-- 地图
+	[UIViewID.OpsNightGiftMainPanel] = {
+		BPName = "StarlightCelebration/NightGift/NightGiftPrepareExchangePage_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		
+	},
+
+	[UIViewID.OpsNightPrepareGiftPanel] = {
+		BPName = "StarlightCelebration/NightGift/NightGiftPreparePage_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
+	[UIViewID.OpsNightGetGiftPanel] = {
+		BPName = "StarlightCelebration/NightGift/NightGiftGetGiftPage_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
+
+	[UIViewID.OpsNightGiftRecord] = {
+		BPName = "StarlightCelebration/NightGift/NightGiftReceiveRecordWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
+    [UIViewID.OpsStarlightCelebrationTaskWin] = {
+		BPName = "StarlightCelebration/StarlightCelebrationTaskPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		
+	},
+
+	[UIViewID.OpsStarLightNewYearActivityPanel] = {
+		BPName = "StarlightCelebration/StarLightNewYearActivityPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		
+	},
+	[UIViewID.OpsGirlsDayCandyPanelView] = {
+		BPName = "Ops/OpsGirlsDay/OpsGirlsDayCandyPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.OpsGirlsDayAwardPanelView] = {
+		BPName = "Ops/OpsGirlsDay/OpsGirlsDayAwardPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.OpsGirlsDayStarPanelView] = {
+		BPName = "Ops/OpsGirlsDay/OpsGirlsDayStarPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
+
+	-- 地图 --
 	[UIViewID.MiddleMapPanel] = {
 		BPName = "Map/MiddleMapPanel_UIBP",
 		ShowType = UIShowType.Normal,
@@ -2753,18 +2939,11 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
-		ListToHideOnShow = {UIViewID.EmotionMainPanel},
+		ListToHideOnShow = {UIViewID.EmotionMainPanel, UIViewID.MusicAtlasRevertPanelView},
 	},
 
 	[UIViewID.WorldMapSettingPanel] = {
 		BPName = "Map/WorldMapSettingPanel_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
-
-	[UIViewID.WorldMapPlaceMarkerPanel] = {
-		BPName = "Map/WorldMapPlaceMarkerPanel_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
@@ -2791,6 +2970,13 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.WorldMapUsePortal] = {
+		BPName = "Map/WorldMapUsePortalPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.WorldMapMarkerTipsList] = {
 		BPName = "Map/WorldMapMarkerTipsList_UIBP",
 		ShowType = UIShowType.Normal,
@@ -2812,6 +2998,13 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.WorldMapGoldSaucerMarkerTips] = {
+		BPName = "Map/WorldMapGoldSaucerMarkerTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.WorldMapMarkerTipsTarget] = {
 		BPName = "Map/WorldMapMarkerTipsTarget_UIBP",
 		ShowType = UIShowType.Normal,
@@ -2822,13 +3015,6 @@ local UIViewConfig = {
 	[UIViewID.WorldMapMarkerTipsChocoboTransport] = {
 		BPName = "Map/WorldMapMarkerTipsChocoboTransport_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
-
-	[UIViewID.TreasureOperatePanel] = {
-		BPName = "Treasure/OpenTreasurePanel_UIBP",
-		ShowType = UIShowType.Popup,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
@@ -2847,8 +3033,52 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.WorldMapMarkerTipsHouse] = {
+		BPName = "Map/WorldMapMarkerTipsHouse_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.WorldMapMarkerFocusItem] = {
+		BPName = "Map/Item/WorldMapMarkerFocusItem_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.WorldMapTaskListPanel] = {
+		BPName = "NewMap/NewMapTaskListPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.NewMapTaskDetailPanel] = {
+		BPName = "NewMap/NewMapTaskDetailPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bEnableUpdateView = true,
+	},
+
+	[UIViewID.NewMapTaskTrackingTips] = {
+		BPName = "NewMap/Item/NewMapTaskTrackingTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.PlayStyleMapWin] = {
 		BPName = "PlayStyle/Map/PlayStyleMapWin_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	-- 地图 --
+
+	[UIViewID.TreasureOperatePanel] = {
+		BPName = "Treasure/OpenTreasurePanel_UIBP",
 		ShowType = UIShowType.Popup,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
@@ -2877,6 +3107,21 @@ local UIViewConfig = {
 		GCType = ObjectGCType.NoCache,
 		bInputModeUIOnly = true,
 	},
+
+	[UIViewID.PVPColosseumRecordInside] = {
+		BPName = "PVP/Record/PVPColosseumRecordInside_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.NoCache,
+	},
+
+    [UIViewID.PVPCrystallineRankChangePanel] = {
+		BPName = "PVP/Dan/PVPColosseumDan_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.NoCache,
+		bInputModeUIOnly = true,
+    },
 
 	[UIViewID.InfoPVPReviveTimeTips] = {
 		BPName = "InfoTips/PVPReviveTimeTips_UIBP",
@@ -2911,6 +3156,13 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.AdventrueSkillPanel] = {
+		BPName = "Adventure/AdventureJobDetailsPage_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	--公共获得奖励界面
 	[UIViewID.CommonRewardPanel] = {
 		BPName = "Common/Reward/CommRewardPanel_UIBP",
@@ -2918,7 +3170,13 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
-
+	--外观跟发型的奖励界面
+	[UIViewID.CommonRewardAppearancePanel] = {
+		BPName = "Common/Reward/CommRewardAppearancePanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
 	--坐骑系统
 	[UIViewID.MountPanel] = {
 		BPName = "Mount/MountMainPanel_UIBP",
@@ -2970,6 +3228,20 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		ListToSetVisible = {UIViewID.SingBarAttuning},
 	},
+	--时尚配饰改良
+	[UIViewID.FashionDecoAmelioratePanel] = {
+		BPName = "FashionDeco/FashionDecoAmelioratePanel_UIBP",
+		ShowType = UIShowType.HideOthers,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.FashionDecoAmeliorateWinPanel] = {
+		BPName = "FashionDeco/FashionDecoAmeliorateWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	--传奇武器
 	[UIViewID.LegendaryWeaponPanel] = {
 		BPName = "LegendaryWeapon/LegendaryWeaponMainPanel_UIBP",
@@ -3099,6 +3371,14 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	--Fate活动用的专用情感头顶图标
+	[UIViewID.FateStageInfoTipsView] = {
+		BPName = "Fate/FateStageInfoTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal, -- 气泡防止挡住主界面小地图
+		GCType = ObjectGCType.LRU,
+	},
+
 	-- SDK Test
 	[UIViewID.SDKMainPanel] = {
 		BPName = "SDK/SDKMainPanel_UIBP",
@@ -3136,7 +3416,26 @@ local UIViewConfig = {
 		Layer = UILayer.AboveNormal,
 		GCType = ObjectGCType.LRU,
 	},
-	
+
+	[UIViewID.SettingsHandleButtonItem] = {
+		BPName = "Settings/Item/SettingsHandleButtonItem_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.SettingsHandleOperationItem] = {
+		BPName = "Settings/Item/SettingsHandleOperationItem_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.SettingHandleOperationWin] = {
+		BPName = "Settings/SettingHandleOperationWin_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.SettingDropDownListNew] = {
 		BPName = "Settings/Item/SettingDropDownList_UIBP",
 		ShowType = UIShowType.Popup,
@@ -3149,8 +3448,9 @@ local UIViewConfig = {
 		ShowType = UIShowType.Popup,
 		Layer = UILayer.AboveNormal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
-	
+
 	--省电模式
 	[UIViewID.PowerSavingMode] = {
 		BPName = "Settings/SettingsPowerSavingMode_UIBP",
@@ -3159,7 +3459,7 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
-	
+
 	-- 充值
 	[UIViewID.RechargingBgModelPanel] = {
 		BPName = "Recharging/RechargingBgModelPanel_UIBP",
@@ -3238,6 +3538,8 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
+		ListToHideOnShow = {UIViewID.ArmyJoinInfoViewWin},
+		ListToSetInvisible = {UIViewID.GatheringJobPanel},
 	},
 
 	[UIViewID.PersonInfoSimplePanel] = {
@@ -3418,6 +3720,7 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Highest,
 		GCType = ObjectGCType.LRU,
+		DontHideWhenLoadMap = true,
 	},
 
 
@@ -3449,48 +3752,56 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotExchangePanel] = {
 		BPName = "JumboCactpot/JumboCactpotExchange_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotBuyerPanel] = {
 		BPName = "JumboCactpot/JumboCactpotBuyers_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotRecordPanel] = {
 		BPName = "JumboCactpot/JumboCactpotRecord_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotNewMainPanel] = {
 		BPName = "JumboCactpot/JumboCactpotNewMain_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotAddChance] = {
 		BPName = "JumboCactpot/JumboCactpotAddChance_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotBuyTipsWin] = {
 		BPName = "JumboCactpot/JumboCactpotBuyTipsWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotBuyWin] = {
 		BPName = "JumboCactpot/JumboCactpotBuyWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotPlate] = {
 		BPName = "JumboCactpot/JumboCactpotPlate_UIBP",
@@ -3504,42 +3815,49 @@ local UIViewConfig = {
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotRewardResume] = {
 		BPName = "JumboCactpot/JumboCactpotRewardResume_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotHistorylottery] = {
 		BPName = "JumboCactpot/JumboCactpotHistorylottery_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotFirstPrize] = {
 		BPName = "JumboCactpot/JumboCactpotFirstPrizePanel_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotRewardBonusNew] = {
 		BPName = "JumboCactpot/JumboCactpotRewardBonusNew_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotRewardShowWin] = {
 		BPName = "JumboCactpot/JumboCactpotRewardShowWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.JumboCactpotGetRewardNewWin] = {
 		BPName = "JumboCactpot/JumboCactpotGetRewardNewWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	-- 世界探索
 	[UIViewID.WorldExploraMainPanel] = {
@@ -3554,6 +3872,20 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+	[UIViewID.WorldExploraAdventureWin] = {
+		BPName = "WorldExplora/WorldExploraAdventureWin_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.WorldExploraAwardWin] = {
+		BPName = "WorldExplora/WorldExploraAwardWin_UIBP",
+		ShowType = UIShowType.Popup,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
 
 	--金碟通用界面
 	[UIViewID.GoldSauserOpportunityPanel] = {
@@ -3565,6 +3897,10 @@ local UIViewConfig = {
 			UIViewID.NewNPCTalkTips,
 			UIViewID.InfoAreaTips,
 			UIViewID.SidebarMain
+		},
+		ListToSetVisible = {
+			UIViewID.GoldSauserMainPanel,
+			UIViewID.GoldSauserMainPanelBodyguardGameItem,
 		},
 		bInputModeUIOnly = true,
 	},
@@ -3581,6 +3917,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.Map,
 		bInputModeUIOnly = true,
+		ListToSetInvisible = { UIViewID.SidebarMain },
 	},
 	[UIViewID.GoldSauserGetRewardWin] = {
 		BPName = "Gate/GateRewardWin_UIBP",
@@ -3660,10 +3997,11 @@ local UIViewConfig = {
 		bInputModeUIOnly = true,
 	},
 	[UIViewID.GoldSauserMainPanelBodyguardGameItem] = {
-		BPName = "GoldSauserMainPanel/Item/GoldSauserMainPanelBodyguardGameItem_UIBP1",
+		BPName = "GoldSauserMainPanel/Bodyguard/GoldSauserMainBodyguardMain_UIBP",
 		ShowType = UIShowType.Popup,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.GoldSauserInfoCountDownTip] = {
 		BPName = "InfoTips/InfoCountDownTips_UIBP",
@@ -3763,6 +4101,14 @@ local UIViewConfig = {
 		bInputModeUIOnly = true,
 		--bUnique = true,
 	},
+	[UIViewID.MentorDismissWinPanel] = {
+		BPName = "Mentor/MentorDismissWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Tips,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+
 	--- 新手引导
 	[UIViewID.TutorialGestureMainPanel] = {
 		BPName = "Tutorial/TutorialGestureMainPanel_UIBP",
@@ -3789,7 +4135,8 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
-		ListToSetInvisible = {UIViewID.MainPanel},
+		ListToSetVisible = {UIViewID.GoldSauserMainPanel},
+		ListToSetInvisible = {UIViewID.MainPanel, UIViewID.MusicAtlasRevertPanelView},
 	},
 	[UIViewID.TutorialGuidePanel] = {
 		BPName = "Tutorial/TutorialGuidePanel_UIBP",
@@ -3984,6 +4331,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.BattlePassBuyLevelWin] = {
 		BPName = "BattlePass/BattlePassBuyLevelNewWin_UIBP",
@@ -3991,44 +4339,24 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.BattlePassAdvanceView] = {
 		BPName = "BattlePass/BattlePassAdvancePanel_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
 	[UIViewID.BattlePassRewardPanel] = {
 		BPName = "BattlePass/BattlePassRewardWin_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
 	},
-	[UIViewID.WorldMapTaskListPanel] = {
-		BPName = "NewMap/NewMapTaskListPanel_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
-	[UIViewID.NewMapTaskDetailPanel] = {
-		BPName = "NewMap/NewMapTaskDetailPanel_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-		bEnableUpdateView = true,
-	},
-	[UIViewID.NewMapTaskTrackingTips] = {
-		BPName = "NewMap/Item/NewMapTaskTrackingTips_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
-	[UIViewID.WorldMapMarkerFocusItem] = {
-		BPName = "Map/Item/WorldMapMarkerFocusItem_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
+
+
 
 	--新人频道相关界面
 	[UIViewID.ChatInvitationWinPanel] = {
@@ -4136,6 +4464,18 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+	[UIViewID.StoreBlindBoxPanel_UIBP] = {
+		BPName = "StoreNew/StoreBlindBoxPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.StoreBlindBoxBuyWinPanel] = {
+		BPName = "StoreNew/StoreBlindBoxBuyWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
 	--称号
 	[UIViewID.TitleMainPanelView] = {
 		BPName = "Title/TitleMainPanel_UIBP",
@@ -4154,6 +4494,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
+		bInputModeUIOnly = true,
 	},
 
 	--理符交纳设置界面
@@ -4243,6 +4584,18 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		ListToHideOnShow = {UIViewID.MarketMainPanel}
+	},
+	[UIViewID.WardrobeSuitGetWayWin] = {
+		BPName = "Wardrobe/WardrobeSuitWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.WardrobePreviewColorWin] = {
+		BPName = "Wardrobe/WardrobePreviewColorWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
 	},
 
 
@@ -4468,6 +4821,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
+		bInputModeUIOnly = true
 	},
 
 	-- 钓鱼笔记, 钓场信息
@@ -4475,12 +4829,13 @@ local UIViewConfig = {
 		BPName = "FishNotesNew/FishIngholePanel_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true
 	},
 	[UIViewID.FishNotesOtherBait] = {
-		BPName = "FishNotesNew/FishIngholeBaitWin_UIBP",
+		BPName = "FishNotesNew/FishIngholeBaitWinNew_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
+		Layer = UILayer.Tips,
 		GCType = ObjectGCType.LRU
 	},
 	[UIViewID.FishNoteClockSetWinView] = {
@@ -4501,6 +4856,13 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU
 	},
+	[UIViewID.FishGuideChatTips] = {
+		BPName = "FishNotesNew/FishGuideChatTipsPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true
+	},
 
 	--region 部队系统
 	[UIViewID.ArmyPanel] = {
@@ -4510,6 +4872,7 @@ local UIViewConfig = {
         GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 		bForceGC = true,
+		ListToHideOnShow = {UIViewID.PersonInfoSimplePanel},
     },
     -- 部队队徽编辑
     [UIViewID.ArmyEmblemEditPanel] = {
@@ -4689,7 +5052,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bForceGC = true,
-        bInputModeUIOnly = true
+        --bInputModeUIOnly = true
 	},
 	[UIViewID.CraftingLogSearchPageView] = {
 		BPName = "CraftingLog/CraftingLogSearchPage_UIBP",
@@ -4853,7 +5216,7 @@ local UIViewConfig = {
 	},
 	-- 莫古抓球机再次挑战确认
 	[UIViewID.MooglePawDoubleWin] = {
-		BPName = "GoldSaucerGame/MooglePaw/Item/GoldSaucer_MooglePawMediumWin_UIBP",
+		BPName = "GoldSaucerGame/MooglePaw/Item/GoldSaucer_MooglePawMediumWinNew_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
@@ -4910,6 +5273,15 @@ local UIViewConfig = {
 		bInputModeUIOnly = true,
 		bForceGC = true,
 	},
+	[UIViewID.BlessMiniGameEnterTips] = {
+		BPName = "InfoTips/Text/GoldSaucerInfoTextTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Tips,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		ListToSetInvisible = { UIViewID.MainPanel, UIViewID.InteractiveMainPanel },
+		bForceGC = true,
+	},
 	--endregion
 
 	--region 演奏界面
@@ -4931,7 +5303,7 @@ local UIViewConfig = {
 	},
 	[UIViewID.MusicPerformanceMetronomeSettingView] = {
 		BPName = "Performance/PerformanceMetronomeSettingWin_UIBP",
-		ShowType = UIShowType.HideOthers,
+		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
@@ -4939,21 +5311,21 @@ local UIViewConfig = {
 	},
 	[UIViewID.MusicPerformanceEnsembleMetronmeView] = {
 		BPName = "Performance/PerformanceMetronomeEnsembleWin_UIBP",
-		ShowType = UIShowType.HideOthers,
+		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
 	[UIViewID.MusicPerformanceEnsembleConfirmView] = {
 		BPName = "Performance/PerformanceEnsembleWin_UIBP",
-		ShowType = UIShowType.HideOthers,
+		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
 	[UIViewID.MusicPerformanceSettingView] = {
 		BPName = "Performance/PerformanceSettingNewWin_UIBP",
-		ShowType = UIShowType.HideOthers,
+		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
@@ -4999,6 +5371,27 @@ local UIViewConfig = {
 	[UIViewID.PerformanceAssistantPauseWinView] = {
 		BPName = "Performance/PerformancePauseWin_UIBP",
 		ShowType = UIShowType.Popup,
+		Layer = UILayer.High,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.PerformanceBlueTipsView] = {
+		BPName = "Performance/PerformanceBlueTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.PerformanceRedTipsView] = {
+		BPName = "Performance/PerformanceRedTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+	},
+	[UIViewID.PerformanceYellowTipsView] = {
+		BPName = "Performance/PerformanceYellowTips_UIBP",
+		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
@@ -5253,6 +5646,8 @@ local UIViewConfig = {
 			UIViewID.TeamSignsMainPanel,
 			UIViewID.TeamRollPanel,
 			UIViewID.Main2ndPanel,
+			UIViewID.CommEasytoUseView,
+			UIViewID.MusicAtlasRevertPanelView,
 		},
 	},
 
@@ -5336,6 +5731,26 @@ local UIViewConfig = {
 		bForceGC = true,
 		-- bInputModeUIOnly = true,
 	},
+
+	[UIViewID.PhotoEditMainPanel] = {
+		--BPName = "Photo/PhotoEdit/PhotoEditMain_UIBP",
+		BPName = "Photo/PhotoEdit/PhotoEditNewMain_UIBP",
+		ShowType = UIShowType.HideOthers,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		bForceGC = true,
+	},
+
+	[UIViewID.PhotoEditShowPictureWin] = {
+		BPName = "Photo/PhotoEdit/PhotoEditShowPictureWin_UIBP",
+		ShowType = UIShowType.HideOthers,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bForceGC = true,
+	},
+
+
 	--endregion 拍照
 
 	--region 搭档主界面
@@ -5439,7 +5854,7 @@ local UIViewConfig = {
 	[UIViewID.TreasureHuntHouseWinPanel] = {
 		BPName = "TreasureHunt/TreasureHuntHouseWin_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.AboveNormal,
+		Layer = UILayer.AboveLow,
 		GCType = ObjectGCType.LRU,
 	},
 
@@ -5521,7 +5936,7 @@ local UIViewConfig = {
 	[UIViewID.DepartOfLightMainPanel] = {
 		BPName = "Departure/DepartureMainPanel_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.AboveLow,
+		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
@@ -5529,7 +5944,7 @@ local UIViewConfig = {
 	[UIViewID.DepartOfLightActivityDetailView] = {
 		BPName = "Departure/DepartureBannerWin_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.AboveLow,
+		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
@@ -5537,7 +5952,7 @@ local UIViewConfig = {
 	[UIViewID.DepartOfLightRecyclePanel] = {
 		BPName = "Departure/DepartureWin_UIBP",
 		ShowType = UIShowType.Normal,
-		Layer = UILayer.AboveLow,
+		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
 	},
@@ -5582,7 +5997,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
-		ListToSetInvisible = {UIViewID.SidebarMain},
+		ListToSetInvisible = {UIViewID.SidebarMain, UIViewID.SidebarCommon},
 	},
 
 	-- region 探索笔记
@@ -5608,6 +6023,7 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
+		ListToHideOnHide = {UIViewID.InteractiveMainPanel},
 	},
 
 	-- endRegion 探索笔记
@@ -5682,6 +6098,13 @@ local UIViewConfig = {
 		GCType = ObjectGCType.LRU,
 	},
 
+	[UIViewID.SidebarFashionWin] = {
+		BPName = "Sidebar/SidebarFashionWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Highest,
+		GCType = ObjectGCType.LRU,
+	},
+
 	[UIViewID.CommMiniKeypadWin] = {
 		BPName = "Common/EditQuantity/CommMiniKeypadWin_UIBP",
 		ShowType = UIShowType.Normal,
@@ -5748,7 +6171,7 @@ local UIViewConfig = {
 	------自动寻路 end----
 
     [UIViewID.PVPInfoPanel] = {
-        BPName = "PVP/PVPInfoPanel_UIBP",
+        BPName = "PVP/Info/PVPInfoPanel_UIBP",
         ShowType = UIShowType.Normal,
         Layer = UILayer.Normal,
         GCType = ObjectGCType.LRU,
@@ -5757,7 +6180,7 @@ local UIViewConfig = {
     },
 
 	[UIViewID.PVPSeriesMalmstonePanel] = {
-        BPName = "PVP/PVPSeriesMalmstonePanel_UIBP",
+        BPName = "PVP/Info/PVPSeriesMalmstonePanel_UIBP",
         ShowType = UIShowType.Normal,
         Layer = UILayer.Normal,
         GCType = ObjectGCType.LRU,
@@ -5767,17 +6190,26 @@ local UIViewConfig = {
     },
 
 	[UIViewID.PVPOptionListPanel] = {
-        BPName = "PVP/PVPOptionListPanel_UIBP",
+        BPName = "PVP/Info/PVPOptionListPanel_UIBP",
         ShowType = UIShowType.Normal,
         Layer = UILayer.Normal,
         GCType = ObjectGCType.LRU,
     },
 
 	[UIViewID.PVPHonorPanel] = {
-        BPName = "PVP/PVPHonorPanel_UIBP",
+        BPName = "PVP/Info/PVPHonorPanel_UIBP",
         ShowType = UIShowType.Normal,
         Layer = UILayer.Normal,
         GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.PVPCrystalRoadPanel] = {
+        BPName = "PVP/Info/PVPCrystalRoadPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+		bInputModeUIOnly = true,
+		ListToHideOnShow = { UIViewID.PVPInfoPanel },
     },
 
 	[UIViewID.PVPDuelPanel] = {
@@ -5883,14 +6315,7 @@ local UIViewConfig = {
 	},
 	------拼装剪影 end----
 
-	---- 传送网格使用券 -----
-	[UIViewID.WorldMapUsePortal] = {
-		BPName = "Map/WorldMapUsePortalPanel_UIBP",
-		ShowType = UIShowType.Normal,
-		Layer = UILayer.Normal,
-		GCType = ObjectGCType.LRU,
-	},
-	---- 传送网格使用券End -----
+
 
 	[UIViewID.InfoMistTips] = {
 		BPName = "InfoTips/Text/InfoMistTips_UIBP",
@@ -6017,6 +6442,53 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+	[UIViewID.OpsMysteryBuySuitWinView] = {
+		BPName = "Ops/OpsMysteryShop/OpsMysteryBuySuitWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.OpsMysteryBuyPropsWinView] = {
+		BPName = "Ops/OpsMysteryShop/OpsMysteryBuyPropsWinNew_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.OpsLoverFestivalGuideWinView] = {
+		BPName = "Ops/OpsLoverFestival/OpsLoverFestivalGuideWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.OpsSkiFreePanel] = {
+		BPName = "Ops/OpsSki/OpsSkiFreePanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.OpsSkiTips] = {
+		BPName = "Ops/OpsSki/Item/OpsSkiTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.OpsLolitaGiftWin] = {
+		BPName = "Ops/OpsLolita/OpsLolitaGiftWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.OpsLolitaBuyPanel] = {
+		BPName = "Ops/OpsLolita/OpsLolitaBuyPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
 
 	[UIViewID.ShareMain] = {
 		BPName = "Share/NewShareMainPanel_UIBP.NewShareMainPanel_UIBP",
@@ -6053,6 +6525,7 @@ local UIViewConfig = {
 		Layer = UILayer.AboveNormal,
 		GCType = ObjectGCType.LRU,
 		bInputModeUIOnly = true,
+		ListToSetInvisible = { UIViewID.SidebarMain },
 	},
 	[UIViewID.MeetTradeExchangeChoosePanel] = {
 			BPName = "MeetTrade/MeetTradeExchangeChoosePanel_UIBP.MeetTradeExchangeChoosePanel_UIBP",
@@ -6175,12 +6648,185 @@ local UIViewConfig = {
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+
+	--列表红点
+	[UIViewID.CommListRedDotPanel] = {
+		BPName = "Common/CommonRedDot/CommonBorderRedDotPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+        GCType = ObjectGCType.LRU,
+	},
 	[UIViewID.PermissionTips] = {
 		BPName = "Permission/PermissionTips_UIBP",
 		ShowType = UIShowType.Normal,
 		Layer = UILayer.Normal,
 		GCType = ObjectGCType.LRU,
 	},
+
+
+	[UIViewID.HouseItemTips] = {
+		BPName = "House/HouseSlotItemTips_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.HouseMainPanelView] = {
+		BPName = "House/HouseMainPanel_UIBP",
+		ShowType = UIShowType.HideOthers,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+		bForceGC = true,
+	},
+
+	[UIViewID.HouseWinPanelView] = {
+		BPName = "House/HouseWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+
+    [UIViewID.HouseLandMianPanelView] = {
+        BPName = "House/HouseLandMianPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+    [UIViewID.HousePurchaseConditionsWinView] = {
+        BPName = "House/HousePurchaseConditionsWin_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+    [UIViewID.HouseLandListWinView] = {
+        BPName = "House/HouseLandListWin_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseLandInformationPanel] = {
+        BPName = "House/HouseLandInformationPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseLandPurchaseCandidateWinView] = {
+        BPName = "House/HouseLandPurchaseCandidateWin_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseLandPurchaseCandidateStatusWinView] = {
+        BPName = "House/HouseLandPurchaseCandidateStatusWin_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseInfoLocationPanelView] = {
+        BPName = "House/HouseInfoLocationPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseStyleWinView] = {
+        BPName = "House/HouseStyleWin_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+
+	[UIViewID.HouseMineMainPanelView] = {
+		BPName = "House/HouseMineMainPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.HouseInfoSettingsWinView] = {
+		BPName = "House/HouseInfoSettingsWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.HouseOthersInfoPanelView] = {
+        BPName = "House/HouseOthersInfoPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Normal,
+        GCType = ObjectGCType.LRU,
+    },
+	[UIViewID.HouseInfoInviteFriendsWinView] = {
+		BPName = "House/HouseInfoInviteFriendsWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.HouseThingWinView] = {
+		BPName = "House/HouseThingWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.HouseAssetsPanelView]= {
+		BPName = "House/HouseAssetsPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.HouseVisitGroupRooms]= {
+		BPName = "House/HouseVisitingTroopsPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	[UIViewID.GreetingCardWinView] = {
+		BPName = "StarlightCelebration/GreetingCard/GreetingCardWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.StarLightRhythmGameMainView] = {
+		BPName = "StarlightCelebration/RhythmGame/StarLightRhythmGameMain_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Exclusive,
+		ListToSetVisible = {UIViewID.ErrorTips, UIViewID.ActiveSystemErrorTips},
+		GCType = ObjectGCType.LRU,
+	},
+
+	[UIViewID.StarLightRhythmGameResultWinView] = {
+		BPName = "StarlightCelebration/RhythmGame/StarLightRhythmGameResultWin_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Exclusive,
+		ListToSetVisible = {UIViewID.ErrorTips, UIViewID.ActiveSystemErrorTips},
+		GCType = ObjectGCType.LRU,
+	},
+	
+	[UIViewID.StarLightRhythmGameActivityPanelView] = {
+		BPName = "StarlightCelebration/RhythmGame/StarLightRhythmGameActivityPanel_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.Normal,
+		GCType = ObjectGCType.LRU,
+	},
+	
+	[UIViewID.VirtualCursorView] = {
+        BPName = "MainSkillHandle/SkillHandleCursorPanel_UIBP",
+        ShowType = UIShowType.Normal,
+        Layer = UILayer.Loading,
+        GCType = ObjectGCType.LRU,
+    },
+	[UIViewID.GMCharacterEditorPanel] = {
+        BPName = "GM/CharacterEditor/GMCharacterEditor_UIBP",
+		ShowType = UIShowType.Normal,
+		Layer = UILayer.AboveNormal,
+		GCType = ObjectGCType.Map,
+    },
 }
 
 return UIViewConfig

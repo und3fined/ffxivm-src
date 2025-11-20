@@ -74,12 +74,19 @@ function FishIngholeClockSetWinView:OnInit()
 	self.Binders = {
 		{"Trigger",UIBinderSetIsChecked.New(self,self.SingleBoxMS.ToggleButton)}, --主界面提醒
 		{"Trigger",UIBinderValueChangedCallback.New(self, nil, self.OnChangeSingleBoxMS)},
-		{"CloseNotify",UIBinderSetIsChecked.New(self,self.SingleBoxSN.ToggleButton)}, --封闭条件下提醒
+
 		{"StartNotify",UIBinderSetIsChecked.New(self,self.SingleBoxWS.ToggleButton)}, --窗口期提醒
+		{"StartNotify",UIBinderValueChangedCallback.New(self, nil, self.OnChangeSingleBoxWS)},
+
 		{"IsComingNotify",UIBinderSetIsChecked.New(self,self.SingleBoxWP.ToggleButton)}, --提前提醒
 		{"IsComingNotify",UIBinderValueChangedCallback.New(self, nil, self.OnChangeSingleBoxWP)},
 		{"ComingNotify",UIBinderValueChangedCallback.New(self, nil, self.OnComingNotify)},
+
 		{"IsNotifySound",UIBinderSetIsChecked.New(self,self.SingleBoxNV.ToggleButton)}, --声音提醒
+		{"IsNotifySound",UIBinderValueChangedCallback.New(self, nil, self.OnChangeSingleBoxNV)},
+
+		{"CloseNotify",UIBinderSetIsChecked.New(self,self.SingleBoxSN.ToggleButton)}, --封闭条件下提醒
+		{"CloseNotify",UIBinderValueChangedCallback.New(self, nil, self.OnChangeSingleBoxSN)},
 	}
 end
 
@@ -135,7 +142,8 @@ function FishIngholeClockSetWinView:OnRegisterBinder()
 	self:RegisterBinders(ClockSettingVM,self.Binders)
 end
 
----@type 主题界面提醒开关
+
+---@type 主题界面提醒开关--------------------------------------------------------
 function FishIngholeClockSetWinView:OnBtnClickedSingleBoxMS()
 	if ClockSettingVM == nil then
 		return
@@ -146,37 +154,23 @@ function FishIngholeClockSetWinView:OnBtnClickedSingleBoxMS()
 end
 
 function FishIngholeClockSetWinView:OnChangeSingleBoxMS(Trigger)
+	-- self.SingleBoxMS:UpdateColor(Trigger)
+
 	self.SingleBoxWS.ToggleButton:SetIsEnabled(Trigger)
 	self.SingleBoxSN.ToggleButton:SetIsEnabled(Trigger)
 	self.SingleBoxWP.ToggleButton:SetIsEnabled(Trigger)
 	self.SingleBoxNV.ToggleButton:SetIsEnabled(Trigger)
-
-	
 
 	if Trigger == false then
 		ClockSettingVM.StartNotify = false
 		ClockSettingVM.IsComingNotify = false
 		ClockSettingVM.IsNotifySound = false
 		ClockSettingVM.CloseNotify = false
-
-		self.SingleBoxNV:UpdateColor(false)
-		self.SingleBoxSN:UpdateColor(false)
-		self.SingleBoxWP:UpdateColor(false)
-		self.SingleBoxWS:UpdateColor(false)
 	end
 end
 
----@type 封闭条件下提醒开关
-function FishIngholeClockSetWinView:OnBtnClickedSingleBoxSN()
-	if ClockSettingVM == nil then
-		return
-	end
-	ClockSettingVM:ChangeCloseNotify()
-	self.BtnSaveSettings:SetIsRecommendState(true)
-	self.bChanged = true
-end
 
----@type 窗口期提醒开关
+---@type 窗口期提醒开关-----------------------------------------------------------
 function FishIngholeClockSetWinView:OnBtnClickedSingleBoxWS()
 	if ClockSettingVM == nil then
 		return
@@ -186,7 +180,12 @@ function FishIngholeClockSetWinView:OnBtnClickedSingleBoxWS()
 	self.bChanged = true
 end
 
----@type 提前提醒开关
+function FishIngholeClockSetWinView:OnChangeSingleBoxWS(Trigger)
+	-- self.SingleBoxWS:UpdateColor(Trigger)
+end
+
+
+---@type 提前提醒开关-------------------------------------------------------------
 function FishIngholeClockSetWinView:OnBtnClickedSingleBoxWP()
 	if ClockSettingVM == nil then
 		return
@@ -197,12 +196,13 @@ function FishIngholeClockSetWinView:OnBtnClickedSingleBoxWP()
 end
 
 function FishIngholeClockSetWinView:OnChangeSingleBoxWP(bChecked)
+	-- self.SingleBoxWP:UpdateColor(bChecked)
 	if not bChecked then
 		--不设置提前提醒
 		--颜色置为灰色
-		self.CheckBox1M:UpdateColor(false)
-		self.CheckBox3M:UpdateColor(false)
-		self.CheckBox5M:UpdateColor(false)
+		-- self.CheckBox1M:UpdateColor(false)
+		-- self.CheckBox3M:UpdateColor(false)
+		-- self.CheckBox5M:UpdateColor(false)
 		self.CheckBox1M:SetChecked(false)
         self.CheckBox3M:SetChecked(false)
         self.CheckBox5M:SetChecked(false)
@@ -211,9 +211,9 @@ function FishIngholeClockSetWinView:OnChangeSingleBoxWP(bChecked)
 		self.CheckBox5M:SetClickable(false)
 	else
 		--设置提前提醒
-		self.CheckBox1M:UpdateColor(true)
-		self.CheckBox3M:UpdateColor(true)
-		self.CheckBox5M:UpdateColor(true)
+		-- self.CheckBox1M:UpdateColor(true)
+		-- self.CheckBox3M:UpdateColor(true)
+		-- self.CheckBox5M:UpdateColor(true)
 		self.CheckBox1M:SetClickable(true)
 		self.CheckBox3M:SetClickable(true)
 		self.CheckBox5M:SetClickable(true)
@@ -222,8 +222,8 @@ function FishIngholeClockSetWinView:OnChangeSingleBoxWP(bChecked)
         self.CheckBox1M:SetChecked(true)
         self.CheckBox3M:SetChecked(false)
         self.CheckBox5M:SetChecked(false)
-        self.CheckBox3M:UpdateColor(true)
-        self.CheckBox5M:UpdateColor(true)
+        -- self.CheckBox3M:UpdateColor(true)
+        -- self.CheckBox5M:UpdateColor(true)
 		self:OnBtnClickedCheckBox1M()
 	end
 end
@@ -277,7 +277,8 @@ function FishIngholeClockSetWinView:SelectComingNotifyTime(ComingNotifyTime)
 	self.PrevSelectCheckBox = self.ComingNotifyCheckBoxs[ComingNotifyTime]
 end
 
----@type 声音提醒开关
+
+---@type 声音提醒开关-------------------------------------------------------------
 function FishIngholeClockSetWinView:OnBtnClickedSingleBoxNV()
 	if ClockSettingVM == nil then
 		return
@@ -287,7 +288,27 @@ function FishIngholeClockSetWinView:OnBtnClickedSingleBoxNV()
 	self.bChanged = true
 end
 
----@type 取消闹钟设置并关闭界面
+function FishIngholeClockSetWinView:OnChangeSingleBoxNV(Trigger)
+	--self.SingleBoxNV:UpdateColor(Trigger)
+end
+
+
+---@type 封闭条件下提醒开关---------------------------------------------------------
+function FishIngholeClockSetWinView:OnBtnClickedSingleBoxSN()
+	if ClockSettingVM == nil then
+		return
+	end
+	ClockSettingVM:ChangeCloseNotify()
+	self.BtnSaveSettings:SetIsRecommendState(true)
+	self.bChanged = true
+end
+
+function FishIngholeClockSetWinView:OnChangeSingleBoxSN(Trigger)
+	--self.SingleBoxSN:UpdateColor(Trigger)
+end
+
+
+---@type 取消闹钟设置并关闭界面-------------------------------------------------------
 function FishIngholeClockSetWinView:OnBtnClickedCancel()
 	_G.UIViewMgr:HideView(self.ViewID)
 end

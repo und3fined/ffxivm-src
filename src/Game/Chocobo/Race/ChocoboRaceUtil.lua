@@ -56,24 +56,6 @@ ChocoboRaceUtil.SelfRankNumIconPath = setmetatable({}, {
     end
 })
 
-function ChocoboRaceUtil.Log(Msg)
-    if ChocoboDefine.DEBUG_RACE then
-        _G.FLOG_INFO("[ChocoboRace]" .. Msg)
-    end
-end
-
-function ChocoboRaceUtil.Err(Msg)
-    if ChocoboDefine.DEBUG_RACE then
-        _G.FLOG_ERROR("[ChocoboRace] " .. Msg)
-    end
-end
-
-function ChocoboRaceUtil.Wrn(Msg)
-    if ChocoboDefine.DEBUG_RACE then
-        _G.FLOG_WARNING("[ChocoboRace] " .. Msg)
-    end
-end
-
 local function SafeFormat(FormatString, ...)
     if not FormatString then return "" end
 
@@ -108,7 +90,7 @@ local function SafeFormat(FormatString, ...)
     return table.concat(Result)
 end
 
-function ChocoboRaceUtil.ShowSkillTips(SkillId, Widget)
+function ChocoboRaceUtil.ShowSkillTips(SkillId, Widget, CurLevel)
     if not SkillId or not Widget then
         return
     end
@@ -149,13 +131,52 @@ function ChocoboRaceUtil.ShowSkillTips(SkillId, Widget)
     end
 
     local DescContent = SkillDisplayCfg.Desc
-    local DescParam = SkillEffectCfg.Level[1].Param
-    if #DescParam == 1 then
-        DescContent = SafeFormat(DescContent, DescParam[1])
-    elseif #DescParam >= 2 then
-        DescContent = SafeFormat(DescContent, DescParam[1], DescParam[2])
-    end
 
+    if CurLevel then
+        -- 当前有指定等级
+        local CurrentParam = SkillEffectCfg.Level[CurLevel].Param
+        local ParamCount = #CurrentParam
+
+        if ParamCount == 1 then
+            DescContent = SafeFormat(DescContent, CurrentParam[1])
+        else
+            DescContent = SafeFormat(DescContent, CurrentParam[1], CurrentParam[2])
+        end
+    else
+        -- 未指定等级，显示所有等级信息
+        local FirstLevelParam = SkillEffectCfg.Level[1].Param
+        local ParamCount = #FirstLevelParam
+
+        if ParamCount == 1 then
+            local AllLevelValues = {}
+            for Level = 1, 3 do
+                local LevelData = SkillEffectCfg.Level[Level]
+                if LevelData and LevelData.Param[1] then
+                    table.insert(AllLevelValues, tostring(LevelData.Param[1]))
+                end
+            end
+            DescContent = SafeFormat(DescContent, table.concat(AllLevelValues, "/"))
+        else
+            local FirstParamValues = {}
+            local SecondParamValues = {}
+
+            for Level = 1, 3 do
+                local LevelData = SkillEffectCfg.Level[Level]
+                if LevelData then
+                    if LevelData.Param[1] then
+                        table.insert(FirstParamValues, tostring(LevelData.Param[1]))
+                    end
+
+                    if LevelData.Param[2] then
+                        table.insert(SecondParamValues, tostring(LevelData.Param[2]))
+                    end
+                end
+            end
+
+            DescContent = SafeFormat(DescContent, table.concat(FirstParamValues, "/"), table.concat(SecondParamValues, "/"))
+        end
+    end
+    
     local SkillTypeText, SkillTypePath, RarityText, RarityPath = "", "", "", ""
 
     if SkillEffectCfg.Type == ProtoRes.CHOCOBO_RACE_SKILL_CASTING_TYPE.CHOCOBO_RACE_SKILL_CASTING_ACTIVE then

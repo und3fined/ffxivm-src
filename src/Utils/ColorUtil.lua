@@ -80,17 +80,34 @@ end
 
 ---替换物品名称富文本为暗色背景风格
 function ColorUtil.ParseItemNameDarkStyle(Str)
+	if _G.UIViewMgr.bUseAozyFont then
+		return ColorUtil.ReplaceRichCode(Str, "<span color=\"#d1906dff\" font=\"Font'/Game/UI/Fonts/HingashiExtended_Font.HingashiExtended_Font'\">")
+	end
 	return ColorUtil.ReplaceRichCode(Str, "<span color=\"#d1906dff\">")
 end
 
 ---替换物品名称富文本为亮色背景风格
 function ColorUtil.ParseItemNameBrightStyle(Str)
+	if _G.UIViewMgr.bUseAozyFont then
+		return ColorUtil.ReplaceRichCode(Str, "<span color=\"#b56728ff\" font=\"Font'/Game/UI/Fonts/HingashiExtended_Font.HingashiExtended_Font'\">")
+	end
 	return ColorUtil.ReplaceRichCode(Str, "<span color=\"#b56728ff\">")
 end
 
 ---替换物品名称富文本为场景背景风格
 function ColorUtil.ParseItemNameSceneStyle(Str)
+	if _G.UIViewMgr.bUseAozyFont then
+		return ColorUtil.ReplaceRichCode(Str, "<span color=\"#ffffff\" outline=\"2;#b56728b2\" font=\"Font'/Game/UI/Fonts/HingashiExtended_Font.HingashiExtended_Font'\">")
+	end
 	return ColorUtil.ReplaceRichCode(Str, "<span color=\"#ffffff\" outline=\"2;#b56728b2\">")
+end
+
+---替换物品名称富文本为场景背景风格（半透明）
+function ColorUtil.ParseItemNameSceneStyleTranslucent(Str)
+	if _G.UIViewMgr.bUseAozyFont then
+		return ColorUtil.ReplaceRichCode(Str, "<span color=\"#ffffff80\" outline=\"2;#b5672859\" font=\"Font'/Game/UI/Fonts/HingashiExtended_Font.HingashiExtended_Font'\">")
+	end
+	return ColorUtil.ReplaceRichCode(Str, "<span color=\"#ffffff80\" outline=\"2;#b5672859\">")
 end
 
 return ColorUtil

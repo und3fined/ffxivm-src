@@ -120,7 +120,7 @@ function RichTextUtil.GetTextAttribute(Color, LinkID, OutlineColor, OutlineSize,
 		table.insert(List, Attribute)
 	end
 
-	if nil ~= OutlineColor then
+	if nil ~= OutlineColor and (0 ~= OutlineColor or nil ~= OutlineSize) then
 		OutlineColor = RichTextUtil.ReviseColor(OutlineColor)
 		OutlineSize = OutlineSize or 1
 		local Attribute = string.format(" outline=\"%d;%s\"", OutlineSize, OutlineColor)

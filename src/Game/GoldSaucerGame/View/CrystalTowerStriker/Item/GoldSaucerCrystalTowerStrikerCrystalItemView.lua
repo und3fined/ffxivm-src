@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local CrystalTowerInteractionCfg = require("TableCfg/CrystalTowerInteractionCfg")
@@ -23,26 +24,25 @@ local UE = _G.UE
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn UFButton
 ---@field EFFBlue1 UFCanvasPanel
+---@field EFFGreen UFCanvasPanel
 ---@field EFFGrey UFCanvasPanel
 ---@field EFFPanel01 UFCanvasPanel
 ---@field EFFPanel02 UFCanvasPanel
 ---@field EFFPurple UFCanvasPanel
 ---@field EFFRED UFCanvasPanel
----@field EFFStar UFCanvasPanel
 ---@field EFFYellow UFCanvasPanel
 ---@field FWidgetSwitcher_0 UFWidgetSwitcher
 ---@field IconCrystalBlue1 UProgressBar
 ---@field IconCrystalBlue1Click UProgressBar
+---@field IconCrystalGreen UProgressBar
+---@field IconCrystalGreenClick UProgressBar
 ---@field IconCrystalGrey UProgressBar
 ---@field IconCrystalPurple UProgressBar
 ---@field IconCrystalPurpleClick UProgressBar
 ---@field IconCrystalRad UProgressBar
 ---@field IconCrystalRadClick UProgressBar
----@field IconCrystalStar UProgressBar
----@field IconCrystalStarClick UProgressBar
 ---@field IconCrystalYellow UProgressBar
 ---@field IconCrystalYellowClick UProgressBar
----@field Image_114 UImage
 ---@field P_DX__CrystalTowerStriker_1 UUIParticleEmitter
 ---@field P_DX__CrystalTowerStriker_2 UUIParticleEmitter
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -52,26 +52,25 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Btn = nil
 	--self.EFFBlue1 = nil
+	--self.EFFGreen = nil
 	--self.EFFGrey = nil
 	--self.EFFPanel01 = nil
 	--self.EFFPanel02 = nil
 	--self.EFFPurple = nil
 	--self.EFFRED = nil
-	--self.EFFStar = nil
 	--self.EFFYellow = nil
 	--self.FWidgetSwitcher_0 = nil
 	--self.IconCrystalBlue1 = nil
 	--self.IconCrystalBlue1Click = nil
+	--self.IconCrystalGreen = nil
+	--self.IconCrystalGreenClick = nil
 	--self.IconCrystalGrey = nil
 	--self.IconCrystalPurple = nil
 	--self.IconCrystalPurpleClick = nil
 	--self.IconCrystalRad = nil
 	--self.IconCrystalRadClick = nil
-	--self.IconCrystalStar = nil
-	--self.IconCrystalStarClick = nil
 	--self.IconCrystalYellow = nil
 	--self.IconCrystalYellowClick = nil
-	--self.Image_114 = nil
 	--self.P_DX__CrystalTowerStriker_1 = nil
 	--self.P_DX__CrystalTowerStriker_2 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -143,7 +142,7 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:OnInteractBtnClick()
     end
 	self.AlreadyInteract = true
 	self:OnInteractLocal(Pos.Y)
-	GameInst:OnInteract(Pos.Y, ViewModel.Category, self.TrackIndex, self.ID)
+	GameInst:OnInteract(Pos.Y, ViewModel.CfgCategory, self.TrackIndex, self.ID)
 
 	-- _G.FLOG_WARNING("OnInteract ID = %s", self.ID)
 
@@ -211,7 +210,7 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:Falling(Category)
     self.FallTimer = self:RegisterTimer(Fall, 0, IntervalTime, 0)
 end
 
---- @type 匀加速公式
+--- @type 匀加速公式 虽然公式是错误的，但是表现上差异不大，所以不改了
 function GoldSaucerCrystalTowerStrikerCrystalItemView:GetDistance(Velocity, Acceleration, Time)
     return Velocity * Time + 0.5 * Acceleration * Velocity * Velocity
 end
@@ -248,6 +247,11 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:GetTrackIndex()
 end
 
 function GoldSaucerCrystalTowerStrikerCrystalItemView:GetViewModel()
+	local bObjValid = CommonUtil.IsObjectValid(self)
+	if not bObjValid then
+		return
+	end
+
 	local Params = self.Params
 	if Params == nil then
 		return
@@ -274,14 +278,14 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:ChangeClickImgVisible(bVis
 	UIUtil.SetIsVisible(self.IconCrystalPurpleClick, bVisible)
 	UIUtil.SetIsVisible(self.IconCrystalYellowClick, bVisible)
 	UIUtil.SetIsVisible(self.IconCrystalRadClick, bVisible)
-	UIUtil.SetIsVisible(self.IconCrystalStarClick, bVisible)
+	UIUtil.SetIsVisible(self.IconCrystalGreenClick, bVisible)
 
 	UIUtil.SetIsVisible(self.EFFBlue1, not bVisible)
 	UIUtil.SetIsVisible(self.EFFPurple, not bVisible)
 	UIUtil.SetIsVisible(self.EFFYellow, not bVisible)
 	UIUtil.SetIsVisible(self.EFFGrey, not bVisible)
 	UIUtil.SetIsVisible(self.EFFRED, not bVisible)	
-	UIUtil.SetIsVisible(self.EFFStar, not bVisible)	
+	UIUtil.SetIsVisible(self.EFFGreen, not bVisible)	
 
 end
 
@@ -321,8 +325,8 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:UpdateProgress(PosY)
 	self.IconCrystalRad:SetPercent(EndPro)
 	self.IconCrystalRadClick:SetPercent(EndPro)
 
-	self.IconCrystalStar:SetPercent(EndPro)
-	self.IconCrystalStarClick:SetPercent(EndPro)
+	self.IconCrystalGreen:SetPercent(EndPro)
+	self.IconCrystalGreenClick:SetPercent(EndPro)
 end
 
 --- @type 
@@ -343,21 +347,21 @@ function GoldSaucerCrystalTowerStrikerCrystalItemView:Reset()
 
 	self.IconCrystalRad:SetPercent(1)
 	self.IconCrystalRadClick:SetPercent(1)
-	self.IconCrystalStar:SetPercent(1)
-	self.IconCrystalStarClick:SetPercent(1)
+	self.IconCrystalGreen:SetPercent(1)
+	self.IconCrystalGreenClick:SetPercent(1)
 
 	UIUtil.SetIsVisible(self.EFFBlue1, true)
 	UIUtil.SetIsVisible(self.EFFPurple, true)
 	UIUtil.SetIsVisible(self.EFFYellow, true)
 	UIUtil.SetIsVisible(self.EFFGrey, true)
 	UIUtil.SetIsVisible(self.EFFRED, true)
-	UIUtil.SetIsVisible(self.EFFStar, true)
+	UIUtil.SetIsVisible(self.EFFGreen, true)
 
 	UIUtil.SetIsVisible(self.IconCrystalBlue1Click, false)
 	UIUtil.SetIsVisible(self.IconCrystalPurpleClick, false)
 	UIUtil.SetIsVisible(self.IconCrystalYellowClick, false)
 	UIUtil.SetIsVisible(self.IconCrystalRadClick, false)
-	UIUtil.SetIsVisible(self.IconCrystalStarClick, false)
+	UIUtil.SetIsVisible(self.IconCrystalGreenClick, false)
 
 	self:UnRegisterAllTimer()
 	local ViewModel = self:GetViewModel()

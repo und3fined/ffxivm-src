@@ -52,9 +52,17 @@ end
 
 function ShopTabListItemView:OnShow()
 	local Index, IsAutoLv = ShopMgr:GetCurTabInfoFitLv()
-	--通过物品跳转商店或直接跳转商店
-	if ShopMgr.JumpToShop or ShopMgr.JumpToGoodsState or ShopMgr.IsJumpAgain then
-		self:SetSelectedIndex(self.CurJumpIndex or ShopMgr:GetJumpType() or 1)
+
+	if ShopMgr.JumpToShop then --正常打开商店且指定了一级分类
+		if IsAutoLv then
+			self:SetSelectedIndex(Index)
+		elseif ShopMgr.IsDefaulFirstType then
+			self:SetSelectedIndex(ShopMgr.LashChosedIndexList[ShopMgr.CurOpenMallId] or 1)
+		else
+			self:SetSelectedIndex( ShopMgr:GetJumpType() or 1)
+		end
+	elseif ShopMgr.JumpToGoodsState or ShopMgr.IsJumpAgain then --通过物品跳转商店或直接跳转商店
+		self:SetSelectedIndex(ShopMgr:GetJumpType() or 1)
 	else
 		if IsAutoLv then
 			self:SetSelectedIndex(Index)
@@ -62,6 +70,7 @@ function ShopTabListItemView:OnShow()
 			self:SetSelectedIndex(ShopMgr.LashChosedIndexList[ShopMgr.CurOpenMallId] or 1)
 		end
 	end
+	self.Menu:ScrollToIndex(self.Menu:GetSelectedIndex() or 1)
 end
 
 function ShopTabListItemView:OnHide()

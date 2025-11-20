@@ -20,12 +20,14 @@ local UILayer = require("UI/UILayer")
 ---@field ImgClock UFImage
 ---@field ImgEmpty UFImage
 ---@field ImgIcon UFImage
+---@field ImgMask UFImage
 ---@field ImgQuality UFImage
 ---@field ImgSelect UFImage
 ---@field ImgUnknown UFImage
 ---@field ImgWin UFImage
 ---@field ImgX UFImage
 ---@field PanelEmpty UFCanvasPanel
+---@field PanelX UFCanvasPanel
 ---@field RichTextNum URichTextBox
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local FishNotesSlotItemView = LuaClass(UIView, true)
@@ -36,12 +38,14 @@ function FishNotesSlotItemView:Ctor()
 	--self.ImgClock = nil
 	--self.ImgEmpty = nil
 	--self.ImgIcon = nil
+	--self.ImgMask = nil
 	--self.ImgQuality = nil
 	--self.ImgSelect = nil
 	--self.ImgUnknown = nil
 	--self.ImgWin = nil
 	--self.ImgX = nil
 	--self.PanelEmpty = nil
+	--self.PanelX = nil
 	--self.RichTextNum = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -61,7 +65,7 @@ function FishNotesSlotItemView:OnInit()
 		{ "bQualityVisible", UIBinderSetIsVisible.New(self, self.ImgQuality, false, true, false) },
 		{ "bClockVisible", UIBinderSetIsVisible.New(self, self.ImgClock, false, true, false) },
 		{ "bClockActiveVisible", UIBinderSetIsVisible.New(self, self.ImgWin, false, true, false) },
-		{ "bSelectXVisible", UIBinderSetIsVisible.New(self, self.ImgX, false, true, false) },
+		{ "bSelectXVisible", UIBinderSetIsVisible.New(self, self.PanelX, false, true, false) },
 		{ "bSelectEnabled", UIBinderSetIsEnabled.New(self, self.ImgSelect) },
 		{ "bNumTextVisible", UIBinderSetIsVisible.New(self, self.RichTextNum) },
 		{ "NumText", UIBinderSetText.New(self, self.RichTextNum)}
@@ -110,7 +114,7 @@ end
 
 function FishNotesSlotItemView:OnClickFishSlot()
 	local Data = self.Params and self.Params.Data
-	if Data and (Data.IsBait == true or _G.FishNotesMgr:CheckFishUnlockInFround(Data.ID)) then
+	if Data and (Data.IsBait == true or _G.FishNotesMgr:CheckFishUnlockInFround(Data.ID)) then 
 		ItemTipsUtil.ShowTipsByResID(Data.ItemID, self)
 		if _G.UIViewMgr:IsViewVisible(_G.UIViewID.FishReleaseTipsPanel) then
 			_G.UIViewMgr:ChangeLayer(_G.UIViewID.ItemTips,UILayer.Tips)

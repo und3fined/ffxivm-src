@@ -72,17 +72,7 @@ function CrafterGoldsmithMainPanelView:OnShow()
 	if not Params.bIsReconnect then
 		return
 	end
-	local BuffMap = _G.LifeSkillBuffMgr.Map[MajorUtil.GetMajorEntityID()]
-	if not BuffMap then
-		return
-	end
-	BuffMap = BuffMap.Map
-	if not BuffMap then
-		return
-	end
-	for _, BuffInfo in pairs(BuffMap) do
-		self:OnBuffAdd(BuffInfo)
-	end
+	_G.LifeSkillBuffMgr:MajorInitAllBuffInView(self, self.OnBuffAdd)
 end
 
 function CrafterGoldsmithMainPanelView:OnHide()
@@ -103,20 +93,7 @@ function CrafterGoldsmithMainPanelView:OnRegisterGameEvent()
 end
 
 function CrafterGoldsmithMainPanelView:OnRegisterBinder()
-	-- local GoldsmithThrill = self.CarpenterThrill
-	-- local Binders = {
-	-- 	{"TensionSliderPercent",        UIBinderSetSliderWithCurve.New(
-	-- 		self, GoldsmithThrill.Slider, GoldsmithThrill.ThrillCurve, GoldsmithThrill.SliderMoveTime)},
-	-- 	{"bIsTensionInRedZone",         UIBinderSetIsVisible.New(self, GoldsmithThrill.EFF_Orange)},
-	-- 	{"bIsTensionInBlueZone",        UIBinderSetIsVisible.New(self, GoldsmithThrill.EFF_Blue)},
-	-- 	{"bIsTensionInRightPurpleZone", UIBinderSetIsVisible.New(self, GoldsmithThrill.EFF_Purple2)},
-	-- 	{"bIsTensionInLeftPurpleZone",  UIBinderSetIsVisible.New(self, GoldsmithThrill.EFF_Purple1)},
-	-- 	{"bIsPurpleZoneVisible",        UIBinderSetIsVisible.New(self, GoldsmithThrill.ImgPurple1)},
-	-- 	{"bIsPurpleZoneVisible",        UIBinderSetIsVisible.New(self, GoldsmithThrill.ImgPurple2)},
-	-- 	{"bIsPurpleZoneVisible",        UIBinderSetIsVisible.New(self, GoldsmithThrill.ImgOrange, true)},
-	-- 	{"bIsPurpleZoneVisible",        UIBinderSetIsVisible.New(self, GoldsmithThrill.ImgBlue, true)},
-	-- }
-	-- self:RegisterBinders(self.CrafterGoldsmithVM ,Binders)
+
 end
 
 function CrafterGoldsmithMainPanelView:OnCrafterSkillCDUpdate(Params)

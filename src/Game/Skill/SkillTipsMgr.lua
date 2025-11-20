@@ -14,6 +14,7 @@ local ProfUtil = require("Game/Profession/ProfUtil")
 local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = require("Define/UIViewID")
 local PworldCfg = require("TableCfg/PworldCfg")
+local RideSkillCfg = require("TableCfg/RideSkillCfg")
 
 local UIViewID_CommSkillTips <const> = UIViewID.CommSkillTipsView
 local SkillTipsType          <const> = SkillCommonDefine.SkillTipsType
@@ -157,6 +158,38 @@ function SkillTipsMgr:ShowMajorGatherSkillTips(SkillID, Widget)
 	return self:ShowGatherSkillTips(SkillID, Pos, ProfID, Level)
 end
 
+--- 显示主角的坐骑技能的Tips, 简化调用
+---@param SkillID number
+---@param Widget UWidget - 挂靠的控件
+---@return number - 返回一个HandleID, 隐藏Tips时需要这个HandleID
+function SkillTipsMgr:ShowMajorMountSkillTips(SkillID, Widget)
+    if self.bDisableMajorTips then
+        return InvalidHandleID
+    end
+
+    local MountSkillCfg = RideSkillCfg:FindCfgByKey(SkillID)
+    local Params = {}
+	Params.SkillName = MountSkillCfg and MountSkillCfg.SkillName or ""
+	Params.SkillTag = {}
+	Params.SkillTag[1] = MountSkillCfg and MountSkillCfg.SkillTag or ""
+	Params.SkillInfoList = {}
+	Params.SkillInfoList[1] = LSTR(1090042)..(MountSkillCfg and MountSkillCfg.Distance or 0)..LSTR(1090044)
+	Params.SkillInfoList[2] = LSTR(1090043)..(MountSkillCfg and MountSkillCfg.Range or 0)..LSTR(1090044)
+	Params.SkillInfoList[3] = "   "
+	Params.SkillInfoList[4] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090045)..(MountSkillCfg and MountSkillCfg.SingTimeDescribe or ""))
+	Params.SkillInfoList[5] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090046)..(MountSkillCfg and MountSkillCfg.SingTime2 or 0)..LSTR(1090047))
+	Params.SkillInfoList[6] = "   "
+	Params.SkillInfoList[7] = MountSkillCfg and MountSkillCfg.SkillDescribe or ""
+	Params.SkillInfoList[8] = LSTR(1090048)
+	Params.SkillInfoList[9] = LSTR(1090049)
+	Params.InTargetWidget = Widget
+	Params.IsAutoFlip = true
+	Params.InfoTipGap = 520+200
+	Params.NameColor = "FFFFFFFF"
+
+	return self:ShowMountSkillTips(Params, true)
+end
+
 --- 自动根据主角职业选择合适的Tips类型
 ---@param SkillID number
 ---@param Widget UWidget - 挂靠的控件
@@ -166,15 +199,28 @@ function SkillTipsMgr:ShowMajorSkillTips(SkillID, Widget)
         return InvalidHandleID
     end
 
-    local ProfID = MajorUtil.GetMajorProfID()
-    if ProfUtil.IsCombatProf(ProfID) then
-        -- 这里后面看需要是不是判断下极限技
-        return self:ShowMajorCombatSkillTips(SkillID, Widget)
-    elseif ProfUtil.IsCrafterProf(ProfID) then
-        return self:ShowMajorCrafterSkillTips(SkillID, Widget)
+    local OuterWidget = Widget:GetParent()
+    local ParentName = ""
+    if OuterWidget then
+        local ParentWidget = OuterWidget:GetParent()
+        if ParentWidget then
+            ParentName = ParentWidget:GetName()
+            _G.FLOG_INFO("SkillTipsMgr:ShowMajorSkillTips, ParentWidgetName:%s ", ParentName)
+        end
+    end
+    if ParentName == "PanelMount" then
+        return self:ShowMajorMountSkillTips(SkillID, Widget)
     else
-        -- 采集和捕鱼人共用一套
-        return self:ShowMajorGatherSkillTips(SkillID, Widget)
+        local ProfID = MajorUtil.GetMajorProfID()
+        if ProfUtil.IsCombatProf(ProfID) then
+            -- 这里后面看需要是不是判断下极限技
+            return self:ShowMajorCombatSkillTips(SkillID, Widget)
+        elseif ProfUtil.IsCrafterProf(ProfID) then
+            return self:ShowMajorCrafterSkillTips(SkillID, Widget)
+        else
+            -- 采集和捕鱼人共用一套
+            return self:ShowMajorGatherSkillTips(SkillID, Widget)
+        end
     end
 end
 

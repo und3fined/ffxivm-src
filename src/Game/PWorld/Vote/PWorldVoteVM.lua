@@ -21,6 +21,7 @@ local ProtoCS = require("Protocol/ProtoCS")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local FUNCTION_TYPE = ProtoCommon.function_type
 local SceneMode = ProtoCommon.SceneMode
+local ScenePoolType = ProtoCommon.ScenePoolType
 
 
 ---@class PWorldVoteVM :  UIViewModel
@@ -69,9 +70,8 @@ function PWorldVoteVM:UpdateVM()
     self:UpdMems()
     self.ReadyCnt = 0
     self:SetMajorReady(false)
-    self.Model = PWorldVoteMgr.Model
 
-    local RandomEntID = PWorldVoteMgr.RandomEntID
+    local RandomEntID = PWorldVoteMgr.RandomEntID or -1
     self.IsRand = RandomEntID > 0
 
     if self.IsRand then
@@ -80,62 +80,14 @@ function PWorldVoteVM:UpdateVM()
             _G.FLOG_ERROR(string.format("PWorldVoteVM:UpdateVM has not SceneEnterDailyRandomCfg = %s", tostring(RandomEntID)))
             return
         end
-
-        self.SceneBG = Cfg.PWorldBanner
-        self.SceneName = Cfg.Name
-        self.SceneLevel = Cfg.PlayerLv
-        self.SceneLevelDesc = string.sformat(LSTR(1320078), self.SceneLevel)
+        self:SetupRandomSceneData(Cfg)
     else
-        -- Scene
-        local SceneID = PWorldVoteMgr:GetEnterSceneID()
-        if not SceneID then
-            return
-        end
-
-        local Cfg = PworldCfg:FindCfgByKey(SceneID)
-
-        if not Cfg then
-            _G.FLOG_ERROR(string.format("PWorldVoteVM:UpdateVM has not Cfg SceneID = %s", tostring(SceneID)))
-            return
-        end
-
-        local PWECfg = SceneEnterCfg:FindCfgByKey(SceneID)
-
-        if PWECfg then
-            local Type = PWECfg.TypeID
-
-            local PWETCfg = SceneEnterTypeCfg:FindCfgByKey(Type)
-
-            if PWETCfg then
-                self.SneceIcon = PWETCfg.Icon
-                self.TypeID = PWECfg.TypeID
-            else
-                _G.FLOG_ERROR(string.format("PWorldVoteVM:UpdateVM has not SceneEnterTypeCfg SceneID = %s", tostring(SceneID)))
-            end
-        else
-            _G.FLOG_ERROR(string.format("PWorldVoteVM:UpdateVM has not SceneEnterCfg SceneID = %s", tostring(SceneID)))
-        end
-        
-        self.SceneBG = Cfg.PWorldBanner2
-        self.SceneName = Cfg.PWorldName
-        -- 水晶冲突副本特别处理名字
-        if PWECfg then
-            if PWorldEntUtil.IsCrystallineExercise(PWECfg.TypeID) then
-                self.SceneName = LSTR(1320137)
-            elseif PWorldEntUtil.IsCrystallineRank(PWECfg.TypeID) then
-                self.SceneName = LSTR(1320138)
-            end
-        end
-        
-        --local CurSceneLevel = Cfg.PlayerLevel
-        ---- 陆行鸟竞赛
-        --if Cfg.SubType == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_CHOCOBO_RACE then
-        --    CurSceneLevel = _G.ChocoboMgr:GetRaceChocoboLevel()
-        --end
-        
-        self.SceneLevel = Cfg.PlayerLevel
-        self.SceneLevelDesc = string.sformat(LSTR(1320078), self.SceneLevel)
+        self:SetupNormalSceneData()
     end
+
+    local TypeCfg = SceneEnterTypeCfg:FindCfgByKey(self.TypeID)
+    self.SneceIcon = TypeCfg and TypeCfg.Icon or ""
+    self.MatchFrameImage = TypeCfg and TypeCfg.MatchFrameImage or ""
 end
 
 function PWorldVoteVM:SetReady(RoleID, V)
@@ -226,6 +178,59 @@ function PWorldVoteVM:UpdateTeamProfInfo()
             Item:SetSyncLevel(_G.TeamMgr:GetTeamMemberLevel(Item.RoleID))
         end
     end
+end
+
+---@param Cfg SceneEnterDailyRandomCfg | nil
+function PWorldVoteVM:SetupRandomSceneData(Cfg)
+    if Cfg == nil then
+        return
+    end
+
+    self.SceneBG = Cfg.PWorldBanner
+    self.SceneName = Cfg.Name
+    self.SceneLevel = Cfg.PlayerLv
+    self.SceneLevelDesc = string.sformat(LSTR(1320078), self.SceneLevel)
+    self.TypeID = ScenePoolType.ScenePoolRandom
+end
+
+function PWorldVoteVM:SetupNormalSceneData()
+    local SceneID = PWorldVoteMgr:GetEnterSceneID()
+    if not SceneID then
+        return
+    end
+
+    local Cfg = PworldCfg:FindCfgByKey(SceneID)
+
+    if not Cfg then
+        _G.FLOG_ERROR(string.format("PWorldVoteVM:UpdateVM has not Cfg SceneID = %s", tostring(SceneID)))
+        return
+    end
+
+    local PWECfg = SceneEnterCfg:FindCfgByKey(SceneID)
+    self.TypeID = PWECfg and PWECfg.TypeID or nil
+    self.SceneBG = Cfg.PWorldBanner2
+    self.SceneName = Cfg.PWorldName
+    -- 水晶冲突副本特别处理名字
+    if PWECfg then
+        if PWorldEntUtil.IsCrystallineExercise(PWECfg.TypeID) then
+            self.SceneName = LSTR(1320137)
+        elseif PWorldEntUtil.IsCrystallineRank(PWECfg.TypeID) then
+            self.SceneName = LSTR(1320138)
+        end
+    end
+    
+    --local CurSceneLevel = Cfg.PlayerLevel
+    ---- 陆行鸟竞赛
+    --if Cfg.SubType == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_CHOCOBO_RACE then
+    --    CurSceneLevel = _G.ChocoboMgr:GetRaceChocoboLevel()
+    --end
+    
+    self.SceneLevel = Cfg.PlayerLevel
+    self.SceneLevelDesc = string.sformat(LSTR(1320078), self.SceneLevel)
+end
+
+function PWorldVoteVM:SetSceneMode(Mode)
+    self.Model = Mode
 end
 
 return PWorldVoteVM

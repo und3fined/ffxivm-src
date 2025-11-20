@@ -84,6 +84,7 @@ function MusicPlayerMgr:OnInit()
 	self.MusicPlayerIsShow = false --播放器是否打开状态
 	self.IsInHotel = false --是否在旅馆中
 	self.IsStopTips = false
+	self.CurPercent = 0
 	--图鉴
 	self.AllAtlasInfoList = {} --全部图鉴信息（包含已解锁和未解锁）
 	self.CurChoseTypeIndex = 1 --当前选中的图鉴类型下标
@@ -132,8 +133,13 @@ end
 function MusicPlayerMgr:OnBegin()
 	local AllAtlasCfg = MusicPlayerCfg:FindAllCfg()
 	self.AllAtlasList = {}
-	for _, v in ipairs(AllAtlasCfg) do
-		self.AllAtlasList[v.MusicID] = v
+	for _, Value in ipairs(AllAtlasCfg) do
+		local OnOff = 0
+		if Value.OnVersion ~= "" and _G.ClientVisionMgr:CheckVersionByGlobalVersion(Value.OnVersion) then
+			OnOff = 1
+		end
+		self.AllAtlasList[Value.MusicID] = Value
+		self.AllAtlasList[Value.MusicID].OnOff = OnOff
 	end
 	self.AllTypeInfo = MusicTypeCfg:FindAllCfg()
 	local function IsUnlockAtlas(ItemResID)
@@ -170,6 +176,7 @@ function MusicPlayerMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.AttackEffectChange, self.OnGameEventAttackEffectChange)
 	self:RegisterGameEvent(EventID.BeginPlaySequence, self.OnGameBeginPlaySequence)
 	self:RegisterGameEvent(EventID.EndPlaySequence, self.OnGameEndPlaySequence)
+	self:RegisterGameEvent(EventID.StartAutoMoving, self.OnStartAutoMoving)
 end
 
 function MusicPlayerMgr:RestMusicPlayerInfo()
@@ -508,7 +515,7 @@ end
 --退出副本
 function MusicPlayerMgr:OnGameEventPWorldExit()
 	if self.PlayerPlayState and self.CurPlayerPlayingMusicID then
-		MusicPlayerMainPanelVM:PlayMusic(1, true)
+		MusicPlayerMainPanelVM:PlayMusic(1, false)
 	end
 
 	if self.ReCallState then
@@ -540,6 +547,12 @@ function MusicPlayerMgr:OnGameEndPlaySequence()
 end
 
 function MusicPlayerMgr:OnGameEventCombatStateChanged()
+	if self.ReCallState then
+		self:ExitRevertState()
+	end
+end
+
+function MusicPlayerMgr:OnStartAutoMoving()
 	if self.ReCallState then
 		self:ExitRevertState()
 	end
@@ -923,6 +936,7 @@ function MusicPlayerMgr:StopOtherBgm()
 	if _G.MountMgr:IsInRide() then
 		_G.MountMgr:StopMountBGM()
 	end
+	_G.TouringBandMgr:EnterTouringBandSilentMode()
 end
 
 function MusicPlayerMgr:RecoverMountBGM()
@@ -1037,10 +1051,6 @@ function MusicPlayerMgr:CheckAtlasOpenState(ResID)
     return false
 end
 
-function MusicPlayerMgr:GetMusicIDOnOff(MusicID)
-
-end
-
 ----------------------------乐谱回想---------------------------------
 
 --检查当前状态是否冲突
@@ -1117,8 +1127,13 @@ function MusicPlayerMgr:OpenRevertPanelView()
 	if not CommState then
 		return
 	end
-	local OtherState = self:CheckOtherEnterState()
-	if CommState and OtherState then
+
+	if self.MusicPlayerIsShow then
+		_G.MsgTipsUtil.ShowTipsByID(156020)
+		return
+	end
+
+	if CommState then
 		local Data = {}
 		if not self.IsbReconnect then
 			Data.CurChoseAtlasID = MusicPlayerMgr.CurChoseAtlasID
@@ -1146,7 +1161,9 @@ end
 
 --恢复背景音乐
 function MusicPlayerMgr:RecoverBGM()
-	_G.UE.UBGMMgr.Get():Resume()
+	if not _G.TouringBandMgr:ExitTouringBandSilentMode() then
+		_G.UE.UBGMMgr.Get():Resume()
+	end
 end
 
 function MusicPlayerMgr:GetTypeIndexByTabList(TabList, Type)

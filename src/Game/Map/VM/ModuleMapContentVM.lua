@@ -128,4 +128,13 @@ function ModuleMapContentVM:SetMapScale(Scale)
 	self.MapScale = Scale
 end
 
+function ModuleMapContentVM:IsTheFogMap(MapID)
+    local UIMapID = MapUtil.GetUIMapID(MapID)
+    if not UIMapID then
+        return false
+    end
+
+    return UIMapID == self.UIMapID
+end
+
 return ModuleMapContentVM

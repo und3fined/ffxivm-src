@@ -138,7 +138,6 @@ function BattlePassMainVM:UpdateBigRewardData(Level)
     end
 
     local CurLevel = BattlePassMgr:GetBattlePassLevel()
-
     
     self.BigRewardLevel = string.format("%d", Cfg.Level)
     local TempReward1 = Cfg.BasicReward[1]
@@ -267,6 +266,9 @@ function BattlePassMainVM:UpdateTaskList(ToggleIndex, WeekIndex)
 end
 
 function BattlePassMainVM:GetTaskWeekIndex(SeasonStart, SeasonEnd, TaskStart)
+    if SeasonStart == "" or SeasonEnd == "" or TaskStart == "" then
+        return -1
+    end
     local SeasonStartTime = TimeUtil.GetTimeFromString(SeasonStart)
     local TaskStartTime = TimeUtil.GetTimeFromString(TaskStart)
     local SeasonEndTime = TimeUtil.GetTimeFromString(SeasonEnd)
@@ -310,12 +312,16 @@ function BattlePassMainVM:InitGrandPrize()
     table.insert(ItemList, self.GrandPrize4)
     table.insert(ItemList, self.GrandPrize5)
 
+    local Index = 1
     for index, v in ipairs(Cfgs) do
-        if index <= table.length(ItemList) then
-            local Temp = {}
-            Temp.ID = v.ID
-            Temp.ResID = v.ItemID
-            ItemList[index]:UpdateVM(Temp)
+        if v.IsShowGrandPrize and v.IsShowGrandPrize == 1 then
+            if Index <= table.length(ItemList) then
+                local Temp = {}
+                Temp.ID = v.ID
+                Temp.ResID = v.ItemID
+                ItemList[Index]:UpdateVM(Temp)
+                Index = Index + 1
+            end
         end
     end
 

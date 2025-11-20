@@ -41,9 +41,11 @@ function MainPanelVM:Ctor()
 
     self.CurrTopRightInfoType = MainPanelConfig.TopRightInfoType.None
     self.PWorldStageVisible = false --副本进度
+    self.HouseStageVisible = false --房屋
     self.FateStageInfoVisible = false --Fate信息
     self.PlayStyleInfoVisible = false --机遇临门游戏信息
     self.JumboInfoVisible = false -- 仙彩信息
+    self.GoldSauserBlessVisible = false -- 仙人赐福信息
     self.MagicCardTourneyInfoVisible = false -- 是否显示幻卡大赛提醒
     self.MysterMerchantTaskVisible = false  --是否显示神秘商人任务信息
     self.TeachingLevelVisible = false
@@ -97,6 +99,9 @@ function MainPanelVM:Ctor()
     self.WarningSkillCDItemListVisibile = false
 
     self.WarningSkillCDItemList = UIBindableList.New(WarningSkillCDItemVM)
+
+    self:SetTeamReadyConfirming(false)
+    self:SetSignsCountDown(false)
 end
 
 function MainPanelVM:OnInit()
@@ -187,9 +192,12 @@ function MainPanelVM:ShowTopRightInfoPanel(Type)
     self.FateStageInfoVisible = Type == MainPanelConfig.TopRightInfoType.FateStageInfo
     self.PlayStyleInfoVisible = Type == MainPanelConfig.TopRightInfoType.PlayStyleInfo
     self.JumboInfoVisible = Type == MainPanelConfig.TopRightInfoType.JumboInfo
+    self.GoldSauserBlessVisible = Type == MainPanelConfig.TopRightInfoType.GoldSauserBless
     self.MagicCardTourneyInfoVisible = Type == MainPanelConfig.TopRightInfoType.MagicCardTourneyInfo
     self.MysterMerchantTaskVisible = Type == MainPanelConfig.TopRightInfoType.MysterMerchantTask
     self.ExclusiveBattleQuestVisible = Type == MainPanelConfig.TopRightInfoType.ExclusiveBattleQuest
+    self.HouseStageVisible = Type == MainPanelConfig.TopRightInfoType.House
+
 
     self:SetFunctionVisible(false, Type)
 end
@@ -206,9 +214,11 @@ function MainPanelVM:HideTopRightInfoPanel(Type)
         self.FateStageInfoVisible = false
         self.PlayStyleInfoVisible = false
         self.JumboInfoVisible = false
+        self.GoldSauserBlessVisible = false
         self.MagicCardTourneyInfoVisible = false
         self.MysterMerchantTaskVisible = false
         self.ExclusiveBattleQuestVisible = false
+        self.HouseStageVisible = false
     end
 end
 
@@ -238,6 +248,10 @@ function MainPanelVM:SetPWorldStageVisible(Visible)
     self:SetTopRightInfoPanelVisible(Visible, MainPanelConfig.TopRightInfoType.PWorldStage)
 end
 
+function MainPanelVM:SetHouseStageVisible(Visible)
+    self:SetTopRightInfoPanelVisible(Visible, MainPanelConfig.TopRightInfoType.House)
+end
+
 function MainPanelVM:GetPWorldStageVisible()
     return self.PWorldStageVisible
 end
@@ -248,6 +262,14 @@ end
 
 function MainPanelVM:SetJumbpInfoVisible(Visible)
     self:SetTopRightInfoPanelVisible(Visible, MainPanelConfig.TopRightInfoType.JumboInfo)
+end
+
+function MainPanelVM:GetTheGoldSaucerGatePanelVisible()
+    return self.PlayStyleInfoVisible
+end
+
+function MainPanelVM:SetGoldSauserBlessInfoVisible(Visible)
+    self:SetTopRightInfoPanelVisible(Visible, MainPanelConfig.TopRightInfoType.GoldSauserBless)
 end
 
 function MainPanelVM:SetFateStageVisible(Visible)
@@ -507,6 +529,14 @@ end
 
 function MainPanelVM:SetOnPVPMap(bOnPVPMap)
     self.bOnPVPMap = bOnPVPMap
+end
+
+function MainPanelVM:SetSignsCountDown(Value)
+    self.bSignsCountDown = Value
+end
+
+function MainPanelVM:SetTeamReadyConfirming(Value)
+    self.bTeamReadyConfirming = Value
 end
 
 return MainPanelVM

@@ -122,8 +122,10 @@ function Class:OnNetMsgQueryRoleSimpleByRoleIDs(MsgBody)
         if CurRoleID == (v or {}).RoleID then
             --穿戴的装备列表
             local EquipList = (v.Avatar or {}).EquipList
+            local Face = (v.Avatar or {}).Face
             -- table.sort(EquipList, function(a, b)  end)
             PersonInfoVM:SetOnEquipList(EquipList or {})
+            PersonInfoVM:SetFace(Face or {})
             return
         end
     end
@@ -251,27 +253,27 @@ function Class:ShowPersonalSimpleInfoView( RoleID, Source )
     if _G.PWorldMgr:CurrIsInPVPColosseum() then
         return
     end
-
-    if RoleID == PersonInfoVM.RoleID then
-        PersonInfoVM:Clear()
-    end
-
-    PersonInfoVM:SetRoleID(RoleID)
-
-    PersonInfoVM.ArmySimpleInfo = nil
-    self:SendQueryArmyInfoByRoleID(RoleID)
+    ---先显示界面，防止等待回包时打开其他界面导致显示问题
+    UIViewMgr:ShowView(UIViewID.PersonInfoSimplePanel)
 
 	_G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
+        if RoleID == PersonInfoVM.RoleID then
+            PersonInfoVM:Clear()
+        end
+
+        PersonInfoVM:SetRoleID(RoleID)
         PersonInfoVM:UpdateRoleInfo(RoleVM)
-        _G.ArmyMgr:GetArmySimpleDataByRoleIDs({RoleID}, function()
+        if RoleVM.IsCancellation then
+            MsgTipsUtil.ShowTips(_G.LSTR(620141))
+            return
+        end
 
-            if RoleVM.IsCancellation then
-                MsgTipsUtil.ShowTips(_G.LSTR(620141))
-                return
-            end
-
-            UIViewMgr:ShowView(UIViewID.PersonInfoSimplePanel, {Source = Source})
-        end, nil)
+        PersonInfoVM.ArmySimpleInfo = nil
+        ---如果界面没有被隐藏，更新数据
+        local SimpleView = UIViewMgr:FindVisibleView(UIViewID.PersonInfoSimplePanel)
+        if SimpleView then
+            SimpleView:UpdateRoleData(Source)
+        end
     end, nil, false)
 end
 
@@ -290,6 +292,10 @@ function Class:ShowPersonInfoView( RoleID )
     self:SendQueryArmyInfoByRoleID(RoleID)
     self:SendQueryGemInfoByRoleID( RoleID )
 
+    if RoleID == MajorUtil:GetMajorRoleID() then
+        --主角数据更新不会更新头像框，拉一下头像框数据，防止显示bug
+        _G.PersonPortraitHeadMgr:ReqGetFrame()
+    end
 	_G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
         if RoleVM.IsCancellation then
             return
@@ -306,7 +312,7 @@ function Class:OpenHomePage(Source)
     if nil == PersonInfoVM.RoleID then
         return
     end
-
+    self:SendQueryGemInfoByRoleID( PersonInfoVM.RoleID )
     PersonInfoVM.DataRef = PersonInfoVM.DataRef + 1
     UIViewMgr:ShowView(UIViewID.PersonInfoMainPanel, {Source = Source})
 end
@@ -316,11 +322,13 @@ function Class:ReportSystemFlowData(Type)
 end
 
 function Class:OnSceneFinishLogRsp(MsgBody)
-	self.SceneFinishLogs = MsgBody.SceneFinishLog.SceneFinishLogs
+    if MsgBody and MsgBody.SceneFinishLog then
+	    self.SceneFinishLogs = MsgBody.SceneFinishLog.SceneFinishLogs
+    end
 end
 
 function Class:GetMajorSceneFinishLogs()
-	return self.SceneFinishLogs
+	return self.SceneFinishLogs or {}
 end
 
 return Class

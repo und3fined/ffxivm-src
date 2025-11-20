@@ -83,7 +83,7 @@ end
 
 function TeamBeginsCDTipsView:OnHide()
 	self:UnRegisterAllTimer()
-	_G.SignsMgr.IsDuringCountDown = false
+	_G.SignsMgr:SetDuringCountDown(false)
 	UIUtil.SetIsVisible(self.PanelTips, true)
 	_G.EventMgr:SendEvent(_G.EventID.TeamBtnStateChanged)
 	self:Hide()

@@ -96,7 +96,7 @@ function OpsActivityTimeItemView:TimeUpdateCallback(LeftTime)
 end
 
 function OpsActivityTimeItemView:OnInforBtnClicked()
-	if self.Params.ActivityID then
+	if self.Params and self.Params.ActivityID then
 		DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.OpsActivityInfoBtn), "0", self.Params.ActivityID)
 	end
 end

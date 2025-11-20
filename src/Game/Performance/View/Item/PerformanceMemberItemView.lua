@@ -25,10 +25,13 @@ local MPDefines = require("Game/MusicPerformance/MusicPerformanceDefines")
 ---@field ImgCancel UFImage
 ---@field ImgLeader UFImage
 ---@field ImgReady UFImage
----@field ImgUnknown UFImage
 ---@field JobSlot CommPlayerSimpleJobSlotView
+---@field PanelReady UFCanvasPanel
+---@field PanelState UFCanvasPanel
 ---@field TextLevel UFTextBlock
 ---@field TextName UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimReadyIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceMemberItemView = LuaClass(UIView, true)
 
@@ -41,10 +44,13 @@ function PerformanceMemberItemView:Ctor()
 	--self.ImgCancel = nil
 	--self.ImgLeader = nil
 	--self.ImgReady = nil
-	--self.ImgUnknown = nil
 	--self.JobSlot = nil
+	--self.PanelReady = nil
+	--self.PanelState = nil
 	--self.TextLevel = nil
 	--self.TextName = nil
+	--self.AnimIn = nil
+	--self.AnimReadyIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -92,9 +98,12 @@ end
 function PerformanceMemberItemView:OnRegisterBinder()
 
 	local Binders = {
+		{ "ImgBgNormalVisible", UIBinderSetIsVisible.New(self, self.ImgBgNormal)},
+		{ "ImgBgSelfVisible", UIBinderSetIsVisible.New(self, self.ImgBgSelf)},
+		
 		{ "ImgBgNormalConfirmVisible", UIBinderSetIsVisible.New(self, self.ImgBgNormalConfirm)},
 		{ "ImgBgSelfConfirmVisible", UIBinderSetIsVisible.New(self, self.ImgBgSelfConfirm)},
-		{ "ImgBgSelfVisible", UIBinderSetIsVisible.New(self, self.ImgBgSelf)},
+
 		{ "ImgLeaderVisible", UIBinderSetIsVisible.New(self, self.ImgLeader)},
 		{ "ImgReadyVisible", UIBinderSetIsVisible.New(self, self.ImgReady, false, true)},
 		{ "ImgCancelVisible", UIBinderSetIsVisible.New(self, self.ImgCancel, false, true)},
@@ -117,19 +126,28 @@ function PerformanceMemberItemView:OnConfirmStatusChanged(ConfirmStatus)
 	local IsConfirmed = ConfirmStatus == MPDefines.ConfirmStatus.ConfirmStatusConfirm
 	local IsCancel = ConfirmStatus == MPDefines.ConfirmStatus.ConfirmStatusCancel
 
-	-- 更新选中图片显隐
-	self.VM.ImgBgNormalConfirmVisible = IsConfirmed and not IsMajor
-	self.VM.ImgBgSelfConfirmVisible = IsConfirmed and IsMajor
-	self.VM.ImgBgNormalVisible = not IsConfirmed and not IsMajor
-	self.VM.ImgBgSelfVisible = not IsConfirmed and IsMajor
+	--ImgBgSelfConfirm、ImgBgNormalConfirm 自己或队员，在确认准备和未准备都显示
+	--ImgBgSelf、ImgBgNormal 自己和队员，在拒绝和掉线(无此功能)情况下显示
+	self.VM.ImgBgNormalConfirmVisible = not IsCancel and not IsMajor
+	self.VM.ImgBgSelfConfirmVisible = not IsCancel and IsMajor
+	self.VM.ImgBgNormalVisible = IsCancel and not IsMajor
+	self.VM.ImgBgSelfVisible = IsCancel and IsMajor
 
 	-- 更新确认状态
 	self.VM.ImgReadyVisible = IsConfirmed
 	self.VM.ImgCancelVisible = IsCancel
+
+	--字体颜色
+	local TextColor = IsCancel and "d5d5d5ff" or "ffeebbff"
+	UIUtil.SetColorAndOpacityHex(self.TextName, TextColor)
+	UIUtil.SetColorAndOpacityHex(self.TextLevel, TextColor)
+
+	if IsConfirmed then
+		self:PlayAnimation(self.AnimReadyIn)
+	end
 end
 
 function PerformanceMemberItemView:OnRoleIDValueChanged(RoleID)
-	self.VM.ImgBgSelfVisible = RoleID == MajorUtil.GetMajorRoleID()
 	self.VM.ImgLeaderVisible = _G.TeamMgr:IsCaptainByRoleID(RoleID)
 end
 

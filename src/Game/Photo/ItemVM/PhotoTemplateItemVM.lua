@@ -1,9 +1,5 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
--- local SceneEnterTypeCfg = require("TableCfg/SceneEnterTypeCfg")
--- local ProfUtil = require("Game/Profession/ProfUtil")
--- local UIUtil = require("Utils/UIUtil")
--- local ItemUtil = require("Utils/ItemUtil")
 local PhotoTemplateUtil = require("Game/Photo/Util/PhotoTemplateUtil")
 
 local PhotoTemplateItemVM = LuaClass(UIViewModel)
@@ -23,7 +19,7 @@ function PhotoTemplateItemVM:UpdateVM(Data)
 	self.ID = Data.ID
     self.IsCust = Data.IsCust
     self.IsShowDelete = Data.IsCust
-
+    self.IsSelected = false
     local Temp = _G.PhotoMgr:GetTemplate(self.ID, self.IsCust)
     if Temp then
         local BaseInfo = PhotoTemplateUtil.GetBaseInfo(Temp)
@@ -36,5 +32,8 @@ function PhotoTemplateItemVM:IsEqualVM(Data)
 	return (Data.ID == self.ID) and (Data.IsCust == self.IsCust)
 end
 
+function PhotoTemplateItemVM:UpdateIconState(isShow)
+	self.IsSelected = isShow
+end
 
 return PhotoTemplateItemVM

@@ -101,6 +101,15 @@ function ChocoboTitlePanelVM:UpdateNode()
         NodeTemp.State = State
         NodeTemp.IsGet = State == ChocoboDefine.TITLE_REWARD_STATE.ALREADY_GET
         NodeTemp.IsShowRedPoint = State == ChocoboDefine.TITLE_REWARD_STATE.CAN_REWARD
+
+        if NodeTemp.IsShowRedPoint then
+            local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title/' .. NodeTemp.ID
+            local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+            if not IsSaveDel then
+                _G.RedDotMgr:AddRedDotByName(RedDotName, nil, true, ChocoboDefine.LIFE_RED_DOT_CHECKID)
+            end
+        end
+        
         table.insert(NodeList, NodeTemp)
     end
 
@@ -149,7 +158,7 @@ function ChocoboTitlePanelVM:UpdateContent()
         MissionTemp.RewardID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE
         MissionTemp.ID = CurSelectCfg.ID
         MissionTemp.Index = i
-        MissionTemp.IconPath = ""
+        MissionTemp.IconPath = "Texture2D'/Game/Assets/Icon/900000/UI_Icon_900258.UI_Icon_900258'"
         MissionTemp.StatisticID = CurSelectCfg.Mission[i].StatisticID
         MissionTemp.Type = CurSelectCfg.Mission[i].Type
         MissionTemp.TextContent = string.format(CurSelectCfg.Mission[i].Desc, CurSelectCfg.Mission[i].Param[1])
@@ -159,6 +168,14 @@ function ChocoboTitlePanelVM:UpdateContent()
         MissionTemp.IsShowMask = ButtonState == ChocoboDefine.TITLE_REWARD_STATE.ALREADY_GET
         MissionTemp.ButtonState = ButtonState
         table.insert(MissionList, MissionTemp)
+
+        if ButtonState == ChocoboDefine.TITLE_REWARD_STATE.CAN_REWARD then
+            local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title/Item/' .. MissionTemp.ID .. MissionTemp.StatisticID
+            local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+            if not IsSaveDel then
+                _G.RedDotMgr:AddRedDotByName(RedDotName, nil, true, ChocoboDefine.LIFE_RED_DOT_CHECKID)
+            end
+        end
     end
 
     self.CurTitleState = self:GetTitleState(self.CurSelectTitleID)

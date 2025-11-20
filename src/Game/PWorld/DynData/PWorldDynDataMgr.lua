@@ -106,7 +106,17 @@ function PWorldDynDataMgr:LoadDynData()
     self:LoadMapSequence(CurrMapEditCfg)
     self:LoadBGMusic(CurrMapEditCfg)
     self:LoadDefaultWeather(CurrMapEditCfg)
-    self:LoadCutSceneSequence(CurrMapEditCfg)   
+    self:LoadCutSceneSequence(CurrMapEditCfg)
+
+    local CurrMapFestivalEditCfg = _G.MapEditDataMgr:GetFestivalEditCfg()
+
+    for k,v in pairs(CurrMapFestivalEditCfg) do
+        for x,MapEditCfg in pairs(v) do
+            if MapEditCfg.MapID == _G.PWorldMgr:GetCurrMapResID() then
+                self:LoadMapArea(MapEditCfg)
+            end
+        end
+    end
 end
 
 function PWorldDynDataMgr:PostLoadDynData()
@@ -122,10 +132,23 @@ function PWorldDynDataMgr:LoadDynDataAfterLoadWorldFinish()
         return
     end
     self:LoadMapAreaRange(CurrMapEditCfg)
+
+    local CurrMapFestivalEditCfg = _G.MapEditDataMgr:GetFestivalEditCfg()
+
+    for k,v in pairs(CurrMapFestivalEditCfg) do
+        for x,MapEditCfg in pairs(v) do
+            if MapEditCfg.MapID == _G.PWorldMgr:GetCurrMapResID() then
+                self:LoadMapAreaRange(MapEditCfg)
+            end
+        end
+    end
 end
 
 function PWorldDynDataMgr:LoadTransDoor(CurrMapEditCfg)
     local TransPointList = CurrMapEditCfg.TransPointList
+    if (nil == TransPointList) then
+        return
+    end
     for _, TransPoint in ipairs(TransPointList) do
         local MapDynEffect = nil
         if (TransPoint.EffectID > 0) then
@@ -198,8 +221,7 @@ function PWorldDynDataMgr:LoadTransArea(CurrMapEditCfg)
             end
 
             if (TransDoorArea ~= nil) then
-                TransDoorArea.ID = Area.ID
-                TransDoorArea.State = 1
+                TransDoorArea:InitData(Area)
                 TransDoorArea:UpdateState()
                 table.insert(self.MapDynDatas, TransDoorArea)
             end
@@ -386,6 +408,7 @@ end
 
 function PWorldDynDataMgr:LoadMapSequence(CurrMapEditCfg)
     local SequenceList = CurrMapEditCfg.SequenceList
+    if (SequenceList == nil) then return end
     local World = FWORLD()
     local SegConfig = _G.UE.TMap(_G.UE.int32, _G.UE.int32)
     for _, Sequence in ipairs(SequenceList) do
@@ -724,6 +747,16 @@ function PWorldDynDataMgr:PlayWeatherSequence(WeatherMarkParam)
 
     if (WeatherSequenceControllerActor ~= nil) then
         WeatherSequenceControllerActor:PlayToMark(WeatherMarkName)
+    end
+end
+
+function PWorldDynDataMgr:TriggerTransArea(ID)
+    if (self.MapDynDatas ~= nil) then
+        for _, DynData in ipairs(self.MapDynDatas) do
+            if (DynData.bIsFromHousing == true and DynData.DataType == ProtoCommon.MapDynType.MAP_DYNAMIC_DATA_TYPE_AREA and DynData.ID == ID) then
+                DynData:RequireCommonTrans()
+            end
+        end
     end
 end
 

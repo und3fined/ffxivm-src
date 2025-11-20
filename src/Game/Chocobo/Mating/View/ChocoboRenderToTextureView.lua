@@ -258,7 +258,7 @@ function ChocoboRenderToTextureView:UpdateUIChocoboModel(Armor, StainID)
     local RideComponent = self.ChildActor:GetRideComponent()
     if RideComponent ~= nil and _G.UE.UCommonUtil.IsObjectValid(RideComponent) then
         self:HidePlayer(true)
-        RideComponent:UseRide(ChocoboDefine.CHOCOBO_RIDE_ID, 0, StainID, HeadString, BodyString, "", FeetString)
+        RideComponent:UseRide(ChocoboDefine.CHOCOBO_RIDE_ID, 0, 0, StainID, HeadString, BodyString, "", FeetString)
         RideComponent:EnableAnimationRotating(false)
         self.RideMeshComponent = self.ChildActor:GetRideMeshComponent()
     end

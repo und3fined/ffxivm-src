@@ -16,6 +16,7 @@ function FashionTrackEquipModelItemVM:Ctor()
     self.EquipIcon = ""
     self.OwnNumText = ""
     self.IsVisible = true
+    self.ItemQualityIcon = ""
 end
 
 
@@ -35,6 +36,7 @@ function FashionTrackEquipModelItemVM:UpdateVM(Value)
         self.IsVisible = true
 		self.EquipIcon = EquipModelInfo.EquipIconPath
         self.EquipName = EquipModelInfo.EquipName
+        self.ItemQualityIcon = EquipModelInfo.ItemQualityIcon
     else
         self.IsVisible = false
 	end

@@ -406,11 +406,11 @@ end
 function OpsPhoneBindingPanelView:UpdateNodeGetReward()
 	local Rewards  = {}
 	if self.ViewModel.FirstBindRewardAvailable then
-		table.insert(Rewards, {ResID = self.ViewModel.FirstBindRewardItemID, Num = tonumber(self.ViewModel.FirstBindRewardNum), ShowReceived = true})
+		table.insert(Rewards, {ResID = self.ViewModel.FirstBindRewardItemID, Num = tonumber(self.ViewModel.FirstBindRewardNum), ShowReceived = false})
 	end
 
 	if self.ViewModel.MonthRewardAvailable then
-		table.insert(Rewards, {ResID = self.ViewModel.PerMonthRewardItemID, Num = tonumber(self.ViewModel.PerMonthRewardAmount), ShowReceived = true})
+		table.insert(Rewards, {ResID = self.ViewModel.PerMonthRewardItemID, Num = tonumber(self.ViewModel.PerMonthRewardAmount), ShowReceived = false})
 	end
 
 	if #Rewards > 0 then

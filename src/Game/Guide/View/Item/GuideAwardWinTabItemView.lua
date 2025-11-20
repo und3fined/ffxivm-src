@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local ItemCfg = require("TableCfg/ItemCfg")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderSetImageBrush = require("Binder/UIBinderSetImageBrush")
 local MagicCardCollectionMgr = require("Game/MagicCardCollection/MagicCardCollectionMgr")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
@@ -54,6 +55,7 @@ function GuideAwardWinTabItemView:OnInit()
 		{"IsCollectedAward", UIBinderSetIsVisible.New(self, self.PanelReceived)},
 		{"AwardIcon", UIBinderValueChangedCallback.New(self, nil, self.OnAwardIconChanged)},
 		{"AwardNum", UIBinderValueChangedCallback.New(self, nil, self.OnAwardNumChanged)},
+		{"ItemQualityIcon", UIBinderSetImageBrush.New(self, self.SlotItem.ImgQuanlity)},
 	}
 end
 

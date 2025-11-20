@@ -327,7 +327,7 @@ function HUDMgr:OnRegisterGameEvent()
 
 	self:RegisterGameEvent(EventID.TeamTargetMarkStateChanged, self.OnGameEventTeamTargetMarkStateChanged)
 	self:RegisterGameEvent(EventID.TouringBandTargetMarkIconChanged, self.OnGameEventTouringBandTargetMarkIconChanged)
-	
+
 	self:RegisterGameEvent(EventID.ShowSpeechBubble, self.OnGameEventShowSpeechBubble)
 	self:RegisterGameEvent(EventID.HideSpeechBubble, self.OnGameEventHideSpeechBubble)
 
@@ -546,10 +546,10 @@ function HUDMgr:OnGameEventAttackEffectChange(Params)
 	local IsDamage = EffectType == ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_HP_DAMAGE or EffectType == ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_SHIELD_COST
 
 	local bShouldShow = false
-	
+
 	-- 仅在以下情况显示飘字：
 	-- 1. 伤害或治疗的发起方或接受方为Major
-	if IsToMajor or IsFromMajor then 
+	if IsToMajor or IsFromMajor then
 		bShouldShow = true
 	end
 
@@ -599,10 +599,18 @@ function HUDMgr:OnGameEventAttackEffectChange(Params)
 		if IsFromBuff and Value == 0 then return end
 	end
 
+	local TipsID = Params.TipsId or 0
+	-- 带TipsID的Buff，显示为技能飘字
+	if TipsID > 0 and IsFromBuff then
+		IsFromBuff = false
+		IsFromSkill = true
+		SkillType = SkillMainCfg:GetSkillType(Params.PassiveSkillID) or ProtoRes.skill_type.SKILL_TYPE_ABILITY
+	end
+
 	local Name = ""
 	-- 只有发起方或接受方为Major时，才显示技能名称
 	if IsToMajor or IsFromMajor then
-		Name = self:GetFlyTextName(SkillType, SkillID, Params.TipsId or 0)
+		Name = self:GetFlyTextName(SkillType, SkillID, TipsID)
 	end
 
 	local HUDTypeOffset = 0
@@ -625,9 +633,9 @@ function HUDMgr:OnGameEventAttackEffectChange(Params)
 	end
 
 	local TimeInv = Params.DelayTime or 0
-	-- 附加伤害延时0.1s
+	-- 附加伤害额外延时0.1s
 	if ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_ATTACH_HP_DAMAGE == EffectType then
-		TimeInv = 100
+		TimeInv = TimeInv + 100
 	end
 
 	local Color = nil
@@ -667,7 +675,7 @@ function HUDMgr:OnGameEventUpdateBufferFlyText(Params)
 
 	local IsHasBuff = Params.BoolParam1
 	local IsMorePile = Params.BoolParam2
-	
+
 	local Pile = Params.IntParam2
 	local MaxPile = Params.IntParam4
 
@@ -697,28 +705,25 @@ function HUDMgr:OnGameEventUpdateBufferFlyText(Params)
 	--print(string.format("HUDMgr:OnGameEventUpdateBuffer BufferID=%d EntityID=%d GiverID=%d", BufferID, EntityID, GiverID))
 
 	local Offset = self:GetFlyTextOffset(EntityID)
-
 	if MajorUtil.IsMajor(EntityID) then
+		-- 主角收到的buff
 		if ProtoRes.BuffDisplayType.BUFF_DISPLAY_TYPE_POSITIVE == Cfg.DisplayType then
 			self:ShowBufferEffect(EntityID, BufferID, HUDType.MajorBufferAdd, 0, Offset)
 		else
 			self:ShowBufferEffect(EntityID, BufferID, HUDType.MajorDBufferAdd, 0, Offset)
 		end
-		return
-	end
-
-	if not MajorUtil.IsMajor(GiverID) then
-		return
-	end
-
-	if ActorUIUtil.IsTeamMember(EntityID) then
+	elseif IsMajorBuddy(EntityID) then
+		-- 搭档收到的buff
 		self:ShowBufferEffect(EntityID, BufferID, HUDType.ActorBufferAdd, 0, Offset)
-		return
-	end
-
-	local ActorType = ActorUtil.GetActorType(EntityID)
-	if EActorType.Monster == ActorType then
-		self:ShowBufferEffect(EntityID, BufferID, HUDType.MonsterBufferAdd, 0, Offset)
+	elseif MajorUtil.IsMajor(GiverID) or IsMajorBuddy(GiverID) then
+		-- 主角或搭档发出的buff
+		if ActorUIUtil.IsTeamMember(EntityID) then
+			-- 队友收到的buff
+			self:ShowBufferEffect(EntityID, BufferID, HUDType.ActorBufferAdd, 0, Offset)
+		elseif EActorType.Monster == ActorUtil.GetActorType(EntityID) then
+			-- 怪物收到的buff
+			self:ShowBufferEffect(EntityID, BufferID, HUDType.MonsterBufferAdd, 0, Offset)
+		end
 	end
 end
 
@@ -909,7 +914,7 @@ end
 function HUDMgr:OnGameEventWorldPreLoad(Params)
 	FLOG_INFO("HUDMgr:OnGameEventWorldPreLoad()")
 
-	if _G.PWorldMgr:IsChangeLine() then
+	if _G.PWorldMgr:IsChangeSameMap() then
 		local MajorEntityID = MajorUtil.GetMajorEntityID()
 		for EntityID in pairs(self.ActorInfos) do
 			if EntityID ~= MajorEntityID then
@@ -1284,7 +1289,7 @@ function HUDMgr:OnGameEventChocoboRaceHUDUpdate(Params)
 	--print("HUDMgr:OnGameEventChocoboRaceStaminaChange", Params.ULongParam2, Params.ULongParam3)
 
 	local EntityID = Params.ULongParam1
-	
+
 	local ActorVM = self:GetActorVM(EntityID)
 	if nil == ActorVM then
 		return
@@ -1318,7 +1323,7 @@ function HUDMgr:OnGameEventMagicCardTourneyRankUpdate(Params)
 	if nil == Params then
 		return
 	end
-	
+
 	local EntityIDList = Params.EntityIDList
 	for _, EntityID in ipairs(EntityIDList) do
 		local ActorVM = self:GetActorVM(EntityID)
@@ -1482,7 +1487,12 @@ local function ShouldCreateActorInfo(EntityID)
 	if nil == Actor then
 		return false
 	end
-
+	
+	-- 添加有效性检查，防止访问无效对象指针
+	if not Actor:IsValid() then
+		return false
+	end
+	
 	local AttrComp = Actor:GetAttributeComponent()
 	local ActorType = AttrComp:GetActorType()
 
@@ -1729,13 +1739,13 @@ end
 ---@param EffectType ProtoCS.CS_ATTACK_EFFECT
 ---@param IsMajor boolean
 ---@param IsFromSkill boolean Skill or Buff
----@param SkillType ProtoCS.CS_ATTACK_EFFECT
+---@param SkillType ProtoRes.skill_type
 ---@param HUDTypeOffset number 普通 - 直击 - 暴击 - 直击暴击 的偏移
 ---@return HUDType|nil
 function HUDMgr:GetFlyTextHUDType(EffectType, IsMajor, IsFromSkill, SkillType, HUDTypeOffset)
 	HUDTypeOffset = HUDTypeOffset or 0
 
-	if ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_HP_DAMAGE == EffectType 
+	if ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_HP_DAMAGE == EffectType
 	or ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_ATTACH_HP_DAMAGE == EffectType
 	or ProtoCS.CS_ATTACK_EFFECT.CS_ATTACK_EFFECT_SHIELD_COST == EffectType then
 		-- Buff效果和技能显示不同的样式
@@ -1782,7 +1792,7 @@ function HUDMgr:SetSpectrumParams(EntityID, Amount, Visible, Color, Texture, BgT
 	if _G.ChocoboRaceMgr:IsChocoboRacePWorld() then
 		return
 	end
-	
+
 	local ActorVM = self:GetActorVM(EntityID)
 	if nil == ActorVM then
 		-- 角色创建现采用分帧处理，这里的时机有可能早于角色创建，故加入参数缓存机制，延迟到MajorCreate中处理（暂时仅处理Major）
@@ -2019,15 +2029,23 @@ function HUDMgr:UpdateActorUIColor(EntityID)
 	if nil ~= ActorVM then ActorVM:UpdateUIColor() end
 end
 
+---UpdateActorUIColor 更新UI颜色
+function HUDMgr:UpdateMonsterTypeIcon(EntityID)
+	local ActorVM = self:GetActorVM(EntityID)
+	if nil ~= ActorVM then ActorVM:UpdateMonsterTypeIcon() end
+end
+
 function HUDMgr:OnCampChange(Params)
     local EntityID = Params.ULongParam1
     local bMajor = Params.BoolParam1
 	if bMajor then
 		for _, ActorInfo in pairs(self.ActorInfos) do
 			ActorInfo.ActorVM:UpdateUIColor()
+			ActorInfo.ActorVM:UpdateMonsterTypeIcon()
 		end
 	else
 		self:UpdateActorUIColor(EntityID)
+		self:UpdateMonsterTypeIcon(EntityID)
 	end
 end
 
@@ -2254,10 +2272,18 @@ function HUDMgr:ResetEidMountPoint(EntityID)
 	end
 end
 
-function HUDMgr:SetOffsetY(EntityID, OffsetY)
+function HUDMgr:SetLocationOffsetZ(EntityID, Offset)
 	local VM = self:GetActorVM(EntityID)
 	if nil ~= VM then
-		VM:SetOffsetY(OffsetY)
+		VM:SetLocationOffsetZ(Offset)
+	end
+end
+
+---@param Time number 平滑处理持续时间
+function HUDMgr:SetSmoothTime(EntityID, Time)
+	local VM = self:GetActorVM(EntityID)
+	if nil ~= VM then
+		VM:SetSmoothTime(Time)
 	end
 end
 

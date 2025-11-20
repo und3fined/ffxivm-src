@@ -153,7 +153,15 @@ function DynDataMapArea:OnTriggerBeginOverlap(Trigger, Target)
     -- BGM相关
     local FuncData = self.FuncData or {}
     if FuncData.IsBGMEnable and FuncData.BGM then
-        _G.UE.UBGMAreaMgr:Get():EnterArea(self.Priority, self.ID, FuncData.BGM, FuncData.IsBGMPlayZoneInOnly)
+        _G.UE.UBGMAreaMgr:Get():EnterArea(self.Priority, self.ID, FuncData.BGM, FuncData.IsBGMPlayZoneInOnly, self.bTriggeredOnCreate)
+    end
+
+    --启用house配置
+    if FuncData.IsHousingEnabled then
+        if FuncData.HousingBlockId > 0 and FuncData.HousingAreaId == 0 then
+            _G.HousingMgr:EnterHouseBlock(FuncData.HousingBlockId)
+            _G.EventMgr:SendEvent(_G.EventID.EnterOrExitHouseBlock,{BlockID = FuncData.HousingBlockId})
+        end
     end
 end
 
@@ -190,6 +198,14 @@ function DynDataMapArea:OnTriggerEndOverlap(Trigger, Target)
     local FuncData = self.FuncData or {}
     if FuncData.IsBGMEnable and FuncData.BGM then
         _G.UE.UBGMAreaMgr:Get():ExitArea(self.ID)
+    end
+
+    --启用house配置
+    if FuncData.IsHousingEnabled then
+        if FuncData.HousingBlockId > 0 and FuncData.HousingAreaId == 0 then
+            _G.HousingMgr:EnterHouseBlock(0)
+            _G.EventMgr:SendEvent(_G.EventID.EnterOrExitHouseBlock,{BlockID = 0})
+        end
     end
 end
 

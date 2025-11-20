@@ -177,7 +177,7 @@ function NewQuestLogTaskDetailsPanelView:OnRegisterBinder()
 			{ "ChapterID", UIBinderValueChangedCallback.New(self, nil, self.OnSelectedQuestChanged) },
 			{ "Icon", UIBinderSetBrushFromAssetPath.New(self, self.IconTask) },
 			{ "Name", UIBinderSetText.New(self, self.RichTextName) },
-			{ "MinLevel", UIBinderSetTextFormat.New(self, self.TextLevel, "%d级") },
+			{ "MinLevel", UIBinderSetTextFormat.New(self, self.TextLevel, LSTR(596303)) }, --596303("%d级")
 			{ "LogImage", UIBinderSetIsVisible.New(self, self.PanelBanner) },
 			{ "LogImage", UIBinderSetBrushFromAssetPath.New(self, self.ImgBanner) },
 			{ "SpecialRule", UIBinderValueChangedCallback.New(self, nil, self.OnSpecialRuleChanged) },
@@ -316,7 +316,12 @@ function NewQuestLogTaskDetailsPanelView:OnClickButtonPlace()
 		local TargetID = TargetVM.TargetID
 		if TargetID < 1000 then
 			if TargetVM.GroupedTargetIDList and #TargetVM.GroupedTargetIDList > 0 then
-				TargetID = TargetVM.GroupedTargetIDList[1]
+				for _, TempTargetID in ipairs(TargetVM.GroupedTargetIDList) do
+					if _G.QuestMgr:GetTargetStatus(TempTargetID) ~= TARGET_STATUS.CS_QUEST_NODE_STATUS_FINISHED then
+						TargetID = TempTargetID
+						break
+					end
+				end
 			end
 		end
 		local OwnerChapterVM = TargetVM.OwnerChapterVM
@@ -388,6 +393,18 @@ function NewQuestLogTaskDetailsPanelView:OnClickButtonGiveUp()
 end
 
 function NewQuestLogTaskDetailsPanelView:OnClickButtonSwitchJob()
+	local QuestID = QuestLogVM.CurrChapterVM.QuestID
+	if QuestID then
+		local QuestCfgItem = QuestHelper.GetQuestCfgItem(QuestID)
+		if QuestCfgItem then
+			local Profession = QuestCfgItem.Profession
+			if Profession and Profession ~= 0 then
+				local Params = { QuestStrictionProf = Profession}
+				_G.ProfMgr.ShowProfSwitchTab(Params)
+				return
+			end
+		end
+	end
 	_G.ProfMgr.ShowProfSwitchTab()
 end
 

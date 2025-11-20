@@ -24,6 +24,7 @@ function MiniGameBaseVM:Ctor()
     self.GoldPanelTitle = LSTR(360007) -- 默认货币栏title
     self.RoundRemainChances = "" -- 剩余次数显示
     self.DifficultyIconPath = "" -- 游戏难度图标路径
+    self.Difficulty = 0 -- 游戏难度
 
     self.ProgressCounter = 0 -- 进度玩法计数器
     self.LastProgress = 0 --上一次玩法进度
@@ -44,6 +45,8 @@ function MiniGameBaseVM:Ctor()
     self.bShowDifficultyMark = true
 
     self.ReconnectSuccess = false -- 是否重连成功
+
+    self.bBless = false
 end
 
 --- 创建VM并绑定GameInst
@@ -60,13 +63,12 @@ function MiniGameBaseVM:UpdateVM()
     if GameInst == nil then
         return
     end
+    self.bBless = GameInst:IsBless()
 	self.RoundRemainChances = tostring(GameInst:GetRemainChances())
-    local TimeSecondsInteger = GameInst:GetRemainSecondsInteger()
-    local InitTimeText = TimeUtil.GetTimeFormat("%M:%S", TimeSecondsInteger)
-    self.TotalTimeTextTitle = InitTimeText
-    self.TotalTimeText = InitTimeText
+    self:UpdateTimeShowFormat()
     local Type = GameInst:GetGameType()
     local Difficulty = GameInst:GetDifficulty()
+    self.Difficulty = Difficulty
     local DifficultyIconPathList = MiniGameClientConfig[Type].DifficultyIconPath
     if DifficultyIconPathList then
         self.DifficultyIconPath = DifficultyIconPathList[Difficulty]
@@ -92,6 +94,11 @@ end
 
 --- 刷新时间显示
 function MiniGameBaseVM:UpdateTimeShow()
+    self:UpdateTimeShowFormat()
+    self:OnUpdateTimeShow()
+end
+
+function MiniGameBaseVM:UpdateTimeShowFormat()
     local GameInst = self.MiniGame
     if GameInst == nil then
         return
@@ -114,7 +121,6 @@ function MiniGameBaseVM:UpdateTimeShow()
     else
         self.TotalTimeText = string.format("%.2f", TotalTime)
     end
-    self:OnUpdateTimeShow()
 end
 
 --- 子类派生方法

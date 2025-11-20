@@ -7,7 +7,9 @@ local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
+local ProtoCommon = require("Protocol/ProtoCommon")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local AnimationUtil = require("Utils/AnimationUtil")
 local ScoreMgr = require("Game/Score/ScoreMgr")
 local EventID = require("Define/EventID")
@@ -49,8 +51,9 @@ end
 
 function MysterMerchantMgr:OnInit()
     self.CurrActiveMerchantList = {}
+    self.EnterHintArea_Record = {} -- 记录初次进入NPC提示区域
     self.EnterCryHelpArea_Record = {} -- 记录初次进入NPC喊话区域
-    self.EnterHintArea_Record = {} -- 记录初次进入触发区域
+    self.EnterTriggerTaskArea_Record = {} -- 记录初次进入触发区域
     self.RequiredItemList = {}
     self.RequiredNumList = {}
     self.RequiredItemHQList = {}
@@ -89,6 +92,7 @@ function MysterMerchantMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.SharedMerchantBirth, self.OnNetMsgMerchantMapData)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.QueryMerchantGoods, self.OnNetMsgMysterMerchantGoods)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.SubmitMerchantTask, self.OnNetMsgSubmitTaskSuccess)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.TriggerMerchantTask, self.OnNetMsgTriggerTaskRsp)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.BuyMerchantGoods, self.OnNetMsgBuyGoodsRsp)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.InvestMerchant, self.OnNetMsgInvestRsp)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_MYSTER_MERCHANT, MERCHANT_CMD.ReceiveInvestRewards, self.OnNetMsgInvestRewardRsp)
@@ -106,7 +110,8 @@ function MysterMerchantMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.PWorldTransBegin, self.OnPWorldTransBegin)
     self:RegisterGameEvent(EventID.EnterMapFinish, self.OnEnterWorld)
     self:RegisterGameEvent(EventID.BagUpdate, self.OnBagUpdate)
-    self:RegisterGameEvent(EventID.MajorDead, self.OnGameEventMajorDead)
+    self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnProfSwitch)
+    self:RegisterGameEvent(EventID.MysteryMerchantLateShowLoot, self.OnMysteryMerchantLateShowLoot)
 end
 
 function MysterMerchantMgr:OnRegisterTimer()
@@ -128,24 +133,26 @@ function MysterMerchantMgr:OnEnterWorld()
     end
     self.IsStartTrans = false
     
-    --副本内传送离开商人范围
-    if self.MerchantID and self.MerchantID > 0 then
-        self:SendMsgRemoveStateReq(self.MerchantID)
-    end
-
     -- 副本没传送时，会隐藏本地创建的怪物，所以在这里重新创建
     for _, ActiveMerchant in pairs(self.CurrActiveMerchantList) do
         local MonsterList = ActiveMerchant.MonsterAvatarList
+        local EObjectList = ActiveMerchant.TaskEObjShowList
         local MerchantID = ActiveMerchant.MerchantID
         local TaskID = ActiveMerchant.TaskID
+        local VisualNum =  ActiveMerchant.VisualNum
         if MonsterList and #MonsterList > 0 then
             self:OnReomveMonsters(MerchantID)
+        end
+        if EObjectList and #EObjectList > 0 then
+            self:OnRemoveCollectItemAll(MerchantID)
         end
         local TaskState = ActiveMerchant.TaskState
         local TaskType = ActiveMerchant.TaskType
         if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_UNFINISHED then
             if TaskType ~= ETaskType.InteractiveTypePickUpCargo then 
                 ActiveMerchant.MonsterAvatarList = self:CreateTaskMonsterAvatar(TaskID)
+            else
+                ActiveMerchant.TaskEObjShowList = self:GetEObjsEditorList(TaskID, VisualNum)
             end
         end
     end
@@ -160,7 +167,6 @@ function MysterMerchantMgr:OnPWorldReady()
 
     -- 在冒险游商团副本内，则显示任务情报
     if _G.PWorldMgr:CurrIsInMerchant() then
-        self:ShowTaskInfoBar(true)
         -- 重登后直接在位面内时，退出再进
         if self.MerchantID == nil or self.MerchantID <= 0 then
             _G.PWorldMgr:SendLeavePWorld(self.PWorldResID)
@@ -187,6 +193,12 @@ function MysterMerchantMgr:OnPWorldReady()
         return
     end
 
+    -- 野外地图进入位面地图时or在同一个地图时，不再触发系统提示
+    if  self.MerchantMapResID ~= self.CurrMapResID then
+        self:OnLeaveHintArea(self.MerchantID)
+        self.MerchantMapResID = self.CurrMapResID -- 只记录存在商人的野外地图（位面除外）
+    end
+
     if self.MerchantID and self.MerchantID > 0 then
         self.MerchantID = 0
     end
@@ -201,18 +213,18 @@ function MysterMerchantMgr:OnPWorldExit(LeavePWorldResID, LeaveMapResID)
         self.MerchantCheckTimer = nil
     end
 
-    if self.EnterHintArea_Record and self.EnterHintArea_Record[self.MerchantID] then
-        self:SendMsgRemoveStateReq(self.MerchantID)
-        --self:OnClearMerchantCache(self.MerchantID)
-        if self.EnterHintArea_Record and self.EnterHintArea_Record[self.MerchantID] then
-            self.EnterHintArea_Record[self.MerchantID] = nil
-        end
-    
-        if self.EnterCryHelpArea_Record and self.EnterCryHelpArea_Record[self.MerchantID] then
-            self.EnterCryHelpArea_Record[self.MerchantID] = nil
-        end
+    -- 从商人任务位面出来
+    if self.IsInMerchantPWorld then
+        self:ClearMerchantCacheAll()
     end
-    self:ShowTaskInfoBar(false)
+
+    if not MysterMerchantUtils.IsConfigMerchantMapPoint(LeaveMapResID) then
+        return
+    end
+
+    local CurrActiveMerchant = self:GetCurrActiveMerchant()
+    self:OnLeaveTaskRange(CurrActiveMerchant)
+    self:OnLeaveCryForHelpArea(self.MerchantID)
 end
 
 -- 副本内传送（由于离开商人范围没有触发，所以采用这个事件）
@@ -222,11 +234,7 @@ function MysterMerchantMgr:OnPWorldTransBegin(IsOnlyChangeLocation)
     end
     
     --副本内传送离开商人范围
-    if self.EnterHintArea_Record and self.EnterHintArea_Record[self.MerchantID] then
-        self.IsStartTrans = true
-    else
-        self.IsStartTrans = false
-    end
+    self.IsStartTrans = true
 end 
 
 function MysterMerchantMgr:OnGameEventStartFadeIn(Params)
@@ -312,7 +320,16 @@ function MysterMerchantMgr:UpdateCurActiveMerchant(MerchantDataList)
         return
     end
 
-    self.CurrActiveMerchantList = {}
+    -- if self.CurrActiveMerchantList and table.length(self.CurrActiveMerchantList) > 0 then
+    --     for MerchantID, ExistMerchant in pairs(self.CurrActiveMerchantList) do
+    --         local MerchantNPCID = ExistMerchant.NPCID
+    --         local MerchantEntityID = ActorUtil.GetActorEntityIDByResID(MerchantNPCID)
+    --         self.ForceRemoveNPC(self, MerchantEntityID)
+    --         self:OnMerchantPendingRemove(MerchantID)
+    --         self:OnClearMerchantCache(MerchantID)
+    --     end
+    -- end
+    -- self.CurrActiveMerchantList = {}
     for _, MerchantData in ipairs(MerchantDataList) do
         self:UpdateMerchant(MerchantData)
     end
@@ -323,30 +340,42 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
     if MerchantData == nil then
         return
     end
-
-    if self.MerchantCheckTimer == nil then
-        self.MerchantCheckTimer = self:RegisterTimer(self.MerchantTick, 0, 0.5, 0)
-    end
-
+    
     local MerchantPointID = MerchantData.PointID
     local PointInfo = MysterMerchantUtils.GetMerchantPointInfo(MerchantPointID)
     if PointInfo == nil then
         FLOG_WARNING("商人PointID不存在，请检查！".. MerchantPointID or 0)
         return
     end
-
+    
     -- 与当前地图不符
     local MapResID = PointInfo.MapResID
     if MapResID ~= self.CurrMapResID then
         return
     end
-
-    local MerchantID = MerchantData.MerchantID
-    local MerchantNPCID = MysterMerchantUtils.GetMerchantResID(MerchantID)
-    local EndTime = math.floor(MerchantData.ExpireTime/1000) --_G.TimeUtil.GetServerTime() + 120
-    local MerchantTask = MerchantData.Task
     
+    local MerchantID = MerchantData.MerchantID
+    local EndTime = math.floor(MerchantData.ExpireTime/1000) --_G.TimeUtil.GetServerTime() + 120
+    local MerchantNPCID = MysterMerchantUtils.GetMerchantResID(MerchantID)
+    local MerchantTask = MerchantData.Task
     FLOG_INFO("商人回收时间："..EndTime)
+    local LocalTime = _G.TimeUtil.GetServerLogicTime()
+    local ExistTime = math.clamp(EndTime - LocalTime, 0, EndTime - LocalTime)
+    if self.CurrActiveMerchantList == nil then
+        self.CurrActiveMerchantList = {}
+    else
+        local Merchant = self.CurrActiveMerchantList[MerchantID]
+        if Merchant then
+            local MerchantEntityID = ActorUtil.GetActorEntityIDByResID(MerchantNPCID)
+            self.ForceRemoveNPC(self, MerchantEntityID)
+            self:OnMerchantPendingRemove(MerchantID)
+            self:OnClearMerchantCache(Merchant.MerchantID)
+        end
+        if EndTime > 0 and ExistTime <= 0 then
+            return
+        end
+    end
+    
     local TaskID = MerchantData.TaskID
     local MerchantType = MysterMerchantUtils.GetMerchantType(MerchantID)
     local TaskInfo = MysterMerchantUtils.GetMerchantTaskInfo(TaskID)
@@ -357,14 +386,7 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
     local BirthPointID = PointInfo and PointInfo.BirthPointID or 0
     local BirthMapPoint = _G.MapEditDataMgr:GetMapPoint(BirthPointID)
     local NPCBirthLocation = BirthMapPoint and _G.UE.FVector(BirthMapPoint.Point.X, BirthMapPoint.Point.Y, BirthMapPoint.Point.Z)
-    if self.CurrActiveMerchantList == nil then
-        self.CurrActiveMerchantList = {}
-    else
-        local Merchant = self.CurrActiveMerchantList[MerchantID]
-        if Merchant then
-            self:OnClearMerchantCache(Merchant.MerchantID)
-        end
-    end
+    
 
     local InvestData = MerchantData.InvestData
     local TaskProgress = MerchantTask and MerchantTask.Progress or 0
@@ -374,6 +396,7 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
         NPCID = MerchantNPCID,
         MerchantPointID = MerchantPointID,
         TaskCenter = NPCBirthLocation,
+        HintDistance = TaskInfo.HintDistance,
         TaskRadius = TaskInfo.TaskRadius,
         TaskHeight = TaskInfo.TaskHeight,
         EscapeDistance = TaskInfo.EscapeDistance,
@@ -381,6 +404,8 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
         MerchantType = MerchantType,
         InvestStatus = InvestData and InvestData.InvestStatus or 0,
         SpentCoin = InvestData and InvestData.SpentCoin,
+        RewardCoin = InvestData and InvestData.RewardCoin,
+        IsSpecialReward = InvestData and InvestData.IsPlayEffect,
         Progress = TaskProgress,
         SubmitNum = TaskSubmitNum,
         FinishNum = TaskInfo.FinishNum,
@@ -403,10 +428,7 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
     if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_UNFINISHED then
         if TaskType == ETaskType.InteractiveTypePickUpCargo then 
             -- 拾取类型，显示采集物
-            if MerchantType == MERCHANT_TYPE.MysteryMerchantTypeExclusive then
-                --独享商人时显示采集物（共享商人不处理，服务器默认显示）
-                TaskEObjShowList = self:GetEObjsEditorList(TaskID, TaskInfo.VisualNum)
-            end
+            TaskEObjShowList = self:GetEObjsEditorList(TaskID, TaskInfo.VisualNum)
         else 
             -- 打怪类型,创建怪物模型
             MonsterAvatarList = self:CreateTaskMonsterAvatar(TaskID)
@@ -421,6 +443,10 @@ function MysterMerchantMgr:UpdateMerchant(MerchantData)
     self.CurrActiveMerchantList[MerchantID].MonsterAvatarList = MonsterAvatarList
     self.CurrActiveMerchantList[MerchantID].TaskEObjShowList = TaskEObjShowList
 
+    if self.MerchantCheckTimer == nil then
+        self.MerchantCheckTimer = self:RegisterTimer(self.MerchantTick, 0, 0.5, 0)
+    end
+
     -- 从位面副本出来时播放动作
     if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_FINISH then
         self:PlayActionTimeline(MerchantID, EATLType.FinishTaskIdle)
@@ -432,21 +458,27 @@ end
 ---@type 创建怪物模型
 function MysterMerchantMgr:CreateTaskMonsterAvatar(TaskID)
     local TaskInfo = MysterMerchantUtils.GetMerchantTaskInfo(TaskID)
-    local MonsterListID = TaskInfo.MonsterGroupListID
-    if MonsterListID == nil or MonsterListID <= 0 then
+    local MonsterListIDs = TaskInfo.MonsterGroupListIDs
+    if MonsterListIDs == nil or string.isnilorempty(MonsterListIDs) then
         return
     end
-
-    local MonsterGrouup = _G.MapEditDataMgr:GetMonsterGroupByListID(MonsterListID)
+    local MonsterList = string.split(MonsterListIDs, ",")
+    if #MonsterList <= 0 then
+        return
+    end
+    
+    -- 实际为创建ENPC
     local MonsterAvatarList = {}
-    if MonsterGrouup then
-        for _, Monster in ipairs(MonsterGrouup.Monsters) do
-            local ResID = Monster.ID
-            local BirthMapPoint = Monster.BirthPoint
+    for _, MonsterListID in ipairs(MonsterList) do
+        local ListID = tonumber(MonsterListID)
+        local NpcData = _G.MapEditDataMgr:GetNpcByListID(ListID)
+        if NpcData then
+            local ResID = NpcData.NpcID
+            local BirthMapPoint = NpcData.BirthPoint
             local BirthLocation = BirthMapPoint and _G.UE.FVector(BirthMapPoint.X, BirthMapPoint.Y, BirthMapPoint.Z)
-            local NPCRotation = _G.UE.FRotator(0, Monster.BirthDir, 0)
+            local NPCRotation = _G.UE.FRotator(0, NpcData.BirthDir, 0)
             local MonsterEntityID = _G.UE.UActorManager:Get():CreateClientActor(
-                _G.UE.EActorType.Monster, Monster.ListID, ResID, BirthLocation, NPCRotation
+                _G.UE.EActorType.Npc, NpcData.ListID, ResID, BirthLocation, NPCRotation
             )
             local MonsterActor = ActorUtil.GetActorByEntityID(MonsterEntityID)
             if (MonsterActor ~= nil) then
@@ -515,7 +547,7 @@ function MysterMerchantMgr:OnRemoveCollectItemAll(MerchantID)
             end
         end
     end
-    RemoveEObjList = nil
+    ExistMerchant.TaskEObjShowList = nil
 end
 
 ---@type 移除场景中的采集物
@@ -536,6 +568,7 @@ function MysterMerchantMgr:RemoveCollectItem(InEObjID)
             local ObjID = GatherEditorIDList[i]
             if InEObjID == ObjID then
                 table.remove(GatherEditorIDList, i)
+                _G.ClientVisionMgr:ClientActorLeaveVision(ObjID, _G.UE.EActorType.EObj)
                 --FLOG_ERROR("采集物被拾取隐藏:"..InEObjID)
             end
         end
@@ -568,8 +601,8 @@ end
 function MysterMerchantMgr:OnInteractiveEnd(MsgBody)
     local EndMsg = MsgBody.End
     local RecvInteractiveID = EndMsg and EndMsg.InteractiveID
-    local InteractionID = MysterMerchantUtils.GetInteractID()
-    if InteractionID and RecvInteractiveID ~= InteractionID then
+    local IsInteractionID = MysterMerchantUtils.IsMerchantTaskItemInteractID(RecvInteractiveID)
+    if not IsInteractionID then
         return
     end
     
@@ -578,6 +611,10 @@ function MysterMerchantMgr:OnInteractiveEnd(MsgBody)
         return
     end
     self:RemoveCollectItem(self.EObjID)
+
+    if self:IsOwnedEobjectsEnough() then
+        MsgTipsUtil.ShowTipsByID(MysterMerchantDefine.TipID.EnoughEObjects)
+    end
 end
 
 function MysterMerchantMgr:OnBagUpdate(Params)
@@ -607,13 +644,6 @@ function MysterMerchantMgr:OnBagUpdate(Params)
             end
         end
 	end
-end
-
-function MysterMerchantMgr:OnGameEventMajorDead(Params)
-    -- 主角死亡以后，移除Debuf
-    if self.MerchantID and self.MerchantID > 0 then
-        self:SendMsgRemoveStateReq(self.MerchantID)
-    end
 end
 
 -- 是否能创建商人NPC
@@ -704,10 +734,12 @@ function MysterMerchantMgr:RemoveMerchantCountDown(ActiveMerchant, EndTime, Poin
         PointID = PointID,
     }
 
-    if ActiveMerchant.RemoveTimer == nil then
-        FLOG_INFO(string.format("%s秒后移除商人：",Delay))
-        ActiveMerchant.RemoveTimer = self:RegisterTimer(RemoveMerchant, Delay, 0, 1, Params)
+    if ActiveMerchant.RemoveTimer then
+        self:UnRegisterTimer(ActiveMerchant.RemoveTimer)
+        ActiveMerchant.RemoveTimer = nil
     end
+    ActiveMerchant.RemoveTimer = self:RegisterTimer(RemoveMerchant, Delay, 0, 1, Params)
+    FLOG_INFO(string.format("%s秒后移除商人：",Delay))
 end
 
 function MysterMerchantMgr.ForceRemoveNPC(_, MerchantEntityID)
@@ -718,6 +750,7 @@ function MysterMerchantMgr.ForceRemoveNPC(_, MerchantEntityID)
     local _, ObjID = ActorUtil.GetInteractionObjInfo(MerchantEntityID)
     if ObjID then
         FLOG_INFO("商人消失："..table_to_string(ObjID))
+        _G.NpcDialogMgr:EndInteraction()
         _G.ClientVisionMgr:ClientActorLeaveVision(ObjID, _G.UE.EActorType.Npc)
         _G.EventMgr:SendEvent(EventID.RemoveMysterMerchantRangeCheckData, ObjID)
     else
@@ -829,7 +862,6 @@ function MysterMerchantMgr:OnClearMerchantCache(MerchantID)
         end
         self:OnReomveMonsters(MerchantID)
         self:OnRemoveCollectItemAll(MerchantID)
-        self:SendMsgRemoveStateReq(MerchantID)
 
         local ActiveMerchant = self.CurrActiveMerchantList[MerchantID]
         local NPCResID = ActiveMerchant and ActiveMerchant.NPCID
@@ -841,12 +873,17 @@ function MysterMerchantMgr:OnClearMerchantCache(MerchantID)
         self.CurrActiveMerchantList[MerchantID] = nil
     end
 
-    if self.EnterHintArea_Record and self.EnterHintArea_Record[MerchantID] then
-        self.EnterHintArea_Record[MerchantID] = nil
+    if self.EnterTriggerTaskArea_Record and self.EnterTriggerTaskArea_Record[MerchantID] then
+        self.EnterTriggerTaskArea_Record[MerchantID] = nil
+        self:ShowTaskInfoBar(false)
     end
 
-    if self.EnterCryHelpArea_Record and self.EnterCryHelpArea_Record[MerchantID] then
-        self.EnterCryHelpArea_Record[MerchantID] = nil
+    self:OnLeaveCryForHelpArea(MerchantID)
+    if self.CurrActiveMerchantList == nil or table.length(self.CurrActiveMerchantList) <= 0 then
+        if self.MerchantCheckTimer then
+            self:UnRegisterTimer(self.MerchantCheckTimer)
+            self.MerchantCheckTimer = nil
+        end
     end
 end
 
@@ -896,12 +933,13 @@ function MysterMerchantMgr:PlayActionTimeline(MerchantID, ATLType)
         --播放完解救动作后播放任务完成的待机动作
         if ATLType == EATLType.Saved then
             local Montage = NPCAnimationComponent:PlayActionTimeline(TimelineID)
-            local Length = AnimationUtil.GetAnimMontageLength(Montage) * 0.7
+            local Length = AnimationUtil.GetAnimMontageLength(Montage) or 0
+            local RealLen = Length * 0.7
             local function PlayIdleTimeline()
                 local IdleTimelineID = MysterMerchantUtils.GetMerchantATLID(self.MerchantID, TaskID, EATLType.FinishTaskIdle)
                 NPCAnimationComponent:SetIdleActionTimeline(IdleTimelineID)
             end
-            self:RegisterTimer(PlayIdleTimeline, Length, 0, 1)
+            self:RegisterTimer(PlayIdleTimeline, RealLen, 0, 1)
         else
             NPCAnimationComponent:SetIdleActionTimeline(TimelineID) -- 待机动作
         end
@@ -916,20 +954,26 @@ function MysterMerchantMgr:OnCheckAreaOverlap()
     for _, MerchantInfo in pairs(self.CurrActiveMerchantList) do
         local NPCCryForHelpRadius = MysterMerchantUtils.GetHelpDistance(MerchantInfo.TaskID)
         local TaskCenter = MerchantInfo.TaskCenter
+        local HintDistance = MerchantInfo.HintDistance
         local TaskRadius = MerchantInfo.TaskRadius
         local TaskHeight = MerchantInfo.TaskHeight
         local EscapeDistance = MerchantInfo.EscapeDistance
         if TaskCenter and not MerchantInfo.IsPendingDisable then
             local Dist = MajorLocation:Dist2D(TaskCenter)
+            -- 系统提示距离判断,当前地图只触发一次
+            if Dist < HintDistance then
+                self:OnEnterHintArea(MerchantInfo)
+            end
+
             if MajorLocation.Z <= TaskCenter.Z + TaskHeight and MajorLocation.Z >= TaskCenter.Z - TaskHeight then
                 if Dist < TaskRadius then
                     self:OnEnterTaskRange(MerchantInfo)-- 进入战斗区域
                 else
                     -- 喊话距离和脱战距离可能一样
                     if Dist < NPCCryForHelpRadius then
-                        self:OnEnterCryForHelpArea(MerchantInfo)-- 进入NPC喊话区域
+                        self:OnEnterCryForHelpArea(MerchantInfo, true)-- 进入NPC喊话区域
                     else
-                        self:OnLeaveCryForHelpArea(MerchantInfo)-- 退出NPC喊话区域
+                        self:OnLeaveCryForHelpArea(MerchantInfo.MerchantID)-- 退出NPC喊话区域
                     end
     
                     if Dist > EscapeDistance then
@@ -938,14 +982,46 @@ function MysterMerchantMgr:OnCheckAreaOverlap()
                 end
             else
                 self:OnLeaveTaskRange(MerchantInfo)-- 退出战斗区域
-                self:OnLeaveCryForHelpArea(MerchantInfo)-- 退出NPC喊话区域
+                self:OnLeaveCryForHelpArea(MerchantInfo.MerchantID)-- 退出NPC喊话区域
             end
         end
     end    
 end
 
+-- 当进入NPC提示区域
+function MysterMerchantMgr:OnEnterHintArea(MerchantInfo)
+    if MerchantInfo == nil then
+        return
+    end
+
+    local MerchantID = MerchantInfo.MerchantID
+    local TaskState = MerchantInfo.TaskState
+    if self.EnterHintArea_Record and self.EnterHintArea_Record[MerchantID] ~= nil then
+        return
+    end
+
+    if self.EnterHintArea_Record == nil then
+        self.EnterHintArea_Record = {}
+    end
+    
+    if self.EnterHintArea_Record then
+        self.EnterHintArea_Record[MerchantID] = MerchantID
+    end
+
+    if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_UNFINISHED then
+        MsgTipsUtil.ShowTipsByID(MysterMerchantDefine.TipID.EnterSystemHint)
+    end
+end
+
+-- 当离开NPC提示区域
+function MysterMerchantMgr:OnLeaveHintArea(MerchantID)
+    if self.EnterHintArea_Record and self.EnterHintArea_Record[MerchantID] then
+        self.EnterHintArea_Record[MerchantID] = nil
+    end
+end
+
 -- 当进入NPC喊话区域
-function MysterMerchantMgr:OnEnterCryForHelpArea(MerchantInfo)
+function MysterMerchantMgr:OnEnterCryForHelpArea(MerchantInfo, IsShowTips)
     if MerchantInfo == nil then
         return
     end
@@ -963,18 +1039,15 @@ function MysterMerchantMgr:OnEnterCryForHelpArea(MerchantInfo)
     if self.EnterCryHelpArea_Record then
         self.EnterCryHelpArea_Record[MerchantID] = MerchantID
     end
-    if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_UNFINISHED then
+
+    if TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_UNFINISHED and IsShowTips then
         MsgTipsUtil.ShowTipsByID(MysterMerchantDefine.TipID.EnterCryHelpArea[MerchantID])
     end
 end
 
 -- 当离开NPC喊话区域
-function MysterMerchantMgr:OnLeaveCryForHelpArea(MerchantInfo)
-    if MerchantInfo == nil then
-        return
-    end
-    local MerchantID = MerchantInfo.MerchantID
-    if self.EnterCryHelpArea_Record[MerchantID] ~= nil then
+function MysterMerchantMgr:OnLeaveCryForHelpArea(MerchantID)
+    if self.EnterCryHelpArea_Record and self.EnterCryHelpArea_Record[MerchantID] then
         self.EnterCryHelpArea_Record[MerchantID] = nil
     end
 end
@@ -987,18 +1060,14 @@ function MysterMerchantMgr:OnEnterTaskRange(MerchantInfo)
 
     local MerchantID = MerchantInfo.MerchantID
     self.MerchantID = MerchantID
-    if self.EnterHintArea_Record and self.EnterHintArea_Record[MerchantID] then
+    if self.EnterTriggerTaskArea_Record and self.EnterTriggerTaskArea_Record[MerchantID] then
         return
     else
-        if self.EnterHintArea_Record == nil then
-            self.EnterHintArea_Record = {}
+        if self.EnterTriggerTaskArea_Record == nil then
+            self.EnterTriggerTaskArea_Record = {}
         end
-        self.EnterHintArea_Record[MerchantID] = MerchantID
-
-        if self.EnterCryHelpArea_Record == nil then
-            self.EnterCryHelpArea_Record = {}
-        end
-        self.EnterCryHelpArea_Record[MerchantID] = MerchantID -- 传送过来的情况下，直接算进入了喊话范围
+        self.EnterTriggerTaskArea_Record[MerchantID] = MerchantID
+        self:OnEnterCryForHelpArea(MerchantInfo, false) -- 传送过来的情况下，直接算进入了喊话范围
         self:OnCheckTutorial()
     end
 
@@ -1059,18 +1128,15 @@ function MysterMerchantMgr:OnLeaveTaskRange(MerchantInfo)
     end
 
     local MerchantID = MerchantInfo.MerchantID
-    if self.EnterHintArea_Record[MerchantID] == nil then
+    if self.EnterTriggerTaskArea_Record[MerchantID] == nil then
         return
     else
-        self.EnterHintArea_Record[MerchantID] = nil
+        self.EnterTriggerTaskArea_Record[MerchantID] = nil
     end
 
     -- 隐藏右上方的大赛提醒UI
     self:ShowTaskInfoBar(false)
     MysterMerchantVM:OnLeaveTaskRange(MerchantInfo)
-    
-    --移除减速Debuff
-    self:SendMsgRemoveStateReq(MerchantID)
 end
 
 ---@type 新手引导系统解锁处理
@@ -1107,6 +1173,7 @@ function MysterMerchantMgr:OnInteractiveClick(NpcId, NpcEntityId, InteractionID,
     self.NPCID = NpcId
     self.NpcEntityId = NpcEntityId
     local FriendlinessLevel = MysterMerchantVM:GetFriendlinessLevel()
+    local DialogInfo = MysterMerchantUtils.GetMerchantDialogInfo(self.NPCID, FriendlinessLevel)
     if InteractionID == MysterMerchantDefine.EndInteractType.SubmitItems then 
         -- 提交货物
         self:ShowSubmitView()
@@ -1137,16 +1204,22 @@ function MysterMerchantMgr:OnInteractiveClick(NpcId, NpcEntityId, InteractionID,
             local Params = { CostItemID = CostItemID, CostNum = ExpenditureNum, CostColor = CostColor, RightBtnOpState = RightBtnOpState, MoneyData = MoneyData}
             _G.MsgBoxUtil:ShowMsgBoxTwoOp(
             LSTR(1110050), -- “冒险投资”
-            string.format(LSTR(1110051), ExpenditureNum), -- "是否愿意投资500金币资助冒险团的旅程？"
+            string.format(LSTR(1110051), ScoreMgr.FormatScore(ExpenditureNum)), -- "是否愿意投资500金币资助冒险团的旅程？"
             AcceptInvest, nil, 
             LSTR(1110052), -- "拒绝"
             LSTR(1110053), -- "投资"
             Params)
         end
 
-        local DialogInfo = MysterMerchantUtils.GetMerchantDialogInfo(self.NPCID, FriendlinessLevel)
         local InvestDialogID = DialogInfo and DialogInfo.InvestDialogID -- 投资选项对话ID
         _G.NpcDialogMgr:PlayDialogLib(InvestDialogID, self.NpcEntityId, false, ShowInvestWindow)
+    elseif InteractionID == MysterMerchantDefine.EndInteractType.Reward then
+        -- 投资回报
+        local function OnPlayDialogFinished()
+            self:ShowMysterRewardView()
+        end
+        local InvestRewardDialogID = DialogInfo and DialogInfo.InvestRewardDialogID or 0 -- 投资奖励对话ID
+        _G.NpcDialogMgr:PlayDialogLib(InvestRewardDialogID, self.NpcEntityId, false, OnPlayDialogFinished)
     elseif InteractionID == MysterMerchantDefine.EndInteractType.Talk then
         -- 交谈
         local CurMerchantData = self:GetCurrActiveMerchant()
@@ -1154,7 +1227,6 @@ function MysterMerchantMgr:OnInteractiveClick(NpcId, NpcEntityId, InteractionID,
         local DialogID = 0
         if CurMerchantData and CurMerchantData.TaskState == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_FINISH then
             -- 播放任务完成对话
-            local DialogInfo = MysterMerchantUtils.GetMerchantDialogInfo(self.NPCID, FriendlinessLevel)
             DialogID = DialogInfo and DialogInfo.FinishedDialogID or 0
         else
             -- 未完成任务情况下的默认对白（与任务相关）
@@ -1186,15 +1258,7 @@ function MysterMerchantMgr:OnSingleInteractive(EntranceItem)
         -- 播放对白
         local FriendlinessLevel = MysterMerchantVM:GetFriendlinessLevel()
         local DialogInfo = MysterMerchantUtils.GetMerchantDialogInfo(self.EntranceItem.ResID, FriendlinessLevel)
-        if self.InvestStatus == MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_WAIT_RECEIVE then
-            -- 领取投资奖励
-            local function OnPlayDialogFinished()
-                self:SendMsgInvestRewardReq(self.MerchantID)
-            end
-            _G.NpcDialogMgr:OverrideStatePending()
-            local InvestRewardDialogID = DialogInfo and DialogInfo.InvestRewardDialogID or 0 -- 投资奖励对话ID
-            _G.NpcDialogMgr:PlayDialogLib(InvestRewardDialogID, EntranceItem.EntityID, false, OnPlayDialogFinished)
-        else
+        if self.InvestStatus ~= MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_WAIT_RECEIVE then
             -- 播放默认对白
             _G.NpcDialogMgr:OverrideStatePending()
             local DefaultDialogID = DialogInfo and DialogInfo.DialogID or 0 -- 默认对白（完成任务情况下的一级交互对话ID）
@@ -1213,16 +1277,6 @@ function MysterMerchantMgr:EndInteraction()
 	_G.NpcDialogMgr:EndInteraction()
 end
 
----@type 是否显示提交货物选项
-function MysterMerchantMgr:IsShowGoodsSubmit()
-    --未完成且需要提交货物
-    local TaskInfoVM = MysterMerchantVM:GetTaskInfoVM()
-    local TaskStatus = TaskInfoVM and TaskInfoVM:GetTaskStatus()
-    local IsPickupTask = TaskInfoVM.TaskType == ETaskType.InteractiveTypePickUpCargo
-    local IsHaveTaskItem = self:GetOwnTaskItemNum() > 0
-    return IsPickupTask and IsHaveTaskItem and TaskStatus ~= MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_FINISH
-end
-
 ---@type 是否准备禁用商人
 function MysterMerchantMgr:IsPendingDisableMerchant(EntityID)
     if EntityID == nil then
@@ -1235,6 +1289,9 @@ function MysterMerchantMgr:IsPendingDisableMerchant(EntityID)
     end
     
     local CurrActiveMerchant = self:GetCurrActiveMerchant()
+    if CurrActiveMerchant == nil then
+        return true
+    end
     local MerchantNPCResID = CurrActiveMerchant and CurrActiveMerchant.NPCID or 0
     local MerchantEntityID = ActorUtil.GetActorEntityIDByResID(MerchantNPCResID)
     local IsPendingDisable = CurrActiveMerchant and CurrActiveMerchant.IsPendingDisable
@@ -1271,15 +1328,35 @@ end
 
 ---@type 任务剩余所需物品数
 function MysterMerchantMgr:GetActualRequireTaskItemNum()
-    -- 暂时只有一种任务物品
-    local OwnedNum = 0
-    for i, _ in ipairs(self.RequiredItemList) do
-        self:ProcessOnRequiredIndex(i, function(ItemData)
-            OwnedNum = OwnedNum + ItemData.Num
-        end)
+    local RequireTaskItemNum = self.RequiredNumList and self.RequiredNumList[1] or 0
+    local CurrActiveMerchant = self:GetCurrActiveMerchant()
+    if CurrActiveMerchant then
+        RequireTaskItemNum = RequireTaskItemNum - CurrActiveMerchant.SubmitNum
     end
-    return OwnedNum
+    return RequireTaskItemNum
 end
+
+---@type 是否显示提交货物选项
+function MysterMerchantMgr:IsShowGoodsSubmit()
+    --未完成且需要提交货物
+    local TaskInfoVM = MysterMerchantVM:GetTaskInfoVM()
+    local IsFinishTask = self:IsFinishMerchatTask()
+    local IsPickupTask = TaskInfoVM.TaskType == ETaskType.InteractiveTypePickUpCargo
+    local IsHaveTaskItem = self:GetOwnTaskItemNum() > 0
+    return IsPickupTask and IsHaveTaskItem and not IsFinishTask
+end
+
+---@type 是否拥有足够的任务物品
+function MysterMerchantMgr:IsOwnedEobjectsEnough()
+    --未完成且需要提交货物
+    local TaskInfoVM = MysterMerchantVM:GetTaskInfoVM()
+    local IsPickupTask = TaskInfoVM.TaskType == ETaskType.InteractiveTypePickUpCargo
+    local OwnedTaskItemNum = self:GetOwnTaskItemNum()
+    local RequireTaskItemNum = self:GetActualRequireTaskItemNum()
+    local IsEnough = OwnedTaskItemNum >= RequireTaskItemNum
+    return IsPickupTask and IsEnough
+end
+
 ---@type 是否显示神秘商品选项
 function MysterMerchantMgr:IsShowMysterMerchant()
     local TaskInfoVM = MysterMerchantVM:GetTaskInfoVM()
@@ -1289,10 +1366,29 @@ end
 
 ---@type 是否显示冒险投资选项
 function MysterMerchantMgr:IsShowInvestOption()
+    return self.InvestStatus == MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_TRIGGER --触发投资
+end
+
+---@type 是否触发冒险投资回报
+function MysterMerchantMgr:IsCanGetReward()
+    return self.InvestStatus == MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_WAIT_RECEIVE --触发投资回报
+end
+
+---@type 是否完成解围任务
+function MysterMerchantMgr:IsFinishMerchatTask()
+    local CurrActiveMerchant = self:GetCurrActiveMerchant()
+    if CurrActiveMerchant == nil then
+        return false
+    end
     local TaskInfoVM = MysterMerchantVM:GetTaskInfoVM()
     local TaskStatus = TaskInfoVM and TaskInfoVM:GetTaskStatus()
     local IsFinishTask = TaskStatus == MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_FINISH
-    return IsFinishTask and self.InvestStatus == MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_TRIGGER --触发投资
+    return IsFinishTask
+end
+
+---@type 显示回报界面
+function MysterMerchantMgr:ShowMysterRewardView()
+    _G.UIViewMgr:ShowView(_G.UIViewID.MysterMerchantRewardView)
 end
 
 ---@type 显示商店界面
@@ -1448,6 +1544,61 @@ function MysterMerchantMgr:ClearInteractFuncList()
     _G.InteractiveMgr.CurInteractEntrance:OnInit()
 end
 
+function MysterMerchantMgr:OnProfSwitch(Param)
+	-- 已触发任务，不处理
+	if not self.TriggerTaskFailed then
+		return
+	end
+
+	if Param == nil then
+		return
+	end
+    -- 不在任务范围内，不处理
+    if self.EnterTriggerTaskArea_Record == nil or self.EnterTriggerTaskArea_Record[self.MerchantID] == nil then
+        return
+    end
+
+	local ProfID = Param.ProfID
+	local NewSpecialization = RoleInitCfg:FindProfSpecialization(ProfID)
+	-- 生活职业和战斗职业切换时
+    if NewSpecialization == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT then
+        local CurrActiveMerchant = self:GetCurrActiveMerchant()
+        if CurrActiveMerchant then
+            self:SendMsgTriggerTaskReq(CurrActiveMerchant.MerchantID, CurrActiveMerchant.TaskID)
+        end
+    end
+end
+
+---@type 延迟显示奖励掉落
+function MysterMerchantMgr:OnMysteryMerchantLateShowLoot(LootList)
+    self:RegisterTimer(
+        function()
+            _G.LootMgr:SetDealyState(false)
+        end,
+        2,
+        0,
+        1
+    )
+
+    if LootList == nil or #LootList <= 0 then
+        return
+    end
+
+    local Params = {}
+    Params.ItemList = {}
+    local LOOT_TYPE = ProtoCS.LOOT_TYPE
+    for _, Loot in pairs(LootList) do
+        if Loot.Type == LOOT_TYPE.LOOT_TYPE_ITEM then 
+            table.insert(Params.ItemList, {ResID = Loot.Item.ResID, Num = Loot.Item.Value})
+        elseif Loot.Type == LOOT_TYPE.LOOT_TYPE_SCORE then
+            table.insert(Params.ItemList, {ResID = Loot.Score.ResID, Num = Loot.Score.Value})  
+        end
+    end
+
+    if #Params.ItemList > 0 then
+        _G.UIViewMgr:ShowView(_G.UIViewID.CommonRewardPanel, Params)
+    end
+end
 
 ----------------------------------------region NetMsg ----------------------------------------
 
@@ -1519,28 +1670,6 @@ function MysterMerchantMgr:OnNetMsgExclusiveDestroyRsp()
     self.IsTriggerExclusiveTask = false
 end
 
----@type 移除货物Debuff请求
-function MysterMerchantMgr:SendMsgRemoveStateReq(MerchantID)
-    if MerchantID == nil then
-        return
-    end
-
-    local StateID = MysterMerchantUtils.GetOverWeightStateID()
-    if not _G.BonusStateMgr:HasBonusStateMajor(StateID) then -- _G.SkillBuffMgr:IsBuffExist(DebufID)
-        return
-    end
-
-    local MsgID = CS_CMD.CS_CMD_MYSTER_MERCHANT
-    local SubMsgID = MERCHANT_CMD.MerchantBuffDestroy
-
-    local MsgBody = {}
-    MsgBody.Cmd = MERCHANT_CMD.MerchantBuffDestroy
-    MsgBody.MerchantBuffDestroy = {
-        MerchantID = MerchantID
-    }
-    _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-end
-
 ---@type 触发商人任务请求
 function MysterMerchantMgr:SendMsgTriggerTaskReq(MerchantID, TaskID)
     local MsgID = CS_CMD.CS_CMD_MYSTER_MERCHANT
@@ -1560,7 +1689,17 @@ function MysterMerchantMgr:SendMsgTriggerTaskReq(MerchantID, TaskID)
         MerchantID = MerchantID,
         SceneResID = SceneResID
     }
+    self.TriggerTaskFailed = false
     _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+---@type 任务请求回包
+function MysterMerchantMgr:OnNetMsgTriggerTaskRsp(MsgBody)
+    if MsgBody and MsgBody.ErrorCode then
+        self.TriggerTaskFailed = true
+        self:ShowTaskInfoBar(false)
+        return
+    end
 end
 
 ---@type 获取商品信息请求
@@ -1600,8 +1739,7 @@ end
 
 ---@type 投资成功
 function MysterMerchantMgr:OnNetMsgInvestRsp()
-    FLOG_INFO("冒险投资成功!!!!!!!!!!!!!!!!")
-    _G.MsgTipsUtil.ShowTipsByID(MysterMerchantDefine.TipID.InvestSuccess)
+    self:ShowTipsInvested()
     self.InvestStatus = MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_INVESTED
     local CurrActiveMerchant = self:GetCurrActiveMerchant()
     if CurrActiveMerchant then
@@ -1609,6 +1747,25 @@ function MysterMerchantMgr:OnNetMsgInvestRsp()
     end
     self:EndInteraction()
     self:ClearInteractFuncList()
+end
+
+---@type 投资成功提示
+function MysterMerchantMgr:ShowTipsInvested()
+    FLOG_INFO("冒险投资成功!!!!!!!!!!!!!!!!")
+    local SysnoticeCfg = require("TableCfg/SysnoticeCfg")
+    local Cfg = SysnoticeCfg:FindCfgByKey(MysterMerchantDefine.TipID.InvestSuccess)
+    if Cfg == nil then
+        return
+    end
+    local ContentTitle = Cfg.Content[1] or ""
+    local ContentSubTitle = ""
+    local CurMerchantData = self:GetCurrActiveMerchant()
+    local ExpenditureNum = CurMerchantData and CurMerchantData.SpentCoin or 0
+    if not string.isnilorempty(Cfg.Content[2]) and ExpenditureNum then
+        ContentSubTitle = string.format(Cfg.Content[2], ExpenditureNum)
+    end
+
+    MsgTipsUtil.ShowInfoTextTips(1, ContentTitle, ContentSubTitle, 3, nil, MysterMerchantDefine.SoundPath.InvestTip)
 end
 
 ---@type 投资奖励领取
@@ -1626,13 +1783,14 @@ end
 
 ---@type 投资奖励回包
 function MysterMerchantMgr:OnNetMsgInvestRewardRsp(MsgBody)
-    local RewardInfo = MsgBody and MsgBody.ReceiveRewards
-    local MerchantID = RewardInfo and RewardInfo.MerchantID or self.MerchantID
     self.InvestStatus = MERCHANT_INVEST_STATUS.INVEST_MERCHANT_STATUS_RECEIVED
-    local CurrActiveMerchant = self.CurrActiveMerchantList and self.CurrActiveMerchantList[MerchantID]
-    if CurrActiveMerchant then
-        CurrActiveMerchant.InvestStatus = self.InvestStatus
+    -- 商人状态共享
+    for _, ActiveMerchant in pairs(self.CurrActiveMerchantList) do
+        ActiveMerchant.InvestStatus = self.InvestStatus
     end
+   
+    self:EndInteraction()
+    self:ClearInteractFuncList()
 end
 
 ---@type 购买商品请求
@@ -1714,12 +1872,15 @@ function MysterMerchantMgr:OnNetMsgSubmitTaskSuccess(MsgBody)
     local SpentCoin = InvestData and InvestData.SpentCoin
     CurrActiveMerchant.InvestStatus = self.InvestStatus
     CurrActiveMerchant.SpentCoin = SpentCoin
+    CurrActiveMerchant.RewardCoin = InvestData and InvestData.RewardCoin
+    CurrActiveMerchant.IsSpecialReward = InvestData and InvestData.IsPlayEffect
     CurrActiveMerchant.TaskState = MERCHANT_TASK_STATUS.MERCHANT_TASK_STATUS_FINISH
     if CurrActiveMerchant.MerchantType == MERCHANT_TYPE.MysteryMerchantTypeExclusive then
         CurrActiveMerchant.EndTime = ExpireTime or TaskFinishTime
         local PointID = CurrActiveMerchant.MerchantPointID
         self:RemoveMerchantCountDown(CurrActiveMerchant, CurrActiveMerchant.EndTime, PointID) -- 在副本外，任务完成后需要计时回收独享商人
     end
+    MysterMerchantVM:UpdateInvestInfo(InvestData)
     self:OnRemoveCollectItemAll(MerchantID) --隐藏采集物
     if not _G.PWorldMgr:CurrIsInMerchant() then
         self:ShowMysterSettlementView()
@@ -1759,7 +1920,10 @@ function MysterMerchantMgr:OnNetMsgMerchantTaskProgressRsp(MsgBody)
         CurrActiveMerchant.TaskState = TaskStatus
         CurrActiveMerchant.InvestStatus = self.InvestStatus
         CurrActiveMerchant.SpentCoin = SpentCoin
+        CurrActiveMerchant.RewardCoin = InvestData and InvestData.RewardCoin
+        CurrActiveMerchant.IsSpecialReward = InvestData and InvestData.IsPlayEffect
     end
+    MysterMerchantVM:UpdateInvestInfo(InvestData)
     self:UpdateTaskInfo(MerchantID, TaskStatus, TaskProgress.Progress)
 end
 

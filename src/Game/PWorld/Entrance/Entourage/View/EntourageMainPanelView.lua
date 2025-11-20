@@ -21,6 +21,7 @@ local UIBinderSetSelectedIndex = require("Binder/UIBinderSetSelectedIndex")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
+local EventID = require("Define/EventID")
 
 local PWorldEntourageVM
 
@@ -219,7 +220,6 @@ function EntourageMainPanelView:OnRegisterUIEvent()
 end
 
 function EntourageMainPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.MajorProfSwitch ,            self.OnEveProf)
 	self:RegisterGameEvent(EventID.TeamInfoUpdate, function()
 		PWorldEntourageVM:UpdateJoinInfo()
 	end)
@@ -235,10 +235,6 @@ function EntourageMainPanelView:OnRegisterBinder()
 	if MajorVM then
 		self:RegisterBinders(MajorVM, self.MajorBinders)
 	end
-end
-
-function EntourageMainPanelView:OnEveProf()
-	PWorldEntourageVM:UpdateVM()
 end
 
 function EntourageMainPanelView:OnMajorLevelChanged(NewValue)

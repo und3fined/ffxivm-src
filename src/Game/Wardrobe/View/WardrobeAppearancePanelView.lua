@@ -156,7 +156,7 @@ function WardrobeAppearancePanelView:OnSelectedItem(Index, ItemData, ItemView)
 end
 
 function WardrobeAppearancePanelView:OnClickedBtnTreasure()
-	local CharismValue = WardrobeMgr:GetCharismNum()
+	local CharismValue = WardrobeMgr:GetCharmNum()
 	local CharismTotalValue = WardrobeMgr:GetCharismTotalNum() 
 	if CharismValue < CharismTotalValue then
 		self.VM.TipsPanelVisible = not self.VM.TipsPanelVisible

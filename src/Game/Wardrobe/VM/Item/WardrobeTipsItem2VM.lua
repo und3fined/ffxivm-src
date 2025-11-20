@@ -15,7 +15,9 @@ local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local WardrobeMgr = require("Game/Wardrobe/WardrobeMgr")
 local MajorUtil = require("Utils/MajorUtil")
-
+local ClientGlobalCfg = require("TableCfg/ClientGlobalCfg")
+local ProtoRes = require("Protocol/ProtoRes")
+local FashionDecoVM = require("Game/FashionDeco/VM/FashionDecoVM")
 
 ---@class WardrobeTipsItem2VM : UIViewModel
 local WardrobeTipsItem2VM = LuaClass(UIViewModel)
@@ -89,6 +91,15 @@ function WardrobeTipsItem2VM:UpdateProfAppList()
 	    end
 	end)
 
+
+	-- 插入时尚品鉴
+	local Item = {}
+	Item.ProfName = _G.LSTR(1080156) --时尚配饰
+	local TotalNum = _G.FashionDecoMgr:GetStaticTotalNumber()
+	Item.ProfID = 99
+	Item.Num = FashionDecoVM:GetFashionDecoNum()
+	Item.TotalNum = TotalNum
+	table.insert(ItemList, Item)
 
 	self.ProfAppList:UpdateByValues(ItemList)
 end

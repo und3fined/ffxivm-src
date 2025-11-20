@@ -82,7 +82,8 @@ function QueueMgr:StartQueue(WorldRegPercent)
 
     if self.bShowQueue and not self.TimerId then
         -- X秒刷新一次（3s），随机人数（1000-1500），随机剩余时间（90秒左右）
-        LoginNewVM.FakeWaitPeople = math.random(1000, 1500)
+        LoginNewVM.InitialPeople = math.random(1000, 1500)
+        LoginNewVM.FakeWaitPeople = LoginNewVM.InitialPeople
         LoginNewVM.FakeWaitTotalTime = math.random(70, 110)
         LoginNewVM.FakeWaitTotalTimeStr = self:GetTimeString(LoginNewVM.FakeWaitTotalTime)
         FLOG_INFO("[LoginNewTipsWinView:OnShow] FakeWaitTotalTime:%d", LoginNewVM.FakeWaitTotalTime)
@@ -100,7 +101,23 @@ function QueueMgr:UpdateQueue()
     if self.TimeCounter > 2 then
         --FLOG_INFO("[LoginNewTipsWinView:UpdateQueue] Update people")
         self.TimeCounter = 0
-        LoginNewVM.FakeWaitPeople = math.random(1000, 1500)
+
+        -- 计算时间比例和人数比例
+        local timeRatio = self.FakeWaitCountTime / LoginNewVM.FakeWaitTotalTime
+        local peopleRatio = 1 - timeRatio
+
+        -- 计算目标人数并添加随机波动
+        local targetPeople = math.max(0, math.floor(LoginNewVM.InitialPeople * peopleRatio))
+        if (LoginNewVM.FakeWaitTotalTime - self.FakeWaitCountTime) > 40 then
+            LoginNewVM.FakeWaitPeople = math.random(math.max(0, targetPeople - 20), targetPeople + 20)  -- 确保下限不小于0
+        elseif (LoginNewVM.FakeWaitTotalTime - self.FakeWaitCountTime) > 20 then
+            LoginNewVM.FakeWaitPeople = math.random(math.max(0, targetPeople - 10), targetPeople + 10)  -- 确保下限不小于0
+        elseif (LoginNewVM.FakeWaitTotalTime - self.FakeWaitCountTime) > 10 then
+            LoginNewVM.FakeWaitPeople = math.random(math.max(0, targetPeople - 5), targetPeople + 5)  -- 确保下限不小于0
+        else
+            LoginNewVM.FakeWaitPeople = targetPeople
+        end
+        FLOG_INFO("[LoginNewTipsWinView:UpdateQueue] targetPeople:%d, FakeWaitPeople:%d", targetPeople, LoginNewVM.FakeWaitPeople)
     end
 
     self.FakeWaitCountTime = self.FakeWaitCountTime + 1

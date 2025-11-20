@@ -196,6 +196,9 @@ function ActorUtil.GetActorName(EntityID)
 
 	local ResID = ActorUtil.GetActorResID(EntityID)
 	local Data = Cfg:FindCfgByKey(ResID) or {}
+	if nil == Data or type(Data) ~= "table" then
+		return ""
+	end
 	return Data.Name or ""
 end
 
@@ -314,7 +317,7 @@ end
 ---GetRoleIDByEntityID @找不到时可能会同步创建角色
 ---@param EntityID number
 function ActorUtil.GetRoleIDByEntityID(EntityID)
-	return UActorUtil.GetRoleIDByEntityID(EntityID)
+	return UActorUtil.GetRoleIDByEntityID(EntityID, true)
 end
 
 ---GetExistActorByEntityID @只查找已经创建的角色
@@ -361,7 +364,7 @@ function ActorUtil.GetActorEntityID(Actor)
 end
 
 ---GetActorByEntityID
----@param EntityID table
+---@param EntityID number
 ---@return ABaseCharacter
 function ActorUtil.GetActorByEntityID(EntityID)
 	return UActorUtil.GetActorByEntityID(EntityID)
@@ -643,10 +646,12 @@ end
 ---@param RoleSimple common.RoleSimple
 function ActorUtil.UpdateAvatar(Character, RoleSimple)
 	if nil == Character or RoleSimple == nil then
+		FLOG_WARNING("[ActorUtil.UpdateAvatar] Character or RoleSimple is nil")
 		return
 	end
 	local AvatarComp = Character:GetAvatarComponent()
 	if nil == AvatarComp then
+		FLOG_WARNING("[ActorUtil.UpdateAvatar] AvatarComp is nil")
 		return
 	end
 
@@ -664,10 +669,12 @@ end
 ---@param RoleSimple common.RoleSimple
 function ActorUtil.UpdateNakedBody(Character, RoleSimple)
 	if nil == Character or RoleSimple == nil then
+		FLOG_WARNING("[ActorUtil.UpdateNakedBody] Character or RoleSimple is nil")
 		return
 	end
 	local AttributeComp = Character:GetAttributeComponent()
 	if nil == AttributeComp then
+		FLOG_WARNING("[ActorUtil.UpdateNakedBody] AttributeComp is nil")
 		return
 	end
 	AttributeComp.RaceID = RoleSimple.Race
@@ -676,9 +683,11 @@ function ActorUtil.UpdateNakedBody(Character, RoleSimple)
 	AttributeComp:SetTribeID(RoleSimple.Tribe)
 	local AvatarComp = Character:GetAvatarComponent()
 	if nil == AvatarComp then
+		FLOG_WARNING("[ActorUtil.UpdateNakedBody] AvatarComp is nil")
 		return
 	end
 
+	print("[ActorUtil.UpdateNakedBody]")
 	AvatarComp:UpdateDefaultBody()
 	AvatarComp:AddAllNakedBody()
 end
@@ -690,12 +699,15 @@ function ActorUtil.UpdateEquips(Character, RoleAvatar)
 	local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 
 	if nil == Character or RoleAvatar == nil then
+		FLOG_WARNING("[ActorUtil.UpdateEquips] Character or RoleAvatar is nil")
 		return
 	end
 	local AvatarComp = Character:GetAvatarComponent()
 	if nil == AvatarComp then
+		FLOG_WARNING("[ActorUtil.UpdateEquips] AvatarComp is nil")
 		return
 	end
+	FLOG_INFO("[ActorUtil.UpdateEquips]")
 	local Assembler = AvatarComp:GetAssembler()
 
 	local EquipList = RoleAvatar.EquipList
@@ -718,6 +730,7 @@ function ActorUtil.UpdateEquips(Character, RoleAvatar)
 						bSetPreviewSectionStain = true
 						AvatarComp:SetPreviewSectionStain(true)
 					end
+					FLOG_INFO("[ActorUtil.UpdateEquips] StainPartForSection. AvatarPartType: %d, SectionID: %d, ColorID: %d", AvatarPartType, tonumber(SectionID) - 1, RegionDye.ColorID)
 					Assembler:StainPartForSection(AvatarPartType, tonumber(SectionID) - 1, RegionDye.ColorID)
 				end
 			end
@@ -742,45 +755,54 @@ end
 
 function ActorUtil.UpdateEquipRegionDyes(Character, PartID, EquipList)
 	if nil == Character or nil == PartID then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] Character or PartID is nil")
 		return
 	end
 	local AvatarComp = Character:GetAvatarComponent()
 	if nil == AvatarComp then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] AvatarComp is nil")
 		return
 	end
 	local Assembler = AvatarComp:GetAssembler()
 	if nil == Assembler then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] Assembler is nil")
 		return
 	end
 
+	FLOG_INFO("[ActorUtil.UpdateEquipRegionDyes] PartID:%d ", PartID)
 	local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 	local AvatarPartType = WardrobeDefine.StainPartType[PartID]
 	--先将该部位原来的染色数据清空，这个部位有外观、且有染色数据的情况下会重新设置
 	Assembler:ClearPartSectionStain(AvatarPartType)
 
 	if nil == EquipList then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] EquipList is nil")
 		return
 	end
 
 	local EquipAvatar = table.find_by_predicate(EquipList, function(e) return e.Part == PartID end)
 	if not EquipAvatar then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] EquipAvatar is nil")
 		return
 	end
 
 	local AppID = EquipAvatar.ResID or 0
 	local RegionDyes = EquipAvatar.RegionDyes or {}
 	if AppID == 0 or table.size(RegionDyes) == 0 then
+		FLOG_WARNING("[ActorUtil.UpdateEquipRegionDyes] AppID or RegionDyes is nil")
 		return
 	end
 
 	local bSetPreviewSectionStain = false;
 	for _, RegionDye in ipairs(RegionDyes ) do
 		local SectionList = WardrobeUtil.ParseSectionIDList(AppID, RegionDye.ID)
+		FLOG_INFO("[ActorUtil.UpdateEquipRegionDyes] AppID:%d, ID:%d, SectionList:%s ------>", AppID, RegionDye.ID, table.concat(SectionList, ","))
 		for _, SectionID in ipairs(SectionList) do
 			if bSetPreviewSectionStain == false then
 				bSetPreviewSectionStain = true
 				AvatarComp:SetPreviewSectionStain(true)
 			end
+			FLOG_INFO("[ActorUtil.UpdateEquipRegionDyes] SectionID:%d, ColorID:%d, AvatarPartType:%d ", SectionID, RegionDye.ColorID, AvatarPartType)
 			Assembler:StainPartForSection(AvatarPartType, tonumber(SectionID) - 1, RegionDye.ColorID)
 		end
 	end
@@ -970,45 +992,8 @@ end
 ---@param Location FVector 坐标，默认(-50, 0, 100002)，根据模块自身调整
 ---@param SystemType string 系统类型，目前只有人形和坐骑类型
 function ActorUtil.CreateUIActorShandow(WorldContextObject, TargetActor, InImage, Location, Type, IsComplexActor)
-	if not WorldContextObject or not TargetActor or not InImage then
-		FLOG_ERROR("[UIActorShandow] Param Is Nil! Please Check")
-		return
-	end
-
-	--低，极低画质关闭阴影
-	local QualityLevel = _G.UE.USaveMgr.GetInt(SaveKey.QualityLevel, _G.SettingsMgr.DefauleValueNotSave, false)
-	if QualityLevel <= 2 then
-		FLOG_INFO("[UIActorShandow] QualityLevel Low")
-		return
-	end
-
-	local AllActor = _G.UE.TArray(_G.UE.AActor)
-	if IsComplexActor then
-		for key, value in pairs(TargetActor) do
-			AllActor:Add(value)
-		end
-	else
-		AllActor:Add(TargetActor)
-	end
-    local Path = "Class'/Game/MaterialLibrary/Blueprint/PlaneShadow/BP_Character_PlaneShadow.BP_Character_PlaneShadow_C'"
-	local Class = ObjectMgr:LoadClassSync(Path, ObjectGCType.NoCache)
-    Location = Location or _G.UE.FVector(-50, 0, 100002)
-    local ShandowActor = CommonUtil.SpawnActor(Class, Location)
-	if not ShandowActor then return end
-	ShandowActor:UseSetting(Type or ActorUtil.ShadowType.Role)
-	local RenderTexture = nil
-	local Scale2D = nil
-    local CaptureComp2D = ShandowActor.SceneCaptureComponent2D
-	if CaptureComp2D then
-		--默认256x256
-		CaptureComp2D.bCaptureEveryFrame = true
-		CaptureComp2D:ClearShowOnlyComponents()
-		CaptureComp2D:SetVisibility(true)
-		CaptureComp2D.ShowOnlyActors = AllActor
-	end
-
-	--持有的引用各个模块自行销毁
-	return ShandowActor, RenderTexture
+	local ShandowActor = _G.UIShadowMgr:GetUIActorShandow(WorldContextObject, TargetActor, InImage, Location, Type, IsComplexActor)
+	return ShandowActor
 end
 
 function ActorUtil.SetUIActorShandowType(ShandowActor, Type)
@@ -1016,13 +1001,27 @@ function ActorUtil.SetUIActorShandowType(ShandowActor, Type)
 	ShandowActor:UseSetting(Type or ActorUtil.ShadowType.Role)
 end
 
---这里只会把Rt放回缓存池，各个模块持有的引用自行置为nil
-function ActorUtil.RealseUIActorShandow(RT)
-	if not RT or not _G.CommonUtil.IsObjectValid(RT) then
-		FLOG_ERROR("[UIActorShandow] RT Is Nil! Please Check")
-		return
+local AvatarPartType = _G.UE.EAvatarPartType
+function ActorUtil.LockTransformPosKeys(AvatarComp)
+	if AvatarComp then
+		AvatarComp:LockTransformByPosKey(AvatarPartType.WEAPON_MASTER_HAND)
+		AvatarComp:LockTransformByPosKey(AvatarPartType.WEAPON_SLAVE_HAND)
 	end
-	_G.CommonModelToImageMgr:ReleaseRenderTarger2D(RT)
+end
+
+function ActorUtil.UnlockTransformPosKeys(AvatarComp)
+	if AvatarComp then
+		AvatarComp:UnlockTransformByPosKey(AvatarPartType.WEAPON_MASTER_HAND)
+		AvatarComp:UnlockTransformByPosKey(AvatarPartType.WEAPON_SLAVE_HAND)
+	end
+end
+
+function ActorUtil.RegisterFreeActor(EntityID, Character)
+	UActorManager:RegisterFreeActor(EntityID, Character)
+end
+
+function ActorUtil.UnRegisterFreeActor(EntityID)
+	return UActorManager:UnRegisterFreeActor(EntityID)
 end
 
 return ActorUtil

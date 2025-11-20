@@ -9,8 +9,6 @@ local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = require("Define/UIViewID")
 local UIBindableList = require("UI/UIBindableList")
 local EmoActVM = require("Game/EmoAct/VM/EmoActVM")
--- local CommSideFrameTabsVM = require("Game/Common/Tab/CommSideFrameTabsVM")
-
 
 ---@class EmoActPanelVM : UIViewModel
 local EmoActPanelVM = LuaClass(UIViewModel)
@@ -21,7 +19,6 @@ end
 
 function EmoActPanelVM:OnInit()
 	self.DetailTipsVisible = false  --UI提示的可视性
-	-- self.CommSideFrameTabsVM = CommSideFrameTabsVM.New()
 	self.CurEmotionList = UIBindableList.New(EmoActVM)       --存放所有常用动作
 	self.CurEmotionFilter = 1+1       --将“情感动作类型”设置为：收藏0、一般1、持续2、表情3
 	self.ListRecentFavorite = nil   --最近使用+收藏

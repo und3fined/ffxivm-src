@@ -1,5 +1,6 @@
 local TemplateShutImageSize = _G.UE.FVector2D(308, 146)
 local MsgTipsID = require("Define/MsgTipsID")
+local LSTR = _G.LSTR
 
 local UITabMain = {
     Camera      = 1,
@@ -157,14 +158,14 @@ local RoleCtrlSettingInfo = {
     },
 }
 
-local RoleSettingType = 
+local RoleSettingType =
 {
     Ctrl    = 1,
     UnCtrl  = 2,
     Camera  = 3,
 }
 
-local RoleSettingTypeInfo = 
+local RoleSettingTypeInfo =
 {
     [RoleSettingType.Ctrl]    = {
         Name = LSTR(630010),
@@ -248,6 +249,66 @@ local PhotoTipsID = {
     TemplateDelete      = MsgTipsID.PhotoTemplateDelete,
 }
 
+---------------------------------------------------Edit Start---------------------------------------------------------------------------
+local UITabEditType = {
+    Crop  = 1,
+}
+
+local UIEditCropType = {
+    House  = 1,
+    Huanhua = 2,
+    Normal = 3,
+}
+
+local UITabEditTitleCfg = {
+    [UITabEditType.Crop] = LSTR(630080),
+}
+
+local UITabEditCfg = {
+    [UITabEditType.Crop] =
+    {
+        IconPath    = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_PhotoEdit.UI_Icon_Tab_PhotoEdit'",
+        Name        = "",
+        CB          = nil,
+        Params      = nil,
+        SelectIcon = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_PhotoEdit_Select.UI_Icon_Tab_PhotoEdit_Select'",
+    },
+}
+
+local UIEditSubCropCfg = {
+    [UIEditCropType.House] = {
+        {
+            CfgIdx = 1,
+            Name = LSTR(630067),
+            AspectRatioWidth = 16,
+            AspectRatioHeight = 9,
+        },
+    },
+    [UIEditCropType.Huanhua] = {
+        {
+            CfgIdx = 1,
+            Name = LSTR(630068),
+            AspectRatioWidth = 3,
+            AspectRatioHeight = 4,
+        },
+    },
+    [UIEditCropType.Normal] = {
+        {
+            CfgIdx = 1,
+            Name = LSTR(630067),
+            AspectRatioWidth = 16,
+            AspectRatioHeight = 9,
+        },
+        {
+            CfgIdx = 1,
+            Name = LSTR(630068),
+            AspectRatioWidth = 3,
+            AspectRatioHeight = 4,
+        },
+    },
+}
+---------------------------------------------------Edit End---------------------------------------------------------------------------
+
 local Define = {
     
     UITabMain = UITabMain,
@@ -313,6 +374,13 @@ local Define = {
     DofDis = 50,
 
     PhotoTipsID = PhotoTipsID,
+
+    UITabEditType = UITabEditType,
+    UIEditCropType = UIEditCropType,
+    UITabEditCfg = UITabEditCfg,
+    UIEditSubCropCfg = UIEditSubCropCfg,
+    CropAlreadyImgDownloadMax = 200,
+    UITabEditTitleCfg = UITabEditTitleCfg,
 }
 
 return Define

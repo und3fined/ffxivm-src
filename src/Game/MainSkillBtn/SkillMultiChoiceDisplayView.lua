@@ -163,7 +163,7 @@ function SkillMultiChoiceDisplayView:ViewShow(Params)
 	local _ <close> = CommonUtil.MakeProfileTag("SkillMultiChoiceDisplayView:ViewShow")
 
 
-	_G.EventMgr:SendEvent(EventID.SkillMultiChoicePanelShowed, { IsDisplayed = true })
+	_G.EventMgr:SendEvent(EventID.SkillMultiChoicePanelShowed, { IsDisplayed = true, bMajor = self.bMajor })
 	self.bActive = true
 
 	-- do
@@ -270,7 +270,13 @@ local function StopSkillUnlockAnimation(AbleBtn)
 end
 
 function SkillMultiChoiceDisplayView:ViewHide()
-	_G.EventMgr:SendEvent(EventID.SkillMultiChoicePanelShowed, { IsDisplayed = false })
+	_G.EventMgr:SendEvent(EventID.SkillMultiChoicePanelShowed, {
+		IsDisplayed = false,
+		BaseSkillIndex = self.BaseSkillIndex,
+		SelectIndex = self.SelectIndex,
+		bMajor = self.bMajor,
+		bActive = self.bActive,
+	})
 	self:OnSelectedCancelChange(false)
 	local EntityID = self.EntityID
 	local LogicData = _G.SkillLogicMgr:GetSkillLogicData(EntityID)
@@ -336,7 +342,11 @@ function SkillMultiChoiceDisplayView:DoMultiChoiceCastSkill()
 			local bSuccess = MainDerivedSkill:OnCastSkill()
 			if bSuccess == true then
 				return SelectIndex
+			else
+				_G.EventMgr:SendEvent(EventID.MajorSkillCastFailed, self.BaseSkillIndex)
 			end
+		else
+			_G.EventMgr:SendEvent(EventID.MajorSkillCastFailed, self.BaseSkillIndex)
 		end
 	end
 end
@@ -445,10 +455,18 @@ function SkillMultiChoiceDisplayView:StopLongClickDisplay()
 end
 
 function SkillMultiChoiceDisplayView:OnLongClick(Index)
+	if not self.SelectIdList or not self.SelectIdList[Index] then
+		return
+	end
 	local SkillID = self.SelectIdList[Index].ID or 0
 	local Widget = self.AbleMap[Index]
 	if SkillID > 0 then
 		self.SkillTipsHandle = _G.SkillTipsMgr:ShowMajorCombatSkillTips(SkillID, Widget)
+	end
+
+	if self.IsSkillDrugBtn then
+		self.SkillDrugBtn:OnLongClickButtonUp()
+		self.IsSkillDrugBtn = false
 	end
 end
 

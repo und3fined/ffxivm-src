@@ -28,6 +28,7 @@ local SCORE_TYPE = ProtoRes.SCORE_TYPE
 ---@field EFF_1 UFCanvasPanel
 ---@field HorizontalCost UFCanvasPanel
 ---@field ImgCoin UFImage
+---@field MainLBottomPanel MainLBottomPanelView
 ---@field MoneySlot CommMoneySlotView
 ---@field ProBar UProgressBar
 ---@field SlotItem CommBackpack96SlotView
@@ -56,6 +57,7 @@ function CraftingLogSimpleWorkPanelView:Ctor()
 	--self.EFF_1 = nil
 	--self.HorizontalCost = nil
 	--self.ImgCoin = nil
+	--self.MainLBottomPanel = nil
 	--self.MoneySlot = nil
 	--self.ProBar = nil
 	--self.SlotItem = nil
@@ -79,6 +81,7 @@ function CraftingLogSimpleWorkPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose1)
 	self:AddSubView(self.CrafterTitleItem)
+	self:AddSubView(self.MainLBottomPanel)
 	self:AddSubView(self.MoneySlot)
 	self:AddSubView(self.SlotItem)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -110,12 +113,12 @@ function CraftingLogSimpleWorkPanelView:OnShow()
 	self.TextQuantity:SetText(_G.LSTR(80055)) --制作数量
 	self.TextBtnL:SetText(_G.LSTR(80056)) --停止制作
 	self.TextBtnR:SetText(_G.LSTR(80057)) --立即完成
-	
+
 	local Params = self.Params
 	local bIsReconnect = Params and Params.bIsReconnect or false
 	self:InitPanel(bIsReconnect)
-	self:StartMake()
-	
+	self:StartMake(bIsReconnect)
+
 	--关闭摇杆显示
 	CommonUtil.DisableShowJoyStick(true)
 	CommonUtil.HideJoyStick()
@@ -155,13 +158,21 @@ function CraftingLogSimpleWorkPanelView:InitPanel(bIsReconnect)
 	self.MoneySlot:UpdateView(SCORE_TYPE.SCORE_TYPE_GOLD_CODE, false, nil, true)
 end
 
-function CraftingLogSimpleWorkPanelView:StartMake()
+function CraftingLogSimpleWorkPanelView:StartMake(bIsReconnect)
 	SimpleVM.IsClickCloseBtn = false
 
 	--需要延迟一点时间，以确保进入制作状态的表现完成
     local function EnterAnimFinish()
-        self:ToMake()
-		self.DelayMakeTimerID = nil
+		if _G.CrafterMgr.IsMaking then
+			if bIsReconnect and _G.CrafterMgr.CrafterResultRsp ~= nil and not _G.CrafterMgr.bResultShown then
+				FLOG_INFO("CraftingLogSimpleWorkPanel not ToMake")
+			else
+				self:ToMake()
+			end
+			self.DelayMakeTimerID = nil
+		else
+			SimpleVM:QuitSimpleMake()
+		end
     end
     self.DelayMakeTimerID = self:RegisterTimer(EnterAnimFinish, _G.CrafterMgr.EnterStateTime, 1, 1)
 end
@@ -287,6 +298,11 @@ function CraftingLogSimpleWorkPanelView:OnFinishBtnClicked()
 	--如果技能还在施放中点击的立即完成只走协议
 	local IsSkilling, SubSkillID = self:IsSkilling()
 	if IsSkilling == true and SubSkillID ~= nil then
+		--如果正在制作的是最后一次
+		local CurLeftNum = SimpleVM:GetLeftNum()
+		if CurLeftNum == 1 and _G.CrafterMgr.CrafterResultRsp ~= nil then
+			return
+		end
 		SimpleVM.IsClickRightAway = true --回包之后再false，防止断线没发过去，重连后再来一次
 		--加上已经释放技能的这次（放在这里加是因为大概率执行到OnSimpleMakeRltCounts时Msg被新的回包覆盖，就会少一次）
 		SimpleVM:AddMakeCounts(1)

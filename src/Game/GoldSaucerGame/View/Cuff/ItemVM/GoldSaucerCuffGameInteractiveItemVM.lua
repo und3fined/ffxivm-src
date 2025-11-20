@@ -19,6 +19,7 @@ local InteractionType = {
     Red = 2,
     StarLight = 4,
     Empty = 5,
+    Fail = 6,
 }
 
 ---@class GoldSaucerCuffGameInteractiveItemVM : UIViewModel
@@ -53,7 +54,7 @@ function GoldSaucerCuffGameInteractiveItemVM:UpdateVM(Data)
     self.DelayShowTime = Data.DelayShowTime
     self.DelayShrinkTime = Data.DelayShrinkTime
     self.ShrinkSp = Data.ShrinkSp
-    self.Scale = CuffDefine.BlowDefaultSize * (1 - (Data.Scale - 1))
+    self.Scale = CuffDefine.BlowDefaultSize * Data.Scale -- (1 - ( - 1))
     self.bBlowResultVisible = Data.bBlowResultVisible
     self.bBtnVisible = Data.bBtnVisible
     if Data.ResultData ~= nil then
@@ -105,7 +106,7 @@ function GoldSaucerCuffGameInteractiveItemVM:AdapterOnGetWidgetIndex()
     elseif Type == InteractionCategory.CATEGORY_STARLIGHT then
         return InteractionType.StarLight
     elseif Type == InteractionCategory.CATEGORY_ERROR then
-        return InteractionType.StarLight
+        return InteractionType.Fail
     elseif Type == InteractionCategory.CATEGORY_NONE then
         return InteractionType.Empty
     else

@@ -1,7 +1,7 @@
 local UIViewID = require("Define/UIViewID")
 
 local MutuallyExclusiveUIConfig = {
-    UIViewID.Main2ndPanel,
+    --UIViewID.Main2ndPanel,
     UIViewID.EmotionMainPanel,
     --UIViewID.CommEasytoUseView,
     UIViewID.PhotoMain,
@@ -18,6 +18,8 @@ local MutuallyExclusiveUIConfig = {
     UIViewID.ArmyDepotPanel,
     UIViewID.ChatMainPanel,
     UIViewID.ShopMainPanelView,
+    UIViewID.HouseStyleWinView,
+    UIViewID.ChocoboMainPanelView,
 }
 
 return MutuallyExclusiveUIConfig

@@ -8,6 +8,8 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local ArmyDefine = require("Game/Army/ArmyDefine")
+local UIDefine = require("Define/UIDefine")
+local SearchBtnColorType = UIDefine.SearchBtnColorType
 
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 
@@ -74,8 +76,8 @@ function ArmyMemberClassInfoEditItemView:OnCheckChanged(bChecked)
 end
 
 function ArmyMemberClassInfoEditItemView:OnCanEditChanged(bCanEdit)
-    self.SingleBoxEdit:SetIsEnabled(bCanEdit)
-
+    self.SingleBoxEdit:SetClickable(bCanEdit)
+    self.SingleBoxEdit:SetColorType(UIDefine.SearchBtnColorType.Dark, not bCanEdit)
 end
 
 function ArmyMemberClassInfoEditItemView:OnRegisterUIEvent()

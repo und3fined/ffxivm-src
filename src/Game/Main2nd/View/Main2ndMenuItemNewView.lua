@@ -79,6 +79,9 @@ function Main2ndMenuItemNewView:OnShow()
 	elseif Item.BtnRedDotID and Item.BtnRedDotID ~= 0 then
 		self.CommonRedDot_UIBP:SetRedDotIDByID(Item.BtnRedDotID)
 	end
+	-- if Params.Index then
+	-- 	self.CommonRedDot_UIBP:SetLisKey(Item.ListKey, Params.Index)
+	-- end
 	--self:PlayAnimation(self.AnimIn1)
 end
 

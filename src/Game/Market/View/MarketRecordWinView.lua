@@ -21,6 +21,7 @@ local EventID = _G.EventID
 ---@field Bg Comm2FrameLView
 ---@field PanelPurchaseHistory UFCanvasPanel
 ---@field PanelSalesRecord UFCanvasPanel
+---@field PanelSearchEmpty CommBackpackEmptyView
 ---@field Tab CommHorTabsView
 ---@field TableViewRecords UTableView
 ---@field TableViewSalesRecord UTableView
@@ -43,6 +44,7 @@ function MarketRecordWinView:Ctor()
 	--self.Bg = nil
 	--self.PanelPurchaseHistory = nil
 	--self.PanelSalesRecord = nil
+	--self.PanelSearchEmpty = nil
 	--self.Tab = nil
 	--self.TableViewRecords = nil
 	--self.TableViewSalesRecord = nil
@@ -63,6 +65,7 @@ end
 function MarketRecordWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.Bg)
+	self:AddSubView(self.PanelSearchEmpty)
 	self:AddSubView(self.Tab)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -75,6 +78,8 @@ function MarketRecordWinView:OnInit()
 		{ "SellRecordItemVMList", UIBinderUpdateBindableList.New(self, self.SellTableViewAdapter) },
 		{ "PurchaseRecordVisible", UIBinderSetIsVisible.New(self, self.PanelPurchaseHistory) },
 		{ "SalesRecordVisible", UIBinderSetIsVisible.New(self, self.PanelSalesRecord) },
+		--{ "SearchEmptyVisible", UIBinderSetIsVisible.New(self, self.PanelSearchEmpty) },
+		
 	}
 end
 
@@ -84,6 +89,7 @@ end
 
 function MarketRecordWinView:OnShow()
 	self.IsOnShow = true
+	self.Tab:CancelSelected()
 	if MarketRecordWinVM.CurType == ProtoCS.MarketRecordType.MarketRecordType_Sell then
 		self.Tab:SetSelectedIndex(2)
 	else
@@ -121,6 +127,13 @@ end
 
 function MarketRecordWinView:OnMarketRecordListUpdata(RecordInfo)
 	MarketRecordWinVM:UpdateListInfo(RecordInfo)
+	if MarketRecordWinVM.CurType == ProtoCS.MarketRecordType.MarketRecordType_Buy then
+		UIUtil.SetIsVisible(self.PanelSearchEmpty, not MarketRecordWinVM.PurchaseRecordVisible)
+		self.PanelSearchEmpty:SetTipsContent(LSTR(1010108))
+	elseif MarketRecordWinVM.CurType == ProtoCS.MarketRecordType.MarketRecordType_Sell then
+		UIUtil.SetIsVisible(self.PanelSearchEmpty, not MarketRecordWinVM.SalesRecordVisible)
+		self.PanelSearchEmpty:SetTipsContent(LSTR(1010109))
+	end
 end
 
 function MarketRecordWinView:OnRegisterBinder()

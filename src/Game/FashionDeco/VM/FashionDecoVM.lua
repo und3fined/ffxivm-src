@@ -13,6 +13,7 @@ local ClientGlobalCfg = require("TableCfg/ClientGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local USaveMgr = _G.UE.USaveMgr
 local LSTR = _G.LSTR
+local AvatarPartType = _G.UE.EAvatarPartType.Ornament_Wing
 ---@class FashionDecoVM : UIViewModel
 local FashionDecoVM = LuaClass(UIViewModel)
 
@@ -67,11 +68,52 @@ function FashionDecoVM:RemovePlayerEquipMap(InEntityID)
 
 end
 
+--获取收藏的数量
+function FashionDecoVM:GetCollectNum()
+    local CurrentCollectNum = 0
+    for _,v in pairs(self.FashionDecorateMap) do
+        if  v.IsCollect  then
+            CurrentCollectNum = CurrentCollectNum + 1
+        end
+    end
+
+    return CurrentCollectNum
+end
+
+--获取饰品是否已解锁
+function FashionDecoVM:IsItemUnlocked(InID)
+    if InID ~= nil and self.FashionDecorateMap[InID] ~= nil and InID > 0 then
+        return true
+    end
+    return false
+end
+
+--获取当前拥有的时尚配饰的数量
+function FashionDecoVM:GetFashionDecoNum()
+    local Num = 0
+    for _, v in pairs(self.FashionDecorateMap) do
+        Num = Num + 1
+    end
+    return Num
+end
+
+--获取对应类型的时尚配饰的数量
+function FashionDecoVM:GetFashionDecoNumByType(InType)
+    local Num = 0
+    for _, v in pairs(self.FashionDecorateMap) do
+        local Type = self:GetTypeByID(v.ID)
+        if Type == InType then
+            Num = Num + 1
+        end
+    end
+    return Num
+end
+
 --通过时尚配饰ID获取类型
 function FashionDecoVM:GetTypeByID(InID)
-    local itemCurrentSelectedCfg = FashionDecorateCfg:FindCfgByKey(InID)
-    if itemCurrentSelectedCfg ~= nil then
-        return itemCurrentSelectedCfg.DecorationType
+    local Cfg = FashionDecorateCfg:FindCfgByKey(InID)
+    if Cfg ~= nil then
+        return Cfg.DecorationType
     end
     return 0
 end
@@ -161,7 +203,7 @@ function FashionDecoVM:StopSingBar(InEntityID)
         end
 
         if self.EntitySingStateRecordMap ~= nil then
-            self.EntitySingStateRecordMap[InEntityID] = false
+            self.EntitySingStateRecordMap[InEntityID] = false   --存在风险，玩家EntityID会在某些情况被更新，若以此作为key，需要监听EventID.MajorEntityIDUpdate事件同步更新key
         end
     end
 end
@@ -187,7 +229,7 @@ function FashionDecoVM:PlayUmSkillActionByIndex(InEntityID,InFashionDecorateID,A
                 local AnimComp =  ActorUtil.GetActorAnimationComponent(InEntityID)
                 if self.ActionPlayList[InEntityID] ~= nil then
                     AnimationUtil.MontageStop(PlayerAnimInst, self.ActionPlayList[InEntityID].SavedMontage)
-                    local LocalAnimInstance = AnimComp:GetPartAnimInstance(3202)
+                    local LocalAnimInstance = AnimComp:GetPartAnimInstance(AvatarPartType)    -- 3202是时尚配饰翅膀部位 _G.UE.EAvatarPartType.Ornament_Wing
                     if LocalAnimInstance ~= nil then
                         AnimationUtil.MontageStop(LocalAnimInstance, self.ActionPlayList[InEntityID].OtherMontage)
                     end
@@ -202,11 +244,17 @@ function FashionDecoVM:PlayUmSkillActionByIndex(InEntityID,InFashionDecorateID,A
                     end
                 end
 
-                local SavedMontage = AnimationUtil.PlayAnyAsMontage(InEntityID, UseAnim, "WholeBody", nil, nil, "")
+                local function SavedMontageCallback()
+                    _G.LookAtMgr:RecoverMajorLookAtParam()
+                end
+                local SavedMontage = AnimationUtil.PlayAnyAsMontage(InEntityID, UseAnim, "WholeBody", SavedMontageCallback, nil, "")
+                --暂时去掉主角的注视目标
+                _G.LookAtMgr:RecordMajorLookAtParam()
+                _G.LookAtMgr:OnUnSelectTarget()
 
                 local OtherMontage
                 if AnimComp ~= nil then 
-                    OtherMontage = AnimComp:PlayAnimation(AnimMgr:GetActionTimeLinePath(itemSkillcfg.OtherActiontimeline),1.0,0.25,0.25,true,3202,true,true)
+                    OtherMontage = AnimComp:PlayAnimation(AnimMgr:GetActionTimeLinePath(itemSkillcfg.OtherActiontimeline), 1.0,0.25,0.25,true,AvatarPartType,true,true)
                 end
                 self.ActionPlayList[InEntityID] ={SavedMontage = SavedMontage,OtherMontage = OtherMontage}
             end
@@ -273,7 +321,7 @@ function FashionDecoVM:ClearData()
     self.FashionDecorateMap = {}
     self.CurrentClothingMap = {}
     self.MainVM = nil
-    self.ChooseType = nil
+    self.ChooseType = FashionDecoDefine.FashionDecorateAutoUseChooseType.FashionDecorateUseByNone
     self.IsInFashionDecorateState = false
     self.PlayerEquipMap = {}
     self.ActionPlayList = {}
@@ -330,6 +378,9 @@ function FashionDecoVM:GetTypeNum(InType)
 end
 --增加新已解锁元素
 function FashionDecoVM:AddNewRecordElemFashionDeco(InID,InFlag,InUpdateTime)
+    if InID == 0 then
+        return
+    end
     self.FashionDecorateMap[InID] = {ID = InID,Flag = InFlag,UpdateTime = InUpdateTime,IsCollect = false}
     local itemCurrentSelectedCfg = FashionDecorateCfg:FindCfgByKey(InID)
     if itemCurrentSelectedCfg ~= nil then
@@ -342,19 +393,25 @@ function FashionDecoVM:AddNewRecordElemFashionDeco(InID,InFlag,InUpdateTime)
     end
 end
 
+--ID是否已解锁
+function FashionDecoVM:IsUnlockedById(InID)
+    return self.FashionDecorateMap[InID] ~= nil
+end
+
 --获取第一个解锁的类型
 function FashionDecoVM:GetFirstUnlockedType()
     local LastType = nil
     for _,v in pairs(self.FashionDecorateMap) do
         local itemcfg = FashionDecorateCfg:FindCfgByKey(v.ID)
-        if LastType == nil then
-            LastType = itemcfg.DecorationType
-        else
-            if itemcfg.DecorationType < LastType then
+        if itemcfg then
+            if LastType == nil then
                 LastType = itemcfg.DecorationType
+            else
+                if itemcfg.DecorationType < LastType then
+                    LastType = itemcfg.DecorationType
+                end
             end
         end
-
     end
     if LastType == nil then
         LastType = FashionDecoDefine.FashionDecoType.Umbrella
@@ -412,11 +469,14 @@ function FashionDecoVM:UpdateCollectState(InID,InCurrentCollect)
     if self.FashionDecorateMap[InID] ~= nil then
         self.FashionDecorateMap[InID].IsCollect = InCurrentCollect
         --更新主界面当前收藏按钮
-        if self.MainVM.CurrentSelectedID == InID then
-            self.MainVM.CurrentSelectedIsCollect = InCurrentCollect
+        local TargetItem = nil
+        if self.MainVM ~= nil then
+            if self.MainVM.CurrentSelectedID == InID then
+                self.MainVM.CurrentSelectedIsCollect = InCurrentCollect
+            end
+            --更新主界面元素的选中元素右上角图标
+            TargetItem = self.MainVM:FindItemByID(InID)
         end
-        --更新主界面元素的选中元素右上角图标
-        local TargetItem = self.MainVM:FindItemByID(InID)
 
         if TargetItem ~= nil then
             TargetItem.IconCollectVisible = InCurrentCollect
@@ -489,6 +549,9 @@ end
 function FashionDecoVM:GetActionListDataByID(InCurrentSelectedID,InVMType)
     local List = {}
     local itemCurrentSelectedCfg = FashionDecorateCfg:FindCfgByKey(InCurrentSelectedID)
+    if itemCurrentSelectedCfg == nil then
+        return List
+    end
 
     if itemCurrentSelectedCfg.DecorationType == FashionDecoDefine.FashionDecoType.Wing then
         return List
@@ -508,11 +571,13 @@ function FashionDecoVM:GetActionListDataByID(InCurrentSelectedID,InVMType)
 
     end
 
-    local ItemVM = InVMType.New()
-    ItemVM.ChangeState = true
-    ItemVM.Icon = "Texture2D'/Game/Assets/Icon/ItemIcon/008000/UI_Icon_008101.UI_Icon_008101'";
-    List[#List + 1] = ItemVM
-
+    --雨伞在技能后面，默认加一个切换姿势的技能
+    if itemCurrentSelectedCfg.DecorationType == FashionDecoDefine.FashionDecoType.Umbrella then
+        local ItemVM = InVMType.New()
+        ItemVM.ChangeState = true
+        ItemVM.Icon = "Texture2D'/Game/Assets/Icon/ItemIcon/008000/UI_Icon_008101.UI_Icon_008101'";
+        List[#List + 1] = ItemVM
+    end
     return List
 end
 function FashionDecoVM:GetAllReadStatus()
@@ -568,7 +633,6 @@ function FashionDecoVM:GetListDataByType(InType,InVMType)
                 ItemVM.IconCollectVisible = false
             end
             List[#List + 1] = ItemVM
-
         end
     end
 
@@ -625,9 +689,7 @@ function FashionDecoVM:GetListDataByType(InType,InVMType)
                 end
 
                 ItemVM.IconCollectVisible = false
-
                 List[#List + 1] = ItemVM
-
             end
         end
     end
@@ -657,8 +719,6 @@ function FashionDecoVM:GetListDataByType(InType,InVMType)
         end
     end
     self:AddEmptySlot(InVMType,List,EmptyNum-#List)
-
-
     return List
 end
 
@@ -695,29 +755,11 @@ function FashionDecoVM:CheckHasCollect()
 
     return false
 end
-function FashionDecoVM:GetCollectNum()
-    local CurrentCollectNum = 0
-    for _,v in pairs(self.FashionDecorateMap) do
-        if  v.IsCollect  then
-            CurrentCollectNum = CurrentCollectNum + 1
-        end
-    end
 
-    return CurrentCollectNum
-end
-function FashionDecoVM:IsItemUnlocked(InID)
-
-    if InID ~= nil and self.FashionDecorateMap[InID] ~= nil and InID > 0 then
-        return true
-    end
-
-    return false
-end
 function FashionDecoVM:OnShutdown()
     self.FashionDecorateMap = {}
     self.CurrentClothingMap = nil
     self.MainVM = nil
 end
-
 
 return FashionDecoVM

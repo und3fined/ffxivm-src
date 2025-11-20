@@ -79,9 +79,9 @@ function StoreNewPosterItemView:UpdateRetDotInfo()
 	if _G.StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
 		self.RedDot:SetStyle(RedDotDefine.RedDotStyle.TextStyle)
 		self.RedDot:SetRedDotText(LSTR(1220001))	--- 新
-		if _G.StoreMgr.RedDotPathList[self.ViewModel.GoodID] ~= nil and _G.StoreMgr:GetServerRedDotData(self.ViewModel.GoodID) == 1 then
+		if _G.StoreMysteryBoxMgr.RedDotPathList[self.ViewModel.GoodID] ~= nil and _G.StoreMysteryBoxMgr:GetServerRedDotData(self.ViewModel.GoodID) == 1 then
 			UIUtil.SetIsVisible(self.RedDot, true)
-			self.RedDot:SetRedDotNameByString(_G.StoreMgr.RedDotPathList[self.ViewModel.GoodID])
+			self.RedDot:SetRedDotNameByString(_G.StoreMysteryBoxMgr.RedDotPathList[self.ViewModel.GoodID])
 		else
 			UIUtil.SetIsVisible(self.RedDot, false)
 		end
@@ -109,18 +109,18 @@ end
 
 function StoreNewPosterItemView:OnSelectChanged(NewValue)
 	UIUtil.SetIsVisible(self.ImgSelect, NewValue)
-	if NewValue and _G.StoreMgr.RedDotPathList ~= nil and _G.StoreMgr.RedDotPathList[self.ViewModel.GoodID] ~= nil then
-		_G.RedDotMgr:DelRedDotByName(_G.StoreMgr.RedDotPathList[self.ViewModel.GoodID])
-		_G.StoreMgr.RedDotPathList[self.ViewModel.GoodID] = nil
-		_G.StoreMgr:ChangeRedDotState(self.ViewModel.GoodID, 0)
-		if table.is_nil_empty(_G.StoreMgr.RedDotPathList) then
+	if NewValue and _G.StoreMysteryBoxMgr.RedDotPathList ~= nil and _G.StoreMysteryBoxMgr.RedDotPathList[self.ViewModel.GoodID] ~= nil then
+		_G.RedDotMgr:DelRedDotByName(_G.StoreMysteryBoxMgr.RedDotPathList[self.ViewModel.GoodID])
+		_G.StoreMysteryBoxMgr.RedDotPathList[self.ViewModel.GoodID] = nil
+		_G.StoreMysteryBoxMgr:ChangeRedDotState(self.ViewModel.GoodID, 0)
+		if table.is_nil_empty(_G.StoreMysteryBoxMgr.RedDotPathList) then
 			_G.RedDotMgr:DelRedDotByID(19)
 		end
 	end
 end
 
 function StoreNewPosterItemView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.StoreUpdateMysterBoxRedDot, self.UpdateRetDotInfo)
+	self:RegisterGameEvent(_G.EventID.StoreUpdateMysteryBoxRedDot, self.UpdateRetDotInfo)
 end
 
 function StoreNewPosterItemView:OnRegisterBinder()

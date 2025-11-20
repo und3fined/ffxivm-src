@@ -298,8 +298,11 @@ end
 
 local function UpdateSelectedNPCRotation(Yaw)
     local CurSelectedNPC = _G.FashionEvaluationMgr:GetSelectedNPCActor()
-    if CurSelectedNPC then
+    if CurSelectedNPC and _G.CommonUtil.IsObjectValid(CurSelectedNPC) then
+        FLOG_INFO("临时测试，触摸时尚品鉴达人旋转："..Yaw)
         CurSelectedNPC:K2_SetActorRotation(_G.UE.FRotator(0, Yaw, 0), false)
+    else
+        FLOG_INFO("临时测试，触摸时尚品鉴达人旋转：未选中达人")
     end
 end
 
@@ -343,13 +346,21 @@ function FashionEvaluationMgr:ShowFashionActorScene(IsVisible)
             self.Render2DView = View.Render2D
             self.Render2DView.CallBackRotate = UpdateSelectedNPCRotation
             self:RestoreUICharacterAvatar()
-            self.Render2DView:HidePlayer(true)
+            self:HideUICharacter(true)
         end
     else
         if UIViewMgr:IsViewVisible(UIViewID.FashionEvaluationMainPanel) then
             UIViewMgr:HideView(UIViewID.FashionEvaluationMainPanel)
         end
     end
+end
+
+function FashionEvaluationMgr:HideUICharacter(IsHide)
+    if not self.Render2DView or not _G.CommonUtil.IsObjectValid(self.Render2DView) then
+		return nil
+	end
+    self.Render2DView:HidePlayer(IsHide)
+    self.UICharacterIsHide = IsHide
 end
 
 ---@type 显示时尚品鉴主界面
@@ -836,11 +847,12 @@ function FashionEvaluationMgr:SetNPCToDefaultTransform(EntityID)
 end
 
 function FashionEvaluationMgr:GetUIComplexCharacter()
-	if not self.Render2DView then
+	if not self.Render2DView or not _G.CommonUtil.IsObjectValid(self.Render2DView) then
 		return nil
 	end
-
-	return self.Render2DView.UIComplexCharacter
+    if _G.CommonUtil.IsObjectValid(self.Render2DView.UIComplexCharacter) then
+        return self.Render2DView.UIComplexCharacter
+    end
 end
 
 ---@type 试穿单个外观
@@ -887,18 +899,21 @@ end
 
 ---@type 试穿外观列表
 function FashionEvaluationMgr:WearAppearanceList(AppearanceList, IsMajorCharacter)
-	if AppearanceList == nil then
+	if AppearanceList == nil or next(AppearanceList) == nil then
 		return
 	end
 
+    if not IsMajorCharacter then
+        self:RestoreUICharacterAvatar()
+    end
+    
 	for _, Appearance in pairs(AppearanceList) do
 		local Part = Appearance.Part
 		local AppearanceID = Appearance.AppearanceID
         local EquipID = 0
-        if AppearanceID == nil or AppearanceID <= 0 then
-            EquipID = Appearance.DefaultEquipID
+        if AppearanceID and AppearanceID > 0 then
+            self:WearAppearance(Part, AppearanceID, EquipID, IsMajorCharacter)
         end
-        self:WearAppearance(Part, AppearanceID, EquipID, IsMajorCharacter)
 	end
 end
 

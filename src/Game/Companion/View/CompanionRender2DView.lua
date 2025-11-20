@@ -252,6 +252,7 @@ function CompanionRender2DView:CreateCompanionActor(CompanionID, CreateParam)
         UE.UVisionMgr.Get():RemoveFromVision(self.CompanionActor)
     end
 
+    self:DestroyShadow()
     -- 是否需要阴影
     local IsNeedShadow = true
     if CreateParam.IsNeedShadow ~= nil then
@@ -319,14 +320,10 @@ function CompanionRender2DView:SwitchToModelCamera(IsSwitch)
     if CameraMgr == nil then return end
 
 	if IsSwitch then
-        -- 禁用关卡流送，避免主视角切换导致子关卡被卸载
-	    UILevelMgr:SwitchLevelStreaming(false)
         --切换相机
         CameraMgr:SwitchCamera(self.SceneActor, 0)
     else
         CameraMgr:ResumeCamera(0, true, self.SceneActor)
-        -- 恢复关卡流送
-	    UILevelMgr:SwitchLevelStreaming(true)
     end
 end
 
@@ -790,12 +787,20 @@ end
 function CompanionRender2DView:SetActorVisible(IsVisible)
 	if self.CompanionActor == nil or IsVisible == nil then return end
 	local CompanionCharacter = self.CompanionActor:Cast(UE.ACompanionCharacter)
+    if CompanionCharacter == nil then
+        FLOG_ERROR("[CompanionRender2DView][SetActorVisible]Cast failed")
+        return
+    end
 	CompanionCharacter:SetActorVisibility(IsVisible, _G.UE.EHideReason.Common)
 end
 
 function CompanionRender2DView:GetActorVisible()
 	if self.CompanionActor == nil then return end
 	local CompanionCharacter = self.CompanionActor:Cast(UE.ACompanionCharacter)
+    if CompanionCharacter == nil then
+        FLOG_ERROR("[CompanionRender2DView][GetActorVisible]Cast failed")
+        return
+    end
 	return CompanionCharacter:GetActorVisibility()
 end
 
@@ -966,6 +971,10 @@ function CompanionRender2DView:SwitchModel(CompanionID)
 
 	FLOG_INFO(string.format("[CompanionRender2DView][SwitchModel]Load %s model", self:GetCompanionName(CompanionID)))
 	local CompanionCharacter = self.CompanionActor:Cast(UE.ACompanionCharacter)
+    if CompanionCharacter == nil then
+        FLOG_ERROR("[CompanionRender2DView][SwitchModel]Cast failed")
+        return
+    end
 	CompanionCharacter:SwitchRole(CompanionID)
 end
 
@@ -979,7 +988,7 @@ end
 
 function CompanionRender2DView:DestroyShadow()
     if self.ShadowActor then
-        CommonUtil.DestroyActor(self.ShadowActor)
+        _G.UIShadowMgr:ReleaseShadowActor()
         self.ShadowActor = nil
     end
 end

@@ -51,33 +51,6 @@ ItemVM.SelectMode = {
 
 ItemVM.SelcteStatus = {Change = 1, Superposition = 2} -- 1，改变选中状态，2，叠加选中状态支持多种
 
-ItemVM.ItemColorType =
-{
-	-- ITEM_COLOR_WHITE = 1,	-- 白
-	-- ITEM_COLOR_GREEN = 2,	-- 绿
-	-- ITEM_COLOR_BLUE = 3,	-- 蓝
-	-- ITEM_COLOR_PURPLE = 4,	-- 紫
-	-- ITEM_COLOR_RED = 6,	-- 红,
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_01.UI_Quality_Slot_NQ_01'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_02.UI_Quality_Slot_NQ_02'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_03.UI_Quality_Slot_NQ_03'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_NQ_04.UI_Quality_Slot_NQ_04'",
-}
-
-ItemVM.ItemHQColorType =
-{
-	-- ITEM_COLOR_WHITE = 1,	-- 白
-	-- ITEM_COLOR_GREEN = 2,	-- 绿
-	-- ITEM_COLOR_BLUE = 3,	-- 蓝
-	-- ITEM_COLOR_PURPLE = 4,	-- 紫
-	-- ITEM_COLOR_ORANGE = 5,	-- 橙
-	-- ITEM_COLOR_RED = 6,	-- 红,
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_01.UI_Quality_Slot_HQ_01'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_02.UI_Quality_Slot_HQ_02'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_03.UI_Quality_Slot_HQ_03'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "Texture2D'/Game/Assets/Icon/Quality/UI_Quality_Slot_HQ_04.UI_Quality_Slot_HQ_04'",
-}
-
 ---Ctor
 function ItemVM:Ctor()
 	self.Source = nil
@@ -114,7 +87,7 @@ function ItemVM:Ctor()
 	self.IsMask = false
 
 	self.IsObtain = false
-	self.ItemQualityIcon = self.ItemColorType[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE]
+	self.ItemQualityIcon = nil
 
 	self.SingID = nil
 	self.IsNeedProps = nil
@@ -132,6 +105,7 @@ function ItemVM:Ctor()
 
 
 	--选中样式
+-- self.SelectedMode = ItemVM.SelectMode.Select
 	for key, value in pairs(ItemVM.SelectMode) do
 		self[value] = false
 		self[key] = false
@@ -140,6 +114,7 @@ function ItemVM:Ctor()
 
 	self.ItemColorAndOpacity = FLinearColor(1, 1, 1, 1) --物品颜色透明度设置
 
+	self.ItemSlotType = nil
 end
 
 function ItemVM:IsEqualVM(Value)
@@ -169,13 +144,6 @@ function ItemVM:UpdateVM(Value, Params)
 	end
 	self.IsDaily = false
 	if Params ~= nil then
-		if Params.Source ~= ItemSource.MatchReward then
-			self.SelectedMode = ItemVM.SelectMode.Select
-		end
-		if Params.Source == ItemSource.FishBait then
-			self.SelectedMode = ItemVM.SelectMode.Tick
-		end
-
 		self.SelectChangedCallback = Params.SelectChangedCallback
 		Params.SelectedMode = Value.SelectedMode
 		self:UpdateParams(Params)
@@ -193,7 +161,13 @@ function ItemVM:UpdateVM(Value, Params)
 	self.IncrementedNum = Value.IncrementedNum
 	
 	if self.IsShowNumProgress == true then
-		self.Num = ItemUtil.GetNumProgressFormat(Value.LeveQuest ~= nil and _G.LeveQuestMgr:GetCanPayItemNum(ValueResID) or BagMgr:GetItemNum(ValueResID), Value.Num)
+		if Value.LeveQuest ~= nil then
+			self.Num = ItemUtil.GetNumProgressFormat2(_G.LeveQuestMgr:GetCanPayItemNum(ValueResID), Value.Num)
+		elseif Value.IsQuestTarget then
+			self.Num = ItemUtil.GetNumProgressFormat2(Value.OwnNum, Value.Num)
+		else
+			self.Num = ItemUtil.GetNumProgressFormat(BagMgr:GetItemNum(ValueResID), Value.Num)
+		end
 	else
 		self.Num = ItemUtil.GetItemNumText(Value.Num)
 	end
@@ -217,6 +191,8 @@ function ItemVM:UpdateVM(Value, Params)
 
 	if nil ~= Value.ShowChoose then
 		self.IconChooseVisible = Value.ShowChoose
+	else
+		self.IconChooseVisible = false
 	end
 
 	if nil ~= Value.ShowReceived then
@@ -272,14 +248,15 @@ function ItemVM:UpdateVM(Value, Params)
 		end
 
 		self.IsHQ = (1 == Cfg.IsHQ)
-		if self.IsHQ then
-			self.ItemQualityIcon = ItemVM.ItemHQColorType[Cfg.ItemColor]
-		else
-			self.ItemQualityIcon = ItemVM.ItemColorType[Cfg.ItemColor]
-		end
 
 		if Params and Params.ItemSlotType ~= nil then
-			self.ItemQualityIcon = ItemUtil.GetSlotColorIcon(self.ResID, Params.ItemSlotType)
+			self.ItemSlotType = Params.ItemSlotType
+		end
+
+		if self.ItemSlotType then
+			self.ItemQualityIcon = ItemUtil.GetSlotColorIcon(self.ResID, self.ItemSlotType)
+		else
+			self.ItemQualityIcon = ItemUtil.GetItemColorIcon(self.ResID)
 		end
 
 		self.NQHQItemID = Cfg.NQHQItemID
@@ -329,10 +306,14 @@ function ItemVM:UpdateParams(Params)
 
 	if nil ~= ParamsIsCanBeSelected then
 		self.IsCanBeSelected = ParamsIsCanBeSelected
+	else
+		self.IsCanBeSelected = true
 	end
 
 	if nil ~= ParamsIsShowNum then
 		self.IsShowNum = ParamsIsShowNum
+	else
+		self.IsShowNum = true
 	end
 
 	if nil ~= ParamsIsShowNumProgress then
@@ -357,10 +338,18 @@ function ItemVM:UpdateParams(Params)
 			end
 		end
 		self.SelectedMode = Params.SelectedMode
+	else
+		self.SelectedMode = ItemVM.SelectMode.Select
+		for key, value in pairs(ItemVM.SelectMode) do
+			self[value] = false
+			self[key] = false
+		end
 	end
 
 	if nil ~= Params.ShowItemLevel then
 		self.ItemLevelVisible = Params.ShowItemLevel
+	else
+		self.ItemLevelVisible = false
 	end
 	
 end

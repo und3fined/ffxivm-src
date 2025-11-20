@@ -18,7 +18,9 @@ local ChocoboLevelCfg = require("TableCfg/ChocoboLevelCfg")
 local ChocoboNameCfg = require("TableCfg/ChocoboNameCfg")
 local BuddyColorCfg = require("TableCfg/BuddyColorCfg")
 local ChocoboMatchSectionCfg = require("TableCfg/ChocoboMatchSectionCfg")
+local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local ProtoCS = require("Protocol/ProtoCS")
+local ProtoCommon = require("Protocol/ProtoCommon")
 local LSTR = nil
 local ChocoboMgr = nil
 local UE = nil
@@ -51,6 +53,7 @@ function ChocoboVM:Ctor()
     self.ExpSliderValue = 0
     self.ExpText = ""
     self.FeatherValue = 0
+    self.SkillLevel = 1
     self.FeatherIconPath = ""
     self.IsRent = false
     self.HasFather = false
@@ -100,6 +103,27 @@ function ChocoboVM:Ctor()
         [ChocoboDefine.OVERVIEW_FILTER_TYPE.STAMINA] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.ATTR_STAMINA),
         [ChocoboDefine.OVERVIEW_FILTER_TYPE.SKILL_STRENGTH] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.ATTR_SKILL_STRENGTH),
     }
+end
+
+function ChocoboVM:UpdateVMByVote(VoteInfo)
+    if VoteInfo == nil or not VoteInfo.ActorID or not VoteInfo.Chocobo then
+        return
+    end
+    
+    local Data = VoteInfo.Chocobo
+    self.ChocoboID = Data.ID
+    self.Level = Data.Level
+    self.Gender = Data.Gender
+    local NameCfg1 = ChocoboNameCfg:FindValue(Data.Name.Name1, "Name") or ""
+    local NameCfg2 = ChocoboNameCfg:FindValue(Data.Name.Name2, "Name") or ""
+    self.Name = NameCfg1 .. " " .. NameCfg2
+    self.ColorID = Data.Color
+
+    local ColorCfg = BuddyColorCfg:FindCfgByKey(self.ColorID)
+    if ColorCfg ~= nil then
+        self.ColorName = ColorCfg.Name
+        self.Color = UE.FLinearColor(ColorCfg.R / 255, ColorCfg.G / 255, ColorCfg.B / 255, 1)
+    end
 end
 
 ---UpdateVM
@@ -164,6 +188,21 @@ function ChocoboVM:UpdateVM(Data)
     --羽力值=五项属性上限的总和×(竞赛等级+10) / 500。计算结果向下取整
     self.FeatherValue = math.floor((Data.Level + 10) * FeatherValue / 500)
     self.FeatherLevel = 1
+
+    self.SkillLevel = 1
+    local SkillLevelThresholds = {}
+    SkillLevelThresholds[1] = 0
+    local SkillValue = (Data.Attr and Data.Attr.Attr and Data.Attr.Attr[ProtoCommon.ChocoboAttrType.AttrTypeSkillStrenth]) or 0
+    local GlobalCfgValue = GameGlobalCfg:FindValue(ProtoRes.Game.game_global_cfg_id.GAME_CFG_CHOCOBO_LEVEL_TWO_SKILL_STRENGTH, "Value")
+    SkillLevelThresholds[2] = GlobalCfgValue and GlobalCfgValue[1] or 200
+    GlobalCfgValue = GameGlobalCfg:FindValue(ProtoRes.Game.game_global_cfg_id.GAME_CFG_CHOCOBO_LEVEL_THREE_SKILL_STRENGTH, "Value")
+    SkillLevelThresholds[3] = GlobalCfgValue and GlobalCfgValue[1] or 400
+
+    if SkillValue >= SkillLevelThresholds[3] then
+        self.SkillLevel = 3
+    elseif SkillValue >= SkillLevelThresholds[2] then
+        self.SkillLevel = 2
+    end
 
     local SectionCfgs = ChocoboMatchSectionCfg:FindAllCfg()
     for __, SectionCfg in pairs(SectionCfgs) do
@@ -268,7 +307,7 @@ function ChocoboVM:UpdateVM(Data)
     for i = 1, #Data.Mating.Child do
         local ChocoboID = Data.Mating.Child[i]
         local ChildInfo = ChocoboMgr:GetChocoboInfoByID(ChocoboID)
-        if ChildInfo ~= nil then
+        if ChildInfo and ChildInfo.Status ~= ProtoCS.ChocoboStatus.StatusMating then
             local TempData = {}
             TempData.ChocoboID = ChocoboID
             local ChildName1 = ChocoboNameCfg:FindValue(ChildInfo.Name.Name1, "Name") or ""

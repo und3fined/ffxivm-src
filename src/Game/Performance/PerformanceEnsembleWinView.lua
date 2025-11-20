@@ -22,11 +22,10 @@ local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local UIBindableList = require("UI/UIBindableList")
 local ActorUtil = require("Utils/ActorUtil")
-
 local ProtoCS = require ("Protocol/ProtoCS")
 local GameNetworkMgr = require("Network/GameNetworkMgr")
 local UIDefine = require("Define/UIDefine")
-local CommBtnColorType = UIDefine.CommBtnColorType
+local AudioUtil = require("Utils/AudioUtil")
 
 local EnsembleStatus = ProtoCS.EnsembleStatus
 
@@ -53,6 +52,9 @@ local LSTR = _G.LSTR
 ---@field TextEnsembleListen UFTextBlock
 ---@field TextTips UFTextBlock
 ---@field TextTitle UFTextBlock
+---@field AnimProgress UWidgetAnimation
+---@field AnimShowAgain UWidgetAnimation
+---@field AnimShowFirst UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceEnsembleWinView = LuaClass(UIView, true)
 
@@ -75,6 +77,9 @@ function PerformanceEnsembleWinView:Ctor()
 	--self.TextEnsembleListen = nil
 	--self.TextTips = nil
 	--self.TextTitle = nil
+	--self.AnimProgress = nil
+	--self.AnimShowAgain = nil
+	--self.AnimShowFirst = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -100,7 +105,7 @@ function PerformanceEnsembleWinView:InitStaticText()
 	self.TextTitle:SetText(LSTR(830089))
 	self.TextEnsembleListen:SetText(LSTR(830019))
 	
-	self.BtnCancel:SetBtnName(LSTR(830060))
+	self.BtnCancel:SetBtnName(LSTR(10003))
 	self.BtnStart:SetBtnName(LSTR(830028))
 	self.BtnKeep:SetBtnName(LSTR(830103))
 	UIUtil.SetIsVisible(self.BtnClose, false)
@@ -111,46 +116,62 @@ function PerformanceEnsembleWinView:OnDestroy()
 end
 
 function PerformanceEnsembleWinView:OnShow()
+	--区别首次、切后台打开不同的动效
+	if self.Params and self.Params.bFromSidebar then
+		self:PlayAnimation(self.AnimShowAgain)
+	else
+		self:PlayAnimation(self.AnimShowFirst)
+	end
+
+	--播放提示音效
+	AudioUtil.LoadAndPlay2DSound(MPDefines.Ensemble.EnterEnsembleWinPanelSoundPath)
+
 	self.VM.TextBPM = string.format(LSTR(830049), _G.MusicPerformanceVM.EnsembleMetronome.BPM or 0)
 	self.VM.TextBEAT = string.format(LSTR(830048), _G.MusicPerformanceVM.EnsembleMetronome.Beat or 0)
 	self.VM.TextAssistant = string.format(LSTR(830017), (_G.MusicPerformanceVM.EnsembleMetronome.Assistant or false) and LSTR(830021) or LSTR(830011))
 
 	self.VM.PanelProBarVisible = true
 	self.VM.TextTipsVisible = true
+	self.VM.PanelEnsembleListenVisible = _G.MusicPerformanceVM.EnsembleMetronome.Assistant
 
 	self.VM.PlayerList:Clear()
 	for _, RoleID in _G.TeamMgr:IterTeamMembers() do
 		local EntityID = ActorUtil.GetEntityIDByRoleID(RoleID)
-		-- local Actor = ActorUtil.GetActorByEntityID(EntityID)
 		local AttrCom = ActorUtil.GetActorAttributeComponent(EntityID)
-		
 		local ProfID = ActorUtil.GetActorProfID(EntityID)
 		if ProfID == ProtoCommon.prof_type.PROF_TYPE_BARD then
 			--是不是演奏状态
 			local StateComp = ActorUtil.GetActorStateComponent(EntityID)
 			if StateComp then
 				if StateComp:IsInNetState(ProtoCommon.CommStatID.CommStatPerform) then
-					local MusicPerformanceMemberItemVM = MusicPerformanceMemberItemVM.New()
-					MusicPerformanceMemberItemVM.RoleID = RoleID
-					MusicPerformanceMemberItemVM.EntityID = EntityID
-					MusicPerformanceMemberItemVM.Name = AttrCom.ActorName
-					MusicPerformanceMemberItemVM.Level = AttrCom.Level
-					MusicPerformanceMemberItemVM.IsMajor = ActorUtil.IsMajor(EntityID)
-					self.VM.PlayerList:Add(MusicPerformanceMemberItemVM)
+					local TeamMemberVM = _G.TeamMgr:GetTeamMemberVMByRoleID(RoleID)
+					if TeamMemberVM then
+						local MusicPerformanceMemberItemVM = MusicPerformanceMemberItemVM.New()
+						MusicPerformanceMemberItemVM.RoleID = RoleID
+						MusicPerformanceMemberItemVM.EntityID = EntityID
+						MusicPerformanceMemberItemVM.Name = AttrCom.ActorName
+						MusicPerformanceMemberItemVM.Level = AttrCom.Level
+						MusicPerformanceMemberItemVM.IsMajor = TeamMemberVM.IsMajor
+						MusicPerformanceMemberItemVM.JoinTime = TeamMemberVM.JoinTime
+						self.VM.PlayerList:Add(MusicPerformanceMemberItemVM)
+					end
 				end
 			end
 		end
 	end
+	self.VM.PlayerList:Sort(self.SortTeamList)
 	_G.MusicPerformanceMgr:SetTeamPlayerList(self.VM.PlayerList)
 	
 	local DropDownList = { {Name = LSTR(830046)}, {Name = LSTR(830015)} }
 	self.DropDownAssistant:UpdateItems(DropDownList, MusicPerformanceUtil.IsPerformanceSyncedWithParty() and 1 or 2)
-	self.VM.TextBtnStart = _G.TeamMgr:IsCaptain() and LSTR(830028) or LSTR(830038)
-	self.VM.TextBtnCancel = _G.TeamMgr:IsCaptain() and LSTR(830014) or LSTR(830030)
+	self.VM.TextBtnStart = _G.TeamMgr:IsCaptain() and LSTR(830028) or LSTR(10002)
+	self.VM.TextBtnCancel = _G.TeamMgr:IsCaptain() and LSTR(10003) or LSTR(10070)
 	self:UpdateTextEL()
 	self:SetConfirmStatus(_G.MusicPerformanceVM.EnsembleConfirmStatus[MajorUtil.GetMajorRoleID()])
 	--隐藏面板后，再打开时需要检查队伍所有人确认完之后的表现
 	self:CheckAllTeamPlayerConfirmState(false)
+
+	_G.MusicPerformanceMgr:SetEnsembleConfirmSidebarVisible(false)
 end
 
 function PerformanceEnsembleWinView:OnHide()
@@ -158,9 +179,8 @@ end
 
 function PerformanceEnsembleWinView:SetConfirmStatus(Status)
 	local IsConfirmed = Status == MPDefines.ConfirmStatus.ConfirmStatusConfirm
-	self.VM.PanelEnsembleListenVisible = not IsConfirmed
-	self.VM.TextELVisible = IsConfirmed
-
+	self.VM.PanelEnsembleListenVisible = _G.MusicPerformanceVM.EnsembleMetronome.Assistant and not IsConfirmed
+	self.VM.TextELVisible = _G.MusicPerformanceVM.EnsembleMetronome.Assistant and IsConfirmed
 	if _G.TeamMgr:IsCaptain() then
 		local IsTeamAllAgree = _G.MusicPerformanceMgr:GetTeamConfirmResult() == MPDefines.TeamConfirmResult.AllAgree
 		self.VM.BtnStartIsEnable = IsTeamAllAgree
@@ -218,6 +238,7 @@ end
 --暂时收起按钮
 function PerformanceEnsembleWinView:OnBtnKeepClicked()
 	_G.UIViewMgr:HideView(self.ViewID)
+	_G.MusicPerformanceMgr:SetEnsembleConfirmSidebarVisible(true)
 end
 
 function PerformanceEnsembleWinView:OnBtnEnsembleListenHelpClicked()
@@ -257,10 +278,19 @@ end
 
 --进度倒计时改变
 function PerformanceEnsembleWinView:OnReadyTimeChanged(Value)
-	self.VM.ProBarValue = Value / MPDefines.Ensemble.DefaultSettings.ReadyTime
 	self.VM.TextTips = string.format(LSTR(830040), MPDefines.Ensemble.DefaultSettings.ReadyTime - Value)
+	self:UpdateProBarProgressAnimation(Value)
 end
 
+---倒计时进度条特效动画
+function PerformanceEnsembleWinView:UpdateProBarProgressAnimation(StartTime)
+	local Duration = MPDefines.Ensemble.DefaultSettings.ReadyTime
+	local ProgressRatio = math.clamp(StartTime / Duration , 0, 1) 
+	local AnimTime = self.AnimProgress:GetEndTime()
+	local PlaySpeed = AnimTime / Duration
+	local AnimPlayStartTime = ProgressRatio * AnimTime
+	self:PlayAnimation(self.AnimProgress, AnimPlayStartTime, 1, _G.UE.EUMGSequencePlayMode.Forward, PlaySpeed)
+end
 
 function PerformanceEnsembleWinView:OnStatusChanged(Value)
 	if Value == EnsembleStatus.EnsembleStatusEnsemble then
@@ -279,7 +309,6 @@ function PerformanceEnsembleWinView:OnRegisterBinder()
 		{ "BtnCancelIsEnable", UIBinderSetIsEnabled.New(self,self.BtnCancel)},
 		{ "TextELVisible", UIBinderSetIsVisible.New(self, self.TextEL) },
 		{ "PlayerList", UIBinderUpdateBindableList.New(self, self.TableViewMemberAdapter) },
-		{ "ProBarValue", UIBinderSetPercent.New(self, self.ProBarWait) },
 		{ "TextBPM", UIBinderSetText.New(self, self.TextBPM) },
 		{ "TextBEAT", UIBinderSetText.New(self, self.TextBEAT) },
 		{ "TextAssistant", UIBinderSetText.New(self, self.TextAssistant) },
@@ -298,6 +327,24 @@ function PerformanceEnsembleWinView:OnRegisterBinder()
 	}
 
 	self:RegisterBinders(MainVM, MainBinders)
+end
+
+function PerformanceEnsembleWinView.SortTeamList(a, b)
+	if a.RoleID == b.RoleID then
+		return false	
+	end
+
+	if a.RoleID == nil or b.RoleID == nil then
+		return a.RoleID ~= nil
+	end
+
+	if a.IsMajor ~= b.IsMajor then
+		return a.IsMajor == true
+	elseif b.JoinTime ~= a.JoinTime then
+		return a.JoinTime < b.JoinTime
+	else
+		return true
+	end
 end
 
 return PerformanceEnsembleWinView

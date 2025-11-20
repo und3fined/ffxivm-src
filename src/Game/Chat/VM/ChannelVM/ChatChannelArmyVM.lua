@@ -17,7 +17,7 @@ end
 
 ---GetChannelID
 function ChatChannelArmyVM:GetChannelID()
-	return ArmyMgr.SelfArmyID or 0
+	return ArmyMgr.SelfArmyID
 end
 
 function ChatChannelArmyVM:IsNeedPull()

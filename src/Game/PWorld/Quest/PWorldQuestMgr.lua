@@ -136,12 +136,12 @@ function PWorldQuestMgr:EndInputTimer()
 end
 
 function PWorldQuestMgr:OnTimerMajorInput()
-    self:CheckMajorInput()
-end
-
-local function OnMajorOpWarn(self ,Time)
-    MsgTipsUtil.ShowTipsByID(146049, nil, Time, self.TimeOut)
-    -- _G.FLOG_INFO("zhg 挂机检测 ： " .. Str)
+    if _G.PWorldMgr:CurrIsInDungeon() then
+        self:CheckMajorInput()
+    else
+        self:Reset()
+        self:EndInputTimer()
+    end
 end
 
 function PWorldQuestMgr:OnMajorInput()
@@ -164,7 +164,11 @@ function PWorldQuestMgr:CheckMajorInput()
         if self.WarnIdx == #self.Scheme then
             self:ReqPWorldInputTimeOut()
         else
-            OnMajorOpWarn(self, math.floor(Delta / 60))
+            local Minutes = math.floor(Delta / 60)
+            local TimeoutMins = self.TimeOut
+            if Minutes < TimeoutMins then
+                MsgTipsUtil.ShowTipsByID(146049, nil, Minutes, TimeoutMins)
+            end
         end
 
         self.WarnIdx = self.WarnIdx + 1
@@ -233,12 +237,12 @@ function PWorldQuestMgr:CheckSyncTips()
     end
 
     -- 某些副本不提示
-    if _G.GoldSauserMgr:CurrIsGoldSauserDungeon()
+    if _G.GoldSauserMgr:CurrIsAirForceDungeon()
         or _G.PWorldMgr:CurrIsInPVPColosseum()
         or _G.ChocoboRaceMgr:IsChocoboRacePWorld() then
         return
     end
-    
+
     -- 创角界面不显示
     -- if _G.IsDemoMajor then
 	if _G.DemoMajorType > 0 then

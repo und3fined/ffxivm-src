@@ -182,7 +182,7 @@ function LeveQuestTaskInfoItemView:OnClickedBtnMarked(ToggleButton, State)
 	ViewModel.IsMarked = IsChecked
 
 	if IsChecked then
-		if not LeveQuestMgr:IsProfMarkedItem(Cfg.ProfType, ViewModel.ID) then
+		if LeveQuestMgr:IsEmptyProfMarkedItem(Cfg.ProfType) then
 			MsgTipsUtil.ShowTips(string.format(_G.LSTR(880020), ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, Cfg.ProfType))) --%s理符道具标记中
 		else
 			MsgTipsUtil.ShowTips(string.format(_G.LSTR(880021), ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, Cfg.ProfType))) --已切换%s理符道具标记
@@ -323,21 +323,24 @@ function LeveQuestTaskInfoItemView:OnClickedBtnpay()
 	local MostPayNum = ViewModel.MostPayNum --交纳次数
 	local PayItemNum = Cfg.RequireItem.Num * MostPayNum
 	local TempGIDList = LeveQuestMgr:GetCanPayItemGIDs(ItemID)
-	local GIDList = {}
+	local Items = {}  --<GIDs, ItemID, Num>
 
 	local function SendLeveQuest()
-		if LeveQuestMgr:GetPaySingleOrMost() == LeveQuestDefine.PayType.Single then
-			if not table.is_nil_empty(TempGIDList) then
-				table.insert(GIDList, TempGIDList[1])
-			end
-		else
-			for index, v in ipairs(TempGIDList) do
-				if index <= PayItemNum then
-					table.insert(GIDList, v)
+		local RemainNum = PayItemNum
+		for index, v in ipairs(TempGIDList) do
+			if RemainNum > 0 then
+				local ItemData = _G.BagMgr:GetItemDataByGID(v)
+				if ItemData ~= nil then
+					if ItemData.Num >= RemainNum then
+						table.insert(Items, {GID = v, ItemID = ItemID, Num = RemainNum})
+					else
+						table.insert(Items, {GID = v, ItemID = ItemID, Num = ItemData.Num})
+					end
+					RemainNum = RemainNum - ItemData.Num
 				end
 			end
 		end
-		LeveQuestMgr:SendLeveQuestSubmitTaskReq(ViewModel.ID, ItemID, PayItemNum, GIDList)
+		LeveQuestMgr:SendLeveQuestSubmitTaskReq(ViewModel.ID, Items)
 	end
 
 	if LimitNum < MostPayNum and LeveQuestMgr:GetPaySingleOrMost() ~= LeveQuestDefine.PayType.Single then

@@ -47,14 +47,18 @@ function MapMarkerProviderMonster:CreateMonsterMarkers()
 	local Length = AllMonsters:Length()
 	for i = 1, Length do
 		local Monster = AllMonsters:GetRef(i)
-		local AttributeComp = Monster:GetAttributeComponent()
-		local EntityID = AttributeComp.EntityID
-		local ResID = AttributeComp.ResID
+		if Monster then
+			local AttributeComp = Monster:GetAttributeComponent()
+			if AttributeComp then
+				local EntityID = AttributeComp.EntityID
+				local ResID = AttributeComp.ResID
 
-		if self:CanShowInMap(ResID) then
-			local Params = { ID = EntityID, EntityID = EntityID, ResID = ResID }
-			local Marker = self:OnCreateMarker(Params)
-			table.insert(MapMarkers, Marker)
+				if self:CanShowInMap(ResID) then
+					local Params = { ID = EntityID, EntityID = EntityID, ResID = ResID }
+					local Marker = self:OnCreateMarker(Params)
+					table.insert(MapMarkers, Marker)
+				end
+			end
 		end
 	end
 

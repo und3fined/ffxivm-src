@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local LSTR = _G.LSTR
 
 ---@class LoginCreateProgressWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -158,15 +159,16 @@ function LoginCreateProgressWinView:OnShow()
 		self.Text7:SetText(LSTR(980038))
 	end
 	
-	self.Text1:SetText(_G.LSTR(980059))	--种族性别
-	self.Text2:SetText(_G.LSTR(980050))	--部族
-	self.Text3:SetText(_G.LSTR(980060))--外貌
-	self.Text4:SetText(_G.LSTR(980061))--外貌细节
-	self.Text5:SetText(_G.LSTR(980051))--创建日
-	self.Text6:SetText(_G.LSTR(980052))--守护神
-	self.Text7:SetText(_G.LSTR(980053))--职业
-	self.Text8:SetText(_G.LSTR(980062))--设置昵称
-	self.TextClickTips:SetText(_G.LSTR(980063))--点击空白处关闭
+	self.Text1:SetText(LSTR(980059))	--种族性别
+	self.Text2:SetText(LSTR(980050))	--部族
+	self.Text3:SetText(LSTR(980060))--外貌
+	self.Text4:SetText(LSTR(980061))--外貌细节
+	self.Text5:SetText(LSTR(980051))--创建日
+	self.Text6:SetText(LSTR(980052))--守护神
+	-- self.Text7:SetText(LSTR(980053))--职业
+
+	self.Text8:SetText(LSTR(980062))--设置昵称
+	self.TextClickTips:SetText(LSTR(980063))--点击空白处关闭
 end
 
 function LoginCreateProgressWinView:OnHide()

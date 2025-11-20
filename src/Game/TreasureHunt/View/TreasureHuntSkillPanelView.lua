@@ -111,6 +111,20 @@ function TreasureHuntSkillPanelView:OnClickedBtnGOMap()
 		return
 	end
 
+	local WorldMapView = UIViewMgr:FindView(UIViewID.WorldMapPanel)
+	if WorldMapView then
+        -- 迷雾解锁动画中不让点，不然会把动画卡断
+		if WorldMapView:IsAnimFogCleanPlaying() then return end
+	end
+
+    -- 打开大地图后点按钮要先隐藏别的UI，不然水晶标记会穿透UI
+	if UIViewMgr:IsViewVisible(UIViewID.MountSpeedPanel) then
+		UIViewMgr:HideView(UIViewID.MountSpeedPanel)
+	end
+	if UIViewMgr:IsViewVisible(UIViewID.AetherCurrentMainPanelView) then
+		UIViewMgr:HideView(UIViewID.AetherCurrentMainPanelView)
+	end
+	
 	local MapItemVM = TreasureHuntSkillPanelVM:GetMapItemVM()
 	if MapItemVM == nil then return end
 	local MapData = MapItemVM:GetMapData()

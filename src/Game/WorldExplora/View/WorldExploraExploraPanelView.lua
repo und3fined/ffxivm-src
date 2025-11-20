@@ -85,6 +85,7 @@ end
 
 function WorldExploraExploraPanelView:OnInit()
 	self.Cfgs = nil
+	self.IndexOffset = 3
 end
 
 function WorldExploraExploraPanelView:OnDestroy()
@@ -132,9 +133,23 @@ function WorldExploraExploraPanelView:InitByCfg()
 	end
 end
 
+function WorldExploraExploraPanelView:SelectGameBtnByType(GameTypeEnum)	
+	local Index = self:GameType2Index(GameTypeEnum)
+
+	self:OnGameBtnClick(Index)
+end
+
+--Index 2 GameType
+function WorldExploraExploraPanelView:Index2GameType(Index)
+	return self.IndexOffset + Index
+end
+function WorldExploraExploraPanelView:GameType2Index(GameTypeEnum)
+	return GameTypeEnum - self.IndexOffset
+end
+
 function WorldExploraExploraPanelView:OnGameBtnClick(Index)
-	local Offset = 3
-	local GameTypeEnum = Index + Offset
+	local GameTypeEnum = self:Index2GameType(Index)
+
 	local bBan = false
 	if GameTypeEnum == Wilder_Explore_GameType.WILDER_EXPLORE_GAMEPLAY_AETHER and not WorldExploraMgr:CheckAetherIsUnlock() then
 		bBan = true

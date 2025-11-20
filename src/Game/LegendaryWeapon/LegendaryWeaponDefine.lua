@@ -36,6 +36,7 @@ LegendaryWeaponDefine.RedDotID =
 	BRD 			= 1018,		--诗人
 	WHM 			= 1019,		--白魔
 	SCH 			= 1020,		--学者
+	MakeBtn 		= 1021,		--制作按钮
 }
 
 --- 获取对应主题章节的红点，这里后面如果很多应该配置红点ID到传奇武器表

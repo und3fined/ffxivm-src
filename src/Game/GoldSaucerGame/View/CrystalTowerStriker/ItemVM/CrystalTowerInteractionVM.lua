@@ -7,14 +7,8 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local ProtoRes = require("Protocol/ProtoRes")
-
-local ItemCfg = require("TableCfg/ItemCfg")
-local GoldSaucerCuffBlowResultItemVM = require("Game/GoldSaucerGame/View/Cuff/ItemVM/GoldSaucerCuffBlowResultItemVM")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
-local CuffDefine = GoldSaucerMiniGameDefine.CuffDefine
-local MaxSwitchIndex = 5
 local SwitchWidgetIndex = {Blue = 1, Purple = 2, Yellow = 3, Gray = 4, Red = 5, StarLight = 6}
-local TimerMgr = _G.TimerMgr
 
 ---@class CrystalTowerInteractionVM : UIViewModel
 
@@ -22,9 +16,8 @@ local CrystalTowerInteractionVM = LuaClass(UIViewModel)
 
 ---Ctor
 function CrystalTowerInteractionVM:Ctor()
-
+    self.CfgCategory = 0
     self.Category = 0
-
 end
 
 function CrystalTowerInteractionVM:IsEqualVM(Value)
@@ -36,9 +29,11 @@ function CrystalTowerInteractionVM:UpdateVM(Value)
         return
     end
     local CrystalTowerInteractionCategory = ProtoRes.CrystalTowerInteractionCategory
-    if Value.Category <= CrystalTowerInteractionCategory.CT_CATEGORY_ERROR then
-        self.Category = Value.Category
-    elseif Value.Category == ProtoRes.CrystalTowerInteractionCategory.CT_CATEGORY_STARLIGHT then
+    local Category = Value.Category
+    self.CfgCategory = Category
+    if Category <= CrystalTowerInteractionCategory.CT_CATEGORY_ERROR then
+        self.Category = Category
+    elseif Category == ProtoRes.CrystalTowerInteractionCategory.CT_CATEGORY_STARLIGHT then
         self.Category = SwitchWidgetIndex.StarLight
     else
         self.Category = SwitchWidgetIndex.Red

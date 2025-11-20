@@ -151,10 +151,14 @@ function CrafterSidebarPanelNewView:OnShow()
 	UIUtil.SetIsVisible(self.TextName_2, false)  -- # TODO - 重构删除这个控件
 	self:SetupItemSlot()
 	self.CrafterTitleItem:SetTitleByProf()
+	
+	self:PlayAnimProBarSchedule(0, 0)
+	self:PlayAnimProBarQuality(0, 0)
 end
 
 function CrafterSidebarPanelNewView:OnHide()
 	self:StopAllAnimations()
+	self:HideCrafterTips()
 end
 
 local Handled = _G.UE.UWidgetBlueprintLibrary.Handled()
@@ -188,13 +192,17 @@ function CrafterSidebarPanelNewView:OnRegisterBinder()
 		-- {"ProfName", UIBinderSetText.New(self, self.TextArea)},
 		{"RecipeName", UIBinderSetText.New(self, self.TextName)},
 		{"ItemIconPath", UIBinderSetBrushFromAssetPath.New(self, self.ItemSlot.Icon) },
+		{"ItemQualityImg", UIBinderSetBrushFromAssetPath.New(self, self.ItemSlot.ImgQuanlity) },
 		{"TextValue", UIBinderSetText.New(self, self.TextValue)},
 		{"TextValueNumber", UIBinderSetText.New(self, self.TextValueNumber)},
         
 		{"DurableBarSize", UIBinderCanvasSlotSetSize.New(self, self.ProBarDurable, true)},
 		{ "DurableBar", UIBinderSetPercent.New(self, self.ProBarDurable) },
-		{ "ProgressBar", UIBinderSetPercent.New(self, self.ProBaSchedule, StartPercent, EndPercent) },	--进度
-		{ "QualityBar", UIBinderSetPercent.New(self, self.ProBarQuality, StartPercent, EndPercent) },	--进度
+		--
+		{ "SetProgressBarPercent", UIBinderValueChangedCallback.New(self, nil, self.OnSetProgressBarPercent) },
+		-- { "ProgressBar", UIBinderSetPercent.New(self, self.ProBaSchedule, StartPercent, EndPercent) },	--进度
+		-- { "QualityBar", UIBinderSetPercent.New(self, self.ProBarQuality, StartPercent, EndPercent) },	--进度
+		{ "SetQualityBarPercent", UIBinderValueChangedCallback.New(self, nil, self.OnSetQualityBarPercent) },
 		{ "SetDurableFillColorType", UIBinderValueChangedCallback.New(self, nil, self.OnSetDurableFillColor) },
 
 		{"OpCountText", UIBinderSetText.New(self, self.TextFrequencyNumber)},
@@ -225,6 +233,18 @@ function CrafterSidebarPanelNewView:OnRegisterBinder()
 	self.ViewModel = ViewModel
 	self:RegisterBinders(ViewModel, Binders)
 
+end
+
+function CrafterSidebarPanelNewView:OnSetProgressBarPercent(AnimInfo)
+	if AnimInfo and AnimInfo.Last and AnimInfo.To and AnimInfo.To > AnimInfo.Last then
+		self:PlayAnimProBarSchedule(AnimInfo.Last, AnimInfo.To)
+	end
+end
+
+function CrafterSidebarPanelNewView:OnSetQualityBarPercent(AnimInfo)
+	if AnimInfo and AnimInfo.Last and AnimInfo.To and AnimInfo.To > AnimInfo.Last then
+		self:PlayAnimProBarQuality(AnimInfo.Last, AnimInfo.To)
+	end
 end
 
 function CrafterSidebarPanelNewView:OnShowCrafterDetails()
@@ -330,6 +350,12 @@ function CrafterSidebarPanelNewView:OnShowCrafterTips(Param)
 		end
 		TipsUtil.ShowSimpleTipsView({Title = _G.LSTR(Tipsname), Content = _G.LSTR(TipsContent)},
 		self.BtnQuality, _G.UE.FVector2D(0, 0), _G.UE.FVector2D(0, 0), true)
+	end
+end
+
+function CrafterSidebarPanelNewView:HideCrafterTips()
+	if UIViewMgr:IsViewVisible(UIViewID.CommHelpInfoSimpleTipsView) then
+		UIViewMgr:HideView(UIViewID.CommHelpInfoSimpleTipsView)
 	end
 end
 

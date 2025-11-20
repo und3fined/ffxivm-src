@@ -7,6 +7,8 @@ local TimeUtil = require("Utils/TimeUtil")
 local TimerMgr = require("Timer/TimerMgr")
 local AudioUtil = require("Utils/AudioUtil")
 local UIUtil = require("Utils/UIUtil")
+local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local ProtoCommon = require("Protocol/ProtoCommon")
 
 --- 设置生效音效
 local SoundNameSetBegin = "AkAudioEvent'/Game/WwiseAudio/Events/sound/battle/etc/SE_Bt_Etc_BattleStart/Play_SE_Bt_Etc_BattleStart.Play_SE_Bt_Etc_BattleStart'"
@@ -57,6 +59,9 @@ function TeamBeginCDTipsVM:OnBeginCountDown(CountDown)
 end
 
 function TeamBeginCDTipsVM:CountDownBegin(Name, EndTime)
+	if CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatFantasyCard) then
+		return
+	end
 	self.SettingTime = EndTime
 	local Params = {}
 	Params.BindVM = self
@@ -78,27 +83,33 @@ function TeamBeginCDTipsVM:CountDownBegin(Name, EndTime)
 			self.PanelVisible = true
 			Params.TextSubTitleVisible = false
 			local TempView2 = _G.UIViewMgr:ShowView(_G.UIViewID.InfoCountdownTipsView, Params)
+			self.SubTitleText = ""
+			TempView2:SetSubTitleText("")
 			TempView2:PlayAnimIn()
 			self.CountDownNum = string.format(LSTR(1240050), EndTime)	--- "距离开始战斗还有%d秒"
-			self.SubTitleText = ""
 			_G.ChatMgr:AddSysChatMsg(self.CountDownNum)
 		elseif EndTime <= 5 then
 			self.PanelVisible = true
 			if EndTime == 5 then
 				Params.TextSubTitleVisible = false
 				local TempView3 = _G.UIViewMgr:ShowView(_G.UIViewID.InfoCountdownTipsView, Params)
+				self.SubTitleText = ""
+				TempView3:SetSubTitleText("")
 				TempView3:PlayAnimIn()
 			end
-			self.SubTitleText = ""
-			AudioUtil.LoadAndPlayUISound(SoundNameCountDown)
+			if not CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatFantasyCard) then
+				AudioUtil.LoadAndPlayUISound(SoundNameCountDown)
+			end
 			if EndTime <= 0 and self.Flag then
 				self.Flag = false
-				AudioUtil.LoadAndPlayUISound(SoundNameStart)
+				if not CommonStateUtil.IsInState(ProtoCommon.CommStatID.CommStatFantasyCard) then
+					AudioUtil.LoadAndPlayUISound(SoundNameStart)
+				end
 				self.CountDownNum = LSTR(1240049)	--- "战斗开始"
 				_G.ChatMgr:AddSysChatMsg(self.CountDownNum)
 				self.EndCDTimerID = TimerMgr:AddTimer(self, function()
 					_G.UIViewMgr:HideView(_G.UIViewID.InfoCountdownTipsView)
-					_G.SignsMgr.IsDuringCountDown = false
+					_G.SignsMgr:SetDuringCountDown(false)
 					_G.EventMgr:SendEvent(_G.EventID.TeamBtnStateChanged)
 					self:UnRegisterTimer(self.EndCDTimerID)
 				end, 1 , 1)

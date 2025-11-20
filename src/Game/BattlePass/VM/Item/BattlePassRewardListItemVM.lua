@@ -9,11 +9,11 @@ local UIViewModel = require("UI/UIViewModel")
 local BattlePassRewardSlotVM = require("Game/BattlePass/VM/Item/BattlePassRewardSlotVM")
 local BattlePassDefine = require("Game/BattlePass/BattlePassDefine")
 
-local Path1 = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Icon_RewardNumber01_png.UI_BattlePass_Icon_RewardNumber01_png'"
-local Path2 = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Icon_RewardNumber02_png.UI_BattlePass_Icon_RewardNumber02_png'"
-
 ---@class BattlePassRewardListItemVM : UIViewModel
 local BattlePassRewardListItemVM = LuaClass(UIViewModel)
+
+local Path1 = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Icon_RewardNumber01_png.UI_BattlePass_Icon_RewardNumber01_png'"
+local Path2 = "PaperSprite'/Game/UI/Atlas/BattlePass/Frames/UI_BattlePass_Icon_RewardNumber02_png.UI_BattlePass_Icon_RewardNumber02_png'"
 
 ---Ctor
 function BattlePassRewardListItemVM:Ctor()
@@ -21,6 +21,10 @@ function BattlePassRewardListItemVM:Ctor()
     self.IsCurLv = false
     self.BaseReward = BattlePassRewardSlotVM.New()
     self.AdvanceReward = BattlePassRewardSlotVM.New()
+    self.LvIcon = Path1
+    self.LvColor = nil
+    self.IsAvailable = false
+    self.IsShow = false
 end
 
 function BattlePassRewardListItemVM:OnInit()

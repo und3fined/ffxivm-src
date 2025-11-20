@@ -102,6 +102,8 @@ function PVPTeamMgr:OnUpdateTeamData()
     self:GetPVPTeamVM():UpdateEnemyMembers(EnemyMemList)
 
     self:ClearMemberVisionInfo()
+
+    self:ForceUpdatePWorldLocation()
 end
 
 ---@private
@@ -234,6 +236,18 @@ function PVPTeamMgr:GetTeamMemberHPPercentByRoleID(RoleID)
 
     -- 如果数据不存在，返回1表示满血，比如比赛准备阶段后台还没下发数据
     return 1
+end
+
+---敌方成员是否在我方队伍视野内，非主角视野
+---@param RoleID number
+---@return boolean
+function PVPTeamMgr:IsInVisionByRoleID(RoleID)
+    if RoleID then
+        local VisionInfo = self.MemberVisionInfo[RoleID]
+        return VisionInfo ~= nil
+    end
+
+    return false
 end
 
 

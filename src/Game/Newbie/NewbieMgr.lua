@@ -371,7 +371,7 @@ function NewbieMgr:PlayCutScene()
 
 	local function Callback(Index)
 		ClientSetupMgr:SendSetReq(ClientSetupID.PlayNewbieCutScene, tostring(Index))
-		if Index > #SceneCutIDList then
+		if Index >= #SceneCutIDList then
 			--最后scene cut是同地图，不会收到EnterWorld事件，全部播完开始监听
 			self:UnRegisterGameEvent(EventID.AreaTriggerBeginOverlap, self.OnGameEventAreaTriggerBeginOverlap)
 			self:UnRegisterGameEvent(EventID.MajorCollide, self.OnGameEventMajorCollide)
@@ -388,7 +388,7 @@ function NewbieMgr:PlayCutScene()
 			end
 		end
 	end
-	_G.TravelLogMgr:PlayNewbieCutScene(SceneCutIDList, NewbieCutSceneIndex, Callback)
+	_G.TravelLogMgr:PlayCutSceneList(SceneCutIDList, NewbieCutSceneIndex, Callback)
 
 	return true
 end
@@ -472,7 +472,7 @@ function NewbieMgr:OnGameEventMajorCollide(EventParams)
 		local CallBack = function ()
 			self:StartForbidDialog()
 		end
-		_G.NpcDialogMgr:PlayDialogLib(510007, nil, nil, CallBack, nil, nil, nil, true)
+		_G.NpcDialogMgr:PlayDialogLib(800007, nil, nil, CallBack, nil, nil, nil, true)
 	end
 end
 
@@ -495,11 +495,11 @@ end
 function NewbieMgr:OnGameEventAreaTriggerBeginOverlap(EventParam)
 	if _G.PWorldMgr:GetCurrPWorldResID() == self.NewbieSceneID then
 		if EventParam.AreaID == 2000000 then
-			_G.NpcDialogMgr:PlayDialogLib(510000)
+			_G.NpcDialogMgr:PlayDialogLib(800000)
 		elseif EventParam.AreaID == 2000001 then
-			_G.NpcDialogMgr:PlayDialogLib(510001)
+			_G.NpcDialogMgr:PlayDialogLib(800001)
 		elseif EventParam.AreaID == 2000002 then
-			_G.NpcDialogMgr:PlayDialogLib(510002)
+			_G.NpcDialogMgr:PlayDialogLib(800002)
 		end
 	end
 end

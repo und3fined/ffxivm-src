@@ -44,6 +44,15 @@ function TeamVoiceMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(_G.EventID.GVoiveOnReportPlayer, self.OnReportPlayer)
     self:RegisterGameEvent(_G.EventID.GVoiveRoomMemberInfo, self.OnRoomMemberInfo)
     self:RegisterGameEvent(_G.EventID.TeamMemberMicSyncStateChanged, self.OnMemberMicSyncStateUpdate)
+    self:RegisterGameEvent(_G.EventID.TeamDestroy, self.OnTeamDestroy)
+end
+
+function TeamVoiceMgr:OnTeamDestroy(TeamID, Mgr)
+    if _G.TeamMgr == Mgr and Mgr == self:GetCurTeamMgr() then
+        self:LogInfo("quit normal team %s to close mic and speaker", TeamID)
+        self:SetMicOn(false)
+        self:SetSpeakerOn(false)
+    end
 end
 
 ---@private

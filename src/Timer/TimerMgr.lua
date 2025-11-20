@@ -86,6 +86,7 @@ function TimerMgr:AddTimer(Listener, Callback, Delay, Interval, LoopNumber, Para
 		Params = Params,
 		ListenerName = ListenerName or DefaultListenerName,
 		Register = Register,
+		bPaused = false,
 	}
 
 	if self.bUpdatingTimer then
@@ -195,18 +196,20 @@ function TimerMgr:UpdateTimer(DeltaTime)
 
 	while Node do
 		local v = Node.Data
-		local Time = math.max(GameTime - v.StartTime, 0) / 1000
-		if Time >= v.CallTime and not TimersPendingToRemove:Find(v.TimerID) then
-			local _ <close> = CommonUtil.MakeProfileTag(v.ListenerName)
-			XPCall(v.Listener, v.Callback, v.Params, Time)
-			v.LoopCount = v.LoopCount + 1
-			if nil == v.LoopNumber or (v.LoopNumber > 0 and v.LoopCount >= v.LoopNumber) then
-				if not TimersPendingToRemove:Find(v.TimerID) then
-					--print("TimerMgr:UpdateTimer remove timer", v.TimerID)
-					TimersPendingToRemove:AddTail(v.TimerID)
+		if not v.bPaused then
+			local Time = math.max(GameTime - v.StartTime, 0) / 1000
+			if Time >= v.CallTime and not TimersPendingToRemove:Find(v.TimerID) then
+				local _ <close> = CommonUtil.MakeProfileTag(v.ListenerName)
+				XPCall(v.Listener, v.Callback, v.Params, Time)
+				v.LoopCount = v.LoopCount + 1
+				if nil == v.LoopNumber or (v.LoopNumber > 0 and v.LoopCount >= v.LoopNumber) then
+					if not TimersPendingToRemove:Find(v.TimerID) then
+						--print("TimerMgr:UpdateTimer remove timer", v.TimerID)
+						TimersPendingToRemove:AddTail(v.TimerID)
+					end
+				else
+					v.CallTime = v.CallTime + v.Interval
 				end
-			else
-				v.CallTime = v.CallTime + v.Interval
 			end
 		end
 		Node = Node.Next
@@ -250,6 +253,35 @@ function TimerMgr:DumpName()
 	while Node do
 		print(Node.Data.ListenerName)
 		Node = Node.Next
+	end
+end
+
+---PauseTimer
+---@param TimerID number        @TimerID
+function TimerMgr:PauseTimer(TimerID)
+	if nil == TimerID then
+		return
+	end
+
+	local Timer = self.Timers:FindByName("TimerID", TimerID)
+	if Timer then
+		Timer.bPaused = true
+		Timer.PausedTime = TimeUtil.GetGameTimeMS() - Timer.StartTime
+	end
+end
+
+---ResumeTimer
+---@param TimerID number        @TimerID
+function TimerMgr:ResumeTimer(TimerID)
+	if nil == TimerID then
+		return
+	end
+
+	local Timer = self.Timers:FindByName("TimerID", TimerID)
+	if Timer then
+		Timer.bPaused = false
+		Timer.StartTime = TimeUtil.GetGameTimeMS() - Timer.PausedTime
+		Timer.PausedTime = nil
 	end
 end
 

@@ -22,12 +22,14 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 ---@field PopUpBG CommonPopUpBGView
 ---@field Poster TouringBandPosterItemView
 ---@field RichText URichTextBox
+---@field SpineWidget_68 USpineWidget
 ---@field TextAction UFTextBlock
 ---@field TextCondition UFTextBlock
 ---@field TextEPet UFTextBlock
 ---@field TextExterior UFTextBlock
+---@field TouringBandMusicalNotationItem_UIBP TouringBandMusicalNotationItemView
+---@field AnimGo UWidgetAnimation
 ---@field AnimHide UWidgetAnimation
----@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local TouringBandFanWinView = LuaClass(UIView, true)
 
@@ -43,12 +45,14 @@ function TouringBandFanWinView:Ctor()
 	--self.PopUpBG = nil
 	--self.Poster = nil
 	--self.RichText = nil
+	--self.SpineWidget_68 = nil
 	--self.TextAction = nil
 	--self.TextCondition = nil
 	--self.TextEPet = nil
 	--self.TextExterior = nil
+	--self.TouringBandMusicalNotationItem_UIBP = nil
+	--self.AnimGo = nil
 	--self.AnimHide = nil
-	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -57,6 +61,7 @@ function TouringBandFanWinView:OnRegisterSubView()
 	self:AddSubView(self.CommonThroughFrameS_UIBP)
 	self:AddSubView(self.PopUpBG)
 	self:AddSubView(self.Poster)
+	self:AddSubView(self.TouringBandMusicalNotationItem_UIBP)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -76,6 +81,9 @@ function TouringBandFanWinView:OnShow()
 	self.CommonThroughFrameS_UIBP.BtnClose2:SetBtnName(_G.LSTR(450009))
 	-- LSTR string: 查  看
 	self.CommonThroughFrameS_UIBP.BtnCheck2:SetBtnName(_G.LSTR(450010))
+	--self:RegisterTimer(self.PlayAnimInEnd, 4)
+	self.TouringBandMusicalNotationItem_UIBP:PlayAnimGo(self, self.PlayAnimInEnd)
+	UIUtil.SetIsVisible(self.Poster, false)
 end
 
 function TouringBandFanWinView:OnHide()
@@ -110,13 +118,18 @@ function TouringBandFanWinView:OnBtnCloseClicked()
 end
 
 function TouringBandFanWinView:OnBtnCheckClicked()
-	_G.TouringBandMgr:OpenTouringBandView()
+	if not self.ViewModel then
+		return
+	end
+	
+	_G.TouringBandMgr:OpenTouringBandView(nil, self.ViewModel.BandID)
 	self:Hide()
 end
 
-function TouringBandFanWinView:PlayAnimIn()
+function TouringBandFanWinView:PlayAnimInEnd()
+	UIUtil.SetIsVisible(self.Poster, true)
 	self.Poster:PlayPosterAnim()
-	self:PlayAnimation(self.AnimIn)
+	self:PlayAnimation(self.AnimGo)
 	self:RegisterTimer(self.PlayAnimInNext, 2.2)
 end
 

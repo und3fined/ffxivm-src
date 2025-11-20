@@ -131,7 +131,7 @@ function FashionEvaluationMainPanelView:OnShow()
 	UIUtil.SetIsVisible(self.RossTips, false)
 	FashionEvaluationVM:InitViewsVisible()
 	FashionEvaluationVM:OnFirstTimesEnterMainView(true)
-	
+	_G.UIViewMgr:HideView(UIViewID.TutorialGuideShowPanel) -- 隐藏指南界面，防止重合（过快点击交互情况下）
 	self:CreateRenderActor()
 	LightMgr:LoadLightLevel(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_FASHION_EVALUATION, LightLevelCreateLocation[LightLevelID.LIGHT_LEVEL_ID_FASHION_EVALUATION], 1)
 	FashionEvaluationMgr:OnFashionSceneVisibleChanged(true)
@@ -169,15 +169,17 @@ function FashionEvaluationMainPanelView:CreateRenderActor()
 			FashionEvaluationMgr:ShowOrCreateAllNPC() -- 创建NPC
 			local EntityID = MajorUtil.GetMajorEntityID()
 			self.Render2D:SetUICharacterByEntityID(EntityID)
+			self.Render2D:HidePlayer(true)
 			self.CameraFocusCfgMap:SetAssetUserData(self.Render2D:GetEquipmentConfigAssetUserData())
 			self:SetModelSpringArmToDefault(false, EFashionView.Main)
-			self.Render2D:HidePlayer(true)
 			self:ActivePresetLights(false)
 		end
 	end
 	local ReCreateCallBack = function()
 		self.CameraFocusCfgMap:SetAssetUserData(self.Render2D:GetEquipmentConfigAssetUserData())
 	end
+	
+	self.Render2D:EnableZoom(false)
 	self.Render2D:CreateRenderActor(RenderActorPath, 
 	FashionEvaluationDefine.CharacterClass, "",
 	false, CallBack, ReCreateCallBack)
@@ -185,8 +187,8 @@ end
 
 ---@type 显示玩家展示角色 与NPC显示互斥
 function FashionEvaluationMainPanelView:ShowPlayerUICharacter(IsVisible)
-	self.Render2D:HidePlayer(not IsVisible)
 	FashionEvaluationMgr:HideCreatedNPCList(IsVisible)
+	FashionEvaluationMgr:HideUICharacter(not IsVisible)
 end
 
 --角色拼装完成
@@ -310,14 +312,24 @@ function FashionEvaluationMainPanelView:OnBtnNPCClicked()
 end
 
 function FashionEvaluationMainPanelView:OnShowView(ViewID)
-	if ViewID == UIViewID.HelpInfoLargeWinView or ViewID == UIViewID.HelpInfoMidWinView then
+	if ViewID == UIViewID.HelpInfoLargeWinView or ViewID == UIViewID.HelpInfoMidWinView
+		or ViewID == UIViewID.SidebarPrivateChat or ViewID == UIViewID.ChatMainPanel then
 		self.MouseButtonActive = false
+	end
+	-- Fate界面打开时，会切换镜头到Fate上
+	if ViewID == UIViewID.FateArchiveMainPanel then
+		self.Render2D.bCameraSwitchedToRenderActor = false
 	end
 end
 
 function FashionEvaluationMainPanelView:OnHideView(ViewID)
-	if ViewID == UIViewID.HelpInfoLargeWinView or ViewID == UIViewID.HelpInfoMidWinView then
+	if ViewID == UIViewID.HelpInfoLargeWinView or ViewID == UIViewID.HelpInfoMidWinView
+		or ViewID == UIViewID.SidebarPrivateChat or ViewID == UIViewID.ChatMainPanel then
 		self.MouseButtonActive = true
+	end
+	-- Fate界面关闭时，会恢复镜头到玩家身上，所以这里拉回来
+	if ViewID == UIViewID.FateArchiveMainPanel then
+		self.Render2D:ChangeUIState(false)
 	end
 end
 
@@ -570,6 +582,7 @@ end
 
 ---@type 新手引导 玩法解锁
 function FashionEvaluationMainPanelView:CheckStartTutorial()
+	_G.UIViewMgr:HideView(UIViewID.TutorialGuideShowPanel) -- 隐藏指南界面，防止重合（过快点击交互情况下）
 	local function ShowFashionEvaluationTutorial(Params)
         local EventParams = _G.EventMgr:GetEventParams()
         EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
@@ -613,6 +626,7 @@ end
 function FashionEvaluationMainPanelView:OnNPCEquipViewVisibleChanged(IsVisible)
 	if IsVisible then
 		FashionEvaluationMgr:HideCreatedNPCList(true)
+		FashionEvaluationMgr:HideUICharacter(true)
 		self:SetModelSpringArmToDefault(false, EFashionView.NPCEquip)
 		LightMgr:LoadLightLevel(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_FASHION_EVALUATION, LightLevelCreateLocation[LightLevelID.LIGHT_LEVEL_ID_FASHION_EVALUATION_FOCU], 2)
 	else

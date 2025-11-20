@@ -265,6 +265,9 @@ function SkillButtonMultiChoiceView:GetHoverButtonIndex(MousePosition, bCalculat
 	local MinDistanceSquared = 500
 	local SelfGeometry = _G.UE.UWidgetLayoutLibrary.GetViewportWidgetGeometry(self)
 	local CurPos = _G.UE.USlateBlueprintLibrary.AbsoluteToLocal(SelfGeometry, MousePosition)
+	if nil == self.WidgetCenter then
+		return 0
+	end
 	local OffPos = CurPos - self.WidgetCenter
 
 	local NormalOffPos = _G.UE.FVector2D()

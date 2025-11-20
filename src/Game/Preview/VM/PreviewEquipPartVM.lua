@@ -39,6 +39,7 @@ function PreviewEquipPartVM:Ctor()
 	self.Part = nil
 	self.EquipmentID = nil
 	self.IsSelect = false
+	self.IsRegionDyes = false --此装备是否有染色数据
 end
 
 function PreviewEquipPartVM:IsEqualVM(Value)
@@ -57,6 +58,7 @@ function PreviewEquipPartVM:UpdateVM(Value)
 	self.Icon = UIUtil.GetIconPath(Value.IconID)
 	self.ResID = Value.ItemID
 	self.ItemType = Value.ItemType
+	self.IsRegionDyes = _G.PreviewRoleAppearanceVM:GetIsRegionDyes(Value.EquipmentID)
 	if self.ItemType == ITEM_TYPE.COLLAGE_COIFFURE then
 		local HairCfg = HairUnlockCfg:FindCfgByItemID(Value.ItemID)
 		if HairCfg == nil then

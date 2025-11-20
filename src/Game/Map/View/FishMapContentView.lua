@@ -1,7 +1,7 @@
 ---
 --- Author: anypkvcai
 --- DateTime: 2023-07-04 20:50
---- Description:
+--- Description: 钓鱼笔记地图内容
 ---
 
 local LuaClass = require("Core/LuaClass")
@@ -24,7 +24,8 @@ local MapContentType = MapDefine.MapContentType
 local TargetSizeX = 3800
 local TargetSizeY = 2500
 
----@class FishMapContentView : UIView
+
+---@class FishMapContentView : MapContentView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field CommGesture_UIBP CommGestureView
 ---@field ImgBG UFImage
@@ -76,8 +77,8 @@ function FishMapContentView:OnInit()
 	local function OnPositionChanged(X, Y)
 		self:OnPositionChanged(X, Y)
 	end
-
 	self.CommGesture_UIBP:SetOnPositionChangedCallback(OnPositionChanged)
+
 	UIUtil.SetIsVisible(self.ImgFogBg, false, false)
 end
 
@@ -142,8 +143,6 @@ function FishMapContentView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.FishNoteNotifyMapInfo, self.OnGameEventFishNoteNotifyMapInfo)
 	self:RegisterGameEvent(EventID.FishNoteNotifyChangePointState, self.OnGameEventFishNotifyChangePointState)
 	self:RegisterGameEvent(EventID.PreprocessedMouseButtonUp, self.PrintMarkerPos)
-	self:RegisterGameEvent(EventID.MapFollowAdd, self.OnGameEventMapFollowUpdate)
-	self:RegisterGameEvent(EventID.MapFollowDelete, self.OnGameEventMapFollowUpdate)
 end
 
 ---通过滑动条改变缩放
@@ -155,13 +154,6 @@ function FishMapContentView:OnGameEventFishNotesMapScaleChanged(Scale)
 	self.CommGesture_UIBP:AdjustOffset()
 end
 
-function FishMapContentView:OnGameEventMapFollowUpdate(FollowInfo)
-	if FollowInfo.FollowType == MapMarkerType.FixPoint then
-		local UIMapID = MapUtil.GetUIMapID(FishIngholeVM.SelectedLocationMapID)
-		self:CreateAllMarkers(UIMapID)
-	end
-end
-
 function FishMapContentView:OnGameEventFishNoteNotifyMapInfo(Params)
 	local UIMapID = MapUtil.GetUIMapID(Params.MapID)
 
@@ -170,7 +162,7 @@ function FishMapContentView:OnGameEventFishNoteNotifyMapInfo(Params)
 		return
 	end
 
-	_G.WorldMapMgr:ChangeMap(UIMapID)-- 更新迷雾数据
+	_G.WorldMapMgr:ChangeMap(UIMapID, Params.MapID, true)-- 更新迷雾数据
 	if self.UIMapID == nil or self.UIMapID ~= UIMapID then
 		self:PlayAnimation(self.AnimMapIn)
 		UIUtil.ImageSetBrushFromAssetPath(self.ImgMap, Cfg.Path)

@@ -38,7 +38,7 @@ function SkillPlaybackRateCell:StartCell()
     local PlaybackRate = CellData.m_PlaybackRate
     Me:GetAnimationComponent():SetPlayRate(PlaybackRate)
     local EffectList = SkillObject.CurrentEffectIDList
-    for _, EffectID in pairs(EffectList) do
+    for EffectID, _ in pairs(EffectList) do
         UFGameFXManager:SetPlaybackRate(EffectID, PlaybackRate)
     end
     self.EndCellTimerID = AddCellTimer(self, "EndCell", (CellData.m_EndTime - CellData.m_StartTime) * SkillObject.PlayRate)
@@ -51,7 +51,7 @@ function SkillPlaybackRateCell:EndCell()
     end
 
     local EffectList = SkillObject.CurrentEffectIDList
-    for _, EffectID in pairs(EffectList) do
+    for EffectID, _ in pairs(EffectList) do
         UFGameFXManager:SetPlaybackRate(EffectID, 1 / SkillObject.PlayRate)
     end
 

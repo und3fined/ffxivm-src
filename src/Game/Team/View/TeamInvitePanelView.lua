@@ -105,6 +105,7 @@ function TeamInvitePanelView:OnShow()
 	UIUtil.SetIsVisible(self.PanelBtns, true)
 
 	self.CommSidebarTabFrame:SetSubTitleIsVisible(true)
+	TeamInviteVM:RefreshAll()
 	self:Refresh()
 	self:UpdateTeamProfInfo()
 
@@ -186,6 +187,7 @@ function TeamInvitePanelView:OnClickedButtonRefresh()
 		return
 	end
 
+	TeamInviteVM:RefreshAll()
 	self.LastRefreshTime = os.time()
 	self:Refresh(self.TbvTabChannel:GetSelectedIndex())
 	TeamInviteVM:ClearInvitedRoleInfo()
@@ -208,14 +210,7 @@ end
 
 function TeamInvitePanelView:OnRecruitShareFromChild(RoleID)
 	local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
-	local ChatDefine = require("Game/Chat/ChatDefine")
-	local ProtoCS = require("Protocol/ProtoCS")
-	local ChatParams = _G.TeamRecruitMgr.MakeClipboardData(TeamRecruitUtil.GatherShareData(TeamRecruitVM.RecruitingDetailVM))
-	local Param = _G.ChatMgr:EncodeChatParams({TeamRecruit = ChatParams})
-	local Params = { Type = ProtoCS.PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT, Direct = true, Param = Param }
-	local ParamList = table.pack(Params)
-	_G.ChatMgr:SendChatMsgPushMessage(ChatDefine.ChatChannel.Person, RoleID, ChatDefine.ChatMacros.TeamRecruit, 0, ParamList)
-	_G.TeamRecruitMgr:AddRecruitShareTipTimer(RoleID)
+	TeamRecruitUtil.ShareCurrentRecruitToChat(RoleID)
 end
 
 function TeamInvitePanelView:OnTeamInviteFromChild(RoleID, OnlineStatus)

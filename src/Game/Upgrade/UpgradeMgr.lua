@@ -10,6 +10,7 @@ local AudioUtil = require("Utils/AudioUtil")
 local ItemCfg = require("TableCfg/ItemCfg")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local FuncCfg = require("TableCfg/FuncCfg")
+local GuideCfg = require("TableCfg/GuideCfg")
 local FuncType = ProtoRes.FuncType
 local LSTR
 local GameNetworkMgr
@@ -24,7 +25,9 @@ function UpgradeMgr:OnInit()
     self.IsOnDirectUpState = false
     self.IsProfActivate = false
     self.IsLevelUpgrade = false
+    self.IsUpdateMainPanel = false
     self.UpgradeRewards = {}
+    self.LockGuideList = {}
 end
 
 ---OnBegin
@@ -49,6 +52,7 @@ end
 function UpgradeMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(_G.EventID.MajorProfActivate, self.MajorProfActivate) --激活
     self:RegisterGameEvent(_G.EventID.BagUseItemSucc, self.OnBagUseItemSucc)
+    self:RegisterGameEvent(_G.EventID.SkillUnlock, self.OnSkillUnlock)
 end
 
 function UpgradeMgr:SendUpgrade(Prof)
@@ -91,6 +95,7 @@ function UpgradeMgr:OnReadyUpgrade(MsgBody)
     end
     _G.ModuleOpenMgr:SetIsOnDirectUpState(true)
     self.IsOnDirectUpState = true
+    self.LockGuideList = {}
 end
 
 function UpgradeMgr:OnUpgradeInfo(MsgBody)
@@ -104,7 +109,11 @@ function UpgradeMgr:OnUpgradeInfo(MsgBody)
     if UIViewMgr:IsViewVisible(_G.UIViewID.BagMain) then
         UIViewMgr:HideView(_G.UIViewID.BagMain)
     end
-    UIViewMgr:ShowView(_G.UIViewID.UpgradeMainPanelView, {Prof = Prof, Exp = Exp, QuestID2Finish = QuestID2Finish})
+    if self.IsUpdateMainPanel then
+        _G.EventMgr:SendEvent(_G.EventID.UpdateUpgradeMainPanel, {Prof = Prof, Exp = Exp, QuestID2Finish = QuestID2Finish})
+    else
+        UIViewMgr:ShowView(_G.UIViewID.UpgradeMainPanelView, {Prof = Prof, Exp = Exp, QuestID2Finish = QuestID2Finish})
+    end
 end
 
 function UpgradeMgr:OnAdventureReward(MsgBody)
@@ -183,6 +192,20 @@ function UpgradeMgr:PlayLevelUpdateEffect()
     end
     local LevelUpAudioPath = "AkAudioEvent'/Game/WwiseAudio/Events/sound/zingle/Zingle_LvUP_CountStop/Play_Zingle_LvUP_CountStop.Play_Zingle_LvUP_CountStop'"
     AudioUtil.LoadAndPlayUISound(LevelUpAudioPath, CallBack)
+end
+
+function UpgradeMgr:OnSkillUnlock(Params)
+    local UnSkillList = Params.Value
+    local Lookup = {}
+    local GuideCfgs = GuideCfg:FindAllGroupID(2)
+    for k, v in ipairs(UnSkillList) do
+        Lookup[v.SkillID] = true
+    end
+    for _, Item in ipairs(GuideCfgs) do
+        if Lookup[Item.Open[1].Param1] then
+            table.insert(self.LockGuideList, Item.GuideID)
+        end
+    end
 end
 
 function UpgradeMgr:GetUpgradeTimeStamp()

@@ -96,9 +96,7 @@ function LoginNewFriendItemView:OnClickIconBtn()
     --LoginMgr.OverseasSvrAreaId = self.Params.Data.CustomValue2
     --FLOG_INFO("[LoginNewFriendItemView:OnClickIconBtn] WorldID:%d", LoginNewVM.WorldID)
 
-    -- 播放视频崩溃上报比较多，减少调用次数，不重复播放:打开同玩好友列表
-    --LoginMgr.IsMoviePlaying = false
-    --_G.CgMgr:StopCGVideo()
+    _G.CgMgr:StopCGVideo()
     UIViewMgr:ShowView(UIViewID.LoginServerList, { Index = 3 })
 end
 

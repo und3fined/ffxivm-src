@@ -32,6 +32,7 @@ local MajorUtil = require("Utils/MajorUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local ArmyFlagTextColors = ArmyDefine.ArmyFlagTextColors
 local FLinearColor = _G.UE.FLinearColor
+local CommonUtil = require("Utils/CommonUtil")
 
 local MaxJoinTextLen = nil --- 申请入队留言最大长度
 
@@ -48,7 +49,8 @@ local MaxJoinTextLen = nil --- 申请入队留言最大长度
 ---@field ImgArmyFlag UFImage
 ---@field ImgIcon UFImage
 ---@field ImgPeopleIcon UFImage
----@field PlayerHeadSlot CommPlayerHeadSlotView
+---@field PanelArmyHouse UFCanvasPanel
+---@field PlayerHeadSlot CommHeadView
 ---@field RichTextPeople URichTextBox
 ---@field TableViewJob UTableView
 ---@field TableView_62 UTableView
@@ -87,6 +89,7 @@ function ArmyJoinInfoViewWinView:Ctor()
 	--self.ImgArmyFlag = nil
 	--self.ImgIcon = nil
 	--self.ImgPeopleIcon = nil
+	--self.PanelArmyHouse = nil
 	--self.PlayerHeadSlot = nil
 	--self.RichTextPeople = nil
 	--self.TableViewJob = nil
@@ -156,10 +159,11 @@ function ArmyJoinInfoViewWinView:UpdateUIShow()
 	self:SetCreateTime(self.CreateTime)
 	self:SetActivityTimeText(self.ActivityTimeType)
 	self.TextArmyName:SetText(self.Name)
-	local AliasStr = string.format("[%s]", self.Alias)
+	local AliasStr = CommonUtil.GetTextFromStringWithSpecialCharacter(" <10006>" .. self.Alias .. "<10007>")--策划要求和HUD保持一致
 	self.TextArmyName02:SetText(AliasStr)
 	self:SetLeaderInfo(self.LeaderID)
 	self:SetBtnState()
+	self:SetHouseUI()
 end
 
 function ArmyJoinInfoViewWinView:UpdateView(Params)
@@ -259,6 +263,12 @@ function ArmyJoinInfoViewWinView:UpdateData(Params)
 		self.ArmyID = self.ArmyID or Info.ArmyID ---无服务器下发使用传入数据
 		self.IsHideBtn = Info.IsHideBtn
 	end
+	---部队房屋相关
+	if self.ArmyID then
+		self.IsHasHouse = false
+		self.HouseAddrStr = nil
+		_G.HouseInfoMgr:SendGroupHouseInfo(self.ArmyID) 
+	end
 end
 
 ---活动item点击
@@ -305,6 +315,8 @@ function ArmyJoinInfoViewWinView:SetDefaultUIText()
 	self.TextGade_5:SetText(LSTR(910136))
 	---LSTR 部队情报
 	self.BG:SetTitleText(LSTR(910371))
+	---LSTR 部队房屋
+	self.TextGade_6:SetText(LSTR(910256))
 end
 
 ---招募标语
@@ -394,6 +406,11 @@ function ArmyJoinInfoViewWinView:SetLeaderInfo(LeaderID)
 		end
 	end
 	_G.RoleInfoMgr:QueryRoleSimple(LeaderID, Callback, self, false)
+	if LeaderID ~= MajorUtil.GetMajorRoleID() then
+		UIUtil.SetIsVisible(self.BtnReport, true, true)
+	else
+		UIUtil.SetIsVisible(self.BtnReport, false)
+	end
 end
 
 function ArmyJoinInfoViewWinView:SetLeaderUI(RoleVM)
@@ -431,6 +448,13 @@ function ArmyJoinInfoViewWinView:SetBtnState()
 	end
 end
 
+function ArmyJoinInfoViewWinView:SetHouseUI()
+	UIUtil.SetIsVisible(self.PanelArmyHouse, self.IsHasHouse or self.IsHasLandNoBuild)
+	if self.HouseAddrStr then
+		self.TextHouseName:SetText(self.HouseAddrStr)
+	end
+end
+
 function ArmyJoinInfoViewWinView:OnHide()
 
 end
@@ -439,6 +463,7 @@ function ArmyJoinInfoViewWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnSave, self.OnApplyJoinArmy)
 	UIUtil.AddOnClickedEvent(self, self.BtnCopy, self.OnClickedCopy)
 	UIUtil.AddOnClickedEvent(self, self.BtnReport, self.OnClickedReport)
+	UIUtil.AddOnClickedEvent(self, self.BtnHouseName, self.OnClickedHouse)
 end
 
 --- 复制部队ID
@@ -570,8 +595,31 @@ function ArmyJoinInfoViewWinView:OnClickedReport()
 	_G.ReportMgr:OpenViewByArmyList(Params)
 end
 
-function ArmyJoinInfoViewWinView:OnRegisterGameEvent()
+function ArmyJoinInfoViewWinView:OnClickedHouse()
+	if self.HouseID then
+		_G.HouseInfoMgr:OpenOthersHouseInfoPanel(self.HouseID)
+		self:Hide()
+	end
+end
 
+function ArmyJoinInfoViewWinView:OnRegisterGameEvent()
+	self:RegisterGameEvent(_G.EventID.HouseGroupInfoUpdate, self.OnGameEventHouseGroupInfoUpdate)
+end
+
+-- // 拉取部队的房屋信息
+function ArmyJoinInfoViewWinView:OnGameEventHouseGroupInfoUpdate(PullGroupInfo)
+	if PullGroupInfo and PullGroupInfo.GroupID == self.ArmyID then
+		if PullGroupInfo.HouseDetail and PullGroupInfo.HouseDetail.Basic then
+			local HouseDetail = PullGroupInfo.HouseDetail
+			self.IsHasHouse = true
+			self.HouseID = HouseDetail.Basic.HouseID
+			self.HouseAddrStr = _G.HouseLandMgr:GetHouseAddrStr(HouseDetail.Basic.Addr, HouseDetail.Basic.HouseResID) 
+		else
+			self.IsHasHouse = false
+			self.HouseAddrStr = nil
+		end
+		self:SetHouseUI()
+	end
 end
 
 function ArmyJoinInfoViewWinView:CheckApplyBtn()

@@ -52,6 +52,7 @@ local ChocoboTransferCmd = ProtoCS.ChocoboTransferCmd
 local TransitionType = ProtoRes.transition_type
 local CHOCOBO_FEE_QTE_RESULT = ChocoboDefine.CHOCOBO_FEE_QTE_RESULT
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
+local CS_COMM_STAT_CMD = ProtoCS.CS_COMM_STAT_CMD
 
 local CommStatID = ProtoCommon.CommStatID
 
@@ -107,13 +108,14 @@ function ChocoboTransportMgr:OnBegin()
 
     self.bTransOnLeaveWorld = false -- 记录离开地图时是否在运输
     self.bForceFly = false          -- Gm设置是否飞行
+    self.bCancelFlyFalling = false -- 取消飞行运输后下落中
 end
 
 function ChocoboTransportMgr:OnEnd()
-    self.MapBookDict = nil
-    self.QueryDict = nil
-    self.QueryingDict = nil
-    self.FindPathListInMap = nil
+    self.MapBookDict = {}
+    self.QueryDict = {}
+    self.QueryingDict = {}
+    self.FindPathListInMap = {}
     self.AnimTimerID = nil
     self.PlayEndTimerID = nil
     self.CurrentNpcID = 0
@@ -125,6 +127,7 @@ function ChocoboTransportMgr:OnEnd()
         self.IsTransporting = false
     end
     self.bForceFly = false
+    self.bCancelFlyFalling = false
     FLOG_INFO("ChocoboTransportMgr:OnEnd()")
 end
 
@@ -168,7 +171,7 @@ function ChocoboTransportMgr:OnMountFlyStateChange(Params)
     if not MajorUtil.IsMajor(EntityID) then
         return
     end
-   
+
 	if not self.IsTransporting then
 		return
 	end
@@ -461,6 +464,13 @@ function ChocoboTransportMgr:__StartPathMove()
         end
     end
 
+    -- check findpath cache 复杂网络情况可能重新发寻路请求了，FindPath会被清理掉
+    if not self.CurrentFindPath then
+        FLOG_ERROR("ChocoboTransport CurrentFindPath is nil")
+        self:CancelTrasport()
+        return
+    end
+
     -- stop start atl
     if self:IsFirstTransMap() then  -- 如果是跨地图继续运输不需要执行
         self:__StopStartAnimation()
@@ -599,8 +609,8 @@ function ChocoboTransportMgr:__SwitchTransportStatus(IsTransport)
         --MountVM:SetPanelVisible(false)
         --MainPanelVM:SetControlPanelVisible(false)
         --JoyStick
-        _G.CommonUtil.HideJoyStick()
-        _G.CommonUtil.DisableShowJoyStick(true) --关闭摇杆显示
+        CommonUtil.HideJoyStick()
+        CommonUtil.DisableShowJoyStick(true) --关闭摇杆显示
         -- 通知cpp镜头固定
         --EventMgr:SendCppEvent(EventID.StartAutoPathMove)
         -- 设置步高
@@ -621,8 +631,8 @@ function ChocoboTransportMgr:__SwitchTransportStatus(IsTransport)
         --MountVM:SetPanelVisible(true)
         --MainPanelVM:SetControlPanelVisible(true)
         -- JoyStick
-        _G.CommonUtil.DisableShowJoyStick(false) --恢复摇杆显示
-        _G.CommonUtil.ShowJoyStick()
+        CommonUtil.DisableShowJoyStick(false) --恢复摇杆显示
+        CommonUtil.ShowJoyStick()
         -- 通知cpp镜头解除固定
         EventMgr:SendCppEvent(EventID.StopAutoPathMove)
 
@@ -636,10 +646,14 @@ function ChocoboTransportMgr:__SwitchTransportStatus(IsTransport)
                 end
                 -- move模式保护
                 if MoveComp.MovementMode == UE.EMovementMode.MOVE_Flying then
+                    if not CommonUtil.IsShipping() then
+                        FLOG_WARNING("[ChocoboTransport] transport end movement move=fly, reset walking")
+                    end
                     MoveComp:SetMovementMode(UE.EMovementMode.MOVE_Walking)
                 end
             end
         end
+
         EventMgr:SendEvent(EventID.ChocoboTransportFinish)
 
         self.TransportStatus = TransportStatus.None
@@ -650,7 +664,7 @@ function ChocoboTransportMgr:__ResetTransportStatus()
     MapVM:SetIsMajorVisible(true)
     MountVM:SetPanelVisible(true)
     MainPanelVM:SetControlPanelVisible(true)
-    _G.CommonUtil.DisableShowJoyStick(false)
+    CommonUtil.DisableShowJoyStick(false)
 end
 
 -- ==================================================
@@ -768,6 +782,7 @@ end
 ---发送寻路请求
 ---@param EndPos UE.FVector
 function ChocoboTransportMgr:SendFindPath(EndPos)
+    EndPos.Z = EndPos.Z + 10 -- 避免位置陷入地下，抬高10厘米
     if ChocoboTransportDefine.FIND_PATH_CACHE then -- 如果开启缓存，先从缓存里拿
         self.FindPathKey = self:PosToKey(EndPos)
         local MapID = _G.PWorldMgr:GetCurrMapResID()
@@ -931,7 +946,7 @@ function ChocoboTransportMgr:OnNetMsgGetStatStatus(MsgBody)
         end
     end
 
-    self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, ProtoCS.CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+    self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
 end
 
 function ChocoboTransportMgr:OnNetMsgFindPath(MsgBody)
@@ -1048,6 +1063,11 @@ function ChocoboTransportMgr:OnGameEventNetworkReconnected(Params)
     if not CommonUtil.IsShipping() then
         FLOG_INFO("[ChocoboTransport] OnGameEventNetworkReconnected bRelay="..tostring(bRelay))
     end
+    if bRelay then
+        self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+        self:RegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+        _G.ActorMgr:SendCommStatQueryReq()
+    end
 end
 
 function ChocoboTransportMgr:OnGameEventAutoPathServerPull()
@@ -1111,7 +1131,7 @@ function ChocoboTransportMgr:GetResumeBrokenPosTable()
         return nil
     end
     local Point = Major:FGetActorLocation()
-    local Width = 100 --1米
+    local Width = 200 --2米
     local StartIndex = nil
     local Length = self.PosTable:Length()
     for i=2, Length do
@@ -1184,8 +1204,8 @@ function ChocoboTransportMgr:OnGameEventEnterWorld()
     ]]
 
     -- 二次保护,可能状态同步包未到达，监听状态协议
-    self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, ProtoCS.CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
-    self:RegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, ProtoCS.CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+    self:UnRegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_COMM_STAT, CS_COMM_STAT_CMD.CS_COMM_STAT_CMD_STATUS, self.OnNetMsgGetStatStatus)
 
 
     self:TryContinueBeginTrans()
@@ -1691,6 +1711,10 @@ function ChocoboTransportMgr:GetQuestTargetNearbyTransportPoint(MapID)
     local QuestPoint = nil
 
     local Major = MajorUtil.GetMajor()
+    if nil == Major then
+        FLOG_ERROR("[ChocoboTransportMgr] GetQuestTargetNearbyTransportPoint major is nil")
+        return QuestPoint, IsNearGap
+    end
     local MajorPos = Major:FGetActorLocation()
 
     for _, Quest in ipairs(QuestList) do
@@ -2393,27 +2417,29 @@ end
 function ChocoboTransportMgr:OnBreakFlyTransport()
     self.TransportStatus = TransportStatus.None -- 飞行需要提前置为空
     if CommonUtil.GetPlatformName() == "Windows" then -- 防止按WASD持续飞行 手机端是无所谓的
-        self:SetMajorCanInput(false) 
+        self:SetMajorCanInput(false)
     end
-    
+    local Major = MajorUtil.GetMajor()
+    if Major then
+        local CharacterMovement = Major.CharacterMovement
+        if CharacterMovement then
+            CharacterMovement:SetMovementMode(UE.EMovementMode.MOVE_Flying)
+        end
+    end
+
     self.DiableTimer = self:RegisterTimer(self.EnterFalling, 0.1)
 end
 
 --- @type 停止输入让玩家Fall
 function ChocoboTransportMgr:EnterFalling()
     self.DiableTimer = nil
+    self.OnGroundTimer = self:RegisterTimer(self.OnInGround, 4) -- 保底，4s后必结束
+
     local MajorController = MajorUtil.GetMajorController()
     if MajorController == nil then
         return
     end
-    local Major = MajorUtil.GetMajor()
-    local CharacterMovement = Major.CharacterMovement
-    if CharacterMovement then
-        CharacterMovement:SetMovementMode(UE.EMovementMode.MOVE_Flying)
-    end
     MajorController:MountFall()
-
-    self.OnGroundTimer = self:RegisterTimer(self.OnInGround, 4) -- 保底，4s后必结束
 end
 
 --- @type 检测落地终止飞行运输以及相关表现处理
@@ -2432,10 +2458,16 @@ end
 --- @type 当落地
 function ChocoboTransportMgr:OnInGround()
     FLOG_INFO("ChocoboTransportMgr:OnInGround()")
-    self:OnBreakTransport()
+    local function DelayBreakTransport()
+        if ChocoboTransportMgr:GetIsTransporting() then
+            ChocoboTransportMgr:OnBreakTransport()
+        end
+    end
+    self:RegisterTimer(DelayBreakTransport, 0.5)    -- 延迟break,等降落位置同步完
+
     _G.MountMgr:CancelForceCanFly()
     if CommonUtil.GetPlatformName() == "Windows" then -- 恢复
-        self:SetMajorCanInput(true) 
+        self:SetMajorCanInput(true)
     end
 
     if self.OnGroundTimer ~= nil then
@@ -2447,6 +2479,9 @@ end
 --- @type 获取飞行路径
 function ChocoboTransportMgr:FindFlyPath(PathID)
     local Path = _G.MapEditDataMgr:GetPath(PathID)
+    if not Path then
+        return
+    end
     local Points = Path.Points
     self.CurrentFindPath = {}
     for i = 1, #Points do
@@ -2489,6 +2524,25 @@ end
 ---@param Val boolean
 function ChocoboTransportMgr:SetQuestNpcQueryEnable(Val)
     self.IsQuestNpcQueryEnable = Val
+    if Val then
+        if self.SEQuestMap == nil then
+            self.SEQuestMap = {}
+            local TArray = UE.UExcelUtil.GetAllQuestInfo()
+            local Length = TArray:Length()
+            local LineNum = 26 --26一组
+            local QuestType = 0
+            for i=1, Length do
+                local Val = TArray:Get(i)
+                if i % LineNum == 1 then
+                    QuestType = Val
+                else
+                    if Val > 0 then
+                         self.SEQuestMap[Val] = QuestType
+                    end
+                end
+            end
+        end
+    end
 end
 
 ---设置显示辅助点开关

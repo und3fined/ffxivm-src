@@ -16,7 +16,7 @@ local RandomEventCfg = require("TableCfg/RandomEventCfg")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local CollectInfoCfg = require("TableCfg/CollectInfoCfg")
 local ItemUtil = require("Utils/ItemUtil")
-local TimeUtil = require("Utils/TimeUtil")
+local ItemDefine = require("Game/Item/ItemDefine")
 ---@class CrafterSidebarPanelVM : UIViewModel
 local CrafterSidebarPanelVM = LuaClass(UIViewModel)
 
@@ -28,6 +28,7 @@ function CrafterSidebarPanelVM:Ctor()
     self.ProfName = ""
     self.RecipeName = ""
     self.ItemIconPath = ""
+    self.ItemQualityImg = ""
     self.TextValue = ""
     self.TextValueNumber = ""
 
@@ -45,8 +46,9 @@ function CrafterSidebarPanelVM:Ctor()
     
     self.DurableBarSize = _G.UE.FVector2D(296, 36)
     self.DurableBar = 0
-    self.ProgressBar = 0
-    self.QualityBar = 0
+    
+    self.SetProgressBarPercent = {Last = 0, To = 0}
+    self.SetQualityBarPercent = {Last = 0, To = 0}
     self.SetDurableFillColorType = 1
     self.SetImgQualityPos = nil
     self.CollectTextBlue = ""
@@ -60,9 +62,12 @@ end
 function CrafterSidebarPanelVM:OnInit()
     self.AnimInfoMap = {}
     self.AnimInfoMap[ProtoCS.FeatureType.FEATURE_TYPE_PROGRESS] = 
-        {Last = 0, To = 1, Prop = "ProgressBar", LifeTime = 200, CurTime = 0}
+        {Last = 0, To = 0}--, Prop = "ProgressBar", LifeTime = 200, CurTime = 0}
     self.AnimInfoMap[ProtoCS.FeatureType.FEATURE_TYPE_QUALITY] = 
-        {Last = 0, To = 1, Prop = "QualityBar", LifeTime = 200, CurTime = 0}
+        {Last = 0, To = 0}--, Prop = "QualityBar", LifeTime = 200, CurTime = 0}
+
+    self:SetNoCheckValueChange("SetProgressBarPercent", true)
+    self:SetNoCheckValueChange("SetQualityBarPercent", true)
 end
 
 function CrafterSidebarPanelVM:OnBegin()
@@ -104,6 +109,7 @@ function CrafterSidebarPanelVM:UpdateStartMakeRsp(StartMakeRsp)
     if Cfg then
         self.ItemIconPath = UIUtil.GetIconPath(Cfg.IconID)
     end
+    self.ItemQualityImg = ItemUtil.GetSlotColorIcon(self.RecipeConfig.ProductID, ItemDefine.ItemSlotType.Item96Slot)
 
     self.QualityMax = self.RecipeConfig.QualityMax
 
@@ -157,51 +163,51 @@ function CrafterSidebarPanelVM:UpdateStartMakeRsp(StartMakeRsp)
 end
 
 function CrafterSidebarPanelVM:StartAnimTimer()
-    self.LastUpdateTime = TimeUtil.GetLocalTimeMS()
-    if not self.AnimTimerID then
-        self.AnimTimerID = _G.TimerMgr:AddTimer(self, self.ProgressAnimUpdate, 0, 0, 0)
-    end
+    -- self.LastUpdateTime = TimeUtil.GetLocalTimeMS()
+    -- if not self.AnimTimerID then
+    --     self.AnimTimerID = _G.TimerMgr:AddTimer(self, self.ProgressAnimUpdate, 0, 0, 0)
+    -- end
 end
 
 function CrafterSidebarPanelVM:CloseAnimTimer()
-    if self.AnimTimerID then
-        _G.TimerMgr:CancelTimer(self.AnimTimerID)
-        self.AnimTimerID = nil
-    end
+    -- if self.AnimTimerID then
+    --     _G.TimerMgr:CancelTimer(self.AnimTimerID)
+    --     self.AnimTimerID = nil
+    -- end
 end
 
 function CrafterSidebarPanelVM:ProgressAnimUpdate()
-    local CurLocalTime = TimeUtil.GetLocalTimeMS()
-    local ElapsedTime = CurLocalTime - self.LastUpdateTime
-    local AnimOver = true
-	-- print("-------- crafter ProgressAnimUpdate Elapsed:", ElapsedTime)
+    -- local CurLocalTime = TimeUtil.GetLocalTimeMS()
+    -- local ElapsedTime = CurLocalTime - self.LastUpdateTime
+    -- local AnimOver = true
+	-- -- print("-------- crafter ProgressAnimUpdate Elapsed:", ElapsedTime)
 
-    for FeatureID, AnimInfo in pairs(self.AnimInfoMap) do
-        AnimInfo.CurTime = AnimInfo.CurTime + ElapsedTime
-        local X = AnimInfo.CurTime / AnimInfo.LifeTime
-        if X > 1 then
-            X = 1
-            AnimInfo.Last = AnimInfo.To
-            AnimInfo.CurTime = 0
-        else
-            AnimOver = false
-        end
+    -- for FeatureID, AnimInfo in pairs(self.AnimInfoMap) do
+    --     AnimInfo.CurTime = AnimInfo.CurTime + ElapsedTime
+    --     local X = AnimInfo.CurTime / AnimInfo.LifeTime
+    --     if X > 1 then
+    --         X = 1
+    --         AnimInfo.Last = AnimInfo.To
+    --         AnimInfo.CurTime = 0
+    --     else
+    --         AnimOver = false
+    --     end
 
-        X = 1 - X
+    --     X = 1 - X
 
-        local CurStep = (1 - X * X * X) * (AnimInfo.To - AnimInfo.Last)
-        local To = AnimInfo.Last + CurStep
-        -- print("crafter, To: ", To, " Last: ", AnimInfo.Last, " CurStep: ", CurStep
-        --     , " CurTime: ", AnimInfo.CurTime, " X: ", X)
+    --     local CurStep = (1 - X * X * X) * (AnimInfo.To - AnimInfo.Last)
+    --     local To = AnimInfo.Last + CurStep
+    --     -- print("crafter, To: ", To, " Last: ", AnimInfo.Last, " CurStep: ", CurStep
+    --     --     , " CurTime: ", AnimInfo.CurTime, " X: ", X)
         
-        self[AnimInfo.Prop] = To
-    end
+    --     self[AnimInfo.Prop] = To
+    -- end
 
-    if AnimOver then
-        self:CloseAnimTimer()
-    end
+    -- if AnimOver then
+    --     self:CloseAnimTimer()
+    -- end
     
-    self.LastUpdateTime = CurLocalTime
+    -- self.LastUpdateTime = CurLocalTime
 end
 
 function CrafterSidebarPanelVM:UpdateFeatures(Features)
@@ -237,17 +243,21 @@ function CrafterSidebarPanelVM:UpdateFeatures(Features)
     local TargetPercent = Value / self.RecipeConfig.ProgressMax
     -- print("++++ Crafter PROGRESS TargetPercent: ", TargetPercent)
     local AnimInfo = self.AnimInfoMap[ProtoCS.FeatureType.FEATURE_TYPE_PROGRESS]
-    if TargetPercent > AnimInfo.Last then
-        AnimInfo.To = TargetPercent
-        AnimInfo.CurTime = 0
-        AnimInfo.LifeTime = 200
-        AnimInfo.Last = self[AnimInfo.Prop]
-        self:StartAnimTimer()
-    else
-        self.ProgressBar = TargetPercent
-        AnimInfo.To = TargetPercent
-        AnimInfo.Last = TargetPercent
+    if AnimInfo then
+        if TargetPercent > AnimInfo.Last then
+            AnimInfo.Last = AnimInfo.To
+            AnimInfo.To = TargetPercent
+            -- AnimInfo.CurTime = 0
+            -- AnimInfo.LifeTime = 200
+            -- AnimInfo.Last = self[AnimInfo.Prop]
+            -- self:StartAnimTimer()
+        else
+            -- self.ProgressBar = TargetPercent
+            AnimInfo.To = TargetPercent
+            AnimInfo.Last = TargetPercent
+        end
     end
+    self.SetProgressBarPercent = AnimInfo
 
     --品质
     Value = Features[ProtoCS.FeatureType.FEATURE_TYPE_QUALITY] or 0
@@ -281,19 +291,21 @@ function CrafterSidebarPanelVM:UpdateFeatures(Features)
     AnimInfo = self.AnimInfoMap[ProtoCS.FeatureType.FEATURE_TYPE_QUALITY]
     if AnimInfo then
         if TargetPercent > AnimInfo.Last then
+            AnimInfo.Last = AnimInfo.To
             AnimInfo.To = TargetPercent
-            AnimInfo.CurTime = 0
-            AnimInfo.LifeTime = 200
-            AnimInfo.Last = self[AnimInfo.Prop]
-            self:StartAnimTimer()
+            -- AnimInfo.CurTime = 0
+            -- AnimInfo.LifeTime = 200
+            -- AnimInfo.Last = self[AnimInfo.Prop]
+            -- self:StartAnimTimer()
         else
-            self.QualityBar = TargetPercent
+            -- self.QualityBar = TargetPercent
             AnimInfo.To = TargetPercent
             AnimInfo.Last = TargetPercent
         end
     else
         FLOG_ERROR("++++ Crafter AnimInfo is nil")
     end
+    self.SetQualityBarPercent = AnimInfo
 
     --工次
     Value = Features[ProtoCS.FeatureType.FEATURE_TYPE_STEPS] or 0

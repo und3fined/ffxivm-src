@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local ClosetCfg = require("TableCfg/ClosetCfg")
 local ItemUtil = require("Utils/ItemUtil")
 local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+local ItemDefine = require("Game/Item/ItemDefine")
 
 local EndureState = EquipmentDefine.EndureState
 local WearableState = EquipmentDefine.WearableState
@@ -57,7 +58,9 @@ function EquipmentSlotItemVM:Ctor()
 	self.bShowRepair = false
 	self.PlayRepairEffect = false
 	self.bPlayAnimChange = false
-
+	self.WardrobeStainTagVisible = false
+	self.WardrobeStainTagColorVsisble = false
+	self.WardrobeStainTagImgStainColorVsisble = false
 	--region Glamours
 	-- --self.bInGlamours = false -- 是否处于幻化系统(控制幻化Panel是否显示)
 	-- self.DyeColor = nil -- 幻影模板染色id
@@ -122,8 +125,29 @@ function EquipmentSlotItemVM:SetPart(InPart, InResID, InGID, IsAppearance)
 		self.EmptySlotOpacity = 1.0
 		local WardrobeIconPath = WardrobeUtil.GetEquipmentAppearanceIcon(self.ResID)
 		self.IconPath = IsAppearance and WardrobeIconPath or ItemCfg.GetIconPath(Cfg.IconID)
-		local ItemColor = nil ~= Cfg.ItemColor and Cfg.ItemColor or ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_NONE
-		self.QualityIcon = IsAppearance and QualityIconMap[ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] or ItemUtil.GetItemColorIcon(self.ResID)
+		local AppQualityIcon = QualityIconMap[ProtoRes.ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE]
+		if IsAppearance then
+			local ResEquipID = Cfg.EquipID
+			if Cfg.Special == 1 then
+				local Item = ItemCfg:FindCfg(string.format("EquipmentID = %d", Cfg.EquipID))
+				if Item then
+					local IsHQ = (1 == Item.IsHQ)
+					if IsHQ then
+						AppQualityIcon = ItemDefine.HQItemIconColorType[Item.ItemColor]
+					else
+						AppQualityIcon = ItemDefine.ItemIconColorType[Item.ItemColor]
+					end
+				end
+			else
+				AppQualityIcon = ItemUtil.GetItemColorIcon(ResEquipID)
+			end
+			--染色标志
+			self.WardrobeStainTagVisible = _G.WardrobeMgr:GetDyeEnable(self.ResID)
+		else
+			self.WardrobeStainTagVisible = false
+		end
+		--衣橱外观默认紫色
+		self.QualityIcon = IsAppearance and AppQualityIcon or ItemUtil.GetItemColorIcon(self.ResID)
 		self.bShowQuality = true
 	else
 		self.EmptySlotOpacity = 0.1
@@ -146,9 +170,9 @@ function EquipmentSlotItemVM:UpdateSchemeInfo()
 end
 
 function EquipmentSlotItemVM:UpdateEndureDeg()
-	if self.Item then
+	if self.Item and self.Item.Attr and self.Item.Attr.Equip and self.Item.Attr.Equip.EndureDeg then
 		self.ProgressValue = self.Item.Attr.Equip.EndureDeg / 10000
-		self.EndureState = self.ProgressValue == 1.0 and EndureState.Full or EndureState.Normal
+		self.EndureState = self.Item.Attr.Equip.EndureDeg == 10000 and EndureState.Full or EndureState.Normal
 	else
 		self.ProgressValue = 1.0
 		self.EndureState = EndureState.Unavailable

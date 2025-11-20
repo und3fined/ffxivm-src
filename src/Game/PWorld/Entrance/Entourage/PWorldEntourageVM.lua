@@ -106,8 +106,10 @@ function PWorldEntourageVM:UpdateEntInfo()
 
     if Info.CombatCfg then
        self.EquipSyncLv =  Info.CombatCfg.EquipMaxLv or 0
+       self.SyncMaxLv = Info.CombatCfg.SyncMaxLv or 0
     else
        self.EquipSyncLv = 0
+       self.SyncMaxLv = 0
     end
 
     local SceneEnterTypeCfg = require("TableCfg/SceneEnterTypeCfg")
@@ -322,9 +324,24 @@ function PWorldEntourageVM:UpdateJoinInfo()
     self.ForbidText = _G.LSTR(1320006)
     local IsPass, RltInfo = self.Policy:CheckJoinPre(self.CurEntID)
     RltInfo = RltInfo or {}
+
+    -- fix equip level check
+    do
+        local ReqEquipLv = self.Policy:GetRequireEquipLv(self.CurEntID)
+        local Score = _G.EquipmentMgr:CalculateEquipScore()
+        RltInfo.IsPassEquipLv = Score >= ReqEquipLv
+        IsPass = true
+        for _, v in pairs(RltInfo) do
+            if not v then
+                IsPass = false
+                break
+            end
+        end
+    end
+
     self.RltInfo = RltInfo
     local ReqLv = self.PWorldRequireLv
-    self.LvTips = string.sformat(_G.LSTR(1320079), ReqLv)
+    self.LvTips = string.sformat(LSTR(1320206), ReqLv, self.SyncMaxLv, self.SyncMaxLv)
     self.bPassLv = RltInfo.IsPassLv
     self.LvTips = GetColorReqDesc(self.LvTips, self.bPassLv)
     -- equip

@@ -132,7 +132,7 @@ function CraftingLogShopItemView:OnRegisterBinder()
 end
 
 function CraftingLogShopItemView:OnGroupNumChanged(v)
-	local BuyNum = self.ViewModel.NeedNum * v
+	local BuyNum = self.ViewModel:SetNeedBuyNum(v)
 	self.CommAmountSlider:SetSliderValue(BuyNum)
 end
 

@@ -182,7 +182,11 @@ function CommLongMsgBoxView:OnBtnClick(BtnType)
 	if self.Params and self.Params.BtnInfo and self.Params.BtnInfo.Callback and self.Params.UIView then
 		local Callback = self.Params.BtnInfo.Callback[BtnType]
 		if nil ~= Callback then
-			Callback(self.Params.UIView)
+			----view存在且失效时会返回false
+			local IsViewValid = self:CheckViewValid()
+			if IsViewValid then
+				Callback(self.Params.UIView)
+			end
 		end
 	end
 
@@ -199,6 +203,16 @@ function CommLongMsgBoxView:OnMaskBtnClick()
 			UIViewMgr:HideView(self.ViewID)
 		end
 	end
+end
+
+----检查View是否失效
+function CommLongMsgBoxView:CheckViewValid()
+	----当view失效时，不触发回调函数/有部分调用传入的不是view,只对有IsValid函数的类做判断/View可能为nil，为nil的情况也返回true
+	local IsViewValid = true
+	if self.Params.UIView and self.Params.UIView.IsValid and not self.Params.UIView:IsValid() then
+		IsViewValid = false
+	end
+	return IsViewValid
 end
 
 return CommLongMsgBoxView

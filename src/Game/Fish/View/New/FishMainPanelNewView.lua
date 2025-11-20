@@ -14,9 +14,11 @@ local FishVM = require("Game/Fish/FishVM")
 
 
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
 
 local UKismetInputLibrary = UE.UKismetInputLibrary
 
+--更改时需同步下手柄那边
 local BtnLockTime = 3
 
 ---@class FishMainPanelNewView : UIView
@@ -58,6 +60,8 @@ function FishMainPanelNewView:OnInit()
 	self.SitBtnHideTimer = 0
 	self.bSitBtnLock = false
 	self.AreaID = 0
+	self.bFishLift = false
+	self.bFishNoteRank = false
 	self.Binder = {
 		{ "bBiteTimerPanel",UIBinderSetIsVisible.New(self, self.Schedule, false, true)},
 		{ "bFishThingTips",UIBinderSetIsVisible.New(self, self.ThingTips, false, true)},
@@ -98,6 +102,10 @@ function FishMainPanelNewView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.EnterFishArea, self.OnEnterFishArea)
 	self:RegisterGameEvent(EventID.ExitFishArea, self.OnExitFishArea)
 	self:RegisterGameEvent(EventID.TargetChangeMajor, self.OnGameEventtargetChange)
+	self:RegisterGameEvent(EventID.FishNoteRefreshGuideList, self.OnRefreshFishData)
+	self:RegisterGameEvent(EventID.FishNoteRefreshFishData, self.OnRefreshFishData)
+	self:RegisterGameEvent(EventID.FishNoteRefreshLocationList, self.OnRefreshFishArea)
+	self:RegisterGameEvent(EventID.FishNoteUpdateRank, self.OnUpdateFishRank)
 
 	self:RegisterGameEvent(_G.EventID.PreprocessedMouseButtonDown, self.OnPreprocessedMouseButtonDown)
 end
@@ -122,6 +130,7 @@ function FishMainPanelNewView:OnFishDrop(Params)
 end
 
 function FishMainPanelNewView:OnFishLift(Params)
+	self.bFishLift = true
 	local FishID = Params.FishID
 	local FishCount = Params.FishCount or 0
 	local FishSize = Params.FishSize
@@ -145,7 +154,7 @@ end
 function FishMainPanelNewView:OnPreprocessedMouseButtonDown(MouseEvent)
 	local UIViewMgr = _G.UIViewMgr
 	local UIViewID = _G.UIViewID
-	if UIViewMgr:IsViewVisible(UIViewID.FishReleaseTipsPanel) then
+	if UIViewMgr:IsViewVisible(UIViewID.FishReleaseTipsPanel) and not UIViewMgr:IsViewVisible(UIViewID.FishNotesOtherBait) then
 		local View = UIViewMgr:FindVisibleView(UIViewID.FishReleaseTipsPanel)
 		local MousePosition = UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(MouseEvent)
 		if UIUtil.IsUnderLocation(View.PanelTips, MousePosition) == false and
@@ -196,7 +205,7 @@ function FishMainPanelNewView:OnGetFishItem()
 	local FishCount = self.FishCount
 	local FishSize = self.FishSize
 	local FishValue = self.FishCollectionValue
-	self.FishMainPanelVM:OnFishLift()
+	self:SetThingTIpsVisible()
 	local IsNew = self.Panel:FishIsNew(FishID)
 	self.ThingTips:OnFishLift(FishID,FishCount,FishSize,FishValue,IsNew)
 end
@@ -217,6 +226,35 @@ end
 
 function FishMainPanelNewView:UnLockBtnSit()
 	self.bSitBtnLock = false
+end
+
+-- 鱼类列表更新相关逻辑，由于列表UI可能会出现UI冲突Hide的情况，因此在MainPanel中监听事件
+function FishMainPanelNewView:OnRefreshFishData()
+	self.Panel:OnRefreshFishData()
+end
+
+function FishMainPanelNewView:OnRefreshFishArea()
+	self.Panel:OnRefreshFishArea()
+end
+
+function FishMainPanelNewView:OnNetworkReconnected()
+	-- 断线重连后重置渔场UI显示状态
+	self.FishMainPanelVM:SetFishAreaPanel(true)
+end
+
+-- 更新鱼类排名
+function FishMainPanelNewView:OnUpdateFishRank(Params)
+	self.bFishNoteRank = true
+	self.ThingTips:OnUpdateFishRank(Params)
+	self:SetThingTIpsVisible()
+end
+
+function FishMainPanelNewView:SetThingTIpsVisible()
+	if self.bFishLift == true and self.bFishNoteRank == true then
+		self.FishMainPanelVM:OnFishLift()
+		self.bFishLift = false
+		self.bFishNoteRank = false
+	end
 end
 
 return FishMainPanelNewView

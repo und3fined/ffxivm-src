@@ -100,6 +100,10 @@ function TipsQueueMgr:Clear()
 	for _, Queue in pairs(self.TipsList) do
 		Queue:ClearQueue()
 	end
+	if self.TipsCount > 0 then
+		FLOG_INFO("[TipsQueueMgr]Clear, TipsCount=%d", self.TipsCount)
+	end
+	self.TipsCount = 0
 end
 
 function TipsQueueMgr:EnableUseQueue(bEnable)
@@ -152,8 +156,8 @@ function TipsQueueMgr:AddPendingShowTips(Config)
 	if bIsDuplicate then
 		return
 	end
-	FLOG_INFO("[TipsQueueMgr]AddPendingShowTips, Type=%d", Type)
 	self.TipsCount = self.TipsCount + 1
+	FLOG_INFO("[TipsQueueMgr]AddPendingShowTips, Type=%d, TipsCount=%d", Type, self.TipsCount)
 	-- 处理ExterRule
 	local bCanReplace = Config.ExterRule == ProtoRes.tip_rule_type.TIP_RULE_REPLACE
 	if bCanReplace then

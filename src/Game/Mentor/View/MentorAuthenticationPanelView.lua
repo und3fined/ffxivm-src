@@ -10,6 +10,8 @@ local UIUtil = require("Utils/UIUtil")
 local PhotoCameraUtil = require("Game/Photo/Util/PhotoCameraUtil")
 local MentorMgr = require("Game/Mentor/MentorMgr")
 local MentorDefine = require("Game/Mentor/MentorDefine")
+local ProtoCommon = require("Protocol/ProtoCommon")
+local GUIDE_TYPE = ProtoCommon.GUIDE_TYPE
 
 local LSTR = _G.LSTR
 
@@ -18,8 +20,14 @@ local LSTR = _G.LSTR
 ---@field BtnConfirm CommBtnLView
 ---@field CloseBtn CommonCloseBtnView
 ---@field ImgHand UFImage
+---@field ImgHand_1 UFImage
 ---@field ImgMentorIcon UFImage
+---@field PanelConfirmGoldSaucer UFCanvasPanel
+---@field PanelConfirmNormal UFCanvasPanel
+---@field PanelGoldSaucer UFCanvasPanel
+---@field PanelNormalBG UFCanvasPanel
 ---@field PanelSeal UFCanvasPanel
+---@field PanelSeal_1 UFCanvasPanel
 ---@field TextRule UFTextBlock
 ---@field TextRuleDetail UFTextBlock
 ---@field TextSeal UFTextBlock
@@ -37,8 +45,14 @@ function MentorAuthenticationPanelView:Ctor()
 	--self.BtnConfirm = nil
 	--self.CloseBtn = nil
 	--self.ImgHand = nil
+	--self.ImgHand_1 = nil
 	--self.ImgMentorIcon = nil
+	--self.PanelConfirmGoldSaucer = nil
+	--self.PanelConfirmNormal = nil
+	--self.PanelGoldSaucer = nil
+	--self.PanelNormalBG = nil
 	--self.PanelSeal = nil
+	--self.PanelSeal_1 = nil
 	--self.TextRule = nil
 	--self.TextRuleDetail = nil
 	--self.TextSeal = nil
@@ -94,6 +108,14 @@ function MentorAuthenticationPanelView:OnShow()
 	self.BubbleTimerID = nil
 	--PhotoCameraUtil.SetOffset(200,0)
 	local ShowType = self.Params.ShowType or 0
+
+	local bGoldSauserType = ShowType == GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER
+	UIUtil.SetIsVisible(self.PanelGoldSaucer, bGoldSauserType)
+	UIUtil.SetIsVisible(self.PanelNormalBG, not bGoldSauserType)
+
+	UIUtil.SetIsVisible(self.PanelConfirmGoldSaucer, bGoldSauserType)
+	UIUtil.SetIsVisible(self.PanelConfirmNormal, not bGoldSauserType)
+	
 	self.TextTitle:SetText(MentorDefine.FinishTabs[ShowType].AuthenticationPanelTextTips)
 	UIUtil.ImageSetBrushFromAssetPath(self.ImgMentorIcon, MentorDefine.FinishTabs[ShowType].AuthenticationPanelImgMentorIcon)
 

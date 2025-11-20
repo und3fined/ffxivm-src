@@ -390,7 +390,7 @@ local UnitedArmyTabs = {
         AnimFlagIcon = "MaterialInstanceConstant'/Game/UMG/UI_Effect/Material/MI_DX_Flag/MI_DX_Flag_HengHui_2.MI_DX_Flag_HengHui_2'",
     },
 }
----ID保持和一级权限一致,方便获取数据
+---ID保持表格功能类型一致,方便获取数据
 local ArmyWelfareTabs = {
     {
         ID = 1,
@@ -411,7 +411,7 @@ local ArmyWelfareTabs = {
         Icon = "Texture2D'/Game/UI/Texture/Army/UI_Army_Icon_Welfare_01.UI_Army_Icon_Welfare_01'"
     },
     {
-        ID = 13,
+        ID = 5,
         -- LSTR string:部队房屋
         Name = LSTR(910256),
         Icon = "Texture2D'/Game/UI/Texture/Army/UI_Army_Icon_Welfare_04.UI_Army_Icon_Welfare_04'"
@@ -423,7 +423,7 @@ local ArmyWelfarePageId = {
     Store = 1, --- 部队仓库
     SE = 3, --- 部队特效
     Shop = 4, --- 部队商城
-    House = 13, --- 部队房屋
+    House = 5, --- 部队房屋
 }
 
 --- 默认分组
@@ -462,6 +462,7 @@ local ArmyUpLevelPerermissionType = {
     ArmyMemberNumUp = 2, ---扩大招募，部队人数增加
     ArmySELevel = 3, ---特效购买等级
     ArmyShopLevel = 4, ---商店等级
+    ArmyHouseLevel = 5, ---部队房屋等级
 }
 
 local ArmyRedDotID = {
@@ -519,6 +520,18 @@ local ArmyPermissionsClassData =
         Name = LSTR(910130),
         Icon = "Sprite'/Game/UI/Atlas/Army/Frames/UI_Army_Member_Class_Icon_Sign12_png.UI_Army_Member_Class_Icon_Sign12_png"
     },
+    [GroupPermissionClass.GRAND_PERMISSION_CLASS_House] =
+    {
+        -- LSTR string:房屋权限
+        Name = LSTR(910443),
+        Icon = "Sprite'/Game/UI/Atlas/Army/Frames/UI_Army_Member_Class_Icon_Sign12_png.UI_Army_Member_Class_Icon_Sign12_png"
+    },
+    [GroupPermissionClass.GRAND_PERMISSION_CLASS_HouseMaintenance] =
+    {
+        -- LSTR string:部队房屋维护权限
+        Name = LSTR(910444),
+        Icon = "Sprite'/Game/UI/Atlas/Army/Frames/UI_Army_Member_Class_Icon_Sign12_png.UI_Army_Member_Class_Icon_Sign12_png"
+    },
 }
 
 local ArmyErrorCode = 
@@ -533,6 +546,7 @@ local ArmyErrorCode =
     ArmyCreateSameName = 145019,
     NoArmyPleaseJoin = 145026,
     NoPermisstion =  145010,
+    NoRepeatJoinArmy =  145028, --无法重复加入部队
 }
 
 ----部队特效获取类型
@@ -592,6 +606,38 @@ local ArmyLogType =
     LogTypeGrandCompanyChanged    = 22,
     -- 修改部队情报数据
     LogTypeInformatioinChanged    = 23,
+    -- 部队友好关系变化
+    LogTypeGrandCompanyLvChanged    = 24,
+    -- 部队土地抽选
+    LogTypeArmyLandLottey = 25,
+    -- 部队土地购买
+    LogTypeArmyLandPurchase = 26,
+    -- 部队房屋搭建
+    LogTypeArmyHouseConstructtion = 27,
+    -- 部队房屋拆除
+    LogTypeArmyHouseDemolition = 28,
+    -- 部队土地废弃
+    LogTypeArmyLandAbandoned = 29,
+    -- 上线停止自动拆除
+    LogTypeStopAutoDemolition = 30,
+    -- 部队土地回收
+    LogTpyeArmyLandRecyle = 31,
+    -- 部队房屋改名
+    LogTypeArmyHouseReName = 32,
+    -- 部队房屋问候语修改
+    LogTypeArmyGreetingsRevision = 33,
+    -- 部队房屋宣传标签设定
+    LogTypeSetHouseDisplayTag = 34,
+    -- 部队房屋展示图片修改
+    LogTypeSetHouseDisplayIcon = 35,
+    -- 部队房屋新建个人房间
+    LogTypeCreateNewPersonalRoom = 36,
+    -- 设置房屋内部装潢
+    LogTypeSetHouseInteriorDecoration = 37,
+    -- 设置房屋外部装潢
+    LogTypeSetHouseExteriorDecoration = 38,
+    -- 自动转让部队长
+    LogTypeAutoTransferLeader = 39,
 }
 
 ----部队税率说明id
@@ -699,8 +745,12 @@ local ArmyTipsID = {
     InvitedJoinSelfArmy = 145079,--个人/系统提示/对方已在你的部队中    
     SaveSucceed = 145080,--个人/系统提示/保存成功     
     InvitedInvalidated = 145085,--个人/系统提示/该邀请已失效
-    InputCheck = 145088,--个人/系统提示/输入内容识别中
-    NoOpenArmyStore = 145093,-- 个人/系统提示/完成35级土神泰坦   
+    InputCheck = 145088,--个人/系统提示/输入内容识别中   
+    InvitedNoByRecruitStatus = 145089, -- 个人/系统提示/无法邀请，部队已停止招募
+    InvitedNoByWorld = 145069, -- 个人/系统提示/不在同一个大区
+    NoEditCategoryPermisstion = 145091, -- 个人/系统提示/没有分组编辑权限
+    NoOpenArmyStore = 145093,-- 个人/系统提示/完成35级土神泰坦
+    NoDisbandArmyByLand = 145094,-- 个人/系统提示/无法解散部队，请先放弃部队持有的土地
 }
 
 local ArmyConditionEnum = 
@@ -825,7 +875,22 @@ local EquipTabs = {
 	},
 }
 
+local RedDotCheckID = 2
+
+local MiniApplyNum = 15 ---最小拉取申请数量
+
+---region 分页
+local PageType = {
+    AllArmy = 1, -- 部队
+    ArmySearch = 2, -- 部队条件
+    Log = 3, -- 日志
+    JoinApply = 4, -- 加入部队申请
+    ArmyInvite = 5, -- 部队邀请
+}
+
 local ArmyStoreOpenConditionID = 20411
+
+local ArmyHousePageID = 2
 
 local ArmyDefine = {
     Zero = 0,
@@ -905,7 +970,11 @@ local ArmyDefine = {
 	EquipTabs = EquipTabs,
 	ITEM_CLASSIFY_TYPE_ITEM_ALL = ITEM_CLASSIFY_TYPE_ITEM_ALL,
 	ITEM_CLASSIFY_TYPE_EQUIP_ALL = ITEM_CLASSIFY_TYPE_EQUIP_ALL,
+    RedDotCheckID = RedDotCheckID,
+    MiniApplyNum = MiniApplyNum,
+    PageType = PageType,
     ArmyStoreOpenConditionID = ArmyStoreOpenConditionID,
+    ArmyHousePageID = ArmyHousePageID,
 }
 
 return ArmyDefine

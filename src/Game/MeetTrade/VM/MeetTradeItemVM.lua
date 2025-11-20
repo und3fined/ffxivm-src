@@ -27,13 +27,14 @@ function MeetTradeItrmVM:Ctor()
 	self.Name = nil
     self.LevelVisible = false
     self.ImgAddOpacity = nil
+	self.ImgAdd = nil
     self.ItemVisible = nil
 	self.OtherInfomation = false
+	self.PlayAnim = false
 end
 
 function MeetTradeItrmVM:IsEqualVM(Value)
-	local ImgAddOpacity = Value.ImgAddOpacity or 0
-	return nil ~= Value and Value.GID == self.GID and self.ImgAddOpacity == ImgAddOpacity and self.BtnAddVisible == Value.BtnAddVisible and self.Index == Value.Index
+	return false
 end
 
 function MeetTradeItrmVM:UpdateVM(Value, Param)
@@ -43,10 +44,12 @@ function MeetTradeItrmVM:UpdateVM(Value, Param)
 	else
 		self.ImgAddOpacity = Value.ImgAddOpacity or 0
 	end
+	self.ImgAdd = Value.ImgAdd
 	self.ItemVisible = IsValid
 	self.BtnAddVisible = Value.BtnAddVisible
 	if nil == IsValid or IsValid == false then
 		self.ResID = nil
+		self.GID = nil
 		self.NumText = nil
 		return
 	end
@@ -74,6 +77,7 @@ function MeetTradeItrmVM:UpdateVM(Value, Param)
 	--选中标识
 	self.IsSelect = Value.IsSelect or false
 	self.OtherInfomation = Param.OtherInfomation or false
+	self.PlayAnim = Value.PlayAnim or false
 end
 
 function MeetTradeItrmVM:ClickedItemVM()
@@ -112,5 +116,10 @@ function MeetTradeItrmVM:SetItemRecoverySelected(IsSelected)
 end
 
 
-
+function MeetTradeItrmVM:SetBindPropertyNoCheckValueChange(BindName)
+    local BindProperty = self:FindBindableProperty(BindName)
+    if BindProperty then
+        BindProperty:SetNoCheckValueChange(true)
+    end
+end
 return MeetTradeItrmVM

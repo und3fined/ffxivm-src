@@ -6,17 +6,23 @@
 
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
+local EventID = require("Define/EventID")
 local UIUtil = require("Utils/UIUtil")
+local ProtoCS = require("Protocol/ProtoCS")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
+local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
-local ItemVM = require("Game/Item/ItemVM")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
+local MooglePawBlessCfg = require("TableCfg/MooglePawBlessCfg")
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
+local ChallengeTargetIconPath = GoldSaucerBlessingDefine.ChallengeTargetIconPath
 local MoogleActBtnActiveType = GoldSaucerMiniGameDefine.MoogleActBtnActiveType
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 
 ---@class GoldSaucerMooglePawMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -139,9 +145,31 @@ end
 
 -- 背景界面信息初始化
 function GoldSaucerMooglePawMainPanelView:InitPanelOnShowData()
-	--self.BottomPanel:SetButtonEmotionVisible(false)
-	--self.BottomPanel:SetButtonPhotoVisible(false)
-	self.MainTeamPanel:SetShowGameInfo()
+	local ViewModel = self.VM
+	if not ViewModel then
+		return
+	end
+
+	local MiniGame = ViewModel.MiniGame
+	if not MiniGame then
+		return
+	end
+	local Params = {}
+	Params.bBless = MiniGame:IsBless()
+	local BlessKind = MiniGame.BlessKind
+	Params.BlessKind = BlessKind
+	Params.ChallengeTarget = ""
+	local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.MooglesPaw)
+	local BlessCfg = MooglePawBlessCfg:FindCfgByKey(BlessKind)
+	if TargetCfg and BlessCfg then
+		Params.ExtraReward = BlessCfg.Reward or 0
+		if BLESSED_KIND.BLESSED_KIND_LITTLE == BlessKind then
+			Params.ChallengeTarget = TargetCfg.LChallengeTarget or ""
+		elseif BLESSED_KIND.BLESSED_KIND_BIG == BlessKind then
+			Params.ChallengeTarget = TargetCfg.BChallengeTarget or ""
+		end
+	end
+	self.MainTeamPanel:SetShowGameInfo(Params)
 	self:SetTheHelpInfoTips()
 	
 	--- 图标显示逻辑
@@ -150,6 +178,10 @@ function GoldSaucerMooglePawMainPanelView:InitPanelOnShowData()
 	if GameIconWidget and ClientDef then
 		UIUtil.ImageSetBrushFromAssetPath(GameIconWidget, ClientDef.IconGamePath)
 	end
+
+	local bBigBlessMode = MiniGame:IsBigBlessMode()
+	local TargetIconPath = bBigBlessMode and ChallengeTargetIconPath.BigBless or ChallengeTargetIconPath.LittleBless
+	UIUtil.ImageSetBrushFromAssetPath(self.MainTeamPanel.IconGold_1, TargetIconPath)
 end
 
 --- 设定功能说明信息
@@ -166,14 +198,35 @@ function GoldSaucerMooglePawMainPanelView:SetTheHelpInfoTips()
 	nforBtn:SetHelpInfoID(GoldSaucerMiniGameMgr:GetThePanelHelpInfoID(MiniGameType.MooglesPaw) or -1)
 end
 
+--- 封装控制赐福挑战模式面板是否显示
+function GoldSaucerMooglePawMainPanelView:SetBlessGameChallengeInfoPanelVisible(bVisible)
+	local GameInst = GoldSaucerMiniGameMgr:GetTheCurMiniGameInst()
+	if GameInst == nil then
+		return
+	end
+	local bBless = GameInst:IsBless()
+	if not bBless then
+		UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, false)
+		return
+	end
+
+	UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, bVisible)
+end
+
 -- 切换子界面显示, 游戏和结算界面分开
 function GoldSaucerMooglePawMainPanelView:OnShowGameOrSettlementChanged(NewValue)
 	if NewValue then
 		_G.UIViewMgr:HideView(UIViewID.MooglePawResultPanel, true)
 		_G.UIViewMgr:ShowView(UIViewID.MooglePawGamePanel, self.Params)
+		self:SetBlessGameChallengeInfoPanelVisible(true)
 	else
 		_G.UIViewMgr:HideView(UIViewID.MooglePawGamePanel, true)
 		_G.UIViewMgr:ShowView(UIViewID.MooglePawResultPanel, self.Params)
+		local GameInst = GoldSaucerMiniGameMgr:GetTheCurMiniGameInst()
+		if GameInst then
+			GameInst:SetIsResultPanelShow(true)
+		end
+		self:SetBlessGameChallengeInfoPanelVisible(false)
 	end
 end
 
@@ -186,6 +239,8 @@ function GoldSaucerMooglePawMainPanelView:OnMiniGameStateChanged(NewValue, OldVa
     elseif OldValue == MiniGameStageType.End and NewValue == MiniGameStageType.Reward then
         self:UpdateRewardInfo()
     elseif OldValue == MiniGameStageType.Restart and NewValue == MiniGameStageType.Update then
+        self:UpdateRunTimeInfo()
+	elseif OldValue == MiniGameStageType.ExtraRoundStart and NewValue == MiniGameStageType.Update then
         self:UpdateRunTimeInfo()
     end
 end
@@ -200,11 +255,18 @@ end
 
 --- 显示奖励结算界面
 function GoldSaucerMooglePawMainPanelView:UpdateRewardInfo()
-	if self.VM == nil then
+	local GameInst = self.VM and self.VM.MiniGame
+	if not GameInst then
 		return
 	end
-	GoldSaucerMiniGameMgr:SendMsgMooglePawExitReq() -- 进入结算界面就向服务器发起退出游戏协议
-	self.VM.bShowGameOrSettlementPanel = false
+	
+	local bBless = GameInst:IsBless()
+	if not bBless then
+		GoldSaucerMiniGameMgr:SendMsgMooglePawExitReq() -- 进入结算界面就向服务器发起退出游戏协议
+		self.VM.bShowGameOrSettlementPanel = false
+	else
+		_G.EventMgr:SendEvent(EventID.DetailMiniGameRestart, {Type = GameInst.MiniGameType or MiniGameType.OutOnALimb, bRestart = false}) --与服务器约定由翻倍协议获取额外轮的球体数据
+	end
 end
 
 --- 开始游戏循环

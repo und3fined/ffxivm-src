@@ -17,6 +17,11 @@ local SkillTipsMgr = require("Game/Skill/SkillTipsMgr")
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local StoreNewMountsActionItemView = LuaClass(UIView, true)
 
+local ActionType = {
+	Mount = 1,
+	Fashion =2
+}
+
 function StoreNewMountsActionItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnSkillTis = nil
@@ -49,31 +54,35 @@ function StoreNewMountsActionItemView:OnHide()
 end
 
 function StoreNewMountsActionItemView:OnClockBtnTips()
-	local Params = {}
-	Params.SkillName = self.ViewModel.SkillName
-	Params.SkillTag = {}
-	Params.SkillTag[1] = self.ViewModel.SkillTag
-	Params.SkillInfoList = {}
-	Params.SkillInfoList[1] = LSTR(1090042)..self.ViewModel.Distance..LSTR(1090044)
-	Params.SkillInfoList[2] = LSTR(1090043)..self.ViewModel.Range..LSTR(1090044)
-	Params.SkillInfoList[3] = "   "
-	Params.SkillInfoList[4] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090045)..self.ViewModel.SingTimeDescribe)
-	Params.SkillInfoList[5] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090046)..self.ViewModel.SingTime2..LSTR(1090047))
-	Params.SkillInfoList[6] = "   "
-	Params.SkillInfoList[7] = self.ViewModel.SkillDescribe
-	Params.SkillInfoList[8] = LSTR(1090048)
-	Params.SkillInfoList[9] = LSTR(1090049)
-	Params.InTargetWidget = self.BtnSkillTis
-	Params.IsAutoFlip = true
-	Params.InfoTipGap = -40
-	Params.NameColor = "FFFFFFFF"
-	SkillTipsMgr:ShowMountSkillTips(Params, true)
-	
-	local Adapter = self.Params.Adapter
-	if nil == Adapter then
-		return
+	if self.ViewModel.Type == ActionType.Mount then
+		local Params = {}
+		Params.SkillName = self.ViewModel.SkillName
+		Params.SkillTag = {}
+		Params.SkillTag[1] = self.ViewModel.SkillTag
+		Params.SkillInfoList = {}
+		Params.SkillInfoList[1] = LSTR(1090042)..self.ViewModel.Distance..LSTR(1090044)
+		Params.SkillInfoList[2] = LSTR(1090043)..self.ViewModel.Range..LSTR(1090044)
+		Params.SkillInfoList[3] = "   "
+		Params.SkillInfoList[4] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090045)..self.ViewModel.SingTimeDescribe)
+		Params.SkillInfoList[5] = string.format("<span color=\"#%s\">%s</>", "C9BB9CFF", LSTR(1090046)..self.ViewModel.SingTime2..LSTR(1090047))
+		Params.SkillInfoList[6] = "   "
+		Params.SkillInfoList[7] = self.ViewModel.SkillDescribe
+		Params.SkillInfoList[8] = LSTR(1090048)
+		Params.SkillInfoList[9] = LSTR(1090049)
+		Params.InTargetWidget = self.BtnSkillTis
+		Params.IsAutoFlip = true
+		Params.InfoTipGap = -40
+		Params.NameColor = "FFFFFFFF"
+		SkillTipsMgr:ShowMountSkillTips(Params, true)
+		
+		local Adapter = self.Params.Adapter
+		if nil == Adapter then
+			return
+		end
+		Adapter:OnItemClicked(self, self.Params.Index)
+	else
+		_G.EventMgr:SendEvent(_G.EventID.StorePlaySkillEvent, self.ViewModel.ID, self.ViewModel.SkillID)
 	end
-	Adapter:OnItemClicked(self, self.Params.Index)
 end
 
 function StoreNewMountsActionItemView:OnRegisterUIEvent()

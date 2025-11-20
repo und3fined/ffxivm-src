@@ -17,6 +17,7 @@ local ProtoRes = require("Protocol/ProtoRes")
 local GlobalCfg = require("TableCfg/GlobalCfg")
 local ChocoboNameCfg = require("TableCfg/ChocoboNameCfg")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ChocoboGlobalCfg = require("TableCfg/ChocoboGlobalCfg")
 
 ---@class ChocoboNameWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -242,7 +243,7 @@ function ChocoboNameWinView:OnClickBtnConfirm()
 			})
 		end
 
-		local CostCfg = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboAdoptCost, "Value")
+		local CostCfg = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDAdoptCost, "Value")
 		local Cost = (CostCfg and type(CostCfg[1]) == "number") and CostCfg[1] or 2000
 		
 		local TitleText = _G.LSTR(420183)
@@ -277,7 +278,7 @@ function ChocoboNameWinView:OnClickBtnConfirm()
 			})
 		end
 
-		local CostCfg = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboRenameCost, "Value")
+		local CostCfg = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDRenameCost, "Value")
 		local Cost = (CostCfg and type(CostCfg[1]) == "number") and CostCfg[1] or 2000
 		
 		local ScoreValue = _G.ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)

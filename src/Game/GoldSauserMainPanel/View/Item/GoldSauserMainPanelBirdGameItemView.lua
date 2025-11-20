@@ -109,7 +109,7 @@ function GoldSauserMainPanelBirdGameItemView:OnInit()
 end
 
 function GoldSauserMainPanelBirdGameItemView:OnDestroy()
-	--self:DestroyTheBombListViewModel()
+	
 end
 
 function GoldSauserMainPanelBirdGameItemView:OnShow()
@@ -141,25 +141,19 @@ function GoldSauserMainPanelBirdGameItemView:BindTheBombListViewModel()
 	end
 end
 
-function GoldSauserMainPanelBirdGameItemView:DestroyTheBombListViewModel()
-	local EntranceVM = GoldSauserMainPanelMainVM:GetEntranceItemVMByBtnID(GoldSauserGameClientType.GoldSauserGameTypeGateMagic)
-	if not EntranceVM then
-		return
-	end
-	EntranceVM:DestoryBirdGameBombListViewModel()
-end
-
 function GoldSauserMainPanelBirdGameItemView:OnHide()
 	local EntranceVM = self.ItemVM
 	if not EntranceVM then
 		return
 	end
 
-	local IsGameExist = EntranceVM:GetIsGameStart()
-	if IsGameExist then
-		EntranceVM:SetGameResult(nil)
+	local ViewGameStart = self.ViewGameStart
+	if ViewGameStart then
+		-- OnHide执行时Binder已解除，故手动清除所有状态
+		self.ViewGameStart = false
+		EntranceVM:SetGameResult(false)
+		EntranceVM:SetIsGameStart(false)
 	end
-	EntranceVM:SetIsGameStart(false)
 end
 
 function GoldSauserMainPanelBirdGameItemView:OnRegisterUIEvent()
@@ -259,13 +253,6 @@ function GoldSauserMainPanelBirdGameItemView:OnIsGameStartChanged(IsGameStart)
 	if IsGameStart then
 		self:SetGameStart()
 	else
-		--- 游戏结束清空状态
-		local EntranceVM = self.ItemVM
-		if EntranceVM then
-			EntranceVM:SetGameResult(nil)
-			self.ViewGameStart = false
-			GoldSauserMainPanelMgr:SetIsInPanelMiniGame(false)
-		end
 		self:StopAnimation(self.AnimLoop1)
 	end
 end
@@ -302,6 +289,8 @@ function GoldSauserMainPanelBirdGameItemView:OnGameResultChanged(NewRlt)
 		end
 	end, DelayTimeForAnimEnd)
 	GoldSauserMainPanelMgr:SendTlogMsgForGameResult(MiniGameType.MiniGameTypeCliffHanger, NewRlt)
+	self.ViewGameStart = false
+	GoldSauserMainPanelMgr:SetIsInPanelMiniGame(false)
 end
 
 function GoldSauserMainPanelBirdGameItemView:GetTheSelectedPanel()

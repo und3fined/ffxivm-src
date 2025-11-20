@@ -43,14 +43,14 @@ local MapConstant = {
 local MapType = {
 	Area = 1, -- 区域地图，三级地图
 	World = 2, -- 世界，一级地图
-	Region = 3, -- 区，二级地图
+	Region = 3, -- 地区，二级地图
 }
 
 ---@class MapMarkerType @地图标记类型
 local MapMarkerType = {
 	Major = 1, -- 自己
-	Placed = 2, --放置的标记点
-	FixPoint = 3, --固定点(表格配置)
+	Placed = 2, -- 手动标记点
+	FixPoint = 3, -- 固定点(表格配置)
 	Quest = 4, -- 任务
 	QuestTarget = 5, -- 任务目标
 	Teammate = 6, -- 队友
@@ -81,6 +81,8 @@ local MapMarkerType = {
 	DetectTarget = 31, -- 普通探索全收集辅助探测功能目标
 	Gameplay = 32, -- 地图通用玩法标记
 	Tracking = 33, -- 任务追踪辅助标记
+	HouseLand = 34, -- 房屋土地
+	GSMiniGame = 35, -- 金碟游乐场小游戏标记
 
 	PVPCommon = 41, -- PVP地图通用标记
 	PVPPlayer = 42, -- PVP地图玩家标记
@@ -91,7 +93,7 @@ local MapMarkerType = {
 ---@class MapMarkerBPType @地图标记蓝图类型。和地图标记类型不一一对应，请尽量复用已有的蓝图类型
 local MapMarkerBPType = {
 	Major = 1, -- Major
-	Placed = 2, -- 放置的标记点
+	Placed = 2, -- 手动标记点
 	Region = 3, -- 区域地图
 	PlaceName = 4, -- 地名
 
@@ -121,7 +123,12 @@ local MapMarkerBPType = {
 	GameplayLocation = 34,	-- 玩法布点
 	Monster = 35, -- 怪物
 	ChocoboRacer = 36, -- 陆行鸟竞赛玩家
-	PVPPlayer = 37, -- PVP地图玩家标记
+	RedPoint = 37, -- 红点(npc查询工具)
+	HouseLand = 38, -- 房屋土地
+	GSMiniGame = 39, -- 金碟游乐场小游戏标记
+
+	PVPCommon = 41, -- PVP地图通用标记
+	PVPPlayer = 42, -- PVP地图玩家标记
 }
 
 
@@ -140,6 +147,7 @@ local MapContentType = {
 	WorldMapLocation = 10, -- 坐标定位世界地图
 	EasyTrace = 11, -- 便捷追踪地图
 	PVPMap = 12, -- PVP地图
+	IndividualHouseMap = 13, -- 独立房屋地图
 }
 
 ---@class MapProviderConfigs
@@ -168,6 +176,8 @@ local MapProviderConfigs = {
 		MapMarkerType.Gameplay,
 		MapMarkerType.Fish,
 		MapMarkerType.Tracking,
+		MapMarkerType.HouseLand,
+		MapMarkerType.GSMiniGame,
 	},
 
 	--[[
@@ -196,12 +206,15 @@ local MapProviderConfigs = {
 		MapMarkerType.Npc,
 		MapMarkerType.Monster,
 		MapMarkerType.SceneSign,
+		MapMarkerType.WorldMapLocation,
 		MapMarkerType.ChocoboRacer,
 		MapMarkerType.ChocoboRaceItem,
 		MapMarkerType.DetectTarget,
 		MapMarkerType.Gameplay,
 		MapMarkerType.Fish,
 		MapMarkerType.Tracking,
+		MapMarkerType.HouseLand,
+		MapMarkerType.GSMiniGame,
 	},
 
 	[MapContentType.PVPMap] = {
@@ -221,6 +234,12 @@ local MapProviderConfigs = {
 		MapMarkerType.Placed,
 		MapMarkerType.WorldMapLocation,
 		MapMarkerType.Major,
+	},
+
+	[MapContentType.IndividualHouseMap] = {
+		MapMarkerType.FixPoint,
+		MapMarkerType.Major,
+		MapMarkerType.HouseLand,
 	},
 
 	[MapContentType.FishMap] = {
@@ -288,7 +307,7 @@ local MapTransferCategory = {
 }
 
 ---@class MapMarkerPriority @地图标记优先级，和地图标记类型不一一对应
---优先级排序：主角[100]>水晶[90]>放置标记点[80]>任务[70]>fate>[60]钓鱼[50]>采集物[40]>固定点（水晶外）[0]
+--优先级排序：主角[100]>水晶[90]>手动标记点[80]>任务[70]>fate>[60]钓鱼[50]>采集物[40]>固定点（水晶外）[0]
 local MapMarkerPriority = {
 	Major = 100,
 	Telepo = 90,
@@ -339,6 +358,8 @@ local MapMarkerConfigs = {
 	[MapMarkerType.DetectTarget] = { Priority = MapMarkerPriority.Default },
 	[MapMarkerType.Gameplay] = { Priority = MapMarkerPriority.GamePlayDefault },
 	[MapMarkerType.Tracking] = { Priority = MapMarkerPriority.Quest },
+	[MapMarkerType.HouseLand] = { Priority = MapMarkerPriority.GamePlayDefault },
+	[MapMarkerType.GSMiniGame] = { Priority = MapMarkerPriority.GamePlayDefault },
 }
 
 local MapMarkerBPConfigs = {
@@ -371,8 +392,12 @@ local MapMarkerBPConfigs = {
 	[MapMarkerBPType.ChocoboTransportPoint] = { BPName = "Map/Marker/MapMarkerChocoboTransportPoint_UIBP" },
 	[MapMarkerBPType.GameplayLocation] = { BPName = "Map/Marker/MapMarkerGameplayLocation_UIBP" },
 	[MapMarkerBPType.Monster] = { BPName = "Map/Marker/MapMarkerMonster_UIBP" },
+	[MapMarkerBPType.PVPCommon] = { BPName = "Map/Marker/MapMarkerPVPCommon_UIBP" },
 	[MapMarkerBPType.PVPPlayer] = { BPName = "Map/Marker/MapMarkerPVPPlayer_UIBP" },
 	[MapMarkerBPType.ChocoboRacer] = { BPName = "Map/Marker/MapMarkerChocoboRacer_UIBP" },
+	[MapMarkerBPType.RedPoint] = { BPName = "Map/Marker/MapMarkerRedPoint_UIBP" },
+	[MapMarkerBPType.HouseLand] = { BPName = "Map/Marker/MapMarkerHouseLand_UIBP" },
+	[MapMarkerBPType.GSMiniGame] = { BPName = "Map/Marker/MapMarkerGoldSaucerGame_UIBP" },
 }
 
 ---@class MapListItemIconPath 三级地图中分层地图的显示图标
@@ -441,6 +466,24 @@ local MapIconConfigs =
 {
 	DefaultIcon = "PaperSprite'/Game/UI/Atlas/MapIconSnap/Frames/060453_png.060453_png'",
 
+	-- 水晶
+	CrystalBig = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060453.UI_Icon_060453'",
+	CrystalBigGray = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060453_gray.UI_Icon_060453_gray'",
+	CrystalSmall = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060430.UI_Icon_060430'",
+	CrystalSmallGray = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060430_gray.UI_Icon_060430_gray'",
+	-- 房屋私用
+	CrystalHouse = "Texture2D'/Game/UI/Texture/House/Icon/UI_House_Icon_LightofEther.UI_House_Icon_LightofEther'",
+
+	-- 服务器图标，原始服，跨服
+	ServerOriginal = "Texture2D'/Game/UI/Texture/Icon/UI_Icon_Server2.UI_Icon_Server2'",
+	ServerCross = "Texture2D'/Game/UI/Texture/Icon/UI_Icon_Server1.UI_Icon_Server1'",
+
+	-- 聊天发送位置
+	SendLoction = "PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_MarkLoction_png.UI_Map_Icon_MarkLoction_png'",
+
+	-- 标记追踪
+	FollowExtraIcon = "Texture2D'/Game/UI/Texture/NewMap/UI_Map_Icon_TrackTips.UI_Map_Icon_TrackTips'",
+
 	MonsterBoss = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060401.UI_Icon_060401'",
 	MonsterNormal = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060422.UI_Icon_060422'",
 
@@ -488,6 +531,7 @@ local MapLocationType =
 {
 	Npc = 1,
 	EObj = 2,
+	Point = 3, -- 地图坐标点
 }
 
 ---@class MapGameplayType 地图通用玩法标记类型
@@ -525,6 +569,9 @@ local MapOpenSource =
 	Fate = 7,
 	ChatSend = 8,
 	TreasureHunt = 9,
+	HouseLandTransfer = 10, -- 房屋快捷传送
+	IndividualHouseMap = 11, -- 独立房屋地图
+
 	Other = 99,
 }
 

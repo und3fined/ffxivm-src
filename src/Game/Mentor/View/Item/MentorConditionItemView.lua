@@ -36,8 +36,6 @@ function MentorConditionItemView:OnInit()
 	self.Binders = {
 		{ "TextCondition", UIBinderSetText.New(self, self.TextCondition) },
 		{ "ImgConditionTrue", UIBinderSetIsVisible.New(self, self.ImgConditionTrue, false, false, false) },
-		{ "TextProgress", UIBinderSetText.New(self, self.RichTextCondition02) },
-		{ "VisibleProgress", UIBinderSetIsVisible.New(self, self.RichTextCondition02) },
 	}
 end
 

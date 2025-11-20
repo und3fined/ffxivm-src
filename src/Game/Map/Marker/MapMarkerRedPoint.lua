@@ -13,6 +13,8 @@ function MapMarkerRedPoint:Ctor()
 	self.ID = nil
 	self.IconPath = nil
 	self.Radius = 0
+	self.GenreID = 0
+	self.Range = 1
 end
 
 function MapMarkerRedPoint:GetType()
@@ -20,7 +22,7 @@ function MapMarkerRedPoint:GetType()
 end
 
 function MapMarkerRedPoint:GetBPType()
-	return MapMarkerBPType.Placed
+	return MapMarkerBPType.RedPoint
 end
 
 function MapMarkerRedPoint:GetTipsName()
@@ -34,7 +36,9 @@ end
 function MapMarkerRedPoint:UpdateMarker(Params)
 	local GenreID = Params.GenreID
 	if GenreID then
+		--self.IconPath = "PaperSprite'/Game/UI/Atlas/HUD/Frames/UI_Icon_Light_png.UI_Icon_Light_png'"
 		local Type = math.floor(GenreID / 10000)
+
 		if Type == 0 then
 			self.IconPath = "PaperSprite'/Game/UI/Atlas/MapIconSnap/Frames/060431_png.060431_png'"
 		elseif Type == 1 then
@@ -46,8 +50,28 @@ function MapMarkerRedPoint:UpdateMarker(Params)
 		elseif Type == 4 then
 			self.IconPath = "PaperSprite'/Game/UI/Atlas/MapIconSnap/Frames/060444_png.060444_png'"
 		end
+
+		self.QuestType = Type
 	end
 	self.ID = Params.ID
+	self.GenreID = Params.GenreID
+	self.Range = Params.Range
+end
+
+function MapMarkerRedPoint:GetPriority()
+	return 200 - math.floor(self.GenreID/10000)
+end
+
+function MapMarkerRedPoint:GetAlpha()
+	return 0.6
+end
+
+function MapMarkerRedPoint:GetQuestType()
+	return self.QuestType
+end
+
+function MapMarkerRedPoint:GetRadius()
+	return self.Range * 100
 end
 
 function MapMarkerRedPoint:OnTriggerMapEvent(EventParams)

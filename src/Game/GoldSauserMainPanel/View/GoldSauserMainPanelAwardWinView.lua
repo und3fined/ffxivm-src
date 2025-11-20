@@ -26,6 +26,7 @@ local UIAdapterDynamicEntryBox = require("UI/Adapter/UIAdapterDynamicEntryBox")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+
 local GoldSauserAwardSourceType = ProtoRes.GoldSauserAwardSourceType
 local GoldSauserAwardBelongType = ProtoRes.GoldSauserAwardBelongType
 local AudioType = GoldSauserMainPanelDefine.AudioType
@@ -46,6 +47,7 @@ local LSTR = _G.LSTR
 ---@field RichTextBoxItemDescription URichTextBox
 ---@field RichTextSchedule URichTextBox
 ---@field ScrollBox_0 UScrollBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TableViewGatWay UTableView
 ---@field TableViewTab UTableView
 ---@field TableViewThing UTableView
@@ -74,6 +76,7 @@ function GoldSauserMainPanelAwardWinView:Ctor()
 	--self.RichTextBoxItemDescription = nil
 	--self.RichTextSchedule = nil
 	--self.ScrollBox_0 = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TableViewGatWay = nil
 	--self.TableViewTab = nil
 	--self.TableViewThing = nil
@@ -95,6 +98,7 @@ function GoldSauserMainPanelAwardWinView:OnRegisterSubView()
 	self:AddSubView(self.CommDropDown)
 	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.CommSingleBox)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -102,19 +106,33 @@ function GoldSauserMainPanelAwardWinView:OnInit()
 	self.TableViewTabAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewTab, self.OnTableViewTabSelectChanged, true)
 	self.TableViewThingAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewThing, self.OnTableViewThingSelectChanged, true)
 	self.TableViewGatWayAdapter = UIAdapterDynamicEntryBox.CreateAdapter(self, self.FDynamicEntryBox_209, self.OnTableViewGatWaySelectChanged)
+
+	self:InitVM()
+end
+
+function GoldSauserMainPanelAwardWinView:InitVM()
+	self.AwardWinPanelVM = GoldSauserMainPanelMainVM.AwardWinPanelVM
 end
 
 function GoldSauserMainPanelAwardWinView:OnDestroy()
+	self.AwardWinPanelVM = nil
+end
 
+function GoldSauserMainPanelAwardWinView:GetVM()
+	return self.AwardWinPanelVM
+end
+
+function GoldSauserMainPanelAwardWinView:GetMainPanelTitle()
+	return LSTR(350082)
 end
 
 function GoldSauserMainPanelAwardWinView:OnShow()
 	_G.AchievementMgr:LoadAllAchieveShowData()
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
-	VM:SetTheMainPanelTitle(LSTR(350082))
+	VM:SetTheMainPanelTitle(self:GetMainPanelTitle())
 	self:InitDropDownList()
 	self:InitTabItemList(VM)
 	
@@ -141,7 +159,7 @@ function GoldSauserMainPanelAwardWinView:OnRegisterGameEvent()
 end
 
 function GoldSauserMainPanelAwardWinView:OnRegisterBinder()
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -173,7 +191,7 @@ function GoldSauserMainPanelAwardWinView:OnHideShopUpdate(ViewID)
     if ViewID ~= UIViewID.ShopMainPanelView then
 		return
 	end
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -186,7 +204,7 @@ function GoldSauserMainPanelAwardWinView:OnHideShopUpdate(ViewID)
 		local ContentVM = ContentVMs:Get(Index)
 		if ContentVM then
 			local Id = ContentVM.ID
-			local AwardWinCfg = GoldSaucerAwardShowCfg:FindCfgByKey(Id)
+			local AwardWinCfg = self:GetAwardShowCfgByID(Id)
 			if AwardWinCfg then
 				ContentVM.IconReceivedVisible = GoldSauserMainPanelMgr:GetTheRewardIsOwned(AwardWinCfg)
 			end
@@ -196,7 +214,7 @@ function GoldSauserMainPanelAwardWinView:OnHideShopUpdate(ViewID)
 end
 
 function GoldSauserMainPanelAwardWinView:OnClickShowTips()
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -204,7 +222,7 @@ function GoldSauserMainPanelAwardWinView:OnClickShowTips()
 	if not SelectedItemID then
 		return
 	end
-	local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(SelectedItemID)
+	local ItemCfg = self:GetAwardShowCfgByID(SelectedItemID)
 	if not ItemCfg then
 		return
 	end
@@ -221,7 +239,7 @@ function GoldSauserMainPanelAwardWinView:OnClickShowTips()
 end
 
 function GoldSauserMainPanelAwardWinView:OnJumpToPreviewPanel()
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -229,7 +247,7 @@ function GoldSauserMainPanelAwardWinView:OnJumpToPreviewPanel()
 	if not SelectedItemID then
 		return
 	end
-	local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(SelectedItemID)
+	local ItemCfg = self:GetAwardShowCfgByID(SelectedItemID)
 	if not ItemCfg then
 		return
 	end
@@ -237,7 +255,7 @@ function GoldSauserMainPanelAwardWinView:OnJumpToPreviewPanel()
 end
 
 function GoldSauserMainPanelAwardWinView:OnBtnGotoClick()
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -245,7 +263,7 @@ function GoldSauserMainPanelAwardWinView:OnBtnGotoClick()
 	if not SelectedItemID then
 		return
 	end
-	local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(SelectedItemID)
+	local ItemCfg = self:GetAwardShowCfgByID(SelectedItemID)
 	if not ItemCfg then
 		return
 	end
@@ -258,6 +276,12 @@ function GoldSauserMainPanelAwardWinView:OnBtnGotoClick()
 			local MallID = GoodsConfig.MallID
 			_G.ShopMgr:JumpToShopGoods(MallID, ItemCfg.ItemID, 1)
 		end
+	elseif AwardType == GoldSauserAwardSourceType.AwardSourceTypeOther then
+		if ItemCfg.JumpID == nil or ItemCfg.JumpID == 0 then
+			return
+		end
+		
+		JumpUtil.JumpTo(ItemCfg.JumpID)
 	end
 end
 
@@ -271,14 +295,42 @@ function GoldSauserMainPanelAwardWinView:OnTableViewGatWaySelectChanged(_, ItemD
 end
 
 
+function GoldSauserMainPanelAwardWinView:CreateExplainExtraParams(ItemData)
+    if not ItemData then
+        return
+    end
+
+	local ItemCfg = self:GetAwardShowCfgByID(ItemData.ID)
+    if not ItemCfg then
+        return
+    end
+
+	return GoldSauserMainPanelMgr:RebuildExplainExtraParams(ItemCfg, ItemData.IconReceivedVisible)
+end
+
+function GoldSauserMainPanelAwardWinView:GetAwardShowCfgByID(ID)
+    local ItemCfg = GoldSaucerAwardShowCfg:FindCfgByKey(ID)
+    if not ItemCfg then
+        _G.FLOG_ERROR("GoldSauserMainPanelAwardWinView:GetAwardShowCfgByID id:{%d} is not In Config", ID)
+        return
+    end
+
+	return ItemCfg
+end
+
 function GoldSauserMainPanelAwardWinView:OnTableViewThingSelectChanged(_, ItemData)
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
 
-	local ExtraParams = GoldSauserMainPanelMgr:CreateExplainExtraParams(ItemData)
-	VM:SelectTheContentItem(ItemData, ExtraParams)
+	local ExtraParams = self:CreateExplainExtraParams(ItemData)
+	local ItemCfg = self:GetAwardShowCfgByID(ItemData.ID)
+	if not ItemCfg then
+		return
+	end
+
+	VM:SelectTheContentItem(ItemCfg, ItemData, ExtraParams)
 	local ToggleBtnCollect = self.ToggleBtnCollect
 	if ToggleBtnCollect  then
 		ToggleBtnCollect:SetChecked(ItemData.bMarked, false)
@@ -292,7 +344,7 @@ function GoldSauserMainPanelAwardWinView:OnCloseThePanel()
 end
 
 function GoldSauserMainPanelAwardWinView:OnToggleBtnCollectSelectionChanged(_, State)
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
@@ -307,12 +359,12 @@ function GoldSauserMainPanelAwardWinView:OnToggleBtnCollectSelectionChanged(_, S
 end
 
 function GoldSauserMainPanelAwardWinView:OnSingleBoxSelectionChanged(_, State)
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
 	local IsChecked = UIUtil.IsToggleButtonChecked(State)
-	local Datas = GoldSauserMainPanelMgr:CreateContentDatasByAwardType(VM.AwardType)
+	local Datas = self:CreateContentDatasByAwardType(VM.AwardType)
 	VM:ChangeShowHaveState(IsChecked, Datas)
 end
 
@@ -320,13 +372,42 @@ function GoldSauserMainPanelAwardWinView:OnDropDownListSelectionChanged(_, ItemD
 	if not IsByClick then
 		return
 	end
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
 	local BelongType = ItemData.ID
-	local Datas = GoldSauserMainPanelMgr:CreateContentDatasByAwardType(VM.AwardType)
+	local Datas = self:CreateContentDatasByAwardType(VM.AwardType)
 	VM:ChangeSelectBelongType(BelongType, Datas)
+end
+
+--重载
+function GoldSauserMainPanelAwardWinView:GetAllAwardShowCfgByType(AwardType)
+	return GoldSaucerAwardShowCfg:FindAllCfg(string.format("AwardType = %d", AwardType))	
+end
+
+--获取奖励类型对应的数据
+function GoldSauserMainPanelAwardWinView:CreateContentDatasByAwardType(AwardType)
+    local TypeCfgs = self:GetAllAwardShowCfgByType(AwardType)
+    if not TypeCfgs or not next(TypeCfgs) then
+        return
+    end
+
+	return GoldSauserMainPanelMgr:RebuildContentDatasByTypeCfgs(TypeCfgs)		
+end
+
+--重载
+function GoldSauserMainPanelAwardWinView:GetAwardTypeCfgByType(AwardType)
+	return GoldSaucerAwardTypeCfg:FindCfgByKey(AwardType)	
+end
+
+function GoldSauserMainPanelAwardWinView:ChangeTabTitle(VM, AwardType)
+    local Cfg = self:GetAwardTypeCfgByType(AwardType)
+    if not Cfg then
+        return
+    end
+
+	VM:ChangeTabTitle(AwardType, Cfg.TypeTitle)
 end
 
 function GoldSauserMainPanelAwardWinView:OnTableViewTabSelectChanged(_, ItemData)
@@ -334,15 +415,15 @@ function GoldSauserMainPanelAwardWinView:OnTableViewTabSelectChanged(_, ItemData
 		return
 	end
 	
-	local VM = GoldSauserMainPanelMainVM.AwardWinPanelVM
+	local VM = self:GetVM()
 	if not VM then
 		return
 	end
 
 	local AwardType = ItemData.AwardType
-	VM:ChangeTabTitle(AwardType)
+	self:ChangeTabTitle(VM, AwardType)
 
-	local ContentDatas = GoldSauserMainPanelMgr:CreateContentDatasByAwardType(AwardType)
+	local ContentDatas = self:CreateContentDatasByAwardType(AwardType)
 	VM:UpdateTabMainContentByTab(ContentDatas)
 	self.TableViewThingAdapter:SetSelectedIndex(1)
 	local DropDownWidget = self.CommDropDown
@@ -359,8 +440,13 @@ function GoldSauserMainPanelAwardWinView:OnTableViewTabSelectChanged(_, ItemData
 end
 
 --- 初始化导航页签列表
+--重载
+function GoldSauserMainPanelAwardWinView:GetAllAwardTypeCfg()
+	return GoldSaucerAwardTypeCfg:FindAllCfg("1=1")
+end
+
 function GoldSauserMainPanelAwardWinView:InitTabItemList(VM)
-	local AllCfg = GoldSaucerAwardTypeCfg:FindAllCfg("1=1")
+	local AllCfg = self:GetAllAwardTypeCfg()	
 	if not AllCfg or not next(AllCfg) then
 		return
 	end

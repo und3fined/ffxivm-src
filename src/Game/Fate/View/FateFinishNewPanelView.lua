@@ -15,10 +15,20 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
 local AudioUtil = require("Utils/AudioUtil")
+local MajorUtil = require("Utils/MajorUtil")
+local BonusStateBuffCfg = require("TableCfg/BonusStateBuffCfg")
+local ProtoRes = require("Protocol/ProtoRes")
+
 local SuccessMusicPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_Zingle_Fate_S_Start.Play_Zingle_Fate_S_Start'"
 local FailedMusicPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_Zingle_Fate_S_Clear.Play_Zingle_Fate_S_Clear'"
 local ConditionFinishMusicPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Play_SE_UI_SE_UI_tell_18.Play_SE_UI_SE_UI_tell_18'"
 local LSTR = _G.LSTR
+local WechatIconPath = "PaperSprite'/Game/UI/Atlas/LoginNew/Frames/UI_LoginNew_Icon_WeChat_png.UI_LoginNew_Icon_WeChat_png'"
+local QQIconPath = "PaperSprite'/Game/UI/Atlas/LoginNew/Frames/UI_LoginNew_Icon_QQ_png.UI_LoginNew_Icon_QQ_png'"
+local WechatBounsTextID = 190143 -- 微信特权文字ID
+local QQBounsTextID = 190144 -- QQ特权文字ID
+local WechatBoundsStateID = 40006 -- 微信特权状态ID
+local QQBoundsStateID = 40007 -- QQ特权状态ID
 
 ---@class FateFinishNewPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -78,20 +88,29 @@ function FateFinishNewPanelView:OnRegisterSubView()
 end
 
 function FateFinishNewPanelView:OnInit()
+    self.bCanHide = true
     self.BtnGoLook:SetButtonText(LSTR(190001))
     self.BtnQuit:SetButtonText(LSTR(190002))
     self.TextRewardTitle:SetText(LSTR(190117))
-    
+
     self.TextFailed:SetText(LSTR(190003))
     self.TextSuccess:SetText(LSTR(190005))
 
-    self.TableViewRewardItemAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewRewardItem, nil)
+    self.TableViewRewardItemAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewRewardItem)
     self.TableViewRewardItemAdapter:SetOnClickedCallback(self.OnItemClickCallback)
     self.TableViewConditionAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewCondition)
     self.BtnCountDown = UIAdapterCountDown.CreateAdapter(self, self.BtnQuit, nil, LSTR(190006), self.ClosePanel)
+
+    self.Binders = {
+        {"FateName", UIBinderSetText.New(self, self.TextMissionName)},
+        {"HideConditionText", UIBinderSetText.New(self, self.TextHideCondition)},
+        {"RewardList", UIBinderUpdateBindableList.New(self, self.TableViewRewardItemAdapter)},
+        {"ConditionList", UIBinderUpdateBindableList.New(self, self.TableViewConditionAdapter)}
+    }
 end
 
 function FateFinishNewPanelView:OnDestroy()
+    self.bCanHide = true
 end
 
 function FateFinishNewPanelView:OnItemClickCallback(Index, ItemData, ItemView)
@@ -100,10 +119,78 @@ function FateFinishNewPanelView:OnItemClickCallback(Index, ItemData, ItemView)
 end
 
 function FateFinishNewPanelView:OnShow()
+    self:RegisterTimer(
+        function()
+            self.bCanHide = true
+        end,
+        1,
+        1
+    )
     self.bPlayedConditionFinishSound = false
     self.BtnGoLook:SetButtonText(LSTR(190001))
     self.BtnQuit:SetButtonText(LSTR(190002))
     self.CommonPopUpBG:SetHideOnClick(false)
+
+    do
+        -- 这里先看一下，是否有奖励，且奖励的数量是否大于0
+        -- 当前职业玩家真实的等级，同步前的，如50同步到20，返回的是50
+        local RealLevel = MajorUtil.GetTrueMajorLevel()
+        local FateCfg = _G.FateMgr:GetFateCfg(self.ViewModel.FateID)
+        local bLevelTooLow = false
+        if RealLevel < FateCfg.Level then
+            local IsCelebrateFate = FateCfg.IsCelebrateFate ~= nil and FateCfg.IsCelebrateFate > 0
+            if (not IsCelebrateFate) then
+                if (RealLevel <= FateCfg.Level - 8) then
+                    -- 如果小于等于8，提示:冒险者的等级过低，参与本次危命任务将无法获得报酬
+                    bLevelTooLow = true
+                end
+            end
+        end
+
+        if (bLevelTooLow) then
+            UIUtil.SetIsVisible(self.PanelPrivilege, false)
+            UIUtil.SetIsVisible(self.PanelNoRewardTips, true)
+            self.TextNoReward:SetText(LSTR(190145))
+        else
+            UIUtil.SetIsVisible(self.PanelNoRewardTips, false)
+            local MajorRoleID = MajorUtil.GetMajorRoleID()
+            if (_G.BonusStateMgr:HasBonusState(MajorRoleID, WechatBoundsStateID)) then
+                UIUtil.SetIsVisible(self.PanelPrivilege, true)
+                UIUtil.ImageSetBrushFromAssetPath(self.ImgPrivilegeIcon, WechatIconPath)
+                local TextStr = LSTR(WechatBounsTextID)
+                local TargetValue = 1
+                local BoundsCfg = BonusStateBuffCfg:FindCfgByKey(WechatBoundsStateID)
+                if (BoundsCfg ~= nil) then
+                    TargetValue = math.floor(BoundsCfg.EffectItems[1].Values[2] * 0.01)
+                    if (TargetValue < 0) then
+                        TargetValue = 1
+                    end
+                else
+                    _G.FLOG_ERROR("BonusStateBuffCfg:FindCfgByKey 出错，无法找到数据，ID是:%s", WechatBoundsStateID)
+                end
+                TextStr = string.format(TextStr, TargetValue)
+                self.TextPrivilege:SetText(TextStr)
+            elseif (_G.BonusStateMgr:HasBonusState(MajorRoleID, QQBoundsStateID)) then
+                UIUtil.SetIsVisible(self.PanelPrivilege, true)
+                UIUtil.ImageSetBrushFromAssetPath(self.ImgPrivilegeIcon, QQIconPath)
+                local TextStr = LSTR(QQBounsTextID)
+                local TargetValue = 1
+                local BoundsCfg = BonusStateBuffCfg:FindCfgByKey(QQBoundsStateID)
+                if (BoundsCfg ~= nil) then
+                    TargetValue = math.floor(BoundsCfg.EffectItems[1].Values[2] * 0.01)
+                    if (TargetValue < 0) then
+                        TargetValue = 1
+                    end
+                else
+                    _G.FLOG_ERROR("BonusStateBuffCfg:FindCfgByKey 出错，无法找到数据，ID是:%s", QQBoundsStateID)
+                end
+                TextStr = string.format(TextStr, TargetValue)
+                self.TextPrivilege:SetText(TextStr)
+            else
+                UIUtil.SetIsVisible(self.PanelPrivilege, false)
+            end
+        end
+    end
 
     self.CommonPopUpBG:SetCallback(
         self,
@@ -192,7 +279,9 @@ function FateFinishNewPanelView:OnFateFinishCondition()
 end
 
 function FateFinishNewPanelView:ClosePanel()
-    self:Hide()
+    if (self.bCanHide) then
+        self:Hide()
+    end
 end
 
 function FateFinishNewPanelView:OnRegisterBinder()
@@ -201,15 +290,8 @@ function FateFinishNewPanelView:OnRegisterBinder()
         return
     end
 
-    local Binders = {
-        {"FateName", UIBinderSetText.New(self, self.TextMissionName)},
-        {"HideConditionText", UIBinderSetText.New(self, self.TextHideCondition)},
-        {"RewardList", UIBinderUpdateBindableList.New(self, self.TableViewRewardItemAdapter)},
-        {"ConditionList", UIBinderUpdateBindableList.New(self, self.TableViewConditionAdapter)}
-    }
-
     self.ViewModel = FateFinishVM.CreateVM(Params)
-    self:RegisterBinders(self.ViewModel, Binders)
+    self:RegisterBinders(self.ViewModel, self.Binders)
 end
 
 return FateFinishNewPanelView

@@ -149,6 +149,7 @@ function LeveQuestMainPanelView:OnInit()
 
 	self.TabRecordList = {}
 	self.RefreshTimer = nil
+	self.LevelTimer = nil
 	self.CurLevel  = 1
 	self.JumpCfg = nil
 end
@@ -176,13 +177,12 @@ function LeveQuestMainPanelView:OnShow()
 	if self.Params ~= nil then
 		-- 查找奖励物品
 		local ItemID = self.Params.JumpItemID
+		self.JumpCfg = nil
 		self.JumpCfg = LeveQuestMgr:GetCfgbyJumpItemID(ItemID)
 		if self.JumpCfg == nil then
 			_G.FLOG_ERROR("JumpCfg Is nil")
-		end
-
-		if self.JumpCfg ~= nil then
-			self.ProfID = self.JumpCfg.ProfType
+		else
+			self.PropID = self.JumpCfg.ProfID
 		end
 	end
 	self.VerIconTabs:UpdateItems(LeveQuestMgr:GetAllCareerData(), LeveQuestMgr:GetCareerIndex(self.PropID))
@@ -204,6 +204,15 @@ function LeveQuestMainPanelView:OnHide()
 	if self.RefreshTimer ~= nil then
 		self:UnRegisterTimer(self.RefreshTimer)
 		self.RefreshTimer = nil
+	end
+
+	if self.LevelTimer ~= nil then
+		self:UnRegisterTimer(self.LevelTimer)
+		self.LevelTimer = nil
+	end
+	if self.ExpTimer ~= nil then
+		self:UnRegisterTimer(self.ExpTimer)
+		self.ExpTimer = nil
 	end
 end
 
@@ -238,7 +247,6 @@ function LeveQuestMainPanelView:OnLeveQuestReduceAnim(Num)
 end
 
 function LeveQuestMainPanelView:OnMajorLevelUpdate(Params)
-
 	local OldLevel = Params.OldLevel
 	local ProfID = Params.ProfID
     if not ProfUtil.IsProductionProf(ProfID)then
@@ -252,10 +260,16 @@ function LeveQuestMainPanelView:OnMajorLevelUpdate(Params)
 	--更新职业变动, 播放动画
 	if OldLevel ~= nil then
 		self:PlayAnimation(self.AnimProBar, self.AnimProBar:GetEndTime(), 1, nil, 0.0, false)
-		self:RegisterTimer(function ()
+		if self.LevelTimer ~= nil then
+			self:UnRegisterTimer(self.LevelTimer)
+			self.LevelTimer = nil
+		end
+		self.LevelTimer = self:RegisterTimer(function ()
+			if ProfID ~= self.ProfID then
+				return
+			end
 			self.LeveQuestVM:UpdateProfIcon(ProfID)
 			self.LeveQuestVM:UpdateProfLv(ProfID)
-
 			-- 更新当前等级
 			local PropLevelInterval = self:GetPropLevelInterval(ProfID)
 			if LeveQuestMgr:GetProfUnlockLevel(ProfID) < PropLevelInterval then
@@ -275,7 +289,7 @@ function LeveQuestMainPanelView:OnMajorExpUpdate(Params)
 	end
 	local ProfID = self.ProfID
 	local CurLevel = LeveQuestMgr:GetProfCurLevel(ProfID)
-	local NewExp = Params.ULongParam3
+	local NewExp =  Params.ULongParam3
 
 	LeveQuestMgr:SetProfCurExp(ProfID, NewExp)
 
@@ -286,7 +300,11 @@ function LeveQuestMainPanelView:OnMajorExpUpdate(Params)
 		self.LeveQuestVM:UpdateExpValue(ProfID, Params)
 	else
 		self:PlayAnimProBar(self.ProBar.Percent, 1)
-		self:RegisterTimer(function ()
+		if self.ExpTimer ~= nil then
+			self:UnRegisterTimer(self.ExpTimer)
+			self.ExpTimer = nil
+		end
+		self.ExpTimer = self:RegisterTimer(function ()
 			-- 从0到最新
 			self.LeveQuestVM:UpdateProfLv(ProfID)
 			self:PlayAnimProBar(0, EndPercent)
@@ -310,7 +328,7 @@ function LeveQuestMainPanelView:OnBagItemsUpdate()
 end
 
 function LeveQuestMainPanelView:OnGameEventOnNormalMakeStart()
-	self:Hide()
+	_G.UIViewMgr:HideView(_G.UIViewID.LeveQuestMainPanel)
 end
 
 function LeveQuestMainPanelView:OnCommVerIconTabsChanged(Index, ItemData, ItemView)
@@ -349,6 +367,19 @@ function LeveQuestMainPanelView:OnCommVerIconTabsChanged(Index, ItemData, ItemVi
 	_G.FLOG_INFO("LeveQuestMainPanelView:OnCommVerIconTabsChanged .. " .. ProfName)
 	self.ProfID = ProfID
 	self.CommonTitle:SetTextSubtitle(_G.EquipmentMgr:GetProfName(ProfID))
+	
+	-- 停止升级动画
+	if self.LevelTimer ~= nil then
+		self:UnRegisterTimer(self.LevelTimer)
+		self.LevelTimer = nil
+	end
+
+	if self.ExpTimer ~= nil then
+		self:UnRegisterTimer(self.ExpTimer)
+		self.ExpTimer = nil
+	end
+	self:StopAnimation(self.AnimProBar)
+	self:StopAnimation(self.AnimProBarControl)
 
 	self.LeveQuestVM:UpdateProfIcon(ProfID)
 	self.LeveQuestVM:UpdateProfLv(ProfID)
@@ -419,8 +450,8 @@ function LeveQuestMainPanelView:OnClickedBtnLimitInfo()
 	TipsUtil.ShowInfoTips(Content, self.FButton_147, _G.UE.FVector2D(-Size.X + 10, Size.Y + 10), _G.UE.FVector2D(0, 0), false , {View = self, HidePopUpBGCallback= function ()
 		self:ClearRefreshTimer()
 		_G.UIViewMgr:HideView(_G.UIViewID.CommHelpInfoTipsView)
-		self.RefreshTimer = self:RegisterTimer(self.OnRefreshTime, 0, 1, 0)
-	end})
+		-- self.RefreshTimer = self:RegisterTimer(self.OnRefreshTime, 0, 1, 0)
+	end}, nil, _G.UIViewID.LeveQuestMainPanel)
 
 	self:ClearRefreshTimer()
 	self.RefreshTimer = self:RegisterTimer(self.OnRefreshTime, 0, 1, 0)
@@ -453,11 +484,12 @@ function LeveQuestMainPanelView:OnRefreshTime()
 	end
 
 	-- _G.FLOG_INFO("理符刷新时间")
-
 	-- 更新数据
 	local View = _G.UIViewMgr:FindView(_G.UIViewID.CommHelpInfoTipsView)
 	if View ~= nil then
-		View:UpdateData({{Title = "", Content = {self:GetTips()}}} )
+		if View.ParentViewID ~= nil and View.ParentViewID == _G.UIViewID.LeveQuestMainPanel then
+			View:UpdateData({{Title = "", Content = {self:GetTips()}}} )
+		end
 	end
 end
 
@@ -470,10 +502,10 @@ function LeveQuestMainPanelView:OnLeveQuestInfoUpdate()
 	self.LeveQuestVM:UpdateLeveQuestInfo()
 	local View = _G.UIViewMgr:FindView(_G.UIViewID.CommHelpInfoTipsView)
 	if View ~= nil then
-		View:UpdateData({{Title = "", Content = {self:GetTips()}}} )
+		if View.ParentViewID ~= nil and View.ParentViewID == _G.UIViewID.LeveQuestMainPanelView then
+			View:UpdateData({{Title = "", Content = {self:GetTips()}}} )
+		end
 	end
-	-- 刷新时间
-	_G.FLOG_INFO("理符数据收到，开始倒计时")
 	self:ClearRefreshTimer()
 	self.RefreshTimer = self:RegisterTimer(self.OnRefreshTime, 0, 1, 0)
 end

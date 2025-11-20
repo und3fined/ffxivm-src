@@ -32,6 +32,7 @@ local ItemDefine = require("Game/Item/ItemDefine")
 ---@field BtnStrategy UFButton
 ---@field CommBtn CommBtnSView
 ---@field CommSlot CommBackpack74SlotView
+---@field CommonRedDot CommonRedDotView
 ---@field Icon UFImage
 ---@field PanelText2 UFCanvasPanel
 ---@field Text1 URichTextBox
@@ -39,6 +40,7 @@ local ItemDefine = require("Game/Item/ItemDefine")
 ---@field TextQuantity1 UFTextBlock
 ---@field TextQuantity2 UFTextBlock
 ---@field TextTitle UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local OpsNewBieStrategyListItemView = LuaClass(UIView, true)
 
@@ -47,6 +49,7 @@ function OpsNewBieStrategyListItemView:Ctor()
 	--self.BtnStrategy = nil
 	--self.CommBtn = nil
 	--self.CommSlot = nil
+	--self.CommonRedDot = nil
 	--self.Icon = nil
 	--self.PanelText2 = nil
 	--self.Text1 = nil
@@ -54,6 +57,7 @@ function OpsNewBieStrategyListItemView:Ctor()
 	--self.TextQuantity1 = nil
 	--self.TextQuantity2 = nil
 	--self.TextTitle = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -61,6 +65,7 @@ function OpsNewBieStrategyListItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CommBtn)
 	self:AddSubView(self.CommSlot)
+	self:AddSubView(self.CommonRedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -79,7 +84,7 @@ function OpsNewBieStrategyListItemView:OnInit()
 		{ "Icon", UIBinderSetImageBrush.New(self, self.Icon)},
 		{ "IconColor", UIBinderSetColorAndOpacityHex.New(self, self.Icon) },
 		{ "IsFinished", UIBinderValueChangedCallback.New(self, nil, self.OnIsFinishedChanged) },
-
+		{ "RedDotName", UIBinderValueChangedCallback.New(self, nil, self.OnRedDotNameChanged) },
 	}
 	self.CommSlot:SetClickButtonCallback(self, self.OnRewardItemClicked)
 end
@@ -254,7 +259,7 @@ function OpsNewBieStrategyListItemView:OnDestroy()
 end
 
 function OpsNewBieStrategyListItemView:OnShow()
-
+	UIUtil.SetIsVisible(self.CommonRedDot, true)
 end
 
 function OpsNewBieStrategyListItemView:OnHide()
@@ -367,6 +372,10 @@ function OpsNewBieStrategyListItemView:IsHaveJumpData()
 		end
 		return false
 	end
+end
+
+function OpsNewBieStrategyListItemView:OnRedDotNameChanged(RedDotName)
+	self.CommonRedDot:SetRedDotNameByString(RedDotName)
 end
 
 return OpsNewBieStrategyListItemView

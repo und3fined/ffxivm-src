@@ -20,31 +20,34 @@ local ReportButtonType = require("Define/ReportButtonType")
 ---@class OpsVersionNoticeContentPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnGoto CommBtnLView
----@field CloseBtn CommonCloseBtnView
 ---@field ImgPoster UFImage
 ---@field TableViewList UTableView
 ---@field TextTaskDescribe UFTextBlock
 ---@field TextTaskTitle UFTextBlock
 ---@field TextTitle UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimLoop UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local OpsVersionNoticeContentPanelView = LuaClass(UIView, true)
 
 function OpsVersionNoticeContentPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnGoto = nil
-	--self.CloseBtn = nil
 	--self.ImgPoster = nil
 	--self.TableViewList = nil
 	--self.TextTaskDescribe = nil
 	--self.TextTaskTitle = nil
 	--self.TextTitle = nil
+	--self.AnimIn = nil
+	--self.AnimLoop = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function OpsVersionNoticeContentPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnGoto)
-	self:AddSubView(self.CloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -62,7 +65,12 @@ function OpsVersionNoticeContentPanelView:OnInit()
 end
 
 function OpsVersionNoticeContentPanelView:OnDestroy()
-
+	-- 确保ImageDownloader资源被完全清理
+	local ImageDownloader = self.ImageDownloader
+	if ImageDownloader and ImageDownloader:IsValid() then
+		ImageDownloader:Stop()
+		self.ImageDownloader = nil
+	end
 end
 
 function OpsVersionNoticeContentPanelView:OnShow()
@@ -78,9 +86,11 @@ function OpsVersionNoticeContentPanelView:OnShow()
 end
 
 function OpsVersionNoticeContentPanelView:OnHide()
+	-- 清理ImageDownloader资源
 	local ImageDownloader = self.ImageDownloader
 	if ImageDownloader and ImageDownloader:IsValid() then
 		ImageDownloader:Stop()
+		self.ImageDownloader = nil
 	end
 
 	if self.Params == nil then
@@ -111,6 +121,11 @@ end
 
 function OpsVersionNoticeContentPanelView:OnClickedSelectMemberItem(Index, ItemData, ItemView)
 	self.ViewModel:SetItemChecked(Index)
+	-- 检查UI对象是否有效
+	if not self:IsValid() or not self.ImgPoster or not self.ImgPoster:IsValid() then
+		return
+	end
+	
 	if string.match(self.ViewModel.ImgPoster, "http") then
 		self:SetUrlPic(self.ViewModel.ImgPoster)
 	else
@@ -128,7 +143,8 @@ function OpsVersionNoticeContentPanelView:SetUrlPic(Url)
     local ImageDownloader = _G.UE.UImageDownloader.MakeDownloader("OpsVersionContentCDNPoster", true, 100)
     ImageDownloader.OnSuccess:Add(ImageDownloader,
 		function(_, texture)
-			if texture then
+			-- 在异步回调中检查对象有效性
+			if texture and self:IsValid() and self.ImgPoster and self.ImgPoster:IsValid() then
 				UIUtil.ImageSetBrushResourceObject(self.ImgPoster, texture)
 				UIUtil.SetIsVisible(self.ImgPoster, true)
 			end
@@ -137,7 +153,10 @@ function OpsVersionNoticeContentPanelView:SetUrlPic(Url)
 
     ImageDownloader.OnFail:Add(ImageDownloader,
 		function()
-			UIUtil.SetIsVisible(self.ImgPoster, false)
+			-- 在异步回调中检查对象有效性
+			if self:IsValid() and self.ImgPoster and self.ImgPoster:IsValid() then
+				UIUtil.SetIsVisible(self.ImgPoster, false)
+			end
 		end
 	)
 

@@ -21,9 +21,14 @@ local ItemVM = require("Game/Item/ItemVM")
 local ItemUtil = require("Utils/ItemUtil")
 local ChatHyperlinkLocationItemVM = require("Game/Chat/VM/ChatHyperlinkLocationItemVM")
 local ChatUtil = require("Game/Chat/ChatUtil")
+local TipsUtil = require("Utils/TipsUtil")
+local ItemTipsUtil = require("Utils/ItemTipsUtil")
 
 local LSTR = _G.LSTR
 local HyperlinkLocationType = ChatDefine.HyperlinkLocationType
+
+local BagMgr = _G.BagMgr
+local FLOG_INFO = _G.FLOG_INFO
 
 local HyperlinkCategory = {
 	Expression = 0,	-- 表情
@@ -120,6 +125,7 @@ function ChatHyperlinkPanelView:OnInit()
 	self.BagItemVMList = UIBindableList.New(ItemVM)
 	self.BagEquipVMList = UIBindableList.New(ItemVM)
     self.LocationVMList = UIBindableList.New(ChatHyperlinkLocationItemVM)
+	self.ItemVMTip = ItemVM.New()
 
 	self.TableAdapterTab = UIAdapterTableView.CreateAdapter(self, self.TableViewTab, self.OnSelectChangedTab)
 
@@ -219,7 +225,7 @@ function ChatHyperlinkPanelView:OnGroupStateChangedCategory(ToggleGroup, ToggleB
 	-- Tab
 	self.TableAdapterTab:ReleaseAllItem(true)
 	self.TableAdapterTab:CancelSelected()
-	local TabDataList = self:GetTabDataList(Index)
+	local TabDataList = self:GetTabDataList(Index) or {}
 	self.TableAdapterTab:SetEntryWidth(#TabDataList > 2 and 285.0 or 427.5) -- 调整Tab的宽度
 	self.TableAdapterTab:UpdateAll(TabDataList)
 
@@ -370,36 +376,49 @@ function ChatHyperlinkPanelView:ShowGif(Type)
 	local CfgList = ChatGifCfg:GetCfgListByTypeID(Type) or {}
 
 	-- 过滤掉未解锁Gif
-	local UnlockIDMap = ChatVM.UnlockGifIDMap or {}
-
-	-- 红点ID
-	local RedDotIDs = {}
-    local ReadIDMap = ChatVM.GifReadRedDotIDMap
-
-	for _, v in ipairs(CfgList) do
+	for _, Cfg in ipairs(CfgList) do
+		local v = table.clone(Cfg)
+		local ID = v.ID
+		local bNeedUnlock = (v.NeedUnlock == 1 and v.UnlockItemID and v.UnlockItemID ~= 0)
 		if v.NeedUnlock == 1 then
-			local ID = v.ID
-			if ID and UnlockIDMap[ID] then 
-				table.insert(DataList, v)
+			v.IsLock = not ChatVM:IsGiftUnlocked(ID)
+			if v.IsLock then
+				v.bNotUse = BagMgr:GetItemByResID(v.UnlockItemID) ~= nil
+			end
+		end
 
-				local RedDotID = v.RedDotID
-				if RedDotID and RedDotID > 0 and nil == ReadIDMap[RedDotID] then -- 该红点未读
-					table.insert(RedDotIDs, RedDotID)
-				end
+		-- FLOG_INFO("[ChatHyperlinkPanelView:ShowGif] ID:%d, NeedUnlock:%d, IsLock:%s", v.ID, v.NeedUnlock, tostring(v.IsLock))
+		if v.IsHidden == 1 then
+			-- 企鹅表情，未解锁时需要隐藏
+			-- if v.IsUnlock then
+			if bNeedUnlock then
+				table.insert(DataList, v)
 			end
 		else
 			table.insert(DataList, v)
 		end
 	end
 
+	table.sort(DataList, function(a, b)
+		if a.IsLock ~= b.IsLock then
+			return a.IsLock ~= true
+		end
+		if a.bNotUse ~= b.bNotUse then
+			return a.bNotUse
+		end
+		local aRedDotValue = _G.RedDotMgr:GetNodeValueByID(a.RedDotID) or 0
+		local bRedDotValue = _G.RedDotMgr:GetNodeValueByID(b.RedDotID) or 0
+		if aRedDotValue ~= bRedDotValue then
+			return aRedDotValue < bRedDotValue
+		end
+		return (a.ID or 0) < (b.ID or 0) -- ID小的排在前面
+	end)
+
 	self.TableAdapterGif:UpdateAll(DataList)
 
 	local IsEmpty = #DataList <= 0
 	self:SetEmptyTips(IsEmpty, 50048) -- "暂无表情"
 	UIUtil.SetIsVisible(self.GifPanel, not IsEmpty)
-
-	-- 红点设置为已读
-	ChatVM:AddGifReadRedDotIDs(RedDotIDs)
 end
 
 function ChatHyperlinkPanelView:OnItemClickedEmoji(Index, ItemData, ItemView)
@@ -420,7 +439,33 @@ function ChatHyperlinkPanelView:OnItemClickedGif(Index, ItemData, ItemView)
 		return
 	end
 
+	-- FLOG_INFO("[ChatHyperlinkPanelView:OnItemClickedGif] ID:%d, NeedUnlock:%d, IsLock:%s", ItemData.ID, ItemData.NeedUnlock, tostring(ItemData.IsLock))
+	if ItemData.NeedUnlock and ItemData.IsLock then
+		-- 未解锁
+		-- 检测背包是否存在表情道具，存在则弹出快捷使用弹窗，否则显示来源弹窗
+		--local ResID = 61900023
+		local ResID = ItemData.UnlockItemID
+		local Item = BagMgr:GetItemByResID(ResID)
+		if Item then
+			-- 弹出快捷使用弹窗
+			BagMgr:PopUpEasyUse(Item)
+		else
+			-- 显示来源弹窗
+			self.ItemVMTip.ResID = ResID
+			local Params = { ViewModel = self.ItemVMTip, InTagetView = ItemView, Offset = _G.UE.FVector2D(-24, -8), ParentViewID=_G.UIViewID.ChatHyperlinkPanel}
+			local ModValue = Index % 7
+			if ModValue == 0 or ModValue > 5 then
+				Params.Extras = { OffsetXViewCount = -1 }
+				Params.Offset = _G.UE.FVector2D(24, -8)
+			end
+			ItemTipsUtil.OnClickedToGetBtn(Params)
+		end
+		return
+	end
+
 	if ChatMgr:SendGif(ItemData.ID) then
+		-- 红点设置为已读
+		ChatVM:AddGifReadRedDotIDs({ItemData.RedDotID})
 		self:Hide()
 	end
 end

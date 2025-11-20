@@ -10,6 +10,7 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+local ChocoboDefine = require("Game/Chocobo/ChocoboDefine")
 
 ---@class ChocoboTitleProbarItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -40,7 +41,10 @@ function ChocoboTitleProbarItemView:OnDestroy()
 end
 
 function ChocoboTitleProbarItemView:OnShow()
-
+    if self.VM then
+        local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title/' .. self.VM.ID
+        self.ProbarNode.RedDotSlot:SetRedDotNameByString(RedDotName)
+    end
 end
 
 function ChocoboTitleProbarItemView:OnHide()
@@ -74,7 +78,6 @@ function ChocoboTitleProbarItemView:OnRegisterBinder()
         { "NodeName", UIBinderSetText.New(self, self.ProbarNode.TextTitle) },
         { "NodeNameColor", UIBinderSetColorAndOpacityHex.New(self, self.ProbarNode.TextTitle) },
         { "IsGet", UIBinderSetIsVisible.New(self, self.ProbarNode.PanelGet) },
-        { "IsShowRedPoint", UIBinderSetIsVisible.New(self, self.ProbarNode.ImgPoint) },
         { "IsSelect", UIBinderSetIsVisible.New(self, self.ProbarNode.ImgSelect) },
     }
     self:RegisterBinders(ViewModel, Binders)

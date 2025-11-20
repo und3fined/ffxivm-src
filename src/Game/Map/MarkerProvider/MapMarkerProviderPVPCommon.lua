@@ -19,7 +19,7 @@ local ColosseumMapLayouts = PVPColosseumDefine.ColosseumMapLayouts
 local ColosseumConstant = PVPColosseumDefine.ColosseumConstant
 
 
----@class MapMarkerProviderPVPCommon
+---@class MapMarkerProviderPVPCommon : MapMarkerProvider
 local MapMarkerProviderPVPCommon = LuaClass(MapMarkerProvider)
 
 function MapMarkerProviderPVPCommon:Ctor()
@@ -47,8 +47,10 @@ function MapMarkerProviderPVPCommon:OnCreateMarker(Params)
         Marker = self:CreateMarker(MapMarkerMonster, Params.ID, Params)
     else
         Marker = self:CreateMarker(MapMarkerPVPCommon, Params.ID, Params)
-        local X, Y = MapUtil.GetUIPosByLocation(Params.Location, self.UIMapID)
+        local Pos = Params.Location
+        local X, Y = MapUtil.GetUIPosByLocation(Pos, self.UIMapID)
 	    Marker:SetAreaMapPos(X, Y)
+        Marker:SetWorldPos(Pos.X, Pos.Y, Pos.Z)
     end
 
     return Marker

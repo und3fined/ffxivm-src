@@ -12,6 +12,7 @@ local ProtoCS = require("Protocol/ProtoCS")
 local BagMainVM = require("Game/NewBag/VM/BagMainVM")
 local ItemTipsFrameVM = require("Game/ItemTips/VM/ItemTipsFrameVM")
 local FateItemSubmitInfoVM = require("Game/Fate/VM/FateItemSubmitInfoVM")
+local ActorUtil = require("Utils/ActorUtil")
 
 local NpcDialogMgr = nil
 local CS_CMD = ProtoCS.CS_CMD
@@ -43,7 +44,8 @@ function FateItemSubmitVM:ShowItemSubmitView(
     InTargetActionList,
     InNpcDialogCfg,
     InFateCfg,
-    InNPCEntityID)
+    InNPCEntityID
+)
     self:ResetData(true)
     self.InteractiveFate = InInteractiveFate
     self.NpcDialogCfg = InNpcDialogCfg
@@ -97,6 +99,9 @@ end
 function FateItemSubmitVM:GetSubmitItemInfo()
 end
 
+function FateItemSubmitVM:GetSubmitItemMagicsparInfo()
+end
+
 function FateItemSubmitVM:CheckReadyToSubmit()
     if self.OwnedItemDataList == nil or #self.OwnedItemDataList < 1 then
         return false
@@ -121,6 +126,15 @@ end
 function FateItemSubmitVM:SubmitItem()
     if self.InteractiveFate == nil then
         return
+    end
+
+    local SubmitNPCResID = 0
+    local TargetActor = ActorUtil.GetActorByEntityID(self.NPCEntityID)
+    if (TargetActor ~= nil) then
+        local AttriComponent = TargetActor:GetAttributeComponent()
+        if (AttriComponent) then
+            SubmitNPCResID = AttriComponent.ResID
+        end
     end
 
     local NextProgress = self.InteractiveFate.Progress + self.CurrentSumbitScore
@@ -149,7 +163,8 @@ function FateItemSubmitVM:SubmitItem()
         Cmd = SubMsgID,
         FateID = self.InteractiveFate.ID,
         FateSubmitItem = {
-            Items = SubmitItemList
+            Items = SubmitItemList,
+            NPCResID = SubmitNPCResID
         }
     }
 

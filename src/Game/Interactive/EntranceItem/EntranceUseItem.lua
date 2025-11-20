@@ -105,7 +105,7 @@ function EntranceUseItem:OnGenFunctionList()
     return {}
 end
 
-function EntranceUseItem:CheckInterative(EnableCheckLog)
+function EntranceUseItem:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     return true
 end
 

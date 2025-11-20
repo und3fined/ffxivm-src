@@ -9,10 +9,8 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local AdventureProfCareerVM = require("Game/Adventure/AdventureProfCareerVM")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local AdventureCareerMgr = require("Game/Adventure/AdventureCareerMgr")
-local MajorUtil = require("Utils/MajorUtil")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 
 ---@class AdventureProfCareerTaskView : AdventureChildPageBaseView
@@ -78,6 +76,7 @@ end
 function AdventureProfCareerTaskView:OnDropDownListSelectionChanged(Index, ItemData, ItemView, IsByClick)
 	UIUtil.SetIsVisible(self.PanelJob, false)
 	UIUtil.SetIsVisible(self.PanelPreview, false)
+	self.AdapterProfCareerList:ScrollToTop()
 	self.AdapterProfCareerList:ReleaseAllItem(true)
 	local CurClassData = AdventureCareerMgr:GetCurClassTypeData(self.CurClassType)
 	local CurSelectProfData = CurClassData[Index]
@@ -103,6 +102,7 @@ function AdventureProfCareerTaskView:OnDropDownListSelectionChanged(Index, ItemD
 
 	self.VM:ClearNewRed(self.CurPageProf)
 	self.CurPageProf = CurSelectProfData.Prof
+	_G.ObjectMgr:CollectGarbage(false, true, false)
 end
 
 ---- 职业未解锁时展示模型图片
@@ -140,7 +140,7 @@ function AdventureProfCareerTaskView:OnHide()
 	self.CurPageProf = nil
 	self.CurClassType = nil
 	if self.AdventureJobView then
-		self.PanelPreview:RemoveChild(self.PanelPreview)
+		self.PanelPreview:RemoveChild(self.AdventureJobView)
 		UIViewMgr:RecycleView(self.AdventureJobView)
 		self.AdventureJobView = nil
 	end

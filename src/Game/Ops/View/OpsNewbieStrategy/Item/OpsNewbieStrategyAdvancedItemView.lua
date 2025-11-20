@@ -29,6 +29,7 @@ local UIBinderSetImageBrush = require("Binder/UIBinderSetImageBrush")
 ---@field PanelCategory UFCanvasPanel
 ---@field PanelFinish UFCanvasPanel
 ---@field PanelList UFCanvasPanel
+---@field PanelListCut UFCanvasPanel
 ---@field PanelLock UFCanvasPanel
 ---@field PanelSize UFCanvasPanel
 ---@field TableViewList UTableView
@@ -38,6 +39,7 @@ local UIBinderSetImageBrush = require("Binder/UIBinderSetImageBrush")
 ---@field TextTitle UFTextBlock
 ---@field AnimFold UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimIn0 UWidgetAnimation
 ---@field AnimUnfold UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local OpsNewbieStrategyAdvancedItemView = LuaClass(UIView, true)
@@ -50,6 +52,7 @@ function OpsNewbieStrategyAdvancedItemView:Ctor()
 	--self.PanelCategory = nil
 	--self.PanelFinish = nil
 	--self.PanelList = nil
+	--self.PanelListCut = nil
 	--self.PanelLock = nil
 	--self.PanelSize = nil
 	--self.TableViewList = nil
@@ -59,6 +62,7 @@ function OpsNewbieStrategyAdvancedItemView:Ctor()
 	--self.TextTitle = nil
 	--self.AnimFold = nil
 	--self.AnimIn = nil
+	--self.AnimIn0 = nil
 	--self.AnimUnfold = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -122,6 +126,9 @@ function OpsNewbieStrategyAdvancedItemView:OnShow()
 end
 
 function OpsNewbieStrategyAdvancedItemView:OnHide()
+	self:StopAnimation(self.AnimUnfold)
+	self:StopAnimation(self.Animfold)
+	UIUtil.SetIsVisible(self.PanelListCut, false)
 end
 
 function OpsNewbieStrategyAdvancedItemView:OnRegisterUIEvent()
@@ -171,11 +178,12 @@ function OpsNewbieStrategyAdvancedItemView:OnIsExpandChanged(IsExpand, OldIsExpa
 	---列表初始化进来的时候，不播动画
 	if IsExpand == nil or (IsExpand == false and OldIsExpand == nil) then
 		---怀疑出现自动开启的情况是动效还在播，导致隐藏失败了
-		UIUtil.PlayAnimationTimePointPct(self, self.AnimUnfold, 0, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, true)
-		UIUtil.PlayAnimationTimePointPct(self, self.Animfold, 1, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, true)
-		--UIUtil.SetIsVisible(self.PanelList, false)
+		self:StopAnimation(self.AnimUnfold)
+		self:StopAnimation(self.Animfold)
+		UIUtil.SetIsVisible(self.PanelListCut, false)
 		return
 	end
+	UIUtil.SetIsVisible(self.PanelListCut, true)
 	local Params = self.Params
 	if nil == Params then
 		return

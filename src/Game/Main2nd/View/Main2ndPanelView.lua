@@ -236,7 +236,7 @@ function Main2ndPanelView:OnMenuItemClicked(Index, ItemData, ItemView)
 	elseif MenuType.PWorld == ItemData.BtnEntranceID then
 		UIViewMgr:ShowView(UIViewID.PWorldEntrancePanel)
 	elseif MenuType.Mount == ItemData.BtnEntranceID then
-		CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.EasyToUse, SideBarDefine.EasyToUseTabType.Mount)
+		CommSideBarUtil.ShowEasyToUseSideBarByType(SideBarDefine.EasyToUseTabType.Mount)
 	elseif MenuType.Glamours == ItemData.BtnEntranceID then
 		_G.WardrobeMgr:OpenWardrobeMainPanel()
 	elseif MenuType.GatheringLog == ItemData.BtnEntranceID then

@@ -39,8 +39,7 @@ local BuffDefine = {
     -- loiafeng: 【临时做法】目前使用Buff表中Tag列的999作为是否显示动态数值的
     DynamicBuffDescTag = 999,
 
-    --kanohchen: 【4月跑测体验】【优化】系统频道全是这个加速buff了
-    SysChatMsgIgnoreBuffID = 998,
+    PerformanceBuffID = 96,
 }
 
 return BuffDefine

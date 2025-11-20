@@ -236,7 +236,7 @@ end
 
 
 function SidePopUpMgr:GetDisplayedEndTime(Type)
-    if self.CurDisplayed.Type == Type then
+    if self.CurDisplayed and self.CurDisplayed.Type == Type then
         return self.CurDisplayed.EndTime
     end
 

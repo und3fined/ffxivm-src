@@ -637,7 +637,13 @@ end
 --- @type 当完成时 包括拼装成功和时间结束自动拼装
 function PuzzlePenguinJigsawMainView:OnFinish(bTimeOut)
     -- 这里播放一下，根据是成功还是失败
-    self.bSuccess = PuzzleMgr.PuzzleGameInst.bSuccess
+    self.bSuccess = false
+    if (PuzzleMgr.PuzzleGameInst~=nil) then
+        self.bSuccess = PuzzleMgr.PuzzleGameInst.bSuccess
+    else
+        _G.FLOG_ERROR("结束的时候，PuzzleMgr.PuzzleGameInst 为空，请检查")
+    end
+    
     _G.FateMgr:SendFateEndPuzzleReq(self.InteractNpcEntityID, self.bSuccess)
     if bTimeOut then
         -- 超时了

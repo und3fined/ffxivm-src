@@ -717,7 +717,8 @@ function GatherMgr:UpdatePrivateGathers(MsgBody)
             self.TotalPickCountMap[MapEditorID] = nil
             FLOG_INFO("Gather RemoveMiniMapGatherPoint %d", MapEditorID)
             -- _G.ClientVisionMgr:ClientActorLeaveVision(MapEditorID, GatherActorType)
-            if MsgBody.bImmediately ~= nil and MsgBody.bImmediately == true then
+
+            if MsgBody.bImmediately ~= nil and MsgBody.bImmediately == true or MsgBody.PrivateGatherItem.PrivateGather.TotalPickCount == 0 then
                 self:DelayGatherLeaveVision(MapEditorID, true)
             else
                 self:DelayGatherLeaveVision(MapEditorID)
@@ -726,6 +727,7 @@ function GatherMgr:UpdatePrivateGathers(MsgBody)
             local IsTimeLimit = self:IsTimeLimitGather(ResID)
             if IsTimeLimit then
                 self.TimeLimitListID = 0
+                self.TimeLimitParams = nil
                 local Content = ""
                 local MajorProfID = MajorUtil.GetMajorProfID()
                 if MajorProfID == ProtoCommon.prof_type.PROF_TYPE_MINER then
@@ -990,7 +992,7 @@ function GatherMgr:OnNetMsgPullPrivateGatherData(MsgBody)
 
         if self.TimeLimitParams then
             --UpdateGatherPoints后，小地图会GetAll，但是限时采集点在小地图视野外，getall的时候就没有限时的了，所以还是要触发
-            _G.EventMgr:SendEvent(_G.EventID.AddMiniMapGatherPoint, self.TimeLimitParams)
+            _G.EventMgr:SendEvent(_G.EventID.AddMiniMapTimeLimitGatherPoint, self.TimeLimitParams)
             self:ShowGatherAreaTips(self.TimeLimitParams.Pos, self.TimeLimitParams.ResID)
         end
 
@@ -1030,10 +1032,14 @@ function GatherMgr:RemoveAllMiniMap()
                 _G.EventMgr:SendEvent(_G.EventID.RemoveMiniMapGatherPoint, {ListID = ListID, ResID = PickItem.ResID})
             end
         end
-        
+
         if not bRemoveTimeLimit and self.TimeLimitParams and self.TimeLimitParams.ListID > 0 then
             _G.EventMgr:SendEvent(_G.EventID.RemoveMiniMapTimeLimitGatherPoint, self.TimeLimitParams)
         end
+        
+        self.UpdateNearestGatherPointParams = self.UpdateNearestGatherPointParams or {}
+        self.UpdateNearestGatherPointParams.bShow = false
+        _G.EventMgr:SendEvent(_G.EventID.UpdateNearestGatherPoint, self.UpdateNearestGatherPointParams)
     end
 
     self.MiniMapGatherMap = {}
@@ -1344,6 +1350,8 @@ function GatherMgr:PlayEffect(EntityID, EffectPath, EffectIDMap, CompleteCallBac
             EffectPos = GatherActor:FGetActorLocation()
         else
             FLOG_ERROR("GatherMgr:PlayEffect Error, major not find gather by entityid")
+            --EffectPos是nil，可能会造成崩溃
+            return
         end
     else
         FLOG_ERROR("GatherMgr:PlayEffect Error, 3p not find gather by listid")
@@ -1699,8 +1707,11 @@ end
 function GatherMgr:DelayGatherLeaveVision(MapEditorID, bImmediately)
     local function DoLeaveVision()
         _G.ClientVisionMgr:ClientActorLeaveVision(MapEditorID, GatherActorType)
-        _G.InteractiveMgr:ShowEntrances()
-        self:SendExitGatherState()
+        local CurGatherID = self.CurGatherListID or 0
+        if CurGatherID > 0 and CurGatherID == MapEditorID then
+            _G.InteractiveMgr:ShowEntrances()
+            self:SendExitGatherState()
+        end
     end
 
     local Delay = bImmediately and 0 or 2
@@ -1735,7 +1746,7 @@ function GatherMgr:OnNetMsgGetGatherData(MsgBody)
         self.CurHighProductionCastCount = self:GetHighProductionCastSkill(GatherPoint.SkillUseCount) or 0
 
         if self.CurGatherEntranceItem then
-            local EntityID = _G.ClientVisionMgr:GetEntityIDByMapEditorID(GatherPoint.ListID, GatherActorType)
+            local EntityID = _G.ClientVisionMgr:GetEntityIDByMapEditorID(GatherPoint.ListID, GatherActorType) or 0
             self.CurActiveEntityID = EntityID
             
             _G.InteractiveMgr.CurInteractEntityID = EntityID
@@ -1750,7 +1761,7 @@ function GatherMgr:OnNetMsgGetGatherData(MsgBody)
 
             self.IsMoveExit = false
             self:SendExitGatherState(true)
-            local GatherID = self.CurGatherEntranceItem.ResID
+            local GatherID = self.CurGatherEntranceItem and self.CurGatherEntranceItem.ResID or 0
             self:ExitGatherState(MajorUtil.GetMajorEntityID(), GatherID)
         end
     end
@@ -2062,7 +2073,7 @@ function GatherMgr:ExitGatherState(EntityID, GatherID)
     EventParams.ULongParam1 = 0
     _G.EventMgr:SendCppEvent(_G.EventID.ManualUnSelectTarget, EventParams)
 
-    local EffectNode = self.EffectNodeMap[EntityID]
+    local EffectNode = self.EffectNodeMap and self.EffectNodeMap[EntityID]
     if EffectNode then
         if EffectNode.DelayResultDisplayTimerID then
             _G.TimerMgr:CancelTimer(EffectNode.DelayResultDisplayTimerID)
@@ -2426,6 +2437,8 @@ function GatherMgr:SimpleGatherItem(FunctionItem)
     end
 
     if not self:GatherSkillPreCheck(FunctionItem.ResID) then
+		GatheringJobPanelVM:BreakSimpleGather()
+		GatheringJobPanelVM:ExitSimpleGatherPanel()
         return -1
     end
 
@@ -2785,6 +2798,9 @@ end
 
 function GatherMgr:GetDirDisTips(Point)
     local MajorActor = MajorUtil.GetMajor()
+    if not MajorActor then
+        return nil
+    end
     local MajorPos = MajorActor:FGetActorLocation()
     local Xlen = Point.X - MajorPos.X
     local Ylen = MajorPos.Y - Point.Y
@@ -2807,7 +2823,10 @@ end
 
 function GatherMgr:ShowGatherAreaTips(Point, ResID)
     local DirContent, DisContent = self:GetDirDisTips(Point)
-
+    if not DirContent or not DisContent then
+        FLOG_ERROR(" GatherMgr:ShowGatherAreaTips DirContent is nil")
+        return
+    end
     --Name
     local Cfg = GatherPointCfg:FindCfgByKey(ResID)
     if Cfg == nil then

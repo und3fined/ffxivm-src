@@ -156,7 +156,7 @@ function JobSkillNinjaView:OnMajorUseSkill(Params)
 		return
 	end
 
-	self:PlayAnimation(self["AnimSkill" .. tostring(SealIndex)])
+	self:PlayAnimationToEndTime(self["AnimSkill" .. tostring(SealIndex)])
 end
 
 function JobSkillNinjaView:SetEnergyState(bHasEnergy)
@@ -165,9 +165,9 @@ function JobSkillNinjaView:SetEnergyState(bHasEnergy)
 	end
 
 	if bHasEnergy then
-		self:PlayAnimation(self.AnimEnergy1)
+		self:PlayAnimationToEndTime(self.AnimEnergy1)
 	else
-		self:PlayAnimation(self.AnimEnergy0)
+		self:PlayAnimationToEndTime(self.AnimEnergy0)
 	end
 	self.bHasEnergy = bHasEnergy
 end

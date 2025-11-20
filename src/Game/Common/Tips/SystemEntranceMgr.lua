@@ -73,9 +73,14 @@ end
 --制作笔记
 ---@param ItemId number@物品ID
 function SystemEntranceMgr:ShowCraftingLogEntrance(ItemID)
-    if _G.UIViewMgr:IsViewVisible(_G.UIViewID.CraftingLog) then
-        if _G.UIViewMgr:IsViewVisible(UIViewID.ShopBuyPropsWinView)
-        or _G.UIViewMgr:IsViewVisible(UIViewID.MarketMainPanel) then
+    local CraftingLog = _G.UIViewMgr:FindVisibleView(_G.UIViewID.CraftingLog)
+    if CraftingLog ~= nil then
+        local CraftingLogZOrder = CraftingLog:GetZOrder()
+        local ShopBuyPropsWinView = _G.UIViewMgr:FindVisibleView(_G.UIViewID.ShopBuyPropsWinView)
+        local ShopBuyPropsWinViewZOrder = ShopBuyPropsWinView ~= nil and ShopBuyPropsWinView:GetZOrder() or 0
+        local MarketMainPanel = _G.UIViewMgr:FindVisibleView(_G.UIViewID.MarketMainPanel)
+        local MarketMainPanelZOrder = MarketMainPanel ~= nil and MarketMainPanel:GetZOrder() or 0
+        if CraftingLogZOrder < ShopBuyPropsWinViewZOrder or CraftingLogZOrder < MarketMainPanelZOrder then
             _G.MsgTipsUtil.ShowTips(_G.LSTR(1200048))--"无法跳转到已经打开的界面"
             return
         end

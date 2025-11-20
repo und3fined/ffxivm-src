@@ -17,6 +17,7 @@ local QuestMgr = require("Game/Quest/QuestMgr")
 local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local ActorUtil = require("Utils/ActorUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local MonsterCfg = require("TableCfg/MonsterCfg")
 local EnmityCfg = require("TableCfg/EnmityCfg")
 local SettingsUtils = require("Game/Settings/SettingsUtils")
@@ -136,45 +137,48 @@ function TutorialGuideMgr:OnCheckMonster()
 
     for i = 1, Length do
         local Monster = AllMonsters:GetRef(i)
-        local MonsterPos = Monster:FGetActorLocation()
-        local Camp = GetCamp(Monster)
+        if Monster ~= nil then
+            local MonsterPos = Monster:FGetActorLocation()
+            local Camp = GetCamp(Monster)
 
-        --必须是怪物阵营
-        if Camp == ProtoRes.camp_type.camp_type_monster then
-            local Dis = ((MonsterPos.X - MajorPos.X) ^ 2) + ((MonsterPos.Y - MajorPos.Y) ^ 2) + ((MonsterPos.Z - MajorPos.Z) ^ 2)
+            --必须是怪物阵营
+            if Camp == ProtoRes.camp_type.camp_type_monster then
+                local Dis = ((MonsterPos.X - MajorPos.X) ^ 2) + ((MonsterPos.Y - MajorPos.Y) ^ 2) + ((MonsterPos.Z - MajorPos.Z) ^ 2)
 
-            if Dis < 4000000 then
-                local EntityID = Monster:GetAttributeComponent().EntityID
-                local ResID = ActorUtil.GetActorResID(EntityID)
-                local _ <close> = CommonUtil.MakeProfileTag("TutorialGuideMgr_OnCheckMonster_MonsterCfg_FindCfgByKey")
-                local Cfg = MonsterCfg:FindCfgByKey(ResID)
-                local _ <close> = CommonUtil.MakeProfileTag("TutorialGuideMgr_OnCheckMonster_EnmityCfg_FindValue")
-                local IsActive = EnmityCfg:FindValue(Cfg.EnmityID, "IsActiveEnmity")
+                if Dis < 4000000 then
+                    local EntityID = Monster:GetAttributeComponent().EntityID
+                    local ResID = ActorUtil.GetActorResID(EntityID)
+                    local _ <close> = CommonUtil.MakeProfileTag("TutorialGuideMgr_OnCheckMonster_MonsterCfg_FindCfgByKey")
+                    local Cfg = MonsterCfg:FindCfgByKey(ResID)
+                    local _ <close> = CommonUtil.MakeProfileTag("TutorialGuideMgr_OnCheckMonster_EnmityCfg_FindValue")
+                    local IsActive = EnmityCfg:FindValue(Cfg.EnmityID, "IsActiveEnmity")
 
-                --第一次遇到主动怪
-                if IsActive == 1 then
-                    if self.CheckMonsterRecord.ActiveMonster == 0 then
-                        self.CheckMonsterRecord.ActiveMonster = 1
-                        local EventParams = _G.EventMgr:GetEventParams()
-                        EventParams.Type = TutorialDefine.TutorialConditionType.MonsterNearMajor --新手引导触发类型
-                        EventParams.Param1 = 1
-                        self:OnCheckTutorialStartCondition(EventParams)
-                        self:SendCheckMonsterRecord()
+                    --第一次遇到主动怪
+                    if IsActive == 1 then
+                        if self.CheckMonsterRecord.ActiveMonster == 0 then
+                            self.CheckMonsterRecord.ActiveMonster = 1
+                            local EventParams = _G.EventMgr:GetEventParams()
+                            EventParams.Type = TutorialDefine.TutorialConditionType.MonsterNearMajor --新手引导触发类型
+                            EventParams.Param1 = 1
+                            self:OnCheckTutorialStartCondition(EventParams)
+                            self:SendCheckMonsterRecord()
 
-                    end
-                else
-                    --第一次遇到被动怪
-                    if IsActive == 0 and self.CheckMonsterRecord.PassiveMonster == 0 and Dis < 1000000 then
-                        self.CheckMonsterRecord.PassiveMonster = 1
-                        local EventParams = _G.EventMgr:GetEventParams()
-                        EventParams.Type = TutorialDefine.TutorialConditionType.MonsterNearMajor --新手引导触发类型
-                        EventParams.Param1 = 0
-                        self:OnCheckTutorialStartCondition(EventParams)
-                        self:SendCheckMonsterRecord()
+                        end
+                    else
+                        --第一次遇到被动怪
+                        if IsActive == 0 and self.CheckMonsterRecord.PassiveMonster == 0 and Dis < 1000000 then
+                            self.CheckMonsterRecord.PassiveMonster = 1
+                            local EventParams = _G.EventMgr:GetEventParams()
+                            EventParams.Type = TutorialDefine.TutorialConditionType.MonsterNearMajor --新手引导触发类型
+                            EventParams.Param1 = 0
+                            self:OnCheckTutorialStartCondition(EventParams)
+                            self:SendCheckMonsterRecord()
+                        end
                     end
                 end
             end
         end
+
     end
 end
 
@@ -268,7 +272,7 @@ function TutorialGuideMgr:OnCheckTutorialStartCondition(Params)
                 end
 
                 if Cond then
-                    --- 条件满足，播放条件
+                --- 条件满足，播放条件
                     self:PlayGuide(cfg.GuideID)
                     PlayCount = PlayCount + 1
                 end
@@ -298,9 +302,7 @@ end
 function TutorialGuideMgr:ClientSetupPost(EventParams)
     local Params = EventParams
     local Key = Params.IntParam1
-    local Value = Params.StringParam1 or "{}"
-
-    self:CheckTutorialGuideState()
+	local Value = Params.StringParam1 or "{}"
 
     if Key == TutorialDefine.GuideTutorialKey then
         --self.GuideTutorialList = {}
@@ -331,6 +333,7 @@ function TutorialGuideMgr:ClientSetupPost(EventParams)
             self.GuideState = tonumber(Value) == TutorialDefine.TutorialSwitchType.On and true or false
             EventMgr:SendEvent(EventID.TutorialGuideSwitch, {Value = tonumber(Value)})
         end
+
     elseif Key == TutorialDefine.GuideTutorialSpecialKey then
         local GuideTutorialSpecialList = Json.decode(Value)
         self.GuideTutorialSpecialList = {}
@@ -571,10 +574,10 @@ function TutorialGuideMgr:PlayGuide(GuideID)
                         local AudioUtil = require("Utils/AudioUtil")
                         local Path = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/New/Play_FM_Tips.Play_FM_Tips'"
                         local ID = AudioUtil.SyncLoadAndPlaySoundEvent(MajorUtil.GetMajorEntityID(), Path, true)
-
+    
                         local Params = {}
                         Params.ID = GuideID
-                        Params.CountDown = Cfg.TipsTime or 10
+                        Params.CountDown = Cfg.TipsTime or 10 
                         UIViewMgr:ShowView(UIViewID.TutorialEntrancePanel, Params)
                     else
                         local Params = {}
@@ -582,13 +585,13 @@ function TutorialGuideMgr:PlayGuide(GuideID)
                         Params.CountDown = Cfg.TipsTime or 10
                         UIViewMgr:ShowView(UIViewID.TutorialGuideShowPanel, Params)
                     end
-
+    
                     table.insert(self.GuideQueue, GuideID)
                 else
                     table.insert(self.GuideQueue, GuideID)
                     FLOG_INFO("PlayGuide %d and insert GuideQueue direct",GuideID)
                 end
-
+    
                 self:SendGuideSchedule(GuideID, false)
                 self.GuideTutorialDoing = true
             else
@@ -607,7 +610,7 @@ function TutorialGuideMgr:PlayGuide(GuideID)
 end
 
 function TutorialGuideMgr:IsPlayQueueEmpty()
-    return  #self.GuideQueue <= 0
+    return  #self.GuideQueue <= 0 
 end
 
 function TutorialGuideMgr:PlayNextGuide()
@@ -701,7 +704,7 @@ function TutorialGuideMgr:DelRedDotDataList(GuideID)
 end
 
 function TutorialGuideMgr:GetRedDotName(GuideID)
-    return self.GuideRedList[tostring(GuideID)]
+    return self.GuideRedList[tostring(GuideID)] 
 end
 
 function TutorialGuideMgr:AddRedDot(GuideID)
@@ -821,8 +824,15 @@ function TutorialGuideMgr:OnDirectUpgrade()
 
     local Cfg = DirectUpgradeGlobalCfg:GetDirectUpgradeCfg(ProtoRes.DIRECT_UPGRADE_ID.DIRECT_UPGRADE_ID_BEGINNERSGUIDE)
     local JumpList = self:ParseStringToArray(Cfg._SkipIDList)
-
-    for key,value in pairs(JumpList) do
+    local SkipList = {}
+    for _, v in ipairs(JumpList) do
+        table.insert(SkipList, v)
+    end
+    for _, v in ipairs(_G.UpgradeMgr.LockGuideList) do
+        table.insert(SkipList, v)
+    end
+    
+    for key,value in pairs(SkipList) do
         Exist = false
         for k,v in pairs(FinishList) do
             if math.abs(v) == tonumber(value) then
@@ -841,6 +851,14 @@ function TutorialGuideMgr:OnDirectUpgrade()
     Params.IntParam1 = TutorialDefine.GuideTutorialKey
     Params.StringParam1 = Json.encode(self.GuideTutorialList, {empty_table_as_array = true})
     _G.ClientSetupMgr:OnGameEventSet(Params)
+end
+
+-- 打开展示引导接口
+function TutorialGuideMgr:OpenShowGuidePanel(GuideID)
+    local Params = {}
+    Params.ID = GuideID
+    Params.IsActivity = true
+    UIViewMgr:ShowView(_G.UIViewID.TutorialGuideShowPanel, Params)
 end
 
 return TutorialGuideMgr

@@ -332,4 +332,16 @@ function LoginRoleSetNameVM:RandomChineseName(RaceID, Gender, Tribe)
     return RltName
 end
 
+function LoginRoleSetNameVM:UpdateBaseInformName()
+    local CurRaceCfg = _G.LoginRoleRaceGenderVM.CurrentRaceCfg
+    if CurRaceCfg then
+        if CurRaceCfg.Gender == ProtoCommon.role_gender.GENDER_MALE then
+            self.RaceName = string.format(LSTR(980067), CurRaceCfg.RaceName)--%s 男
+        else
+            self.RaceName = string.format(LSTR(980068), CurRaceCfg.RaceName)--%s 女
+        end
+
+        self.TribeName = CurRaceCfg.TribeName
+    end
+end
 return LoginRoleSetNameVM

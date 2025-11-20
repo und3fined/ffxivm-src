@@ -68,7 +68,7 @@ end
 
 function OpsAcitivitySeasonPanelView:SetSeasonActivity(ActivityData)
 	local function OnLoadComplete(Widget)
-		if _G.UE.UCommonUtil.IsObjectValid(self.ActvityPanel) then
+		if self and self.ActvityPanel and _G.UE.UCommonUtil.IsObjectValid(self.ActvityPanel) then
 			self:HideSeasonActivity()
 			if Widget then
 				self.ActvityPanel:AddChildToCanvas(Widget)

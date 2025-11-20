@@ -20,11 +20,16 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 
 
 local SkillCommonDefine = require("Game/Skill/SkillCommonDefine")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
+
+local OneVector2D = _G.UE.FVector2D(1, 1)
 
 ---@class SkillSprintDownBtnView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnRun UFButton
+---@field HandleState SkillHandleStateLView
 ---@field Icon_Skill UFImage
+---@field ImgUp UFImage
 ---@field ImgUpCDmask UFImage
 ---@field TextCD UFTextBlock
 ---@field AnimPrompt UWidgetAnimation
@@ -34,7 +39,9 @@ local SkillSprintDownBtnView = LuaClass(UIView, true)
 function SkillSprintDownBtnView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnRun = nil
+	--self.HandleState = nil
 	--self.Icon_Skill = nil
+	--self.ImgUp = nil
 	--self.ImgUpCDmask = nil
 	--self.TextCD = nil
 	--self.AnimPrompt = nil
@@ -43,6 +50,7 @@ end
 
 function SkillSprintDownBtnView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.HandleState)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -68,6 +76,7 @@ function SkillSprintDownBtnView:OnShow()
 	else
 		self.SkillID = 0
 	end
+	self:OnGamePadUpdateCombatType()
 end
 
 function SkillSprintDownBtnView:OnHide()
@@ -83,6 +92,8 @@ function SkillSprintDownBtnView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.SkillCDUpdateLua, self.OnSkillCDUpdate)
 	self:RegisterGameEvent(EventID.SkillReplace, self.OnSkillReplace)
 	self:RegisterGameEvent(EventID.InputActionSkillPressed, self.OnInputActionSkillPressed)
+	self:RegisterGameEvent(EventID.InputActionSkillReleased, self.OnInputActionSkillReleased)
+	self:RegisterGameEvent(EventID.GamePadUpdateCombatType, self.OnGamePadUpdateCombatType)
 end
 
 function SkillSprintDownBtnView:OnRegisterBinder()
@@ -135,8 +146,47 @@ end
 
 function SkillSprintDownBtnView:OnInputActionSkillPressed(Params)
 	if Params ~= self.SkillIndex then return end
+	self.BtnRun:SetRenderScale(OneVector2D * SkillCommonDefine.SkillBtnClickFeedback)
+	self:StartLongClickTimer()
+end
 
-	self:OnBtnClick()
+function SkillSprintDownBtnView:OnInputActionSkillReleased(Params)
+	if Params ~= self.SkillIndex then return end
+	self.BtnRun:SetRenderScale(OneVector2D)
+	local LongClickTimerID = rawget(self, "LongClickTimerID")
+	if LongClickTimerID then
+		self:UnRegisterTimer(LongClickTimerID)
+		rawset(self, "LongClickTimerID", nil)
+		self:OnBtnClick()
+	end
+end
+
+function SkillSprintDownBtnView:StopLongClickTimer()
+	self.BtnRun:SetRenderScale(OneVector2D)
+	local LongClickTimerID = rawget(self, "LongClickTimerID")
+	if LongClickTimerID then
+		self:UnRegisterTimer(LongClickTimerID)
+		rawset(self, "LongClickTimerID", nil)
+	end
+end
+
+function SkillSprintDownBtnView:StartLongClickTimer()
+	local LongClickTimerID = rawget(self, "LongClickTimerID")
+	if LongClickTimerID then
+		self:UnRegisterTimer(LongClickTimerID)
+	end
+
+	self.StartLongClickTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
+	LongClickTimerID = self:RegisterTimer(self.StopLongClickTimer, SkillCommonDefine.SkillTipsClickTime, 1, 1)
+	rawset(self, "LongClickTimerID", LongClickTimerID)
+end
+
+
+function SkillSprintDownBtnView:OnGamePadUpdateCombatType()
+    local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.SpeedSkill)
+	if HandleButtonText then
+		self.HandleState:SetHandleButtonText(HandleButtonText)
+	end
 end
 
 return SkillSprintDownBtnView

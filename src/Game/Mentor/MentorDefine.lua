@@ -5,6 +5,16 @@ local LSTR = _G.LSTR
 local NPCEmotionID = { YES = 43, NO = 25 }   --Q情感动作表 id
 local NPCAuthenticationBubbleText = LSTR(760006)
 local GuideResignText = LSTR(760015)
+local GoldSauserGuideResignText = LSTR(760052)
+
+-- 指导者身份变更协议需要处理的指导者合集 从ProtoCommon.GUIDE_TYPE中提取出来的纯指导者类型
+local PureMentorType = {
+	GUIDE_TYPE.GUIDE_TYPE_FIGHT,
+	GUIDE_TYPE.GUIDE_TYPE_GATHER,
+	GUIDE_TYPE.GUIDE_TYPE_SENIOR,
+	GUIDE_TYPE.GUIDE_TYPE_RED_FLOWER,
+	GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER,
+}
 
 -- GUIDE_TYPE.GUIDE_TYPE_NONE 没有数据时的空界面
 local FinishTabs = {
@@ -69,6 +79,19 @@ local FinishTabs = {
 		MentorTypeText = LSTR(760007),
 		UnlockIcon = "Texture2D'/Game/UI/Texture/InfoTips/ContentUnlock/UI_InfoTips_Img_LittleRedFlower.UI_InfoTips_Img_LittleRedFlower'",
 		UnlockIconMask = "Texture2D'/Game/UMG/UI_Effect/Texture/Mask/T_DX_Mask_LittleRedFlower.T_DX_Mask_LittleRedFlower'",
+	},
+	[ GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER ] = {
+		Type = GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER,
+		TextTitle = LSTR(760045),
+		TextTips = LSTR(760046),
+		ImgMentorIcon = "PaperSprite'/Game/UI/Atlas/Mentor/Frames/UI_Mentor_Icon_Style06_png.UI_Mentor_Icon_Style06_png'",
+		ImgAttitude = "Texture2D'/Game/UI/Texture/Mentor/UI_Mentor_Image_WellDone.UI_Mentor_Image_WellDone'",
+		-- MentorAuthenticationPanel_UIBP
+		AuthenticationPanelTextTips = LSTR(760047),
+		AuthenticationPanelImgMentorIcon = "PaperSprite'/Game/UI/Atlas/Mentor/Frames/UI_Mentor_Icon_Style06_png.UI_Mentor_Icon_Style06_png'",
+		MentorTypeText = LSTR(760048),
+		UnlockIcon = "Texture2D'/Game/UI/Texture/InfoTips/ContentUnlock/UI_InfoTips_Img_Mentor.UI_InfoTips_Img_Mentor'",
+		UnlockIconMask = "Texture2D'/Game/UMG/UI_Effect/Texture/Mask/T_DX_Mask_Mentor.T_DX_Mask_Mentor'",
 	}
 }
 
@@ -108,15 +131,24 @@ local ProceedTabs = {
 	[ GUIDE_TYPE.GUIDE_TYPE_RED_FLOWER ] = {
 		Type = GUIDE_TYPE.GUIDE_TYPE_RED_FLOWER,
 		MentorTypeText = LSTR(760007),
-	}
+	},
+	[ GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER ] = {
+		Type = GUIDE_TYPE.GUIDE_TYPE_GOLD_SAUSER,
+		TextTitle = LSTR(760045),
+		TextTips = LSTR(760049),
+		ImgMentorIcon =  "PaperSprite'/Game/UI/Atlas/Mentor/Frames/UI_Mentor_Icon_Style06_png.UI_Mentor_Icon_Style06_png'",
+		ImgAttitude = "Texture2D'/Game/UI/Texture/Mentor/UI_Mentor_Image_KeepGoing.UI_Mentor_Image_KeepGoing'",
+	},
 }
 
 local MentorDefine = {
 	FinishTabs = FinishTabs,
 	ProceedTabs = ProceedTabs,
 	GuideType = GUIDE_TYPE,
+	PureMentorType = PureMentorType,
 	NPCEmotionID = NPCEmotionID,
 	GuideResignText = GuideResignText,
+	GoldSauserGuideResignText = GoldSauserGuideResignText,
 	NPCAuthenticationBubbleText = NPCAuthenticationBubbleText,
 }
 

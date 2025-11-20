@@ -14,6 +14,7 @@ local LoginMgr = require("Game/Login/LoginMgr")
 local LoginNewDefine = require("Game/LoginNew/LoginNewDefine")
 local EventID = require("Define/EventID")
 local MajorUtil = require("Utils/MajorUtil")
+local ConfirmCallBack
 ---@class TeamTeleportWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Comm2FrameM_UIBP Comm2FrameMView
@@ -61,12 +62,12 @@ function TeamTeleportWinView:OnShow()
 	
 	self:SetTeleportContent()
 	self.CheckRoleID = self.Params and self.Params.CheckRoleID
-	self.ConfirmCallBack = self.Params and self.Params.ConfirmCallBack
+	ConfirmCallBack = self.Params and self.Params.ConfirmCallBack
 end
 
 function TeamTeleportWinView:OnHide()
 	self.CheckRoleID = nil
-	self.ConfirmCallBack = nil
+	ConfirmCallBack = nil
 end
 
 function TeamTeleportWinView:SetTeleportContent()
@@ -108,8 +109,8 @@ function TeamTeleportWinView:OnClickOk()
 	if self.CheckRoleID then
 		_G.RoleInfoMgr:SendQueryInfoByRoleID(self.CheckRoleID)
 	else
-		if self.ConfirmCallBack then
-			self.ConfirmCallBack()
+		if ConfirmCallBack then
+			ConfirmCallBack()
 		end
 
 		if not self.Params.CrossAfterEvent then
@@ -129,8 +130,8 @@ function TeamTeleportWinView:OnQueryCaptainRoleInfoDataUpdate(RoleID)
 
 		if CheckRoleWorldID ~= MajorRoleWorldID then
 			self.Params.WorldID = CheckRoleWorldID
-			if self.ConfirmCallBack then
-				self.ConfirmCallBack()
+			if ConfirmCallBack then
+				ConfirmCallBack()
 			end
 
 			if not self.Params.CrossAfterEvent then

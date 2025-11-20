@@ -25,6 +25,7 @@ function TouringBandFanWinVM:Ctor()
 end
 
 function TouringBandFanWinVM:Reset()
+    self.BandID = 0
     self.TextContent = ""
     self.TextExterior = ""
     self.TextEPet = ""
@@ -36,6 +37,7 @@ end
 
 function TouringBandFanWinVM:UpdateVM(BandID)
     self:Reset()
+    self.BandID = BandID
     local BandCfg = TouringBandCfg:FindCfgByKey(BandID)
     if BandCfg == nil then
         return

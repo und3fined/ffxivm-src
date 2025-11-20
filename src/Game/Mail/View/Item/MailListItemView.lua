@@ -5,7 +5,6 @@ local UIBinderSetText =  require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath =  require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
-local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 local MailMgr = _G.MailMgr
 
@@ -85,6 +84,7 @@ function MailListItemView:OnSelectChanged(IsSelected, IsByClick)
 	end
 	ViewModel.IsSelected = IsSelected
 	ViewModel:RefreshShowTitleColor()
+	ViewModel:RefreshShowImgIcon()
 end
 
 function MailListItemView:OnIDChanged(NewValue, OldValue)

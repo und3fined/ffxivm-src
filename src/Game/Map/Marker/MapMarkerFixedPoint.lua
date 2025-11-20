@@ -22,6 +22,7 @@ local MapMarkerPriority = MapDefine.MapMarkerPriority
 local MapMarkerEventType = ProtoRes.MapMarkerEventType
 local MapConstant = MapDefine.MapConstant
 local MapMarkerBPType = MapDefine.MapMarkerBPType
+local MapIconConfigs = MapDefine.MapIconConfigs
 local TELEPORT_CRYSTAL_TYPE = ProtoRes.TELEPORT_CRYSTAL_TYPE
 local MapMarkerLayout = ProtoRes.MapMarkerLayout
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
@@ -86,19 +87,20 @@ function MapMarkerFixedPoint:UpdateIconPath()
 	local EventArg = self.MarkerCfg.EventArg
 
 	if MapMarkerEventType.MAP_MARKER_EVENT_TELEPO == EventType then
+		-- 水晶是否激活图标不同；默认激活水晶TELEPORT_CRYSTAL_DEFAULT_OPEN直接用配表里的Icon
 		local CrystalID = EventArg
 		local CrystalType = TeleportCrystalCfg:FindValue(CrystalID, "Type")
 		if CrystalType == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP then
 			if self:GetIsActive() then
-				self.IconPath = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060453.UI_Icon_060453'"
+				self.IconPath = MapIconConfigs.CrystalBig
 			else
-				self.IconPath = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060453_gray.UI_Icon_060453_gray'"
+				self.IconPath = MapIconConfigs.CrystalBigGray
 			end
 		elseif CrystalType == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP then
 			if self:GetIsActive() then
-				self.IconPath = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060430.UI_Icon_060430'"
+				self.IconPath = MapIconConfigs.CrystalSmall
 			else
-				self.IconPath = "Texture2D'/Game/Assets/Icon/MapIconSnap/UI_Icon_060430_gray.UI_Icon_060430_gray'"
+				self.IconPath = MapIconConfigs.CrystalSmallGray
 			end
 		end
 	end
@@ -135,7 +137,7 @@ function MapMarkerFixedPoint:UpdateAdjacentMapIcon()
 		local FollowInfo = _G.WorldMapMgr:GetMapFollowInfo()
 		if FollowInfo then
 			if FollowInfo.FollowUIMapID == TargetUIMapID and FollowInfo.FollowMapID == TargetMapID then
-				self.ExtraIconPath2 = "Texture2D'/Game/UI/Texture/NewMap/UI_Map_Icon_TrackTips.UI_Map_Icon_TrackTips'"
+				self.ExtraIconPath2 = MapDefine.MapIconConfigs.FollowExtraIcon
 			end
 		end
 	end
@@ -387,6 +389,10 @@ end
 
 function MapMarkerFixedPoint:GetTipsName()
 	return MapUtil.GetMapTipsName(self.MarkerCfg)
+end
+
+function MapMarkerFixedPoint:SetIsEnableHitTest(IsEnable)
+	self.IsEnableHitTest = IsEnable
 end
 
 function MapMarkerFixedPoint:GetIsEnableHitTest()

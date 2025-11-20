@@ -242,6 +242,7 @@ function CrafterCulinarianMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.CrafterCulinaryStorm, self.OnEventCrafterCulinaryStorm)
 	self:RegisterGameEvent(EventID.MajorAddBuffLife, self.OnBuffAdd)
 	self:RegisterGameEvent(EventID.MajorRemoveBuffLife, self.OnBuffRemove)
+	self:RegisterGameEvent(EventID.CrafterSkillCostUpdate, self.OnCrafterSkillCostUpdate)
 end
 
 function CrafterCulinarianMainPanelView:OnRegisterBinder()
@@ -823,6 +824,12 @@ function CrafterCulinarianMainPanelView:OnInspireStormVisibleChanged(bVisible)
 	else
 		BtnAfflatus:PlayAnimation(BtnAfflatus.AnimInspirationStormHide)
 	end
+end
+
+function CrafterCulinarianMainPanelView:OnCrafterSkillCostUpdate(Params)
+	self.BtnAfflatus:OnCrafterSkillCostUpdate(Params)
+	self.BtnImpulse:OnCrafterSkillCostUpdate(Params)
+	self.BtnMemory:OnCrafterSkillCostUpdate(Params)
 end
 
 return CrafterCulinarianMainPanelView

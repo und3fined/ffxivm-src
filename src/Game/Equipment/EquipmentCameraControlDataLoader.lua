@@ -10,10 +10,19 @@ local FocusType = CameraControlDefine.FocusType
 ---@class EquipmentCameraControlDataLoader : CameraControlDataLoader
 local EquipmentCameraControlDataLoader = LuaClass(CameraControlDataLoader, true)
 
-function CameraControlDataLoader:GetCameraControlParams(SkeletonName, InFocusType)
+function EquipmentCameraControlDataLoader:GetCameraControlParams(SkeletonName, InFocusType)
+	if nil == self.CachedParams then
+		-- 处理没通过New创建DataLoader的情况
+		self.CachedParams = {}
+	end
+
 	if nil == InFocusType or InFocusType >= FocusType.Max then
 		_G.FLOG_ERROR("Invalid camera control focus type")
 		return nil
+	end
+
+	if nil ~= self.CachedParams[SkeletonName] and nil ~= self.CachedParams[SkeletonName][InFocusType] then
+		return self.CachedParams[SkeletonName][InFocusType]
 	end
 
 	local CameraControlParams = CameraControlParams.New()
@@ -27,24 +36,16 @@ function CameraControlDataLoader:GetCameraControlParams(SkeletonName, InFocusTyp
 			return nil
 		end
 		RawFocusData = CfgData.CameraParams
-		RawFocusData.DefaultViewDistance = RawFocusData.DefaultViewDistance
 		CameraControlParams.FocusEID = self:GetFocusEID(InFocusType)
 	end
 
-	CameraControlParams.DefaultViewDistance = RawFocusData.DefaultViewDistance
-	CameraControlParams.MinPitch = RawFocusData.MinPitch or CameraControlParams.MinPitch
-	CameraControlParams.MaxPitch = RawFocusData.MaxPitch or CameraControlParams.MaxPitch
-	local RawParamsNames = {"NearCameraParams", "FarCameraParams"}
-	local ControlParamsNames = {"MinViewDistParams", "MaxViewDistParams"}
+	self:TransformParamsData(RawFocusData, CameraControlParams)
 
-	for Index = 1, 2 do
-		local RawParams = RawFocusData[RawParamsNames[Index]]
-		local ControlParams = CameraControlParams[ControlParamsNames[Index]]
-		ControlParams.ViewDistance = RawParams.ViewDistance
-		ControlParams.FOV = RawParams.FOV
-		ControlParams.ZOffset = RawParams.ZOffset
-		ControlParams.PitchOffset = RawParams.PitchOffset
+	if nil == self.CachedParams[SkeletonName] then
+		self.CachedParams[SkeletonName] = {}
 	end
+	self.CachedParams[SkeletonName][InFocusType] = CameraControlParams
+
 	return CameraControlParams
 end
 

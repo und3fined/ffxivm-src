@@ -11,6 +11,7 @@ local TouringBandSongCfg = require("TableCfg/TouringBandSongCfg")
 local BandCmdBase = require("Game/TouringBand/BandTimelineExtension/BandCmd/BandCmdBase")
 local TouringBandDefine = require("Game/TouringBand/TouringBandDefine")
 local TouringBandUtil = require("Game/TouringBand/TouringBandUtil")
+local ActorUtil = require("Utils/ActorUtil")
 
 local BandCmdPerformingClip = LuaClass(BandCmdBase)
 
@@ -19,22 +20,26 @@ function BandCmdPerformingClip:OnInit()
     self.EventType = ProtoRes.TOURING_BAND_TIMELINE_EVENT_PARENT_TYPE.TB_EVENT_SUB_PERFORMING
 end
 
-function BandCmdPerformingClip:OnStart()
+function BandCmdPerformingClip:OnUpdate()
+    if self.AudioID then
+        return
+    end
+    
     if self.Param == nil then
-        TouringBandUtil.Err("BandCmdCreateNpcClip.OnStart Create Failed ID =  : " .. self.ID)
+        TouringBandUtil.Err("BandCmdCreateNpcClip.OnUpdate Create Failed ID =  : " .. self.ID)
         return
     end
 
     local Timeline = _G.BandTimelineMgr:GetTimelineByID(self.TimelineID)
     if not Timeline then
-        TouringBandUtil.Err("BandCmdCreateNpcClip.OnStart Failed: Timeline not found for ID = " .. tostring(self.TimelineID))
+        TouringBandUtil.Err("BandCmdCreateNpcClip.OnUpdate Failed: Timeline not found for ID = " .. tostring(self.TimelineID))
         return
     end
 
     local Member = Timeline:GetMemberEntityIDList()
     local EntityID = Member[self.TargetIndex]
     if EntityID <= 0 then
-        TouringBandUtil.Err("BandCmdCreateNpcClip.OnStart Failed: Invalid EntityID (0) at Index = " .. tostring(self.TargetIndex))
+        TouringBandUtil.Err("BandCmdCreateNpcClip.OnUpdate Failed: Invalid EntityID (0) at Index = " .. tostring(self.TargetIndex))
         return
     end
 
@@ -44,21 +49,25 @@ function BandCmdPerformingClip:OnStart()
         return
     end
     self.AudioID = AudioUtil.SyncLoadAndPlaySoundEvent(EntityID, Cfg.File, true)
-    _G.EventMgr:SendEvent(EventID.TouringBandStatesChange, { TimelineID = self.TimelineID, Key = TouringBandDefine.STATES_TYPE.PERFORMING , Value = true })
-    if self.AudioID == nil then
-        TouringBandUtil.Error(string.format("[BandCmdPerformingClip:OnStart]ID=%d, SongID=%d.", self.ID, SongID))
-        return
-    end
-    -- 调整播放进度
-    if self.IsMidPlayback then
-        if TouringBandDefine.DEBUG then
-            AudioUtil.SeekOnEventPercent(Cfg.File, self.AudioID, self.PlayProgress, EntityID)
-        else
-            local SeekTime = math.max(math.floor((self.CurrentTime - self.StartTime) * 1000), 0)
-            AudioUtil.SeekOnEventMs(Cfg.File, self.AudioID, SeekTime, EntityID)
+    local Owner = ActorUtil.GetActorByEntityID(EntityID)
+    if Owner then
+        local AkComp = Owner:GetComponentByClass(_G.UE.UAkComponent)
+        if AkComp then
+            AkComp:K2_SetRelativeRotation(_G.UE.FRotator(0, 180, 0), false, nil, false)
         end
     end
-    TouringBandUtil.Log(string.format("[BandCmdPerformingClip:OnStart]ID=%d, AudioID=%d, SongID=%d.", self.ID, self.AudioID, SongID))
+
+    _G.EventMgr:SendEvent(EventID.TouringBandStatesChange, { TimelineID = self.TimelineID, Key = TouringBandDefine.STATES_TYPE.PERFORMING , Value = true })
+    if self.AudioID == nil then
+        TouringBandUtil.Err(string.format("[BandCmdPerformingClip:OnUpdate]ID=%d, SongID=%d.", self.ID, SongID))
+        return
+    end
+    
+    -- 调整播放进度
+    local SeekTime = math.max(math.floor((self.CurrentTime - self.StartTime) * 1000), 0)
+    AudioUtil.SeekOnEventMs(Cfg.File, self.AudioID, SeekTime, EntityID)
+    TouringBandUtil.Log(string.format("[BandCmdPerformingClip:OnUpdate]ID=%d, AudioID=%d, SongID=%d. SeekTime = %d", 
+            self.ID, self.AudioID, SongID, SeekTime))
 end
 
 function BandCmdPerformingClip:OnEnd()
@@ -77,6 +86,15 @@ function BandCmdPerformingClip:OnDestroy()
     end
     AudioUtil.StopSound(self.AudioID)
     TouringBandUtil.Log(string.format("[BandCmdPerformingClip:OnDestroy]ID=%d, AudioID=%d.", self.ID, self.AudioID))
+    self.AudioID = nil
+end
+
+function BandCmdPerformingClip:VisionLeave()
+    if self.AudioID == nil then
+        return
+    end
+    AudioUtil.StopSound(self.AudioID)
+    TouringBandUtil.Log(string.format("[BandCmdPerformingClip:VisionLeave]ID=%d, AudioID=%d.", self.ID, self.AudioID))
     self.AudioID = nil
 end
 

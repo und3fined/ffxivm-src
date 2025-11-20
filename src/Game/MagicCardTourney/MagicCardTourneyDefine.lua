@@ -3,10 +3,13 @@
 --- DateTime: 2023-10-09 11:36
 --- Description:
 local ProtoCS = require("Protocol/ProtoCS")
+local ProtoRes = require("Protocol/ProtoRes")
 local LSTR = _G.LSTR
 local ProtoCommon = require("Protocol/ProtoCommon")
 local RaceType = ProtoCommon.race_type
 local TribeType = ProtoCommon.tribe_type
+local EEffectType = ProtoRes.Game.fantasy_tournament_effect_type
+local EEffectStatus = ProtoCS.EFFECT_STATUS
 
 ---大赛报名相关
 local MatchBtnColor = 
@@ -34,9 +37,9 @@ local StageName =
 }
 
 local EffectStatusText = {
-    [ProtoCS.EFFECT_STATUS.EFFECT_STATUS_IN_PROGRESS] = LSTR(1150051),
-    [ProtoCS.EFFECT_STATUS.EFFECT_STATUS_FAIL] = LSTR(1150013),
-    [ProtoCS.EFFECT_STATUS.EFFECT_STATUS_SUCCESS] = LSTR(1150012),
+    [EEffectStatus.EFFECT_STATUS_IN_PROGRESS] = LSTR(1150051),
+    [EEffectStatus.EFFECT_STATUS_FAIL] = LSTR(1150013),
+    [EEffectStatus.EFFECT_STATUS_SUCCESS] = LSTR(1150012),
 }
 
 --本地测试用，需删除
@@ -57,7 +60,9 @@ local ImgPath = {
     MagicCardReadinessBGNormal = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_Readiness_BigBG.UI_Cards_Img_Readiness_BigBG'",
     MagicCardReadinessRuleBGTourney = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_Readiness_BookGreen.UI_Cards_Img_Readiness_BookGreen'",
     MagicCardReadinessRuleBGNormal = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_Readiness_Book.UI_Cards_Img_Readiness_Book'",
-    MagicCardBG = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_Main_BGGreen.UI_Cards_Img_Main_BGGreen'"
+    MagicCardBG = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_Main_BGGreen.UI_Cards_Img_Main_BGGreen'",
+    MagicCardReadinessLineTourney = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_NewLine3.UI_Cards_Img_NewLine3",
+    MagicCardReadinessLineNormal = "Texture2D'/Game/UI/Texture/Cards/UI_Cards_Img_NewLine1.UI_Cards_Img_NewLine1'",
 }
 
 local SoundPath = {
@@ -262,7 +267,9 @@ local MagicCardTourneyDefine = {
     NumberOneAwardText = NumberOneAwardText,
     ScoreAddText = ScoreAddText,
     ScoreText = ScoreText,
-    CupIconPath = CupIconPath
+    CupIconPath = CupIconPath,
+    EEffectType = EEffectType,
+    EEffectStatus = EEffectStatus,
 }
 
 return MagicCardTourneyDefine

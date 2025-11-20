@@ -235,7 +235,9 @@ function BuddyAbilityPageView:OnBtnStudySkill()
 	BuddyMgr:SendBuddyLearnSkillMessage(ViewModel.CurLearnID)
 
 	local ItemView = self.TableViewSkillAdapter:GetChildWidget(CurLearn.Index + 1)
-	ItemView:PlayAnimation(ItemView.AnimLearned)
+	if ItemView ~= nil then
+		ItemView:PlayAnimation(ItemView.AnimLearned)
+	end
 end
 
 function BuddyAbilityPageView:OnUpdateBuddyAbilityInfo()

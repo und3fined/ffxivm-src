@@ -3,7 +3,7 @@
 echo "Syncing files from FFXIV extract..."
 
 FGAME_BUNDLE="com.tencent.tmgp.fmgame"
-EXPORTED_DIR="$HOME/Library/Containers/$FGAME_BUNDLE/Data/Documents/FF_U2PM/extract"
+EXPORTED_DIR="$HOME/Library/Containers/$FGAME_BUNDLE/Data/Documents/UEKit/extract"
 
 RAW_FOLDER="Encrypted/Source/Script"
 SRC_FOLDER="Source/Script"

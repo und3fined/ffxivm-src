@@ -48,11 +48,14 @@ local UE = _G.UE
 ---@field CommMoneyBar CommMoneyBarView
 ---@field CommonBkg02 CommonBkg02View
 ---@field CommonBkgMask CommonBkgMaskView
+---@field CommonBorderRedDot_UIBP_Left CommonBorderRedDotView
+---@field CommonBorderRedDot_UIBP_Right CommonBorderRedDotView
 ---@field CommonTitle CommonTitleView
 ---@field EffProBar UFCanvasPanel
 ---@field EffProBarGrop UFCanvasPanel
 ---@field FCanvasPanel UFCanvasPanel
 ---@field FCanvasPanel_155 UFCanvasPanel
+---@field FCanvasPanel_64 UFCanvasPanel
 ---@field PanelBattlePass UFCanvasPanel
 ---@field PanelBigReward UFCanvasPanel
 ---@field PanelMain UFCanvasPanel
@@ -94,11 +97,14 @@ function BattlePassMainView:Ctor()
 	--self.CommMoneyBar = nil
 	--self.CommonBkg02 = nil
 	--self.CommonBkgMask = nil
+	--self.CommonBorderRedDot_UIBP_Left = nil
+	--self.CommonBorderRedDot_UIBP_Right = nil
 	--self.CommonTitle = nil
 	--self.EffProBar = nil
 	--self.EffProBarGrop = nil
 	--self.FCanvasPanel = nil
 	--self.FCanvasPanel_155 = nil
+	--self.FCanvasPanel_64 = nil
 	--self.PanelBattlePass = nil
 	--self.PanelBigReward = nil
 	--self.PanelMain = nil
@@ -138,6 +144,8 @@ function BattlePassMainView:OnRegisterSubView()
 	self:AddSubView(self.CommMoneyBar)
 	self:AddSubView(self.CommonBkg02)
 	self:AddSubView(self.CommonBkgMask)
+	self:AddSubView(self.CommonBorderRedDot_UIBP_Left)
+	self:AddSubView(self.CommonBorderRedDot_UIBP_Right)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.RewardSlot01)
 	self:AddSubView(self.RewardSlot02)
@@ -151,6 +159,8 @@ function BattlePassMainView:OnInit()
 	self.CurTabIndex = nil
 	self.IsForward = true
 	self.LastScrollValue = 0
+	self.MinLevel = 1
+	self.MaxLevel = 80
 
 	self.CurTaskToggleIndex = BattlePassDefine.TaskType.Weekly
 	self.CurTabIndex = BattlePassDefine.TabIndex.LevelReward
@@ -183,6 +193,10 @@ function BattlePassMainView:OnShow()
 	self:InitMoneyBar()
 	BattlePassMgr:SendBattlePassStateReq()
 	self:InitText()
+	self.CommonBorderRedDot_UIBP_Left:SetStyle(RedDotDefine.ListRedDotPosType.Left)
+	self.CommonBorderRedDot_UIBP_Right:SetStyle(RedDotDefine.ListRedDotPosType.Right)
+	UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Left, false)
+	UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Right, false)
 end
 
 function BattlePassMainView:AddChildByType(ParentWidget, CurSelectChildWidgetPath, PageParams)
@@ -422,6 +436,7 @@ function BattlePassMainView:OnLevelRewardScrolled(TableView, ItemOffset)
 end
 
 function BattlePassMainView:OnLevelRewardItemShow(Level)
+	self:SetRedDot()
 	if not self.IsForward then
 		return
 	end 
@@ -429,73 +444,56 @@ function BattlePassMainView:OnLevelRewardItemShow(Level)
 end
 
 function BattlePassMainView:SetRedDot()
-	local Len = self.RewardListAdapter:GetNum()
-	local HasMaxAvailable = false
-	local HasMinAvailable = false
-	local FirstShowIndex = 1
-	local LastShowIndex = 80
-	for index = 1, Len, 1 do
-		local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
-		if ItemData ~= nil then
-			if ItemData.IsShow then
-				FirstShowIndex = index
-				break
-			end
-		end
-	end
+    local Len = self.RewardListAdapter:GetNum()
+    local HasMinAvailable, HasMaxAvailable = false, false
+    local FirstShowIndex, LastShowIndex = nil, nil
+    
+    -- 单次遍历同时找到第一个和最后一个显示项的位置
+    for index = 1, Len do
+        local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
+        if ItemData and ItemData.IsShow then
+            if not FirstShowIndex then
+                FirstShowIndex = index
+            end
+            LastShowIndex = index
+        end
+    end
+    
+    -- 如果没有找到任何显示项，使用默认值
+    FirstShowIndex = FirstShowIndex or 1
+    LastShowIndex = LastShowIndex or 80
+    
+    -- 检查第一个显示项之前的可用项
+    for index = 1, FirstShowIndex - 1 do
+        local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
+        if ItemData and ItemData.IsAvailable then
+            HasMinAvailable = true
+            break
+        end
+    end
+    
+    -- 检查最后一个显示项之后的可用项
+    for index = LastShowIndex + 1, Len do
+        local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
+        if ItemData and ItemData.IsAvailable then
+            HasMaxAvailable = true
+            break
+        end
+    end
 
-	for index = Len, 1, -1 do
-		local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
-		if ItemData ~= nil then
-			if ItemData.IsShow then
-				LastShowIndex = index
-				break
-			end
-		end
-	end
-
-
-	for index = 1, Len, 1 do
-		local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
-		if ItemData ~= nil and index < FirstShowIndex then
-			if ItemData.IsAvailable then
-				HasMinAvailable = true
-				break
-			end
-		end
-	end
-
-	for index = Len, 1, -1 do
-		local ItemData = self.RewardListAdapter:GetItemDataByIndex(index)
-		if ItemData ~= nil and index > LastShowIndex then
-			if ItemData.IsAvailable then
-				HasMaxAvailable = true
-				break
-			end
-		end
-	end
-
-	if HasMinAvailable then
-		UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Left, true)
-	else
-		UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Left, false)
-	end
-
-	if HasMaxAvailable then
-		UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Right, true)
-	else
-		UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Right, false)
-	end
+    -- 设置红点显示状态
+    UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Left, HasMinAvailable)
+    UIUtil.SetIsVisible(self.CommonBorderRedDot_UIBP_Right, HasMaxAvailable)
 end
 
 function BattlePassMainView:OnLevelRewardItemHide(Level)
 	-- OnHide 查看有边是否奖励
-	-- self:SetRedDot()
+	self:SetRedDot()
 	
 	if self.IsForward then
 		return
 	end 
-
+	
 	self:UpdateBigRewardData(Level)
 end
 

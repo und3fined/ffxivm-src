@@ -176,6 +176,7 @@ function BuddyMgr:OnNetMsgBuddyCall(MsgBody)
 	if MsgBody.Call.CallOut == true then
 		if MajorUtil.IsMajor(MsgBody.Call.MasterEntityID) then
 			self.BuddyEntityID = MsgBody.Call.BuddyEntityID
+			self:SetTargetColorID()
 			self:SetBuddyOuting(true)
 		else
 			self.BuddyEntityID = nil
@@ -588,6 +589,7 @@ function BuddyMgr:OnGameEventBuddyCreate(Params)
 	local IsMajorBuddy = false
 	if MajorUtil.IsMajor(MasterEntityID) then
 		self.BuddyEntityID = BuddyEntityID
+		self:SetTargetColorID()
 		self:SetBuddyOuting(true)
 		EventMgr:SendEvent(EventID.BuddyQueryInfo)
 		IsMajorBuddy = true
@@ -859,6 +861,8 @@ end
 
 function BuddyMgr:SetChocoboColor(ID, Color)
     self.ColorTable[ID] = Color
+	_G.FLOG_INFO("BuddyMgr:SetChocoboColor, Color.TargetRGB = %d", Color.TargetRGB)
+	self.TargetColorID = Color.TargetRGB
     self:CheckInDyeCD(ID, Color.CD, Color.TargetRGB)
 end
 
@@ -866,6 +870,17 @@ function BuddyMgr:GetChocoboColor(ID)
 	local ColorID =  self.ColorTable[ID]
 	return ColorID
 end 
+
+function BuddyMgr:SetTargetColorID()
+	if nil ~= self.BuddyEntityID then
+		local Buddy = ActorUtil.GetActorByEntityID(self.BuddyEntityID)
+		if nil ~= Buddy then
+			local SurfaceColorID = self.ColorTable[-1].RGB
+			_G.FLOG_INFO("BuddyMgr:SetTargetColorID, SurfaceColorID = %d", SurfaceColorID)
+			Buddy:SetChocoboColorID(SurfaceColorID)
+		end
+	end
+end
 
 function BuddyMgr:SurfaceBInDyeCD()
     if self.SurfaceViewCurID == nil then

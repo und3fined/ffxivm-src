@@ -6,7 +6,10 @@
 
 local TouringBandDefine =
 {
-    DEBUG = false,
+    DEBUG = true,
+    RED_DOT_NAME = "Root/TouringBand",
+    RED_DOT_CHECKID = 59,  -- 红点表里的checkID
+    GUIDE_QUEUE_ID = 59,   -- 新手引导
     TALK_CHEERING_NUM = 4,
     STATES_TYPE = {
         NONE = 0,
@@ -16,6 +19,12 @@ local TouringBandDefine =
         COME_ON = 4, -- 入场
         MOVE_OUT_READY = 5, -- 准备离场
         SHOW_SYSTEM_WEAPON = 6, -- 显示乐器
+    },
+
+    RECORD_TYPE = {
+        UNLOCK = 1,
+        MEET = 2,
+        STORY = 3,
     },
     
     DEFAULT_POSTER_TEXTURE = "Texture'/Game/UI/Texture/TouringBand/MI_UI_Mask_TouringBandPoster.MI_UI_Mask_TouringBandPoster'",

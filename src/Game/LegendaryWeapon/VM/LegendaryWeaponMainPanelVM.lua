@@ -68,8 +68,14 @@ function LegendaryWeaponMainPanelVM:GetTopicTabList()
         local IsUnLock = LegendaryWeaponMgr.TopicVersion and LegendaryWeaponMgr.TopicVersion[Value.TopicID] == true
         if IsUnLock == true then
             local IsLock = not IsUnLock     --这里需要反向一下即解锁（继2.1.5版本以后这里还需判断前置任务）
-            table.insert(TopicTabList, {IconPath = Value.Logo, SelectIcon = Value.Logo, Name = Value.Name, IsLock = IsLock, 
-                                ID = Value.TopicID, ShopID = Value.ShopID, FirstType = Value.FirstType})    
+            table.insert(TopicTabList,
+            {IconPath = Value.LogoNormal,
+            SelectIcon = Value.Logo,
+            Name = Value.Name,
+            IsLock = IsLock,
+            ID = Value.TopicID,
+            ShopID = Value.ShopID,
+            FirstType = Value.FirstType })
         end
 	end
     self.TopicTabList = TopicTabList

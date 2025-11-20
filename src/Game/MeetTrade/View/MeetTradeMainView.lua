@@ -9,12 +9,10 @@ local LuaClass = require("Core/LuaClass")
 local MeetTradeVM = require("Game/MeetTrade/VM/MeetTradeVM")
 local UIUtil = require("Utils/UIUtil")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
-local UIBinderSetHead = require("Binder/UIBinderSetHead")
-local UIBinderSetFrameIcon = require("Binder/UIBinderSetFrameIcon")
 local UIBinderSetText = require("Binder/UIBinderSetText")
-local UIBinderSetItemNumFormat = require("Binder/UIBinderSetItemNumFormat")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local CommonUtil = require("Utils/CommonUtil")
 local TipsUtil = require("Utils/TipsUtil")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
@@ -23,6 +21,8 @@ local HelpInfoUtil = require("Utils/HelpInfoUtil")
 local MonthCardMgr = require("Game/MonthCard/MonthCardMgr")
 local HelpCfg = require("TableCfg/HelpCfg")
 local MajorUtil = require("Utils/MajorUtil")
+local ItemUtil = require("Utils/ItemUtil")
+local LocalizationUtil = require("Utils/LocalizationUtil")
 local FLinearColor = _G.UE.FLinearColor
 local LSTR = _G.LSTR
 local BagMgr = _G.BagMgr
@@ -35,24 +35,33 @@ local MeetTradeMgr = _G.MeetTradeMgr
 ---@field Bkg CommonBkg01View
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnCondition CommBtnMView
+---@field BtnReady CommBtnLView
 ---@field BtnStop CommBtnMView
 ---@field BtnTaxInfo CommInforBtnView
----@field Comm96Slot CommBackpack96SlotView
----@field Comm96Slot_1 CommBackpack96SlotView
 ---@field CommonTitle CommonTitleView
 ---@field EditQuantity CommEditQuantityItemView
+---@field FTextBlock UFTextBlock
+---@field FTextBlock_71 UFTextBlock
+---@field Icon UFImage
+---@field Icon_1 UFImage
 ---@field ImgCoin UFImage
 ---@field MoneyBar CommMoneySlotView
 ---@field Player1 MeetTradePlayerItemView
 ---@field Player2 MeetTradePlayerItemView
 ---@field TableViewSlot UTableView
 ---@field TableViewSlot_1 UTableView
----@field TextTax UFTextBlock
+---@field TextAmount UFTextBlock
+---@field TextTax URichTextBox
 ---@field TextTaxCost UFTextBlock
 ---@field Textchange UFTextBlock
 ---@field Textchange_1 UFTextBlock
 ---@field Textchange_2 UFTextBlock
 ---@field Textchange_3 UFTextBlock
+---@field AnimDepositCoin UWidgetAnimation
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
+---@field ValueAnimDepositCoin float
+---@field CurveAnimDepositCoin CurveFloat
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MeetTradeMainView = LuaClass(UIView, true)
 
@@ -61,24 +70,33 @@ function MeetTradeMainView:Ctor()
 	--self.Bkg = nil
 	--self.BtnClose = nil
 	--self.BtnCondition = nil
+	--self.BtnReady = nil
 	--self.BtnStop = nil
 	--self.BtnTaxInfo = nil
-	--self.Comm96Slot = nil
-	--self.Comm96Slot_1 = nil
 	--self.CommonTitle = nil
 	--self.EditQuantity = nil
+	--self.FTextBlock = nil
+	--self.FTextBlock_71 = nil
+	--self.Icon = nil
+	--self.Icon_1 = nil
 	--self.ImgCoin = nil
 	--self.MoneyBar = nil
 	--self.Player1 = nil
 	--self.Player2 = nil
 	--self.TableViewSlot = nil
 	--self.TableViewSlot_1 = nil
+	--self.TextAmount = nil
 	--self.TextTax = nil
 	--self.TextTaxCost = nil
 	--self.Textchange = nil
 	--self.Textchange_1 = nil
 	--self.Textchange_2 = nil
 	--self.Textchange_3 = nil
+	--self.AnimDepositCoin = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
+	--self.ValueAnimDepositCoin = nil
+	--self.CurveAnimDepositCoin = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -87,10 +105,9 @@ function MeetTradeMainView:OnRegisterSubView()
 	self:AddSubView(self.Bkg)
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.BtnCondition)
+	self:AddSubView(self.BtnReady)
 	self:AddSubView(self.BtnStop)
 	self:AddSubView(self.BtnTaxInfo)
-	self:AddSubView(self.Comm96Slot)
-	self:AddSubView(self.Comm96Slot_1)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.EditQuantity)
 	self:AddSubView(self.MoneyBar)
@@ -107,7 +124,7 @@ function MeetTradeMainView:OnInit()
 	self.Textchange_2:SetText(LSTR(1490001)) ---"物品交易"
 	self.Textchange_3:SetText(LSTR(1490002)) ---"金币交易"
 	self.BtnStop.TextContent:SetText(LSTR(1490005)) ---"中止交易"
-	self.BtnCondition.TextContent:SetText(LSTR(1490006)) ---"提出条件"
+	self.BtnReady.TextContent:SetText(LSTR(1490006)) ---"提出条件"
 
 	---创建TableView的适配器
 	self.OtherItemsTable = UIAdapterTableView.CreateAdapter(self, self.TableViewSlot)
@@ -116,6 +133,9 @@ function MeetTradeMainView:OnInit()
 	
 	self.BindersOtherVM = {
 		{ "Name", 				UIBinderSetText.New(self, self.Player1.TextPlayerName) },
+		{ "NickName", 				UIBinderSetText.New(self, self.Player1.TextPlayerName02) },
+		{ "NickNameVisible", 				UIBinderSetIsVisible.New(self, self.Player1.TextPlayerName02) },
+
 	}
 	self.BindersMajorVM = {
 		{ "Name", 				UIBinderSetText.New(self, self.Player2.TextPlayerName) },
@@ -124,13 +144,10 @@ function MeetTradeMainView:OnInit()
 	self.BinderMeetTradeVM = {
 		{ "RoleTradeItemVMList", 			UIBinderUpdateBindableList.New(self, self.OtherItemsTable) },
 		{ "MajorTradeItemVMList", 		UIBinderUpdateBindableList.New(self, self.MajorItemTable) },
-		{ "MajorGoldForTrade", 		UIBinderSetItemNumFormat.New(self, self.Comm96Slot_1.RichTextQuantity) },
-		{ "RoleGoldForTrade", 		UIBinderSetItemNumFormat.New(self, self.Comm96Slot.RichTextQuantity) },
-		{ "MajorGoldTax", 		UIBinderSetItemNumFormat.New(self, self.TextTaxCost) },
+		{ "RoleGoldForTradeText", 		UIBinderSetText.New(self, self.TextAmount) },
+		{ "MajorGoldTaxText", 		UIBinderSetText.New(self, self.TextTaxCost) },
 		{ "MajorGoldTaxRateText", 		UIBinderSetText.New(self, self.TextTax) },
-		{ "GlodNumForTradeVisible", 		UIBinderSetIsVisible.New(self, self.Comm96Slot.IconChoose) },
-		{ "GlodNumForTradeVisible",		 UIBinderSetIsVisible.New(self, self.Comm96Slot_1.IconChoose) },
-
+		{ "PlayGoldNumChangeAnimation", 		UIBinderValueChangedCallback.New(self, nil, self.PlayGoldNumChangeAnimation) },
 	}
 end
 
@@ -141,11 +158,13 @@ end
 function MeetTradeMainView:OnShow()
 	self.MoneyBar:UpdateView(BagMgr.RecoveryScoreID, false, UIViewID.BagMain, true)
 	self.BtnClose:SetCallback(self,self.OnClickButtonStop)
-	self.Comm96Slot:SetClickButtonCallback(self, self.OnClickGold)
-	self.Comm96Slot_1:SetClickButtonCallback(self, self.OnClickGold)
+	UIUtil.SetIsVisible(self.BtnStop, false)
+	UIUtil.SetIsVisible(self.BtnCondition, false)
+	UIUtil.SetIsVisible(self.BtnReady, true)
 	---设置玩家头像
 	self.Player1.PlayerHeadSlot:SetInfo(self.RoleVM.RoleID)
 	self.Player2.PlayerHeadSlot:SetInfo(self.MajorVM.RoleID)
+	self.Player1.PlayerHeadSlot:SetVisibility(_G.UE.ESlateVisibility.HitTestInvisible)
 	---设置数量编辑器
 	local OnClickEditQuantityAddBtn = function(CurValue)
 		CurValue = CurValue or 0
@@ -169,6 +188,7 @@ function MeetTradeMainView:OnShow()
 			return CurValue - 1
 		end
 	end
+	MeetTradeVM:Reset()
 	self:SetMajorLockState(false)
 	self.EditQuantity:SetCurValue(0)
 	self.EditQuantity:SetUnitSubCall(OnClickEditQuantitySubBtn)
@@ -177,6 +197,7 @@ function MeetTradeMainView:OnShow()
 		self:OnEditQuantityChangeNum(Value)
 	end)
 	self.EditQuantity:SetInputLowerLimit(0)
+	self.EditQuantity:SetTextAmountTextFun(ItemUtil.GetItemNumTextWithoutBehind)
 	---配置表中配置的最大金币交易数量
 	local MaxGoldCountCanSet = MeetTradeMgr.GoldNumLimit
 	---取该值和背包中的最大金币交易数量比较，取较小值
@@ -186,9 +207,7 @@ function MeetTradeMainView:OnShow()
 	self.EditQuantity:SetInputUpperLimit(MaxGoldCountCanSet)
 	---根据当前的月卡状态设置Help Info按钮状态
 	self.BtnTaxInfo:SetCallback(self, self.OnInforBtnClickHelp)
-	self:UpdateMajorAnimationEffect(false)
 	self:UpdateRoleAnimationEffect(false)
-	MeetTradeVM:Reset()
 	---设置帮助按钮
 	self.CommonTitle.CommInforBtn:SetHelpInfoID(11182)
 	---设置角色名称的字色
@@ -197,27 +216,32 @@ function MeetTradeMainView:OnShow()
 	---更新主面板上双方的物品表，初始拉起时都为空
 	MeetTradeVM:UpdateMajorTradeItemListInfo()
 	MeetTradeVM:UpdateRoleTradeItemListInfo()
+	MeetTradeVM.IsClickLock = false
+	MeetTradeMgr:RegisterMeetTradeCountDownCallback(self.ViewID, self, self.OnMeetTradeCountDown)
+	self.FTextBlock_71:SetText(LSTR(1490065))
+	self:OnMeetTradeCountDown(MeetTradeMgr.TradeStartTime)
 end
 
 
 --- 界面关闭时，强制停止交易
 function MeetTradeMainView:OnHide(Params)
 	--- 非确认交易导致的界面关闭都要发送交易取消消息
-	if Params == nil or not Params.TradeIsEnd then
+	if Params ~= nil and not Params.TradeIsEnd then
 		MeetTradeMgr:SendMeetTradeCancel("1")
 	end
 	MeetTradeVM:ResetVMInfo()
 	MeetTradeMgr:OnMeetTradeEnd()
+	MeetTradeMgr:UnRegisterMeetTradeCountDownCallback(self.ViewID)
 end
 
 
 function MeetTradeMainView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnStop, self.OnClickButtonStop)
-	UIUtil.AddOnClickedEvent(self, self.BtnCondition, self.OnClickButtonCondition)
+	UIUtil.AddOnClickedEvent(self, self.BtnReady, self.OnClickButtonCondition)
 end
 
 function MeetTradeMainView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.MeetTradeLockStateChange, self.OnMeetTradeLockStateChange) 
+	self:RegisterGameEvent(EventID.MeetTradeLockStateChange, self.OnMeetTradeLockStateChange)
 end
 
 function MeetTradeMainView:OnRegisterBinder()
@@ -237,6 +261,9 @@ function MeetTradeMainView:OnUnRegisterBinder()
 end
 
 function MeetTradeMainView:OnClickButtonStop()
+	if MeetTradeVM.IsClickLock then
+		return
+	end
 	local OkBtnCallback = function ()
 		self:StopTradeCallback()
 	end
@@ -245,6 +272,16 @@ function MeetTradeMainView:OnClickButtonStop()
 end
 
 function MeetTradeMainView:OnClickButtonCondition()
+	--- 检查双方的金币数量是否为0
+	if MeetTradeVM.MajorGoldForTrade == 0 and MeetTradeVM.RoleGoldForTrade == 0 then
+		--- 检查自己的物品列表是否为空
+		if MeetTradeVM.MajorTradeItemListParams == nil or #MeetTradeVM.MajorTradeItemListParams == 0 then
+			if MeetTradeVM.RoleTradeItemListParams == nil or #MeetTradeVM.RoleTradeItemListParams == 0 then
+				_G.MsgTipsUtil.ShowTips(LSTR(1490063)) --双方交易物品为空，无法交易
+				return
+			end
+		end
+	end
 	--- 发送提出条件的消息
 	MeetTradeMgr:SendMeetTradeLock()
 end
@@ -259,12 +296,18 @@ function MeetTradeMainView:OnMeetTradeLockStateChange(Member)
 	else
 		self:SetRoleLockState(Member.State == 1)
 	end
+	--- 如果双方都准备好了，拉起确认面板
+    if MeetTradeMgr.OtherIsReadyForTrade and MeetTradeMgr.MajorIsReadyForTrade then
+		--锁定面板点击
+		MeetTradeVM.IsClickLock = true
+		self:RegisterTimer(self.OpenConfirmView, MeetTradeMgr.LockDelayTime, 0)
+    end
 end
 
 function MeetTradeMainView:SetMajorLockState(IsLock)
 	self:UpdateMajorAnimationEffect(IsLock)
 	---交易锁定，相关按钮禁用
-	self.BtnCondition:SetIsEnabled(not IsLock, not IsLock)
+	self.BtnReady:SetIsEnabled(not IsLock, not IsLock)
 	self.EditQuantity:SetAllBtnIsEnabled(not IsLock)
 	--- 我方交易锁定
 	MeetTradeVM:SetIsLock(IsLock)
@@ -276,6 +319,7 @@ end
 
 function MeetTradeMainView:UpdateMajorAnimationEffect(IsReadyForTrade)
 	self.Player2:UpdateAnimationEffect(IsReadyForTrade)
+	MeetTradeVM:UpdateImgAdd(IsReadyForTrade)
 end
 
 function MeetTradeMainView:UpdateRoleAnimationEffect(IsReadyForTrade)
@@ -286,14 +330,14 @@ function MeetTradeMainView:StopTradeCallback()
 	---关闭自身,可能出现收到交易结束的消息，该界面已经被销毁
     ---交易面板关闭
     if UIViewMgr:IsViewVisible(UIViewID.MeetTradeMainView) then
-		self:Hide()
+		UIViewMgr:HideView(UIViewID.MeetTradeMainView, nil, {TradeIsEnd = false})
     end
 end
 
 function MeetTradeMainView:FinishTradeCallback()
     ---交易面板关闭
     if UIViewMgr:IsViewVisible(UIViewID.MeetTradeMainView) then
-		self:Hide()
+		UIViewMgr:HideView(UIViewID.MeetTradeMainView, nil, {TradeIsEnd = false})
     end
 end
 
@@ -308,20 +352,20 @@ function MeetTradeMainView:OnEditQuantityChangeNum(Value)
 		local LinearColor
 		MeetTradeVM:SendMajorGoldNumForTrade(Value)
 		---设置的数量和交易税不足时，提出条件按钮置灰，税额数字置红色
-		if Value + MeetTradeVM:GetMajorGoldTax() > MeetTradeVM:GetMajorMaxGoldNumForTrade() then
-			self.BtnCondition:SetIsEnabled(false, false)
+		if Value + MeetTradeVM:GetMajorGoldTax() > _G.ScoreMgr:GetScoreValueByID(BagMgr.RecoveryScoreID) then
+			self.BtnReady:SetIsEnabled(false, false)
 			LinearColor = FLinearColor.FromHex("DC5868FF")
 		else
-			self.BtnCondition:SetIsEnabled(true, true)
+			self.BtnReady:SetIsEnabled(true, true)
 			LinearColor = FLinearColor.FromHex("D5D5D5FF")
 		end
 		self.TextTaxCost:SetColorAndOpacity(LinearColor)
 	end
 end
 
-function MeetTradeMainView:OnClickGold()
-	ItemTipsUtil.CurrencyTips(BagMgr.RecoveryScoreID, true, self.Comm96Slot)
-end
+-- function MeetTradeMainView:OnClickGold()
+-- 	ItemTipsUtil.CurrencyTips(BagMgr.RecoveryScoreID, true, self.Comm96Slot)
+-- end
 
 function MeetTradeMainView:OnInforBtnClickHelp()
 	local TipsContent = nil
@@ -336,7 +380,7 @@ function MeetTradeMainView:OnInforBtnClickHelp()
 		if RemainTime < 1 then
 			RemainTimeText = LSTR(1490053)
 		end
-		local TaxRate = string.format("%s", MeetTradeVM.MajorGoldTaxRate*100).."%"
+		local TaxRate = string.format("%d", MeetTradeVM.MajorGoldTaxRate*100).."%"
 		TipsContent = HelpInfoUtil.ParseTextWithPlaceholders(HelpContent, FilterFunction, TaxRate, RemainTimeText)
 	else
 		local HelpCfgs = HelpCfg:FindAllHelpIDCfg(19)
@@ -349,4 +393,44 @@ function MeetTradeMainView:OnInforBtnClickHelp()
 	TipsUtil.ShowInfoTitleTips(TipsContent, self.BtnTaxInfo, _G.UE.FVector2D(0, 15), _G.UE.FVector2D(0, 0))
 end
 
+function MeetTradeMainView:OpenConfirmView()
+    if not UIViewMgr:IsViewVisible(UIViewID.MeetTradeConfirmationView) then
+        UIViewMgr:ShowView(UIViewID.MeetTradeConfirmationView)
+    end
+end
+
+function MeetTradeMainView:OnMeetTradeCountDown(CountDownTime)
+	local Text = LocalizationUtil.GetCountdownTime(CountDownTime, "mm:ss")
+	self.FTextBlock:SetText(Text)
+	if CountDownTime <= 10 then
+		UIUtil.SetColorAndOpacityHex(self.FTextBlock, "DC5868FF")
+	else
+		UIUtil.SetColorAndOpacityHex(self.FTextBlock, "FFF5D0FF")
+	end
+end
+
+function MeetTradeMainView:PlayGoldNumChangeAnimation(NewValue)
+	if NewValue > 0 then
+		self:PlayAnimation(self.AnimDepositCoin)
+	end
+end
+
+function MeetTradeMainView:SequenceEvent_AnimDepositCoin()
+	if MeetTradeVM.PlayGoldNumChangeAnimation then
+		---蓝图未提供金币数量减少的函数，先用这个，防止后面有修改
+		if MeetTradeVM.PlayGoldNumChangeAnimation == 2 then
+			self:GetValueAnimDepositCoin()
+		elseif MeetTradeVM.PlayGoldNumChangeAnimation == 1 then
+			self:GetValueAnimDepositCoin()
+		end
+		---在结束动画修正精度误差，表现延迟太明显，在动画中修正
+		local AnimVlaue = 0
+		if self.ValueAnimDepositCoin > 0.999 then
+			AnimVlaue = 1
+		else
+			AnimVlaue = self.ValueAnimDepositCoin
+		end
+		MeetTradeVM:SetTotalMoneyNumStrByAminVlaue(AnimVlaue)
+	end
+end
 return MeetTradeMainView

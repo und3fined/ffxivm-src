@@ -27,6 +27,7 @@ local LSTR = _G.LSTR
 ---@field Params.CancelButtonText string @取消按钮文字
 ---@field Params.MaxTextLength integer @允许输入文本的最大长度
 ---@field Params.SureCallback(FText) function @点击确认按钮的回调函数
+---@field Params.IsNoHideByClickSureBtn boolean @点击确认按钮是否不隐藏弹框
 local CommPopupInputBoxView = LuaClass(UIView, true)
 
 function CommPopupInputBoxView:Ctor()
@@ -87,6 +88,23 @@ function CommPopupInputBoxView:OnShow()
 	else
 		self.BtnCancel:SetText(LSTR(10003)) -- "取  消"
 	end
+
+	if self.Params.EmptyInputEnable then
+		self.GroupInput:SetCallback(self, function (View, Text)
+			if string.isnilorempty(Text) then  --搜索是否String是null或其值为Empty
+				View.BtnSure:SetIsDisabledState(true, true)
+				return
+			end
+			View.BtnSure:SetIsRecommendState(true)
+		end, nil)
+		if string.isnilorempty(self.Params.Content) then
+			self.BtnSure:SetIsDisabledState(true, true)
+		else
+			self.BtnSure:SetIsRecommendState(true)
+		end
+	end
+	
+	self.IsNoHideByClickSureBtn = self.Params.IsNoHideByClickSureBtn == true
 end
 
 function CommPopupInputBoxView:OnHide()
@@ -107,7 +125,7 @@ function CommPopupInputBoxView:OnRegisterBinder()
 end
 
 function CommPopupInputBoxView:OnCancelBtnClick()
-	UIViewMgr:HideView(UIViewID.CommonPopupInput)
+	self:Hide()
 end
 
 function CommPopupInputBoxView:OnSureBtnClick()
@@ -116,7 +134,9 @@ function CommPopupInputBoxView:OnSureBtnClick()
 		self.Params.SureCallback(InputText)
 	end
 
-	UIViewMgr:HideView(UIViewID.CommonPopupInput)
+	if self.IsNoHideByClickSureBtn ~= true then
+		self:Hide()
+	end
 end
 
 return CommPopupInputBoxView

@@ -29,6 +29,7 @@ function SettingsSubCategoryVM:Ctor( )
     self.Category = 0
     self.SubCategory = 0
     self.SubCategoryName = ""
+    self.SubCategoryFunc = nil
     self.Color = "" 
     self.IsSetColor = false
     self.ColorSaveKey = nil
@@ -37,6 +38,7 @@ function SettingsSubCategoryVM:Ctor( )
 	self.ItemList = UIBindableList.New()
     self.HID = 0
     self.ButtonFunc = nil
+    self.ButtonText = nil
 end
 
 function SettingsSubCategoryVM:UpdateVM( Value )
@@ -51,10 +53,15 @@ function SettingsSubCategoryVM:UpdateVM( Value )
 
     self.ColorSaveKey = Value.ColorSaveKey
     self.SetColorFunc = Value.SetColorFunc
+    if not string.isnilorempty(Value.SubCategoryFunc) then
+        self.SubCategoryFunc = Value.SubCategoryFunc
+    end
     if not string.isnilorempty(Value.ButtonFunc) then
         self.ButtonFunc = Value.ButtonFunc
     end
-
+    if not string.isnilorempty(Value.ButtonText) then
+        self.ButtonText = Value.ButtonText
+    end
     if self.IsSetColor then
 		local Color = SettingsUtils.GetColor(self.ColorSaveKey)
 		if string.isnilorempty(Color) then
@@ -72,11 +79,7 @@ function SettingsSubCategoryVM:UpdateVM( Value )
             local Cfg = CfgList[1] 
             local Data = table.clone(Cfg, true)
             Data.Desc = Cfg.Desc
-            if Cfg.ID == 51 then
-                Data.Value = {"中文"}
-            else 
-                Data.Value = SettingsDefine.LanguagesDesc
-            end
+            Data.Value = SettingsDefine.LanguagesNameDesc
             Data.SwitchTips = Cfg.SwitchTips
 
             CfgList[1] = Data

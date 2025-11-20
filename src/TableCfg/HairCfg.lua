@@ -42,6 +42,14 @@ function HairCfg:FindCfgByRaceIDTribeGender(RaceID, Tribe, Gender)
 	return self:FindAllCfg(SearchConditions)
 end
 
+---@param RaceID number
+---@param Tribe number
+---@param Gender number
+function HairCfg:FindAllCfgByRaceIDTribeGender(RaceID, Tribe, Gender)
+	local SearchConditions = string.format("RaceID = %d AND Tribe = %d AND Gender = %d", RaceID, Tribe, Gender)
+	return self:FindAllCfg(SearchConditions)
+end
+
 function HairCfg:FindCfgByID(ID)
 	return self:FindCfgByKey(ID)
 end

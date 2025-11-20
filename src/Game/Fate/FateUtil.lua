@@ -196,10 +196,10 @@ function FateUtil.GetConditionText(Value)
     end
 
     Text = string.gsub(Text, CountText, TableCount)
-    local bIsGold = RequireReward == ProtoRes.Game.FATE_ACHIEVEMENT_REQUIRE_AWARD.FATE_ACHIEVEMENT_REQUIRE_AWARD_GOLD
-    if (bIsGold and not bIsMultiCondition) then
-        Text = string.format("%s%s", Text, LSTR(190068))
-    end
+    -- local bIsGold = RequireReward == ProtoRes.Game.FATE_ACHIEVEMENT_REQUIRE_AWARD.FATE_ACHIEVEMENT_REQUIRE_AWARD_GOLD
+    -- if (bIsGold and not bIsMultiCondition) then
+    --     Text = string.format("%s%s", Text, LSTR(190068))
+    -- end
 
     local ConditionText = string.format("%s（%s/%s）", Text, Progress, TargetCount)
     return ConditionText

@@ -16,6 +16,7 @@ local ProfUtil = require("Game/Profession/ProfUtil")
 ---@class ShareActivityPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field CommPlayerHeadSlot_UIBP CommPlayerHeadSlotView
+---@field FCanvasPanel_0 UFCanvasPanel
 ---@field IconJob UFImage
 ---@field ImgBG UFImage
 ---@field ImgLogo UFImage
@@ -35,6 +36,7 @@ local ShareActivityPanelView = LuaClass(UIView, true)
 function ShareActivityPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.CommPlayerHeadSlot_UIBP = nil
+	--self.FCanvasPanel_0 = nil
 	--self.IconJob = nil
 	--self.ImgBG = nil
 	--self.ImgLogo = nil
@@ -71,6 +73,7 @@ function ShareActivityPanelView:OnShow()
 	local Callback = function(View)
 	end
 	self:Update(Callback, self, true)
+	_G.ShareMgr:SetShareImageWidget(self.FCanvasPanel_0)
 end
 
 function ShareActivityPanelView:OnHide()

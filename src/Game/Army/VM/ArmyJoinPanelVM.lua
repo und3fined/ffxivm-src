@@ -55,13 +55,21 @@ end
 
 --- 显示UI
 function ArmyJoinPanelVM:ShowView(Type)
+    local ArmyMainVM = require("Game/Army/VM/ArmyMainVM")
+    local CurItemData
     --- 设置所有部队信息
     if Type == ArmyDefine.ArmyOutUIType.ArmyJoin then
         self.bJoinPage = true
         self.bInvitationPage = false
+        CurItemData = self.ArmyJoinArmyPageVM:GetCurSelectedItemData()
     elseif Type == ArmyDefine.ArmyOutUIType.ArmyInvite then
         self.bJoinPage = false
         self.bInvitationPage = true
+        CurItemData = self.ArmyInvitationPageVM:GetCurSelectedItemData()
+    end
+    ---设置背景图片
+    if CurItemData then
+        ArmyMainVM:SetBGIcon(CurItemData.GrandCompanyType)
     end
 end
 

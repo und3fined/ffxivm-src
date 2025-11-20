@@ -9,6 +9,7 @@ local AetherCurrentsMgr = require("Game/AetherCurrent/AetherCurrentsMgr")
 local MapQuestObjMgr = require("Game/PWorld/MapQuestObj/MapQuestObjMgr")
 local DiscoverNoteMgr = require("Game/SightSeeingLog/DiscoverNoteMgr")
 local MysteryMerchantMgr = require("Game/MysterMerchant/MysterMerchantMgr")
+local GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
 local MoveConfig = require("Define/MoveConfig")
 local FateMgr = require("Game/Fate/FateMgr")
 local NpcCfg = require("TableCfg/NpcCfg")
@@ -95,6 +96,26 @@ function ClientActorFactory:OnMapLoaded(CurMapEditCfg)
 	self.WildBoxMap = {}
 
 	local NpcList = self.CurMapEditCfg.NpcList
+	if NpcList then
+		for index = 1, #NpcList do
+			local NpcID = NpcList[index].NpcID
+			local Cfg = NpcCfg:FindCfgByKey(NpcID)
+			if Cfg then
+				if Cfg.IsQuestObj == 1 then --为true才是任务npc
+					self.QuestNpcMap[NpcID] = true
+				elseif ProtoRes.NPC_TYPE.WILDBOX == Cfg.Type then --野外宝箱
+					self.WildBoxMap[NpcID] = true
+				end
+			end
+		end
+	end
+end
+
+function ClientActorFactory:OnFestivalMapLoaded(FestialMapEditCfg)
+	if nil == FestialMapEditCfg then
+		return
+	end
+	local NpcList = FestialMapEditCfg.NpcList
 	if NpcList then
 		for index = 1, #NpcList do
 			local NpcID = NpcList[index].NpcID
@@ -213,6 +234,8 @@ function ClientActorFactory:LoadOneNpc(Npc, ActorType)
 			elseif MysteryMerchantMgr:CanCreateMerchantNPC(Npc.ListId) then
 			 	ClientVisionMgr:DoClientActorEnterVision(MapEditorID, Npc, MapEditorActorConfig.Npc, Npc.ListId)
 			elseif DiscoverNoteMgr:CanCreateNpc(Npc.ListId) or DiscoverNoteMgr:CanCreateHintNpc(Npc.ListId) then
+				ClientVisionMgr:DoClientActorEnterVision(MapEditorID, Npc, MapEditorActorConfig.Npc, Npc.ListId)
+			elseif GoldSaucerBlessingMgr:CanCreateNpc(Npc.ListId) then
 				ClientVisionMgr:DoClientActorEnterVision(MapEditorID, Npc, MapEditorActorConfig.Npc, Npc.ListId)
 			else
 				ClientVisionMgr:DestoryClientActor(EntityID, ActorType)

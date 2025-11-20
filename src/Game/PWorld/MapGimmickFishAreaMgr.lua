@@ -102,4 +102,29 @@ function MapGimmickFishAreaMgr:JudgePriority()
     return MaxGimmickID
 end
 
+-- 根据位置更新当前所处的渔场
+function MapGimmickFishAreaMgr:GetGimmickIDByPos(Pos, MapID)
+    self:Reset()
+    local AreaList, CurrArea = _G.MapAreaMgr:GetFishGimmickAreaByPos(Pos, MapID)
+    -- 当前不在任何渔场内
+    if CurrArea == nil then
+        return 0, 0
+    end
+    -- 当前在渔场内
+    local AreaID = 0
+    local Priority = 0
+    local GimmickID = 0
+    for _,Area in ipairs(AreaList) do
+        AreaID = Area.Gimmick.GimmickKey
+        GimmickID = Area.ID
+        Priority = Area.Priority
+        self.FishAreaPriorityMap[GimmickID] = Priority
+        self.FishGimmickAreaIDMap[GimmickID] = AreaID
+    end
+    AreaID = CurrArea.Gimmick.GimmickKey
+    GimmickID = CurrArea.ID
+    self:SetCurrAreaID(AreaID)
+    return AreaID, GimmickID
+end
+
 return MapGimmickFishAreaMgr

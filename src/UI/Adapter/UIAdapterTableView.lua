@@ -76,6 +76,10 @@ function UIAdapterTableView:Ctor()
 	self.bClearCache = false
 	self.bClearCacheOnHide = false
 	self.bClearCacheOnUnload = false
+
+	self.LastDistanceRemaining = 0.0
+	self.bDisblePlayAnimInWhenScrolling = false
+	self.bEnablePlayAnimIn = true
 end
 
 ---OnDestroy
@@ -100,13 +104,20 @@ function UIAdapterTableView:OnDestroy()
 	self.ItemShowStatusList = {}
 	self.bEnabledRetainerBoxPool = false
 
+	self.bDisblePlayAnimInWhenScrolling = false
+	self.bEnablePlayAnimIn = true
+
 	local Widget = self.Widget
 	if nil ~= Widget and Widget:IsValid() then
 		Widget.BP_OnItemShow:Clear()
 		Widget.BP_OnItemHide:Clear()
 		Widget.BP_OnReleaseAll:Clear()
 		Widget.BP_OnItemClicked:Clear()
+		--Widget.OnScrolled:Clear()
 		Widget.BP_OnGetEntryWidgetIndex:Unbind()
+		Widget.OnTableViewTouchStart:Clear()
+		Widget.OnTableViewTouchMove:Clear()
+		Widget.OnTableViewTouchEnd:Clear()
 	end
 
 	self:CancelAllItemDelayDisplayTimers()
@@ -116,6 +127,10 @@ end
 ---OnHide
 function UIAdapterTableView:OnHide()
 	self:ReleaseAllItem(self.bClearCacheOnHide)
+	self.LastDistanceRemaining = 0.0
+	--self.bDisblePlayAnimInWhenScrolling = false
+	self.bEnablePlayAnimIn = true
+	--_G.FLOG_INFO("UIAdapterTableView:OnHide, WidgetName:%s", self.WidgetName)
 
 	-- 父类函数没有功能 可以不调用
 	--self.Super:OnHide()
@@ -201,6 +216,7 @@ end
 ---@param AlwaysNotifySelectChanged boolean
 ---@param bReverse boolean
 function UIAdapterTableView:InitAdapter(View, Widget, OnSelectChanged, AlwaysNotifySelectChanged, bReverse, bClearCache, bClearCacheOnHide, bClearCacheOnUnload)
+	--_G.FLOG_INFO("UIAdapterTableView:InitAdapter, WidgetName:%s", Widget:GetName())
 	self.Super:InitAdapter(View, Widget)
 	self.WidgetName = Widget:GetName()
 	self.OnSelectChanged = OnSelectChanged
@@ -212,7 +228,10 @@ function UIAdapterTableView:InitAdapter(View, Widget, OnSelectChanged, AlwaysNot
 	self.TableDelayDisplayTime = Widget:GetTableDelayDisplayTime()
 	self.ItemDelayDisplayInterval = Widget:GetTableItemDelayDisplayInterval()
 	self.bEnabledRetainerBoxPool = Widget:GetEnableRetainerBoxPool() and Widget:GetUseRetainerBoxPool()
+	self.bDisblePlayAnimInWhenScrolling = Widget:IsDisablePlayAnimInWhenScrolling()
 	self.bAutoPlayAnimation = Widget:GetAutoPlayAnimation()
+
+	--_G.FLOG_INFO("UIAdapterTableView:InitAdapter, WidgetName=%s, bDisblePlayAnimInWhenScrolling:%s", self.WidgetName, tostring(self.bDisblePlayAnimInWhenScrolling))
 
 	-- FLOG_INFO("UIAdapterTableView:InitAdapter, TableDelayDisplayTime=%f, ItemDelayDisplayInterval=%f, EnabledRetainerBoxPool=%s",
 	-- 	self.TableDelayDisplayTime, self.ItemDelayDisplayInterval, tostring(self.bEnabledRetainerBoxPool))
@@ -253,18 +272,78 @@ function UIAdapterTableView:InitAdapter(View, Widget, OnSelectChanged, AlwaysNot
 		return self:OnTableItemGetWidgetIndex(Item)
 	end
 
+	local function OnTableviewScrolled(_, ItemOffset, DistanceRemaining)
+		if ItemOffset == 0.0 then
+			self.LastDistanceRemaining = 0.0
+		else
+			self.LastDistanceRemaining = DistanceRemaining
+		end
+		--_G.FLOG_INFO("UIAdapterTableView:OnTableviewScrolled, WidgetName:%s, ItemOffset=%f, DistanceRemaining=%f", self.WidgetName, ItemOffset, DistanceRemaining)
+	end
+
+	local function OnTableViewTouchStart(_, MyGeometry, MouseEvent)
+		--_G.FLOG_INFO("UIAdapterTableView:OnTableViewTouchStart, WidgetName:%s", self.WidgetName)
+		if self.TableViewTouchStart then
+			self.TableViewTouchStart(self.View, self.WidgetName, MyGeometry, MouseEvent)
+		end
+	end
+
+	local function OnTableViewTouchMove(_, MyGeometry, MouseEvent)
+		self.bEnablePlayAnimIn = false
+		--_G.FLOG_INFO("UIAdapterTableView:OnTableViewTouchMove, WidgetName:%s, bEnablePlayAnimIn:%s", self.WidgetName, tostring(self.bEnablePlayAnimIn))
+		if self.TableViewTouchMove then
+			self.TableViewTouchMove(self.View, self.WidgetName, MyGeometry, MouseEvent)
+		end
+	end
+
+	local function OnTableViewTouchEnd(_, MyGeometry, MouseEvent)
+		self.bEnablePlayAnimIn = true
+		--_G.FLOG_INFO("UIAdapterTableView:OnTableViewTouchEnd, WidgetName:%s, bEnablePlayAnimIn:%s", self.WidgetName, tostring(self.bEnablePlayAnimIn))
+		if self.TableViewTouchEnd then
+			self.TableViewTouchEnd(self.View, self.WidgetName, MyGeometry, MouseEvent)
+		end
+	end
+
 	Widget.BP_OnItemShow:Add(View, OnItemShow)
 	Widget.BP_OnItemUpdate:Add(View, OnItemUpdate)
 	Widget.BP_OnItemHide:Add(View, OnItemHide)
 	Widget.BP_OnReleaseAll:Add(View, OnReleaseAll)
 	Widget.BP_OnItemClicked:Add(View, OnItemClicked)
 	Widget.BP_OnGetEntryWidgetIndex:Bind(self.Object, OnGetEntryWidgetIndex)
+	--Widget.OnScrolled:Add(View, OnTableviewScrolled)
+	Widget.OnTableViewTouchStart:Add(View, OnTableViewTouchStart)
+	Widget.OnTableViewTouchMove:Add(View, OnTableViewTouchMove)
+	Widget.OnTableViewTouchEnd:Add(View, OnTableViewTouchEnd)
+end
+
+function UIAdapterTableView:SetOnTouchCallback(OnTouchTableStarted, OnTouchTableMoved, OnTouchTableEnded)
+	self.TableViewTouchStart = OnTouchTableStarted
+	self.TableViewTouchMove = OnTouchTableMoved
+	self.TableViewTouchEnd = OnTouchTableEnded
 end
 
 ---InitCategoryInfo
 ---@param CategoryVMClass ViewModelClass
 function UIAdapterTableView:InitCategoryInfo(CategoryVMClass)
 	self.CategoryVMClass = CategoryVMClass
+end
+
+function UIAdapterTableView:IsEnablePlayAnimIn()
+	-- local ScrollOffset = self.Widget:GetScrollOffset()
+	-- local ScrollDistance = self.Widget:GetScrollDistance()
+	-- local EnablePlayAnimIn = true
+	-- if self.LastDistanceRemaining > 0.0 then
+	-- 	EnablePlayAnimIn = false
+	-- end
+	--_G.FLOG_INFO("UIAdapterTableView:IsEnablePlayAnimIn,LastDistanceRemaining:%f, WidgetName:%s, bEnablePlayAnim:%s", self.LastDistanceRemaining, self.WidgetName, tostring(EnablePlayAnimIn))
+
+	local EnablePlayAnimIn = true
+	if self.bDisblePlayAnimInWhenScrolling then
+		EnablePlayAnimIn = self.bEnablePlayAnimIn
+	end
+	-- _G.FLOG_INFO("UIAdapterTableView:IsEnablePlayAnimIn, WidgetName:%s, bDisblePlayAnimInWhenScrolling:%s, EnablePlayAnim:%s",
+	-- 	self.WidgetName, tostring(self.bDisblePlayAnimInWhenScrolling), tostring(EnablePlayAnimIn))
+	return EnablePlayAnimIn
 end
 
 ---OnItemShow
@@ -294,7 +373,9 @@ function UIAdapterTableView:OnItemShow(Item, ItemView)
 		local function ShowTableItem(Info)
 			if nil ~= ItemView and nil ~= ItemView.Object and ItemView.Object:IsValid() then
 				UIUtil.SetRenderOpacity(ItemView, 1.0)
-				ItemView:PlayAnimIn()
+				if self:IsEnablePlayAnimIn() then
+					ItemView:PlayAnimIn()
+				end
 			end
 			if self.bIsEnableTableDelayShow then
 				self.ItemRealDelayDisplayTime = self.ItemRealDelayDisplayTime - self.TableDelayDisplayTime
@@ -340,7 +421,8 @@ function UIAdapterTableView:OnTableItemShow(ItemView, Item)
 
 	ItemView:InitView()
 	ItemView:LoadView()
-	ItemView:ShowView({ Index = Index, Data = ItemData, Adapter = self })
+	--_G.FLOG_INFO("UIAdapterTableView:OnTableItemShow, ItemView:%s", ItemView:GetClassName())
+	ItemView:ShowView({ Index = Index, Data = ItemData, Adapter = self, EnablePlayAnimIn = self:IsEnablePlayAnimIn() })
 
 	if nil ~= ItemView.OnSelectChanged then
 		ItemView:OnSelectChanged(Item == self.SelectedItem)
@@ -366,6 +448,14 @@ function UIAdapterTableView:OnTableItemShow(ItemView, Item)
 			self:ChangeItemsRenderMode()
 		end
 	end
+
+	if self.CallbackOnItemShow then
+		self.CallbackOnItemShow(self.View, Index, ItemData, ItemView)
+	end
+end
+
+function UIAdapterTableView:SetCallbackOnItemShow(Callback)
+	self.CallbackOnItemShow = Callback
 end
 
 ---OnTableItemUpdate
@@ -391,7 +481,7 @@ function UIAdapterTableView:OnTableItemUpdate(ItemView, Item)
 		return
 	end
 
-	ItemView:CheckPlayAnimIn()
+	ItemView:CheckPlayAnimIn(self:IsEnablePlayAnimIn())
 
 	Params.Index = Index
 
@@ -717,6 +807,8 @@ end
 function UIAdapterTableView:ScrollToIndex(Index)
 	if nil ~= Index and nil ~= self.Widget and self.Widget:IsValid() then
 		self.Widget:ScrollToIndex(Index - 1)
+		self.LastDistanceRemaining = 0.0
+		--_G.FLOG_INFO("UIAdapterTableView:ScrollToIndex, WidgetName:%s, Index=%d", self.WidgetName, Index)
 	end
 end
 
@@ -825,6 +917,10 @@ end
 --- 获取Item的对应Item的下标
 ---@param Predicate function @命中条件
 function UIAdapterTableView:GetItemDataByPredicate(Predicate)
+	if nil == self.BindableList then
+		return
+	end
+
 	local ItemData, Index = self.BindableList:Find(Predicate)
 	if ItemData ~= nil then
 		return ItemData, Index
@@ -1078,7 +1174,7 @@ end
 
 function UIAdapterTableView:CancelAllItemDelayDisplayTimers()
 	for Index = 1, #self.Timers do
-		_G.TimerMgr:CancelTimer(self.Timers[Index])
+		self:UnRegisterTimer(self.Timers[Index])
 	end
 	self.Timers = {}
 end

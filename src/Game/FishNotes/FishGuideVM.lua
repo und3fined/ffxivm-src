@@ -11,15 +11,16 @@ local EventID = require("Define/EventID")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local ProtoRes = require ("Protocol/ProtoRes")
 local FishNotesGridVM = require("Game/FishNotes/ItemVM/FishNotesGridVM")
-local FishNotesPlaceVM = require("Game/FishNotes/ItemVM/FishNotesPlaceVM")
 local FishNotesMgr = require("Game/FishNotes/FishNotesMgr")
 local FishNotesDefine = require("Game/FishNotes/FishNotesDefine")
 local BoardType = require("Define/BoardType")
-local LocalizationUtil = require("Utils/LocalizationUtil")
 local TimeUtil = require("Utils/TimeUtil")
 local UIUtil = require("Utils/UIUtil")
 local ItemCfg = require("TableCfg/ItemCfg")
-local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
+local ChatUtil = require("Game/Chat/ChatUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local MajorUtil = require("Utils/MajorUtil")
 
 ---@type FishGuideVM : UIViewModel
 ---@field FishGridList table @鱼列表
@@ -32,6 +33,7 @@ local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
 ---@field SelectFishNumberID string @选中的鱼编号
 ---@field SelectFishDetail string @选中的鱼详情
 ---@field SelectFishNumber string @选中的鱼累计钓到数量
+---@field SelectFishObtainPower string @选中的鱼的获得力要求
 ---@field SelectFishSize string @选中的鱼钓到的最大尺寸
 ---@field bSelectFishDetailVisible boolean @选中的鱼详情是否显示
 ---
@@ -67,23 +69,10 @@ local ITEM_COLOR_TYPE = ProtoRes.ITEM_COLOR_TYPE
 ---
 ---@field SelectFishItemID number @选中的鱼物品ID
 ---@field FishSwitchState boolean @图标/拓印切换按纽，true为图标
+---
+---@field bShowRankingVisible boolean @详情界面排名信息显示
+---@field bSizeKing boolean @详情界面皇冠显示
 local FishGuideVM = LuaClass(UIViewModel)
-
-local ItemColorType =
-{
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Grey_152px_png.Ui_Img_LightSlot_NQ_Grey_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Green_152px_png.Ui_Img_LightSlot_NQ_Green_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Blue_152px_png.Ui_Img_LightSlot_NQ_Blue_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_NQ_Purple_152px_png.Ui_Img_LightSlot_NQ_Purple_152px_png'",
-}
-
-local ItemHQColorType =
-{
-	[ITEM_COLOR_TYPE.ITEM_COLOR_WHITE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Grey_152px_png.Ui_Img_LightSlot_HQ_Grey_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_GREEN] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Green_152px_png.Ui_Img_LightSlot_HQ_Green_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_BLUE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Blue_152px_png.Ui_Img_LightSlot_HQ_Blue_152px_png'",
-	[ITEM_COLOR_TYPE.ITEM_COLOR_PURPLE] = "PaperSprite'/Game/UI/Atlas/ItemSlot/Frames/Ui_Img_LightSlot_HQ_Purple_152px_png.Ui_Img_LightSlot_HQ_Purple_152px_png'",
-}
 
 function FishGuideVM:Ctor()
 end
@@ -99,6 +88,7 @@ function FishGuideVM:OnInit()
     self.SelectFishNumberID = ""
     self.SelectFishDetail = ""
     self.SelectFishNumber = ""
+    self.SelectFishObtainPower = ""
     self.SelectFishSize = ""
     self.SelectFishSizeTime = ""
     self.FishIcon = ""
@@ -135,6 +125,15 @@ function FishGuideVM:OnInit()
 
     self.bSearchShow = false
     self.SearchDataList = nil
+
+    --排名
+    self.bShowRankingVisible = false
+    self.HistoryRanking = _G.LSTR(70008)--"无"
+    self.CurRanking = _G.LSTR(70008)--"无"
+    self.HistoryRankingColor = ""
+    self.CurRankingColor = ""
+    self.bSizeKing = false
+    self.bLargeFontSize = true
 end
 
 function FishGuideVM:OnShutdown()
@@ -220,7 +219,6 @@ function FishGuideVM:UpdateFishList(Index)
         end
     end
     self.FishGridList:UpdateByValues(FishList, SortGrid)
-    self:ResetSelectedFishGrid()
 end
 
 function FishGuideVM:GetSelectIndexByFishID(FishID)
@@ -278,11 +276,6 @@ function FishGuideVM:UpdateFishDetail(Index, Data)
     self.bInheritVisible = FishData.NeedFolklore
     local Infested = self:SetInfestedInfo(FishData.ID)
     self.SelectFishSeaboard = string.format("%s%s", _G.LSTR(180088), Infested)--"出没场地："
-    -- if FishData.Rarity == FishNotesDefine.FishRartyEnum.King or FishData.Rarity == FishNotesDefine.FishRartyEnum.Queen then
-    --     self.SelectFishNameColor = "D4FDCCFF"
-    -- else
-    --     self.SelectFishNameColor = "AFAFAFFF"
-    -- end
 
     local bUnLockState = FishNotesMgr:CheckFishbUnLock(FishData.ID)
     local SaveData = FishNotesMgr:GetUnlockFishData(FishData.ID)
@@ -297,33 +290,18 @@ function FishGuideVM:UpdateFishDetail(Index, Data)
     self.bSelectFishDetailVisible = true
     self.SelectFishDetail = FishData.Description
     self.SelectFishNumber = string.format("%s%d", _G.LSTR(180087), SaveData.Count)--钓起数量：
+    self.SelectFishObtainPower = string.format("%s%s", _G.LSTR(180113), tostring(FishData.GatheringThreshold or 0))
     local Size = SaveData.Size
-    local MinSize, MaxSize, SizeRatio = 1, 1, 1
-    if not table.is_nil_empty(FishData.Size) then
-        MinSize = FishData.Size[1]
-        MaxSize = FishData.Size[2]
-        SizeRatio = (Size - MinSize) / (MaxSize - MinSize)
-    end
-    if SizeRatio >= 0.7 then
-        self.InchIcon = "PaperSprite'/Game/UI/Atlas/FishNotes/Frames/UI_FishNotes_Img_Inch_png.UI_FishNotes_Img_Inch_png'"
-    elseif SizeRatio >= 0.4 then
-        self.InchIcon = "PaperSprite'/Game/UI/Atlas/FishNotesNew/Frames/UI_FishNotes_Img_Silver_png.UI_FishNotes_Img_Silver_png'"
-    else
-        self.InchIcon = "PaperSprite'/Game/UI/Atlas/FishNotesNew/Frames/UI_FishNotes_Img_Copper_png.UI_FishNotes_Img_Copper_png'"
-    end
+    self.InchIcon = self:GetInchIconPath(FishData.Size, Size)
     self.SelectFishSize = string.format("%d%s", Size, _G.LSTR(180061))
     local SizeTime = SaveData.SizeTime ~= 0 and SaveData.SizeTime or TimeUtil.GetServerTime()
     self.SelectFishSizeTime = TimeUtil.GetTimeFormat("%Y/%m/%d", SizeTime)
-    self.SelectFishItemID = FishData.ItemID
+    self.bSizeKing = SaveData.HistoryPercent == 1
+    self:SetRankingInfo(SaveData.HistoryPercent, SaveData.CurrPercent, FishData.Rarity) --排名信息
 
+    self.SelectFishItemID = FishData.ItemID
     local ItemData = ItemCfg:FindCfgByKey(FishData.ItemID)
     if ItemData then
-        -- self.IsHQ = (1 == ItemData.IsHQ)
-        -- if self.IsHQ then
-        --     self.QualityIcon = ItemHQColorType[ItemData.ItemColor]
-        -- else
-        --     self.QualityIcon = ItemColorType[ItemData.ItemColor]
-        -- end
         self.ItemDataIconID = ItemData.IconID
     end
     self.ParchmentIcon = FishData.ParchmentIcon
@@ -342,6 +320,64 @@ function FishGuideVM:UpdateFishDetail(Index, Data)
     --如果当前已经打开了留言板，则申请更新留言信息
     if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MessageBoardPanel) then
         EventMgr:SendEvent(EventID.BoardObjectChange, self.SelectFishItemID)
+    end
+end
+
+---@type 详情信息_鱼类奖牌
+function FishGuideVM:GetInchIconPath(FishCfgSize, SaveSize)
+    local MinSize, MaxSize, SizeRatio = 1, 1, 1
+    if not table.is_nil_empty(FishCfgSize) then
+        MinSize = FishCfgSize[1]
+        MaxSize = FishCfgSize[2]
+        SizeRatio = (SaveSize - MinSize) / (MaxSize - MinSize)
+    end
+    if SizeRatio >= 0.7 then
+        return "PaperSprite'/Game/UI/Atlas/FishNotesNew/Frames/UI_FishNotes_Img_Inch_png.UI_FishNotes_Img_Inch_png'"
+    elseif SizeRatio >= 0.4 then
+        return "PaperSprite'/Game/UI/Atlas/FishNotesNew/Frames/UI_FishNotes_Img_Silver_png.UI_FishNotes_Img_Silver_png'"
+    else
+        return "PaperSprite'/Game/UI/Atlas/FishNotesNew/Frames/UI_FishNotes_Img_Copper_png.UI_FishNotes_Img_Copper_png'"
+    end
+end
+
+---@type 详情信息_鱼类钓起排名
+function FishGuideVM:SetRankingInfo(HistoryPercent, CurrPercent, Rarity)
+    local FishRartyEnum = FishNotesDefine.FishRartyEnum
+    --鱼王鱼皇才显示排名
+    self.bShowRankingVisible = Rarity == FishRartyEnum.King or Rarity == FishRartyEnum.Queen
+    if self.bShowRankingVisible then
+        if CurrPercent ~= 0 then
+            self.HistoryRanking = string.format("%d%%", math.floor(HistoryPercent * 100))
+            self.CurRanking = string.format("%d%%", math.floor(CurrPercent * 100))
+            self.HistoryRankingColor = self:GetRankingColor(HistoryPercent)
+            self.CurRankingColor = self:GetRankingColor(CurrPercent)
+            self.bLargeFontSize = true
+        else
+            --为0时即未上榜
+            self.HistoryRanking = _G.LSTR(70008)--"无"
+            self.CurRanking = _G.LSTR(70008)--"无"
+            self.HistoryRankingColor = self:GetRankingColor(0)
+            self.CurRankingColor = self:GetRankingColor(0)
+            self.bLargeFontSize = false
+        end
+    end
+end
+
+function FishGuideVM:GetRankingColor(RankPercent, bFishMain)
+    if RankPercent == 1 then
+        return bFishMain and "#ffd78b" or "#bd8213"
+    elseif RankPercent >= 0.99 then
+        return bFishMain and "#ff9da9" or "#af4c58"
+    elseif RankPercent >= 0.95 then
+        return bFishMain and "#fcb77f" or "#b56728"
+    elseif RankPercent >= 0.75 then
+        return bFishMain and "#c9a2ff" or "#744aad"
+    elseif RankPercent >= 0.5 then
+        return bFishMain and "#add9ff" or "#4d85b4"
+    elseif RankPercent >= 0.25 then
+        return bFishMain and "#b3f7b1" or "#449342"
+    else
+        return bFishMain and "#d5d5d5" or "#6c6964"
     end
 end
 
@@ -412,6 +448,53 @@ function FishGuideVM:CommentViewChanged(flag)
 	}
     _G.UIViewMgr:ShowView(_G.UIViewID.MessageBoardPanel, Params)
     -- self.bCommentViewVisible = flag
+end
+
+---@type 鱼类排名分享信息
+function FishGuideVM:GetShareFishInfo()
+    local FishData = self.NowData
+    local SaveData = FishNotesMgr:GetUnlockFishData(FishData.ID) or {Size = 0, SizeTime = 0, HistoryPercent = 0}
+    local LocationType = not table.is_nil_empty(self.HauntList) and self.HauntList[1].LocationType or 0
+    return FishData.ID, SaveData.Size, LocationType, SaveData.SizeTime, SaveData.HistoryPercent or 0
+end
+
+---@see 鱼类排名分享剪切板
+function FishGuideVM:SetClipboard(ID, Size, LocationType, SizeTime, HighestRanking)
+    self.FishClipboard = {
+        ID = ID,
+        Size = Size,
+        LocationType = LocationType,
+        SizeTime = SizeTime,
+        Ranking = HighestRanking,
+        RoleID = MajorUtil.GetMajorRoleID()
+    }
+	MsgTipsUtil.ShowTips(_G.LSTR(1310011))
+    _G.UE.UPlatformUtil.ClipboardCopy(ChatUtil.GetFishShareMacro())
+end
+
+function FishGuideVM:GenChatFishShareHref()
+    local Info = self.FishClipboard
+	if nil == Info then
+		return
+	end
+
+	local ID = Info.ID
+	local Size = Info.Size
+	local LocationType = Info.LocationType
+	local SizeTime = Info.SizeTime
+	local Ranking = Info.Ranking
+
+	if nil == ID or nil == Size or nil == LocationType or nil == SizeTime or nil == Ranking then
+        _G.FLOG_ERROR("FishGuideVM.GenChatFishShareHref params error")
+		return
+	end
+
+	local Href = {
+		Type = ProtoCS.PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH,
+		Fish = { ID = ID, Size = Size, LocationType = LocationType, Time = SizeTime, Ranking = Ranking, RoleID = Info.RoleID}
+	}
+
+    return Href
 end
 
 return FishGuideVM

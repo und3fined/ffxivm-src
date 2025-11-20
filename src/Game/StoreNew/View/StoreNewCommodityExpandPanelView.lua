@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local StoreDefine = require("Game/Store/StoreDefine")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 local LSTR = _G.LSTR
 
@@ -19,7 +20,6 @@ local StoreMainVM = _G.StoreMainVM
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnExpand UFButton
 ---@field PanelCommodity UFCanvasPanel
----@field SingleBox CommSingleBoxView
 ---@field TableViewCommodity UTableView
 ---@field AnimUpdateList UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -29,7 +29,6 @@ function StoreNewCommodityExpandPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnExpand = nil
 	--self.PanelCommodity = nil
-	--self.SingleBox = nil
 	--self.TableViewCommodity = nil
 	--self.AnimUpdateList = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -37,14 +36,14 @@ end
 
 function StoreNewCommodityExpandPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.SingleBox)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function StoreNewCommodityExpandPanelView:OnInit()
 	self.GoodsTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewCommodity, self.OnGoodListSelectChanged, true, false)
 	self.Binders = {
-		{ "GoodList", 			UIBinderUpdateBindableList.New(self, self.GoodsTableViewAdapter) },
+		{ "GoodList", 					UIBinderUpdateBindableList.New(self, self.GoodsTableViewAdapter) },
+		{ "bShowSubEmptyPanel", 		UIBinderSetIsVisible.New(self, self.CommEmpty) },
 	}
 end
 
@@ -56,17 +55,9 @@ function StoreNewCommodityExpandPanelView:OnShow()
 	if nil == StoreMainVM.TabList or nil == next(StoreMainVM.TabList) then
 		StoreMainVM:InitData()
 	end
+	self.CommEmpty:SetTipsContent(LSTR(950097))
+	StoreMainVM.bShowSubEmptyPanel = StoreMainVM.GoodList:Length() == 0
 	self:OnRefreshGoodsSelected()
-	self.SingleBox:SetText(LSTR(950079))	--- 未拥有
-	if StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
-		local Index = StoreMainVM.TabSelecteIndex >= 1 and StoreMainVM.TabSelecteIndex or 1
-		local TabData = StoreMainVM.TabList[Index]
-		if nil ~= TabData then
-			UIUtil.SetIsVisible(self.SingleBox, TabData.IsDisplayHaveFilter)
-		end
-	else
-		UIUtil.SetIsVisible(self.SingleBox, false)
-	end
 end
 
 function StoreNewCommodityExpandPanelView:OnGoodListSelectChanged(Index, ItemData, ItemView)
@@ -78,10 +69,6 @@ end
 
 function StoreNewCommodityExpandPanelView:OnHide()
 
-end
-
-function StoreNewCommodityExpandPanelView:OnRegisterUIEvent()
-	UIUtil.AddOnStateChangedEvent(self, self.SingleBox, self.OnClickSingleBox)
 end
 
 function StoreNewCommodityExpandPanelView:OnRegisterGameEvent()
@@ -98,13 +85,6 @@ function StoreNewCommodityExpandPanelView:OnRefreshGoodsSelected()
 		function(VM) return VM.GoodID == StoreMainVM.SelectedGoods[StoreMainVM:GetCurrentMainTabType()] end)
 	Index = Index or 1
 	self.GoodsTableViewAdapter:SetSelectedIndex(Index)
-end
-
----@type 切换未拥有筛选
-function StoreNewCommodityExpandPanelView:OnClickSingleBox(_, BtnState)
-	local bIsChecked = BtnState == _G.UE.EToggleButtonState.Checked
-	StoreMainVM:SetSecondScreen(bIsChecked)
-	self:PlayAnimation(self.AnimGoodsUpdate)
 end
 
 return StoreNewCommodityExpandPanelView

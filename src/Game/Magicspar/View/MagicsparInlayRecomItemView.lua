@@ -12,6 +12,7 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 
 ---@class MagicsparInlayRecomItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -81,6 +82,7 @@ function MagicsparInlayRecomItemView:OnRegisterBinder()
 		{ "IconPath", UIBinderSetBrushFromAssetPath.New(self, self.FImg_Icon) },
 		{ "Name", UIBinderSetText.New(self, self.Text_MagicsparName_1) },
 		{ "Desc", UIBinderSetText.New(self, self.Text_Attri) },
+		{ "DescColor", UIBinderSetColorAndOpacityHex.New(self, self.Text_Attri)},
 		--{ "iCount", UIBinderSetTextFormat.New(self, self.Text_HoldValue, _G.LSTR(1060003)) },--"持有 %d"
 		{ "bUse", UIBinderSetIsVisible.New(self, self.FImg_Use) },
 		{ "iCount", UIBinderSetTextFormat.New(self, self.RichTextNum, "%d") },
@@ -90,6 +92,7 @@ end
 
 function MagicsparInlayRecomItemView:OnSelectChanged(bSelect)
 	self.ViewModel.bSelect = bSelect
+	self.ViewModel.DescColor = bSelect and "d5d5d5" or "828282"
 end
 
 return MagicsparInlayRecomItemView

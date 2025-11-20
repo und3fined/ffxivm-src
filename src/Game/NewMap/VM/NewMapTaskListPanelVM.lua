@@ -43,7 +43,7 @@ function NewMapTaskListPanelVM:SetShowUIMapID()
 	local IsWorldMap = MapUtil.IsWorldMap(CurUIMapID)
 	local QuestTypeList = {}
 	if IsAreaMap then
-		QuestTypeList = { QUEST_TYPE.QUEST_TYPE_MAIN, QUEST_TYPE.QUEST_TYPE_IMPORTANT, QUEST_TYPE.QUEST_TYPE_BRANCH }
+		QuestTypeList = { QUEST_TYPE.QUEST_TYPE_MAIN, QUEST_TYPE.QUEST_TYPE_IMPORTANT, QUEST_TYPE.QUEST_TYPE_BRANCH, QUEST_TYPE.QUEST_TYPE_REPEAT}
 	elseif IsRegionMap or IsWorldMap then
 		QuestTypeList = { QUEST_TYPE.QUEST_TYPE_MAIN, QUEST_TYPE.QUEST_TYPE_IMPORTANT }
 	end

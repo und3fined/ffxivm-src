@@ -22,12 +22,14 @@ local ClientSetupMgr
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.ModuleOpenCmd
 local ProfSubMsg = ProtoCS.ProfSubMsg
-local DelayTime = 0.6
+local DelayTime = 0
 local Interval = 3.5
 local LoopNumber = 0
 
 --- 部队解锁等级限制
 local ArmyUnlockLevelLimit = 15
+
+local HouseUnlockLevelLimit = 10
 
 ---@class ModuleOpenMgr : MgrBase
 local ModuleOpenMgr = LuaClass(MgrBase)
@@ -71,7 +73,7 @@ function ModuleOpenMgr:OnInit()
 	self.IsOnDirectUpState = false	--- 直升状态下不播表现
 	self.DUSkipModuleOpenIDList = DirectUpgradeGlobalCfg:FindCfgByKey(ProtoRes.DIRECT_UPGRADE_ID.DIRECT_UPGRADE_ID_MODULEOPEN).SkipIDList
 	self.AllCfg = self:OnInitLocalAllCfg()
-	for _, value in pairs(self.AllCfg) do
+	for _, value in pairs(self.AllCfg) do	--- 表里ID不连续的话遍历会出错，这里改一下
 		local TempCfgItemData = value
 		if TempCfgItemData ~= nil then
 			if TempCfgItemData.ModuleEntranceID and TempCfgItemData.ModuleEntranceID > 0 then
@@ -150,7 +152,7 @@ function ModuleOpenMgr:UpdateOpenedList(OpenedList)
     for i = 1, #OpenedList do
         local ID = self:CheckIDType(OpenedList[i])
         if ID ~= nil then
-            if ID ~= ProtoCommon.ModuleID.ModuleIDArmy then
+            if ID ~= ProtoCommon.ModuleID.ModuleIDArmy and ID ~= ProtoCommon.ModuleID.ModuleIDHOUSE then
                 table.insert(self.OpenedList, ID)
             end
         end
@@ -165,6 +167,13 @@ function ModuleOpenMgr:UpdateOpenedList(OpenedList)
 		local ArmtModuleCfg = ModuleOpenCfg:FindAllCfg(string.format("ModuleID=%d", ProtoCommon.ModuleID.ModuleIDArmy))
 		if ArmtModuleCfg ~= nil then
 			self:OnCheckModuleState(ArmtModuleCfg[1].ID)
+		end
+	end
+
+	if self:CheckHouseConds() then
+		local HouseModuleCfg = ModuleOpenCfg:FindAllCfg(string.format("ModuleID=%d", ProtoCommon.ModuleID.ModuleIDHOUSE))
+		if HouseModuleCfg and HouseModuleCfg[1] then
+			self:OnCheckModuleState(HouseModuleCfg[1].ID)
 		end
 	end
 
@@ -406,8 +415,31 @@ function ModuleOpenMgr:CheckRedDotIsNeedShow(RedDotID)
 	return self.NeesShowRedDotList[RedDotID] ~= nil
 end
 
+function ModuleOpenMgr:OnSystemUnlockMotionOver()
+	for _, value in ipairs(self.ExpressionQueue) do
+		if value.ExpressionType == ProtoRes.ExpressionType.EXPRESSION_TYPE_MODULE then
+			return
+		end
+	end
+	--新手引导系统解锁处理	全屏表现播放完
+	local function OnTutorial(Params)
+		--发送新手引导触发获得物品触发消息
+		local EventParams = _G.EventMgr:GetEventParams()
+		EventParams.Type = TutorialDefine.TutorialConditionType.EndPlayUnlockAnimation 	--新手引导触发类型
+		EventParams.Param1 = Params.ID
+		_G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+	end
+	
+	for i = 1, #self.TutorialDlist do
+		local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = OnTutorial, Params = {ID = self.TutorialDlist[i]}}
+		_G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
+	end
+	self.TutorialDlist = {}
+end
+
 -- 当前所有表现播放完
 function ModuleOpenMgr:OnAllMotionOver()
+	self:OnSystemUnlockMotionOver()
 	if not self.IsWaiting then
 		return
 	end
@@ -417,20 +449,6 @@ function ModuleOpenMgr:OnAllMotionOver()
             self.IsNeedHideMiniMap = false
         end
 
-		--新手引导系统解锁处理
-		local function OnTutorial(Params)
-			--发送新手引导触发获得物品触发消息
-			local EventParams = _G.EventMgr:GetEventParams()
-			EventParams.Type = TutorialDefine.TutorialConditionType.EndPlayUnlockAnimation 	--新手引导触发类型
-			EventParams.Param1 = Params.ID
-			_G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
-		end
-		
-		for i = 1, #self.TutorialDlist do
-			local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = OnTutorial, Params = {ID = self.TutorialDlist[i]}}
-			_G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
-		end
-		self.TutorialDlist = {}
         -- self.IsNeedTutorial = false
         -- EventMgr:SendEvent(_G.EventID.ModuleOpenAllMotionOverEvent, self.OpenedList)
     end, 0.5)
@@ -635,6 +653,25 @@ function ModuleOpenMgr:CheckArmyConds()
 	return false
 end
 
+--- 房屋解锁特殊处理
+function ModuleOpenMgr:CheckHouseConds()
+	local RoleDetail = ActorMgr:GetMajorRoleDetail()
+	if RoleDetail == nil then
+		return false
+	end
+	if RoleDetail.Prof == nil or RoleDetail.Prof.ProfList == nil then
+		return false
+	end
+
+	local ProfList = RoleDetail.Prof.ProfList
+	for _, value in pairs(ProfList) do
+		if value.Level >= HouseUnlockLevelLimit then
+			return true
+		end
+	end
+	return false
+end
+
 --- 加入部队
 function ModuleOpenMgr:OnJoinArmy()
 	local ArmyIsOpen = self:CheckArmyConds()
@@ -676,6 +713,20 @@ function ModuleOpenMgr:OnNetMsgLevelUp(MsgBody)
 		else
 			_G.EventMgr:SendEvent(_G.EventID.ModuleOpenNotify, ProtoCommon.ModuleID.ModuleIDArmy)
 			self:OnGetModuleDetails(ArmtModuleCfg[1].ID)
+		end
+	end
+
+	local HouseIsOpen = self:CheckHouseConds()
+	local HouseModuleCfg = ModuleOpenCfg:FindAllCfg(string.format("ModuleID=%d", ProtoCommon.ModuleID.ModuleIDHOUSE))
+	if HouseModuleCfg == nil or HouseModuleCfg[1] == nil then return end
+	if not HouseIsOpen and MsgBody.LevelUp.NewLevel >= HouseUnlockLevelLimit then
+		local IsInDungeon = _G.PWorldMgr:CurrIsInDungeon()
+		local IsJoinFate = _G.FateMgr:IsJoinFate()
+		if IsInDungeon or IsJoinFate then
+			_G.ClientSetupMgr:SendSetReq(ClientSetupID.ModuleIDHOUSE, "1")
+		else
+			_G.EventMgr:SendEvent(_G.EventID.ModuleOpenNotify, ProtoCommon.ModuleID.ModuleIDHOUSE)
+			self:OnGetModuleDetails(HouseModuleCfg[1].ID)
 		end
 	end
 end

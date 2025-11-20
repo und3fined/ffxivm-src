@@ -4,29 +4,51 @@
 --- Description:
 ---
 
-local UIView = require("UI/UIView")
+local CommCheckBoxBaseView = require("Game/Common/Btn/CommCheckBoxBaseView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 
----@class CommCheckBoxView : UIView
+---@class CommCheckBoxView : CommCheckBoxBaseView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field FImg_Check UFImage
+---@field FImg_UnCheck UFImage
 ---@field TextContent UFTextBlock
 ---@field ToggleButton UToggleButton
----@field CheckValue int
----@field Content text
----@field CheckedColor LinearColor
----@field UnCheckedColor LinearColor
+---@field Font SlateFontInfo
+---@field Min Font Size int
+---@field Reduction Step int
+---@field Enable Show Detail Text Tips bool
+---@field Text Adaptation ETextAdaptation
+---@field Text Overflow ETextOverflow
+---@field Max Need Width float
+---@field Max Need Height float
+---@field Horizontal ETextJustify
+---@field Vertical EVerticalAlignment
+---@field Style CommCheckBoxImgStruct
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
-local CommCheckBoxView = LuaClass(UIView, true)
+local CommCheckBoxView = LuaClass(CommCheckBoxBaseView, true)
+
+--- !!!! See CommCheckBoxBaseView See CommCheckBoxBaseView See CommCheckBoxBaseView !!!!!
+---     一些通用设置在CommCheckBoxBaseView 新增通用方法也加在CommCheckBoxBaseView
+
 
 function CommCheckBoxView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.FImg_Check = nil
+	--self.FImg_UnCheck = nil
 	--self.TextContent = nil
 	--self.ToggleButton = nil
-	--self.CheckValue = nil
-	--self.Content = nil
-	--self.CheckedColor = nil
-	--self.UnCheckedColor = nil
+	--self.Font = nil
+	--self.Min Font Size = nil
+	--self.Reduction Step = nil
+	--self.Enable Show Detail Text Tips = nil
+	--self.Text Adaptation = nil
+	--self.Text Overflow = nil
+	--self.Max Need Width = nil
+	--self.Max Need Height = nil
+	--self.Horizontal = nil
+	--self.Vertical = nil
+	--self.Style = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -36,85 +58,8 @@ function CommCheckBoxView:OnRegisterSubView()
 end
 
 function CommCheckBoxView:OnInit()
-	self.OnStateChanged = self.ToggleButton.OnStateChanged
-end
-
-function CommCheckBoxView:OnDestroy()
-	self.OnStateChanged = nil
-end
-
-function CommCheckBoxView:OnShow()
-	local Params = self.Params
-	if nil == Params then
-		return
-	end
-
-	local Text = Params.Text
-	if nil == Text then
-		return
-	end
-
-	self.TextContent:SetText(Text)
-end
-
-function CommCheckBoxView:OnHide()
-
-end
-
-function CommCheckBoxView:OnRegisterUIEvent()
-	UIUtil.AddOnStateChangedEvent(self, self.ToggleButton, self.OnStateChangedEvent)
-end
-
-function CommCheckBoxView:OnRegisterGameEvent()
-
-end
-
-function CommCheckBoxView:OnRegisterBinder()
-
-end
-
----SetStateChangedCallback
----@param View UIView
----@param Callback function
----@param CallbackParams any
----@deprecated @建议使用UIUtil.AddOnStateChangedEvent
-function CommCheckBoxView:SetStateChangedCallback(View, Callback, CallbackParams)
-	self.View = View
-	self.Callback = Callback
-	self.CallbackParams = CallbackParams
-end
-
-function CommCheckBoxView:OnStateChangedEvent(ToggleButton, State)
-	local IsChecked = UIUtil.IsToggleButtonChecked(State)
-
-	self:UpdateColor(IsChecked)
-
-	local Callback = self.Callback
-	if nil ~= Callback then
-		Callback(self.View, IsChecked, self.CallbackParams, self.CheckValue)
-	end
-end
-
-function CommCheckBoxView:SetChecked(IsChecked, InBroadcastDelegate)
-	self.ToggleButton:SetChecked(IsChecked, InBroadcastDelegate)
-
-	self:UpdateColor(IsChecked)
-end
-
-function CommCheckBoxView:GetChecked()
-	return self.ToggleButton:GetChecked()
-end
-
-function CommCheckBoxView:UpdateColor(IsChecked)
-	self.TextContent:SetColorAndOpacity(IsChecked and self.CheckedColor or self.UnCheckedColor)
-end
-
-function CommCheckBoxView:SetText(Text)
-	self.TextContent:SetText(Text)
-end
-
-function CommCheckBoxView:SetClickable( IsClickable )
-	UIUtil.SetIsVisible(self.ToggleButton, true, IsClickable)
+	self.Super.OnInit(self)
+	self:SetColorType(self.CheckColorType, self.IsGary)
 end
 
 return CommCheckBoxView

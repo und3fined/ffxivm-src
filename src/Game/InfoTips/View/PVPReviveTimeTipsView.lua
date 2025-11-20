@@ -57,7 +57,7 @@ end
 function PVPReviveTimeTipsView:OnShow()
     self.ReviveStr = LSTR(460016) --%s后复活并返回队伍
     self.ReviveSecondStr =  RichTextUtil.GetText(LSTR(460018), "#FFF4D0FF", "#B567287A", 2) -- %s秒
-    local RespawnEndTimeStamp = self.Params
+    local RespawnEndTimeStamp = self.Params.ReviveTimeStamp
     self.AdapterCountDownTime:Start(RespawnEndTimeStamp, 1, true, true)
 end
 

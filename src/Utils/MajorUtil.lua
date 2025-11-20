@@ -136,7 +136,7 @@ end
 ---GetMajorRoleID
 ---@return number
 function MajorUtil.GetMajorRoleID()
-	return ActorMgr.MajorRoleID
+	return _G.ActorMgr.MajorRoleID
 end
 
 ---GetMajorWorldID
@@ -438,6 +438,14 @@ function MajorUtil.IsMajorInsideWall()
     return false
 end
 
+function MajorUtil.IsSwimming()
+	local MajorActor = MajorUtil.GetMajor()
+	if MajorActor ~= nil and MajorActor:IsSwimming() then
+		return true
+	end
+	return false
+end
+
 function MajorUtil.LookAtActor(TargetEntityID)
 	if TargetEntityID and TargetEntityID > 0 then
 		UMajorUtil.LookAtActor(TargetEntityID)
@@ -558,6 +566,14 @@ function MajorUtil.SyncSelfMoveReq(bForceSend)
 	UMoveSyncMgr:SyncSelf(bForceSend)
 end
 
+-- 禁止上报移动包（慎用！保证恢复！！！true:禁止所有上报，false:允许上报但也受其他条件影响）
+function MajorUtil.SetDisableMoveReq(bDisabled)
+	local MajorActor = MajorUtil.GetMajor()
+	if MajorActor then
+		_G.FLOG_INFO("Major SetDisableMoveReq:%s", tostring(bDisabled))
+		return MajorActor:SetDisableMoveReq(bDisabled)
+	end
+end
 
 -- 是否在下落状态
 function MajorUtil.IsFalling()

@@ -13,6 +13,7 @@ local MajorUtil = require("Utils/MajorUtil")
 local ScenemarkCfg = require("TableCfg/ScenemarkCfg")
 local ActorUtil = require("Utils/ActorUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local MainPanelVM = require("Game/Main/MainPanelVM")
 
 local ClientSetupID = require("Game/ClientSetup/ClientSetupID")
 
@@ -50,7 +51,7 @@ function SignsMgr:OnInit()
 	self.IsEnableSceneMarker = false
 	self.IsEnableTargetMarker = false
 	self.IsEnableCountDown = false
-	self.IsDuringCountDown = false
+	self:SetDuringCountDown(false)
 	self.IsMarkUsed = false
 	self.TargetID = 0
 	self.LastClickedCDTimeMS = 0
@@ -65,7 +66,6 @@ function SignsMgr:OnInit()
 	self.TargetSignsMainPanelIsShowing = false
 	self.SceneMarkersMainPanelIsShowing = false
 
-	self.IsCombatState = false
 	self.IgnoreActors = {}
 end
 
@@ -103,18 +103,13 @@ end
 
 function SignsMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.TargetChangeMajor, self.OnGameEventTargetChangeMajor)
-	self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldExit)
+    self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldExit)
 	self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldEnter)
     self:RegisterGameEvent(EventID.TeamLeave, self.OnGameEventTeamLeave)
     self:RegisterGameEvent(EventID.TeamSceneMarkConfirmEvent, self.OnGameEventTeamSceneMarkConfirm)
 	self:RegisterGameEvent(EventID.WorldPreLoad, self.OnGameEventWorldPreLoad)
 	self:RegisterGameEvent(EventID.UpdateInDialogOrSeq,self.OnGameUpdateInDialogOrSeq)
 	-- self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventPWorldExit) 	--- 清除标记状态
-	self:RegisterGameEvent(EventID.NetStateUpdate, 				self.OnCombatStateUpdate)
-end
-
-function SignsMgr:OnCombatStateUpdate(Params)
-	self.IsCombatState =  MajorUtil.IsMajor(Params.ULongParam1) and Params.IntParam1 == ProtoCommon.CommStatID.COMM_STAT_COMBAT
 end
 
 --------------------------------------------发送协议包相关代码Start----------------------------
@@ -198,7 +193,7 @@ function SignsMgr:OnTargetInfoNotify(MsgBody)
 		end
 	end
 	_G.SignsMainVM:ClearAllItemUsed()
-	FLOG_INFO("SignsMgr - ClearAllItemUsed !")
+	print("SignsMgr - ClearAllItemUsed !")
 	selfTargetList = {}
 	for i = 1, #MsgTargets do
 		local EntityID = MsgTargets[i].EntityID
@@ -233,6 +228,12 @@ function SignsMgr:OnTargetInfoNotify(MsgBody)
 	self:OnSynSeverSigns(Grounds)
 	if self.IsNeedPostEvent and _G.TeamMgr:IsInTeam() then
 		if self.CurrentUseSceneMarkers ~= nil and self.CurrentUseSceneMarkers.Items ~= nil then
+			for i = 1, 8 do
+				if self.CurrentUseSceneMarkerEffects[i] ~= nil then
+					_G.CommonUtil.DestroyActor(self.CurrentUseSceneMarkerEffects[i])
+				end
+			end
+			self.CurrentUseSceneMarkerEffects = {}
 			local Items = self.CurrentUseSceneMarkers.Items
 			for _, value in pairs(Items) do
 				local param = {
@@ -249,7 +250,7 @@ end
 
 --- 同步服务器标记
 function SignsMgr:OnSynSeverSigns(Grounds)
-	FLOG_INFO("SignsMgr - OnSynSeverSigns !")		--- 临时日志
+	print("SignsMgr - OnSynSeverSigns !")		--- 临时日志
 	if Grounds == nil then Grounds = {} end
 	local CurrentUseSceneMarkers = self.CurrentUseSceneMarkers.Items or {}
 	-- 构建索引映射
@@ -263,13 +264,13 @@ function SignsMgr:OnSynSeverSigns(Grounds)
 	for _, marker in pairs(CurrentUseSceneMarkers) do
 		if not GroundsIndexMap[marker.Index] then
 			-- 服务器上不存在，标记为待删除
-			FLOG_INFO("SignsMgr - toRemove insert !")	--- 临时日志
+			print("SignsMgr - toRemove insert !")	--- 临时日志
 			table.insert(toRemove, marker)
 		else
 			-- 服务器上存在，但可能需要更新Pos
 			local Index = GroundsIndexMap[marker.Index].Index
 			local Pos = GroundsIndexMap[marker.Index].Pos
-			FLOG_INFO("SignsMgr - ChangePos !")	--- 临时日志
+			print("SignsMgr - ChangePos !")	--- 临时日志
 			self:OnSaveSceneMarkersItemPos(Index, Pos)
 		end
 	end
@@ -277,7 +278,7 @@ function SignsMgr:OnSynSeverSigns(Grounds)
 	for _, marker in pairs(toRemove) do
 		for _, value in pairs(CurrentUseSceneMarkers) do
 			if value.Index == marker.Index then
-				FLOG_INFO("SignsMgr - Remove !")	--- 临时日志
+				print("SignsMgr - Remove !")	--- 临时日志
 				self:RemoveSceneMarkEffect(marker.Index)
 				_G.SceneMarkersMainVM:OnSetItemUsedState(marker.Index, false)
 				break
@@ -296,7 +297,7 @@ function SignsMgr:OnSynSeverSigns(Grounds)
 		if self.SceneMarkersMainPanelIsShowing then
 			_G.SceneMarkersMainVM:OnSetItemUsedState(ground.Index, true)
 		end
-		FLOG_INFO("SignsMgr - Add !")	--- 临时日志
+		print("SignsMgr - Add !")	--- 临时日志
 		self:OnSaveSceneMarkersItemPos(ground.Index, ground.Pos)
 	end
 end
@@ -430,6 +431,10 @@ function SignsMgr:OnSaveSceneMarkersItemPos(Index, Position)
 		Y = Position.Y,
 		Z = Position.Z
 	}
+	if self.CurrentUseSceneMarkerEffects[Index] ~= nil then
+		_G.CommonUtil.DestroyActor(self.CurrentUseSceneMarkerEffects[Index])
+		self.CurrentUseSceneMarkerEffects[Index] = nil
+	end
 	self.CurrentUseSceneMarkers.Items[tostring(Index)] = TempItem
 	_G.SceneMarkersMainVM:OnSetItemUsedState(Index, true)
 	self:OnTeamSceneMarkAdd({Index = TempItem.Index, Pos = _G.UE.FVector(TempItem.Position.X, TempItem.Position.Y, TempItem.Position.Z)})
@@ -520,7 +525,7 @@ end
 
 --- 进入副本
 function SignsMgr:OnGameEventPWorldEnter(Params)
-	FLOG_INFO("SignsMgr - OnGameEventPWorldEnter ")
+	print("SignsMgr - OnGameEventPWorldEnter ")
 	if not Params.bReconnect then
 		--- 清除客户端目标标记
 		for key, _ in pairs(self.TargetList) do
@@ -537,7 +542,7 @@ end
 
 --- 退出副本
 function SignsMgr:OnGameEventPWorldExit()
-	FLOG_INFO("SignsMgr - Clear Signs Data!")
+	print("SignsMgr - Clear Signs Data!")
 	--[[
 	if not Params.bReconnect then
 		--- 清除客户端目标标记
@@ -554,9 +559,9 @@ function SignsMgr:OnGameEventPWorldExit()
 	_G.SceneMarkersMainVM:ClearAllItemUsed()
 	--- 刷新存档Item
 	--_G.SceneMarkersMainVM:OnUpdateSaveListEnable(Params.CurrMapResID)
-	if self.CurrentUseSceneMarkers == nil then
-		return
-	end
+	-- if self.CurrentUseSceneMarkers == nil then
+	-- 	return
+	-- end
 	for i = 1, 8 do
 		self:RemoveSceneMarkEffect(i)
 	end
@@ -704,6 +709,20 @@ end
 
 function SignsMgr:ClearIgnoreActors()
 	self.IgnoreActors = {}
+end
+
+function SignsMgr:OnSignMarkerEndPlay(SignMarker)
+	for k,v in pairs(self.CurrentUseSceneMarkerEffects) do
+		if v == SignMarker then
+			self:RemoveSceneMarkEffect(k)
+			break
+		end
+	end
+end
+
+function SignsMgr:SetDuringCountDown(bCountDown)
+	self.IsDuringCountDown = bCountDown
+	MainPanelVM:SetSignsCountDown(bCountDown)
 end
 
 return SignsMgr

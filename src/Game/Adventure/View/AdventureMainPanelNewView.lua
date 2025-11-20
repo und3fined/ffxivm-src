@@ -11,12 +11,8 @@ local AdventureDefine = require("Game/Adventure/AdventureDefine")
 local AdventureMgr = require("Game/Adventure/AdventureMgr")
 local AdventureRecommendTaskMgr = require("Game/Adventure/AdventureRecommendTaskMgr")
 local EventID = require("Define/EventID")
-local UIViewMgr = require("UI/UIViewMgr")
-local UIViewID = require("Define/UIViewID")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local AdventureCareerMgr = require("Game/Adventure/AdventureCareerMgr")
-local MajorUtil = require("Utils/MajorUtil")
-local RoleInitCfg = require("TableCfg/RoleInitCfg")
 
 local LSTR = _G.LSTR
 local WidgetPoolMgr = require("UI/WidgetPoolMgr")
@@ -138,7 +134,10 @@ function AdventureMainPanelNewView:OnShow()
 			if _G.ModuleOpenMgr:CheckOpenState(v.ModuleID) then
 				ParentData.RedDotID = v.RedDotID
 				ParentData.RedDotStyle = 1
-				ParentData.RedDot2ID =  AdventureDefine.TabNewRed[v.Index] and AdventureDefine.TabNewRed[v.Index].Tab
+				local HideNewRed = (v.Index == AdventureDefine.MainTabIndex.Weekly and AdventureMgr:IsStageRewardCanGet())
+				if not HideNewRed then
+					ParentData.RedDot2ID =  AdventureDefine.TabNewRed[v.Index] and AdventureDefine.TabNewRed[v.Index].Tab
+				end
 				ParentData.RedDot2Text =  LSTR(520030)
 			end
 
@@ -164,7 +163,7 @@ function AdventureMainPanelNewView:OnShow()
 	if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDChallengeNote) then
 		AdventureMgr:SendChallengeLog(0)
     end
-	
+
 	self:RefreshNewTabRed()
 end
 
@@ -178,6 +177,7 @@ function AdventureMainPanelNewView:AddChildByType(CurSelectChildWidgetPath, Page
 				UIUtil.CanvasSlotSetOffsets(Widget, Margin)
 				self:AddSubView(Widget)
 				self.DisplayWidget = Widget
+				self.CurChildWidgetPath = CurSelectChildWidgetPath
 			end
 		else
 			WidgetPoolMgr:RecycleWidget(Widget)
@@ -185,7 +185,6 @@ function AdventureMainPanelNewView:AddChildByType(CurSelectChildWidgetPath, Page
 	end
 
 	if not self.CurChildWidgetPath or self.CurChildWidgetPath ~= CurSelectChildWidgetPath or not self.DisplayWidget then
-		self.CurChildWidgetPath = CurSelectChildWidgetPath
 		WidgetPoolMgr:CreateWidgetAsyncByName(CurSelectChildWidgetPath, nil, OnComplete, true, true, PageParams)
 	else
 		self.DisplayWidget:UpdateView(PageParams)
@@ -222,6 +221,7 @@ end
 function AdventureMainPanelNewView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.ModuleOpenGMBtnEvent, self.OnChangeBtnOpenState)
 	self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnModuleOpenNotify)
+	self:RegisterGameEvent(EventID.CrystalTransferReq, self.Hide)
 	
 end
 
@@ -307,8 +307,10 @@ function AdventureMainPanelNewView:RefreshNewTabRed()
 end
 
 function AdventureMainPanelNewView:IsShowBgTwoType(IsShowBgTwoType)
-	UIUtil.SetIsVisible(self.Bkg.PanelBG1, not IsShowBgTwoType)
-	UIUtil.SetIsVisible(self.Bkg.PanelBG2, IsShowBgTwoType)
+	if self and _G.UE.UCommonUtil.IsObjectValid(self.Bkg) then
+		UIUtil.SetIsVisible(self.Bkg.PanelBG1, not IsShowBgTwoType)
+		UIUtil.SetIsVisible(self.Bkg.PanelBG2, IsShowBgTwoType)
+	end
 end
 
 return AdventureMainPanelNewView

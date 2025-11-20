@@ -198,7 +198,7 @@ end
 function AdventureJobDetailsPageView:OnClickOpenSkillPanel()
 	local Params = {IndependentView = true}
 	_G.EquipmentMgr:SetPreviewProfID(true, self.ViewModel.Prof)
-	_G.UIViewMgr:ShowView(UIViewID.SkillMainPanel, Params)
+	_G.UIViewMgr:ShowView(_G.UIViewID.AdventrueSkillPanel, Params)
 end
 ------------------------模型相关--------------------
 ---切换未解锁职业Npc

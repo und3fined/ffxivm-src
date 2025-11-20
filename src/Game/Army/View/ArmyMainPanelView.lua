@@ -22,15 +22,16 @@ local UIViewMgr = require("UI/UIViewMgr")
 ---@class ArmyMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnClose CommonCloseBtnView
----@field BtnHelp CommInforBtnView
 ---@field ChatMsg CommChatMsgPanelView
+---@field CommonBkgMask CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field ImgBG UFImage
+---@field ImgBg2 UFImage
 ---@field ImgMask UFImage
 ---@field PanelArmy UFCanvasPanel
 ---@field PanelEmpty UFCanvasPanel
 ---@field PanelRight UFCanvasPanel
 ---@field TableViewTabs CommMenuView
----@field TextTitle UFTextBlock
 ---@field AnimBGID1 UWidgetAnimation
 ---@field AnimBGID2 UWidgetAnimation
 ---@field AnimBGID3 UWidgetAnimation
@@ -38,6 +39,7 @@ local UIViewMgr = require("UI/UIViewMgr")
 ---@field AnimMaskIn UWidgetAnimation
 ---@field AnimMaskOut UWidgetAnimation
 ---@field AnimShow UWidgetAnimation
+---@field DesignPanelIndex int
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ArmyMainPanelView = LuaClass(UIView, true)
 
@@ -48,15 +50,16 @@ local Tabs = nil
 function ArmyMainPanelView:Ctor()
     --AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnClose = nil
-	--self.BtnHelp = nil
 	--self.ChatMsg = nil
+	--self.CommonBkgMask = nil
+	--self.CommonTitle = nil
 	--self.ImgBG = nil
+	--self.ImgBg2 = nil
 	--self.ImgMask = nil
 	--self.PanelArmy = nil
 	--self.PanelEmpty = nil
 	--self.PanelRight = nil
 	--self.TableViewTabs = nil
-	--self.TextTitle = nil
 	--self.AnimBGID1 = nil
 	--self.AnimBGID2 = nil
 	--self.AnimBGID3 = nil
@@ -64,14 +67,16 @@ function ArmyMainPanelView:Ctor()
 	--self.AnimMaskIn = nil
 	--self.AnimMaskOut = nil
 	--self.AnimShow = nil
+	--self.DesignPanelIndex = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function ArmyMainPanelView:OnRegisterSubView()
     --AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose)
-	self:AddSubView(self.BtnHelp)
 	self:AddSubView(self.ChatMsg)
+	self:AddSubView(self.CommonBkgMask)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.TableViewTabs)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -108,6 +113,7 @@ function ArmyMainPanelView:OnInit()
         {"IsShowChat", UIBinderSetIsVisible.New(self, self.ChatMsg)},
         {"BGMaskColor", UIBinderSetColorAndOpacityHex.New(self, self.ImgMask) },
     }
+    self.CommonTitle:SetSubTitleIsVisible(false)
 end
 
 ---署名数据界面显隐
@@ -317,7 +323,7 @@ end
 --- @param IsQuery boolean 是否直接查询部队信息
 function ArmyMainPanelView:OnShow()
     -- LSTR string:部队
-    self.TextTitle:SetText(LSTR(910308))
+	self.CommonTitle:SetTextTitleName(LSTR(910308))
     UIUtil.SetIsVisible(self.BtnHelp, true)
     --- 获取简单公会仓库,有公会才处理
     local ArmyID = ArmyMgr.SelfArmyID

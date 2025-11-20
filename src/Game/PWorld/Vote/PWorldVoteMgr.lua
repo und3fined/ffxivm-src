@@ -292,6 +292,7 @@ function PWorldVoteMgr:SetEnterSceneVoteInfo(SceneID, RoleInfos, ID, VoteObjType
     self.VoteEnterSceneInfo.Msg = table.deepcopy(Msg or {})
     self.Model = Model
     self.CurPollType = PollType
+    PWorldVoteVM:SetSceneMode(Model)
 
     self.RandomEntID = 0
     -- 投票的成员可能是通过日随，也可能不是，找到自己是不是日随，是日随显示日随ID
@@ -475,13 +476,13 @@ function PWorldVoteMgr:ReqVoteEnterPWorld(IsReady)
     if _G.SingBarMgr:GetMajorIsSinging() then --[sammrli]打断吟唱
         _G.SingBarMgr:OnBreakSingOver()
     end
+
+    if self:GetCurPollType() ~= nil and not IsReady then
+        self.LastRefuseVoteTime = os.time()
+    end
 end
 
 function PWorldVoteMgr:ReqVoteEnterPWorldNormal(IsReady)
-    if not IsReady then
-        self.LastRefuseVotePWorldNormal = os.time()
-    end
-
     local ID = self.VoteEnterSceneInfo.ID
     local VoteObjType = self.VoteEnterSceneInfo.VoteObjType
 
@@ -692,11 +693,11 @@ function PWorldVoteMgr:ShowPWorldVoteView(bShow)
         if self:GetCurPollType() == PollTypeDef.PollType_Chocobo then
             for _, Info in pairs(self.VoteEnterSceneInfo.RoleInfos or {}) do
                 if Info.ActorID > 0 then
+                    _G.ChocoboMgr:AddRoleChocoboInfo(Info)
                     table.insert(List, Info.ActorID)
                 end
             end
             _G.RoleInfoMgr:QueryRoleSimples(List)
-            _G.ChocoboMgr:QueryChocoboSimples(List)
         else
             for _, Info in pairs(self.VoteEnterSceneInfo.RoleInfos or {}) do
                 table.insert(List, Info.RoleID)

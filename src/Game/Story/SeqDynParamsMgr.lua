@@ -1,6 +1,7 @@
 
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
+local StoryDefine = require("Game/Story/StoryDefine")
 
 local SeqDynParamsMgr = LuaClass(MgrBase)
 
@@ -31,10 +32,16 @@ end
 -- 关卡配置的参数列表按顺序传入，根据LcutType分开解析
 function SeqDynParamsMgr:SetDynParams(LcutType, StrArgs)
 	local Args = string.split(StrArgs, ",")
-	-- BP SequenceDynamicParamsEnum
-	if LcutType == 2 then
+	local ParamType = StoryDefine.LcutDynParamType
+
+	if LcutType == ParamType.TreasureHuntOpenDoor then
 		self:TreasureHuntOpenDoor(tonumber(Args[1]), tonumber(Args[2]))
-		_G.FLOG_INFO("SeqDynParamsMgr:SetDynParams, %s, %s", Args[1], Args[2])
+		_G.FLOG_INFO("SeqDynParamsMgr:TreasureHuntOpenDoor, %s, %s", Args[1], Args[2])
+
+	elseif LcutType == ParamType.PlayHousingCamera then
+		self:PlayHousingCamera(tonumber(Args[1]))
+		_G.FLOG_INFO("SeqDynParamsMgr:PlayHousingCamera, %s", Args[1])
+
 	else
 		_G.FLOG_ERROR("SeqDynParamsMgr:SetDynParams invalid LcutType %d", LcutType or -1)
 	end
@@ -135,6 +142,11 @@ function SeqDynParamsMgr:TreasureHuntOpenDoor(roomIndex, doorIndex)
     self.IntParam6 = lcutMarkerAlert
 
     -- PlayLandscapeCamera 坐标点种在场景里，c++ GetAllActorsOfClass APositionMarker 查找名字里含ID的坐标点
+end
+
+function SeqDynParamsMgr:PlayHousingCamera(blockId)
+    self.IntParam1 = blockId
+    self.IntParam2 = _G.HousingMgr:GetHouseSizeWithBlockID(blockId) -- 用来做lcut内条件判断
 end
 
 return SeqDynParamsMgr

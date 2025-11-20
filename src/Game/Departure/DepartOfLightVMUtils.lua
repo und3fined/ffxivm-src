@@ -105,6 +105,9 @@ function DepartOfLightVMUtils.GetActivityDescInfoByGameID(GameID)
         MaxTarget = ActivityDescCfg.MaxTarget or 1,
         NodeDescLocked = ActivityDescCfg.NodeDescLocked or "",
         NodeDescUnlock = ActivityDescCfg.NodeDescUnlock or "",
+        PreQuestID = ActivityDescCfg.PreQuest,
+        QuestJumpParam = ActivityDescCfg.QuestJumpParam, -- 解锁跳转
+        JumpParam = ActivityDescCfg.JumpParam, -- 玩法跳转
         DescList = {},
     }
     local DescList = ActivityDescCfg.DescList
@@ -202,8 +205,9 @@ function DepartOfLightVMUtils.GetRandomInteract(InteractList, LastInteract)
     end
     
     local RandInterct = InteractListTemp[1]
+    local RandIndex = 1
     if #InteractListTemp <= 1 then
-        return RandInterct
+        return RandInterct, RandIndex
     end
 
     local IsSameWeight = true
@@ -223,14 +227,16 @@ function DepartOfLightVMUtils.GetRandomInteract(InteractList, LastInteract)
             AddValue = AddValue + Index * Interact.Weight
             if RandValue <= AddValue then
                 RandInterct = Interact
+                RandIndex = Index
                 break
             end
         end
     end
 
     local function RandomInteract()
-        local RandIndex = math.random(#InteractListTemp)
-        RandInterct = InteractListTemp[RandIndex]
+        local RandIde = math.random(#InteractListTemp)
+        RandInterct = InteractListTemp[RandIde]
+        RandIndex = RandIde
     end
 
     if IsSameWeight then
@@ -251,7 +257,7 @@ function DepartOfLightVMUtils.GetRandomInteract(InteractList, LastInteract)
         end
     end
 
-    return RandInterct
+    return RandInterct, RandIndex
 end
 
 ---@type 获取交互图片列表

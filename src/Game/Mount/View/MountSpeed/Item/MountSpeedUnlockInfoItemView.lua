@@ -8,18 +8,28 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
+local UIViewID = require("Define/UIViewID")
 
 ---@class MountSpeedUnlockInfoItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field PanelFlightSpeed UFHorizontalBox
+---@field PanelGroundSpeed UFHorizontalBox
 ---@field RichText URichTextBox
+---@field RichTextFlightSpeed URichTextBox
+---@field RichTextGroundSpeed URichTextBox
 ---@field TextTitle UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MountSpeedUnlockInfoItemView = LuaClass(UIView, true)
 
 function MountSpeedUnlockInfoItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.PanelFlightSpeed = nil
+	--self.PanelGroundSpeed = nil
 	--self.RichText = nil
+	--self.RichTextFlightSpeed = nil
+	--self.RichTextGroundSpeed = nil
 	--self.TextTitle = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -33,6 +43,7 @@ function MountSpeedUnlockInfoItemView:OnInit()
 	self.Binders = {
 		{ "QuestTitle", UIBinderSetText.New(self, self.TextTitle)},
 		{ "QuestRichText", UIBinderSetText.New(self, self.RichText) },
+		{ "PanelFlightSpeedVisible", UIBinderSetIsVisible.New(self, self.PanelFlightSpeed) },
 	}
 end
 
@@ -41,7 +52,8 @@ function MountSpeedUnlockInfoItemView:OnDestroy()
 end
 
 function MountSpeedUnlockInfoItemView:OnShow()
-
+	self.RichTextGroundSpeed:SetText(LSTR(200015))
+	self.RichTextFlightSpeed:SetText(LSTR(200016))
 end
 
 function MountSpeedUnlockInfoItemView:OnHide()
@@ -71,9 +83,24 @@ function MountSpeedUnlockInfoItemView:OnRegisterBinder()
 end
 
 function MountSpeedUnlockInfoItemView:OnHyperlinkClicked(_, LinkID)
-	local ItemID = tonumber(LinkID)
-	if ItemID and ItemID > 0 then
-		ItemTipsUtil.ShowTipsByResID(ItemID, self.RichText)
+	local SplitList = string.split(LinkID, ",")
+	-- 道具ID
+	if #SplitList == 1 then
+		local ItemID = tonumber(SplitList[1])
+		if ItemID and ItemID > 0 then
+			ItemTipsUtil.ShowTipsByResID(ItemID, self.RichText)
+		end
+	-- 地图ID, NPCResID
+	elseif #SplitList == 2 then
+		local MapID = tonumber(SplitList[1])
+		local NPCResID = tonumber(SplitList[2])
+		if MapID and MapID > 0 and NPCResID and NPCResID > 0 then
+			UIViewMgr:HideView(UIViewID.MountSpeedPanel)
+			if UIViewMgr:IsViewVisible(UIViewID.WorldMapPanel) then
+				UIViewMgr:HideView(UIViewID.WorldMapPanel,true)
+			end
+			_G.WorldMapMgr:ShowWorldMapLocationNpc(MapID, NPCResID)
+		end
 	end
 end
 

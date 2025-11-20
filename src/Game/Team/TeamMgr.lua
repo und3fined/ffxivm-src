@@ -27,6 +27,7 @@ local ChatDefine = require("Game/Chat/ChatDefine")
 local PWorldHelper = require("Game/PWorld/PWorldHelper")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local TeamHelperMgr = require("Game/Team/Abs/TeamHelperMgr")
 
 local UIViewMgr
 local EventMgr
@@ -271,6 +272,10 @@ function TeamMgr:OnNetMsgTeamQueryTeam(MsgBody)
 		self:UpdateTeam(Team.TeamID, Team.Captain, Team.MemberList)
 		if self:IsInTeam() then
 			self:ClearInviteInfo()
+			local ReadyData = Team.Ready
+			if ReadyData then
+				TeamHelperMgr:HandleTeamReadyConfirm(ReadyData.RoleID, ReadyData, self)
+			end
 		end
 	else
 		self:OnLeaveTeam()
@@ -293,6 +298,9 @@ function TeamMgr:OnNetMsgTeamQueryTeam(MsgBody)
 			_G.PWorldMgr:QueryRoleSceneData(RoleIDs)
 		end
     end
+
+	-- 更新队伍成员位置
+	self:UpdateTeamMemberPosition()
 end
 
 function TeamMgr:OnNetMsgTeamJoinNotify(MsgBody)
@@ -345,14 +353,11 @@ function TeamMgr:OnMsgMemStatChg(MsgBody)
 			if not (MemStateChg.Scene and MemStateChg.Scene.SceneResID and MemStateChg.Scene.MapResID) then
 				self:LogErr('invalid scene data for role %s', RoleID)
 			end
-			VM:SetTeamMemberMapData(MemStateChg.Scene)
-		elseif ChgType == MemStateType.MemStateTypeDie then -- 死亡
-			-- nothing now
-		elseif ChgType == MemStateType.MemStateTypeRevive then -- 复活
-			-- nothing now
+			if self.TeamVM then
+				self.TeamVM:UpdateMemberPostion(RoleID, MemStateChg.Scene)
+			end
 		elseif ChgType == MemStateType.MemStateDisplayTag then 
 			if type(MemStateChg.DisplayTag) == 'number' then
-				VM:SetOnlineStatus(MemStateChg.DisplayTag)
 				_G.EventMgr:SendEvent(_G.EventID.TeamMemberOnlineStatus, RoleID, MemStateChg.DisplayTag)
 				if self.LastUpdateOnlineStatusInfo == nil then
 					self.LastUpdateOnlineStatusInfo = {}
@@ -465,7 +470,25 @@ function TeamMgr:OnNetMsgTeamInviteJoinNotify(MsgBody)
 			end
 
 			Data.MemberProfIDList = ProfIDList
-			SidebarMgr:AddSidebarItem(InviteSidebarType, Msg.StartTime or TimeUtil.GetServerTime(), GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GLOBAL_CFG_TEAM_BE_INVITE_LIST_TIMEOUT).Value[1], Data)
+
+			local StartTime = Msg.StartTime or TimeUtil.GetServerTime()
+			local CountDown = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GLOBAL_CFG_TEAM_BE_INVITE_LIST_TIMEOUT).Value[1] or 30
+			-- if query too long
+			if TimeUtil.GetServerTime() - StartTime >= CountDown then
+				_G.FLOG_ERROR("invite timeout too long, ignore it, %s %s", Data.TeamID, Data.CaptainRoleID)
+				return
+			end
+
+			SidebarMgr:AddOrUpdateSidebarItem({
+				Type = InviteSidebarType,
+				StartTime = StartTime,
+				CountDown = CountDown,
+				Tips = nil,
+				bNotNotifyTimeout = true,
+				IsTryOpenWin = true,
+				TransData = Data,
+				bTimeoutAutoRemove = true
+			})
 			AudioUtil.LoadAndPlayUISound("AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Play_SE_UI_SE_UI_notice_new.Play_SE_UI_SE_UI_notice_new'")
 		end
 
@@ -525,12 +548,32 @@ end
 
 function TeamMgr:OnQueryInviterRoleInfoDataUpdate(RoleID)
 	if self.CacheCheckRoleID and self.CacheCheckRoleID == RoleID then
-		local MajorRoleWorldID = (MajorUtil.GetMajorRoleVM() or {}).CurWorldID or 0 
-		local CaptainRoleWorldID = (_G.RoleInfoMgr:FindRoleVM(RoleID) or {}).CurWorldID or 0 
-		if MajorRoleWorldID ~= CaptainRoleWorldID then
-			local CrossWorldUtil = require("Utils/CrossWorldUtil")
-			CrossWorldUtil.CrossWorldWithoutCrtstal(CaptainRoleWorldID, LSTR(1530011), LSTR(1530012), nil, nil, RoleID)
-		end
+		local RoleIDs = {
+			MajorUtil.GetMajorRoleID(),
+			RoleID,
+		}
+
+		_G.RoleInfoMgr:QueryRoleSimples(RoleIDs, function()
+			local MajorCurWorldID = 0
+			local CaptainCurWorldID = 0
+			for _, QueryRoleID in ipairs(RoleIDs) do
+				local RoleVM = RoleInfoMgr:FindRoleVM(RoleID, true) or {}
+				if QueryRoleID == MajorUtil.GetMajorRoleID() then
+					MajorCurWorldID = RoleVM.CurWorldID or 0
+				elseif QueryRoleID == RoleID then
+					CaptainCurWorldID = RoleVM.CurWorldID or 0
+				else
+					FLOG_INFO("ZYH Useless RoleID is %s", QueryRoleID)
+				end
+			end
+
+			if MajorCurWorldID ~= 0 and CaptainCurWorldID ~= 0 and MajorCurWorldID ~= CaptainCurWorldID then
+				local CrossWorldUtil = require("Utils/CrossWorldUtil")
+				CrossWorldUtil.CrossWorldWithoutCrtstal(CaptainCurWorldID, LSTR(1530011), LSTR(1530012), nil, nil, RoleID)
+			else
+				FLOG_INFO("ZYH CaptainWorldID is : %s, MyWorldID is %s :", CaptainCurWorldID, MajorCurWorldID)
+			end
+		end, nil, false)
 
 		self.CacheCheckRoleID = nil
 	end
@@ -849,6 +892,23 @@ function TeamMgr:AddTeamMember(Member)
 	end
 end
 
+function TeamMgr:UpdateTeamMemberPosition()
+	local TeamID = self:GetTeamID()
+	TeamHelperMgr:QueryTeamMemberData(TeamID, ProtoCS.Team.Team.TeamMemberDataQueryType.TeamMemberDataQueryTypeLocation, nil, function(Param)
+		if self:GetTeamID() ~= TeamID or Param.Locations == nil then
+			return
+		end
+
+		if self.TeamVM then
+			for _, LocData in ipairs(Param.Locations) do
+				self.TeamVM:UpdateMemberPostion(LocData.RoleID, {MapResID=LocData.MapID})
+			end
+		end
+	end, 5, function()
+		self:LogWarn("query team location data timeout, team id: %s", TeamID)
+	end)
+end
+
 function TeamMgr:UpdateMemberState(Prop)
 	if nil == Prop then
 		return
@@ -867,7 +927,9 @@ function TeamMgr:UpdateMemberState(Prop)
 
 	local MemPropUpdate = Prop.Update
 	if MemPropUpdate == MemPropUpdateDef.MemPropUpdate_EnterScene then
-		VM:SetTeamMemberMapData(Prop.Scene)
+		if self.TeamVM then
+			self.TeamVM:UpdateMemberPostion(RoleID, Prop.Scene)
+		end
 	elseif MemPropUpdate == MemPropUpdateDef.MemPropUpdate_Login then
 		VM:SetTeamMemberOnline(true)
 		self:UpdateMemberProps(RoleID, {"IsOnline",}, {true,})

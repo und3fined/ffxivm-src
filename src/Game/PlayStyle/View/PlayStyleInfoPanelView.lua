@@ -78,6 +78,7 @@ function PlayStyleInfoPanelView:OnRegisterSubView()
 end
 
 function PlayStyleInfoPanelView:OnInit()
+    self.bFold = false
     self.LastCheck = false
 
     self.Binders = {
@@ -101,16 +102,14 @@ function PlayStyleInfoPanelView:OnInit()
 end
 
 function PlayStyleInfoPanelView:OnFunctionVisibleChanged(NewValue, OldValue)
-    if (NewValue == false and self.LastCheck) then
-        local NeedCheck = not self.LastCheck
-        local bInfoVisible = not NeedCheck
-        self.BtnFold:SetIsChecked(NeedCheck)
-        self.LastCheck = NeedCheck
-        UIUtil.SetIsVisible(self.PanelGateInfo, bInfoVisible)
-        if (bInfoVisible) then
-            self:PlayAnimation(self.AnimUnfold)
-        end
+    self.bFold = NewValue
+    self.BtnFold:SetIsChecked(self.bFold)
+    local bExpand = not self.bFold
+    if (bExpand) then
+        self:PlayAnimation(self.AnimUnfold)
     end
+    
+    UIUtil.SetIsVisible(self.PanelGateInfo, bExpand)
 end
 
 function PlayStyleInfoPanelView:OnActivityNameChanged(NewValue, OldValue)
@@ -125,10 +124,7 @@ end
 
 function PlayStyleInfoPanelView:OnShow()
     UIUtil.SetIsVisible(self.PanelGateInfo, true)
-
-    self.LastCheck = false
     self.BtnFold:SetIsChecked(false)
-    MainPanelVM:SetFunctionVisible(false, MainPanelConfig.TopRightInfoType.PlayStyleInfo)
 end
 
 function PlayStyleInfoPanelView:OnHide()
@@ -159,15 +155,8 @@ function PlayStyleInfoPanelView:OnRegisterBinder()
 end
 
 function PlayStyleInfoPanelView:OnBtnFoldClicked()
-    local NeedCheck = not self.LastCheck
-    local bInfoVisible = not NeedCheck
-    self.BtnFold:SetIsChecked(NeedCheck)
-    self.LastCheck = NeedCheck
-    UIUtil.SetIsVisible(self.PanelGateInfo, bInfoVisible)
-    MainPanelVM:SetFunctionVisible(not bInfoVisible, MainPanelConfig.TopRightInfoType.PlayStyleInfo)
-    if (bInfoVisible) then
-        self:PlayAnimation(self.AnimUnfold)
-    end
+    local bExpand = not self.bFold
+    MainPanelVM:SetFunctionVisible(bExpand, MainPanelConfig.TopRightInfoType.PlayStyleInfo)
 end
 
 return PlayStyleInfoPanelView

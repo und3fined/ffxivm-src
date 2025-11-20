@@ -15,6 +15,7 @@ local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMo
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetIsEnabled = require("Binder/UIBinderSetIsEnabled")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local MAX_NAME_LENGTH = 8
 
 local ScoreMgr = _G.ScoreMgr
@@ -25,6 +26,7 @@ local LSTR = _G.LSTR
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BG Comm2FrameMView
 ---@field BtnCreate CommBtnLView
+---@field BtnIcon UFButton
 ---@field FHorizontalConsume UFHorizontalBox
 ---@field ImgIcon UFImage
 ---@field InputBox CommInputBoxView
@@ -33,6 +35,8 @@ local LSTR = _G.LSTR
 ---@field TextNew UFTextBlock
 ---@field TextNumber1 UFTextBlock
 ---@field ToggleGroupDynamic UToggleGroupDynamic
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local NewBagExpandSetWinView = LuaClass(UIView, true)
 
@@ -40,6 +44,7 @@ function NewBagExpandSetWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BG = nil
 	--self.BtnCreate = nil
+	--self.BtnIcon = nil
 	--self.FHorizontalConsume = nil
 	--self.ImgIcon = nil
 	--self.InputBox = nil
@@ -48,6 +53,8 @@ function NewBagExpandSetWinView:Ctor()
 	--self.TextNew = nil
 	--self.TextNumber1 = nil
 	--self.ToggleGroupDynamic = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -101,6 +108,7 @@ end
 function NewBagExpandSetWinView:OnRegisterUIEvent()
 	UIUtil.AddOnStateChangedEvent(self, self.ToggleGroupDynamic, self.OnToggleGroupStateChanged)
 	UIUtil.AddOnClickedEvent(self, self.BtnCreate.Button, self.OnClickedExpand)
+	UIUtil.AddOnClickedEvent(self, self.BtnIcon, self.OnBtnMoneyIconClick)
 end
 
 function NewBagExpandSetWinView:OnRegisterGameEvent()
@@ -122,6 +130,9 @@ function NewBagExpandSetWinView:OnToggleGroupStateChanged(ToggleGroup, ToggleBut
 	DepotExpandWinVM:SetSelectedIcon(Index + 1)
 end
 
+function NewBagExpandSetWinView:OnBtnMoneyIconClick()
+	ItemTipsUtil.ShowTipsByResID(DepotExpandWinVM.ScoreID, self.ImgIcon)
+end
 
 function NewBagExpandSetWinView:OnClickedExpand()
 

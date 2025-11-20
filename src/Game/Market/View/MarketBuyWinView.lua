@@ -30,13 +30,14 @@ local EventID = _G.EventID
 ---@class MarketBuyWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnExchange CommBtnLView
+---@field BtnRefresh UFButton
 ---@field BtnSwitch UFButton
 ---@field CommMoneyBar CommMoneyBarView
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field CountSlider CommAmountSliderView
 ---@field ImgPriceIcon UFImage
 ---@field MarketPurchaseWindowItem_UIBP MarketPurchaseWindowItemView
 ---@field NewBg Comm2FrameLView
----@field RichTextAmount URichTextBox
 ---@field TableViewList UTableView
 ---@field TextItemDescription URichTextBox
 ---@field TextItemName UFTextBlock
@@ -44,19 +45,23 @@ local EventID = _G.EventID
 ---@field TextPrice UFTextBlock
 ---@field TextSalePrice UFTextBlock
 ---@field TextSeller UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
+---@field AnimRefresh UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MarketBuyWinView = LuaClass(UIView, true)
 
 function MarketBuyWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnExchange = nil
+	--self.BtnRefresh = nil
 	--self.BtnSwitch = nil
 	--self.CommMoneyBar = nil
+	--self.CommWinSlotQuality = nil
 	--self.CountSlider = nil
 	--self.ImgPriceIcon = nil
 	--self.MarketPurchaseWindowItem_UIBP = nil
 	--self.NewBg = nil
-	--self.RichTextAmount = nil
 	--self.TableViewList = nil
 	--self.TextItemDescription = nil
 	--self.TextItemName = nil
@@ -64,6 +69,9 @@ function MarketBuyWinView:Ctor()
 	--self.TextPrice = nil
 	--self.TextSalePrice = nil
 	--self.TextSeller = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
+	--self.AnimRefresh = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -71,6 +79,7 @@ function MarketBuyWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnExchange)
 	self:AddSubView(self.CommMoneyBar)
+	self:AddSubView(self.CommWinSlotQuality)
 	self:AddSubView(self.CountSlider)
 	self:AddSubView(self.MarketPurchaseWindowItem_UIBP)
 	self:AddSubView(self.NewBg)
@@ -90,7 +99,7 @@ function MarketBuyWinView:OnInit()
 		{ "ItemNameText", UIBinderSetText.New(self, self.TextItemName) },
 		{ "ItemDescriptionText", UIBinderSetText.New(self, self.TextItemDescription) },
 	
-		{ "ShopAmount", UIBinderSetTextFormat.New(self, self.RichTextAmount, "%d") },
+		--{ "ShopAmount", UIBinderSetTextFormat.New(self, self.RichTextAmount, "%d") },
 		{ "SalePriceText", UIBinderSetTextFormatForMoney.New(self, self.TextSalePrice) },
 		{ "SalePriceColor", UIBinderSetColorAndOpacityHex.New(self, self.TextSalePrice) },
 		{ "SaleStallVMList", UIBinderUpdateBindableList.New(self, self.SaleStallTableViewAdapter) },
@@ -125,6 +134,8 @@ function MarketBuyWinView:OnShow()
 	
 	self.CountSlider:SetSliderValueMaxTips("已达到最大数量，不能再增加")
 	self.CountSlider:SetSliderValueMinTips("已达到最小数量，不能再减少")
+
+	self.CommWinSlotQuality:UpdateUIByItem(self.Params.ResID)
 end
 
 function MarketBuyWinView:SetBuyInfoByStall(StallBrief)
@@ -151,6 +162,7 @@ end
 function MarketBuyWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnExchange, self.OnClickedBuyBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnSwitch, self.OnClickedSwitchBtn)
+	UIUtil.AddOnClickedEvent(self, self.BtnRefresh, self.OnClickedRefreshBtn)
 	UIUtil.AddOnScrolledEvent(self, self.SaleStallTableViewAdapter, self.OnTableViewScrolled)
 end
 
@@ -164,6 +176,7 @@ function MarketBuyWinView:ResetStallBriefData(IsReverse)
 	self.LastNum = 1
 	MarketBuyWinVM.StallBriefBegin = nil
 	MarketBuyWinVM.StallBriefEnd = nil
+	MarketBuyWinVM.StallBrief = nil
 end
 
 function MarketBuyWinView:OnRegisterBinder()
@@ -243,6 +256,11 @@ function MarketBuyWinView:OnTableViewScrolled(TableView, ItemOffset)
 	end
 end
 
+function MarketBuyWinView:OnClickedRefreshBtn()
+	self:PlayAnimation(self.AnimRefresh)
+	MarketMgr:SendStallListMessage(self.Params.ResID, 0, MarketMgr.StallListOnePageNum*3 - 1, self.IsReverse)
+end
+
 function MarketBuyWinView:OnClickedSwitchBtn()
 	self.IsReverse = not self.IsReverse
 	local End = MarketMgr.StallListOnePageNum*3 - 1
@@ -286,7 +304,7 @@ function MarketBuyWinView:OnClickedBuyBtn()
 		return
 	end	
 
-	MarketMgr:SendBuyGoodsMessage(MarketBuyWinVM.StallBrief.SellID, self.Params.ResID, MarketBuyWinVM.ShopAmount, MarketBuyWinVM.StallBrief.SinglePrice)
+	MarketMgr:SendBuyGoodsMessage(MarketBuyWinVM.StallBrief.SellID, ResID, MarketBuyWinVM.ShopAmount, MarketBuyWinVM.StallBrief.SinglePrice)
 	self:Hide()
 end
 

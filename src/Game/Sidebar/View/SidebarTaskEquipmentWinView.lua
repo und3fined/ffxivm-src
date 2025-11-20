@@ -33,7 +33,8 @@ local TIME_TO_CLOSE = 10 --默认10秒关闭
 ---@field ImgBg UFImage
 ---@field ProBarCD UProgressBar
 ---@field SidePopUpBtn SidePopUpBtnItemView
----@field TableViewMemberProf UTableView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
+---@field TableViewMemberProfNew UTableView
 ---@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -47,7 +48,8 @@ function SidebarTaskEquipmentWinView:Ctor()
 	--self.ImgBg = nil
 	--self.ProBarCD = nil
 	--self.SidePopUpBtn = nil
-	--self.TableViewMemberProf = nil
+	--self.SkillHandleCloseBtn = nil
+	--self.TableViewMemberProfNew = nil
 	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -58,12 +60,13 @@ end
 function SidebarTaskEquipmentWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.SidePopUpBtn)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function SidebarTaskEquipmentWinView:OnInit()
 	self.SidebarTaskEquipmentWinVM = SidebarTaskEquipmentWinVM.New()
-	self.AdapterTableViewMemberProf = UIAdapterTableView.CreateAdapter(self, self.TableViewMemberProf)
+	self.AdapterTableViewMemberProf = UIAdapterTableView.CreateAdapter(self, self.TableViewMemberProfNew, self.OnSelectItem, true)
 end
 
 function SidebarTaskEquipmentWinView:OnDestroy()
@@ -92,19 +95,12 @@ function SidebarTaskEquipmentWinView:OnShow()
 end
 
 function SidebarTaskEquipmentWinView:OnHide()
-
+   	self.AdapterTableViewMemberProf:ClearSelectedItem()
 end
 
 function SidebarTaskEquipmentWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.SidePopUpBtn.Btn, self.OnClickPopUpBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnClose, self.OnClickCloseBtn)
-
-	local function OnOnSlotItemClick(EquipmentSlotItemVM)
-		if EquipmentSlotItemVM then
-			ItemTipsUtil.ShowTipsByGID(EquipmentSlotItemVM.GID, self.ImgBg)
-		end
-	end
-	self.SidebarTaskEquipmentWinVM:RegisterSlotItemClick(OnOnSlotItemClick)
 end
 
 function SidebarTaskEquipmentWinView:OnRegisterGameEvent()
@@ -148,6 +144,12 @@ function SidebarTaskEquipmentWinView:OnGameEventUpdateView()
 	local Params = self.Params
 	if Params and Params.MissItemList then
 		self.SidebarTaskEquipmentWinVM:UpdateView(Params.MissItemList)
+	end
+end
+
+function SidebarTaskEquipmentWinView:OnSelectItem(Index, ItemData, ItemView)
+	if ItemData then
+		ItemTipsUtil.ShowTipsByGID(ItemData.GID, self.ImgBg)
 	end
 end
 

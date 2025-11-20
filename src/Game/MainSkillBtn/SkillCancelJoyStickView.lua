@@ -12,22 +12,23 @@ local KIL = _G.UE.UKismetInputLibrary
 
 ---@class SkillCancelJoyStickView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field Btn_Cancel UFButton
 ---@field ImgCancelBkg UFImage
 ---@field ImgCancelBkgInvalid UFImage
+---@field SkillHandleStateRBLB SkillHandleStateRBLBView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local SkillCancelJoyStickView = LuaClass(UIView, true)
 
 function SkillCancelJoyStickView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
-	--self.Btn_Cancel = nil
 	--self.ImgCancelBkg = nil
 	--self.ImgCancelBkgInvalid = nil
+	--self.SkillHandleStateRBLB = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function SkillCancelJoyStickView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.SkillHandleStateRBLB)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -54,6 +55,8 @@ function SkillCancelJoyStickView:OnShow()
 	end
 	UIUtil.SetIsVisible(self.ImgCancelBkg, true)
 	UIUtil.SetIsVisible(self.ImgCancelBkgInvalid, false)
+
+	UIUtil.SetIsVisible(self.SkillHandleStateRBLB, _G.SkillHandleMgr:IsInHandleMode())
 end
 
 --极限技使用，因为是事先show，但是没有参数
@@ -81,7 +84,7 @@ function SkillCancelJoyStickView:OnRegisterUIEvent()
 end
 
 function SkillCancelJoyStickView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(EventID.GamePadSkillCancel, self.OnGamePadSkillCancel)
 end
 
 function SkillCancelJoyStickView:OnRegisterBinder()
@@ -138,6 +141,13 @@ function SkillCancelJoyStickView:RouteMouseMove(_, MouseEvent)
 		self:MouseEnter()
 	elseif bEnter == false and self.bEnter == true then
 		self:MouseLeave()
+	end
+end
+
+function SkillCancelJoyStickView:OnGamePadSkillCancel(Index)
+	local CancelView = self.OnMoveCallbackPtr
+	if CancelView and CancelView["CancelPressStatus"] then
+		CancelView:CancelPressStatus()
 	end
 end
 

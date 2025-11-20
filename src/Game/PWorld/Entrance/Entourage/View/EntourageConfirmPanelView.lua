@@ -164,6 +164,8 @@ function EntourageConfirmPanelView:OnShow()
 		self:HideAndClear()
 	end)
 	self:PlayAnimation(self.AnimProgress, math.clamp( (Duration - RemainTime) / Duration , 0, 1) , 1, _G.UE.EUMGSequencePlayMode.Forward, self.AnimProgress:GetEndTime() / Duration)
+	---发送副本确认界面打开的消息
+	_G.EventMgr:SendEvent(_G.EventID.EnterLevelConfirmView)
 end
 
 function EntourageConfirmPanelView:OnHide()
@@ -172,7 +174,6 @@ function EntourageConfirmPanelView:OnHide()
 	end
 
 	_G.PWorldMatchMgr:NtfUpdateMatch()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
 end
 
 function EntourageConfirmPanelView:OnActive()
@@ -225,7 +226,7 @@ end
 function EntourageConfirmPanelView:HideAndTryOpenBar()
 	self:Hide()
 
-	if _G.PWorldEntourageMgr:IsConfirmExpired() then
+	if not _G.PWorldEntourageMgr:GetConfirmState() then
 		self:SetSideBar(false)	
 	else
 		self:SetSideBar(true)

@@ -108,6 +108,10 @@ function ChocoboFeeDingApertureItemView:PlayAnimHide()
     self:PlayAnimation(self.AnimHide)
 end
 
+function ChocoboFeeDingApertureItemView:PlayAnimOut()
+    self:PlayAnimToEnd(self.AnimHide)
+end
+
 function ChocoboFeeDingApertureItemView:GetCurInnerCircle()
     local Transform = self.PanelStatic.RenderTransform
     if Transform == nil or Transform.Scale == nil then

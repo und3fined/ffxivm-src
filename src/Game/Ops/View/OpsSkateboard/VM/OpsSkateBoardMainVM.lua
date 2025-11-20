@@ -16,6 +16,7 @@ local OpsSkateBoardMainVM = LuaClass(OpsActivityWhaleMonutVM)
 local ProtoCS = require("Protocol/ProtoCS")
 local OpsActivityDefine = require("Game/Ops/OpsActivityDefine")
 local LSTR = _G.LSTR
+local OpsRewardStatus = ProtoCS.Game.Activity.RewardStatus
 
 local StrParamIndexDefine ={
     MountName = 1,
@@ -43,10 +44,17 @@ local function MakeNode(Index, Data, NodeCfg, Activity)
         JumpType = NodeCfg.JumpType,
         JumpID = tonumber(NodeCfg.JumpParam) or 0,
         RedDotName = RedDotName,
-        Sort = RewardStatus ~= ProtoCS.Game.Activity.RewardStatus.RewardStatusDone and NodeCfg.NodeSort or NodeCfg.NodeSort - 999999,
         Locked = Data.Head.Locked,
         JumpButton = NodeCfg.JumpButton
     }
+
+    if RewardStatus == OpsRewardStatus.RewardStatusNo then
+        Node.Sort = NodeCfg.NodeSort
+    elseif RewardStatus == OpsRewardStatus.RewardStatusWaitGet then
+        Node.Sort = NodeCfg.NodeSort + 999
+    else
+        Node.Sort = NodeCfg.NodeSort - 999
+    end
 
     return Node
 end

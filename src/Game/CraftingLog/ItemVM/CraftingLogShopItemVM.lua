@@ -49,12 +49,9 @@ function CraftingLogShopItemVM:UpdateVM(Value)
 	self.Icon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(Value.ItemID))
     self.ItemQualityImg = ItemUtil.GetSlotColorIcon(Value.ItemID, ItemDefine.ItemSlotType.Item96Slot)
 
-	local NeedNum =  Value.NeedNum
-	self.NeedNum = NeedNum
-	self:SetNumRatio()
-
+	self.NeedNum = Value.NeedNum
 	self.UnitPrice = ItemData.GoldCoinPrice
-	self:SetBuyNum(NeedNum)
+	self:SetNumRatio()
 end
 
 function CraftingLogShopItemVM:IsEqualVM(Value)
@@ -66,10 +63,23 @@ function CraftingLogShopItemVM:SetNumRatio()
 	local ItemData =  self.ItemData
 	local HaveCount = ItemData.IsHQ == 1 and BagMgr:GetItemHQNum(ItemData.ItemID) or BagMgr:GetItemNumWithHQ(ItemData.ItemID)
 	if NeedNum > HaveCount then
-		self.NumRatio = string.format("<span color=\"#FF0000FF\">%d</>/%d", HaveCount, NeedNum)
+		self.NumRatio = string.format("<span color=\"#dc5868\">%d</>/%d", HaveCount, NeedNum)
 	else
 		self.NumRatio = string.format("<span color=\"#FFFFFFFF\">%d</>/%d", HaveCount, NeedNum)
 	end
+
+	if self.CanGroupBuy then
+		self:SetBuyNum(self:SetNeedBuyNum())
+	end
+end
+
+function CraftingLogShopItemVM:SetNeedBuyNum(GropNum)
+	GropNum = GropNum or _G.CraftingLogShopWinVM.GroupNum
+	local ItemData =  self.ItemData
+	local HaveCount = ItemData.IsHQ == 1 and BagMgr:GetItemHQNum(ItemData.ItemID) or BagMgr:GetItemNumWithHQ(ItemData.ItemID)
+	local NeedBuyNum = (self.NeedNum * GropNum) - HaveCount
+	self.NeedBuyNum = NeedBuyNum > 0 and NeedBuyNum or 0
+	return self.NeedBuyNum
 end
 
 function CraftingLogShopItemVM:SetBuyNum(Value)
@@ -77,8 +87,7 @@ function CraftingLogShopItemVM:SetBuyNum(Value)
 	self.CostNum = self.BuyNum * self.UnitPrice
 	_G.CraftingLogShopWinVM:SetCostNum()
 
-	local GropNum = _G.CraftingLogShopWinVM.GroupNum
-	local CanGroupBuy = Value/GropNum == self.NeedNum
+	local CanGroupBuy = Value == self.NeedBuyNum
 	if self.CanGroupBuy ~= CanGroupBuy then
 		self.CanGroupBuy = CanGroupBuy
 		_G.CraftingLogShopWinVM:SetGroupBuyEnable(CanGroupBuy)

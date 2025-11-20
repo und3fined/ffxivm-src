@@ -10,6 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 
 --@ViewModel
 local LoginRoleSetNameVM = require("Game/LoginRole/LoginRoleSetNameVM")
+local LoginRoleProfVM = require("Game/LoginRole/LoginRoleProfVM")
 
 --@Binder
 local UIBinderSetText = require("Binder/UIBinderSetText")
@@ -120,7 +121,8 @@ function LoginCreateNamePanelView:OnShow()
 	-- else
 	-- 	_G.LoginUIMgr:SetNextBtnEnable(true)
 	-- end
-	_G.LoginUIMgr:SetNextBtnEnable(true)
+	-- _G.LoginUIMgr:SetNextBtnEnable(true)
+	self:RefreshNextBtn()
 
 	-- self:SetPlatformNickName()
 end
@@ -151,6 +153,17 @@ function LoginCreateNamePanelView:OnRegisterBinder()
 	}
 	
 	self:RegisterBinders(self.ViewModel, Binders)
+end
+
+function LoginCreateNamePanelView:RefreshNextBtn()
+	local Cfg = LoginRoleProfVM.CurrentProf
+	if Cfg then
+		if Cfg.IsShowWhenMore == 1 then
+			_G.LoginUIMgr:SetNextBtnVisible(false)
+		else
+			_G.LoginUIMgr:SetNextBtnVisible(true)
+		end
+	end
 end
 
 -- function LoginCreateNamePanelView:OnRecordRoleName(IsRecord)

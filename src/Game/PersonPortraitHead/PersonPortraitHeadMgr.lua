@@ -244,9 +244,9 @@ function Class:RespGetHead(Msg)
     for I, Item in pairs(Heads) do
         table.insert(CustomHeads, {HeadIdx = I, HeadID = Item.head_id, HeadType = Item.head_type, HeadUrl = Item.head_url})
     end
-
-    self:SetCustomHeadList(CustomHeads)
+    
     self:SetCurHeadInfo(Idx, Type)
+    self:SetCustomHeadList(CustomHeads)
     self:SetHistoryHeads(Resp.history_heads)
 
     self:SetHeadEditShut(Meta)
@@ -258,6 +258,7 @@ function Class:RespGetHead(Msg)
 
     if self.IsSet then
 	    PersonPortraitHeadVM.LastUseCustHead = true
+        self.IsSet = nil
     end
 end
 
@@ -569,9 +570,13 @@ function Class:GetFrameRemainTime(FrameResID)
     end
 
     local CreatedTime = Ele.CreatedTime
+    if CreatedTime == nil then
+        _G.FLOG_WARNING("PersonPortraitHeadMgr:GetFrameRemainTime CreatedTime is nil")
+        CreatedTime = 0
+    end
     local Now = _G.TimeUtil.GetServerTime()
     local Dur = Now - CreatedTime
-    local LifeTime = tonumber(Cfg.Timelimit) or Dur
+    local LifeTime = tonumber(Cfg.TimeLimit) or Dur
     local Remain = LifeTime - Dur
     local FmtRemain = _G.LocalizationUtil.GetCountdownTimeForLongTime(Remain)
     return FmtRemain
@@ -581,7 +586,8 @@ end
 ---@region fantasy_med
 
 function Class:OnRegisterNetMsgFantasyMedicine()
-    self:RegisterGameNetMsg(CS_CMD_FANTASY, SUB_CMD_FANTASY.FantasyMedicineCmdQuery, self.RespQueryFantasyStat)  
+    -- self:RegisterGameNetMsg(CS_CMD_FANTASY, SUB_CMD_FANTASY.FantasyMedicineCmdQuery, self.RespQueryFantasyStat) 
+    self:RegisterGameNetMsg(CS_CMD_FANTASY, SUB_CMD_FANTASY.FantasyMedicineCmdNotifyStatus, self.RespNoticeFantasyStat)  
 end
 
 function Class:ReqQueryFantasyStat()
@@ -628,5 +634,35 @@ function Class:ReqModifyFantasyStat()
     GameNetworkMgr:SendMsg(CS_CMD_FANTASY, Cmd, Msg)
 end
 
+function Class:RespNoticeFantasyStat(Msg)
+    local Resp = Msg.NotifyStatusRsp
+
+    LOG_S('RespNoticeFantasyStat', string.format('msg = %s', table.tostring(Msg)))
+
+    if not Resp then
+        return
+    end
+
+    local Stat = Resp.Status
+
+    if Stat then
+        self.FlagNoticeFantasyStat = true
+    end
+end
+
+function Class:TryPopFantasyStat()
+    if self.FlagNoticeFantasyStat then
+
+        self:RegisterTimer(function()
+            MsgTipsUtil.ShowTips(LSTR(960003))
+            self:ReqModifyFantasyStat()
+            self.FlagNoticeFantasyStat = nil
+        end, 2, 0, 1)
+    end
+end
+
+function Class:SwitchPrintMovePos()
+    PersonPortraitHeadDefine.IsShowMovePos = not PersonPortraitHeadDefine.IsShowMovePos
+end
 
 return Class

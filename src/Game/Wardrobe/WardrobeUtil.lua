@@ -24,7 +24,7 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
-local BitUtil = require("Utils/BitUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local ItemCondType = ProtoRes.CondType
 local LSTR = _G.LSTR
 local BitUtil = require("Utils/BitUtil")
@@ -72,10 +72,11 @@ function WardrobeUtil.ParseSectionIDList(AppID, SocketID)
     return SectionList
 end
 
+-- 是否未区域染色外观
 function WardrobeUtil.IsAppRegionDye(AppID)
     local AppCfg = ClosetCfg:FindCfgByKey(AppID)
     if AppCfg == nil then
-		_G.FLOG_INFO(string.format("WardrobeUtil.ParseSectionIDList AppCfg Is nil  %s", tostring(AppID)))
+		-- _G.FLOG_INFO(string.format("WardrobeUtil.ParseSectionIDList AppCfg Is nil  %s", tostring(AppID)))
 		return false
 	end
 
@@ -87,6 +88,7 @@ function WardrobeUtil.IsAppRegionDye(AppID)
 
     return false
 end
+
 
 function WardrobeUtil.IsDyeColorRegionDye(StainAera)
     if table.is_nil_empty(StainAera) then
@@ -139,7 +141,7 @@ function WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainAera)
     end
 
     for index, v in ipairs(StainAera) do
-        if v.Ban ~= 1 then
+        if v.Ban ~= 1 and v.List ~= "" then
             if Color == nil then
                 Color = v.ColorID
             end
@@ -156,6 +158,7 @@ function WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainAera)
     return Color
 end
 
+-- 组装成一个完整的区域染色
 function WardrobeUtil.GetRegionDye(AppID, RegionDye)
     local TempStainAera = {}
     local CCfg = ClosetCfg:FindCfgByKey(AppID)
@@ -192,7 +195,7 @@ function WardrobeUtil.GetColor(ColroID)
     if ColorCfg == nil then
         return ""
     end
-    return  WardrobeUtil.Dec2HexColor(ColorCfg.Color)
+    return WardrobeUtil.Dec2HexColor(ColorCfg.Color)
 end
 
 ---@return string 返回菜单的的默认装备icon
@@ -219,7 +222,7 @@ function WardrobeUtil.GetEquipmentAppearanceIcon(AppearanceID)
 end
 
 ---@return string 返回外观名称
-function WardrobeUtil.GetEquipmentAppearanceName(AppearanceID)
+function WardrobeUtil.GetEquipmentAppearanceName(AppearanceID, IsShow)
     local IsSpecial = WardrobeUtil.GetIsSpecial(AppearanceID)
     local ECfg = EquipmentCfg:FindAllCfgByAppearanceID(AppearanceID)
     if table.is_nil_empty(ECfg) then
@@ -232,17 +235,32 @@ function WardrobeUtil.GetEquipmentAppearanceName(AppearanceID)
         return ""
     end
 
-    return Cfg.ItemName
+    if not IsShow then
+        return CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemName) or ""
+    end
+
+    return WardrobeUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemName)
+end
+
+
+function WardrobeUtil.GetTextFromStringWithSpecialCharacter(str)
+    if string.isnilorempty(str) then
+		return ""
+	end
+    local ReplacedStr = str:gsub("<(%d+)>", function(IdStr)
+        return ""
+    end)
+
+    return ReplacedStr
 end
 
 ---@return Part 
 function WardrobeUtil.GetPartByAppearanceID(AppearanceID)
-    local ECfg = EquipmentCfg:FindAllCfgByAppearanceID(AppearanceID)
-    if table.is_nil_empty(ECfg) then
-        return
-    end
-
-    return ECfg[1].Part
+   local EquipID =  WardrobeUtil.GetEquipIDByAppearanceID(AppearanceID)
+   local ECfg = EquipmentCfg:FindCfgByKey(EquipID)
+   if ECfg ~= nil then
+        return ECfg.Part
+   end  
 end
 
 ---@param ProfID number@职业ID
@@ -281,13 +299,6 @@ function WardrobeUtil.GetUnlockCostItemNum(AppID)
     return 0
 end
 
-function WardrobeUtil.GetClosetCfgEquipIDByAppearanceID(AppearanceID)
-    local Cfg = ClosetCfg:FindCfgByKey(AppearanceID)
-    if Cfg ~= nil  then
-        return Cfg.EquipID
-    end
-    return 0
-end
 
 ---@return table<int> 返回成就idList
 function WardrobeUtil.GetAchievementIDList(AppID)
@@ -492,7 +503,7 @@ function WardrobeUtil.GetSimpleProfCondText(ProfTable, ClassLimitList)
     local CurProfID = MajorUtil.GetMajorProfID() 
 
     for _, v in ipairs(ClassLimitList) do
-        if v ~= 0 and ProfMgr.CheckProfClass(CurProfID, v) and v < 8 then
+        if v ~= 0 and ProfMgr.CheckProfClass(CurProfID, v) then
             return ProtoEnumAlias.GetAlias(ProtoCommon.class_type, v)
         end
     end
@@ -550,6 +561,7 @@ function WardrobeUtil.GetDetailProfCondText(ProfTable, ClassLimit)
     end
 
     local RetProfTable = {}
+ 
     if #ClassLimit > 0 then
         for i = 1 , #ClassLimit do
             local Cfg = ProfClassCfg:FindCfgByKey(ClassLimit[i])
@@ -637,9 +649,154 @@ function WardrobeUtil.GetDetailProfCondText(ProfTable, ClassLimit)
 
 end
 
+---@return string 返回可穿戴的职业详情
+function WardrobeUtil.GetDetailProfCondText2(ProfTable, ClassLimit)
+    -- 返回所有职业（废弃了的逻辑,因为逻辑上所有职业不显示了）
+    if (table.is_nil_empty(ProfTable) or ProfTable[1] == 0) and (table.is_nil_empty(ClassLimit) or ClassLimit[1] == 0 ) then
+        return _G.LSTR(1080016)
+    end
+
+    -- 如果Prof, 存在当前ClassLimit里，移除掉Prof。
+    -- 不存在，进行下一步逻辑判断。
+    local TempProfTable = {}
+    local RetProfTable = {}
+
+    if #ClassLimit > 0 then
+        for i = 1 , #ClassLimit do
+            local Class = ClassLimit[i]
+            if Class == ProtoCommon.class_type.CLASS_TYPE_CARPENTER or Class == ProtoCommon.class_type.CLASS_TYPE_EARTHMESSENGER then
+                local Cfg = ProfClassCfg:FindCfgByKey(ClassLimit[i])
+                if Cfg ~= nil then
+                    for index, subProf in ipairs(Cfg.Prof) do
+                        if not table.contain(ProfTable, subProf) then
+                            table.insert(ProfTable, subProf)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for _, prof in ipairs(ProfTable) do
+        if prof ~= 0 then
+            for _, class in ipairs(ClassLimit) do
+                if class ~= 0 and class ~= ProtoCommon.class_type.CLASS_TYPE_CARPENTER and class ~= ProtoCommon.class_type.CLASS_TYPE_EARTHMESSENGER then
+                    local Cfg = ProfClassCfg:FindCfgByKey(class)
+                    if Cfg ~= nil then
+                        for index, subProf in ipairs(Cfg.Prof) do
+                            if subProf == prof then
+                                table.insert(TempProfTable, subProf)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for _,  prof in ipairs(ProfTable) do
+        if not table.contain(TempProfTable, prof) then
+            table.insert(RetProfTable, prof)
+        end
+    end
+
+    table.sort(RetProfTable, function(a, b) return  a < b end)
+    local ProfLimitDes = ""
+    local ClassNames = {}
+    for _, class in ipairs(ClassLimit) do
+        if class ~= 0 then
+            if class ~= ProtoCommon.class_type.CLASS_TYPE_CARPENTER and class ~= ProtoCommon.class_type.CLASS_TYPE_EARTHMESSENGER  then
+                local ClassName = _G.EquipmentMgr:GetProfClassName(class)
+                table.insert(ClassNames,ClassName)
+            end
+        end
+    end
+
+    ClassNames = table.concat(ClassNames, "、", 1, #ClassNames)
+    ProfLimitDes = ClassNames
+
+    local Result = {}
+    local exists = {}  -- 哈希表用于O(1)复杂度查重
+    for _, profID in ipairs(RetProfTable) do
+        local Cfg = RoleInitCfg:FindCfgByKey(profID)
+        if Cfg then
+            -- 处理有进阶职业的情况
+            if Cfg.AdvancedProf and Cfg.AdvancedProf ~= 0 then
+                local advanceID = Cfg.AdvancedProf
+                local isAdvanceActive = MajorUtil.GetMajorLevelByProf(advanceID) ~= nil
+                local targetID = isAdvanceActive and advanceID or profID
+                if not exists[targetID] then
+                    exists[targetID] = true
+                    table.insert(Result, targetID)
+                end
+            
+            -- 处理无进阶职业的情况
+            else
+                local NNCfg = RoleInitCfg:FindProfForPAdvance(profID)
+                local targetID = nil
+            
+                -- 无基职直接使用当前职业
+                if not NNCfg then
+                    targetID = profID
+                -- 有基职判断激活状态
+                else
+                   -- 有基职判断激活状态, 判断一下职业里还有重复的值
+                   local isSpecialActive = MajorUtil.GetMajorLevelByProf(profID) ~= nil
+                   -- 特职没有激活， 如果后面没有基值的，那就直接特职
+                   if not isSpecialActive then
+                       if not table.contain(RetProfTable, NNCfg.Prof) then
+                           targetID = profID
+                       else
+                           targetID = NNCfg.Prof
+                       end
+                   else
+                       targetID = isSpecialActive and profID
+                   end
+                end
+            
+                if targetID ~= nil and not exists[targetID] then
+                    exists[targetID] = true
+                    table.insert(Result, targetID)
+                end
+            end
+        end
+    end
+
+    if #Result > 0 then
+        local ProfNames = {}
+        for i = 1, #Result do
+            if _G.EquipmentMgr:GetProfName(Result[i]) then
+                table.insert(ProfNames, _G.EquipmentMgr:GetProfName(Result[i]))
+            end
+        end
+        ProfNames = table.concat(ProfNames, "、", 1, #ProfNames)
+        if #ProfNames > 0 then
+            if ProfLimitDes ~= "" then
+                ProfLimitDes = string.format("%s、%s", ProfLimitDes, ProfNames)
+            else
+             ProfLimitDes = ProfNames
+            end
+        end
+    end
+
+    local Title = RichTextUtil.GetText(LSTR(1080017), "D1BA8EFF")
+    ProfLimitDes = string.format("%s\n%s", Title, ProfLimitDes) 
+    return ProfLimitDes
+end
+
 ---@return boolean 是否显示职业详情
 function WardrobeUtil.GetDetailProfVisible(ProfTable, ClassLimit)
     if (table.is_nil_empty(ProfTable) or ProfTable[1] == 0) and (table.is_nil_empty(ClassLimit) or ClassLimit[1] == 0 ) then
+        return false
+    end
+
+    if #ClassLimit == 1 and #ProfTable == 0  then
+        return false
+    end
+
+
+    if #ClassLimit == 0 and #ProfTable <= 1 then
         return false
     end
 
@@ -775,6 +932,9 @@ end
 
 ---@return boolean 判断是否满足等级条件
 function WardrobeUtil.JudgeLevelCond(LevelCond)
+    if LevelCond == nil then
+        return false
+    end
     local ProfID = MajorUtil.GetMajorProfID() 
     local ProfLevel = MajorUtil.GetMajorLevelByProf(ProfID)
     return ProfLevel >= LevelCond
@@ -815,21 +975,11 @@ function WardrobeUtil.GetMajorAppearanceAndColorByPartID(PartID)
 end
 
 function WardrobeUtil.GetEquipIDByAppearanceID(AppearanceID)
-    -- local ECfg = EquipmentCfg:FindAllCfgByAppearanceID(AppearanceID)
-	-- if not table.is_nil_empty(ECfg) then
-		-- return WardrobeUtil.GetIsSpecial(AppearanceID) and WardrobeUtil.GetClosetCfgEquipIDByAppearanceID() or ECfg[1].ID
-	-- end
-    return WardrobeUtil.GetClosetCfgEquipIDByAppearanceID(AppearanceID)
-end
-
-
-
-
-function WardrobeUtil.GetPartIDByAppearanceID(AppearanceID)
-    local ECfg = EquipmentCfg:FindAllCfgByAppearanceID(AppearanceID)
-	if not table.is_nil_empty(ECfg) then
-		return ECfg[1].Part
-	end
+    local Cfg = ClosetCfg:FindCfgByKey(AppearanceID)
+    if Cfg ~= nil  then
+        return Cfg.EquipID
+    end
+    return 0
 end
 
 
@@ -897,6 +1047,31 @@ function WardrobeUtil.GetFirstDropDownIndexByItemData(ItemData, DropDownDataList
             return i
         end
 	end
+end
+
+-- 是否是特性外观
+function WardrobeUtil.IsTraitApp(AppID)
+    local Cfg = ClosetCfg:FindCfgByKey(AppID)
+    return Cfg ~= nil and Cfg.SpecialEffectType ~= nil and Cfg.SpecialEffectType ~= 0
+end
+
+function WardrobeUtil.GetTraitTypeApp(AppID)
+    local Cfg = ClosetCfg:FindCfgByKey(AppID)
+    if Cfg ~= nil and Cfg.SpecialEffectType ~= nil then
+        return Cfg.SpecialEffectType
+    end
+    return 0
+end
+
+-- 颜色菜单列表类型转换Index
+function WardrobeUtil.ColorTypeConvertIndex(Type)
+	local TypeList = WardrobeDefine.ColorTypeList
+	for index, v in ipairs(TypeList) do
+		if v == Type then
+			return index
+		end
+	end
+	return  1
 end
 
 return WardrobeUtil

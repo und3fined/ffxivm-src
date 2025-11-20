@@ -82,11 +82,15 @@ function SettingsItemDropDownListView:OnShow()
 					end
 				end
 			end
-			
+			--下拉列表变化时CurIndex会变化，那self.DropDownList的SelectedIndex也会变化，这边先改变其值
+			self.DropDownList.SelectedIndex = CurIndex
 			self.DropDownList:UpdateItems(ListData, CurIndex, self.DropDownList.IsSelectedFunc)
 		end
 
 		self.DropDownList:SetPreClickDropDownFunc(PreClickDropDownFunc)
+	--下拉框是复用的，需要把PreClickDropDownFunc清掉
+	else
+		self.DropDownList:SetPreClickDropDownFunc(nil)
 	end
 
 	self:SetDropDownList()
@@ -110,7 +114,7 @@ function SettingsItemDropDownListView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.OnePictureFeatureChg, self.OnOnePictureFeatureChg)
 	self:RegisterGameEvent(_G.EventID.QualityLevelChg, self.OnQualityLevelChg)
 	self:RegisterGameEvent(_G.EventID.BgVoiceCloseCancel, self.OnBgVoiceCloseCancel)
-
+	self:RegisterGameEvent(_G.EventID.OnResetHandleCusAction, self.OnResetHandleCusAction)
 end
 
 function SettingsItemDropDownListView:OnRegisterBinder()
@@ -271,10 +275,23 @@ end
 -- function SettingsItemDropDownListView:PreClickDropDownFunc()
 -- end
 
+function SettingsItemDropDownListView:SetTextItemContent()
+	local ItemVMDesc = self.ItemVM.Desc or ""
+	local ItemVMDescList = ItemVMDesc:split('^')
+	if #ItemVMDescList >= 2 then
+		self.TextItemContent:SetText(ItemVMDescList[1] or "")
+		self.TextItemContent2:SetText(ItemVMDescList[2] or "")
+		UIUtil.SetIsVisible(self.PanelHandleSkillSetting, true)
+	else
+		self.TextItemContent:SetText(ItemVMDesc or "")
+		UIUtil.SetIsVisible(self.PanelHandleSkillSetting, false)
+	end
+end
+
 ---下拉列表
 function SettingsItemDropDownListView:SetDropDownList()
 	-- 设置描述
-	self.TextItemContent:SetText(self.ItemVM.Desc or "")
+	self:SetTextItemContent()
 
 	local ListData = {}
 	local SettingCfg = self.ItemVM.SettingCfg
@@ -371,6 +388,10 @@ function SettingsItemDropDownListView:SetDropDownList()
 			end
 
 			local function DoSelectFunc()
+				if not self.DropDownList or not _G.CommonUtil.IsObjectValid(self.DropDownList) then
+					return
+				end
+
 				self.DropDownList:SetSelectedIndexByItemVM(ItemVM)
 
 				-- local Index = self.DropDownList:GetIndexByItemData(ItemVM)
@@ -430,4 +451,35 @@ function SettingsItemDropDownListView:OnBgVoiceCloseCancel( Index )
 	self.DropDownList:UpdateItems(ListData, Index)
 end
 
+function SettingsItemDropDownListView:OnResetHandleCusAction()
+	local ListData = {}
+	local SettingCfg = self.ItemVM.SettingCfg
+	local GetListDataFuncStr =SettingCfg.NoTranslateStr
+	if not string.isnilorempty(GetListDataFuncStr) then
+		local ListStr = SettingsUtils.CallFunc(GetListDataFuncStr, true, SettingCfg)
+		for _, v in pairs(ListStr or {}) do
+			table.insert(ListData, { Name = v })
+		end
+		local CurIndex = SettingsUtils.GetValue(self.ItemVM.GetValueFunc, self.ItemVM.SettingCfg)
+		--下拉列表变化时CurIndex会变化，那self.DropDownList的SelectedIndex也会变化，这边先改变其值
+		self.DropDownList.SelectedIndex = CurIndex
+		if nil == CurIndex or CurIndex <= 0 then
+			CurIndex = 1
+		else
+			if SettingCfg.Num then
+				local NumCnt = #SettingCfg.Num
+				if NumCnt > 0 then
+					for index = 1, NumCnt do
+						if SettingCfg.Num[index] == CurIndex then
+							CurIndex = index
+							break
+						end
+					end
+				end
+			end
+		end
+		self.DropDownList:UpdateItems(ListData, CurIndex, self.DropDownList.IsSelectedFunc)
+		self.DropDownList:FoldDropDown()
+	end
+end
 return SettingsItemDropDownListView

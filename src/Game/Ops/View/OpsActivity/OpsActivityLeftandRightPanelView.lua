@@ -16,14 +16,19 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local OpsActivityLeftandRightPanelVM = require("Game/Ops/VM/OpsActivityLeftandRightPanelVM")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
 
 ---@class OpsActivityLeftandRightPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnView OpsActivityPreviewBtnView
+---@field Btn_Video UFButton
 ---@field ButtonMask UButton
 ---@field CommBtnGoto OpsCommBtnLView
+---@field IconVideco UFImage
 ---@field ImgLine UFImage
 ---@field PanelAward UFCanvasPanel
+---@field PanelVideo UFCanvasPanel
 ---@field ShareTips OpsActivityShareTipsItemView
 ---@field TableViewSlot UTableView
 ---@field TextInfo UFTextBlock
@@ -31,6 +36,7 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field TextSubTitle UFTextBlock
 ---@field TextTitle UFTextBlock
 ---@field Time OpsActivityTimeItemView
+---@field UMGVideoPlayer_UIBP UMGVideoPlayerView
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local OpsActivityLeftandRightPanelView = LuaClass(UIView, true)
@@ -39,10 +45,13 @@ local LSTR = _G.LSTR
 function OpsActivityLeftandRightPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnView = nil
+	--self.Btn_Video = nil
 	--self.ButtonMask = nil
 	--self.CommBtnGoto = nil
+	--self.IconVideco = nil
 	--self.ImgLine = nil
 	--self.PanelAward = nil
+	--self.PanelVideo = nil
 	--self.ShareTips = nil
 	--self.TableViewSlot = nil
 	--self.TextInfo = nil
@@ -50,6 +59,7 @@ function OpsActivityLeftandRightPanelView:Ctor()
 	--self.TextSubTitle = nil
 	--self.TextTitle = nil
 	--self.Time = nil
+	--self.UMGVideoPlayer_UIBP = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -60,6 +70,7 @@ function OpsActivityLeftandRightPanelView:OnRegisterSubView()
 	self:AddSubView(self.CommBtnGoto)
 	self:AddSubView(self.ShareTips)
 	self:AddSubView(self.Time)
+	self:AddSubView(self.UMGVideoPlayer_UIBP)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -79,6 +90,8 @@ function OpsActivityLeftandRightPanelView:OnInit()
 		{"bShowCommBtnGoto", UIBinderSetIsVisible.New(self, self.CommBtnGoto)},
 		{"bShowTableViewSlot", UIBinderSetIsVisible.New(self, self.PanelAward)},
     }
+	UIUtil.SetIsVisible(self.PanelVideo, false)
+	self.UMGVideoPlayer_UIBP:HideAllUI()
 end
 
 function OpsActivityLeftandRightPanelView:OnDestroy()
@@ -97,30 +110,89 @@ function OpsActivityLeftandRightPanelView:OnShow()
 	self:SetTextColor()
 	self.ViewModel:Update(self.Params)
 	if self.ViewModel.bShowCommBtnGoto then
-		self.CommBtnGoto.BtnText = self.ViewModel.BtnContent
+		if self.ViewModel.IsLoginDay then
+			self:SetBtnState()
+		else
+			self.CommBtnGoto.CommBtnL:SetIsRecommendState(true)
+			self.CommBtnGoto.BtnText = self.ViewModel.BtnContent
+		end
+	end
+	if self.ViewModel.bShowVideo then
+		self.UMGVideoPlayer_UIBP:SetVideoPath(self.ViewModel.VideoPath)
+		self.UMGVideoPlayer_UIBP:SetPlayMovieEndCallBack(self, self.PlayMovieEnd)
+		UIUtil.SetIsVisible(self.PanelVideo, true)
+		UIUtil.SetIsVisible(self.UMGVideoPlayer_UIBP, true)
+	else
+		UIUtil.SetIsVisible(self.PanelVideo, false)
+		UIUtil.SetIsVisible(self.UMGVideoPlayer_UIBP, false)
+	end
+end
+
+function OpsActivityLeftandRightPanelView:SetBtnState()
+	if self.ViewModel.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then
+		self.CommBtnGoto.CommBtnL:SetIsRecommendState(true)
+		self.CommBtnGoto.BtnText = LSTR(100132)
+	elseif self.ViewModel.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusDone then
+		self.CommBtnGoto.CommBtnL:SetIsDoneState(true)
+		self.CommBtnGoto.BtnText = LSTR(100037)
+		self.CommBtnGoto.CommBtnL:SetText(LSTR(100037))
+	elseif self.ViewModel.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo then
+		self.CommBtnGoto.CommBtnL:SetIsDisabledState(true, true)
+		self.CommBtnGoto.BtnText = LSTR(100132)
 	end
 end
 
 
 function OpsActivityLeftandRightPanelView:OnHide()
+	self.UMGVideoPlayer_UIBP:OnClose()
+end
+
+function OpsActivityLeftandRightPanelView:PlayMovieEnd()
+	self.UMGVideoPlayer_UIBP:OnResume()
 end
 
 function OpsActivityLeftandRightPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self,  self.CommBtnGoto.CommBtnL, self.OnCommBtnGotoClick)
 	UIUtil.AddOnClickedEvent(self,  self.ButtonMask, self.OnButtonMaskClick)
+	UIUtil.AddOnClickedEvent(self,  self.Btn_Video, self.OnVideoPlayClick)
 end
 
 function OpsActivityLeftandRightPanelView:OnRegisterGameEvent()
-
+	self:RegisterGameEvent(_G.EventID.OpsActivityNodeGetReward, self.OpsNodeRewardGet)
 end
 
 function OpsActivityLeftandRightPanelView:OnRegisterBinder()
 	self:RegisterBinders(self.ViewModel, self.Binders)
 end
 
+function OpsActivityLeftandRightPanelView:OpsNodeRewardGet()
+	self:OnShow()
+	local Rewards  = {}
+	local LoginDayNodeRewards = self.ViewModel.LoginDayNodeRewards
+	if LoginDayNodeRewards then
+		for _, Reward in ipairs(LoginDayNodeRewards) do
+			table.insert(Rewards, {ResID = Reward.ItemID, Num = Reward.Num})
+		end
+	end
+	if #Rewards > 0 then
+		local Params = {}
+		Params.ShowBtn = false
+		Params.ItemList = Rewards
+		_G.UIViewMgr:ShowView(_G.UIViewID.CommonRewardPanel, Params)
+	end
+end
+
 function OpsActivityLeftandRightPanelView:OnCommBtnGotoClick()
-	DataReportUtil.ReportActivityFlowData("ActivityPicClickFlow", self.Params.ActivityID, 1)
-	OpsActivityMgr:Jump(self.ViewModel.JumpType, self.ViewModel.JumpParam)
+	if self.ViewModel.IsLoginDay then
+		if self.ViewModel.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then
+			OpsActivityMgr:SendActivityNodeGetReward(self.ViewModel.LoginDayNodeID)
+		elseif self.ViewModel.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo then
+			MsgTipsUtil.ShowTipsByID(351004)
+		end
+	else
+		DataReportUtil.ReportActivityFlowData("ActivityPicClickFlow", self.Params.ActivityID, 1)
+		OpsActivityMgr:Jump(self.ViewModel.JumpType, self.ViewModel.JumpParam)
+	end
 end
 
 function OpsActivityLeftandRightPanelView:OnButtonMaskClick()
@@ -136,6 +208,14 @@ function OpsActivityLeftandRightPanelView:OnClickedSelectMemberItem(Index, ItemD
 	end
 	ItemTipsUtil.ShowTipsByResID(ItemData.ItemID, ItemView, nil, nil, 30)
 end
+
+function OpsActivityLeftandRightPanelView:OnVideoPlayClick()
+	if self.ViewModel.VideoPath == nil then
+		return
+	end
+	_G.UIViewMgr:ShowView(_G.UIViewID.CommonVideoPlayerView, {VideoPath = self.ViewModel.VideoPath})
+end
+
 
 function OpsActivityLeftandRightPanelView:SetTextColor()
 	if self.Params.Activity == nil then

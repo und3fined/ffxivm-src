@@ -33,7 +33,7 @@ local UIViewModelConfig = {
 	{ Name = "LoginNewVM", 				Life = "Game", Priority = 2000, 		Path = "Game/LoginNew/VM/LoginNewVM" },
 	{ Name = "LoadingVM", 				Life = "Game", Priority = 2000, 		Path = "Game/Loading/LoadingVM" },
 	{ Name = "ShareVM", 				Life = "Game", Priority = 2000, 		Path = "Game/Share/VM/ShareVM" },
-	
+
 	{ Name = "DanmakuVM",        		Life = "Role", Priority = 2000,         Path = "Game/Danmaku/DanmakuVM" },
 	{ Name = "MainPanelVM", 			Life = "Role", Priority = 2000, 		Path = "Game/Main/MainPanelVM" },
 	{ Name = "TeamVM", 					Life = "Role", Priority = 2000, 		Path = "Game/Team/VM/TeamVM" },
@@ -138,6 +138,7 @@ local UIViewModelConfig = {
 	{ Name = "StoreMainVM",							Life = "Role", Priority = 2000,         Path = "Game/Store/VM/StoreMainVM"},
 	{ Name = "StoreGiftMailVM",						Life = "Role", Priority = 2000,         Path = "Game/Store/VM/StoreGiftMailVM"},
 	{ Name = "StoreBuyWinVM",						Life = "Role", Priority = 2000,         Path = "Game/Store/VM/StoreBuyWinVM"},
+	{ Name = "StoreBlindBoxBuyWinVM",				Life = "Role", Priority = 2000,         Path = "Game/Store/VM/StoreBlindBoxBuyWinVM"},
 
 	{ Name = "AchievementMainPanelVM",				Life = "Role", Priority = 2000,         Path = "Game/Achievement/VM/AchievementMainPanelVM"},
 
@@ -148,9 +149,10 @@ local UIViewModelConfig = {
 	{ Name = "ActivityVM",                Life = "Role", Priority = 2000,         Path = "Game/Activity/ActivityVM"},
 	{ Name = "OpsActivityMainVM",              	Life = "Role", Priority = 2000,         		Path = "Game/Ops/VM/OpsActivityMainVM"},
 	{ Name = "OpsActivityTreasureChestPanelVM",              	Life = "Role", Priority = 2000,         		Path = "Game/Ops/VM/OpsActivityTreasureChestPanelVM"},
+	{ Name = "NightGiftPreparePageVM",              	Life = "Role", Priority = 2000,         		Path = "Game/StarlightCelebration/VM/NightGift/NightGiftPreparePageVM"},
 
 	{ Name = "GatheringLogVM",              Life = "Role", Priority = 2000,         Path = "Game/GatheringLog/GatheringLogVM"},
-	{ Name = "JumboCactpotVM",              Life = "Role", Priority = 2000,         Path = "Game/JumboCactpot/JumboCactpotVM"}, 
+	{ Name = "JumboCactpotVM",              Life = "Role", Priority = 2000,         Path = "Game/JumboCactpot/JumboCactpotVM"},
 	{ Name = "WorldExploraVM",              Life = "Role", Priority = 2000,         Path = "Game/WorldExplora/WorldExploraVM"},
 	{ Name = "AetheryteticketVM",              Life = "Role", Priority = 2000,         Path = "Game/Aetheryteticket/AetheryteticketVM"},
 	{ Name = "CollectablesVM",                  Life = "Role", Priority = 2000,         Path = "Game/Collectables/CollectablesVM"},
@@ -166,6 +168,8 @@ local UIViewModelConfig = {
 	--endregion 金碟主界面
 	-- 新人攻略主界面
 	{ Name = "OpsNewbieStrategyPanelVM",                  Life = "Role", Priority = 2000,         Path = "Game/Ops/VM/OpsNewbieStrategy/OpsNewbieStrategyPanelVM"},
+	-- 组队分享主界面
+	{ Name = "OpsTeamUpMainPanelVM",                  Life = "Role", Priority = 2000,         Path = "Game/Ops/VM/OpsTeamUp/OpsTeamUpMainPanelVM"},
 
 	-- 风脉泉系统
 	{ Name = "AetherCurrentsVM",   Life = "Role", Priority = 2000,    Path = "Game/AetherCurrent/AetherCurrentsVM"},
@@ -236,6 +240,7 @@ local UIViewModelConfig = {
 	{ Name = "PhotoTemplateVM",		Life = "Role", 	Priority = 2000, 	Path = "Game/Photo/VM/PhotoTemplateVM"},
 	{ Name = "PhotoActionVM",		Life = "Role", 	Priority = 2000, 	Path = "Game/Photo/VM/PhotoActionVM"},
 	{ Name = "PhotoEmojiVM",		Life = "Role", 	Priority = 2000, 	Path = "Game/Photo/VM/PhotoEmojiVM"},
+	--{ Name = "PhotoEditMainVM",		Life = "Role", 	Priority = 2000, 	Path = "Game/Photo/VM/PhotoEdit/PhotoEditMainVM"},
 
 	-- 目标标记
 	{ Name = "SignsMainVM",			Life = "Role", 	Priority = 2000, 	Path = "Game/Signs/VM/SignsMainVM"},
@@ -247,6 +252,9 @@ local UIViewModelConfig = {
 
 	-- 便捷使用
 	{ Name = "SidePopUpMainBagVM",   Life = "Role", Priority = 2000,    Path = "Game/SidePopUp/VM/SidePopUpMainBagVM"},
+
+	-- 解锁外观
+	{ Name = "SidePopUpFashionVM",   Life = "Role", Priority = 2000,    Path = "Game/SidePopUp/VM/SidePopUpFashionVM"},
 
 	-- 任务提示
 	{ Name = "InfoQuestTipsVM",   	Life = "Role", Priority = 2000,    	Path = "Game/InfoTips/Quest/InfoQuestTipsVM"},
@@ -260,12 +268,14 @@ local UIViewModelConfig = {
 	{ Name = "ExclusiveBattleQuestVM",              Life = "Role", Priority = 2000,         Path = "Game/ExclusiveBattleQuest/VM/ExclusiveBattleQuestVM"},
 
 	-- 对战资料
-	{ Name = "PVPInfoVM",              Life = "Role", Priority = 2000,         Path = "Game/PVP/VM/PVPInfoVM"},
+	{ Name = "PVPInfoVM",              Life = "Role", Priority = 2000,         Path = "Game/PVP/Info/VM/PVPInfoVM"},
 
     -- PVP水晶冲突
-	{ Name = "PVPColosseumHeaderVM",   Life = "Role", Priority = 2000,         Path = "Game/PVP/Colosseum/VM/PVPColosseumHeaderVM"},
-	{ Name = "PVPColosseumBattleLogVM",   Life = "Role", Priority = 2000,         Path = "Game/PVP/Colosseum/VM/PVPColosseumBattleLogVM"},
-	{ Name = "PVPColosseumRecordVM",   Life = "Role", Priority = 2000,         Path = "Game/PVP/Record/VM/PVPColosseumRecordVM"},
+	{ Name = "PVPColosseumHeaderVM",   		Life = "Role", Priority = 2000, Path = "Game/PVP/Colosseum/VM/PVPColosseumHeaderVM"},
+	{ Name = "PVPColosseumBattleLogVM",   	Life = "Role", Priority = 2000, Path = "Game/PVP/Colosseum/VM/PVPColosseumBattleLogVM"},
+	{ Name = "PVPColosseumRecordInsideVM",   		Life = "Role", Priority = 2000, Path = "Game/PVP/Colosseum/VM/PVPColosseumRecordInsideVM"},
+	{ Name = "PVPColosseumRecordVM",   		Life = "Role", Priority = 2000, Path = "Game/PVP/Record/VM/PVPColosseumRecordVM"},
+	{ Name = "PVPMapVM", 					Life = "Role", Priority = 2000, Path = "Game/PVP/Map/VM/PVPMapVM"},
 
 	-- 自选宝箱
 	{ Name = "TreasureChestVM",     Life = "Role", Priority = 2000,         Path = "Game/TreasureChest/VM/TreasureChestVM"},
@@ -278,6 +288,8 @@ local UIViewModelConfig = {
 	{ Name = "MainFunctionPanelVM",    Life = "Role", Priority = 2000,         Path = "Game/Main/FunctionPanel/MainFunctionPanelVM"},
 	-- 主界面仇恨列表
 	{ Name = "MainEnmityPanelVM",    Life = "Role", Priority = 2000,         Path = "Game/Main/EnmityPanel/MainEnmityPanelVM"},
+	-- 主界面房屋
+	{ Name = "MainHousePanelVM",    Life = "Role", Priority = 2000,         Path = "Game/Main/VM/MainHouseListVM"},
 
 	-- 决斗
 	{ Name = "PVPDuelVM",              Life = "Role", Priority = 2000,         Path = "Game/PVP/Duel/VM/PVPDuelVM"},
@@ -291,6 +303,20 @@ local UIViewModelConfig = {
 	{ Name = "MainControlPanelVM",        Life = "Role", Priority = 2000,         Path = "Game/Main/VM/MainControlPanelVM" },
 
 	{ Name = "BattlePassMainVM",        Life = "Role", Priority = 2000,         Path = "Game/BattlePass/VM/BattlePassMainVM" },
+
+	-- 房屋
+	{ Name = "HouseMainPanelVM",	Life = "Role", Priority = 2000,         Path = "Game/House/VM/HouseMainPanelVM"},
+	-- 房屋土地
+	{ Name = "HouseLandMianPanelVM",	Life = "Role", Priority = 2000,         Path = "Game/House/VM/HouseLandMianPanelVM"},
+	-- 仙人赐福
+	{ Name = "GoldSaucerBlessingVM",	Life = "Role", Priority = 2000,         Path = "Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingVM"},
+	-- 房屋信息
+	{ Name = "HouseMineMainPanelVM",        Life = "Role", Priority = 2000,         Path = "Game/House/VM/HouseMineMainPanelVM"},
+	-- 回流活动
+	{ Name = "OpsReturnMainPanelVM",        Life = "Role", Priority = 2000,         Path = "Game/Ops/VM/OpsReturn/OpsReturnMainPanelVM"},
+	{ Name = "StoreMysteryBoxVM",							Life = "Role", Priority = 2000,         Path = "Game/Store/VM/StoreMysteryBoxVM"},
+	--贺卡
+	{ Name = "GreetingCardWinVM",        Life = "Role", Priority = 2000,         Path = "Game/StarlightCelebration/GreetingCard/VM/GreetingCardWinVM"},
 }
 
 return UIViewModelConfig

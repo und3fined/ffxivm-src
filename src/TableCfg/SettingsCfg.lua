@@ -54,6 +54,20 @@ function SettingsCfg:GetSettingsList( Category, SubCategory )
 	end
 
 	local ret = self:FindAllCfg(Condition)
+
+	return ret or {}
+end
+
+function SettingsCfg:GetCfgBySaveKey(SaveKey)
+	local IsWithEmulatorMode = _G.SettingsMgr.IsWithEmulatorMode
+	local Condition = nil
+	if IsWithEmulatorMode then
+		Condition = string.format("SaveKey = '%s' AND (IsHide = 0 OR IsHide = 1)", SaveKey)
+	else
+		Condition = string.format("SaveKey = '%s' AND (IsHide = 0 OR IsHide = 2)", SaveKey)
+	end
+	local ret = self:FindAllCfg(Condition)
+
 	return ret or {}
 end
 

@@ -35,17 +35,22 @@ function OpsActivityTaskItemVM:UpdateVM(TaskItem)
     self.ActivityID = TaskItem.ActivityID
     self.TaskState = TaskItem.RewardStatus
     self.NodeID = TaskItem.NodeID
+    self.ClassifyID = TaskItem.ClassifyID
     local ActivityNodeCfg = require("TableCfg/ActivityNodeCfg")
     local ActivityNode = ActivityNodeCfg:FindCfgByKey(self.NodeID)
     -- 简单任务
     if self.Index == 0 then
         self.TaskContent = TaskItem.NodeDes
-        self.TaskProgress = string.format("(%d/%d)", tonumber(TaskItem.FinishedTask) or 0,  tonumber(TaskItem.TotalTask) or 1)
+        local finished = TaskItem.FinishedTask and tonumber(TaskItem.FinishedTask) or 0
+        local total = TaskItem.TotalTask and tonumber(TaskItem.TotalTask) or 1
+        self.TaskProgress = string.format("(%d/%d)", finished, total)
         self.JumpType = TaskItem.JumpType
         self.JumpParam = TaskItem.JumpParam
         self.JumpButton = TaskItem.JumpButton
-        self.NodeDescColor = ActivityNode.NodeDescColor ~= "" and ActivityNode.NodeDescColor or "FFFFFF"
-        self.ProgressColor = ActivityNode.ProgressColor ~= "" and ActivityNode.ProgressColor or "FFFFFF"
+        if ActivityNode then
+            self.NodeDescColor = ActivityNode.NodeDescColor ~= "" and ActivityNode.NodeDescColor or "FFFFFF"
+            self.ProgressColor = ActivityNode.ProgressColor ~= "" and ActivityNode.ProgressColor or "FFFFFF"
+        end
         self:RefreshBtnGoText()
     end
 
@@ -66,10 +71,12 @@ function OpsActivityTaskItemVM:UpdateVM(TaskItem)
         self.NodeID2 = TaskItem.NodeID2
         local ActivityNode1 = ActivityNodeCfg:FindCfgByKey(self.NodeID1)
         local ActivityNode2 = ActivityNodeCfg:FindCfgByKey(self.NodeID2)
-        self.NodeDescColor1 = ActivityNode1.NodeDescColor ~= "" and ActivityNode1.NodeDescColor or "FFFFFF"
-        self.NodeDescColor2 = ActivityNode2.NodeDescColor ~= "" and ActivityNode2.NodeDescColor or "FFFFFF"
-        self.ProgressColor1 = ActivityNode1.ProgressColor ~= "" and ActivityNode1.ProgressColor or "FFFFFF"
-        self.ProgressColor2 = ActivityNode2.ProgressColor ~= "" and ActivityNode2.ProgressColor or "FFFFFF"
+        if ActivityNode1 and ActivityNode2 then
+            self.NodeDescColor1 = ActivityNode1.NodeDescColor ~= "" and ActivityNode1.NodeDescColor or "FFFFFF"
+            self.NodeDescColor2 = ActivityNode2.NodeDescColor ~= "" and ActivityNode2.NodeDescColor or "FFFFFF"
+            self.ProgressColor1 = ActivityNode1.ProgressColor ~= "" and ActivityNode1.ProgressColor or "FFFFFF"
+            self.ProgressColor2 = ActivityNode2.ProgressColor ~= "" and ActivityNode2.ProgressColor or "FFFFFF"
+        end
         if self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo then
             if TaskItem.FinishedTask1 < TaskItem.TotalTask1 and self.JumpButton1 ~= "" then
                 self.bShowBtn1 = true
@@ -86,17 +93,18 @@ function OpsActivityTaskItemVM:UpdateVM(TaskItem)
             self.bShowBtn2 = false
         end
     end
-
-    for i = #TaskItem.Rewards, 1, -1 do
-        if TaskItem.Rewards[i].ItemID == 0 then
-            table.remove(TaskItem.Rewards, i)
-        else
-            TaskItem.Rewards[i].RewardStatus = self.TaskState
-            TaskItem.Rewards[i].ItemSlotType = ItemDefine.ItemSlotType.Item74Slot
+    if TaskItem.Rewards then
+        for i = #TaskItem.Rewards, 1, -1 do
+            if TaskItem.Rewards[i].ItemID == 0 then
+                table.remove(TaskItem.Rewards, i)
+            else
+                TaskItem.Rewards[i].RewardStatus = self.TaskState
+                TaskItem.Rewards[i].ItemSlotType = ItemDefine.ItemSlotType.Item74Slot
+            end
         end
-    end
 
-    self.RewardList:UpdateByValues(TaskItem.Rewards)
+        self.RewardList:UpdateByValues(TaskItem.Rewards)
+    end
 end
 
 
@@ -106,12 +114,14 @@ end
 
 function OpsActivityTaskItemVM:RefreshBtnGoText()
     self.bShowBtnGo = true
+    self.RedDotName = ""
     if self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo then
         if self.JumpButton and self.JumpButton ~= "" then
 		    self.TextBtnGo = self.JumpButton
         end
 	elseif self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then
 		self.TextBtnGo = LSTR(100036)
+        self.RedDotName = _G.OpsActivityMgr:GetRedDotName(self.ClassifyID, self.ActivityID, "Reward")
 	elseif self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusDone then
         self.TextBtnGo = LSTR(100037)
 	end

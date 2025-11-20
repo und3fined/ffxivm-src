@@ -75,8 +75,8 @@ function ChatHyperlinkLocationItemView:OnRegisterBinder()
 		return
 	end
 
-	local ViewModel = self.Params.Data 
-	self.ViewModel = ViewModel 
+	local ViewModel = self.Params.Data
+	self.ViewModel = ViewModel
 	if nil == ViewModel then
 		return
 	end
@@ -100,12 +100,17 @@ function ChatHyperlinkLocationItemView:OnClickButtonLoction()
 		return
 	end
 
+	if _G.PWorldMgr:CurrIsInDungeon() then
+		_G.MsgTipsUtil.ShowTips(_G.LSTR(50191))
+		return
+	end
+
 	local Type = ViewModel.Type
 	if Type == HyperlinkLocationType.MyLocation then
-		ChatMgr:AddLocationHref(ViewModel.MapID, ViewModel.Position)
+		ChatMgr:AddLocationHref(ViewModel.MapID, ViewModel.Position, ViewModel.UIMapID)
 
 	elseif Type == HyperlinkLocationType.OpenMap then
-		WorldMapMgr:ShowSendLoctionView() 
+		WorldMapMgr:ShowSendLoctionView()
 	end
 end
 

@@ -13,14 +13,9 @@ local EventID = require("Define/EventID")
 local ItemUtil = require("Utils/ItemUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local CompanionCfg = require ("TableCfg/CompanionCfg")
-local ModelDefine = require("Game/Model/Define/ModelDefine")
-local LightDefine = require("Game/Light/LightDefine")
 local TipsUtil = require("Utils/TipsUtil")
 local CommonUtil = require("Utils/CommonUtil")
-local GameplayStaticsUtil = require("Utils/GameplayStaticsUtil")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
-local CompanionGlobalCfg = require("TableCfg/CompanionGlobalCfg")
-local CompanionActionUnlockCfg = require("TableCfg/CompanionActionUnlockCfg")
 local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
 local DataReportUtil = require("Utils/DataReportUtil")
 
@@ -28,18 +23,13 @@ local CompanionArchiveVM = require ("Game/Companion/VM/CompanionArchiveVM")
 local CompanionVM = require ("Game/Companion/VM/CompanionVM")
 
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
-local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
--- local CompanionActorPath = "Class'/Game/BluePrint/Character/CompanionBlueprint.CompanionBlueprint_C'"
 local SceneActorPath = "Class'/Game/UI/Render2D/Companion/BP_Render2DCompanionArchive.BP_Render2DCompanionArchive_C'"
-local LightPreset = "LightPreset'/Game/UI/Render2D/LightPresets/Login/UniversalLightingPreset/UniversalLightingPreset01.UniversalLightingPreset01'"
-local CompanionLightLevelID = LightDefine.LightLevelID.LIGHT_LEVEL_ID_COMPANION_ARCHIVE
-local SCS_FinalColorLDRHasAlpha = _G.UE.ESceneCaptureSource.SCS_FinalColorLDRHasAlpha or 3
 
 local UIViewMgr = _G.UIViewMgr
 local LSTR = _G.LSTR
@@ -68,6 +58,11 @@ local EmptyText = {
 	[EmptyType.Search] = LSTR(120008),
 	[EmptyType.Filter] = LSTR(120009),
 	[EmptyType.Toggle] = LSTR(120010),
+}
+
+local CreateParam = {
+	Location = UE.FVector(0, 0, ActorZLocation),
+	Rotation = UE.FRotator(0, 0, 0),
 }
 
 ---@class CompanionArchivePanelView : UIView
@@ -239,6 +234,7 @@ function CompanionArchivePanelView:OnDestroy()
 end
 
 function CompanionArchivePanelView:OnShow()
+	self.SearchBar:SetQueryTextIsLegal(false)
 	BuoyMgr:ShowAllBuoys(false)
 
 	-- 策划要求屏蔽留言板
@@ -266,13 +262,13 @@ end
 
 function CompanionArchivePanelView:OnHide()
 	BuoyMgr:ShowAllBuoys(true)
-	self:RestoreRefelctionCubemap()
 	self.ViewModel:ClearData()
 	self.SelectedCompanionID = nil
 	self.CompanionAdapterTableView:ClearSelectedItem()
 	self.CompanionActor = nil
 	self.CompanionEntityID = nil
 	self.WaitSwitchModelID = nil
+	self.ReCreateCompanionCallback = nil
 end
 
 function CompanionArchivePanelView:OnRegisterUIEvent()
@@ -299,8 +295,10 @@ end
 function CompanionArchivePanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.CompanionArchiveModelStartRotate, self.OnCompanionArchiveModelStartRotate)
 	self:RegisterGameEvent(EventID.CompanionArchiveModelEndRotate, self.OnCompanionArchiveModelEndRotate)
-    -- self:RegisterGameEvent(EventID.LevelPostLoad, self.OnGameEventLevelPostLoad)
 	self:RegisterGameEvent(EventID.CompanionArchiveNewListUpdate, self.OnCompanionArchiveNewListUpdate)
+
+	self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
+    self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldMapExit)
 end
 
 function CompanionArchivePanelView:OnRegisterBinder()
@@ -585,59 +583,43 @@ function CompanionArchivePanelView:OnCompanionArchiveModelEndRotate()
 	
 end
 
-function CompanionArchivePanelView:OnGameEventLevelPostLoad(Params)
-    local LightLevelName = Params.StringParam1
-	if LightLevelName ~= LightDefine.LightLevelPath[CompanionLightLevelID] then return end
-	
-	local UWorldMgr = UE.UWorldMgr.Get()
-	local LightLevel = UE.UGameplayStatics.GetStreamingLevel(FWORLD(), LightLevelName)
-    if LightLevel then
-        if LightLevel:IsLevelLoaded() then
-            local Level = LightLevel:GetLoadedLevel()
-            if Level then
-                local Actors = UWorldMgr:GetActorsInLevel(Level)
-                for i=1, Actors:Length() do
-                    local Actor = Actors:GetRef(i)
-                    if Actor then
-                        local Name = Actor:GetName()
-                        if Name == "SphereReflectionCapture_1" then
-                            self.LightLevelRef = Actor
-                            break
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-	local World = GameplayStaticsUtil:GetWorld()
-	local AllReflections = UE.TArray(UE.AActor)
-	UE.UGameplayStatics.GetAllActorsOfClass(World, UE.ASphereReflectionCapture.StaticClass(), AllReflections)
-	for Index = 1, AllReflections:Length() do
-		local Reflection = AllReflections:GetRef(Index)
-		if Reflection then
-			if Reflection ~= self.LightLevelRef then
-				self.CurWorldRef = Reflection
-			end
+function CompanionArchivePanelView:OnCompanionArchiveNewListUpdate(Params)
+	local CompanionID = Params.CompanionID
+	local VMList = self.ViewModel.CompanionVMList
+	local FindVM = nil
+	for _, VM in pairs(VMList) do
+		if VM.CompanionID == CompanionID then
+			FindVM = VM
+			break
 		end
 	end
-
-	local NewCubemap = self.LightLevelRef.CaptureComponent.Cubemap
-	if NewCubemap then
-		self.OriginCubeMap = self.CurWorldRef.CaptureComponent.Cubemap
-		self.CurWorldRef.CaptureComponent.Cubemap = NewCubemap
+	if FindVM then
+		FindVM:UpdateRedDot()
 	end
 end
 
-function CompanionArchivePanelView:OnCompanionArchiveNewListUpdate()
-	self.ViewModel:UpdateVMData()
+function CompanionArchivePanelView:OnGameEventPWorldMapEnter(Params)
+	if self.ReCreateCompanionCallback then
+		self.ReCreateCompanionCallback()
+		self.ReCreateCompanionCallback = nil
+	end
+end
+
+function CompanionArchivePanelView:OnGameEventPWorldMapExit(Params)
+	self.ReCreateCompanionCallback = function ()
+		local SelectedCompanionID = self.SelectedCompanionID
+		if SelectedCompanionID and SelectedCompanionID > 0 then
+			self.ViewModel:SetAutoPlayInteract(false)
+			self.ViewModel:ResetAnimationState()
+			self.CompanionRenderer:CreateCompanionActor(SelectedCompanionID, CreateParam)
+		end
+	end
 end
 
 function CompanionArchivePanelView:InitCompanionModel(CompanionID)
 	self.HasInitCompanion = true
 	local function RenderSceneCallBack(IsSuccess)
         if (IsSuccess) then
-			-- self.CompanionRenderer:SwitchSceneLights(false)
 			self.CompanionRenderer:SetFOVY(25, false)
         end
     end
@@ -664,10 +646,6 @@ function CompanionArchivePanelView:InitCompanionModel(CompanionID)
 		end
 	end
 
-	local CreateParam = {
-		Location = UE.FVector(0, 0, ActorZLocation),
-		Rotation = UE.FRotator(0, 0, 0),
-	}
 	self.CompanionRenderer:ShowCompanion(SceneActorPath, CompanionID, RenderSceneCallBack, RenderActorCallBack, CreateParam)
 end
 
@@ -797,12 +775,16 @@ function CompanionArchivePanelView:PlayActionTimeline(TimelineLabel, Callback)
 end
 
 function CompanionArchivePanelView:StopActionTimeline()
-	if not self.CompanionActor then return end
-
-	local AnimationComponent = self.CompanionActor:GetAnimationComponent()
-	local AnimationInstance = AnimationComponent:GetAnimInstance()
-	local BlendOutTime = 0.25
-	AnimationInstance:Montage_Stop(BlendOutTime)
+	if self.CompanionActor then
+		local AnimationComponent = self.CompanionActor:GetAnimationComponent()
+		if AnimationComponent then
+			local AnimationInstance = AnimationComponent:GetAnimInstance()
+			if AnimationInstance then
+				local BlendOutTime = 0.25
+				AnimationInstance:Montage_Stop(BlendOutTime)
+			end
+		end
+	end
 end
 
 function CompanionArchivePanelView:IsSelectedMergeCompanion()
@@ -869,14 +851,7 @@ end
 
 function CompanionArchivePanelView:ResetAnimationState()
 	self:StopActionTimeline()
-	self.ViewModel:ResetAnimaionState()
-end
-
-function CompanionArchivePanelView:RestoreRefelctionCubemap()
-	if self.CurWorldRef == nil then return end
-	
-	self.CurWorldRef.CaptureComponent.Cubemap = self.OriginCubeMap
-	self.OriginCubeMap = nil
+	self.ViewModel:ResetAnimationState()
 end
 
 function CompanionArchivePanelView:UpdateInteractList(CompanionID)

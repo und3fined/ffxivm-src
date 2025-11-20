@@ -63,6 +63,7 @@ end
 function MagicCardTourneyMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_ROOM_UPDATE, self.OnNetMsgRoomUpdate)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_TOURNAMENT_INFO, self.OnNetMsgTourneyInfo)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_TOURNAMENT_BROADCAST, self.OnNetMsgTourneyStateChanged)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_TOURNAMENT_RANK, self.OnNetMsgRankInfo)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_TOURNAMENT_MATCH, self.OnNetMsgMatchTourney)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_FANTASYCARD, FANTASY_CARD_OP.FANTASY_CARD_OP_TOURNAMENT_MATCH_DONE, self.OnNetMsgMatchSuccess)
@@ -298,6 +299,10 @@ end
 function MagicCardTourneyMgr:OnReadyTourney()
     self:UpdateTourneyInfo()
     self:ShowTourneyInfoBar(true)
+    local StageInfoVM = TourneyVM.StageInfoVM
+    if StageInfoVM then
+        StageInfoVM:OnEnterMatchRoom()
+    end
 end
 
 --------------- 功能接口 ---------------
@@ -438,6 +443,11 @@ function MagicCardTourneyMgr:OnPWorldTransBegin(IsOnlyChangeLocation)
     end
 end 
 
+---@type 对局开始 准备或者对局
+function MagicCardTourneyMgr:OnMagicCardStart(IsPVP)
+    self.IsInTourney = IsPVP
+end
+
 -- 对局前退出
 function MagicCardTourneyMgr:OnMagicCardBeforeEnterQuit()
     self.IsInTourney = false
@@ -527,6 +537,7 @@ end
 function MagicCardTourneyMgr:CancelEnterConfirm(IsManual)
     self.IsCancelEnterMatch = true
     self.IsMatchSuccess = false
+    self.IsInTourney = false
     self:HideEnterConfirmRelativeView()
     self:ClearAutoCancelEnterTimer()
     if IsManual then
@@ -806,7 +817,7 @@ end
 
 ---@type 获取对局室内正在对局中的所有玩家
 function MagicCardTourneyMgr:GetInGamePlayerEntityIDMap()
-    local PlayerEntityIDMap = MagicCardRoleManager:GetInGamePlayerEntityIDMap()
+    local PlayerEntityIDMap = self.RoleManager:GetInGamePlayerEntityIDMap()
     return PlayerEntityIDMap
 end
 
@@ -862,7 +873,6 @@ function MagicCardTourneyMgr:OnSignUpSuccess()
     self:EndInteraction()
 
     local TipDuration = TourneyVMUtils.GetTipDurationByID(MagicCardTourneyDefine.TipsID.SignUpSuccessTip)
-    FLOG_ERROR("Tips时间："..TipDuration)
     local function OnTipsReoved()
         self:EndInteraction()
         self:SwitchStageInfoView()
@@ -917,7 +927,8 @@ function MagicCardTourneyMgr:ShowTourneyDetailView()
     if IsActive == false then
         return
     end
-    self:SendMsgRankInfo()
+
+    self:UpdateTourneyInfo()
     TourneyVM:UpdateEffectStatus()
     UIViewMgr:ShowView(UIViewID.MagicCardTourneyDetailPanel)
 end
@@ -1005,6 +1016,11 @@ function MagicCardTourneyMgr:OnNetMsgTourneyInfo(MsgBody)
     self:UpdateRankObjState(self.TourneyInfo.IsActive)
 end
 
+---@type 大赛结束或开启广播
+function MagicCardTourneyMgr:OnNetMsgTourneyStateChanged(MsgBody)
+    self:UpdateTourneyInfo()
+end
+
 ---@type 报名请求
 function MagicCardTourneyMgr:SendMsgSignUpForTourney()
     local MsgID = CS_CMD.CS_CMD_FANTASYCARD
@@ -1067,6 +1083,10 @@ function MagicCardTourneyMgr:OnNetMsgMatchSuccess(MsgBody)
     self.IsMatchSuccess = true
     self.MatchConfirmStartTime = _G.TimeUtil.GetLocalTime()
     UIViewMgr:HideView(UIViewID.MagicCardTourneyDetailPanel)
+    -- 幻卡对局涉及镜头切换与角色隐藏/显示，所以直接关闭商城界面，避免角色预览问题
+    if _G.UIViewMgr:IsViewVisible(_G.UIViewID.StoreNewMainPanel) then
+        _G.UIViewMgr:HideView(_G.UIViewID.StoreNewMainPanel)
+    end
     local StageInfoVM = TourneyVM.StageInfoVM
     if StageInfoVM then
         StageInfoVM:UpdateMatchTextByState(EMatchState.Confirm)

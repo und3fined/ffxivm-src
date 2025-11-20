@@ -15,6 +15,8 @@ local SocialSettings = require("Game/Social/SocialSettings")
 local LoginMgr = require("Game/Login/LoginMgr")
 local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = require("Define/UIViewID")
+local TeamRecruitVM = require("Game/TeamRecruit/VM/TeamRecruitVM")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
 
 local LSTR = _G.LSTR
 local TabType = SocialDefine.TabType
@@ -100,6 +102,9 @@ function SocialMainPanelView:OnShow()
 
 	local Key = TabType.FriendList
 	self.CommMenu:SetSelectedKey(Key)
+
+	TeamInviteVM:ClearInvitedRoleInfo()
+	TeamRecruitVM:ClearSharedRoleInfo() -- 防止其他玩法数据污染
 end
 
 function SocialMainPanelView:OnHide()
@@ -107,6 +112,7 @@ function SocialMainPanelView:OnHide()
 
 	self.CommMenu:CancelSelected()
 	TeamInviteVM:ClearInvitedRoleInfo()
+	TeamRecruitVM:ClearSharedRoleInfo()
 
 	UIUtil.SetIsVisible(self.FriendListPanel, false)
 	UIUtil.SetIsVisible(self.FriendPlatformPanel, false)
@@ -121,6 +127,7 @@ end
 
 function SocialMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.TeamInviteJoin, self.OnGameEventTeamInviteJoin)
+    self:RegisterGameEvent(EventID.TeamRecruitShareToPlayerSuc, self.OnEventMsgShareTeamRecruitToPlayerSuc)
 end
 
 function SocialMainPanelView:OnRegisterBinder()
@@ -134,7 +141,11 @@ function SocialMainPanelView:InitConstText()
 
 	self.IsInitConstText = true
 
+	UIUtil.SetIsVisible(self.TextTitle, false)
+	UIUtil.SetIsVisible(self.CommonTitle, true)
 	self.TextTitle:SetText(LSTR(20008)) -- "社交"
+	self.CommonTitle:SetTextTitleName(LSTR(20008))
+	self.CommonTitle:SetTitleIcon("Texture2D'/Game/UI/Texture/Icon/Title/UI_Icon_Title_Social.UI_Icon_Title_Social'")
 end
 
 function SocialMainPanelView:GetCurTabData()
@@ -177,6 +188,10 @@ function SocialMainPanelView:OnGameEventTeamInviteJoin( RoleID )
 	end
 
 	TeamInviteVM:AddInvitedRole(RoleID)
+end
+
+function SocialMainPanelView:OnEventMsgShareTeamRecruitToPlayerSuc( )
+    MsgTipsUtil.ShowTips(LSTR(1310115)) -- "招募分享成功"
 end
 
 -------------------------------------------------------------------------------------------------------

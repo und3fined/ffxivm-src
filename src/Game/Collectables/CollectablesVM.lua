@@ -312,9 +312,9 @@ function CollectablesVM:UpdateWarnImgVisbile()
         end
     end
     -- 当增加工票报酬会超过可拥有最大工票值则只增加到最大值最终显示差值
-    if self.bBtnWarnVisible then
-        self:SetTicketRewardUnderMax()
-    end
+    --if self.bBtnWarnVisible then
+    --    self:SetTicketRewardUnderMax()
+    --end
 end
 
 ---@type 当增加工票报酬会超过可拥有最大工票值则只增加到最大值最终显示差值
@@ -400,11 +400,7 @@ end
 ---@type 根据收藏品的ID获得其记录信息
 ---@param ID number 收藏品ID
 function CollectablesVM:GetRecordInfoByID(ID)
-    local AllRecordInfo = CollectablesMgr.AllRecordData
-    local RecordList = AllRecordInfo.RecordList
-    if nil == RecordList then
-        return
-    end
+    local RecordList = CollectablesMgr.AllRecordData or {}
     for i = 1, #RecordList do
         local RecordInfo = RecordList[i]
         if RecordInfo.CollectID == ID then
@@ -433,7 +429,6 @@ function CollectablesVM:UpdateImproveRecordTips(SelectCollection)
     if View ~= nil then
         View:RefreshRecordedEffect(self.RecordCollectionName)
     end
-    _G.LootMgr:SetDealyState(false)
 end
 
 ---@type 得到选中的物品

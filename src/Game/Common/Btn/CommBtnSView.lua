@@ -14,6 +14,7 @@ local WidgetCallback = require("UI/WidgetCallback")
 ---@field Button UFButton
 ---@field Img UFImage
 ---@field ProBarLongPress UProgressBar
+---@field RedDot CommonRedDotView
 ---@field TextContent UFTextBlock
 ---@field AnimPressed UWidgetAnimation
 ---@field AnimReleased UWidgetAnimation
@@ -28,6 +29,7 @@ function CommBtnSView:Ctor()
 	--self.Button = nil
 	--self.Img = nil
 	--self.ProBarLongPress = nil
+	--self.RedDot = nil
 	--self.TextContent = nil
 	--self.AnimPressed = nil
 	--self.AnimReleased = nil
@@ -39,6 +41,7 @@ end
 
 function CommBtnSView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.RedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

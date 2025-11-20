@@ -52,6 +52,11 @@ function WardrobeSuitItemVM:UpdateVM(Value)
     self.CanEquip =  WardrobeMgr:CanEquipAppearance(Value.AppID)
     self.StainedEnable = WardrobeMgr:GetDyeEnable(Value.AppID)
     self.IsStained = WardrobeMgr:GetIsDye(Value.AppID)
+    if WardrobeMgr:GetIsClothing( Value.AppID) then
+        self.IsStained=  WardrobeMgr:GetCurrentIsDye( Value.AppID)
+    else
+        self.IsStained =  WardrobeMgr:GetIsDye(Value.AppID)
+    end
     self.IsUnlock = WardrobeMgr:GetIsUnlock(Value.AppID)
     self.EquipID = Value.EquipID
     local SpeacialID = WardrobeUtil.GetIsSpecial(Value.AppID) and WardrobeDefine.SpecialShiftID or 0 

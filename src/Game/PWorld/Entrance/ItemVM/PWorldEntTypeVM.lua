@@ -51,11 +51,7 @@ end
 function PWorldEntTypeVM:UpdMatch()
 	local EntSet = SceneEnterTypeCfg:GetPWorldEntIDs(self.TypeID)
 	local Matches = _G.PWorldMatchMgr:GetMatchItems()
-	local CrystallineMatches = _G.PWorldMatchMgr:GetCrystallineItems()
-	local FrontlineMatches = _G.PWorldMatchMgr:GetFrontlineItems()
-	local HasOverlap = table.set_has_overlap(EntSet, Matches) or
-						table.set_has_overlap(EntSet, CrystallineMatches) or
-						table.set_has_overlap(EntSet, FrontlineMatches)
+	local HasOverlap = table.set_has_overlap(EntSet, Matches)
 	self.IsMatching = HasOverlap
 	self:UpdateStatus()
 end

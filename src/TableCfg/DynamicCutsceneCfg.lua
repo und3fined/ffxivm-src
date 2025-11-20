@@ -5,6 +5,8 @@ local CfgBase = require("TableCfg/CfgBase")
 local CS = {
     _1_1 = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bostit/bostit00010/bostit00110.bostit00110\'',
     _1_2 = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bostit/bostit00120/bostit00120_proj/bostit00120.bostit00120\'',
+    _1_3 = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunsea/dunsea1b710/dunsea1b710_proj/dunsea1b710.dunsea1b710\'',
+    _1_4 = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunfst/dunfst1b420/dunfst1b420_proj/dunfst1b420.dunfst1b420\'',
 }
 
 ---@class DynamicCutsceneCfg : CfgBase
@@ -19,6 +21,7 @@ local DynamicCutsceneCfg = {
     DefaultValues = {
         AnimationCondition = 0,
         DisableOcclusionCull = 0,
+        DistributionExponent = 0.0,
         FadeOutTime = 1.0,
         FadeOutWhiteColor = 0,
         ForbidLoadLayerSet = 0,
@@ -29,6 +32,7 @@ local DynamicCutsceneCfg = {
         LoadAllSubLevels = 0,
         SceneCharacterShowType = 0,
         SequencePath = '',
+        UseCharacterAsViewPoint = 0,
     },
 	LuaData = {
         {
@@ -730,9 +734,11 @@ local DynamicCutsceneCfg = {
         },
         {
             ID = 273,
+            SequencePath = CS._1_3,
         },
         {
             ID = 276,
+            SequencePath = CS._1_4,
         },
         {
             ID = 277,
@@ -986,7 +992,30 @@ local DynamicCutsceneCfg = {
         },
         {
             ID = 365,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b411/dunwil1b411_proj/dunwil1b411.dunwil1b411\'',
+        },
+        {
+            ID = 366,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b411/dunwil1b411_proj/dunwil1b412.dunwil1b412\'',
+        },
+        {
+            ID = 367,
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunfst/dunfst1b421/dunfst1b421_proj/dunfst1b421.dunfst1b421\'',
+        },
+        {
+            ID = 368,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ex1/heavna/heavna33320/heavna33320_proj/heavna33320.heavna33320\'',
+        },
+        {
+            ID = 369,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b120/dunwil1b120_proj/dunwil1b120.dunwil1b120\'',
+        },
+        {
+            ID = 370,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b220/dunwil1b220_proj/dunwil1b220.dunwil1b220\'',
         },
         {
             ID = 3000000,
@@ -1007,6 +1036,14 @@ local DynamicCutsceneCfg = {
         {
             ID = 3000004,
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunsea/dunsea1b141/dunsea1b141_proj/dunsea1b141.dunsea1b141\'',
+        },
+        {
+            ID = 3000005,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b311/dunwil1b311_proj/dunwil1b311.dunwil1b311\'',
+        },
+        {
+            ID = 3000006,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv_m/dunwil/dunwil1b311/dunwil1b311_proj/dunwil1b312.dunwil1b312\'',
         },
         {
             ID = 8000001,
@@ -1765,9 +1802,266 @@ local DynamicCutsceneCfg = {
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse31935/gaiuse31935_proj/gaiuse31935.gaiuse31935\'',
         },
         {
+            ID = 8000235,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40110/gaiuse40110_proj/gaiuse40110.gaiuse40110',
+        },
+        {
+            ID = 8000236,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40120/gaiuse40120_proj/gaiuse40120.gaiuse40120',
+        },
+        {
+            ID = 8000237,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40310/gaiuse40310_proj/gaiuse40310.gaiuse40310',
+        },
+        {
+            ID = 8000238,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40320/gaiuse40320_proj/gaiuse40320.gaiuse40320',
+        },
+        {
+            ID = 8000239,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40510/gaiuse40510_proj/gaiuse40510.gaiuse40510',
+        },
+        {
+            ID = 8000240,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40810/gaiuse40810_proj/gaiuse40810.gaiuse40810',
+        },
+        {
+            ID = 8000241,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40820/gaiuse40820_proj/gaiuse40820.gaiuse40820',
+        },
+        {
+            ID = 8000242,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse40910/gaiuse40910_proj/gaiuse40910.gaiuse40910',
+        },
+        {
+            ID = 8000243,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41020/gaiuse41020_proj/gaiuse41020.gaiuse41020',
+        },
+        {
+            ID = 8000244,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41030/gaiuse41030_proj/gaiuse41030.gaiuse41030',
+        },
+        {
+            ID = 8000245,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41040/gaiuse41040_proj/gaiuse41040.gaiuse41040',
+        },
+        {
+            ID = 8000246,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41110/gaiuse41110_proj/gaiuse41110.gaiuse41110',
+        },
+        {
+            ID = 8000251,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41540/gaiuse41540_proj/gaiuse41540.gaiuse41540',
+        },
+        {
+            ID = 8000265,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50220/gaiuse50220_proj/gaiuse50220.gaiuse50220',
+        },
+        {
+            ID = 8000266,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50230/gaiuse50230_proj/gaiuse50230.gaiuse50230',
+        },
+        {
+            ID = 8000267,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50240/gaiuse50240_proj/gaiuse50240.gaiuse50240',
+        },
+        {
+            ID = 8000268,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50250/gaiuse50250_proj/gaiuse50250.gaiuse50250',
+        },
+        {
+            ID = 8000269,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50300/gaiuse50300_proj/gaiuse50300.gaiuse50300',
+        },
+        {
+            ID = 8000270,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/tuduku/tuduku00255/tuduku00255_proj/tuduku00255.tuduku00255',
+        },
+        {
+            ID = 8000271,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60010/gaiuse60010_proj/gaiuse60010.gaiuse60010',
+        },
+        {
+            ID = 8000272,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60110/gaiuse60110_proj/gaiuse60110.gaiuse60110',
+        },
+        {
+            ID = 8000273,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60120/gaiuse60120_proj/gaiuse60120.gaiuse60120',
+        },
+        {
+            ID = 8000274,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60130/gaiuse60130_proj/gaiuse60130.gaiuse60130',
+        },
+        {
+            ID = 8000275,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60140/gaiuse60140_proj/gaiuse60140.gaiuse60140',
+        },
+        {
+            ID = 8000276,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60150/gaiuse60150_proj/gaiuse60150.gaiuse60150',
+        },
+        {
+            ID = 8000277,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosdra/bosdra00010/bosdra00010_proj/bosdra00010.bosdra00010',
+        },
+        {
+            ID = 8000279,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60210/gaiuse60210_proj/gaiuse60210.gaiuse60210',
+        },
+        {
+            ID = 8000280,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60220/gaiuse60220_proj/gaiuse60220.gaiuse60220',
+        },
+        {
+            ID = 8000281,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60230/gaiuse60230_proj/gaiuse60230.gaiuse60230',
+        },
+        {
+            ID = 8000282,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60240/gaiuse60240_proj/gaiuse60240.gaiuse60240',
+        },
+        {
+            ID = 8000283,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60250/gaiuse60250_proj/gaiuse60250.gaiuse60250',
+        },
+        {
+            ID = 8000284,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60270/gaiuse60270_proj/gaiuse60270.gaiuse60270',
+        },
+        {
+            ID = 8000285,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60280/gaiuse60280_proj/gaiuse60280.gaiuse60280',
+        },
+        {
+            ID = 8000286,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60290/gaiuse60290_proj/gaiuse60290.gaiuse60290',
+        },
+        {
+            ID = 8000287,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60300/gaiuse60300_proj/gaiuse60300.gaiuse60300',
+        },
+        {
+            ID = 8000288,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60310/gaiuse60310_proj/gaiuse60310.gaiuse60310',
+        },
+        {
+            ID = 8000289,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60320/gaiuse60320_proj/gaiuse60320.gaiuse60320',
+        },
+        {
+            ID = 8000290,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60330/gaiuse60330_proj/gaiuse60330.gaiuse60330',
+        },
+        {
+            ID = 8000291,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60350/gaiuse60350_proj/gaiuse60350.gaiuse60350',
+        },
+        {
+            ID = 8000292,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60400/gaiuse60400_proj/gaiuse60400.gaiuse60400',
+        },
+        {
+            ID = 8000293,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60405/gaiuse60405_proj/gaiuse60405.gaiuse60405',
+        },
+        {
+            ID = 8000294,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60410/gaiuse60410_proj/gaiuse60410.gaiuse60410',
+        },
+        {
+            ID = 8000295,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60420/gaiuse60420_proj/gaiuse60420.gaiuse60420',
+        },
+        {
+            ID = 8000296,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60430/gaiuse60430_proj/gaiuse60430.gaiuse60430',
+        },
+        {
+            ID = 8000297,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60440/gaiuse60440_proj/gaiuse60440.gaiuse60440',
+        },
+        {
+            ID = 8000298,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60450/gaiuse60450_proj/gaiuse60450.gaiuse60450',
+        },
+        {
+            ID = 8000299,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60460/gaiuse60460_proj/gaiuse60460.gaiuse60460',
+        },
+        {
+            ID = 8000300,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60470/gaiuse60470_proj/gaiuse60470.gaiuse60470',
+        },
+        {
+            ID = 8000301,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60480/gaiuse60480_proj/gaiuse60480.gaiuse60480',
+        },
+        {
+            ID = 8000302,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60315/gaiuse60315_proj/gaiuse60315.gaiuse60315',
+        },
+        {
+            ID = 8000303,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60500/gaiuse60500_proj/gaiuse60500.gaiuse60500',
+        },
+        {
+            ID = 8000304,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60505/gaiuse60505_proj/gaiuse60505.gaiuse60505',
+        },
+        {
+            ID = 8000305,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60510/gaiuse60510_proj/gaiuse60510.gaiuse60510',
+        },
+        {
+            ID = 8000306,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60520/gaiuse60520_proj/gaiuse60520.gaiuse60520',
+        },
+        {
+            ID = 8000307,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60525/gaiuse60525_proj/gaiuse60525.gaiuse60525',
+        },
+        {
+            ID = 8000308,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse60530/gaiuse60530_proj/gaiuse60530.gaiuse60530',
+        },
+        {
+            ID = 8000309,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/tuduku/tuduku00300/tuduku00300_proj/tuduku00300.tuduku00300',
+        },
+        {
+            ID = 8000310,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/houfst/houfst1h110/houfst1h110_proj/houfst1h110.houfst1h110',
+        },
+        {
+            ID = 8000311,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/housea/housea1h110/housea1h110_proj/housea1h110.housea1h110',
+        },
+        {
+            ID = 8000312,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/houwil/houwil1h110/houwil1h110_proj/houwil1h110.houwil1h110',
+        },
+        {
+            ID = 8000313,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/jobnin/jobnin30010/jobnin30010_proj/jobnin30010.jobnin30010',
+        },
+        {
+            ID = 8000314,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/jobnin/jobnin45110/jobnin45110_proj/jobnin45110.jobnin45110',
+        },
+        {
+            ID = 8000315,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/jobnin/jobnin50010/jobnin50010_proj/jobnin50010.jobnin50010',
+        },
+        {
             FadeOutWhiteColor = 1,
             ID = 8000316,
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/pvpmks/pvpmks06000/pvpmks06000_proj/pvpmks06000.pvpmks06000\'',
+        },
+        {
+            ID = 8000317,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/jobnin/jobnin50020/jobnin50020_proj/jobnin50020.jobnin50020',
         },
         {
             FadeOutWhiteColor = 1,
@@ -1808,6 +2102,32 @@ local DynamicCutsceneCfg = {
             ID = 8000325,
             LoadAllSubLevels = 1,
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd40170/gaiusd40170_proj/gaiusd40170.gaiusd40170\'',
+        },
+        {
+            ID = 8000346,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60110/gaiusd60110_proj/gaiusd60110.gaiusd60110',
+        },
+        {
+            ID = 8000347,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60120/gaiusd60120_proj/gaiusd60120.gaiusd60120',
+        },
+        {
+            ID = 8000348,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60130/gaiusd60130_proj/gaiusd60130.gaiusd60130',
+        },
+        {
+            ID = 8000349,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60140/gaiusd60140_proj/gaiusd60140.gaiusd60140',
+        },
+        {
+            ID = 8000350,
+            LoadAllSubLevels = 1,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60210/gaiusd60210_proj/gaiusd60210.gaiusd60210',
+        },
+        {
+            ID = 8000351,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd60220/gaiusd60220_proj/gaiusd60220.gaiusd60220',
         },
         {
             ID = 8000361,
@@ -1942,13 +2262,11 @@ local DynamicCutsceneCfg = {
         },
         {
             ID = 8000395,
-            LoadAllSubLevels = 1,
-            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunsea/dunsea1b710/dunsea1b710_proj/dunsea1b710.dunsea1b710\'',
+            SequencePath = CS._1_3,
         },
         {
             ID = 8000396,
-            LoadAllSubLevels = 1,
-            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunfst/dunfst1b420/dunfst1b420_proj/dunfst1b420.dunfst1b420\'',
+            SequencePath = CS._1_4,
         },
         {
             ID = 8000399,
@@ -1985,6 +2303,234 @@ local DynamicCutsceneCfg = {
         {
             ID = 8000407,
             SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunfst/dunfst1b510/dunfst1b510_proj/dunfst1b510.dunfst1b510\'',
+        },
+        {
+            ID = 8000408,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41310/gaiuse41310_proj/gaiuse41310.gaiuse41310\'',
+        },
+        {
+            ID = 8000409,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41410/gaiuse41410_proj/gaiuse41410.gaiuse41410\'',
+        },
+        {
+            ID = 8000410,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41420/gaiuse41420_proj/gaiuse41420.gaiuse41420\'',
+        },
+        {
+            ID = 8000411,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41510/gaiuse41510_proj/gaiuse41510.gaiuse41510\'',
+        },
+        {
+            ID = 8000412,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41550/gaiuse41550_proj/gaiuse41550.gaiuse41550\'',
+        },
+        {
+            ID = 8000413,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41610/gaiuse41610_proj/gaiuse41610.gaiuse41610\'',
+        },
+        {
+            ID = 8000414,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41710/gaiuse41710_proj/gaiuse41710.gaiuse41710\'',
+        },
+        {
+            ID = 8000415,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41810/gaiuse41810_proj/gaiuse41810.gaiuse41810\'',
+        },
+        {
+            ID = 8000416,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41910/gaiuse41910_proj/gaiuse41910.gaiuse41910\'',
+        },
+        {
+            ID = 8000417,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41920/gaiuse41920_proj/gaiuse41920.gaiuse41920\'',
+        },
+        {
+            ID = 8000418,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse41930/gaiuse41930_proj/gaiuse41930.gaiuse41930\'',
+        },
+        {
+            ID = 8000419,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50010/gaiuse50010_proj/gaiuse50010.gaiuse50010\'',
+        },
+        {
+            ID = 8000420,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50110/gaiuse50110_proj/gaiuse50110.gaiuse50110\'',
+        },
+        {
+            ID = 8000421,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50130/gaiuse50130_proj/gaiuse50130.gaiuse50130\'',
+        },
+        {
+            ID = 8000422,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50140/gaiuse50140_proj/gaiuse50140.gaiuse50140\'',
+        },
+        {
+            ID = 8000423,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50150/gaiuse50150_proj/gaiuse50150.gaiuse50150\'',
+        },
+        {
+            ID = 8000424,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50210/gaiuse50210_proj/gaiuse50210.gaiuse50210\'',
+        },
+        {
+            ID = 8000425,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/clsrog/clsrog05010/clsrog05010_proj/clsrog05010.clsrog05010',
+        },
+        {
+            ID = 8000426,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/clsrog/clsrog15110/clsrog15110_proj/clsrog15110.clsrog15110',
+        },
+        {
+            ID = 8000427,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/clsrog/clsrog30110/clsrog30110_proj/clsrog30110.clsrog30110',
+        },
+        {
+            ID = 8000428,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/clsrog/clsrog30120/clsrog30120_proj/clsrog30120.clsrog30120',
+        },
+        {
+            ID = 8000429,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b110/dunwil1b110_proj/dunwil1b110.dunwil1b110',
+        },
+        {
+            ID = 8000430,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b140/dunwil1b140_proj/dunwil1b140.dunwil1b140',
+        },
+        {
+            ID = 8000431,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b210/dunwil1b210_proj/dunwil1b210.dunwil1b210',
+        },
+        {
+            ID = 8000432,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b240/dunwil1b240_proj/dunwil1b240.dunwil1b240',
+        },
+        {
+            ID = 8000433,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b310/dunwil1b310_proj/dunwil1b310.dunwil1b310',
+        },
+        {
+            ID = 8000434,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b330/dunwil1b330_proj/dunwil1b330.dunwil1b330',
+        },
+        {
+            ID = 8000435,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b340/dunwil1b340_proj/dunwil1b340.dunwil1b340',
+        },
+        {
+            ID = 8000436,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b350/dunwil1b350_proj/dunwil1b350.dunwil1b350',
+        },
+        {
+            ID = 8000437,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b440/dunwil1b440_proj/dunwil1b440.dunwil1b440',
+        },
+        {
+            ID = 8000438,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b410/dunwil1b410_proj/dunwil1b410.dunwil1b410',
+        },
+        {
+            ID = 8000439,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd50210/gaiusd50210_proj/gaiusd50210.gaiusd50210\'',
+        },
+        {
+            ID = 8000440,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiusd/gaiusd50220/gaiusd50220_proj/gaiusd50220.gaiusd50220\'',
+        },
+        {
+            ID = 8000441,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunroc/dunroc1d310/dunroc1d310_proj/dunroc1d310.dunroc1d310\'',
+        },
+        {
+            ID = 8000442,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunroc/dunroc1d320/dunroc1d320_proj/dunroc1d320.dunroc1d320\'',
+        },
+        {
+            ID = 8000443,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunroc/dunroc1d330/dunroc1d330_proj/dunroc1d330.dunroc1d330\'',
+        },
+        {
+            ID = 8000444,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunlak/dunlak1d110/dunlak1d110_proj/dunlak1d110.dunlak1d110\'',
+        },
+        {
+            ID = 8000445,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunlak/dunlak1d130/dunlak1d130_proj/dunlak1d130.dunlak1d130\'',
+        },
+        {
+            ID = 8000446,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosodn/bosodn00010/bosodn00010_proj/bosodn00010.bosodn00010\'',
+        },
+        {
+            ID = 8000447,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosodn/bosodn00020/bosodn00020_proj/bosodn00020.bosodn00020\'',
+        },
+        {
+            ID = 8000448,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bossiv/bossiv00020/bossiv00020_proj/bossiv00020.bossiv00020\'',
+        },
+        {
+            ID = 8000449,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bossiv/bossiv00110/bossiv00110_proj/bossiv00110.bossiv00110\'',
+        },
+        {
+            ID = 8000450,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bossiv/bossiv00120/bossiv00120_proj/bossiv00120.bossiv00120\'',
+        },
+        {
+            ID = 8000451,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosnbr/bosnbr00010/bosnbr00010_proj/bosnbr00010.bosnbr00010\'',
+        },
+        {
+            ID = 8000452,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosnbr/bosnbr00020/bosnbr00020_proj/bosnbr00020.bosnbr00020\'',
+        },
+        {
+            ID = 8000453,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosdrk/bosdrk00010/bosdrk00010_proj/bosdrk00010.bosdrk00010\'',
+        },
+        {
+            ID = 8000454,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosdrk/bosdrk00020/bosdrk00020_proj/bosdrk00020.bosdrk00020\'',
+        },
+        {
+            ID = 8000455,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b120/dunwil1b120_proj/dunwil1b120.dunwil1b120\'',
+        },
+        {
+            ID = 8000456,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b130/dunwil1b130_proj/dunwil1b130.dunwil1b130\'',
+        },
+        {
+            ID = 8000457,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b220/dunwil1b220_proj/dunwil1b220.dunwil1b220\'',
+        },
+        {
+            ID = 8000458,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b230/dunwil1b230_proj/dunwil1b230.dunwil1b230\'',
+        },
+        {
+            ID = 8000459,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b320/dunwil1b320_proj/dunwil1b320.dunwil1b320\'',
+        },
+        {
+            ID = 8000460,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunwil/dunwil1b430/dunwil1b430_proj/dunwil1b430.dunwil1b430\'',
+        },
+        {
+            FadeOutTime = 0.0,
+            FadeOutWhiteColor = 1,
+            ID = 8000461,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/gaiuse/gaiuse50120/gaiuse50120_proj/gaiuse50120.gaiuse50120\'',
+        },
+        {
+            FadeOutTime = 0.0,
+            ID = 8000462,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/bosdra/bosdra00030/bosdra00030_proj/bosdra00030.bosdra00030\'',
+        },
+        {
+            FadeOutTime = 0.0,
+            ID = 8000463,
+            SequencePath = 'LevelSequence\'/Game/Assets/Cut/ffxiv/dunlak/dunlak1r310/dunlak1r310_proj/dunlak1r310.dunlak1r310\'',
         },
         {
             ID = 21403809,
@@ -2099,6 +2645,10 @@ local DynamicCutsceneCfg = {
             SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21608102.LCut_21608102\'',
         },
         {
+            ID = 21711931,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21711931.LCut_21711931\'',
+        },
+        {
             ID = 21720609,
             SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21720609.LCut_21720609\'',
         },
@@ -2183,6 +2733,34 @@ local DynamicCutsceneCfg = {
             SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21801317.LCut_21801317\'',
         },
         {
+            ID = 21906403,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906403.LCut_21906403\'',
+        },
+        {
+            ID = 21906504,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906504.LCut_21906504\'',
+        },
+        {
+            ID = 21906601,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906601.LCut_21906601\'',
+        },
+        {
+            ID = 21906704,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906704.LCut_21906704\'',
+        },
+        {
+            ID = 21906705,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906705.LCut_21906705\'',
+        },
+        {
+            ID = 21906803,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906803.LCut_21906803\'',
+        },
+        {
+            ID = 21906804,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_21906804.LCut_21906804\'',
+        },
+        {
             ID = 22004312,
             SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22004312.LCut_22004312\'',
         },
@@ -2197,6 +2775,34 @@ local DynamicCutsceneCfg = {
         {
             ID = 22004602,
             SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22004602.LCut_22004602\'',
+        },
+        {
+            ID = 22102501,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22102501.LCut_22102501\'',
+        },
+        {
+            ID = 22102502,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22102502.LCut_22102502\'',
+        },
+        {
+            ID = 22401602,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22401602.LCut_22401602\'',
+        },
+        {
+            ID = 22401803,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22401803.LCut_22401803\'',
+        },
+        {
+            ID = 22401804,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22401804.LCut_22401804\'',
+        },
+        {
+            ID = 22401805,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22401805.LCut_22401805\'',
+        },
+        {
+            ID = 22402001,
+            SequencePath = 'LevelSequence\'/Game/EditorRes/Dialogue/Sequence/LCut_22402001.LCut_22402001\'',
         },
 	},
 }

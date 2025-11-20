@@ -221,8 +221,17 @@ function MainActorInfoItemView:UpdateUI(EntityID)
     if EActorType.Major == ActorType or EActorType.Player == ActorType or EActorType.Monster == ActorType then
         self:SwitchHPBar(true)
         local ActorVM = _G.ActorMgr:FindActorVM(EntityID)
-        self.ActorVM = ActorVM
-        self:RegisterBinders(ActorVM, self.InfoBinders)
+
+        if nil ~= ActorVM then
+            self.ActorVM = ActorVM
+            self:RegisterBinders(ActorVM, self.InfoBinders)
+        else
+            FLOG_ERROR("MainActorInfoItemView.UpdateUI(%s): ActorVM not found", tostring(EntityID))
+            self:UpdateActorHP(100, 100)
+            UIUtil.SetIsVisible(self.TextLevel, false)
+            UIUtil.SetIsVisible(self.TextPercent, false)
+        end
+
         self:UpdateActorName()
 
     elseif EActorType.Gather == ActorType then

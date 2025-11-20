@@ -113,14 +113,12 @@ end
 -- AwardNotifyReslut此变量用于监听是否有下发Roll点结果
 function TeamRollItemVM:UpdateRollItemInfo(TeamID, AwardNotifyReslut)
 	local AwardList = RollMgr:GetAwardList(TeamID)
-	FLOG_INFO("TeamRoll  UpdateRollItemInfo  TeamID ==  " .. TeamID)
 	if AwardList == nil or AwardList.AwardList == nil then
 		return
 	end
 	local AwardResult = AwardList.AwardList
 	for _, value in ipairs(AwardResult) do
 		local valueID = value.ID
-		FLOG_INFO("TeamRoll  UpdateRollItemInfo  valueID ==  " .. valueID)
 		local ExpireTime = value.ExpireTime
 		local AwardVM = self:GetAwardVM(valueID, TeamID)
 		local ServerTime = TimeUtil.GetServerTime()
@@ -131,16 +129,12 @@ function TeamRollItemVM:UpdateRollItemInfo(TeamID, AwardNotifyReslut)
 			local AwardBelong = RollMgr:GetAwardBelong(valueID, TeamID)
 			--- 有归属了，但是还没操作 这里额外判断下过期时间或者操作状态
 			if AwardBelong ~= nil then
-				FLOG_INFO("TeamRoll  UpdateRollItemInfo  AwardBelong ~= nil ")
 				if (ExpireTime < ServerTime or AwardVM.IsOperated) then
-					FLOG_INFO("TeamRoll  UpdateRollItemInfo  Item IsOperated or Expired ")
 					AwardVM.IsWait = false
 					if AwardBelong.RoleID == MajorRoleID then
-						FLOG_INFO("TeamRoll  UpdateRollItemInfo  Obtained ")
 						ItemStatusValue = ItemStatusValue | ItemStatus.Obtained --已获得
 						AwardVM.Obtained = true
 					elseif not AwardVM.IsAlreadyPossessed and not AwardVM.IsGiveUp then
-						FLOG_INFO("TeamRoll  UpdateRollItemInfo  not AwardVM.IsAlreadyPossessed and not AwardVM.IsGiveUp ")
 						local TempResult = -1
 						if AwardList.RollList ~= nil then
 							for _, RollListItem in ipairs(AwardList.RollList) do
@@ -151,21 +145,17 @@ function TeamRollItemVM:UpdateRollItemInfo(TeamID, AwardNotifyReslut)
 							end
 						end
 						if AwardBelong.RoleID == 0 then
-							FLOG_INFO("TeamRoll  UpdateRollItemInfo  IsGiveUp  1")
 							ItemStatusValue = ItemStatusValue | ItemStatus.IsGiveUp -- 已放弃
 						else
 							if TempResult == -1 then
-								FLOG_INFO("TeamRoll  UpdateRollItemInfo  IsGiveUp  2")
 								ItemStatusValue = ItemStatusValue | ItemStatus.IsGiveUp -- 已放弃
 								--- 这里是时间到了，但是没有自己的点数，证明是无资格玩家，后台没有下发，手动设置一下
 								RollMgr:AddRollList(TeamID, {RoleID = MajorRoleID, Result = -1, ID = valueID})
 							else
-								FLOG_INFO("TeamRoll  UpdateRollItemInfo  NotObtained  1")
 								ItemStatusValue = ItemStatusValue | ItemStatus.NotObtained --未获得
 							end
 						end
 					elseif AwardVM.IsAlreadyPossessed then
-						FLOG_INFO("TeamRoll  UpdateRollItemInfo  IsGiveUp  3")
 						ItemStatusValue = ItemStatusValue | ItemStatus.IsGiveUp -- 已放弃
 					end
 					--队伍视图获得玩家的亮 ，其他灰
@@ -179,18 +169,14 @@ function TeamRollItemVM:UpdateRollItemInfo(TeamID, AwardNotifyReslut)
 					AwardVM.IsShowPanelProbar = false
 				end
 				if AwardBelong.RoleID ~= 0 and AwardBelong.RoleID ~= nil then
-					FLOG_INFO("TeamRoll  UpdateRollItemInfo  **获得  ")
 					local Role = RoleInfoMgr:FindRoleVM(AwardBelong.RoleID, true)
 					AwardVM.RichTextDescribe = string.format(LSTR(480009), Role.Name)		--- <span color=#d1ba8eFF>%s</>获得
 				else
 					-- if (ItemStatusValue & 4) >> 2 == 1 then
 					-- 	AwardVM.ItemName = ""
-						FLOG_INFO("TeamRoll  UpdateRollItemInfo  被所有人放弃 ")
 						AwardVM.RichTextDescribe = LSTR(480010)											--- 被所有人放弃
 					-- end
 				end
-			else
-				FLOG_INFO("TeamRoll  UpdateRollItemInfo  AwardBelong == nil !")
 			end
 			if AwardVM.IsOperated and AwardBelong == nil then
 				self.IsAwradResult = false

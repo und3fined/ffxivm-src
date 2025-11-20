@@ -4,7 +4,7 @@ local FateMainCfgTable = require("TableCfg/FateMainCfg")
 local FateTargetCfgTable = require("TableCfg/FateTargetCfg")
 local ItemCfg = require("TableCfg/ItemCfg")
 local ItemUtil = require("Utils/ItemUtil")
-
+local UIUtil = require("Utils/UIUtil")
 local LSTR = _G.LSTR
 
 local FateFinishRewardItemVM = LuaClass(UIViewModel)
@@ -17,7 +17,6 @@ function FateFinishRewardItemVM:Ctor()
 end
 
 function FateFinishRewardItemVM:OnBegin()
-
 end
 
 function FateFinishRewardItemVM:IsEqualVM(Value)
@@ -25,7 +24,8 @@ function FateFinishRewardItemVM:IsEqualVM(Value)
 end
 
 function FateFinishRewardItemVM:UpdateVM(Value)
-    self.ItemResID = Value.ItemResID
+    self.ItemResID = Value.ItemResID or 0
+    self.ResID = Value.ItemResID or 0
     self.Num = Value.Num
     self.HideItemLevel = true
     self.IconChooseVisible = false
@@ -33,7 +33,7 @@ function FateFinishRewardItemVM:UpdateVM(Value)
     if (TableData ~= nil) then
         self.IsQualityVisible = true
         local TempIconID = ItemUtil.GetItemIcon(self.ItemResID)
-        self.Icon = UIUtil.GetIconPath(TempIconID) 
+        self.Icon = UIUtil.GetIconPath(TempIconID)
         self.ItemQualityIcon = ItemUtil.GetItemColorIcon(self.ItemResID)
         self.IsMask = false
         self.IsSelect = false

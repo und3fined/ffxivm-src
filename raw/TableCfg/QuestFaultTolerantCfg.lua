@@ -9,7 +9,11 @@ local QuestFaultTolerantCfg = {
 	KeyName = "id",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'TargetText',
+            },
+		}
     },
     DefaultValues = nil,
 	LuaData = nil,

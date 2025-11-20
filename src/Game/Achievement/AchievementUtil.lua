@@ -303,4 +303,35 @@ function AchievementUtil.QueryAchievementHelp(AchievemwntID)
     return AchievementTextCfg:FindValue(AchievemwntID, "Help") or ""
 end
 
+-- 根据类型id 类别id 查询拥有的成就数据
+---@param TypeID number @类型id
+---@param CategoryID number @类别id
+---@return AchievementDataList table @成就数据列表
+function AchievementUtil.GetAchievementDataByType(TypeID, CategoryID)
+    local ReturnList = {}
+    local AchievementMgr = _G.AchievementMgr
+    if TypeID ~= nil then
+        ReturnList = AchievementMgr:GetAchieveDataListFromTypeID(TypeID)
+    end
+    if CategoryID ~= nil then
+        if TypeID == nil then
+            ReturnList = AchievementMgr:GetAchieveDataListFromCategoryID(CategoryID)
+        else
+            ReturnList = table.find_all_by_predicate(ReturnList, function(Item) return Item.CategoryID == CategoryID end) or {}
+        end
+    end
+
+    return ReturnList
+end
+
+-- 获取所有完成成就数据
+---@param DataList table @待查询列表（传nil 查所有）
+---@return AchievementDataList table @成就数据列表
+function AchievementUtil.GetAllFinishAchievementData(DataList)
+    if DataList == nil then
+        DataList = (_G.AchievementMgr or {}).AchievementDataList or {}
+    end
+    return table.find_all_by_predicate(DataList, function(Item) return Item.IsFinish == true end) or {}
+end
+
 return AchievementUtil

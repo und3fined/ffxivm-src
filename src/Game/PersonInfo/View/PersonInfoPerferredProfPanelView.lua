@@ -145,6 +145,11 @@ function PersonInfoPerferredProfPanelView:OnItemClickedProfItem(Index, ItemData,
 	end)
 
 	if ExistItem then
+		local CurCnt = PersonInfoVM.PerfProfCnt
+		if CurCnt <= 1 then
+			_G.MsgTipsUtil.ShowTips(_G.LSTR(620142))
+			return
+		end
 		PersonInfoVM:DeletePerferredProf(ItemData.ProfID)
 	else
 		PersonInfoVM:AddPerferredProf(ItemData.ProfID)

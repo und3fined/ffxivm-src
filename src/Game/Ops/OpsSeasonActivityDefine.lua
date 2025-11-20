@@ -61,6 +61,8 @@ local CelebrationActionType = {
     ClickedGoTo1 = 2, --界面状态1-点击【前往】
     ClickedGoTo2 = 3, --界面状态2-点击【前往派对】
 }
+
+local StarlightRhythmGameNodeID = 2507210112
 local OpsSeasonActivityDefine =
 {
     RedDotID = RedDotID,
@@ -75,5 +77,6 @@ local OpsSeasonActivityDefine =
     MysteriousVisitorActionType = MysteriousVisitorActionType,
     PenguinWarsActionType = PenguinWarsActionType,
     CelebrationActionType = CelebrationActionType,
+    StarlightRhythmGameNodeID = StarlightRhythmGameNodeID,
 }
 return OpsSeasonActivityDefine

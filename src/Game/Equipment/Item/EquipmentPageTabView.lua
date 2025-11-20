@@ -53,13 +53,10 @@ function EquipmentPageTabView:OnDestroy()
 end
 
 function EquipmentPageTabView:OnShow()
-	local IsVisible = false
 	if self.Params and self.Params.Data then
 		self.RedDot:SetRedDotIDByID(self.Params.Data.RedDotID)
 		self.RedDot:SetStyle(1)
-		IsVisible = self.Params.Data.ReCreate
 	end
-	UIUtil.SetIsVisible(self.PageTab, true, IsVisible)
 end
 
 function EquipmentPageTabView:OnHide()
@@ -68,10 +65,6 @@ end
 
 function EquipmentPageTabView:OnRegisterUIEvent()
 
-end
-
-function EquipmentPageTabView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.EquipmentAnimFinish, self.EquipmentAnimFinish)
 end
 
 function EquipmentPageTabView:OnRegisterBinder()
@@ -100,10 +93,6 @@ function EquipmentPageTabView:OnSelectChanged(bSelect)
 	UIUtil.SetIsVisible(self.ImgSelect, bSelect)
 	UIUtil.SetIsVisible(self.EFF_Select, bSelect)
 
-end
-
-function EquipmentPageTabView:EquipmentAnimFinish()
-	UIUtil.SetIsVisible(self.PageTab, true, true)
 end
 
 return EquipmentPageTabView

@@ -86,6 +86,9 @@ local LocalizationUtil = {
         { Pattern = "（UTC%d+）", Repl = "（UTC%d）" },
         { Pattern = "%(UTC%d+%)", Repl = "(UTC%d)" },
     },
+
+    IsEnabledLQATag = UCommonUtil.GetIsEnabledLQATag(),
+    LQATagMap = {}, -- {ukey1=true, ukey2=true}
 }
 
 function LocalizationUtil.GetLocalDateCfg()
@@ -379,6 +382,28 @@ function LocalizationUtil.GetTimerForLowPrecision(Time, MaxTimeForDays)
     end
 end
 
+-- ---本地化时间显示--时间跨度显示(跨天)
+-- ---@param Str string @输入的时间字符串
+-- ---@param bShowUTC boolean @是否显示UTC+8
+-- ------适用场景: 活动、赛季时间的时间跨度
+-- ---@return string
+-- function LocalizationUtil.GetTimeRange(Str, bShowUTC)
+--     local Ret = LocalizationUtil.LocalizeStringDate(Str)
+--     if bShowUTC then
+--         Ret = Ret .. " (UTC+8)"
+--     end
+--     return Ret
+-- end
+
+----本地化时间显示--时间跨度显示(当天)
+---------适用场景: 当天的时间跨度的前缀
+---@return string
+-- function LocalizationUtil.GetTimeTypeForAozy(Str)
+--     local Ret = Str
+--     return Ret
+-- end
+
+
 ----本地化图片路径转换
 ---------适用场景: 将输入的图片Path转换为本地语言的路径的图片
 ---@param InPath string
@@ -511,6 +536,11 @@ function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
         local FlagPos = string.find(LocalStr, '|')
         if FlagPos then
             local Single = string.sub(LocalStr, 1, FlagPos - 1)
+
+            if LocalizationUtil.IsEnabledLQATag then
+                LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+            end
+
             return Single
         end
     end
@@ -518,6 +548,10 @@ function LocalizationUtil.GetLocalString(Str, Key, NameSpace, IsFromExcel)
 	if not IsFromExcel and string.isnilorempty(LocalStr) then
 		return Str
 	end
+
+    if LocalizationUtil.IsEnabledLQATag then
+        LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+    end
 
 	return LocalStr
 end
@@ -537,6 +571,68 @@ function LocalizationUtil.SplitStringPlural(Str)
 
 	return Ret_1, Ret_2
 end
+
+-------------------------------------------------------------------------------------------------------
+--- LQA
+
+function LocalizationUtil.SetIsEnabledLQATag(b)
+    LocalizationUtil.IsEnabledLQATag = b
+end
+
+function LocalizationUtil.EmptyLQATagData()
+    LocalizationUtil.LQATagMap = {}
+end
+
+function LocalizationUtil.AddLQATag(Key, NameSpace, LocalStr, IsFromExcel)
+    if string.isnilorempty(Key) or string.isnilorempty(NameSpace) or string.isnilorempty(LocalStr) then
+        return
+    end
+
+    local TagType = NameSpace
+    local UKey = Key
+    if IsFromExcel then
+        UKey = NameSpace .. "_" .. Key
+        TagType = "excel"
+    end
+
+    local Data = LocalizationUtil.LQATagMap[TagType]
+    if nil == Data then
+        Data = {}
+        LocalizationUtil.LQATagMap[TagType] = Data
+    end
+
+    if nil == Data[UKey] then
+        Data[UKey] = LocalStr
+    end
+end
+
+function LocalizationUtil.GenerateLQATagFile()
+    local Json = require("Core/Json")
+    local PathMgr = require("Path/PathMgr")
+
+    local Text = Json.encode(LocalizationUtil.LQATagMap or {})
+
+	local Dir = string.format("%s/LQA", _G.FDIR_PERSISTENT())
+    if not PathMgr.ExistDir(Dir) then
+        PathMgr.CreateDir(Dir, false)
+    end
+
+	local Path = string.format("%s/LQATag_%s.json", Dir, CommonUtil.GetCurrentCultureName())
+	local File = io.open(Path, "wb")
+	if File then
+		if not File:write(Text) then
+			File:close()
+			os.remove(Path)
+
+			return
+		end
+
+		File:flush()
+		File:close()
+	end	
+end
+
+-------------------------------------------------------------------------------------------------------
 
 function LocalizationUtil.U3GetLocalString(Str, Namespace)
     return LocalizationUtil.GetLocalString(Str, nil, Namespace or "u3", false)

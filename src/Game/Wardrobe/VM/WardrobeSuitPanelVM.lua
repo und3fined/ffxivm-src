@@ -27,6 +27,11 @@ function WardrobeSuitPanelVM:Ctor()
 	self.UseBtnVisible = false
 	self.EmptyVisible = nil
 	self.CharmNumText = ""
+	self.CharmEffVisible = false
+	self.NewCharmNumText = ""
+	self.GetWayVisible = nil
+	self.CurSuitName = ""
+	self.SuitListRedDotName = {}
 end
 
 function WardrobeSuitPanelVM:OnInit()
@@ -41,6 +46,10 @@ function WardrobeSuitPanelVM:OnEnd()
 end
 
 function WardrobeSuitPanelVM:OnShutdown()
+	for _, name in ipairs(self.SuitListRedDotName) do
+		_G.RedDotMgr:DelRedDotByName(name)
+	end
+	self.SuitListRedDotName= {}
 end
 
 function WardrobeSuitPanelVM:InitTabList()
@@ -196,6 +205,25 @@ function WardrobeSuitPanelVM:UpdateSuitList(TabIndex, FilterIndex)
         Data.ID = cfg.ID
         Data.TitelName = cfg.SuitName
         Data.AppItems = cfg.AppItems
+		local IsAllUnlocked, UnlockedNum = self:GetUnlockedNum(cfg.AppItems)
+		local EnableUnlock = self:GetUnlockEnable(cfg.AppItems) 
+		Data.IsAllUnlocked = IsAllUnlocked
+		Data.IsAllLocked = UnlockedNum == 0
+		Data.UnlockedNum = UnlockedNum
+		if EnableUnlock then
+			if self.SuitListRedDotName[cfg.ID] == nil then
+				Data.RedDotName = _G.RedDotMgr:AddRedDotByParentRedDotID(WardrobeDefine.RedDotList.SuitList)
+				self.SuitListRedDotName[cfg.ID] = Data.RedDotName
+			else
+				Data.RedDotName = self.SuitListRedDotName[cfg.ID]
+			end
+		else
+			if self.SuitListRedDotName[cfg.ID] ~= nil then
+				_G.RedDotMgr:DelRedDotByName(self.SuitListRedDotName[cfg.ID])
+				self.SuitListRedDotName[cfg.ID] = nil
+				Data.RedDotName = ""
+			end
+		end
 
         --Todo 如果有装备 
         if self:IsInVersion(cfg.AppItems) then
@@ -208,9 +236,25 @@ function WardrobeSuitPanelVM:UpdateSuitList(TabIndex, FilterIndex)
 		DataList = GetDataByFilterIndex(FilterIndex, DataList)
 	end
 
+	table.sort(DataList,WardrobeSuitPanelVM.SortSuitList)
+	self.GetWayVisible = false
     self.SuitList:UpdateByValues(DataList)
 
 	self.EmptyVisible = #DataList == 0
+end
+
+function WardrobeSuitPanelVM.SortSuitList(a, b)
+	if a.IsAllUnlocked ~= b.IsAllUnlocked then
+        return a.IsAllUnlocked
+    end
+
+    -- 其次按UnlockedNum降序排序
+    if a.IsAllLocked ~= b.IsAllLocked then
+        return not a.IsAllLocked
+    end
+
+    -- 最后按ID升序排序（确保稳定性）
+    return a.ID < b.ID
 end
 
 function WardrobeSuitPanelVM:IsInVersion(List)
@@ -236,17 +280,36 @@ function WardrobeSuitPanelVM:IsInVersion(List)
     return false
 end
 
-function WardrobeSuitPanelVM:IsInUpTime(List)
-    if List and next(List) then
+function WardrobeSuitPanelVM:GetUnlockedNum(List)
+	local Num = 0
+	if List and next(List) then
         for _, v in ipairs(List) do
-            local Cfg = EquipmentCfg:FindCfgByEquipID(v)
-			local AppID = WardrobeUtil
-            if Cfg ~= nil then
-                return true
-            end
-        end
-    end
-    return false
+			local Cfg = EquipmentCfg:FindCfgByEquipID(v)
+			if Cfg ~= nil and Cfg.AppearanceID > 0 then
+				if WardrobeMgr:GetIsUnlock(Cfg.AppearanceID) then
+					Num = Num + 1
+				end
+			end
+		end
+		return Num == #List, Num
+	end
+	return false, Num
+end
+
+function WardrobeSuitPanelVM:GetUnlockEnable(List)
+	if List and next(List) then
+        for _, v in ipairs(List) do
+			local Cfg = EquipmentCfg:FindCfgByEquipID(v)
+			if Cfg ~= nil and Cfg.AppearanceID > 0 then
+				if not WardrobeMgr:GetIsUnlock(Cfg.AppearanceID) then
+					if WardrobeUtil.JudgeUnlockAppearanceWithouItem(Cfg.AppearanceID) then
+						return true
+					end
+				end
+			end
+		end 
+	end
+	return false
 end
 
 function WardrobeSuitPanelVM:SearchSuitList(SearchText)
@@ -261,6 +324,25 @@ function WardrobeSuitPanelVM:SearchSuitList(SearchText)
             Data.ID = cfg.ID
             Data.TitelName = cfg.SuitName
             Data.AppItems = cfg.AppItems
+			local IsAllUnlocked, UnlockedNum = self:GetUnlockedNum(cfg.AppItems)
+			Data.IsAllUnlocked = IsAllUnlocked
+			Data.UnlockedNum = UnlockedNum
+			Data.IsAllLocked = UnlockedNum == 0
+			local EnableUnlock = self:GetUnlockEnable(cfg.AppItems) 
+			if EnableUnlock then
+				if self.SuitListRedDotName[cfg.ID] == nil then
+					Data.RedDotName = _G.RedDotMgr:AddRedDotByParentRedDotID(WardrobeDefine.RedDotList.SuitList)
+					self.SuitListRedDotName[cfg.ID] = Data.RedDotName
+				else
+					Data.RedDotName = self.SuitListRedDotName[cfg.ID]
+				end
+			else
+				if self.SuitListRedDotName[cfg.ID] ~= nil then
+					_G.RedDotMgr:DelRedDotByName(self.SuitListRedDotName[cfg.ID])
+					self.SuitListRedDotName[cfg.ID] = nil
+				end
+				Data.RedDotName = ""
+			end
     
             --Todo 如果有装备 
             if self:IsInVersion(cfg.AppItems) then
@@ -277,12 +359,15 @@ end
 
 function WardrobeSuitPanelVM:UpdateCharismNum()
 	if not WardrobeMgr:IsExceedCfgLevel() then
-		self.CharmNumText = string.format("%d/%d", WardrobeMgr:GetCharismNum(), WardrobeMgr:GetCharismTotalNum())
-		self.CharmEffVisible = WardrobeMgr:GetCharismNum() >= WardrobeMgr:GetCharismTotalNum()
+		self.CharmNumText = string.format("%d/%d", WardrobeMgr:GetCharmNum(), WardrobeMgr:GetCharismTotalNum())
+		self.CharmEffVisible = WardrobeMgr:GetCharmNum() >= WardrobeMgr:GetCharismTotalNum()
 	else
-		self.CharmNumText = string.format("%d", WardrobeMgr:GetCharismNum())
+		self.CharmNumText = string.format("%d", WardrobeMgr:GetCharmNum())
 		self.CharmEffVisible = false
 	end
+
+	local Num = WardrobeMgr:GetNewCharismNum()
+	self.NewCharmNumText = string.format("%s:%d",_G.LSTR(1080096), Num)
 end
 
 WardrobeSuitPanelVM.GetDataByFilterIndex = GetDataByFilterIndex

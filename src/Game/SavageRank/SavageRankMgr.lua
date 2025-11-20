@@ -187,16 +187,18 @@ end
 function SavageRankMgr:OnNetMsgZeroRankAll(MsgBody)
 	local _ <close> = _G.CommonUtil.MakeProfileTag("SavageRankMgr:OnNetMsgZeroRankAll")
 
-	local SceneID = MsgBody.ZeroSceneRankAllRsp.SceneResID
-	local Offset = MsgBody.ZeroSceneRankAllRsp.offset
-	local TeamResults = MsgBody.ZeroSceneRankAllRsp.TeamResults
-	self.RankTeamInfo[SceneID] = self.RankTeamInfo[SceneID] or {}
-	table.insert(self.RankTeamInfo[SceneID], TeamResults)
-	self.Wait[SceneID] = false
-	self:SetRoleIDRankInfo(SceneID, true)
-	if Offset == 0 then
-		if self.CurChosedSceneID == SceneID then
-			EventMgr:SendEvent(EventID.SavageRankUpdateDrop, true)
+	if MsgBody and MsgBody.ZeroSceneRankAllRsp then
+		local SceneID = MsgBody.ZeroSceneRankAllRsp.SceneResID
+		local Offset = MsgBody.ZeroSceneRankAllRsp.offset
+		local TeamResults = MsgBody.ZeroSceneRankAllRsp.TeamResults
+		self.RankTeamInfo[SceneID] = self.RankTeamInfo[SceneID] or {}
+		table.insert(self.RankTeamInfo[SceneID], TeamResults)
+		self.Wait[SceneID] = false
+		self:SetRoleIDRankInfo(SceneID, true)
+		if Offset == 0 then
+			if self.CurChosedSceneID == SceneID then
+				EventMgr:SendEvent(EventID.SavageRankUpdateDrop, true)
+			end
 		end
 	end
 end

@@ -256,7 +256,7 @@ function StoreGiftMailWinView:OnDestroy()
 end
 
 function StoreGiftMailWinView:TableViewIncludeSeceltedChanged(Index, ItemData, ItemView)
-	ItemTipsUtil.ShowTipsByResID(StoreMainVM.ContainsItemList.Items[Index].ResID, ItemView, {X = -self.TableViewInclude.EntrySpacing, Y = 0})
+	ItemTipsUtil.ShowTipsByResID(ItemData.ResID, ItemView, {X = -self.TableViewInclude.EntrySpacing, Y = 0})
 end
 
 function StoreGiftMailWinView:OnMailStyleSeceltedChanged(Index, ItemData, ItemView)
@@ -327,11 +327,7 @@ function StoreGiftMailWinView:OnShow()
 		self:UpdateTransactionHint()
 		local NowServerTime = TimeUtil.GetServerTimeFormat("%Y年%m月%d日")
 		self.TextDate:SetText(NowServerTime)
-		if _G.StoreMgr:CheckMallTypeByIndex(StoreMainVM.TabSelecteIndex, ProtoRes.StoreMall.STORE_MALL_PROPS) then
-			self.TextItemName:SetText(StoreMainVM.CurrentSelectedItem.Name)
-		else
-			self.TextItemName:SetText(StoreMainVM.CurrentSelectedItem.ItemNameText)
-		end
+		self.TextItemName:SetText(StoreUtil.GetGoodsName(self.GoodsID))
 
 		local UActorManager = _G.UE.UActorManager.Get()
 		local Rotation = _G.UE.FRotator(0, 0, 0)
@@ -488,6 +484,7 @@ function StoreGiftMailWinView:OnClose()
 		self.CommonModelToImage:Show(Actor, nil, SceneCenter, {X=512, Y=512}) --[sammrli]临时改成512，等引擎那边处理RT复用问题
 		Actor:GetAvatarComponent():SetForcedLODForAll(0)
 	end
+	_G.MsgTipsUtil.ShowTips(LSTR(950106))
 	local AnimDuringTime = self.Animpack:GetEndTime()
 	self:RegisterTimer(function() self:Hide() end, AnimDuringTime, 0, 1)
 	_G.UIViewMgr:HideView(_G.UIViewID.StoreGiftChooseFriendWin)
@@ -549,11 +546,11 @@ function StoreGiftMailWinView:OnClickBtnGift()
 		local AccRechargePoints = ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_VIRTUAL_ACC_RECHARGE)
 		local VirtualNum = ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_VIRTUAL_ACC_SENDGIFT)
 		local GiftDiffNum = math.ceil((self.PriceVM.BuyPrice - (AccRechargePoints * 0.33 - VirtualNum)) / 100 / 0.33)
-		local MsgBoxParams = {}
-		MsgBoxUtil.ShowMsgBoxTwoOp(
+		local MsgBoxParams = {TextAlignment = CommonBoxDefine.TextAlignment.Left}
+		MsgBoxUtil.ShowMsgBoxMTwoOp(
 			self,
 			LSTR(950074),		--- "提示"
-			string.format(LSTR(950104), GiftDiffNum),     --- "赠礼水晶点不足提示"
+			string.format(LSTR(950103), GiftDiffNum),     --- "赠礼水晶点不足提示"
 			JumpToRecharge,
 			nil,
 			LSTR(950030),	--- "取消"
@@ -635,7 +632,21 @@ function StoreGiftMailWinView:SendGiftRequest()
 		GiftNum = StoreMgr:CheckMallTypeByIndex(StoreMainVM.TabSelecteIndex, ProtoRes.StoreMall.STORE_MALL_PROPS) and
 			StoreMainVM.MultiBuyPurchaseNumber or 1
 	}
-	StoreMgr:SendNetGiftReq(ReqData)
+	if StoreMgr:CheckProductClassLimit(self.GoodsID) then
+		_G.MsgBoxUtil.ShowMsgBoxTwoOp(
+			self,
+			LSTR(950047),	--- "商品购买"
+			LSTR(950107),	--- 包含仅限%s穿戴的时装，是否继续赠送？
+			function()
+				StoreMgr:SendNetGiftReq(ReqData)
+			end,
+			nil,
+			LSTR(950108)
+		)
+	else
+		StoreMgr:SendNetGiftReq(ReqData)
+	end
+
 end
 
 function StoreGiftMailWinView.IsBalanceEnough(Price, BalanceScoreID)

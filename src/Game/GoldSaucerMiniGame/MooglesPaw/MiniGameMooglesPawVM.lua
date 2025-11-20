@@ -9,7 +9,10 @@ local MiniGameBaseVM = require("Game/GoldSaucerMiniGame/MiniGameBaseVM")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local MooglePawParamsCfg = require("TableCfg/MooglePawParamsCfg")
 local MooglePawTypeCfg = require("TableCfg/MooglePawTypeCfg")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
+local MooglePawBlessCfg = require("TableCfg/MooglePawBlessCfg")
 local ProtoRes = require("Protocol/ProtoRes")
+local ProtoCS = require("Protocol/ProtoCS")
 local CatchBallParamType = ProtoRes.Game.CatchBallParamType
 local MiniGameState = GoldSaucerMiniGameDefine.MiniGameStageType
 local MoogleActBtnActiveType = GoldSaucerMiniGameDefine.MoogleActBtnActiveType
@@ -26,13 +29,18 @@ local GoldSaucerCuffGameResultItemVM = require("Game/GoldSaucerGame/View/Cuff/It
 local MoogleBallShowState = GoldSaucerMiniGameDefine.MoogleBallShowState
 local MoogleBallCaughtState = GoldSaucerMiniGameDefine.MoogleBallCaughtState
 local MoogleLimitPos = GoldSaucerMiniGameDefine.MoogleLimitPos
-
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 
 local LSTR = _G.LSTR
 local FLOG_ERROR = _G.FLOG_ERROR
 local BallItemSlotSum = 36 -- 莫古球分布总格数
 local QuadSlotNum = 3 -- 象限格子数
-
+local BigBlessSuccessIconPath = GoldSaucerMiniGameDefine.BigBlessSuccessIconPath
+local BigBlessFailIconPath = GoldSaucerMiniGameDefine.BigBlessFailIconPath
+local LittleBlessSuccessIconPath = GoldSaucerMiniGameDefine.LittleBlessSuccessIconPath
+local LittleBlessFailIconPath = GoldSaucerMiniGameDefine.LittleBlessFailIconPath
+local BlessSuccessItemBg = GoldSaucerMiniGameDefine.BlessSuccessItemBg
+local BlessFailItemBg = GoldSaucerMiniGameDefine.BlessFailItemBg
 
 -- 莫古力种类
 local EnumMoogleType = {
@@ -72,6 +80,10 @@ function MiniGameMooglesPawVM:Ctor()
     self.MoogleMoveState = MoogleMoveState.Idle
 
     self.ResultVMList = UIBindableList.New(GoldSaucerCuffGameResultItemVM)
+
+    self.TextHint = ""
+
+    self.bKeyTime = false
 end
 
 function MiniGameMooglesPawVM:ResetVMInfo()
@@ -93,6 +105,7 @@ function MiniGameMooglesPawVM:OnUpdateVM()
     self:UpdateActBtnState(GameInst)
     self.bShowObtainPanel = self.RewardGot ~= "" and self.bShowGameOrSettlementPanel
     self.bShowPanelCountDown = self.bShowGameOrSettlementPanel
+    self.TextHint = GameInst:IsBless() and LSTR(1660006) or LSTR(360032)
 end
 
 --- 刷新时间显示
@@ -112,7 +125,6 @@ function MiniGameMooglesPawVM:OnUpdateTimeShow()
     else
         self.bKeyTime = true 
     end
-
     --莫古力的移动刷新需要放在时间刷新里刷新才能保证连贯
     self:UpdateMoogleMovePath(GameInst)
     --FLOG_ERROR("TimeUpdateMoogleMoveStateBefore: state:%s %s", tostring(self.MoogleMoveState), self)
@@ -222,9 +234,14 @@ function MiniGameMooglesPawVM:InitBallDistribute()
         if BallDataExist then
             local CsInfo = BallDataExist.CsInfo
             Value.BallID = CsInfo.BallID
-            Value.BallType = CsInfo.BallType
+            local BallType = CsInfo.BallType
+            Value.BallType = BallType
             local LocationT = BallDataExist.Location
             Value.PosX, Value.PosY = self:World2LocalPosOffset(CsInfo.PosX, CsInfo.PosY, LocationT)
+            if BallType == MogulBallType.MogulBallTypeStar then
+                local RandIndex = math.random(1, 3)
+                Value.StarAnimIndex = RandIndex
+            end
         end
         table.insert(ListValues, Value)
     end
@@ -320,7 +337,7 @@ function MiniGameMooglesPawVM:HideTheOtherBallWhenShowCatchResult()
     for i = 1, BallItems:Length() do
         local VM = BallItems:Get(i)
         if VM ~= nil then
-           VM:ChangeShowState(BallIDCaught == VM.BallID and MoogleBallShowState.Strong or MoogleBallShowState.Weak)
+           VM:DeleteTheCaughtBall(BallIDCaught)
         end
     end
 end
@@ -375,7 +392,7 @@ function MiniGameMooglesPawVM:ResetBallShowStateWhenShowCatchResult()
     for i = 1, BallItems:Length() do
         local VM = BallItems:Get(i)
         if VM ~= nil then
-           VM:ChangeShowState(MoogleBallShowState.Normal)
+           --VM:ChangeShowState(MoogleBallShowState.Normal)
         end
     end
 end
@@ -418,25 +435,104 @@ function MiniGameMooglesPawVM:UpdateResultList(CompleteCounts)
     end
 
     ResultVMs:Clear()
-    local bPerfectChallenge = GameInst:GetIsPerfectChallenge()
-    --- 达成挑战Item
-    ResultVMs:AddByValue(
-    {
-        VarName = LSTR(360008),
-        Value = string.format(LSTR(360009), tostring(CompleteCounts)),
-        bIsNewRecord = GameInst:GetCompleteChallengeNewRecord(),
-        bIsPerfectChallenge = bPerfectChallenge,
-    }, nil, true)
 
-    --- 完美挑战Item
-    local PerfectChallengeItem = {
-        VarName = LSTR(360010),
-        Value = bPerfectChallenge and string.format(LSTR(360011), GameInst:GetPerfectChallengeTime() or 0) or "", 
-        bIsNewRecord = GameInst:GetPerfectChallengeNewRecord(),
-        bIsPerfectChallenge = bPerfectChallenge,
-        bShowUnfinished = not bPerfectChallenge,
-    }
-    ResultVMs:AddByValue(PerfectChallengeItem)
+    local bBless = GameInst:IsBless()
+    if not bBless then
+        local bPerfectChallenge = GameInst:GetIsPerfectChallenge()
+        --- 达成挑战Item
+        ResultVMs:AddByValue(
+        {
+            VarName = LSTR(360008),
+            Value = string.format(LSTR(360009), tostring(CompleteCounts)),
+            bIsNewRecord = GameInst:GetCompleteChallengeNewRecord(),
+            bIsPerfectChallenge = bPerfectChallenge,
+            bBless = false,
+        }, nil, true)
+    
+        --- 完美挑战Item
+        local PerfectChallengeItem = {
+            VarName = LSTR(360010),
+            Value = bPerfectChallenge and string.format(LSTR(360011), GameInst:GetPerfectChallengeTime() or 0) or "", 
+            bIsNewRecord = GameInst:GetPerfectChallengeNewRecord(),
+            bIsPerfectChallenge = bPerfectChallenge,
+            bShowUnfinished = not bPerfectChallenge,
+            bBless = false,
+        }
+        ResultVMs:AddByValue(PerfectChallengeItem)
+    else
+        local ChallengeResult = GameInst:IsBlessChallengeSuccess()
+        local BlessKind = GameInst.BlessKind
+        local GameType = GameInst.MiniGameType
+        local function GetTheBlessChallengeTarget()
+            local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(GameType)
+            if not TargetCfg then
+                return
+            end
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                return TargetCfg.BChallengeTarget
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                return TargetCfg.LChallengeTarget
+            end
+        end
+
+        if ChallengeResult then
+            -- 设定titleIcon
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessSuccessIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessSuccessIconPath
+            end
+
+            local ChallengeRewardScoreNum = ""
+            local BlessCfg = MooglePawBlessCfg:FindCfgByKey(BlessKind)
+            if BlessCfg then
+                ChallengeRewardScoreNum = string.formatint(BlessCfg.Reward)
+            end
+
+            local BlessInteractorRlt = {}
+            BlessInteractorRlt.bBless = true
+            BlessInteractorRlt.BlessTitle = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG and LSTR(1660008) or LSTR(1660009)
+            BlessInteractorRlt.BlessTitleIcon = TitleIcon
+            BlessInteractorRlt.BlessBg = BlessSuccessItemBg
+            BlessInteractorRlt.bShowNumOrCheckIcon = true
+            BlessInteractorRlt.GetRewardNumText = string.format("x%s", tostring(GameInst:GetStarInteractorCatchNum())) 
+            BlessInteractorRlt.ScoreGotNumText = string.formatint(GameInst:GetStarInteractorCatchTotalScore())
+            BlessInteractorRlt.bPlayBlessSuccessAnim = true
+            BlessInteractorRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            ResultVMs:AddByValue(BlessInteractorRlt, nil, true)
+
+            local BlessChallengeRlt = {}
+            BlessChallengeRlt.bBless = true
+            BlessChallengeRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessChallengeRlt.BlessTitleIcon = TitleIcon
+            BlessChallengeRlt.BlessBg = BlessSuccessItemBg
+            BlessChallengeRlt.bShowNumOrCheckIcon = false
+            BlessChallengeRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_Check.UI_GoldSaucerGame_Img_ResultList_Check'"
+            BlessChallengeRlt.ScoreGotNumText = ChallengeRewardScoreNum
+            BlessChallengeRlt.bPlayBlessSuccessAnim = true
+            BlessChallengeRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+            ResultVMs:AddByValue(BlessChallengeRlt, nil, true)
+        else
+            -- 设定titleIcon
+            local TitleIcon = ""
+            if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+                TitleIcon = BigBlessFailIconPath
+            elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+                TitleIcon = LittleBlessFailIconPath
+            end
+            local BlessFailRlt = {}
+            BlessFailRlt.bBless = true
+            BlessFailRlt.BlessTitle = GetTheBlessChallengeTarget()
+            BlessFailRlt.BlessTitleIcon = TitleIcon
+            BlessFailRlt.BlessBg = BlessFailItemBg
+            BlessFailRlt.bShowNumOrCheckIcon = false
+            BlessFailRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_UnCheck.UI_GoldSaucerGame_Img_ResultList_UnCheck'"
+            BlessFailRlt.ScoreGotNumText = "0"
+            BlessFailRlt.bBigBless = false
+            ResultVMs:AddByValue(BlessFailRlt, nil, true)
+        end
+    end
 end
 
 return MiniGameMooglesPawVM

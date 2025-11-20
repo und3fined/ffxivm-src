@@ -69,10 +69,28 @@ function SidebarPrivateChatWinView:OnInit()
 
 	self.BtnClose:SetText(LSTR(10066)) -- "关  闭"
 	self.BtnGoToChat:SetText(LSTR(10025)) -- "查  看"
+
+	self.RoleCallbackFunc = function(Params, RoleVM)
+		if nil == RoleVM or RoleVM.RoleID ~= Params.RoleID then
+			return
+		end
+
+		self.RoleID = RoleVM.RoleID
+
+		-- 头像
+		self.PlayerHeadSlot:SetInfo(self.RoleID)
+
+		-- 名字
+		self.RichTextName:SetText(RoleVM.Name or "")
+
+		-- 消息内容 
+		local Content = ChatUtil.GetChatContent(Params.MsgItemVM)
+		self.RichTextMsg:SetText(Content or "")
+	end
 end
 
 function SidebarPrivateChatWinView:OnDestroy()
-
+	_G.RoleInfoMgr:RemoveCallbackInfoByPredicate(self.RoleCallbackFunc)
 end
 
 function SidebarPrivateChatWinView:OnShow()
@@ -88,7 +106,8 @@ function SidebarPrivateChatWinView:OnShow()
 	self.LossTime = TimeUtil.GetServerTime() - StartTime
 	if self.LossTime >= self.CountDown then
 		self.ProBarCD:SetPercent(0)
-		self:CloseUI()
+		SidebarMgr:TryOpenSidebarMainWin()
+		ChatVM:ClearSidebarItem()
 		return
 	end
 
@@ -154,23 +173,10 @@ function SidebarPrivateChatWinView:OnValueChangedMsgItemVM(MsgItemVM)
 		return
 	end
 
-	_G.RoleInfoMgr:QueryRoleSimple(RoleID, function(_, RoleVM)
-		if nil == RoleVM then
-			return
-		end	
-
-		self.RoleID = RoleID
-
-		-- 头像
-		self.PlayerHeadSlot:SetInfo(RoleID)
-
-		-- 名字
-		self.RichTextName:SetText(RoleVM.Name or "")
-
-		-- 消息内容 
-		local Content = ChatUtil.GetChatContent(MsgItemVM)
-		self.RichTextMsg:SetText(Content or "")
-	end)
+	_G.RoleInfoMgr:QueryRoleSimple(RoleID, self.RoleCallbackFunc, {
+		RoleID=RoleID,
+		MsgItemVM=MsgItemVM
+	}, true)
 end
 
 -------------------------------------------------------------------------------------------------------

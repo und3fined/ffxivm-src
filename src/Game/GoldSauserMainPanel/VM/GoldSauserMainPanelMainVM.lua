@@ -20,11 +20,9 @@ local GoldSauserMainPanelTyphonGameItemVM = require("Game/GoldSauserMainPanel/VM
 local GoldSauserMainPanelBodyguardGameItemVM  = require("Game/GoldSauserMainPanel/VM/ItemVM/GoldSauserMainPanelBodyguardGameItemVM")
 local GoldSauserChallengeNotesVM = require("Game/GoldSauserMainPanel/VM/ItemVM/GoldSauserChallengeNotesVM")
 local GoldSauserMainPanelAwardWinVM = require("Game/GoldSauserMainPanel/VM/GoldSauserMainPanelAwardWinVM")
-local TimeUtil = require("Utils/TimeUtil")
 local GoldSaucerCfg = require("TableCfg/GoldSaucerCfg")
-local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
-local ProtoRes = require("Protocol/ProtoRes")
 
+local FLOG_INFO = _G.FLOG_INFO
 local FLOG_ERROR = _G.FLOG_ERROR
 
 local UIViewMgr
@@ -37,7 +35,7 @@ local BtnIdforMiniGameTypeMap =
 {
     [MiniGameType.MiniGameTypeAirForceOne] = GoldSauserMainPanelDefine.GameGateSubType.AirplaneGame,
     [MiniGameType.MiniGameTypeCliffHanger] = GoldSauserMainPanelDefine.GameGateSubType.BirdGame,
-    --[MiniGameType.MiniGameTypeBodyGuard] = GoldSauserMainPanelDefine.GameGateSubType.EventSquare,
+    [MiniGameType.MiniGameTypeBodyGuard] = GoldSauserMainPanelDefine.GameGateSubType.EventSquare,
     --[MiniGameType.MiniGameTypeTyphon] = GoldSauserMainPanelDefine.GameGateSubType.EventSquare,
 }
 
@@ -50,7 +48,6 @@ function GoldSauserMainPanelMainVM:Ctor()
     self.CactusClickedCount = nil
     self.GamePlayItemList = nil
     self.CurrentSelectBtnID = nil
-    self.MiniGameType = nil
     self.IsMiniGameStart = nil
     self.IsEventSquareCenter = nil
     self.ChallengNoteVM = nil
@@ -216,16 +213,33 @@ function GoldSauserMainPanelMainVM:SetGameNotify(MiniGamePanelType, Level)
         return
     end
 
-    if MiniGamePanelType == MiniGameType.MiniGameTypeCliffHanger then
+    --[[if MiniGamePanelType == MiniGameType.MiniGameTypeCliffHanger then
         return -- 2025.4.27 监修未过，暂时屏蔽小雏鸟游戏
+    end--]]
+
+    local EntranceVM = self:GetEntranceItemVMByBtnID(ClientType)
+    if not EntranceVM then
+        return
+    end
+    EntranceVM:SetCurRunMiniGameType(MiniGamePanelType)
+    EntranceVM:SetIsGameStart(true)
+    EntranceVM:SetCurLevel(Level)
+end
+
+--- 通知触发小游戏
+function GoldSauserMainPanelMainVM:NotifyGameAutoEnd(MiniGamePanelType)
+    local ClientType = BtnIdforMiniGameTypeMap[MiniGamePanelType]
+    if not ClientType then
+        return
     end
 
     local EntranceVM = self:GetEntranceItemVMByBtnID(ClientType)
     if not EntranceVM then
         return
     end
-    EntranceVM:SetIsGameStart(true)
-    EntranceVM:SetCurLevel(Level)
+    EntranceVM:SetIsGameStart(false)
+    EntranceVM:SetCurRunMiniGameType(nil)
+    EntranceVM:SetCurLevel(nil)
 end
 
 function GoldSauserMainPanelMainVM:SetSauserCelebrationInfo(Active, IsShowPreview, TopTimeInfo, DownTimeInfo)
@@ -310,11 +324,6 @@ function GoldSauserMainPanelMainVM:UpdateEventData(Event)
     if not TaskType then
         return
     end
-
-    local ExplainVM = self.GoldSauserMainPanelExplainWinVM
-    if not ExplainVM then
-        return
-    end
    
     for _, ItemVM in pairs(self.GamePlayItemList) do
         if ItemVM:GetGameType() == TaskType then
@@ -324,13 +333,20 @@ function GoldSauserMainPanelMainVM:UpdateEventData(Event)
         end 
     end
 
-    if ExplainVM:GetGameType() ~= 0 then
+    local ExplainVM = self.GoldSauserMainPanelExplainWinVM
+    if not ExplainVM then
+        return
+    end
+
+    local ExplainTaskType = ExplainVM:GetGameType()
+    if ExplainTaskType and ExplainTaskType ~= 0 and ExplainTaskType == TaskType then
         local ExplainViewShowItems = {}
         for _, Evt in ipairs(Event) do
             if ExplainVM:IsEventIDNeedShow(Evt.ID) then
                 table.insert(ExplainViewShowItems, Evt)
             end
         end
+        FLOG_INFO("[GoldSauserMainPanel]ExplainViewUpdateError EventIDCombineCheck Length:%s", #ExplainViewShowItems)
         ExplainVM:SetEventInfo(ExplainViewShowItems, RewardNeedNum)
     end
 end

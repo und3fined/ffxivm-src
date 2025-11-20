@@ -15,8 +15,16 @@ local PerformanceKeyBaseView = require("Game/Performance/View/Item/PerformanceKe
 ---@field ImgKey UFImage
 ---@field KeyState PerformanceKeyStateItemView
 ---@field TextKey UFTextBlock
+---@field TextKeyDi UFTextBlock
+---@field TextKeyGao UFTextBlock
 ---@field AnimPressBlack UWidgetAnimation
+---@field AnimPressBlue UWidgetAnimation
+---@field AnimPressRed UWidgetAnimation
 ---@field AnimReleaseBlack UWidgetAnimation
+---@field AnimReleaseBlue UWidgetAnimation
+---@field AnimReleaseRed UWidgetAnimation
+---@field AnimTipsHide UWidgetAnimation
+---@field AnimTipsLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceFullBlackKeyItemView = LuaClass(PerformanceKeyBaseView, true)
 
@@ -26,8 +34,16 @@ function PerformanceFullBlackKeyItemView:Ctor()
 	--self.ImgKey = nil
 	--self.KeyState = nil
 	--self.TextKey = nil
+	--self.TextKeyDi = nil
+	--self.TextKeyGao = nil
 	--self.AnimPressBlack = nil
+	--self.AnimPressBlue = nil
+	--self.AnimPressRed = nil
 	--self.AnimReleaseBlack = nil
+	--self.AnimReleaseBlue = nil
+	--self.AnimReleaseRed = nil
+	--self.AnimTipsHide = nil
+	--self.AnimTipsLoop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

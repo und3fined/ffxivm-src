@@ -10,12 +10,15 @@ local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 
 ---@class WorldMapTransferItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field IconServer UFImage
 ---@field ImgIcon UFImage
 ---@field ImgNormal UFImage
+---@field SizeIcon USizeBox
 ---@field Text01 UFTextBlock
 ---@field Text02 UFTextBlock
 ---@field ToggleBtnCollect UToggleButton
@@ -24,8 +27,10 @@ local WorldMapTransferItemView = LuaClass(UIView, true)
 
 function WorldMapTransferItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.IconServer = nil
 	--self.ImgIcon = nil
 	--self.ImgNormal = nil
+	--self.SizeIcon = nil
 	--self.Text01 = nil
 	--self.Text02 = nil
 	--self.ToggleBtnCollect = nil
@@ -40,10 +45,13 @@ end
 function WorldMapTransferItemView:OnInit()
 	self.Binders =
 	{
-		{ "MapName", UIBinderSetText.New(self, self.Text01) },
-		{ "CrystalName", UIBinderSetText.New(self, self.Text02) },
+		{ "InfoName1", UIBinderSetText.New(self, self.Text01) },
+		{ "InfoName2", UIBinderSetText.New(self, self.Text02) },
 		{ "IconPath", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon) },
+		{ "IconPath2", UIBinderSetBrushFromAssetPath.New(self, self.IconServer)},
+		{ "IsShowIcon2", UIBinderSetIsVisible.New(self, self.SizeIcon)},
 		{ "IsInFavor", UIBinderSetIsChecked.New(self, self.ToggleBtnCollect) },
+		{ "CanFavor", UIBinderSetIsVisible.New(self, self.ToggleBtnCollect, false, true) },
 	}
 end
 

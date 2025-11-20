@@ -9,13 +9,17 @@ local MiniGameBaseVM = require("Game/GoldSaucerMiniGame/MiniGameBaseVM")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local GoldSaucerCuffGameResultItemVM = require("Game/GoldSaucerGame/View/Cuff/ItemVM/GoldSaucerCuffGameResultItemVM")
 local GoldSaucerCuffGameInteractiveItemVM = require("Game/GoldSaucerGame/View/Cuff/ItemVM/GoldSaucerCuffGameInteractiveItemVM")
-
 local ProtoRes = require("Protocol/ProtoRes")
-
 local UIBindableList = require("UI/UIBindableList")
 local MiniGameState = GoldSaucerMiniGameDefine.MiniGameStageType
+local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
+local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
 local LSTR = _G.LSTR
 local TimerMgr = _G.TimerMgr
+local Anim = MiniGameClientConfig[MiniGameType.CrystalTower].Anim
+local EventID = _G.EventID
+local EventMgr = _G.EventMgr
+
 ---@class MiniGameCuffVM
 local MiniGameCuffVM = LuaClass(MiniGameBaseVM)
 
@@ -23,6 +27,8 @@ local MiniGameCuffVM = LuaClass(MiniGameBaseVM)
 function MiniGameCuffVM:Ctor()
     self.AllSubViewVM = {} 
     self.bCuffScoreVisible = false
+    self.AddScoreOutLineColor = "AA6F01FF"
+    self.AddScoreColor = "FFFFFFFF"
     self.CuffScore = "+0"
     self.TextStrengthValue = ""
     self.StrengthPro = 0
@@ -33,6 +39,7 @@ function MiniGameCuffVM:Ctor()
     self.bFailed = false
     self.bSuccessed = false
     self.RewardGot = "0" -- 获取奖励数量
+    self.MainPanelRewardGot = "0" -- 奖励面板奖励数量显示
     self.CuffAddRewardGot = "0"
     local CoinID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE -- 金碟币ID
 	local IconPath = _G.ScoreMgr:GetScoreIconName(CoinID)
@@ -50,11 +57,17 @@ function MiniGameCuffVM:Ctor()
     self.ResultVMList = UIBindableList.New(GoldSaucerCuffGameResultItemVM)
     self.InteractiveVMList = UIBindableList.New(GoldSaucerCuffGameInteractiveItemVM)
     self.CenterBlowVM = GoldSaucerCuffGameInteractiveItemVM.New()
+    
+    self.bRecordListPanelShow = false
+    self.bRecordFailPanelShow = false
+    self.bRltFailPanelShow = false
 end
 
 function MiniGameCuffVM:Reset()
     self.AllSubViewVM = {} 
     self.bCuffScoreVisible = false
+    self.AddScoreOutLineColor = "AA6F01FF"
+    self.AddScoreColor = "FFFFFFFF"
     self.CuffScore = "+0"
     self.TextStrengthValue = ""
     self.StrengthPro = 0
@@ -65,6 +78,7 @@ function MiniGameCuffVM:Reset()
     self.bFailed = false
     self.bSuccessed = false
     self.RewardGot = "0" -- 获取奖励数量
+    self.MainPanelRewardGot = "0" -- 奖励面板奖励数量显示
     self.CuffAddRewardGot = "0"
     local CoinID = ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE -- 金碟币ID
 	local IconPath = _G.ScoreMgr:GetScoreIconName(CoinID)
@@ -82,6 +96,10 @@ function MiniGameCuffVM:Reset()
     self.ResultVMList:Clear()
     self.InteractiveVMList:Clear()
     self.CenterBlowVM:ResetVM()
+
+    self.bRecordListPanelShow = false
+    self.bRecordFailPanelShow = false
+    self.bRltFailPanelShow = false
 end
 
 --- 全部更新
@@ -153,6 +171,7 @@ function MiniGameCuffVM:UpdateData(bInteractive)
         if self.bCuffScoreVisible then
             NeedCuffScore = NeedCuffScore + tonumber(LastCuffScore)
             self.CuffScore = string.format("+%s", NeedCuffScore)
+            EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimScoreAdd, GameInst.ScoreByInteractItemType)
         -- end
         -- if self.bCuffScoreVisible then
             if self.AddScoreTimer ~= nil then
@@ -172,9 +191,16 @@ function MiniGameCuffVM:UpdateData(bInteractive)
     self.TextMultiple = GameInst.TextMultiple
     self.bPanelNormalVisible = GameInst.bPanelNormalVisible
     self.bPanelResultVisible = GameInst.bPanelResultVisible
-    self.bFailed = GameInst.bFailed
-    self.bSuccessed = GameInst.bSuccessed
-    self.RewardGot = GameInst.RewardGot
+    local RltFail = GameInst.bFailed
+    local RltSuc = GameInst.bSuccessed
+    self.bFailed = RltFail
+    self.bSuccessed = RltSuc
+    local bBless = GameInst:IsBless()
+    self.bRecordListPanelShow = bBless or RltSuc
+    self.bRecordFailPanelShow = bBless and RltFail
+    self.bRltFailPanelShow = not bBless and RltFail
+    self.RewardGot = GameInst:GetRewardGot()
+    self.MainPanelRewardGot = GameInst:GetMainPanelRewardGot()
     if tonumber(GameInst.CuffAddRewardGot) ~= 0 then
         self.CuffAddRewardGot = GameInst.CuffAddRewardGot
         -- EventMgr:SendEvent(EventID.MiniGameMainPanelPlayAnim, Anim.AnimObtainNumberIn)
@@ -193,7 +219,7 @@ function MiniGameCuffVM:UpdateRewardGotSingle()
     if GameInst == nil then
         return
     end
-    self.RewardGot = GameInst.RewardGot
+    self.RewardGot = GameInst:GetRewardGot()
 end
 
 function MiniGameCuffVM:SetOriginReward()
@@ -202,7 +228,7 @@ function MiniGameCuffVM:SetOriginReward()
         return
     end
     
-    self.RewardGot = GameInst:GetOriginRewardGot()
+    self.RewardGot = GameInst:GetBaseReward()
 end
 
 -- --- @type 刷新所有SubViewVM

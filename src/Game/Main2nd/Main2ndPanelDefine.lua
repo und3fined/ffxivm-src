@@ -35,6 +35,8 @@ local MenuType =
 	Announcement = 32,
 	GameBot = 33,
 	CompanySeal = 34,
+	House = 35,
+	Toy = 36, -- 玩具
 } 
 
 local MoreMenuType = {

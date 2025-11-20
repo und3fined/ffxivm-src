@@ -7,6 +7,7 @@ local FashionDecoActionItemVM = require("Game/FashionDeco/VM/FashionDecoActionIt
 local FashionDecoMgr = require("Game/FashionDeco/FashionDecoMgr")
 local CommTabsDefine = require("Game/Common/Tab/CommTabsDefine")
 local DataReportUtil = require("Utils/DataReportUtil")
+local MajorUtil = require("Utils/MajorUtil")
 ---@class FashionDecoSideFrameWinVM : UIViewModel
 local FashionDecoSideFrameWinVM = LuaClass(UIViewModel)
 local LSTR = _G.LSTR
@@ -36,6 +37,9 @@ function FashionDecoSideFrameWinVM:Ctor()
     self.CurrentSelectedEquip = false
     self.BtnWearVisible = false
     self.ToggleBtnCollectVisible = false
+
+    self.bShowPanelBtnAmeliorate = false --是否显示配饰改良的入口( 目前翅膀显示，雨伞不显示)
+    self.bIsAmeliorateSystemOpen = true --配饰改良系统是否能点击
 end
 --收藏点击
 function FashionDecoSideFrameWinVM:ClearData()
@@ -67,11 +71,23 @@ end
 function FashionDecoSideFrameWinVM:GetSettingVM()
     return self.FashionDecoSettingTipsVM
 end
+
+-- 改变选中的对象，选中目标ID
+function FashionDecoSideFrameWinVM:OnChangeSelectItem(ID)
+    for i = 1, self.ListSlotItemListVM:Length() do
+        self.ListSlotItemListVM.Items[i]:OnSelectedChange(false)
+    end
+
+    local InNewItem = self:FindItemByID(ID)
+    if InNewItem then
+        InNewItem.IsSelect = true
+        self:SetCurrentSelectedItem(InNewItem)
+        InNewItem:OnSelectedChange(true)
+    end
+end
+
 --设置当前选择的item
 function FashionDecoSideFrameWinVM:SetCurrentSelectedItem(InNewItem)
-    if self.CurrentSelectedItem ~= nil and (InNewItem.ID == self.CurrentSelectedItem.ID  ) then
-        return
-    end
     if self.CurrentSelectedItem ~= nil and (InNewItem.ID == nil or not InNewItem.IsSelect) then
         return
     end
@@ -86,6 +102,7 @@ function FashionDecoSideFrameWinVM:FindItemByID(ID)
     end)
 end
 
+--埋点上报
 function FashionDecoSideFrameWinVM:ReportCurrentSelectItem()
    DataReportUtil.ReportFashiondecoData("FashionAccessoriesFlow", 2,1,self.CurrentSelectedID)
 end
@@ -97,7 +114,7 @@ function FashionDecoSideFrameWinVM:UpdateCurrentSelectedItem()
     self.CurrentSelectedName = self.CurrentSelectedItem.Title
     self.CurrentSelectedID = self.CurrentSelectedItem.ID
     self.CurrentSelectedEquip = self.CurrentSelectedItem.Equip
-    self.CurrentSelectedItem = nil
+    -- self.CurrentSelectedItem = nil
     self.ListActionItemListVM = self:ResetBindableList(self.ListActionItemListVM, FashionDecoActionItemVM)
     local TempActionList = FashionDecoMgr:GetActionListDataByID(self.CurrentSelectedID,FashionDecoActionItemVM)
     if #TempActionList > 0 then
@@ -149,31 +166,49 @@ function FashionDecoSettingTipsVM:CancelAllSettingSelected()
     FashionDecoMgr:SendAutoUseType(0)
 end
 
+--穿戴/卸下时尚配饰
 function FashionDecoSideFrameWinVM:WearCurrentFashionDeco()
-    if FashionDecoMgr:CheckFashionDecorateHiddenState(self.CurrentSelectType) then
-        --336005 当前状态无法装备
+    local StateComp = MajorUtil.GetMajorStateComponent()
+    local IsHoldWeapon = false
+    if StateComp ~= nil  then
+        IsHoldWeapon = StateComp:IsHoldWeaponState()
+    end
+
+    --检查当前状态能否--穿戴/卸下
+    if FashionDecoMgr:CheckFashionDecorateHiddenState(self.CurrentSelectType) and not IsHoldWeapon then
         MsgTipsUtil.ShowTips(LSTR(1030016))--当前状态无法装备
         return
     end
-        --是否装备
-        local bIsUmbrella = false
-        if self.CurrentSelectedEquip == true then
-            --if self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Umbrella then
-                --bIsUmbrella = true
-            --end
-            FashionDecoMgr:SendUnClothing(self.CurrentSelectType)
-        else
+    --是否装备
+    local bIsUmbrella = false
+    if self.CurrentSelectedEquip == true then
+        --if self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Umbrella then
+            --bIsUmbrella = true
+        --end
+        FashionDecoMgr:SendUnClothing(self.CurrentSelectType)
+    else
 
-            if self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Umbrella then
-                bIsUmbrella = true
-            end
-            FashionDecoMgr:SingAndSendClothing(self.CurrentSelectedID,bIsUmbrella,true)
-            DataReportUtil.ReportEasyUseFlowData(3, self.CurrentSelectedID, 4)
+        if self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Umbrella then
+            bIsUmbrella = true
         end
+        if IsHoldWeapon and self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Wing then
+            FashionDecoMgr:SendClothing(self.CurrentSelectedID,bIsUmbrella,true)
+        else
+            FashionDecoMgr:SingAndSendClothing(self.CurrentSelectedID,bIsUmbrella,true)
+        end
+        DataReportUtil.ReportEasyUseFlowData(3, self.CurrentSelectedID, 4)
+    end
 end
 
 function FashionDecoSideFrameWinVM:SetTabsSelectionIndex(Index)
     self.CurrentSelectType = Index
+
+    if self.CurrentSelectType == FashionDecoDefine.FashionDecoType.Wing then
+        local Num = FashionDecoMgr:GetFashionDecoNumByType(FashionDecoDefine.FashionDecoType.Wing)
+        self.bShowPanelBtnAmeliorate = Num > 0
+    else
+        self.bShowPanelBtnAmeliorate = false
+    end
 end
 
 --更新所有的当前类型
@@ -190,7 +225,7 @@ function FashionDecoSideFrameWinVM:GetAllReadStatus()
     return FashionDecoMgr:GetAllReadStatus()
 end
 
---改变了类型
+--改变配饰类型（雨伞/翅膀）
 function FashionDecoSideFrameWinVM:OnSelectChangedItem(InIndex)
     if InIndex < FashionDecoDefine.FashionDecoType.Umbrella then
         return

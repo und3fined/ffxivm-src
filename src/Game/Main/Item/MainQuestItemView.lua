@@ -302,11 +302,11 @@ function MainQuestItemView:OnClickedBtnQuest()
 					QuestTrackVM:StartCanAcceptQuestAutoPathMove(ChapterID) --开始自动寻路
 				end
 			else
-				QuestTrackVM:TrackCanAcceptQuest(ChapterID)
 				if not _G.AutoPathMoveMgr:IsAutoPathMoveEnable() then --如果没有开启自动寻路,打开任务点地图
 					QuestTrackVM:ShowMapTrackQuest(ChapterID)
 				end
 			end
+			QuestTrackVM:TrackCanAcceptQuest(ChapterID)
 		else
 			self:TrackQuest(ChapterID)
 		end
@@ -385,7 +385,21 @@ function MainQuestItemView:OnSecond()
 		local MainlineVM = self.Params.MainlineVM
 		if MainlineVM then
 			local ServerTime = TimeUtil.GetServerLogicTime() - 1 --减1秒前后台误差
-			local LimitTime =  MainlineVM.LimitTime
+			local LimitTime = MainlineVM.LimitTime
+			if nil == LimitTime then
+				-- 外网有nil的报错,这里做个兜底处理
+				LimitTime = 0
+				if MainlineVM.ChapterID then
+					local ChapterCfgItem = QuestHelper.GetChapterCfgItem(MainlineVM.ChapterID)
+					if ChapterCfgItem then
+						local OpenDayLimit = ChapterCfgItem.OpenDayLimit
+						if OpenDayLimit and OpenDayLimit ~= 0 then
+							LimitTime = TimeUtil.GetOpenServerOffsetTS(ChapterCfgItem.OpenDayLimit, ChapterCfgItem.OpenHourLimit)
+						end
+						MainlineVM.LimitTime = LimitTime
+					end
+				end
+			end
 			if LimitTime > ServerTime then
 				local Second = LimitTime - ServerTime
 				local Number = 0
@@ -498,7 +512,7 @@ function MainQuestItemView:TempChangeTargetVMList()
 	if bTargetFinishPWorld and (not bCombatProf) then
 		if not self.TargetVMListCache then
 			self.TargetVMListCache = VM.TargetVMList
-			self.ChapterIDCache = VM.ChapterID
+			self.QuestIDCache = VM.QuestID
 
 			local NewVM = QuestTargetVM.New()
 			NewVM.TargetID = TargetID
@@ -512,10 +526,10 @@ function MainQuestItemView:TempChangeTargetVMList()
 		end
 
 	elseif self.TargetVMListCache then
-		if VM.ChapterID == self.ChapterIDCache then
+		if VM.QuestID == self.QuestIDCache then
 			VM.TargetVMList = self.TargetVMListCache
 			self.TargetVMListCache = nil
-			self.ChapterIDCache = nil
+			self.QuestIDCache = nil
 		end
 	end
 end

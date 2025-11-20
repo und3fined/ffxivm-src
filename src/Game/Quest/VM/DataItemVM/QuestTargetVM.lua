@@ -120,9 +120,10 @@ function QuestTargetVM:UpdateVM(Value)
 				local Items = {}
 				for Index, ItemResID in ipairs(Value.RequiredItemList) do
 					local NeedNum = Value.RequiredNumList[Index]
+					local OwnNum = Value.OwnedItemCountList[Index]
 					local NeedMagic = Value.MagicsparList[Index]
 					local IsNeedMagic = NeedMagic ~= nil
-					local ItemVMData = {ResID = ItemResID, Num = NeedNum, IsShowNum = not IsNeedMagic}
+					local ItemVMData = { ResID = ItemResID, Num = NeedNum, OwnNum = OwnNum, IsShowNum = not IsNeedMagic, IsQuestTarget = true }
 					table.insert(Items, ItemVMData)
 				end
 				self.ItemVMList:UpdateByValues(Items)
@@ -147,16 +148,29 @@ function QuestTargetVM:UpdateCountdown(Countdown)
 end
 
 function QuestTargetVM:UpdateItemList()
-	local ItemVMList = self.ItemVMList
-	if ItemVMList then
-		if ItemVMList:Length() > 0 then
-			local Items = ItemVMList:GetItems()
-			for _, ItemVM in ipairs(Items) do
-				local Value = ItemVM.Item
-				if Value then
-					if Value.IsShowNum then
-						local Num = _G.BagMgr:GetItemNum(Value.ResID)
-						ItemVM:SetNumProgress(Num)
+	local QuestID = self.OwnerChapterVM and self.OwnerChapterVM.QuestID
+	local Quest = _G.QuestMgr.QuestMap and _G.QuestMgr.QuestMap[QuestID]
+	if Quest then
+		local Target = Quest.Targets and Quest.Targets[self.TargetID]
+		if Target then
+			local OwnedCountList = Target.OwnedItemCountList
+			local RequiredItemList = Target.RequiredItemList
+
+			local ItemVMList = self.ItemVMList
+			if ItemVMList and ItemVMList:Length() > 0 then
+				local Items = ItemVMList:GetItems()
+				for _, ItemVM in ipairs(Items) do
+					local Value = ItemVM.Item
+					if Value then
+						if Value.IsShowNum then
+							for Index, ResID in ipairs(RequiredItemList) do
+								if ResID == Value.ResID then
+									local Num = OwnedCountList[Index]
+									ItemVM:SetNumProgress(Num)
+									break
+								end
+							end
+						end
 					end
 				end
 			end

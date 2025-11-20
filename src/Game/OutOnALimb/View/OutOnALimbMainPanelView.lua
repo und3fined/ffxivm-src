@@ -59,8 +59,8 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field ImgCutTree2 UFImage
 ---@field ImgCutTree3 UFImage
 ---@field ImgCutTree4 UFImage
----@field ImgDifficulty UFImage
----@field ImgDifficulty2 UFImage
+---@field ImgDifficulty USpineWidget
+---@field ImgDifficulty2 USpineWidget
 ---@field ImgLetter1 UFImage
 ---@field ImgLetter2 UFImage
 ---@field ImgLetter3 UFImage
@@ -69,14 +69,15 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field ImgLetter6 UFImage
 ---@field ImgLetter7 UFImage
 ---@field ImgLetter8 UFImage
----@field ImgMedium UFImage
----@field ImgMedium2 UFImage
+---@field ImgMedium USpineWidget
+---@field ImgMedium2 USpineWidget
 ---@field ImgNoCut UFImage
 ---@field ImgNoCut1 UFImage
+---@field ImgPointerBg UFImage
 ---@field ImgPointerSimple UFImage
 ---@field ImgPriceIcon UFImage
----@field ImgSimple UFImage
----@field ImgSimple2 UFImage
+---@field ImgSimple USpineWidget
+---@field ImgSimple2 USpineWidget
 ---@field ImgTime UFImage
 ---@field ImgTimerBlue UFImage
 ---@field ImgTimerRed UFImage
@@ -86,6 +87,7 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field MI_DX_Common_GoldSaucer_4 UFImage
 ---@field MainLBottomPanel MainLBottomPanelView
 ---@field MainTeamPanel MainTeamPanelView
+---@field MooglePawRoundTips GoldSaucerMooglePawRoundTipsItemView
 ---@field NumberPanel UFCanvasPanel
 ---@field ObtainPanel UFCanvasPanel
 ---@field P_EFF_OutOnALimb_1 UUIParticleEmitter
@@ -108,6 +110,9 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field ProBarYellow UFImage
 ---@field ProBarYellow1 UProgressBar
 ---@field ProBarYellow2 UProgressBar
+---@field Spine_GoldSaucerGame_Monster1 USpineWidget
+---@field Spine_GoldSaucerGame_Monster2 USpineWidget
+---@field Spine_GoldSaucerGame_Monster3 USpineWidget
 ---@field TextCutPanel UFCanvasPanel
 ---@field TextDifficulty UFTextBlock
 ---@field TextNumber UFTextBlock
@@ -136,12 +141,16 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field AnimDifficultyTips UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimObtainNumberIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---@field AnimPointerNumberTrigger UWidgetAnimation
 ---@field AnimPointerStateYellowLoop UWidgetAnimation
 ---@field AnimPointerTimeHide UWidgetAnimation
 ---@field AnimPointerTimeTrigger UWidgetAnimation
 ---@field AnimProBarChooseLoop UWidgetAnimation
 ---@field AnimProBarYellow UWidgetAnimation
+---@field AnimSection2 UWidgetAnimation
+---@field AnimSection3 UWidgetAnimation
+---@field AnimSection3Loop UWidgetAnimation
 ---@field AnimTips UWidgetAnimation
 ---@field AnimTopTipsIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -184,6 +193,7 @@ function OutOnALimbMainPanelView:Ctor()
 	--self.ImgMedium2 = nil
 	--self.ImgNoCut = nil
 	--self.ImgNoCut1 = nil
+	--self.ImgPointerBg = nil
 	--self.ImgPointerSimple = nil
 	--self.ImgPriceIcon = nil
 	--self.ImgSimple = nil
@@ -197,6 +207,7 @@ function OutOnALimbMainPanelView:Ctor()
 	--self.MI_DX_Common_GoldSaucer_4 = nil
 	--self.MainLBottomPanel = nil
 	--self.MainTeamPanel = nil
+	--self.MooglePawRoundTips = nil
 	--self.NumberPanel = nil
 	--self.ObtainPanel = nil
 	--self.P_EFF_OutOnALimb_1 = nil
@@ -219,6 +230,9 @@ function OutOnALimbMainPanelView:Ctor()
 	--self.ProBarYellow = nil
 	--self.ProBarYellow1 = nil
 	--self.ProBarYellow2 = nil
+	--self.Spine_GoldSaucerGame_Monster1 = nil
+	--self.Spine_GoldSaucerGame_Monster2 = nil
+	--self.Spine_GoldSaucerGame_Monster3 = nil
 	--self.TextCutPanel = nil
 	--self.TextDifficulty = nil
 	--self.TextNumber = nil
@@ -247,12 +261,16 @@ function OutOnALimbMainPanelView:Ctor()
 	--self.AnimDifficultyTips = nil
 	--self.AnimIn = nil
 	--self.AnimObtainNumberIn = nil
+	--self.AnimOut = nil
 	--self.AnimPointerNumberTrigger = nil
 	--self.AnimPointerStateYellowLoop = nil
 	--self.AnimPointerTimeHide = nil
 	--self.AnimPointerTimeTrigger = nil
 	--self.AnimProBarChooseLoop = nil
 	--self.AnimProBarYellow = nil
+	--self.AnimSection2 = nil
+	--self.AnimSection3 = nil
+	--self.AnimSection3Loop = nil
 	--self.AnimTips = nil
 	--self.AnimTopTipsIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -264,6 +282,7 @@ function OutOnALimbMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.ChooseDifficulty)
 	self:AddSubView(self.MainLBottomPanel)
 	self:AddSubView(self.MainTeamPanel)
+	self:AddSubView(self.MooglePawRoundTips)
 	self:AddSubView(self.PointerStateGrey)
 	self:AddSubView(self.PointerStateRed)
 	self:AddSubView(self.PointerStateYellow)
@@ -290,7 +309,8 @@ function OutOnALimbMainPanelView:OnInit()
 		--{"YellowPointerAngle", UIBinderSetRenderTransformAngle.New(self, self.PointerStateYellow, true)},
 		{"RedPointerAngle", UIBinderSetRenderTransformAngle.New(self, self.PointerStateRed, true)},
 		{"GreyPointerAngle", UIBinderSetRenderTransformAngle.New(self, self.PointerStateGrey)},
-		{"DifficultyIconPath", UIBinderSetBrushFromAssetPath.New(self, self.ImgPointerSimple)},
+		--{"Difficulty", UIBinderSetBrushFromAssetPath.New(self, self.ImgPointerSimple)},
+		{"Difficulty", UIBinderValueChangedCallback.New(self, nil, self.OnSetWhichDifficultyPanelToShow)},
 		--{"bTopTipsShow", UIBinderSetIsVisible.New(self, self.TopTips)},
 		{"bKeyTime", UIBinderValueChangedCallback.New(self, nil, self.OnComeInKeyTime)},
 		{"bShowCutTimePanel",  UIBinderSetIsVisible.New(self, self.TimePanel)},
@@ -432,9 +452,8 @@ function OutOnALimbMainPanelView:BindBtnCloseCallBack()
 		end
 		
 		GameInst:SetIsForceEnd(true)
-		GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.OutOnALimb)
 		GoldSaucerMiniGameMgr:SendMsgAloneTreeExitReq(MiniGameType.OutOnALimb)
-		--self:StopAllAnimations()
+		GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.OutOnALimb)
 	end
 
 	local function RecoverGameLoop()
@@ -859,6 +878,12 @@ function OutOnALimbMainPanelView:OnMiniGameStateChanged(NewValue, OldValue)
     end
 end
 
+function OutOnALimbMainPanelView:OnSetWhichDifficultyPanelToShow(Difficulty)
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster1, Difficulty == MiniGameDifficulty.Sabotender)
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster2, Difficulty == MiniGameDifficulty.Morbol)
+	UIUtil.SetIsVisible(self.Spine_GoldSaucerGame_Monster3, Difficulty == MiniGameDifficulty.Titan)
+end
+
 --- 设定难度进度条标志位置
 function OutOnALimbMainPanelView:SetLevelPosition(DifficultyType, bShowPanelFirst)
 	local WidgetLevelMark
@@ -1022,8 +1047,23 @@ function OutOnALimbMainPanelView:ShowDifficultyShowPanel()
 	end
 end
 
+--- 显示通用回合提示
+function OutOnALimbMainPanelView:ShowGoldSauserCommRoundTips()
+	local ViewModel = self:GetTheParamsVM()
+    if ViewModel == nil then
+        return
+    end
+	local RoundTips = self.MooglePawRoundTips
+	if RoundTips then
+		UIUtil.SetIsVisible(RoundTips, true)
+		RoundTips:ShowRoundTips(ViewModel, function()
+			UIUtil.SetIsVisible(RoundTips, false)
+		end)
+	end
+end
+
 --- 显示游戏开始提示信息
-function OutOnALimbMainPanelView:StartDelayShowPanel()
+function OutOnALimbMainPanelView:StartDelayShowPanel(bRestart)
 	local ViewModel = self:GetTheParamsVM()
     if ViewModel == nil then
         return
@@ -1036,22 +1076,36 @@ function OutOnALimbMainPanelView:StartDelayShowPanel()
 	self:ResetSubViewState()
 	self:SetThePanelUseTips(self.TextTips1, LSTR(370042))
 	self:SetTheHelpInfoTips(MiniGameStageType.Update)
-	self:PlayAnimation(self.AnimTips)
+	if not bRestart then
+		self:PlayAnimation(self.AnimTips) -- 2025.6.16 只有第一次开始播放相关tips
+	end
 	self:PlayAnimation(self.AnimCutPanelIn)
 	GoldSaucerMiniGameMgr.PlayUISoundByAudioType(AudioType.CutPanelIn)
 	self:PlayAnimation(self.AnimPointerTimeTrigger, 0.73)
 
 	--- 设定背景特效
 	local RoundIndex = MiniGameInst:GetRoundIndex() + 1 or 1
+	local OutOnALimbDCfg = self.OutOnALimbDCfg
+	if OutOnALimbDCfg then
+		local BgPath = OutOnALimbDCfg.PointerPanelBgPath
+		if BgPath then
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgPointerBg, BgPath[RoundIndex])
+		end
+	end
+
 	local bShowEffect = RoundIndex > 1
 	UIUtil.SetIsVisible(self.EFF_1, bShowEffect)
+	if self:IsAnimationPlaying(self.AnimSection3Loop) then
+		self:StopAnimation(self.AnimSection3Loop)
+	end
 	if bShowEffect then
 		if RoundIndex <= GoldSaucerMiniGameDefine.CutPanelBGEffectLimit then
-			self:PlayAnimation(self.AnimCutPanelDoubling13)
+			self:PlayAnimation(self.AnimSection2)
 			self.P_EFF_OutOnALimb_2:ResetParticle()
 			self.P_EFF_OutOnALimb_4:ResetParticle()
 		else
-			self:PlayAnimation(self.AnimCutPanelDoubling45)
+			self:PlayAnimation(self.AnimSection3)
+			self:PlayAnimation(self.AnimSection3Loop, 0, 0)
 			self.P_EFF_OutOnALimb_1:ResetParticle()
 			self.P_EFF_OutOnALimb_3:ResetParticle()
 		end
@@ -1224,6 +1278,7 @@ function OutOnALimbMainPanelView:UpdateFailInfoShow()
 		end
         -- 动画后展示失败结算界面
 		UIViewMgr:ShowView(UIViewID.OutOnALimbSettlementPanel, ViewModel)
+		MiniGameInst:SetIsResultPanelShow(true)
     end
 	self:RegisterTimer(ShowFailRewardPanel, GoldSaucerMiniGameDefine.FailShowConstantTime, 0, 1)
 end
@@ -1261,7 +1316,8 @@ end
 --- 刷新再次挑战展示信息
 function OutOnALimbMainPanelView:UpdateRestartInfo()
 	self:ShowRewardChangeInNewRound()
-    self:StartDelayShowPanel()
+	self:ShowGoldSauserCommRoundTips()
+    self:StartDelayShowPanel(true)
 end
 
 --- 游戏开始刷新界面组件状态
@@ -1284,8 +1340,6 @@ function OutOnALimbMainPanelView:ResetSubViewState()
 	UIUtil.ImageSetMaterialScalarParameterValue(self.ProBarYellow, "ProgressStart", 1)
 	UIUtil.ImageSetMaterialScalarParameterValue(self.ProBarYellow, "ProgressEnd", 1)
 	self:PlayAnimation(self.AnimProBarYellow)
-	--self:PlayAnimation(self.AnimCutPanelDoubling13, 0.69, 1, _G.UE.EUMGSequencePlayMode.Reverse, 1)
-	--self:PlayAnimation(self.AnimCutPanelDoubling45, 0.69, 1, _G.UE.EUMGSequencePlayMode.Reverse, 1)
 end
 
 --- 动画结束统一回调
@@ -1321,9 +1375,9 @@ function OutOnALimbMainPanelView:OnAnimationFinished(Animation)
 			self:StartDifficultyBarSwingTimer(true)
 			self:PlayAnimation(self.AnimDifficultyPanelLoop, 0, 0, nil, 1.0)
 		end, 0.5, 0, 1)--]]
-	elseif Animation == self.AnimCutPanelDoubling13 then
+	elseif Animation == self.AnimSection2 then
 		self.P_EFF_OutOnALimb_1:ResetParticle()
-	elseif Animation == self.AnimCutPanelDoubling45 then
+	elseif Animation == self.AnimSection3 then
 		self.P_EFF_OutOnALimb_2:ResetParticle()
 	end
 end

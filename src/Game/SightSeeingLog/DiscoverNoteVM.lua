@@ -151,6 +151,7 @@ function DiscoverNoteVM:UpdateRegionNoteIcons(RegionSevInfos)
                 bPerfectComplete = bPerfectComplete,
                 OffsetAngle = 0,--Index % 2 == 1 and 0 or -10
                 bShowPerfectCondEffect = Value.bShowPerfectCondEffect,
+                bRedDotShow = Value.bRedDotShow
             })
         end
     end
@@ -714,6 +715,22 @@ function DiscoverNoteVM:CloseActChoosePanelByPointChangeToNormal(NoteID)
         return
     end
     self.ForceClosePanelByPointChange = true
+end
+
+function DiscoverNoteVM:SetNoteItemRedDotVisible(NoteItemID, bVisible)
+    local NoteIconItems = self.NoteIconItems
+    if not NoteIconItems then
+        return
+    end
+
+    local ItemVM = NoteIconItems:Find(function(E)
+        return E.ItemID == NoteItemID
+    end)
+    if not ItemVM then
+        return
+    end
+
+    ItemVM.bRedDotShow = bVisible
 end
 
 return DiscoverNoteVM

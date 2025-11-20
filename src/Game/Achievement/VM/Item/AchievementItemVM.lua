@@ -30,6 +30,7 @@ function AchievementItemVM:Ctor()
 	self.TextName = ""
 	self.ToggleBtnFavorState = EToggleButtonState.Unchecked
 	self.BtnRequestDetailVisible = false
+	self.BtnRequestDetailRedDotVisible = false
 	self.AchievePoint = 0
 	self.ImgLevelPath = ""
 
@@ -107,8 +108,10 @@ function AchievementItemVM:UpdateVM(Value, Params)
 	self.TextContent = TextContent or Value.TextContent
 
 	self.ToggleBtnFavorState = _G.AchievementMgr:IsCollectAchievement(Value.ID) and EToggleButtonState.Checked or EToggleButtonState.Unchecked
-	self.BtnRequestDetailVisible = (Value.GroupID or 0) ~= 0
+	self.BtnRequestDetailVisible = (Value.GroupID or 0) ~= 0 or (Value.DiyGroup or "") ~= ""
+	self.BtnRequestDetailRedDotVisible = (Value.DiyGroup or "") ~= ""
 	self.GroupID = Value.GroupID
+	self.DiyGroup = Value.DiyGroup
 	self.AchievePoint = Value.AchievePoint
 	self.ImgLevelPath = Value.AchievePointIcon
 	local RewardList = Value.RewardList or {}

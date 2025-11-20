@@ -41,9 +41,18 @@ function PWorldEntPolNM:GetRewardData(EntCfg)
         table.insert(RewardsData, Data)
     end
 
+    local PropDropMap = {}
+    if Cfg.RewardPropIndex and #Cfg.RewardPropIndex > 0 then
+        for i, v in ipairs(Cfg.RewardPropIndex) do
+            if NormalRewards[v] then
+                PropDropMap[v] = i
+            end
+        end
+    end
+
     for Idx, ID in ipairs(NormalRewards) do
         local Cnt = Cfg.RewardCnt[Idx] or 0
-        local Data = PolUtil.MakeRewardData(ID, Cnt, PWorldEntDefine.RewardType.Norm, Cfg.ID)
+        local Data = PolUtil.MakeRewardData(ID, Cnt, PropDropMap[Idx] == nil and PWorldEntDefine.RewardType.Norm or PWorldEntDefine.RewardType.PropDrop, Cfg.ID)
         table.insert(RewardsData, Data)
     end
 

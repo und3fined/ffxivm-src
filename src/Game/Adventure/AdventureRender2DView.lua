@@ -206,13 +206,9 @@ function AdventureRender2dView:OnShow()
     AdventureRender2dView.ShowCount = AdventureRender2dView.ShowCount + 1
     FLOG_INFO("AdventureRender2dView:OnShow ShowCount:%d", AdventureRender2dView.ShowCount)
 
-	-- 禁用关卡流送，避免主视角切换导致子关卡被卸载
-	UILevelMgr:SwitchLevelStreaming(false)
 end
 
 function AdventureRender2dView:OnHide()
-	-- 恢复关卡流送
-	UILevelMgr:SwitchLevelStreaming(true)
     AdventureRender2dView.ShowCount = AdventureRender2dView.ShowCount - 1
     FLOG_INFO("AdventureRender2dView:OnShow OnHide:%d", AdventureRender2dView.ShowCount)
 
@@ -1982,7 +1978,6 @@ function AdventureRender2dView:DisableEnvironmentLights()
 	local CompsToDisable = {}
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.USkyLightComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UDirectionalLightComponent))
-	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UPlanarReflectionComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UChildActorComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UPostProcessComponent))
 	for _, Comp in ipairs(CompsToDisable) do

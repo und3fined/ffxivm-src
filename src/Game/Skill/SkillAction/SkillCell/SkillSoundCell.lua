@@ -86,7 +86,8 @@ function SkillSoundCell:ConditionalEndSound()
     if not SkillObject then
         return
     end
-    if _G.SkillLogicMgr:IsSkillSystem(SkillObject.OwnerEntityID) or self.CellData.IsCanBeBreak then
+    local IsCanBeBreak = self.CellData and self.CellData.IsCanBeBreak or false
+    if _G.SkillLogicMgr:IsSkillSystem(SkillObject.OwnerEntityID) or IsCanBeBreak then
         self:EndSound()
     end
 

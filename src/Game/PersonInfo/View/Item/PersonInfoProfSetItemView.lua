@@ -14,6 +14,7 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 ---@class PersonInfoProfSetItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field IconFull UFImage
 ---@field IconSelect UFImage
 ---@field PersonInfoProf PersonInfoProfItemView
 ---@field AnimLoop UWidgetAnimation
@@ -22,6 +23,7 @@ local PersonInfoProfSetItemView = LuaClass(UIView, true)
 
 function PersonInfoProfSetItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.IconFull = nil
 	--self.IconSelect = nil
 	--self.PersonInfoProf = nil
 	--self.AnimLoop = nil
@@ -37,6 +39,9 @@ end
 function PersonInfoProfSetItemView:OnInit()
 	self.BindersPersonInfoVM = {
 		{ "StrPerferredProfSet", UIBinderValueChangedCallback.New(self, nil, self.OnPerferredProfChanged) },
+	}
+	self.BindersPersonInfoProfVM = {
+		{ "IsMax", 	UIBinderSetIsVisible.New(self, self.IconFull) },
 	}
 end
 
@@ -68,6 +73,7 @@ function PersonInfoProfSetItemView:OnRegisterBinder()
 	self.ViewModel = Params.Data
 
 	self:RegisterBinders(PersonInfoVM, self.BindersPersonInfoVM)
+	self:RegisterBinders(self.ViewModel, self.BindersPersonInfoProfVM)
 end
 
 function PersonInfoProfSetItemView:OnPerferredProfChanged()

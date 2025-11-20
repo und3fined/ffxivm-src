@@ -1,23 +1,15 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
-
-local PhotoVM = LuaClass(UIViewModel)
 local PhotoDefine = require("Game/Photo/PhotoDefine")
-
 local UIBindableList = require("UI/UIBindableList")
 local PhotoTemplateUtil = require("Game/Photo/Util/PhotoTemplateUtil")
 local PhotoActorUtil = require("Game/Photo/Util/PhotoActorUtil")
 local PhotoSceneUtil = require("Game/Photo/Util/PhotoSceneUtil")
-
-
 -- local ItemVM = require("Game/Item/ItemVM")
 local PhotoSubTabItemVM = require("Game/Photo/ItemVM/PhotoSubTabItemVM")
 
-local LSTR = _G.LSTR
-
-local PWorldQuestMgr
-local PWorldMgr
-local PWorldTeamMgr
+local PhotoVM = LuaClass(UIViewModel)
+local PhotoMgr
 
 
 function PhotoVM:Ctor()
@@ -36,7 +28,7 @@ function PhotoVM:Reset()
     self.IsFollowWithEye = false
 
     -- 面向跟随
-    self.IsFollowWithFace = true
+    self.IsFollowWithFace = false
 
 
     -- 九宫格
@@ -90,9 +82,7 @@ function PhotoVM:InitSubTabData()
 end
 
 function PhotoVM:OnBegin()
-    -- PWorldQuestMgr = _G.PWorldQuestMgr
-    -- PWorldMgr = _G.PWorldMgr
-    -- PWorldTeamMgr = _G.PWorldTeamMgr
+    PhotoMgr = _G.PhotoMgr
 
     self:InitSubTabData()
 end
@@ -106,7 +96,6 @@ end
 function PhotoVM:UpdateVM()
     self:Reset()
     self:UpdCanGiveAll()
-    
 end
 
 function PhotoVM:OnTimer()
@@ -174,12 +163,18 @@ function PhotoVM:TryRptPause()
     end
 end
 
-function PhotoVM:SetIsPauseSelect(V)
-    if _G.PhotoMgr:IsCurSeltMajor() then
-        self:SetIsBanMove(V)
+function PhotoVM:SetIsPauseSelect(IsPause)
+    if self.IsBanMove ~= IsPause and PhotoMgr:IsCurSeltMajor() then
+        self:SetIsBanMove(IsPause)
     end
-    self.IsPauseSelect = V
-    _G.PhotoMgr:PauseSeltAnim(V)
+
+    if self.IsPauseSelect ~= IsPause then
+        self.IsPauseSelect = IsPause
+        if not PhotoMgr:GetIsDirectPause() then
+            PhotoMgr:PauseSeltAnim(IsPause)
+        end
+        PhotoMgr:PauseSeltActorEffect(IsPause)
+    end
 end
 
 function PhotoVM:SetIsPauseWeather(V)
@@ -187,10 +182,13 @@ function PhotoVM:SetIsPauseWeather(V)
     PhotoSceneUtil.PauseWeather(V)
 end
 
-function PhotoVM:SetIsPauseAll(V)
-    self:SetIsBanMove(V)
-    self.IsPauseAll = V
-    PhotoActorUtil.PauseAllActorAnim(V)
+function PhotoVM:SetIsPauseAll(IsPause)
+    if self.IsPauseAll ~= IsPause then
+        self.IsPauseAll = IsPause
+        self:SetIsBanMove(IsPause)
+        PhotoActorUtil.PauseAllActorAnim(IsPause)
+        PhotoMgr:PauseAllActorEffect(IsPause)
+    end
 end
 
 function PhotoVM:SetIsBanMove(V)
@@ -203,7 +201,7 @@ function PhotoVM:SetIsBanMove(V)
         CommonUtil.DisableShowJoyStick(false)
 		CommonUtil.ShowJoyStick()
 	end
-
+    PhotoMgr:SetMajorCanMove(not self.IsBanMove)
     -- _G.PhotoRoleStatVM:TryRptStat()
 end
 

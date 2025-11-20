@@ -13,12 +13,12 @@ local GatherPointCfg = require("TableCfg/GatherPointCfg")
 local MapMarkerType = MapDefine.MapMarkerType
 local MapMarkerBPType = MapDefine.MapMarkerBPType
 
----@class MapMarkerGather
+
+---@class MapMarkerGather : MapMarker
 local MapMarkerGather = LuaClass(MapMarker)
 
----Ctor
 function MapMarkerGather:Ctor()
-	self.bTracking = false
+	self.bTracking = false -- 小地图采集点是否追踪，追踪后有发光动效
 end
 
 function MapMarkerGather:GetType()

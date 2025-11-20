@@ -35,7 +35,7 @@ local OpsActivityMgr
 ---@field CommonTitle CommonTitleView
 ---@field ImgBG UFImage
 ---@field ImgDown UFImage
----@field ImgMask UFImage
+---@field ImgMask2 UFImage
 ---@field PanelBG UFCanvasPanel
 ---@field AnimChangeActivity UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
@@ -53,7 +53,7 @@ function OpsActivityMainPanelView:Ctor()
 	--self.CommonTitle = nil
 	--self.ImgBG = nil
 	--self.ImgDown = nil
-	--self.ImgMask = nil
+	--self.ImgMask2 = nil
 	--self.PanelBG = nil
 	--self.AnimChangeActivity = nil
 	--self.AnimIn = nil
@@ -86,7 +86,9 @@ function OpsActivityMainPanelView:OnTreeViewTabsSelectChanged(Index, ItemData, I
     if nil == ItemData then
         return
     end
-    local ActivityData = ItemData
+
+
+	local ActivityData = ItemData
     if nil == ActivityData or string.isnilorempty(ActivityData:GetBPName()) then
         return
     end
@@ -109,9 +111,15 @@ function OpsActivityMainPanelView:OnTreeViewTabsSelectChanged(Index, ItemData, I
 	end
 
 	if ActivityData.Activity and ActivityData.Activity.MaskSwitch == 1 then
-		UIUtil.SetIsVisible(self.ImgMask, true)
+		UIUtil.SetIsVisible(self.ImgMask2, true)
 	else
-		UIUtil.SetIsVisible(self.ImgMask, false)
+		UIUtil.SetIsVisible(self.ImgMask2, false)
+	end
+
+	if ActivityData.Activity and ActivityData.Activity.MaskBottom == 1 then
+		UIUtil.SetIsVisible(self.ImgDown, true)
+	else
+		UIUtil.SetIsVisible(self.ImgDown, false)
 	end
 
 	if ActivityData.Activity and ActivityData.Activity.MaskBottom == 1 then
@@ -139,7 +147,7 @@ function OpsActivityMainPanelView:OnShow()
 	else
 		DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.OpsActivityOpen), "2", self.Params.JumpData[1], 2)
 	end
-	
+
 	if nil ~= OperationUtil.IsEnableCustomService and OperationUtil.IsEnableCustomService() then
 		UIUtil.SetIsVisible(self.CommonTitle.CommInforBtn, true, true)
 		UIUtil.ImageSetBrushFromAssetPath(self.CommonTitle.CommInforBtn.Imgnfor,
@@ -202,8 +210,12 @@ function OpsActivityMainPanelView:OnRegisterGameEvent()
 
 	self:RegisterGameEvent(EventID.StartAutoPathMove, self.Hide) -- 监听自动寻路事件，关闭活动界面
 	self:RegisterGameEvent(EventID.MapFollowAdd, self.Hide)
+	self:RegisterGameEvent(EventID.CrystalTransferReq, self.Hide)
 
 	self:RegisterGameEvent(EventID.PandoraActivityClosed, self.OnPandoraActivityClose)
+
+	self:RegisterGameEvent(EventID.UpdateScore, self.OnUpdateScore)
+
 end
 
 function OpsActivityMainPanelView:OnRegisterBinder()
@@ -235,7 +247,7 @@ function OpsActivityMainPanelView:SwitchActivity(ActivityData)
 		return
 	end
 	local function OnLoadComplete(Widget)
-		if self and _G.UE.UCommonUtil.IsObjectValid(self.ActvityPanel)  then
+		if self and self.ActvityPanel and _G.UE.UCommonUtil.IsObjectValid(self.ActvityPanel)  then
 			self:HideOpsActivity()
 			if Widget then
 				self.ActvityPanel:AddChildToCanvas(Widget)
@@ -277,6 +289,7 @@ function OpsActivityMainPanelView:SwitchActivity(ActivityData)
 		end
 	end
 end
+
 
 function OpsActivityMainPanelView:SetUrlPic(Url)
 	_G.FLOG_INFO('[OpsActivity][OpsActivityMainPanelView][OnBinderPortUrl] Download image start url = %s', Url)
@@ -384,6 +397,16 @@ function OpsActivityMainPanelView:IsPandoraActivity(ActivityData)
 	end
 
 	return false
+end
+
+function OpsActivityMainPanelView:OnUpdateScore()
+	if self.DisplayActivtiyWidget == nil then
+		return
+	end
+	
+	if nil ~= self.DisplayActivtiyWidget.Params.AppId then
+		_G.PandoraMgr:NotifyActivityShow(self.DisplayActivtiyWidget.Params.AppId, self.DisplayActivtiyWidget.Params.ActivityID)
+	end
 end
 
 

@@ -80,7 +80,7 @@ function NewBagItemTipsVM:UpdateVM(Value)
 		end
 
 		if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDCompanySeal) then
-			local IsImprove = _G.CompanySealMgr:EquipIsImprove(ItemResID)
+			--local IsImprove = _G.CompanySealMgr:EquipIsImprove(ItemResID)
 			local IsInScheme = Value.Attr.Equip.IsInScheme
 			local CarryList = Value.Attr.Equip.GemInfo.CarryList
 			local HasCarry = false
@@ -92,7 +92,7 @@ function NewBagItemTipsVM:UpdateVM(Value)
 			end
 
 			if EquipCfg then
-				if EquipCfg.ExchangeCompanySealNum > 0 and not IsInScheme and not HasCarry and not IsImprove then
+				if EquipCfg.ExchangeCompanySealNum > 0 and not IsInScheme and not HasCarry then
 					table.insert(MoreMenuList, BagMoreMenuConfig[BagTipsMoreMenu.RareTask])
 				end
 			end
@@ -162,12 +162,12 @@ function NewBagItemTipsVM:UpdateVM(Value)
 		self.UseBtnEnabled = Cfg.ItemType ~= ITEM_TYPE_DETAIL.MISCELLANY_TASKONLY and Cfg.UseFunc > 0
 	end
 
-	if ItemUtil.CheckIsAetheryteticket(Cfg.ItemType) then
+	--[[if ItemUtil.CheckIsAetheryteticket(Cfg.ItemType) then
 		if not _G.BagMgr:ItemUseCondition({ResID = ItemResID}, nil, nil, true) 
 		or MajorUtil.IsMajorDead() then
 			self.UseBtnEnabled = false
 		end
-	end
+	end--]]
 
 	--这里红点有点不好塞，暂时拆开塞进去
 	if _G.EquipmentMgr:CheckCanImprove(ItemResID) then	

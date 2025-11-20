@@ -17,18 +17,22 @@ local CS_DEBUG_CMD = ProtoCS.CS_DEBUG_CMD
 
 ---@class GMTargetInfoView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field CanvasPanel_0 UCanvasPanel
 ---@field Content URichTextBox
 ---@field FButton UFButton
 ---@field FButton_1 UFButton
+---@field TextBlock UTextBlock
+---@field TextBlock_99 UTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GMTargetInfoView = LuaClass(UIView, true)
 
 local BuffHideDelay = 2
 
 local MissNum = -1
+local MinRowNum = 25
 
-local function SetColorFormat(Text, Color)
-	return string.format("<span color=\"%s\" size=\"20\">%s</>", Color, Text)
+local function SetColorFormat(Text, Color, Size)
+	return string.format("<span color=\"%s\" size=\"%d\">%s</>", Color, Size, Text)
 end
 
 local function EffectList2Str(Effects)
@@ -50,19 +54,22 @@ local function ConvertFormatTime(TimeStamp)
 	return _G.TimeUtil.GetTimeFormat("%H:%M:%S", TimeSecond) .. string.format(".%d", TimeStamp - TimeSecond * 1000)
 end
 
-local function GenFormatAttackValue(Value)
+local function GenFormatAttackValue(Value, Size)
 	Value = Value or 0
 	if Value == MissNum then
-		return SetColorFormat("miss","#fa0003ff")
+		return SetColorFormat("miss","#fa0003ff", Size)
 	end
-	return SetColorFormat(string.format("%13d", Value), "#fa0003ff")
+	return SetColorFormat(string.format("%13d", Value), "#fa0003ff", Size)
 end
 
 function GMTargetInfoView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.CanvasPanel_0 = nil
 	--self.Content = nil
 	--self.FButton = nil
 	--self.FButton_1 = nil
+	--self.TextBlock = nil
+	--self.TextBlock_99 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -151,51 +158,52 @@ function GMTargetInfoView:OnGetTargetCombatInfo(MsgBody)
 	if MsgBody == nil then
 		return
 	end
-	local Split_Line = SetColorFormat("|", "#fa0003ff")
-    local SkillInfoRsp = MsgBody.SkillInfoRsp
+	local SkillInfoRsp = MsgBody.SkillInfoRsp
+	local Size = self:CalculateFontSize(SkillInfoRsp)
+	local Split_Line = SetColorFormat("|", "#fa0003ff", Size)
 	local Text = ""
-	Text = Text .. SetColorFormat("固定数据", "#a8a800ff") .. "\n"
-	Text = Text .. string.format("%s：%d | %s\n", SetColorFormat("实例信息", "#72b8fdff"), SkillInfoRsp.id, SkillInfoRsp.name)
-	Text = Text .. string.format("%s：%d\n", SetColorFormat("朝向", "#72b8fdff"), SkillInfoRsp.dir)
+	Text = Text .. SetColorFormat("固定数据", "#a8a800ff", Size) .. "\n"
+	Text = Text .. string.format("%s：%d | %s\n", SetColorFormat("实例信息", "#72b8fdff", Size), SkillInfoRsp.id, SkillInfoRsp.name)
+	Text = Text .. string.format("%s：%d\n", SetColorFormat("朝向", "#72b8fdff", Size), SkillInfoRsp.dir)
 	local Cfg = SkillMainCfg:FindCfgByKey(SkillInfoRsp.skill_id)
 	local SkillName = ""
 	if Cfg then
 		SkillName = Cfg.SkillName
 	end
-	Text = Text .. string.format("%s：%d(%s)\n", SetColorFormat("最后释放技能", "#72b8fdff"), SkillInfoRsp.skill_id, SkillName)
-	Text = Text .. string.format("%s：%d\n", SetColorFormat("最后释放技能的子表ID", "#72b8fdff"), SkillInfoRsp.sub_skill_id)
-	Text = Text .. string.format("%s：%s\n", SetColorFormat("是否在技能流程中", "#72b8fdff"), SkillInfoRsp.casting_skill == true and "是" or "否")
-	Text = Text .. string.format("%s: %s\n\n", SetColorFormat("跑步状态", "#72b8fdff"), SkillInfoRsp.walk == true and "走" or "跑")
+	Text = Text .. string.format("%s：%d(%s)\n", SetColorFormat("最后释放技能", "#72b8fdff", Size), SkillInfoRsp.skill_id, SkillName)
+	Text = Text .. string.format("%s：%d\n", SetColorFormat("最后释放技能的子表ID", "#72b8fdff", Size), SkillInfoRsp.sub_skill_id)
+	Text = Text .. string.format("%s：%s\n", SetColorFormat("是否在技能流程中", "#72b8fdff", Size), SkillInfoRsp.casting_skill == true and "是" or "否")
+	Text = Text .. string.format("%s: %s\n\n", SetColorFormat("跑步状态", "#72b8fdff", Size), SkillInfoRsp.walk == true and "走" or "跑")
 
-	Text = Text .. SetColorFormat("命中信息", "#a8a800ff") .. "\n"
-	Text = Text .. string.format("%s：%s\n\n", SetColorFormat("时间", "#72b8fdff"), ConvertFormatTime(SkillInfoRsp.attack_time))
+	Text = Text .. SetColorFormat("命中信息", "#a8a800ff", Size) .. "\n"
+	Text = Text .. string.format("%s：%s\n\n", SetColorFormat("时间", "#72b8fdff", Size), ConvertFormatTime(SkillInfoRsp.attack_time))
 	Text = Text .. string.format("        %s         | %s | %s | %s\n"
-		, SetColorFormat("命中目标ID", "#72b8fdff")
-		, SetColorFormat("命中目标名称", "#72b8fdff")
-		, SetColorFormat("伤害值", "#72b8fdff")
-		, SetColorFormat("效果列表", "#72b8fdff"))
+		, SetColorFormat("命中目标ID", "#72b8fdff", Size)
+		, SetColorFormat("命中目标名称", "#72b8fdff", Size)
+		, SetColorFormat("伤害值", "#72b8fdff", Size)
+		, SetColorFormat("效果列表", "#72b8fdff", Size))
 	for _, value in ipairs(SkillInfoRsp.attack) do
-		Text = Text .. string.format("%d | %25s |%s| %s\n", value.id, value.name, GenFormatAttackValue(value.hurt), EffectList2Str(value.effects))
+		Text = Text .. string.format("%d | %25s |%s| %s\n", value.id, value.name, GenFormatAttackValue(value.hurt, Size), EffectList2Str(value.effects))
 	end
 	Text = Text .. "\n"
 
-	Text = Text .. SetColorFormat("被命中信息", "#a8a800ff") .. "\n"
-	Text = Text .. string.format("%s：%s\n\n", SetColorFormat("时间", "#72b8fdff"), ConvertFormatTime(SkillInfoRsp.be_attack_time))
+	Text = Text .. SetColorFormat("被命中信息", "#a8a800ff", Size) .. "\n"
+	Text = Text .. string.format("%s：%s\n\n", SetColorFormat("时间", "#72b8fdff", Size), ConvertFormatTime(SkillInfoRsp.be_attack_time))
 	if #SkillInfoRsp.be_attacked > 0 then
 		Text = Text .. string.format("        %s         | %s | %s\n"
-			, SetColorFormat("伤害来源ID", "#72b8fdff")
-			, SetColorFormat("伤害来源名称", "#72b8fdff")
-			, SetColorFormat("效果列表", "#72b8fdff"))
+			, SetColorFormat("伤害来源ID", "#72b8fdff", Size)
+			, SetColorFormat("伤害来源名称", "#72b8fdff", Size)
+			, SetColorFormat("效果列表", "#72b8fdff", Size))
 		local Attack_Source = SkillInfoRsp.be_attacked[1]
 		Text = Text .. string.format("%d | %20s | %s\n", Attack_Source.id, Attack_Source.name, EffectList2Str(Attack_Source.effects))
 		Text = Text .. string.format("        %s         | %s | %s | %s\n"
-			, SetColorFormat("命中目标ID", "#72b8fdff")
-			, SetColorFormat("命中目标名称", "#72b8fdff")
-			, SetColorFormat("伤害值", "#72b8fdff")
-			, SetColorFormat("效果列表", "#72b8fdff"))
+			, SetColorFormat("命中目标ID", "#72b8fdff", Size)
+			, SetColorFormat("命中目标名称", "#72b8fdff", Size)
+			, SetColorFormat("伤害值", "#72b8fdff", Size)
+			, SetColorFormat("效果列表", "#72b8fdff", Size))
 		for index, value in ipairs(SkillInfoRsp.be_attacked) do
 			if index > 1 then
-				Text = Text .. string.format("%d | %25s |%s| %s\n", value.id, value.name, GenFormatAttackValue(value.hurt), EffectList2Str(value.effects))
+				Text = Text .. string.format("%d | %25s |%s| %s\n", value.id, value.name, GenFormatAttackValue(value.hurt, Size), EffectList2Str(value.effects))
 			end
 		end
 	else
@@ -203,13 +211,13 @@ function GMTargetInfoView:OnGetTargetCombatInfo(MsgBody)
 	end
 	Text = Text .. "\n"
 
-	Text = Text .. SetColorFormat("BUFF信息", "#a8a800ff") .. "\n"
+	Text = Text .. SetColorFormat("BUFF信息", "#a8a800ff", Size) .. "\n"
 	Text = Text .. string.format("%s | %s | %s | %s | %s \n"
-		, SetColorFormat("BUFF ID", "#72b8fdff")
-		, SetColorFormat("层数", "#72b8fdff")
-		, SetColorFormat(string.format("%25s", "施法者"), "#72b8fdff")
-		, SetColorFormat("来源", "#72b8fdff")
-		, SetColorFormat("已生效技能效果", "#72b8fdff"))
+		, SetColorFormat("BUFF ID", "#72b8fdff", Size)
+		, SetColorFormat("层数", "#72b8fdff", Size)
+		, SetColorFormat(string.format("%25s", "施法者"), "#72b8fdff", Size)
+		, SetColorFormat("来源", "#72b8fdff", Size)
+		, SetColorFormat("已生效技能效果", "#72b8fdff", Size))
 
 	for _, value in ipairs(SkillInfoRsp.buff) do
 		self.CacheBuffList[value.buff_id] = {BuffData = value, LastTime = -1, Type = 0}
@@ -242,33 +250,34 @@ function GMTargetInfoView:OnGetTargetCombatInfo(MsgBody)
 		elseif BuffData.Type == 1 then
 			BuffData.Type = 2
 			BuffData.LastTime = BuffHideDelay
-			Text = Text .. string.format("   %s | %s | %25s | %s | %s\n", SetColorFormat(tostring(value.buff_id), "#da3dffff"), tostring(value.pile), Caster, Source_Format, EffectList2Str(value.effects))
+			Text = Text .. string.format("   %s | %s | %25s | %s | %s\n", SetColorFormat(tostring(value.buff_id), "#da3dffff", Size), tostring(value.pile), Caster, Source_Format, EffectList2Str(value.effects))
 		else
-			Text = Text .. string.format("    %s | %s | %25s | %s | %s\n", SetColorFormat(tostring(value.buff_id), "#da3dffff"), tostring(value.pile), Caster, Source_Format, EffectList2Str(value.effects))
+			Text = Text .. string.format("    %s | %s | %25s | %s | %s\n", SetColorFormat(tostring(value.buff_id), "#da3dffff", Size), tostring(value.pile), Caster, Source_Format, EffectList2Str(value.effects))
 		end
 	end
 
-	Text = Text .. SetColorFormat("仇恨列表（前8位）","#a8a800ff") .. "\n"
+	Text = Text .. SetColorFormat("仇恨列表（前8位）","#a8a800ff", Size) .. "\n"
 	Text = Text .. string.format("%s | %s | %s \n"
-		, SetColorFormat("仇恨目标ID", "#72b8fdff")
-		, SetColorFormat(string.format("%25s", "名称"), "#72b8fdff")
-		, SetColorFormat("仇恨值", "#72b8fdff"))
+		, SetColorFormat("仇恨目标ID", "#72b8fdff", Size)
+		, SetColorFormat(string.format("%25s", "名称"), "#72b8fdff", Size)
+		, SetColorFormat("仇恨值", "#72b8fdff", Size))
 	for _, value in pairs(SkillInfoRsp.enmities) do
 		Text = Text .. string.format("%s | %s | %s \n", tostring(value.entity_id), ActorUtil.GetActorName(value.entity_id), tostring(value.value))
 	end
 
 
 
-	Text = Text .. SetColorFormat("关注列表","#a8a800ff") .. "\n"
+	Text = Text .. SetColorFormat("关注列表","#a8a800ff", Size) .. "\n"
 	Text = Text .. string.format("%s | %s \n"
-	, SetColorFormat("关注目标ID", "#72b8fdff")
-	, SetColorFormat(string.format("%25s", "名称"), "#72b8fdff"))
+	, SetColorFormat("关注目标ID", "#72b8fdff", Size)
+	, SetColorFormat(string.format("%25s", "名称"), "#72b8fdff", Size))
 	for _, value in pairs(SkillInfoRsp.interests) do
 		Text = Text .. string.format("%s | %s \n", tostring(value.entity_id), ActorUtil.GetActorName(value.entity_id))
 	end
 
 	Text = string.gsub(Text, "|", Split_Line)
 	self.Content:SetText(Text)
+	UIUtil.TextBlockSetFontSize(self.Content, Size)
 end
 
 function GMTargetInfoView:OnGameEventSelectTarget(Params)
@@ -293,6 +302,25 @@ function GMTargetInfoView:OnGameEventTargetChangeMajor(TargetID)
 		--self.EntityID = TargetID
 		self.SelectedEntityID = TargetID
 	end
+end
+
+-- 根据显示内容行数动态计算字体大小
+function GMTargetInfoView:CalculateFontSize(SkillInfo)
+	-- 计算显示内容的行数
+	local RowNum = MinRowNum
+	RowNum = RowNum + #SkillInfo.attack
+	if #SkillInfo.be_attacked > 0 then
+		RowNum = RowNum + #SkillInfo.be_attacked + 1
+	end
+	RowNum = RowNum + #SkillInfo.buff
+	RowNum = RowNum + #SkillInfo.enmities
+	RowNum = RowNum + #SkillInfo.interests
+	-- 计算字号公式：字体像素值 = 屏幕高度 /（行数 * 行高系数） 字体磅数 = 像素值 *（72 / DPI）
+	local ScrollSize = UIUtil.GetWidgetSize(self.CanvasPanel_0)
+	local FontPixel = ScrollSize.Y / (RowNum * 1.5)
+	local FontSize = math.floor(FontPixel * 72 / 96)
+	FontSize = FontSize > 20 and 20 or FontSize
+	return FontSize
 end
 
 return GMTargetInfoView

@@ -63,6 +63,7 @@ function MusicPlayerListItemVM:UpdateVM(List)
 end
 
 function MusicPlayerListItemVM:UpdateItemInfo(List)
+	self.ImgPlayingVisible = false
 	self.ListInfo = List
 	self.NumText = MusicPlayerMgr:SetNumber(List.Index)
 	self.Name = List.MusicName
@@ -84,7 +85,6 @@ function MusicPlayerListItemVM:UpdateItemInfo(List)
 		self.BtnSwitchVisible = false
 		self.BtnAddVisible = false
 		self.TextNumVisible = true
-		self.ImgPlayingVisible = false
 		self.TextNameColor = TextColor[2]
 	end
 end
@@ -259,7 +259,7 @@ end
 
 function MusicPlayerListItemVM:UpdateCurPlayingItem()
 	if self.MusicID == MusicPlayerMgr.CurPlayerPlayingMusicID then
-		if self.CurIndex == MusicPlayerMgr.CurPlayIndex and MusicPlayerMgr.CurPlayListIndex == MusicPlayerMgr.CurPlayingListIndex then
+		if self.CurIndex == MusicPlayerMgr.CurPlayIndex and MusicPlayerMgr.CurPlayListIndex == MusicPlayerMgr.CurPlayingListIndex and not MusicPlayerMgr.EditState then
 			self.TextNumVisible = not MusicPlayerMgr.PlayerPlayState
 			self.ImgPlayingVisible = MusicPlayerMgr.PlayerPlayState
 		end
@@ -281,4 +281,7 @@ function MusicPlayerListItemVM:SetOldList(List)
 	return NewList
 end
 
+function MusicPlayerListItemVM:IsEqualVM(Value)
+	return false
+end
 return MusicPlayerListItemVM

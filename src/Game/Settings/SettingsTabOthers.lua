@@ -10,6 +10,7 @@ local DataReportUtil = require("Utils/DataReportUtil")
 local ReportButtonType = require("Define/ReportButtonType")
 local UIDefine = require("Define/UIDefine")
 local AccountUtil = require("Utils/AccountUtil")
+local MajorUtil = require("Utils/MajorUtil")
 local OperationUtil = require("Utils/OperationUtil")
 local CommBtnColorType = UIDefine.CommBtnColorType
 
@@ -45,22 +46,42 @@ function SettingsTabOthers:SendLeaveReq()
         -- _G.MsgTipsUtil.ShowTips("当前副本不支持脱离卡死")
         return
     end
-    local Params = { LeftBtnStyle = CommBtnColorType.Normal, RightBtnStyle = CommBtnColorType.Normal }
-    local CdTimeText = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GLOBAL_CFG_MOVE_RESET_TIME, "Value")[1] or "0"
-    local HintText = string.format(_G.LSTR(110001), CdTimeText) 
-    _G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(10004), HintText,
-                                function()
-                                        local MsgID = ProtoCS.CS_CMD.CS_CMD_MOVE
-                                        local SubMsgID = ProtoCS.CS_SUBMSGID_MOVE.CS_SUB_CMD_MOVE_RESET
-                                        local MsgBody = { SubCmd = SubMsgID }
-                                        _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-                                        --设置面板中的脱离卡死功能使用上报
-                                        DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.SettingsLeave), tostring(CurrPWorldResID))
-                                        DataReportUtil.ReportSettingClickFlowData("SetUpClickFlow", "1", "4", "1")
 
-                                        _G.UIViewMgr:HideView(UIViewID.Settings)
-                                        _G.UIViewMgr:HideView(UIViewID.Main2ndPanel)
-                                end, nil, _G.LSTR(10003), _G.LSTR(10002), Params)
+    local function ShowLeaveTips()
+        local Params = { LeftBtnStyle = CommBtnColorType.Normal, RightBtnStyle = CommBtnColorType.Normal }
+        local CdTimeText = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GLOBAL_CFG_MOVE_RESET_TIME, "Value")[1] or "0"
+        local HintText = string.format(_G.LSTR(110001), CdTimeText) 
+        _G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(10004), HintText,
+                                    function()
+                                            local MsgID = ProtoCS.CS_CMD.CS_CMD_MOVE
+                                            local SubMsgID = ProtoCS.CS_SUBMSGID_MOVE.CS_SUB_CMD_MOVE_RESET
+                                            local MsgBody = { SubCmd = SubMsgID }
+                                            _G.GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+                                            --设置面板中的脱离卡死功能使用上报
+                                            DataReportUtil.ReportButtonClickData(tostring(ReportButtonType.SettingsLeave), tostring(CurrPWorldResID))
+                                            DataReportUtil.ReportSettingClickFlowData("SetUpClickFlow", "1", "4", "1")
+
+                                            _G.UIViewMgr:HideView(UIViewID.Settings)
+                                            _G.UIViewMgr:HideView(UIViewID.Main2ndPanel)
+                                    end, nil, _G.LSTR(10003), _G.LSTR(10002), Params)
+    end
+
+    local IsNeedUnmount = false
+    local Major = MajorUtil.GetMajor()
+    if nil ~= Major then
+        local MajorRideCom = Major:GetRideComponent()
+        if nil ~= MajorRideCom then
+            if MajorRideCom:IsInMultiplayerRide() and MajorRideCom:IsInOtherRide() then
+                IsNeedUnmount = true
+            end
+        end
+    end
+    _G.FLOG_INFO("SettingsTabOthers:SendLeaveReq, IsNeedUnmount:%s", tostring(IsNeedUnmount))
+    if IsNeedUnmount then
+        _G.MountMgr:SendMountCancelCall(ShowLeaveTips)
+    else
+        ShowLeaveTips()
+    end
 end
 
 ----------------------------------   -----------------------------------------------

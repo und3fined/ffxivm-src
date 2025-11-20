@@ -15,6 +15,8 @@ local TouringBandCfg = require("TableCfg/TouringBandCfg")
 local TouringBandUtil = require("Game/TouringBand/TouringBandUtil")
 local EmotionCfg = require("TableCfg/EmotionCfg")
 local EmotionUtils = require("Game/Emotion/Common/EmotionUtils")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local MsgTipsID = require("Define/MsgTipsID")
 local EventID = _G.EventID
 
 ---@class TouringBandActionItemView : UIView
@@ -88,7 +90,6 @@ end
 function TouringBandActionItemView:OnBandIDChang(NewValue, OldValue)
     local BandCfg = TouringBandCfg:FindCfgByKey(NewValue)
     self.EmotionID = nil
-    self.bCanUse = true
     if not BandCfg then
         TouringBandUtil.Err("Error TouringBandActionItemView.OnBandIDChang: BandCfg is nil for ID: " .. tostring(NewValue))
         UIUtil.SetIsVisible(self, false)
@@ -131,8 +132,15 @@ function TouringBandActionItemView:OnClickBtnSkill()
     if self.SkillVM.IsCD then
         return
     end
-    if not self.bCanUse or _G.TouringBandMgr:IsEmotionValidState() ~= true then
-        _G.EmotionMgr:ShowCannotUseTips(EmotionID)
+    
+    local bCanUse, TipsID = _G.EmotionMgr:IsEnableAtIgnoreActivatedID(EmotionID, true)
+    if not bCanUse then
+        MsgTipsUtil.ShowTipsByID(TipsID)
+        return
+    end
+    
+    if not _G.TouringBandMgr:IsEmotionValidState() then
+        MsgTipsUtil.ShowTipsByID(MsgTipsID.EmitionCannotUse)
         return
     end
     
@@ -150,7 +158,6 @@ function TouringBandActionItemView:OnGameEventEmotionRefreshItemUI()
     local Color = not bEnable and "#696969FF" or "#FFFFFFFF"
     UIUtil.SetColorAndOpacityHex(self.ImgBG, Color)
     UIUtil.SetColorAndOpacityHex(self.ImgEmoAct, Color)
-    self.bCanUse = bEnable
 end
 
 return TouringBandActionItemView

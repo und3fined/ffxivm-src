@@ -140,6 +140,18 @@ function SettingsTabRole:SetShowOtherCompanions(Value, _)
 	_G.UE.UCompanionComponent.SetOtherCompanionsHidden(Value == 2)
 end
 
+-- 副本中显示自己翅膀 1：显示  2：隐藏
+function SettingsTabRole:SetShowSelfWing(Value, _)
+    _G.UE.USaveMgr.SetInt(SaveKey.ShowSelfWing, Value, true)
+    _G.FashionDecoMgr:OnUpdateShowSelfWingToDungeon(Value == 1)
+end
+
+-- 副本中显示他人翅膀 1：显示  2：隐藏
+function SettingsTabRole:SetShowOtherWing(Value, _)
+    _G.UE.USaveMgr.SetInt(SaveKey.ShowOtherWing, Value, true)
+    _G.FashionDecoMgr:OnUpdateShowOtherWingToDungeon(Value == 1)
+end
+
 ---------------------------------- 角色动作  -----------------------------------------------
 --进出待机状态的事件通知
 function SettingsTabRole:OnPlayerEnterIdleState(Params)

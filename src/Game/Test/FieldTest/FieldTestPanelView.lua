@@ -19,8 +19,7 @@ local AudioUtil = require("Utils/AudioUtil")
 local UIViewID = _G.UIViewID
 local UIViewMgr = _G.UIViewMgr
 
-local table_to_string = _G.table_to_string
-local GMMgr = _G.GMMgr
+local FieldTestMgr = _G.FieldTestMgr
 local TimerMgr = _G.TimerMgr
 local UE = _G.UE
 
@@ -36,6 +35,8 @@ local UE = _G.UE
 ---@field SubPanel10 FieldTestSubPanelView
 ---@field SubPanel11 FieldTestSubPanelView
 ---@field SubPanel12 FieldTestSubPanelView
+---@field SubPanel13 FieldTestSubPanelView
+---@field SubPanel14 FieldTestSubPanelView
 ---@field SubPanel2 FieldTestSubPanelView
 ---@field SubPanel3 FieldTestSubPanelView
 ---@field SubPanel4 FieldTestSubPanelView
@@ -67,6 +68,8 @@ function FieldTestPanelView:Ctor()
 	--self.SubPanel10 = nil
 	--self.SubPanel11 = nil
 	--self.SubPanel12 = nil
+	--self.SubPanel13 = nil
+	--self.SubPanel14 = nil
 	--self.SubPanel2 = nil
 	--self.SubPanel3 = nil
 	--self.SubPanel4 = nil
@@ -102,6 +105,8 @@ function FieldTestPanelView:OnRegisterSubView()
 	self:AddSubView(self.SubPanel10)
 	self:AddSubView(self.SubPanel11)
 	self:AddSubView(self.SubPanel12)
+	self:AddSubView(self.SubPanel13)
+	self:AddSubView(self.SubPanel14)
 	self:AddSubView(self.SubPanel2)
 	self:AddSubView(self.SubPanel3)
 	self:AddSubView(self.SubPanel4)
@@ -116,19 +121,22 @@ end
 function FieldTestPanelView:OnInit()
 	self.AdapterTabList = UIAdapterTableView.CreateAdapter(self, self.TabList)
 	self.TabVMList = UIBindableList.New(FieldTestTabItemVM)
-	self.TabVMList:AddByValue({Key = 2, Name = "Mons", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 3, Name = "Gath", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 1, Name = "NPC", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 2, Name = "怪物", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 3, Name = "采集物", PanelView = self, CallBack = self.OnSelectedTabIndex})
 	self.TabVMList:AddByValue({Key = 4, Name = "FATE", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 5, Name = "Soud", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 6, Name = "Weat", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 7, Name = "Choc", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 8, Name = "Aeth", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 9, Name = "Fish", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 10, Name = "Aeth", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 11, Name = "Sigh", PanelView = self, CallBack = self.OnSelectedTabIndex})
-	self.TabVMList:AddByValue({Key = 12, Name = "Chest", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 5, Name = "音效", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 6, Name = "天气", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 7, Name = "陆行鸟", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 8, Name = "传送带", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 9, Name = "钓场", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 10, Name = "风脉泉", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 11, Name = "探索笔记", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 12, Name = "野外宝箱", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 13, Name = "巡回乐团", PanelView = self, CallBack = self.OnSelectedTabIndex})
+	self.TabVMList:AddByValue({Key = 14, Name = "冒险游商团", PanelView = self, CallBack = self.OnSelectedTabIndex})
 
-	for i=1, 12 do
+	for i=1, 14 do
 		local SubView =	self[string.format("SubPanel%d", i)]
 		if SubView then
 			SubView:OnShowChocoboView(false)
@@ -173,39 +181,45 @@ function FieldTestPanelView:OnShow()
 
 	self.UpdateTimerID = self:RegisterTimer(self.OnUpdateTime, 0, 0.05, 0)
 
-	_G.FieldTestMgr:GetNpcMonsterResByGM()
+	FieldTestMgr:GetNpcMonsterResByGM()
 
-	local GatherDataList = _G.FieldTestMgr:GetGatherDataList()
+	local GatherDataList = FieldTestMgr:GetGatherDataList()
 	self.SubPanel3:SetDataList(GatherDataList)
 
-	local FateDataList = _G.FieldTestMgr:GetFateDataList()
+	local FateDataList = FieldTestMgr:GetFateDataList()
 	self.SubPanel4:SetDataList(FateDataList)
 
-	local SoundEffDataList = _G.FieldTestMgr:GetSoundEffDataList()
+	local SoundEffDataList = FieldTestMgr:GetSoundEffDataList()
 	self.SubPanel5:SetDataList(SoundEffDataList)
 
-	local WeatherDataList = _G.FieldTestMgr:GetWeatherDataList()
+	local WeatherDataList = FieldTestMgr:GetWeatherDataList()
 	self.SubPanel6:SetDataList(WeatherDataList)
 	
-	local ChocoboNPCDataList = _G.FieldTestMgr:GetChocoboNPCDataList()
-	local MapTaskList = _G.FieldTestMgr:GetMapTaskList()
+	local ChocoboNPCDataList = FieldTestMgr:GetChocoboNPCDataList()
+	local MapTaskList = FieldTestMgr:GetMapTaskList()
 	self.SubPanel7:SetDataList(ChocoboNPCDataList)
 	self.SubPanel7:SetChocoboDataList(MapTaskList)
 	
 	-- 处理编辑器数据
-	local ExitRangeDataList, FishLocationDataList = _G.FieldTestMgr:GetMapEditDataList()
+	local ExitRangeDataList, FishLocationDataList = FieldTestMgr:GetMapEditDataList()
 	self.SubPanel8:SetDataList(ExitRangeDataList)
 	self.SubPanel9:SetDataList(FishLocationDataList)
 
-	local AetherDataList = _G.FieldTestMgr:GetAetherDataList()
+	local AetherDataList = FieldTestMgr:GetAetherDataList()
 	self.SubPanel10:SetDataList(AetherDataList)
 
-	local DiscoverDataList = _G.FieldTestMgr:GetDiscoverDataList()
+	local DiscoverDataList = FieldTestMgr:GetDiscoverDataList()
 	self.SubPanel11:SetDataList(DiscoverDataList)
 
-	local WildBoxDataList = _G.FieldTestMgr:GetWildBoxDataList()
+	local WildBoxDataList = FieldTestMgr:GetWildBoxDataList()
 	self.SubPanel12:SetDataList(WildBoxDataList)
 
+	local BandDataList = FieldTestMgr:GetBandDataList()
+	self.SubPanel13:SetDataList(BandDataList)
+	
+	local MerchantDataList = FieldTestMgr:GetMerchantDataList()
+	self.SubPanel14:SetDataList(MerchantDataList)
+	
 	for i=1, #self.SubPanelViews do
 		self.SubPanelViews[i]:UpdateProblemDataList(i)
 	end
@@ -464,12 +478,12 @@ end
 
 function FieldTestPanelView:OnGMReceiveRes()
 	if self.Subpanel1 then
-		self.NpcDataList = _G.FieldTestMgr.NpcDataList
+		self.NpcDataList = FieldTestMgr.NpcDataList
 		self.SubPanel1:SetDataList(self.NpcDataList)
 	end
 
 	if self.SubPanel2 then
-		self.MonsterDataList = _G.FieldTestMgr.MonsterDataList
+		self.MonsterDataList = FieldTestMgr.MonsterDataList
 		self.SubPanel2:SetDataList(self.MonsterDataList)
 	end
 end
@@ -581,6 +595,14 @@ end
 -- 点击最大化FieldTest界面
 function FieldTestPanelView:ShowMovePanel()
 	UIUtil.SetIsVisible(self.MovePanel, true)
+end
+
+function FieldTestPanelView:UpdateBandInfo(Infos)
+	local Text = self.SubPanel13.EditableText:GetText()
+	if Text then
+		Text = Text .. Infos
+	end
+	self.SubPanel13.EditableText:SetText(Text)
 end
 
 return FieldTestPanelView

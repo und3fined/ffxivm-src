@@ -99,6 +99,8 @@ MainPanelConfig.TopRightInfoType = {
     MagicCardTourneyInfo = 5, -- 幻卡大赛提醒
     MysterMerchantTask = 6,  -- 神秘商人任务信息
     ExclusiveBattleQuest = 7, -- 专属道具任务
+    House = 8, --房屋
+    GoldSauserBless = 9, -- 仙人赐福信息
 }
 
 MainPanelConfig.LifeProfEntranceType = {

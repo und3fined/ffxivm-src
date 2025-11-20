@@ -79,9 +79,9 @@ ProfDefine.LackProfFuncIconMap =
 --- 稀缺职能
 ProfDefine.LackProfFuncIconMapForMatch =
 {
-	[ProtoCommon.function_type.FUNCTION_TYPE_GUARD] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Icon_JobStyle_03_png.UI_PWorld_Icon_JobStyle_03_png'",
-	[ProtoCommon.function_type.FUNCTION_TYPE_ATTACK] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Icon_JobStyle_01_png.UI_PWorld_Icon_JobStyle_01_png'",
-	[ProtoCommon.function_type.FUNCTION_TYPE_RECOVER] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Icon_JobStyle_02_png.UI_PWorld_Icon_JobStyle_02_png'",
+	[ProtoCommon.function_type.FUNCTION_TYPE_GUARD] = "Texture2D'/Game/Assets/Icon/Profe/Career/UI_Icon_Career_Main_PLD.UI_Icon_Career_Main_PLD'",
+	[ProtoCommon.function_type.FUNCTION_TYPE_ATTACK] = "Texture2D'/Game/Assets/Icon/Profe/Career/UI_Icon_Career_Main_BLU.UI_Icon_Career_Main_BLU'",
+	[ProtoCommon.function_type.FUNCTION_TYPE_RECOVER] = "Texture2D'/Game/Assets/Icon/Profe/Career/UI_Icon_Career_Main_SCH.UI_Icon_Career_Main_SCH'",
 	[ProtoCommon.function_type.FUNCTION_TYPE_PRODUCTION] = "",
 	[ProtoCommon.function_type.FUNCTION_TYPE_GATHER] = "",
 	[ProtoCommon.function_type.FUNCTION_TYPE_NULL] = "",

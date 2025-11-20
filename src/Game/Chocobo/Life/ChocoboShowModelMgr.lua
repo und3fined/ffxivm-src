@@ -115,7 +115,7 @@ function ChocoboShowModelMgr:OnHide()
     -- 阴影
     self.ImageRole = nil
     if self.MajorShandowActor then
-        _G.CommonUtil.DestroyActor(self.MajorShandowActor)
+        _G.UIShadowMgr:ReleaseShadowActor()
     end
     self.MajorShandowActor = nil
     -- 阴影End
@@ -219,27 +219,30 @@ function ChocoboShowModelMgr:OnAssembleAllEnd(Params)
     if self.IsMajorCreate and self.IsChocoboCreate and (IsSelfChocoCreate or IsSelfMajorCreate) then
         if self.OnCreateSuccessCallBack then
             self:SetActorLOD(1)
-            self.OnCreateSuccessCallBack(self.CallBackView)
+            CommonUtil.XPCall(self.CallBackView, self.OnCreateSuccessCallBack)
             self.OnCreateSuccessCallBack = nil
-
+            self.CallBackView = nil
+            
             local ChocoboActor = self.ModelChocoboController:GetChildActor()
             local MajorActor = self.ModelMajorController:GetUIComplexCharacter()
-            local Table = {}
-            table.insert(Table, ChocoboActor)
-            table.insert(Table, MajorActor)
-            local ShadowPos = MajorActor:K2_GetActorLocation()
-            ShadowPos.Z = ModelDefine.DefaultLocation.Z
-            if self.MajorShandowActor then
-                self.MajorShandowActor:K2_SetActorLocation(ShadowPos)
-                --更新捕获Actor
-                local AllActor = _G.UE.TArray(_G.UE.AActor)
-                for _, value in pairs(Table) do
-                    AllActor:Add(value)
+            if ChocoboActor and MajorActor then
+                local Table = {}
+                table.insert(Table, ChocoboActor)
+                table.insert(Table, MajorActor)
+                local ShadowPos = MajorActor:K2_GetActorLocation()
+                ShadowPos.Z = ModelDefine.DefaultLocation.Z
+                if self.MajorShandowActor then
+                    self.MajorShandowActor:K2_SetActorLocation(ShadowPos)
+                    --更新捕获Actor
+                    local AllActor = _G.UE.TArray(_G.UE.AActor)
+                    for _, value in pairs(Table) do
+                        AllActor:Add(value)
+                    end
+                    _G.UIShadowMgr:UpdateActorList(AllActor)
+                else
+                    self.MajorShandowActor = ActorUtil.CreateUIActorShandow(_G.FWORLD(),
+                            Table, self.ImageRole, ShadowPos, ActorUtil.ShadowType.Chocobo, true)
                 end
-                self.MajorShandowActor.SceneCaptureComponent2D.ShowOnlyActors= AllActor
-            else
-                self.MajorShandowActor = ActorUtil.CreateUIActorShandow(_G.FWORLD(),
-                Table, self.ImageRole, ShadowPos, ActorUtil.ShadowType.Chocobo, true)
             end
         end
     end
@@ -405,11 +408,19 @@ function ChocoboShowModelMgr:SetModelDefaultPos()
     local Offset = Cfg[1].Offset
     local Length = Cfg[1].Length
     local FOV = Cfg[1].FOV
-
-    self.ModelMajorController:SetModelLocation(self.PlayerPos.X, self.PlayerPos.Y, self.ModelMajorController:GetChildActor():GetCapsuleHalfHeight())
+    
+    local PlayerPosZ = self.PlayerPos.Z
+    if self.ModelMajorController:GetChildActor() then
+        PlayerPosZ = self.ModelMajorController:GetChildActor():GetCapsuleHalfHeight() or PlayerPosZ
+    end
+    self.ModelMajorController:SetModelLocation(self.PlayerPos.X, self.PlayerPos.Y, PlayerPosZ)
     self.ModelMajorController:SetModelRotation(0, PlayerDir, 0)
 
-    self.ModelChocoboController:SetModelLocation(self.ChocoboPos.X, self.ChocoboPos.Y, self.ModelChocoboController:GetChildActor():GetCapsuleHalfHeight())
+    local ChocoboPosZ = self.ChocoboPos.Z
+    if self.ModelChocoboController:GetChildActor() then
+        ChocoboPosZ = self.ModelChocoboController:GetChildActor():GetCapsuleHalfHeight() or ChocoboPosZ
+    end
+    self.ModelChocoboController:SetModelLocation(self.ChocoboPos.X, self.ChocoboPos.Y, ChocoboPosZ)
     self.ModelChocoboController:SetModelRotation(0, ChocoboDir, 0)
 
     self.ModelCameraController:SetSpringArmLocation(_G.UE.FVector(Offset.X, Offset.Y, Offset.Z), false)
@@ -435,8 +446,9 @@ function ChocoboShowModelMgr:UpdateUIChocoboModel(CallBack)
                 LatestArmor.Feet == (CurrentArmor.Feet or 0) then
 
             if self.UpdateChocoboModelCallBack then
-                self.UpdateChocoboModelCallBack(self.CallBackView)
+                CommonUtil.XPCall(self.CallBackView, self.UpdateChocoboModelCallBack)
                 self.UpdateChocoboModelCallBack = nil
+                self.CallBackView = nil
             end
             return
         end
@@ -456,8 +468,9 @@ end
 function ChocoboShowModelMgr:ProcessNextRequest()
     if #self.RequestQueue <= 0 then
         if self.UpdateChocoboModelCallBack then
-            self.UpdateChocoboModelCallBack(self.CallBackView)
+            CommonUtil.XPCall(self.CallBackView, self.UpdateChocoboModelCallBack)
             self.UpdateChocoboModelCallBack = nil
+            self.CallBackView = nil
         end
         return
     end

@@ -9,10 +9,26 @@ local GoldSaucerAwardTypeCfg = {
 	KeyName = "AwardType",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'TypeTitle',
+            },
+		}
     },
-    DefaultValues = nil,
-	LuaData = nil,
+    DefaultValues = {
+        AwardIcon = 'Texture2D\'/Game/UI/Texture/GoldSauserMainPanel/UI_GoldSauserMainPanel_Icon_Award_ChamberofCommerce_Normal.UI_GoldSauserMainPanel_Icon_Award_ChamberofCommerce_Normal\'',
+        AwardIconSelected = 'Texture2D\'/Game/UI/Texture/GoldSauserMainPanel/UI_GoldSauserMainPanel_Icon_Award_ChamberofCommerce_Select.UI_GoldSauserMainPanel_Icon_Award_ChamberofCommerce_Select\'',
+        AwardType = 1,
+    },
+	LuaData = {
+        {
+        },
+        {
+            AwardIcon = 'Texture2D\'/Game/UI/Texture/GoldSauserMainPanel/UI_GoldSauserMainPanel_Icon_Award_Achievement_Normal.UI_GoldSauserMainPanel_Icon_Award_Achievement_Normal\'',
+            AwardIconSelected = 'Texture2D\'/Game/UI/Texture/GoldSauserMainPanel/UI_GoldSauserMainPanel_Icon_Award_Achievement_Select.UI_GoldSauserMainPanel_Icon_Award_Achievement_Select\'',
+            AwardType = 2,
+        },
+	},
 }
 
 setmetatable(GoldSaucerAwardTypeCfg, { __index = CfgBase })

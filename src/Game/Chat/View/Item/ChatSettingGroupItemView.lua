@@ -11,18 +11,21 @@ local UIBinderSetText  = require("Binder/UIBinderSetText")
 local ChatSetting = require("Game/Chat/ChatSetting")
 local EventID = require("Define/EventID")
 local EventMgr = require("Event/EventMgr")
+local ChatVM = require("Game/Chat/ChatVM")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+local UIDefine = require("Define/UIDefine")
+
+local CheckBoxStyle = UIDefine.SearchBtnColorType.Dark
 
 ---@class ChatSettingGroupItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field CheckBox CommSingleBoxView
----@field TextName UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local ChatSettingGroupItemView = LuaClass(UIView, true)
 
 function ChatSettingGroupItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.CheckBox = nil
-	--self.TextName = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -34,7 +37,11 @@ end
 
 function ChatSettingGroupItemView:OnInit()
 	self.Binders = {
-		{"Name", UIBinderSetText.New(self, self.TextName)},
+		{"Name", UIBinderSetText.New(self, self.CheckBox)},
+	}
+
+	self.BindersChatVM = {
+		{ "IsSettingGroupChecked", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedIsSettingGroupChecked) }
 	}
 end
 
@@ -70,6 +77,7 @@ function ChatSettingGroupItemView:OnRegisterBinder()
 	end
 
 	self:RegisterBinders(ViewModel, self.Binders)
+	self:RegisterBinders(ChatVM, self.BindersChatVM)
 
 	self.GroupID = ViewModel.ChannelID
 
@@ -90,6 +98,13 @@ end
 
 function ChatSettingGroupItemView:OnEventBlockGroupClear() 
 	self.CheckBox:SetChecked(true, false)
+end
+
+function ChatSettingGroupItemView:OnValueChangedIsSettingGroupChecked(NewValue) 
+	local IsGrey = not NewValue
+	local CheckBox = self.CheckBox
+	CheckBox:SetColorType(CheckBoxStyle, IsGrey)
+	CheckBox:SetIsEnabled(not IsGrey)
 end
 
 return ChatSettingGroupItemView

@@ -187,6 +187,13 @@ function BandCmdBase:TriggerEventAfterStartTime()
     end
 end
 
+-- 离开视野的时候
+function BandCmdBase:VisionLeave()
+    if self.OnVisionLeave and type(self.OnVisionLeave) == "function" then
+        self:OnVisionLeave()
+    end
+end
+
 function BandCmdBase:ResetCycleCount()
     self.CycleNumber = self.CycleNumber - 1
     if self.CycleNumber <= 0 then

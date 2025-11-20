@@ -74,7 +74,7 @@ end
 function LoginReConnectMgr:HaveNotFinishCreate()
     self.SavePath = string.format("%s/GameData/LoginReconnect_%s.txt", _G.FDIR_SAVED_RELATIVE(), _G.LoginMgr:GetOpenID())
     local SaveData = CommonUtil.LoadJsonFile(self.SavePath)
-    if not SaveData or SaveData.CurPhase and SaveData.CurPhase < 1 then
+    if not SaveData or not SaveData.CurPhase or SaveData.CurPhase and SaveData.CurPhase < 1 then
         return false
     end
 

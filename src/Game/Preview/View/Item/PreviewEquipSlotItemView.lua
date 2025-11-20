@@ -9,11 +9,13 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local UIBinderValueChangedCallback =  require("Binder/UIBinderValueChangedCallback")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 ---@class PreviewEquipSlotItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnView UToggleButton
 ---@field Comm96Slot CommBackpack96SlotView
+---@field WardrobeStainTag WardrobeStainTagItemView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PreviewEquipSlotItemView = LuaClass(UIView, true)
 
@@ -21,12 +23,14 @@ function PreviewEquipSlotItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnView = nil
 	--self.Comm96Slot = nil
+	--self.WardrobeStainTag = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function PreviewEquipSlotItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.Comm96Slot)
+	self:AddSubView(self.WardrobeStainTag)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -34,6 +38,8 @@ function PreviewEquipSlotItemView:OnInit()
 	self.Binders = {
 		{"SelectBtnState", UIBinderSetIsChecked.New(self, self.BtnView)},
 		{"bOwned", UIBinderValueChangedCallback.New(self, nil, self.OnbOwnedValueChanged)},
+		{ "IsRegionDyes", UIBinderSetIsVisible.New(self, self.WardrobeStainTag) },
+		{ "IsRegionDyes", UIBinderSetIsVisible.New(self, self.WardrobeStainTag.ImgDye)},
 	}
 end
 

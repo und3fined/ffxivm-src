@@ -16,10 +16,12 @@ local MajorUtil = require("Utils/MajorUtil")
 ---@field HeadSize USizeBox
 ---@field IconSilhouette UFImage
 ---@field ImageIcon UImage
----@field ImgNormalFrame UFImage
+---@field ImgBkg UFImage
 ---@field ImgFrame UFImage
+---@field ImgNormalFrame UFImage
 ---@field SpecialFrameSize USizeBox
 ---@field HeadSide CommHeadSize
+---@field IsTriggerClick bool
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommHeadView = LuaClass(UIView, true)
 
@@ -29,10 +31,12 @@ function CommHeadView:Ctor()
 	--self.HeadSize = nil
 	--self.IconSilhouette = nil
 	--self.ImageIcon = nil
-	--self.ImgNormalFrame = nil
+	--self.ImgBkg = nil
 	--self.ImgFrame = nil
+	--self.ImgNormalFrame = nil
 	--self.SpecialFrameSize = nil
 	--self.HeadSide = nil
+	--self.IsTriggerClick = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -84,7 +88,7 @@ function CommHeadView:SetInfo(RoleID, Source)
 
 	local IsMajor = MajorUtil.GetMajorRoleID() == RoleID
 
-	UIUtil.SetIsVisible(self.BtnClick, IsMajor, true)
+	UIUtil.SetIsVisible(self.BtnClick, self.IsTriggerClick and not IsMajor, true)
 end
 
 ---@param RoleID number @角色ID 
@@ -103,6 +107,16 @@ function CommHeadView:SetIcon( HeadIcon, IsGrey )
 	self:SetIsGreyIcon(IsGrey)
 end
 
+-- 兼容之前版本
+function CommHeadView:SetIconByTextureResource( HeadIcon, IsGrey )
+	if HeadIcon then
+		UIUtil.ImageSetMaterialTextureParameterValue(self.ImageIcon, 'Texture', HeadIcon)
+	end
+
+	self:SetIsGreyIcon(IsGrey)
+end
+
+
 function CommHeadView:SetClickCB( CB )
     self.CustCB = CB
 end
@@ -115,6 +129,23 @@ function CommHeadView:SetIsGreyIcon( IsGrey )
 	UIUtil.SetImageDesaturate(self.ImageIcon, nil, IsGrey and 1 or 0)
 end
 
+---兼容处理
+function CommHeadView:SetFrameIconByHeadFrameID(HeadFrameID)
+	local IsDefault = HeadFrameID == 1
+
+	if not IsDefault then
+		PersonPortraitHeadHelper.SetFrame(self.ImgFrame, HeadFrameID)
+	end
+	UIUtil.SetIsVisible(self.ImgNormalFrame, IsDefault and (not self.IsHideFrame))
+	UIUtil.SetIsVisible(self.ImgFrame, not IsDefault and (not self.IsHideFrame))
+end
+
+---兼容处理
+function CommHeadView:SetFrameIcon(Icon)
+	UIUtil.ImageSetBrushFromAssetPath(self.ImgFrame, Icon)
+	UIUtil.SetIsVisible(self.ImgNormalFrame,  false)
+	UIUtil.SetIsVisible(self.ImgFrame, true)
+end
 
 -------------------------------------------------------------------------------------------------------
 --- inner

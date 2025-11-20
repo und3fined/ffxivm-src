@@ -75,6 +75,7 @@ function LoadMapEditCfgState:OnLoadFestivalMapEditCfg(BodyBuffer)
     if (MapEditCfg ~= nil) then
         _G.MapEditDataMgr:InitFestivalMapEditCfg(MapEditCfg)
         _G.QuestTrackMgr:TryInitQuestParams(MapEditCfg.MapID)
+        _G.ClientVisionMgr:OnFestivalMapLoad(MapEditCfg.MapID)
     end
 end
 

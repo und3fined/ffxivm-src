@@ -62,9 +62,11 @@ function PersonInfoProfVM:UpdateVM( Value )
         ---服务器确认不修改主角的通关数据下发，客户端区分处理
         if self.RoleVM.RoleID == MajorRoleID then
             local SceneFinishLogs = _G.PersonInfoMgr:GetMajorSceneFinishLogs()
-            for _, Value in ipairs(SceneFinishLogs) do
-                if Value.ProfID == self.ProfID then
-                    table.insert(PassSceneIDList, Value.SceneID)
+            if SceneFinishLogs then
+                for _, Value in ipairs(SceneFinishLogs) do
+                    if Value.ProfID == self.ProfID then
+                        table.insert(PassSceneIDList, Value.SceneID)
+                    end
                 end
             end
         else

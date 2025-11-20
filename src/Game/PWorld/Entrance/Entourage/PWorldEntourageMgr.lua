@@ -7,18 +7,35 @@ FilePath: \Script\Game\PWorld\Entrance\Entourage\PWorldEntourageMgr.lua
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 --]]
 local LuaClass = require("Core/LuaClass")
-local MgrBase = require("Common/MgrBase")
+local LogableMgr = require("Common/LogableMgr")
 local ProtoCS = require("Protocol/ProtoCS")
+local EventID = require("Define/EventID")
+local UIViewID = require("Define/UIViewID")
 
 local GameNetworkMgr = nil
 local CS_CMD = ProtoCS.CS_CMD.CS_CMD_ENTOURAGE
 local SUB_CMD = ProtoCS.Entourage.EntourageCmd
 
----@class PWorldEntourageMgr: MgrBase
-local PWorldEntourageMgr = LuaClass(MgrBase)
+local PWorldEntourageVM = require("Game/PWorld/Entrance/Entourage/PWorldEntourageVM")
+local SidebarDefine = require("Game/Sidebar/SidebarDefine")
+
+local SidebarType = SidebarDefine.SidebarType
+
+---@class PWorldEntourageMgr: LogableMgr
+local PWorldEntourageMgr = LuaClass(LogableMgr)
+
+function PWorldEntourageMgr:OnInit()
+    self:SetLogName("PWorldEntourageMgr")
+end
 
 function PWorldEntourageMgr:OnBegin()
 	GameNetworkMgr = _G.GameNetworkMgr
+end
+
+function PWorldEntourageMgr:OnRegisterGameEvent()
+    self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnMajorProfSwitch)
+    self:RegisterGameEvent(EventID.AppEnterForeground, self.OnAppEnterForeground)
+    self:RegisterGameEvent(EventID.SidebarExpandOpen, self.OnSidebarExpandOpen)
 end
 
 function PWorldEntourageMgr:ReqEntourage(SubCmd, Params)
@@ -47,7 +64,7 @@ end
 
 function PWorldEntourageMgr:OpenEntourageMainUI(EntID)
     local function Nav()
-        if _G.UIViewMgr:IsViewVisible(_G.UIViewID.PWorldEntouragePanel) then
+        if _G.UIViewMgr:IsViewVisible(UIViewID.PWorldEntouragePanel) then
             _G.PWorldEntourageVM:OnMainPanelShow(EntID)
             return
         end
@@ -67,6 +84,7 @@ function PWorldEntourageMgr:GetConfirmState()
     return self.ConfirmStartTime ~= nil and not self:IsConfirmExpired()
 end
 
+---@deprecated
 function PWorldEntourageMgr:StartConfirm(ExpireFunc)
     local CurTime = _G.TimeUtil.GetLocalTime()
     if self.ConfirmStartTime == nil or self:IsConfirmExpired() then
@@ -122,6 +140,31 @@ function PWorldEntourageMgr:ClearExpireTimer()
     if self.ExpireTimerID then
         self:UnRegisterTimer(self.ExpireTimerID)
         self.ExpireTimerID = nil
+    end
+end
+
+function PWorldEntourageMgr:OnMajorProfSwitch()
+    PWorldEntourageVM:UpdateVM()
+end
+
+function PWorldEntourageMgr:OnAppEnterForeground()
+    if not self:GetConfirmState() then
+        _G.UIViewMgr:HideView(UIViewID.EntourageConfirm)
+        _G.SidebarMgr:RemoveSidebarItem(SidebarType.EntourageEnterConfirm)
+        self:EndConfirm()
+    end
+end
+
+function PWorldEntourageMgr:OnSidebarExpandOpen(ItemVM)
+    if ItemVM.Type ~= SidebarType.EntourageEnterConfirm then
+        return
+    end
+
+    -- 随从副本确认
+    if self:GetConfirmState() then
+        _G.UIViewMgr:ShowView(UIViewID.EntourageConfirm)
+    else
+        self:LogWarn("PWorldEntourageMgr:OnSidebarExpandOpen not in confirm state")
     end
 end
 

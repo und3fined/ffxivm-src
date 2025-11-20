@@ -223,6 +223,7 @@ function WildBoxMoundMgr:GetCurrentMapBoxList(MapID)
                 Sound1Path = Cfg.Sound1Path,
                 Sound2PlayTime = Cfg.Sound2PlayTime,
                 Sound2Path = Cfg.Sound2Path,
+                TotalRewardCount = Cfg.TotalRewardCount,
             }
             table.insert(DataList, Data)
         end
@@ -446,7 +447,7 @@ function WildBoxMoundMgr:OpenBox(InteractiveDescID, InteractiveEntityID, ListID)
     if WildBox == nil then return end
 
     -- 挖掘前判断玩家是否有足够背包空位
-    if self:IsBagSpaceEnough(WildBox.DropID) then
+    if self:IsBagSpaceEnough(WildBox) then
         local InteractSuccess = SingBarMgr:MajorSingByInteractiveID(InteractiveDescID, InteractiveEntityID, ListID, CallBack)
         if not InteractSuccess then return end
 
@@ -456,6 +457,8 @@ function WildBoxMoundMgr:OpenBox(InteractiveDescID, InteractiveEntityID, ListID)
         if MoundStartActiontimelineCfg then
             AnimMgr:PlayActionTimeLine(MoundEntityID, MoundStartActiontimelineCfg.Filename)
         end
+
+        self:ClearTimers()
 
         -- 过1.5秒播放宝箱弹出动画
         local DelayTime = 1.5
@@ -527,38 +530,11 @@ function WildBoxMoundMgr:SingBarEndCallback(IsBreak, EntityID, ListID)
 end
 
 --- 检查背包是否有足够空位获取奖励
----@param DropID int32 掉落ID
+---@param Wildbox table 宝箱配置
 ---@return bool 是否有空位
-function WildBoxMoundMgr:IsBagSpaceEnough(DropID)
+function WildBoxMoundMgr:IsBagSpaceEnough(Wildbox)
     local BagSpace = BagMgr:GetBagLeftNum()
-    local IgnoreList = {
-        19000002,   -- 金币
-        19000099,   -- 经验
-    }
-
-    local LootMappingCfgs = LootMappingCfg:FindAllCfg(string.format("ID = %d", DropID))
-    for _, LootMappingCfg in ipairs(LootMappingCfgs or {}) do
-        if LootMappingCfg then
-            for _, Program in pairs(LootMappingCfg.Programs) do
-                local LootID = Program.ID
-                if LootID ~= 0 then
-                    local RewardItemTotalCount = 0
-                    local RewardItemList = ItemUtil.GetLootItems(LootID)
-                    for _, Item in ipairs(RewardItemList) do
-                        if not table.contain(IgnoreList, Item.ResID) then -- IgnoreList以外的物品才算空间
-                            RewardItemTotalCount = RewardItemTotalCount + Item.Num
-        
-                            if RewardItemTotalCount > BagSpace then
-                                return false
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return true
+    return BagSpace >= Wildbox.TotalRewardCount
 end
 
 function WildBoxMoundMgr:ClearTimers()

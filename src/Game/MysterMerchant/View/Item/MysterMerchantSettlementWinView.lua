@@ -90,7 +90,7 @@ function MysterMerchantSettlementWinView:OnShow()
 end
 
 function MysterMerchantSettlementWinView:OnHide()
-	MysterMerchantMgr:EndInteraction()
+
 end
 
 function MysterMerchantSettlementWinView:OnRegisterUIEvent()

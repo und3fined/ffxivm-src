@@ -22,6 +22,9 @@ local MysteryboxCfg = {
             {
                 Name = 'BuyNote',
             },
+            {
+                Name = 'CannotBuyTipText',
+            },
 		}
     },
     DefaultValues = nil,

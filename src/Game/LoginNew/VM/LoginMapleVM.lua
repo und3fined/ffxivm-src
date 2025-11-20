@@ -206,17 +206,27 @@ function LoginMapleVM:InitServerData(TreeInfo)
     --table.sort(TempAllServer, function(L, R)
     --    return L.Index < R.Index
     --end)
-    if #TempRecommendServer < self.RecommendServerCount then
-        for i = 1, #TempRecommendServer do
-            table.insert(TempAllServer, TempRecommendServer[i])
+    if #TempRecommendServer < self.RecommendServerCount and #TempAllServer > 0 then
+        --for i = 1, #TempRecommendServer do
+        --    table.insert(TempAllServer, TempRecommendServer[i])
+        --end
+        for i = #TempAllServer, 1, -1 do
+            if #TempRecommendServer < self.RecommendServerCount then
+                table.insert(TempRecommendServer, TempAllServer[i])
+                print(string.format("[LoginMapleVM:InitServerData] TempRecommendServer + Name:%s, Index:%d, Tag:%d", TempAllServer[i].Name, TempAllServer[i].Index, TempAllServer[i].Tag))
+            else
+                break
+            end
         end
     end
-    for i = #TempAllServer, 1, -1 do
-        if #RecommendListData < self.RecommendServerCount then
-            table.insert(RecommendListData, TempAllServer[i])
-            print(string.format("[LoginMapleVM:InitServerData] Recommend + Name:%s, Index:%d, Tag:%d", TempAllServer[i].Name, TempAllServer[i].Index, TempAllServer[i].Tag))
-        else
-            break
+    if #TempRecommendServer > 0 then
+        for i = #TempRecommendServer, 1, -1 do
+            if #RecommendListData < self.RecommendServerCount then
+                table.insert(RecommendListData, TempRecommendServer[i])
+                print(string.format("[LoginMapleVM:InitServerData] Recommend + Name:%s, Index:%d, Tag:%d", TempRecommendServer[i].Name, TempRecommendServer[i].Index, TempRecommendServer[i].Tag))
+            else
+                break
+            end
         end
     end
 

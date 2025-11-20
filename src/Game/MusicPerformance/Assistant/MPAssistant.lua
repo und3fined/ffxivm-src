@@ -66,8 +66,6 @@ function MPAssistant:TickScore()
 	self:HandleClickEvents()
 
 	local CurScore = self.ScoreBoard:GetCurScore()
-	-- 处理分数改变以及通知
-	self:HandleScoreChange(PrevScore, CurScore)
 
 	self:CheckAssistantDone()
 end
@@ -106,14 +104,6 @@ function MPAssistant:CheckAssistantDone()
 	local CostLogicTimeMS = self:GetLogicTimeMS(self.CostTimeMS)
 	if CostLogicTimeMS >= (self.MusicLength + MPDefines.AssistantFallingDownConfig.AssistantDoneDelayTimeMS) then
 		self:AssistantDone()
-	end
-end
-
-function MPAssistant:HandleScoreChange(PrevScore, CurScore)
-	if PrevScore ~= CurScore then
-		local TotalScoreType, TotalScoreProg = self.ScoreBoard:GetTotalScore(CurScore, self.MaxScore)
-		-- print("MP ", TotalScoreType, TotalScoreProg)
-		_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceAssistantTotalScoreChanged, TotalScoreType, TotalScoreProg, CurScore)
 	end
 end
 
@@ -209,7 +199,6 @@ function MPAssistant:StartMusicAssistant(SongData, IsLongClick, Rate)
 	self.Rate = Rate
 	self:Clear()
 	local MusicScoreDA = _G.ObjectMgr:LoadObjectSync(string.format("MusicPerformanceScoreDataAsset'/Game/Assets/Audio/PerformanceAssistantMsb/msb/%s.%s'", SongData.Path, SongData.Path))
-	-- self.MaxScore = self.ScoreBoard:GetMaxScore(self.SongData, IsLongClick)
 	self:SetScoreDA(MusicScoreDA)
 	self:Start()
 end

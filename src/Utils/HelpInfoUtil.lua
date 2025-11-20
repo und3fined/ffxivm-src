@@ -41,11 +41,17 @@ function HelpInfoUtil.ParseContent(Cfgs, ...)
     local args = { ... } -- 将可变参数转为表
     local ResList = {}
     local lastTitleID = 0 -- 使用更明确的变量名
+    local placeholdersStartIndex  = 1 --占位符开始索引
 
     -- 安全格式化函数
     local function safe_format(fmt, ...)
         if type(fmt) ~= "string" then return tostring(fmt) end
         local success, ret = pcall(string.format, fmt, ...)
+        local placeholders = 0
+        for _ in string.gmatch(fmt,"%%[%-%+%#0 ]*%d*%.?%d*[aAfFgGeEsScCdUoxXbq]")  do  -- 匹配所有的格式说明符，如 %s, %d 等
+            placeholders = placeholders + 1
+        end
+        placeholdersStartIndex = placeholdersStartIndex + placeholders
         return success and ret or fmt
     end
 
@@ -56,14 +62,14 @@ function HelpInfoUtil.ParseContent(Cfgs, ...)
         -- 初始化标题组
         if not ResList[titleID] then
             ResList[titleID] = {
-                HelpName = safe_format(cfg.HelpName, table.unpack(args)),
-                SecTitle = safe_format(cfg.TitleName, table.unpack(args)),
+                HelpName = safe_format(cfg.HelpName, table.unpack(args,placeholdersStartIndex)),
+                SecTitle = safe_format(cfg.TitleName, table.unpack(args,placeholdersStartIndex)),
                 SecContent = {}
             }
         end
 
         -- 格式化并添加内容
-        local formatted_content = safe_format(cfg.SecContent, table.unpack(args))
+        local formatted_content = safe_format(cfg.SecContent, table.unpack(args,placeholdersStartIndex))
         --格式化的内容覆盖
         cfg.SecContent = formatted_content
         table.insert(ResList[titleID].SecContent, Cfgs[index])
@@ -140,7 +146,7 @@ end
 
 ---@param ID number 说明ID
 ---@return ViewID number or Nil
-function HelpInfoUtil.ShowHelpInfoByID(ID, ...)
+function HelpInfoUtil.ShowHelpInfoByID(ID,ExtraParam,FilterTitleIDs, ...)
     if HelpInfoUtil.IsAGroupInfo(ID) then
         HelpInfoUtil.ShowHelpInfoMenuWin(ID)
         return
@@ -159,7 +165,10 @@ function HelpInfoUtil.ShowHelpInfoByID(ID, ...)
     local Type = HelpCfgs[1].Type
     local Params = {}
     Params.Cfgs = HelpInfoUtil.ParseContent(HelpCfgs, ...)
-
+    if FilterTitleIDs then
+         Params.Cfgs = HelpInfoUtil.FilterTitleIDContent(Params.Cfgs,FilterTitleIDs)
+    end
+    Params.ExtraParam = ExtraParam
     -- 不支持Tips类型
     if Type == HelpInfoType.Large then
         UIViewMgr:ShowView(UIViewID.HelpInfoLargeWinView, Params)
@@ -168,6 +177,19 @@ function HelpInfoUtil.ShowHelpInfoByID(ID, ...)
         UIViewMgr:ShowView(UIViewID.HelpInfoMidWinView, Params)
         return UIViewID.HelpInfoMidWinView
     end
+end
+
+function HelpInfoUtil.FilterTitleIDContent(Cfgs, FilterTitleIDs)
+    if FilterTitleIDs == nil then
+        return Cfgs
+    end
+    local CfgArr = {}
+    for k, v in pairs(Cfgs) do
+        if table.contain(FilterTitleIDs, k) then
+            table.insert(CfgArr, v)
+        end
+    end
+    return CfgArr
 end
 
 ---@param ID number 说明ID
@@ -210,9 +232,9 @@ function HelpInfoUtil.ShowHelpInfo(ButtonView, HidePopUpBG, ...)
         -- 判断是否有标题
         if not table.is_nil_empty(Content)  then
             if Content[1].Title == "" then 
-                TipsUtil.ShowInfoTips(Content, ButtonView.BtnInfor, Offset, Alignment, HidePopUpBG)
+                TipsUtil.ShowInfoTips(Content, ButtonView.BtnInfor, Offset, Alignment, HidePopUpBG, nil, Type)
             else
-                TipsUtil.ShowInfoTitleTips(Content, ButtonView.BtnInfor, Offset, Alignment, false)
+                TipsUtil.ShowInfoTitleTips(Content, ButtonView.BtnInfor, Offset, Alignment, false, nil, Type)
             end
         end
     end

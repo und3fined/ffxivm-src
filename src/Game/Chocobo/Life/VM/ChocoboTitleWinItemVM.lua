@@ -15,6 +15,7 @@ local ChocoboTitleWinItemVM = LuaClass(UIViewModel)
 ---Ctor
 function ChocoboTitleWinItemVM:Ctor()
     self.ID = 0
+    self.StatisticID = 0
     self.Index = 0
     self.Type = ProtoRes.CHOCOBO_MISSION_TYPE.CHOCOBO_MISSION_TYPE_RACE_PARTICIPATE
     self.IconPath = ""
@@ -29,6 +30,7 @@ end
 
 function ChocoboTitleWinItemVM:UpdateVM(Data)
     self.ID = Data.ID
+    self.StatisticID = Data.StatisticID
     self.Index = Data.Index
     self.Type = Data.Type
     self.IconPath = Data.IconPath

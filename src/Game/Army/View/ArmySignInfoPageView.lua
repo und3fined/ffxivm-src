@@ -299,7 +299,7 @@ end
 
 function ArmySignInfoPageView:SetTextColor(GrandCompanyType)
 	if GrandCompanyType == nil then
-        return
+		return
 	end
 	local GrandCompanyTypeStyle = GrandCompanyTypeStyle[GrandCompanyType]
 	if GrandCompanyTypeStyle then

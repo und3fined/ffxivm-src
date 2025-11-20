@@ -13,6 +13,9 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 
 local ArmyMainVM = _G.ArmyMainVM
+local ArmyDefine = require("Game/Army/ArmyDefine")
+---region 分页
+local PageType = ArmyDefine.PageType
 
 local ArmyMgr = require("Game/Army/ArmyMgr")
 local TipsUtil = require("Utils/TipsUtil")
@@ -68,6 +71,16 @@ function ArmyMemberAskForItemView:OnShow()
     self.bFullCapacity = MemberPageVM.bFullCapacity
     UIUtil.SetIsVisible(self.BtnOk, self.IsCanAgreeJoin, true, false)
     UIUtil.SetIsVisible(self.BtnRefuse, self.IsCanAgreeJoin, true, false)
+    local Params = self.Params
+	if nil == Params then
+		return 
+	end
+    if self.ViewModel then
+        local PageData = ArmyMgr:GetPageDataByType(PageType.JoinApply)
+		if PageData and PageData.Offset - Params.Index == 0 and ArmyMgr:GetApplyListIsEnd() == false then
+            ArmyMgr:SendGetArmyQueryApplyListMsg()
+		end
+	end
 end
 
 function ArmyMemberAskForItemView:OnHide()

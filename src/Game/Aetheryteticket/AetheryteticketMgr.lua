@@ -27,23 +27,30 @@ local ProtoRes = require("Protocol/ProtoRes")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local CondType = ProtoRes.CondType
 
+local CrystalPortalMgr
+
 local LSTR = _G.LSTR
 local FLOG_ERROR = _G.FLOG_ERROR
 
 local AetheryteticketMgr = LuaClass(MgrBase)
 
 function AetheryteticketMgr:OnInit()
-
+    CrystalPortalMgr = PWorldMgr:GetCrystalPortalMgr()
 end
 
 function AetheryteticketMgr:OnBegin()
+    self.bUseSuccess = false
+    self.TransferLandTimerID = nil
 end
 
 function AetheryteticketMgr:OnEnd()
+    self.bUseSuccess = false
+    self:EndTransferLandTimer()
 end
 
 function AetheryteticketMgr:OnShutdown()
-
+    self.bUseSuccess = false
+    self:EndTransferLandTimer()
 end
 
 function AetheryteticketMgr:OnRegisterNetMsg()
@@ -52,6 +59,40 @@ end
 
 function AetheryteticketMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.BagUseItemSucc, self.OnBagUseItemSucc)
+    self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
+end
+
+function AetheryteticketMgr:OnGameEventPWorldMapEnter(_)
+    if self.bUseSuccess then
+        self.bUseSuccess = false
+        -- 暂时只处理主角的落地特效
+        local MajorEntityID = MajorUtil.GetMajorEntityID()
+        if not MajorEntityID then
+            return
+        end
+        self:StartTransferLandTimer(MajorEntityID)
+    end
+end
+
+function AetheryteticketMgr:StartTransferLandTimer(EntityID)
+    local TransferLandTimerID = self.TransferLandTimerID
+    if TransferLandTimerID then
+        self:UnRegisterTimer(TransferLandTimerID)
+        self.TransferLandTimerID = nil
+    end
+    self.TransferLandTimerID = self:RegisterTimer(function()
+        CrystalPortalMgr:TransferFadeIn(EntityID, true)
+        self:EndTransferLandTimer()
+    end, 0.5)
+end
+
+function AetheryteticketMgr:EndTransferLandTimer()
+    local TransferLandTimerID = self.TransferLandTimerID
+    if not TransferLandTimerID then
+        return
+    end
+    self:UnRegisterTimer(TransferLandTimerID)
+    self.TransferLandTimerID = nil
 end
 
 function AetheryteticketMgr:OnBagUseItemSucc(Params)
@@ -64,7 +105,6 @@ function AetheryteticketMgr:OnBagUseItemSucc(Params)
     if (Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.MISCELLANY_AETHERYTETICKET) then
         self:OnUseAetherytetickeSuccess(Params.ResID)
     end
-
 end
 
 --- @type 当成功使用传送网格券
@@ -84,6 +124,8 @@ function AetheryteticketMgr:OnUseAetherytetickeSuccess(ResID)
     if UIViewMgr:IsViewVisible(UIViewID.WorldMapTransferPanel) then
         UIViewMgr:HideView(UIViewID.WorldMapTransferPanel)
     end
+
+    self.bUseSuccess = true
 end
 
 --- @type 尝试使用传送券道具进行传送
@@ -177,7 +219,7 @@ function AetheryteticketMgr:OpenAetheryteticketPanel()
         local CanUse = self:CheckUseCondition(ResID, false)
         -- 是否国防联军限制
         if ItemNum > 0 then
-            if self:CheckGroupGrandCompanyLimit(ResID) then
+            if self:CheckGrandCompanyLimit(ResID) then
                 local RichText = RichTextUtil.GetText(LSTR(290004), "#d1906d") --   ( 军队不符 )
                 TmpData.OwnNum = TmpData.OwnNum..RichText
             end
@@ -253,18 +295,28 @@ function AetheryteticketMgr:CheckUseCondition(ItemID, bShowErrorTips)
 end
 
 -- @type 条件原因时国防联军限制
-function AetheryteticketMgr:CheckGroupGrandCompanyLimit(ItemID)
-    local bIsSameAllied, CondFailReasonList = self:CheckUseCondition(ItemID, false)
-    if not bIsSameAllied then
-        for ReasonType, Value in pairs(CondFailReasonList) do
-            if Value then
-                if ReasonType == CondType.GrandCompanyLimit then
-                    return true
-                end        
-            end
+function AetheryteticketMgr:CheckGrandCompanyLimit(ItemID)
+    local Cfg = ItemCfg:FindCfgByKey(ItemID)
+	if Cfg == nil then
+		return
+	end
+
+	local Cond = CondCfg:FindCfgByKey(Cfg.UseCond) --物品状态/限制
+	if Cond == nil then
+		return
+	end
+
+    local CondContent = Cond.Cond
+    if not CondContent or not next(CondContent) then
+        return
+    end
+
+    for _, CondItem in pairs(CondContent) do
+        local Reason = CondItem.Type
+        if Reason == CondType.GrandCompanyLimit then
+            return not ConditionMgr:CheckSubCond(CondItem, {}, {})
         end
     end
-    return false
 end
 
 function AetheryteticketMgr:FilterAetheryteticketID()

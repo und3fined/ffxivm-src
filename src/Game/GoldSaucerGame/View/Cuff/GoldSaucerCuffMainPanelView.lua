@@ -7,32 +7,42 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local ProtoCS = require("Protocol/ProtoCS")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
+local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+local UIBinderSetOutlineColor = require("Binder/UIBinderSetOutlineColor")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMoney")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
 local MiniGameCuffAudioDefine = require("Game/GoldSaucerMiniGame/Cuff/MiniGameCuffAudioDefine")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
+local CuffBlessCfg = require("TableCfg/CuffBlessCfg")
 local AudioUtil = require("Utils/AudioUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
 local ProtoRes = require("Protocol/ProtoRes")
 local InteractionCategory = ProtoRes.InteractionCategory
 local ScoreMgr = require("Game/Score/ScoreMgr")
+local GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
 local ProtoRes = require("Protocol/ProtoRes")
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local DelayTime = GoldSaucerMiniGameDefine.DelayTime
+local ChallengeTargetIconPath = GoldSaucerBlessingDefine.ChallengeTargetIconPath
 local AudioPath = MiniGameCuffAudioDefine.AudioPath
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 
 local LSTR = _G.LSTR
 local EventID = _G.EventID
 local UIViewMgr = _G.UIViewMgr
 local UIViewID = _G.UIViewID
+local FLOG_ERROR = _G.FLOG_ERROR
 ---@class GoldSaucerCuffMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Award GoldSaucerGameCuffAwardItemView
@@ -42,13 +52,21 @@ local UIViewID = _G.UIViewID
 ---@field BlowYellow GoldSaucerCuffBlowYellowItemView
 ---@field Btn1 CommBtnMView
 ---@field Btn2 CommBtnMView
+---@field Btn3 CommBtnLView
+---@field BtnClickCactus UFButton
 ---@field ChallengeResults GoldSaucerCuffChallengeResultsItemView
 ---@field CloseBtn CommonCloseBtnView
 ---@field Critical GoldSaucerGameCommCriticalItemView
 ---@field CuffScore GoldSaucerGameCuffScoreItemView
+---@field ImgBg2 UFImage
+---@field ImgCactusPeople UFImage
+---@field ImgDecoBlow1 UFImage
+---@field ImgDecoBlow2 UFImage
 ---@field MainTeamPanel MainTeamPanelView
 ---@field MoneySlot CommMoneySlotView
+---@field PanelCactus UFCanvasPanel
 ---@field PanelChallengeFailurePrompt UFCanvasPanel
+---@field PanelChallengeFailurePrompt_1 UFCanvasPanel
 ---@field PanelChallengeRecordList UFVerticalBox
 ---@field PanelCold UFCanvasPanel
 ---@field PanelHint UFCanvasPanel
@@ -56,20 +74,30 @@ local UIViewID = _G.UIViewID
 ---@field PanelResult UFCanvasPanel
 ---@field PannelBlowMid UFCanvasPanel
 ---@field ProgressBarFull UProgressBar
+---@field SpineCactusPeople1 USpineWidget
+---@field SpineCactusPeople2 USpineWidget
 ---@field TableViewBlow UTableView
 ---@field TableViewList UTableView
 ---@field TextAward UFTextBlock
 ---@field TextHint UFTextBlock
 ---@field TextHint1 UFTextBlock
+---@field TextHint1_1 UFTextBlock
 ---@field TextMultiple UFTextBlock
 ---@field TextQuantity UFTextBlock
 ---@field TextStrengthValue UFTextBlock
 ---@field challengeBegins GoldSaucerCuffchallengeBeginsItemView
 ---@field AnimBlowDown UWidgetAnimation
 ---@field AnimBlowHigh UWidgetAnimation
+---@field AnimClickCactus UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimNormalIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
+---@field AnimSection1 UWidgetAnimation
+---@field AnimSection2 UWidgetAnimation
+---@field AnimSection3 UWidgetAnimation
+---@field AnimSection3Loop UWidgetAnimation
+---@field AnimSectionGreenHide UWidgetAnimation
+---@field AnimSectionGreenShow UWidgetAnimation
 ---@field AnimSettlementIn UWidgetAnimation
 ---@field AnimTextBreathe UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -84,13 +112,21 @@ function GoldSaucerCuffMainPanelView:Ctor()
 	--self.BlowYellow = nil
 	--self.Btn1 = nil
 	--self.Btn2 = nil
+	--self.Btn3 = nil
+	--self.BtnClickCactus = nil
 	--self.ChallengeResults = nil
 	--self.CloseBtn = nil
 	--self.Critical = nil
 	--self.CuffScore = nil
+	--self.ImgBg2 = nil
+	--self.ImgCactusPeople = nil
+	--self.ImgDecoBlow1 = nil
+	--self.ImgDecoBlow2 = nil
 	--self.MainTeamPanel = nil
 	--self.MoneySlot = nil
+	--self.PanelCactus = nil
 	--self.PanelChallengeFailurePrompt = nil
+	--self.PanelChallengeFailurePrompt_1 = nil
 	--self.PanelChallengeRecordList = nil
 	--self.PanelCold = nil
 	--self.PanelHint = nil
@@ -98,20 +134,30 @@ function GoldSaucerCuffMainPanelView:Ctor()
 	--self.PanelResult = nil
 	--self.PannelBlowMid = nil
 	--self.ProgressBarFull = nil
+	--self.SpineCactusPeople1 = nil
+	--self.SpineCactusPeople2 = nil
 	--self.TableViewBlow = nil
 	--self.TableViewList = nil
 	--self.TextAward = nil
 	--self.TextHint = nil
 	--self.TextHint1 = nil
+	--self.TextHint1_1 = nil
 	--self.TextMultiple = nil
 	--self.TextQuantity = nil
 	--self.TextStrengthValue = nil
 	--self.challengeBegins = nil
 	--self.AnimBlowDown = nil
 	--self.AnimBlowHigh = nil
+	--self.AnimClickCactus = nil
 	--self.AnimIn = nil
 	--self.AnimNormalIn = nil
 	--self.AnimOut = nil
+	--self.AnimSection1 = nil
+	--self.AnimSection2 = nil
+	--self.AnimSection3 = nil
+	--self.AnimSection3Loop = nil
+	--self.AnimSectionGreenHide = nil
+	--self.AnimSectionGreenShow = nil
 	--self.AnimSettlementIn = nil
 	--self.AnimTextBreathe = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -126,6 +172,7 @@ function GoldSaucerCuffMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BlowYellow)
 	self:AddSubView(self.Btn1)
 	self:AddSubView(self.Btn2)
+	self:AddSubView(self.Btn3)
 	self:AddSubView(self.ChallengeResults)
 	self:AddSubView(self.CloseBtn)
 	self:AddSubView(self.Critical)
@@ -146,6 +193,8 @@ function GoldSaucerCuffMainPanelView:OnInit()
 		{"TotalTimeTextTitle", UIBinderSetText.New(self, self.MainTeamPanel.TextTime)},
 
 		{"bCuffScoreVisible", UIBinderSetIsVisible.New(self, self.CuffScore)},
+		{"AddScoreOutLineColor", UIBinderSetOutlineColor.New(self, self.CuffScore.FTextBlock_44)},
+		{"AddScoreColor", UIBinderSetColorAndOpacityHex.New(self, self.CuffScore.FTextBlock_44)},
 		{"bPanelNormalVisible", UIBinderSetIsVisible.New(self, self.PanelNormal, nil, true)},
 		{"bPanelResultVisible", UIBinderSetIsVisible.New(self, self.PanelResult, nil, true)},
 		{"CuffScore", UIBinderSetText.New(self, self.CuffScore.FTextBlock_44)},
@@ -153,24 +202,29 @@ function GoldSaucerCuffMainPanelView:OnInit()
 		{"StrengthPro", UIBinderSetPercent.New(self, self.ProgressBarFull)},
 		{"TextMultiple", UIBinderSetText.New(self, self.TextMultiple)},
 		{"bTextMultipleVisible", UIBinderSetIsVisible.New(self, self.TextMultiple)},
-		{"bFailed", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
-		{"bSuccessed", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRltFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
+		{"bRecordListPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt_1)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.Award, true)},
 		{"ResultVMList", UIBinderUpdateBindableList.New(self, self.ResultTableViewAdapter)},
 		{"InteractiveVMList", UIBinderUpdateBindableList.New(self, self.InteractiveTableViewAdapter)},
 		{"RewardGot", UIBinderSetTextFormatForMoney.New(self, self.Award.TextQuantity)},
-		{"RewardGot", UIBinderSetTextFormatForMoney.New(self, self.MainTeamPanel.TextNumber)},
+		{"MainPanelRewardGot", UIBinderSetTextFormatForMoney.New(self, self.MainTeamPanel.TextNumber)},
 		{"CuffAddRewardGot",  UIBinderSetText.New(self, self.MainTeamPanel.TextNumber1)},
 
 		{"AwardIconPath", UIBinderSetBrushFromAssetPath.New(self, self.Award.Comm96Slot.Icon)},
 		{"TextHint", UIBinderSetText.New(self, self.TextHint)},
-		{"bTextHintVisible", UIBinderSetIsVisible.New(self, self.PanelHint)}, --
+		{"bTextHintVisible", UIBinderSetIsVisible.New(self, self.PanelHint)},
 		{"JDCoinColor", UIBinderSetColorAndOpacityHex.New(self, self.TextQuantity)},
 		{"RightBtnContent", UIBinderSetText.New(self, self.Btn2.TextContent)},
 		{"bEnterEndState", UIBinderValueChangedCallback.New(self, nil, self.ChangeShowType)},
-
+		{"StrengthPro", UIBinderValueChangedCallback.New(self, nil, self.OnNotifyStrengthChange)},
 		{"CriticalText", UIBinderSetText.New(self, self.Critical.TextQuantity)},
+		--{"bBless", UIBinderValueChangedCallback.New(self, nil, self.OnPlayBlessBgAnim)},
+		{"bBless", UIBinderSetIsVisible.New(self, self.PanelCactus)},
 		-- {"bCriticalVisible", UIBinderSetIsVisible.New(self, self.Critical)},
 	}
+	self.ImageStage = 0 -- 背景图片所属阶段
 end
 
 function GoldSaucerCuffMainPanelView:OnDestroy()
@@ -189,10 +243,11 @@ end
 
 function GoldSaucerCuffMainPanelView:InitLSTRText()
 	self.TextHint1:SetText(LSTR(250016)) --- 不要气馁，再挑战看看吧！
+	self.TextHint1_1:SetText(LSTR(250016))
 	self.TextAward:SetText(LSTR(250017)) -- 奖励
 	self.TextQuantity:SetText(1) -- 阿拉伯数字1
 	self.Btn1.TextContent:SetText(LSTR(10036)) -- 离开
-
+	self.Btn3.TextContent:SetText(LSTR(10036)) -- 离开
 end
 
 function GoldSaucerCuffMainPanelView:PlayAnimationIn()
@@ -223,14 +278,19 @@ end
 function GoldSaucerCuffMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnPressedEvent(self, self.Btn1.Button, self.OnLeaveBtnClick)
 	UIUtil.AddOnClickedEvent(self, self.Btn2.Button, self.OnFightAgainBtnClick)
+	UIUtil.AddOnClickedEvent(self, self.BtnClickCactus, self.OnBtnClickCactusClick)
+	UIUtil.AddOnPressedEvent(self, self.Btn3.Button, self.OnLeaveBtnClick)
 	self:BindBtnCloseCallBack()
 end
 
 function GoldSaucerCuffMainPanelView:OnRegisterGameEvent()
+	self:RegisterGameEvent(EventID.MiniGameCuffCenterLastPunchTipsShow, self.MiniGameCuffShowLastPunchTips)
+	self:RegisterGameEvent(EventID.MiniGameBigBlessStartTipsShow, self.MiniGameBigBlessStartTipsShow)
 	self:RegisterGameEvent(EventID.MiniGameCuffSubViewOnShow, self.MiniGameCuffShowSubViewCanvasEvent)
 	self:RegisterGameEvent(EventID.MiniGameCuffShowPunchResult, self.MiniGameCuffShowPunchResultEvent)
 	self:RegisterGameEvent(EventID.MiniGameMainPanelPlayAnim, self.MiniGameCuffMainPlayAnimEvent)
 	self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
+	self:RegisterGameEvent(EventID.MiniGameMarkerBlessStateChange, self.OnResultPanelBtnChange)
 end
 
 function GoldSaucerCuffMainPanelView:OnRegisterBinder()
@@ -246,7 +306,70 @@ function GoldSaucerCuffMainPanelView:OnRegisterBinder()
     self:RegisterBinders(ViewModel, self.Binders)
 end
 
+function GoldSaucerCuffMainPanelView:OnPlayBlessBgAnim(bBless)
+	if bBless then
+		self:PlayAnimation(self.AnimSectionGreenShow)
+	else
+		self:PlayAnimation(self.AnimSectionGreenHide, 0.2)
+	end
+end
+
 function GoldSaucerCuffMainPanelView:OnSelectChanged(Index, ItemData, ItemView)
+end
+
+function GoldSaucerCuffMainPanelView:OnNotifyStrengthChange(NewValue)
+	local DefineCfg = MiniGameClientConfig[MiniGameType.Cuff]
+	if not DefineCfg then
+		return
+	end
+
+	local PercentLimitChange = DefineCfg.PercentLimitChange
+	if not PercentLimitChange then
+		return
+	end
+
+	local PanelBgPath = DefineCfg.PanelBgPath
+	if not PanelBgPath then
+		return
+	end
+
+	local OldStage = self.ImageStage
+	local CurStage = 1
+	if NewValue < PercentLimitChange[1] then
+		CurStage = 1
+	elseif NewValue < PercentLimitChange[2] then
+		CurStage = 2
+	else
+		CurStage = 3
+	end
+
+	if OldStage ~= CurStage then
+		if self:IsAnimationPlaying(self.AnimSection3Loop) then
+			self:StopAnimation(self.AnimSection3Loop)
+		end
+
+		local AddScoreOutLineColor = "AA6F01FF"
+		local AddScoreColor = "FFFFFFFF"
+
+		if CurStage == 1 then
+			self:PlayAnimation(self.AnimSection1)
+		elseif CurStage == 2 then
+			self:PlayAnimation(self.AnimSection2)
+			AddScoreOutLineColor = "CC7800FF"
+        	AddScoreColor = "FFEFA5FF"
+		elseif CurStage == 3 then
+			self:PlayAnimation(self.AnimSection3)
+			self:PlayAnimation(self.AnimSection3Loop, 0, 0)
+			AddScoreOutLineColor = "9C4900FF"
+			AddScoreColor = "FFB29DFF"
+		else
+			FLOG_ERROR("GoldSaucerCuffMainPanelView:OnNotifyStrengthChange ErrorStage To Play")
+		end
+		UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.CuffScore.FTextBlock_44, AddScoreOutLineColor)
+		UIUtil.TextBlockSetColorAndOpacityHex(self.CuffScore.FTextBlock_44, AddScoreColor)
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgBg2, PanelBgPath[CurStage])
+		self.ImageStage = CurStage
+	end
 end
 
 --- @type 准备开始
@@ -316,6 +439,7 @@ function GoldSaucerCuffMainPanelView:SetHidenOnShow()
 	UIUtil.SetIsVisible(self.BlowPurple, false)
 	UIUtil.SetIsVisible(self.BlowRed, false)
 	UIUtil.SetIsVisible(self.BlowYellow, false)
+	self:PlayAnimation(self.AnimSectionGreenHide, 0.2)
 end
 
 --- @type 把不需要动态改变的变量写好
@@ -327,8 +451,26 @@ function GoldSaucerCuffMainPanelView:SetDefaultValue()
 	UIUtil.SetRenderOpacity(self.PanelNormal, 1)
 	UIUtil.SetIsVisible(self.CloseBtn, true)
 
-	self.MainTeamPanel:SwitchTab(4)
-	self.MainTeamPanel:SetShowGameInfo()
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local Params = {}
+	Params.bBless = MiniGameInst:IsBless()
+	local BlessKind = MiniGameInst.BlessKind
+	Params.BlessKind = BlessKind
+	Params.ChallengeTarget = ""
+	local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.Cuff)
+	local BlessCfg = CuffBlessCfg:FindCfgByKey(BlessKind)
+	if TargetCfg and BlessCfg then
+		Params.ExtraReward = BlessCfg.Reward or 0
+		if BLESSED_KIND.BLESSED_KIND_LITTLE == BlessKind then
+			Params.ChallengeTarget = TargetCfg.LChallengeTarget or ""
+		elseif BLESSED_KIND.BLESSED_KIND_BIG == BlessKind then
+			Params.ChallengeTarget = TargetCfg.BChallengeTarget or ""
+		end
+	end
+	self.MainTeamPanel:SetShowGameInfo(Params)
 	self.MainTeamPanel.TextGameName:SetText(LSTR(250008)) -- 重击伽美什  
 	self.MainTeamPanel.TextGameName_1:SetText(LSTR(250009)) -- 当前奖励
 	local IconGamePath = MiniGameClientConfig[MiniGameType.Cuff].IconGamePath
@@ -338,24 +480,87 @@ function GoldSaucerCuffMainPanelView:SetDefaultValue()
 	UIUtil.SetIsVisible(self.MainTeamPanel.HorizontalObtain, true)
 	UIUtil.SetColorAndOpacityHex(self.Award.TextQuantity, "FFF9E1FF")
 	UIUtil.SetIsVisible(self.Critical, false)
+	-- 赐福仙人掌动画种类切换
+	local bBigBlessMode = MiniGameInst:IsBigBlessMode()
+	UIUtil.SetIsVisible(self.SpineCactusPeople1, not bBigBlessMode)
+	UIUtil.SetIsVisible(self.SpineCactusPeople2, bBigBlessMode)
+	local TargetIconPath = bBigBlessMode and ChallengeTargetIconPath.BigBless or ChallengeTargetIconPath.LittleBless
+	UIUtil.ImageSetBrushFromAssetPath(self.MainTeamPanel.IconGold_1, TargetIconPath)
+end
+
+--- 封装控制赐福挑战模式面板是否显示
+function GoldSaucerCuffMainPanelView:SetBlessGameChallengeInfoPanelVisible(bVisible)
+	local GameInst = self:GetGameInst()
+	if GameInst == nil then
+		return
+	end
+	local bBless = GameInst:IsBless()
+	if not bBless then
+		UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, false)
+		return
+	end
+
+	UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, bVisible)
 end
 
 --- @type 设置出现游戏名字和时间还是金碟币数量
 function GoldSaucerCuffMainPanelView:ChangeShowType(bEnterEndState)
 	local bMoneyVisible = bEnterEndState
-	local bShowGameDesc = not bEnterEndState
+	--local bShowGameDesc = not bEnterEndState
 	UIUtil.SetIsVisible(self.MoneySlot, bMoneyVisible)
 	-- UIUtil.SetIsVisible(self.PanelCountdown, bShowGameDesc)
 	-- UIUtil.SetIsVisible(self.HorizontalTitle, bShowGameDesc)
 	UIUtil.SetIsVisible(self.MainTeamPanel.PanelCountdown, not bEnterEndState)
 	UIUtil.SetIsVisible(self.MainTeamPanel.HorizontalGold, not bEnterEndState)
 	UIUtil.SetIsVisible(self.MainTeamPanel.HorizontalObtain, not bEnterEndState)
-
-	UIUtil.SetIsVisible(self.Btn1, true)
-	UIUtil.SetIsVisible(self.Btn2, true)
-	UIUtil.SetIsVisible(self.Award, true)
+	self:SetBlessGameChallengeInfoPanelVisible(not bEnterEndState)
+	
 	if bEnterEndState then
 		self:OnMoneyUpdate()
+		--- 更新赐福时的按钮显示情况
+		local MiniGameInst = self:GetGameInst()
+		if MiniGameInst == nil then
+			return
+		end
+		local bBless = MiniGameInst:IsBless()
+        if bBless then
+			local bBlessChallengeSuccess = MiniGameInst:IsBlessChallengeSuccess()
+			UIUtil.SetIsVisible(self.Btn1, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.Btn2, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.PanelCold, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.Btn3, bBlessChallengeSuccess)
+		else
+            local SgInstanceID = MiniGameInst:GetInstanceID()
+			if SgInstanceID then
+				local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+				UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
+			end
+		end
+	end
+end
+
+function GoldSaucerCuffMainPanelView:OnResultPanelBtnChange(_)
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local VM = self:GetTheParamsVM()
+	if VM == nil then
+		return
+	end
+	if not VM.bPanelResultVisible then
+		return
+	end
+	local SgInstanceID = MiniGameInst:GetInstanceID()
+	if SgInstanceID then
+		local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+		UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
 	end
 end
 
@@ -369,7 +574,7 @@ function GoldSaucerCuffMainPanelView:MiniGameCuffShowPunchResultEvent(Power)
 end
 
 --- 播放动画
-function GoldSaucerCuffMainPanelView:MiniGameCuffMainPlayAnimEvent(InAnim)
+function GoldSaucerCuffMainPanelView:MiniGameCuffMainPlayAnimEvent(InAnim, ScoreType)
 	local Anim = MiniGameClientConfig[MiniGameType.Cuff].Anim
 	local ChallengeResults = self.ChallengeResults
 	if InAnim == Anim.AnimSettlementIn then
@@ -392,6 +597,24 @@ function GoldSaucerCuffMainPanelView:MiniGameCuffMainPlayAnimEvent(InAnim)
 		ChallengeResults:PlayAnimation(ChallengeResults.AnimFaill)
 	elseif InAnim == Anim.Critical then
 		self:OnPlayCtiticalAnim()
+	elseif InAnim == Anim.AnimScoreAdd then
+		local ScoreWidget = self.CuffScore
+		if ScoreWidget then
+			if ScoreType and type(ScoreType) == "number" then
+				local AddScoreOutLineColor = "AA6F01FF"
+				local AddScoreColor = "FFFFFFFF"
+				if ScoreType == InteractionCategory.CATEGORY_MIDDLE then
+					AddScoreOutLineColor = "CC7800FF"
+					AddScoreColor = "FFEFA5FF"
+				elseif ScoreType == InteractionCategory.CATEGORY_HIGH then
+					AddScoreOutLineColor = "9C4900FF"
+					AddScoreColor = "FFB29DFF"
+				end
+				UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.CuffScore.FTextBlock_44, AddScoreOutLineColor)
+				UIUtil.TextBlockSetColorAndOpacityHex(self.CuffScore.FTextBlock_44, AddScoreColor)
+			end
+			ScoreWidget:PlayAnimation(ScoreWidget.AnimScore)
+		end
 	end
 end
 
@@ -443,6 +666,29 @@ function GoldSaucerCuffMainPanelView:OnPlayCtiticalAnim()
 	end, ShowEndAnimTime)
 end
 
+function GoldSaucerCuffMainPanelView:MiniGameBigBlessStartTipsShow()
+	local ChallengeBegins = self.challengeBegins
+	if not ChallengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(ChallengeBegins, true)
+	ChallengeBegins:SetBlessRoundReady()
+	self:PlayAnimation(self.AnimSectionGreenShow)
+end
+
+function GoldSaucerCuffMainPanelView:MiniGameCuffShowLastPunchTips()
+	local challengeBegins = self.challengeBegins
+	if not challengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(challengeBegins, true)
+	challengeBegins:SetBegin(function()
+		UIUtil.SetIsVisible(challengeBegins, false)
+	end, LSTR(250032), LSTR(250033))
+
+	self:PlayAnimation(self.AnimSectionGreenHide, 0.2)
+end
+
 --- @type
 function GoldSaucerCuffMainPanelView:MiniGameCuffShowSubViewCanvasEvent(bVisible)
 	local MiniGameInst = self:GetGameInst()
@@ -461,7 +707,11 @@ end
 
 --- @type 当游戏状态发生改变
 function GoldSaucerCuffMainPanelView:OnMiniGameStateChanged(NewValue, OldValue)
-	FLOG_INFO("OutOnALimbMainPanelView:OnMiniGameStateChanged NewValue:%s, OldValue:%s", NewValue, OldValue)
+	FLOG_INFO("GoldSaucerCuffMainPanelView:OnMiniGameStateChanged NewValue:%s, OldValue:%s", NewValue, OldValue)
+end
+
+function GoldSaucerCuffMainPanelView:OnBtnClickCactusClick()
+	self:PlayAnimation(self.AnimClickCactus)
 end
 
 -- 点击离开按钮
@@ -493,7 +743,7 @@ function GoldSaucerCuffMainPanelView:OnFightAgainBtnClick()
 		UIUtil.SetIsVisible(self.CloseBtn, true)
 
 		UIUtil.SetIsVisible(self.Btn1, false)
-		UIUtil.SetIsVisible(self.Award, false)
+		--UIUtil.SetIsVisible(self.Award, false)
 		UIUtil.SetIsVisible(self.Btn2, false)
 		self.Award:StopAllAnimations()
 
@@ -538,6 +788,10 @@ function GoldSaucerCuffMainPanelView:BindBtnCloseCallBack()
 	end
 
 	local function RecoverGameLoop()
+		local bSelfValid = CommonUtil.IsObjectValid(self)
+		if not bSelfValid then
+			return
+		end
 		local GameInst = self:GetGameInst()
 		if GameInst == nil then
 			return
@@ -601,6 +855,9 @@ function GoldSaucerCuffMainPanelView:GetTheParamsVM()
 end
 
 function GoldSaucerCuffMainPanelView:GetGameInst()
+	if not CommonUtil.IsObjectValid(self) then
+		return
+	end
 	local ViewModel = self:GetTheParamsVM()
 	if ViewModel == nil then
 		return

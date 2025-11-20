@@ -20,6 +20,7 @@ function ProfessionToggleJobVM:Ctor()
 	self.LeftRangeItemVMList = nil
 	self.RightRangeItemVMList = nil
 	self.ProfSpecialization = ProtoCommon.specialization_type.SPECIALIZATION_TYPE_COMBAT
+	self.QuestStrictionProf = nil --任务限制职业
 end
 
 ---@param ProfDetailList Table map<int32, ProfData>
@@ -83,7 +84,7 @@ function ProfessionToggleJobVM:UpdateCurrentProfList(ProfDetailList)
 				if LevelItemVM.ProfID ~= MajorUtil.GetMajorProfID() then
 					Level = ProfData and ProfData.Level or 0
 				else
-					Level = MajorUtil.GetMajorLevel()
+					Level = MajorUtil.GetTrueMajorLevel()
 				end
 				LevelItemVM:SetLevel(Level)
 				self.SelectedLevelItemVM = LevelItemVM
@@ -103,6 +104,7 @@ function ProfessionToggleJobVM:UpdateCurrentProfList(ProfDetailList)
 				LevelItemVM.ExpProgress = 1.0
 			end
 			LevelItemVM.ProfIcon = _G.EquipmentMgr:GetProfLevelItemIcon(LevelItemVM.ProfID)
+			LevelItemVM.bIsQuestProf = self.QuestStrictionProf == LevelItemVM.ProfID
 		end
 	end
 end
@@ -141,7 +143,7 @@ function ProfessionToggleJobVM:GenerateNewProfList(ProfDetailList)
 					if LevelItemVM.ProfID ~= MajorUtil.GetMajorProfID() then
 						Level = ProfData and ProfData.Level or 0
 					else
-						Level = MajorUtil.GetMajorLevel()
+						Level = MajorUtil.GetTrueMajorLevel()
 					end
 					LevelItemVM:SetLevel(Level)
 					self.SelectedLevelItemVM = LevelItemVM
@@ -175,6 +177,7 @@ function ProfessionToggleJobVM:GenerateNewProfList(ProfDetailList)
 						table.insert(LevelItemVMList, LevelItemVM)
 					end
 				end
+				LevelItemVM.bIsQuestProf = self.QuestStrictionProf == ItemData.Prof
             end
 			RangeItemVM.LevelItemVMList = LevelItemVMList
 			table.insert(RangeItemVMList, RangeItemVM)

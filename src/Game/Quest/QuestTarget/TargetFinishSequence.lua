@@ -51,8 +51,14 @@ function TargetFinishSequence:DoStartTarget()
     end
 
     if self.bMapAutoPlay then
-        QuestRegister:RegisterMapAutoPlaySequence(
-            self.MapID, self.SequenceID, self.QuestID, self.TargetID, OnPrePlaySequence)
+        local CurrMapID = _G.PWorldMgr:GetCurrMapResID()
+        if CurrMapID == self.MapID then
+            QuestHelper.PrintQuestInfo("TargetFinishSequence play %d on AutoPlay map %d", self.SequenceID, self.MapID)
+            self:PlaySequence()
+        else
+            QuestRegister:RegisterMapAutoPlaySequence(
+                self.MapID, self.SequenceID, self.QuestID, self.TargetID, OnPrePlaySequence)
+        end
     else
         self:PlaySequence()
     end
@@ -70,6 +76,10 @@ function TargetFinishSequence:DoClearTarget()
     self.bSequenceStopped = true
 end
 
+function TargetFinishSequence:GetDialogID()
+    return self.SequenceID or 0
+end
+
 function TargetFinishSequence:PlaySequence()
     if self.SequenceID > 0 then
         local function SequenceStoppedCallback(_)
@@ -82,7 +92,11 @@ end
 
 function TargetFinishSequence:SendFinishSequence()
     if self.bSequenceStopped then return end
-    QuestMgr:SendFinishTargetWithBranchCheck(self.QuestID, self.TargetID)
+    if QuestMgr.bQuestSeqInSkipGroup then
+        QuestMgr:SendMultipleFinishTarget(self.QuestID, self.TargetID)
+    else
+        QuestMgr:SendFinishTargetWithBranchCheck(self.QuestID, self.TargetID)
+    end
     self.bSequenceStopped = true
 end
 

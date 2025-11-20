@@ -117,7 +117,7 @@ function ChocoboTitleWinItemView:OnButtonStateChanged(NewValue, OldValue)
     if NewValue == ChocoboDefine.TITLE_REWARD_STATE.GO_ON then
         UIUtil.SetIsVisible(self.BtnGet, false)
         UIUtil.SetIsVisible(self.BtnGo, true)
-        self.BtnGo:SetIsDisabledState(true, false)
+        self.BtnGo:SetIsDisabledState(true, true)
         UIUtil.SetIsVisible(self.PanelUnFinishAlreadyGet, false)
     elseif NewValue == ChocoboDefine.TITLE_REWARD_STATE.CAN_REWARD then
         UIUtil.SetIsVisible(self.BtnGet, true)
@@ -132,8 +132,18 @@ function ChocoboTitleWinItemView:OnButtonStateChanged(NewValue, OldValue)
 end
 
 function ChocoboTitleWinItemView:OnClickBtnGet()
+    if not self.VM then
+        return
+    end
+    
     local Title = self.VM.ID
     local Mission = self.VM.Index - 1
+    local RedDotName = ChocoboDefine.LIFE_RED_DOT_NAME .. '/Title/Item/' .. (self.VM.ID or 0) .. (self.VM.StatisticID or 0)
+    local IsSaveDel = _G.RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+    if not IsSaveDel then
+        _G.RedDotMgr:DelRedDotByName(RedDotName)
+    end
+    
     _G.ChocoboMgr:ReqGetMissionAward(Title, Mission)
 end
 

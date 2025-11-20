@@ -13,11 +13,11 @@ local USaveMgr = _G.UE.USaveMgr
 
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
+local ProtoCS = require("Protocol/ProtoCS")
 
 local ProfModelCfg = require("TableCfg/ProfModelCfg")
 local QuestHelper = require("Game/Quest/QuestHelper")
 local ProfUtil = require("Game/Profession/ProfUtil")
-local ProtoCS = require("Protocol/ProtoCS")
 
 ---@class NpcDialogPlayVM : UIViewModel
 local AdventureDetailVM = LuaClass(UIViewModel)
@@ -103,6 +103,7 @@ function AdventureDetailVM:OnSelectJobChange(Prof)
 
     local StartQuestCfg = _G.AdventureCareerMgr:GetCurProfChangeProfData(self.Prof, Cfg.AdvancedProf and Cfg.AdvancedProf ~= 0)
     local BaseQuestCfg = _G.AdventureCareerMgr:GetCurProfChangeProfData(self.Prof)
+
     if StartQuestCfg and next(StartQuestCfg) and StartQuestCfg.Level then
         self.bIsPreviewTextShow = true
         self.PreviewText = string.format(LSTR(1050229),tostring(StartQuestCfg.Level))
@@ -124,6 +125,7 @@ function AdventureDetailVM:OnSelectJobChange(Prof)
             self.bIsPreviewTextShow = false
         end
     end
+
 end
 
 return AdventureDetailVM

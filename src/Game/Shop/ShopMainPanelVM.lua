@@ -19,7 +19,6 @@ function ShopMainPanelVM:Ctor()
 	self.EmptyVisible = false
 	self.GoodsListVisible = true
 	self.PreGoodsList = nil
-	self.EmptyView = nil
 end
 
 function ShopMainPanelVM:OnInit()
@@ -50,7 +49,7 @@ function ShopMainPanelVM:OnBegin()
 end
 
 function ShopMainPanelVM:OnEnd()
-	self.EmptyView = nil
+
 end
 
 function ShopMainPanelVM:MatchGoodsInfo(Input)
@@ -79,8 +78,9 @@ function ShopMainPanelVM:MatchGoodsInfo(Input)
 		self:SetSearchState(true)
 	else
 		self:SetSearchState(false)
-		self.EmptyView:SetSearchEmpty(_G.LSTR(1010050))
 	end	
+
+	return matches
 end
 
 function ShopMainPanelVM:SetSearchState(Value)

@@ -25,13 +25,16 @@ function MiniGameMonsterTossResultVM:Ctor()
     self.TryAgainTip = "1"
     self.ResultVMList = UIBindableList.New(GoldSaucerCuffGameResultItemVM)
     self.RewardGot = "0"
+    self.ChangeRewardText = "+0"
     self.AwardIconPath = ""
     self.TryAgainTipColor = "#FFFFFF"
     self.BtnText = LSTR(250001) -- 再 战
     -- {"BtnText", UIBinderSetText.New(self, self.Btn2.TextContent)}, 
 
 	-- 	{"", UIBinderSetBrushFromAssetPath.New(self, self.Award.CommBackpackSlot_UIBP.FImg_Icon)},
-    
+    self.bRecordListPanelShow = false
+    self.bRecordFailPanelShow = false
+    self.bRltFailPanelShow = false
 end
 
 function MiniGameMonsterTossResultVM:IsEqualVM(Value)
@@ -50,10 +53,16 @@ function MiniGameMonsterTossResultVM:UpdateVM(Value)
     if Value.ResultListData ~= nil then
         self:UpdateList(self.ResultVMList, Value.ResultListData)
     end
-    self.RewardGot = tonumber(Value.RewardGot)
+    local ActualRewardGot = tonumber(Value.RewardGot)
+    self.RewardGot = ActualRewardGot
+    self.ChangeRewardText = string.format("+%s", ActualRewardGot)
     self.AwardIconPath = Value.AwardIconPath
     self.TryAgainTipColor = Value.TryAgainTipColor
     self.BtnText = Value.BtnText
+
+    self.bRecordListPanelShow = Value.bRecordListPanelShow
+    self.bRecordFailPanelShow = Value.bRecordFailPanelShow
+    self.bRltFailPanelShow = Value.bRltFailPanelShow
 end
 
 --- @type 加载tableviews

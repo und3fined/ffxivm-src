@@ -34,24 +34,24 @@ function EquipmentCurrencyVM:UpdateScorePossesNum(Values)
     end
 end
 
-function EquipmentCurrencyVM:UpdateScoreWeekUpper(Values)
-    if Values == nil then
-        return
-    end
-    local ScoreVMMap = self.ScoreVMMap
-    for _, ScoreInfo in pairs(Values) do
-        local SummCfg = ScoreSummaryCfg:FindCfgByKey(ScoreInfo.ID)
-        if SummCfg ~= nil then
-            if ScoreVMMap ~= nil then
-                local ScoreVMMapItem = ScoreVMMap[SummCfg.ID]
-				if ScoreVMMapItem ~= nil then
-					ScoreVMMapItem:UpdateWeekUpperInfo(ScoreInfo.WeekValue)
-				end
-			end
-		end
-	end
+-- function EquipmentCurrencyVM:UpdateScoreWeekUpper(Values)
+--     if Values == nil then
+--         return
+--     end
+--     local ScoreVMMap = self.ScoreVMMap
+--     for _, ScoreInfo in pairs(Values) do
+--         local SummCfg = ScoreSummaryCfg:FindCfgByKey(ScoreInfo.ID)
+--         if SummCfg ~= nil then
+--             if ScoreVMMap ~= nil then
+--                 local ScoreVMMapItem = ScoreVMMap[SummCfg.ID]
+-- 				if ScoreVMMapItem ~= nil then
+-- 					ScoreVMMapItem:UpdateWeekUpperInfo(ScoreInfo.WeekValue)
+-- 				end
+-- 			end
+-- 		end
+-- 	end
 
-end
+-- end
 
 function EquipmentCurrencyVM:SelectTabType(ScoreSummary)
     local ParentVMList = self.CurrencyItemBindableVMList:GetItems()

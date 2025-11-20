@@ -16,13 +16,20 @@ local UIViewMgr = require("UI/UIViewMgr")
 local HaircutMainPanelView = require("Game/Haircut/View/HaircutMainPanelView")
 local DataReportUtil = require("Utils/DataReportUtil")
 local SaveKey = require("Define/SaveKey")
-local EBGMChannel = _G.UE.EBGMChannel
+local QuestHelper = require("Game/Quest/QuestHelper")
+local UIBindableList = require("UI/UIBindableList")
+local CommRewardHairstyleItemVM = require("Game/Haircut/VM/CommRewardHairstyleItemVM")
+local ItemCfg = require("TableCfg/ItemCfg")
+local LoginRoleRaceGenderVM = require("Game/LoginRole/LoginRoleRaceGenderVM")
+local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
 
+local EBGMChannel = _G.UE.EBGMChannel
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.Game.Barbershop.Cmd
 local LSTR = _G.LSTR
 local USaveMgr = _G.UE.USaveMgr
 local LoginAvatarMgr = _G.LoginAvatarMgr
+local HaircutUnlockQuestId = 150568  --理发屋解锁任务ID
 
 ---@class HaircutMgr : MgrBase
 local HaircutMgr = LuaClass(MgrBase)
@@ -152,8 +159,14 @@ function HaircutMgr:OnGameEventLoginRes(Params)
     if PWorldInfo and PWorldInfo.MainPanelUIType == _G.LoginMapType.HairCut then
         LoginAvatarMgr:UpdateVersionName() -- 获取资源版本号
         if bReconnect then
+            if self.RealLeaveHaircut then
+                -- 播完sequence后断线重连则踢出理发屋
+                FLOG_INFO("Reconnect when Leave Haircut")
+                _G.PWorldMgr:SendLeavePWorld()
+                return
+            end
             self:SendMsgHairQuery()
-            self.bReconnectedNoLogin = false
+            -- self.bReconnectedNoLogin = false
     
             self.bReconnect = bReconnect
             -- _G.LoginUIMgr:ReleaseCameraActor()
@@ -173,9 +186,9 @@ function HaircutMgr:OnGameEventLoginRes(Params)
             end
             self.HairCutColorIsLeft = _G.LoginUIMgr.LoginReConnectMgr:GetValue("HairCutColorIsLeft")
             CommonUtil.HideJoyStick()
-            LoginUIMgr.IsShowPreviewPage = false
+            _G.LoginUIMgr.IsShowPreviewPage = false
         else
-            LoginUIMgr:ReturnCurPhaseView(false)
+            _G.LoginUIMgr:ReturnCurPhaseView(false)
         end
         UIViewMgr:HideView(_G.LoginMapMgr:GetPreViewPageID())
         self:OnShowMajor(true)
@@ -453,6 +466,112 @@ function HaircutMgr:SendChangeBGMap(PWorldID, MapID)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
+--获取发型数据，通过物品表ID、角色性别、种族
+function HaircutMgr:GetHariCfgByItemId(ItemId)
+	local SubType = LoginAvatarMgr.CustomizeSubType.Hairdo
+	local List = LoginAvatarMgr.PropertyCacheList[SubType]
+	if List ~= nil or LoginAvatarMgr.CustomizeCfgName[SubType] == nil then return List end
+
+    local HairUnlockDataList = HairUnlockCfg:FindAllCfg(string.format("UnlockItemID = %d", ItemId))
+    local HairUnlockDataCfg = HairUnlockDataList[1]
+    if HairUnlockDataCfg == nil then return end
+
+	local TableCfg = LoginAvatarMgr.CustomizeCfgName[SubType].Cfg
+    local CurrentRaceCfg = LoginRoleRaceGenderVM.CurrentRaceCfg
+	if CurrentRaceCfg == nil then return end
+
+    local SearchConditions = string.format("RaceID = %d AND Tribe = %d AND Gender = %d AND ModelID = %d", 
+    CurrentRaceCfg.RaceID, CurrentRaceCfg.Tribe, CurrentRaceCfg.Gender, HairUnlockDataCfg.HairID)
+    local HairData = TableCfg:FindAllCfg(SearchConditions)
+    return HairData
+end
+
+-- 使用物品新发型物品时
+function HaircutMgr:OnUseNewHairItem(ItemId)
+    --理发师系统是否解锁
+    local IsUnLock = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDBarberShop) 
+    local CurrPWorldType = _G.PWorldMgr:GetCurrPWorldType()
+	if CurrPWorldType == ProtoRes.pworld_type.PWORLD_CATEGORY_DUNGEON then
+         --副本内
+        if IsUnLock then
+            _G.MsgTipsUtil.ShowTipsByID(198008)
+        else 
+            --判断前置任务是否完成，达到了可接取的状态
+            local IsCanActivate = QuestHelper.CheckCanActivate(HaircutUnlockQuestId)
+            if IsCanActivate then
+                _G.MsgTipsUtil.ShowTipsByID(198009) 
+            else
+                _G.MsgTipsUtil.ShowTipsByID(198010)
+            end
+        end
+    else
+        --副本外
+        if IsUnLock then
+            local DataList = {}
+            table.insert(DataList, {ItemId = ItemId})
+            self:OnShowActivateHaircutView(DataList)
+        else
+            self:OnBeauticiansNotUnlock()
+        end
+    end
+    return IsUnLock and true or false
+end
+
+--打开激活发型面板
+function HaircutMgr:OnShowActivateHaircutView(DataList)
+	local Params = {}
+	Params.Title = LSTR(1250041)
+	Params.HairStyleVMList =  UIBindableList.New(CommRewardHairstyleItemVM)
+	Params.BtnLeftText = LSTR(10066)
+	Params.BtnRightText = LSTR(1250042)
+	Params.HintText = LSTR(1250045)
+	Params.ShowBtnLeft = true
+	Params.ShowBtnRight = true
+	Params.ShowHint = true
+	Params.ShowBtn = true
+	Params.TextCloseTips = false
+	Params.BtnLeftCB = function  () 
+		UIViewMgr:HideView(_G.UIViewID.CommonRewardAppearancePanel)
+	end
+	Params.BtnRightCB = function ()
+        --已解锁，打开地图选中乌尔达哈旅馆
+        _G.WorldMapMgr:ShowWorldMapFixPoint(12001, 706)
+        UIViewMgr:HideView(_G.UIViewID.CommonRewardAppearancePanel)
+	end
+	for _, v in ipairs(DataList) do
+		Params.HairStyleVMList:AddByValue(self:CreateAppearanceItem(v.ItemId), nil, true)
+	end
+	UIViewMgr:ShowView(UIViewID.CommonRewardAppearancePanel, Params)  
+end
+
+--美容师未解锁[激活发型面板中]
+function HaircutMgr:OnBeauticiansNotUnlock()
+    --判断前置任务是否完成，达到了可接取的状态
+    local IsCanActivate = QuestHelper.CheckCanActivate(HaircutUnlockQuestId)
+    if IsCanActivate then
+        _G.OpsNewbieStrategyMgr:JumpUnlockSys(267)
+    else
+        _G.OpsNewbieStrategyMgr:JumpUnlockSysByNotCanAccessed(267)
+    end
+end
+
+function HaircutMgr:CreateAppearanceItem(ItemId)
+    local Data = {}
+    local ItemCfg = ItemCfg:FindCfgByKey(ItemId)
+    if ItemCfg then
+        Data.ID = ItemId
+        Data.ItemNameVisible = true
+        Data.ItemName = ItemCfg.ItemName
+        local HairDataList = self:GetHariCfgByItemId(ItemId)
+        if HairDataList ~= nil then
+            if #HairDataList > 0 and HairDataList[1] ~= nil then
+                Data.HairStyleIcon = HairDataList[1].IconPath
+            end
+        end
+        Data.IsSelected = false
+    end
+	return Data
+end
 -----------------------------------------------Req end-----------------------------------------------
 
 

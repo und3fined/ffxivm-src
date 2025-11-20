@@ -75,6 +75,8 @@ function BandTimelineMgr:CreateBandTimeline(ID, StartTime)
         return
     end
 
+    _G.FLOG_INFO("[TB] Timeline Create request | ID:%d StartTime:%s", ID, tostring(StartTime))
+    
     local Timeline = nil
     for __, Item in ipairs(self.TimelineList) do
         if Item.TimelineID == ID then
@@ -86,6 +88,7 @@ function BandTimelineMgr:CreateBandTimeline(ID, StartTime)
     if Timeline ~= nil then
         -- 如果存在且开始时间相等，则直接返回
         if Timeline.StartTime == StartTime then
+            _G.FLOG_INFO("[TB] Timeline Duplicate creation | ID:%d StartTime:%s", ID, tostring(StartTime))
             return
         end
         -- 其他情况下，先销毁旧的时间线
@@ -96,11 +99,14 @@ function BandTimelineMgr:CreateBandTimeline(ID, StartTime)
     Timeline = BandTimelineBase.New()
     -- 初始化并开始新的时间线
     local Ret = Timeline:Init(ID, StartTime, self.PlayRate)
+    _G.FLOG_INFO("[TB] Timeline Initializing new timeline | ID:%d StartTime:%s", ID, tostring(StartTime))
     table.insert(self.TimelineList, Timeline) -- 确保将新创建的时间线添加到列表中
     if Ret then
         Timeline:Start()
+        _G.FLOG_INFO("[TB] Timeline Started successfully | ID:%d", ID)
         _G.EventMgr:SendEvent(EventID.AddTouringBandRangeCheckData, ID)
     else
+        _G.FLOG_INFO("[TB] Timeline Start failed | ID:%d", ID)
         self:DestroyBandTimeline(ID) -- 如果初始化失败，确保销毁时间线以释放资源
     end
 

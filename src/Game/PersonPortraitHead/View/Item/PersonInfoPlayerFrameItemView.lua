@@ -23,7 +23,12 @@ local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetP
 ---@field ImgBkg UFImage
 ---@field ImgFrame UFImage
 ---@field ImgSelect UFImage
+---@field ImgTime UFImage
+---@field ImgUse UFImage
 ---@field TextClock UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimLoop UWidgetAnimation
+---@field AnimUnlock UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PersonInfoPlayerFrameItemView = LuaClass(UIView, true)
 
@@ -34,7 +39,12 @@ function PersonInfoPlayerFrameItemView:Ctor()
 	--self.ImgBkg = nil
 	--self.ImgFrame = nil
 	--self.ImgSelect = nil
+	--self.ImgTime = nil
+	--self.ImgUse = nil
 	--self.TextClock = nil
+	--self.AnimIn = nil
+	--self.AnimLoop = nil
+	--self.AnimUnlock = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -50,6 +60,8 @@ function PersonInfoPlayerFrameItemView:OnInit()
 		{ "IsSelt", 	UIBinderSetIsVisible.New(self, self.ImgSelect) },
 		{ "IsShowLockIcon", 	UIBinderSetIsVisible.New(self, self.IconClock) },
 		{ "FrameIcon", 		UIBinderSetBrushFromAssetPath.New(self, self.ImgFrame) },
+		{ "IsLimitedTime", 		UIBinderSetIsVisible.New(self, self.ImgTime) },
+
 	}
 
 	self.TextClock:SetText(LSTR(960046))

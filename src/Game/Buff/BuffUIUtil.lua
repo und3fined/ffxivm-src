@@ -75,6 +75,7 @@ function M.BonusState2BuffVMParams(EntityID, BuffID, Params)
         RemainingCount = 1,
         IsEternal = (Params.EndTime == 0),
         AddTime = 0,
+        ScoreUse = Params.ScoreUse,
     }
 end
 

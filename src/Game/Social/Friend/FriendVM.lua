@@ -299,21 +299,6 @@ function FriendVM:RemoveFriend(RoleID)
     SocialSettings.DeleteFriendHideSignInfo(RoleID)
 end
 
---- 更新好友备注
----@param RoleID number @角色ID 
----@param NewRemark string @新备注 
-function FriendVM:UpdateFriendRemark(RoleID, NewRemark)
-    local Items = self.GroupVMList:GetItems()
-
-    for _, v in ipairs(Items) do
-        local Member = v:GetMemberByRoleID(RoleID)
-        if Member then
-            Member.Remark = NewRemark
-            break
-        end
-    end
-end
-
 --- 改变玩家分组
 ---@param Groups csproto.role.friends.MoveFriendGroup @移动好友分组信息
 function FriendVM:TransformFriendsGroup(Groups)
@@ -382,6 +367,34 @@ function FriendVM:TransformFriendsGroup(Groups)
     EventMgr:SendEvent(EventID.FriendTransGroup, OldGroupIDList, NewGroupIDList)
 end
 
+function FriendVM:GetFriendEntryVM(RoleID)
+    if nil == RoleID then
+        return
+    end
+
+    local FriendList = self.AllFriends
+    if table.is_nil_empty(FriendList) then
+        return
+    end
+
+    return table.find_by_predicate(FriendList, function(e) return RoleID == e.RoleID end)
+end
+
+--- 更新好友昵称
+---@param RoleID number @角色ID 
+---@param Nickname string @新昵称
+function FriendVM:UpdateFriendNickname(RoleID, Nickname)
+    if nil == RoleID or nil == Nickname then
+        return
+    end
+
+    local EntryVM = self:GetFriendEntryVM(RoleID)
+    if EntryVM then
+        EntryVM:UpdateNickname(Nickname)
+        EventMgr:SendEvent(EventID.FriendSetNicknameSuc, RoleID, Nickname)
+    end
+end
+
 function FriendVM:CheckItemsSortPriority(Items, b)
     local Keyword = self.Keyword
     local IsCheckName = (nil == b) and (not string.isnilorempty(Keyword))
@@ -394,7 +407,11 @@ end
 --- 是否已经是好友
 ---@param RoleID number @角色ID 
 function FriendVM:IsAreadyFriend(RoleID)
-    return table.find_by_predicate(self.AllFriends or {}, function(e) return RoleID ~= nil and RoleID == e.RoleID end) ~= nil
+    if nil == RoleID then
+        return false
+    end
+
+    return self:GetFriendEntryVM(RoleID) ~= nil
 end
 
 ---------------------------------------------------------------------------------------------------------------

@@ -181,9 +181,9 @@ function CurrrentEquipPageView:OnSoulCrystalClicked()
 	if IsBaseProf then
 		--检查有没有特职
 		local AdvencedProf = RoleInitCfg:FindProfAdvanceProf(ProfID)
-		StartQuestCfg = _G.AdventureCareerMgr:GetCurProfChangeProfData(ProfID, AdvencedProf ~= nil)
-		CfgData = _G.AdventureCareerMgr:GetQuestCfgData(StartQuestCfg.StartQuestID)
-		CfgData1 = _G.AdventureCareerMgr:GetChapterCfgData(CfgData.ChapterID)
+		StartQuestCfg = _G.AdventureCareerMgr:GetCurProfChangeProfData(ProfID, AdvencedProf ~= nil) or {}
+		CfgData = _G.AdventureCareerMgr:GetQuestCfgData(StartQuestCfg.StartQuestID) or {}
+		CfgData1 = _G.AdventureCareerMgr:GetChapterCfgData(CfgData.ChapterID) or {}
 	end
 	local ModuleID = ProtoCommon.ModuleID
 	local MoudleOpen = _G.ModuleOpenMgr:CheckOpenState(ModuleID.ModuleIDAdventure)
@@ -349,7 +349,7 @@ end
 ----------------------------------------------右侧装备栏函数S-------------------------------
 function CurrrentEquipPageView:UpdateSlotByItem(Part, ResID, GID, bAddClick, bPlayAnim)
 	local Key = "EquipSlotItem"..Part
-	if self[Key] ~= nil then
+	if self[Key] ~= nil and self[Key]:IsValid() then
 		self[Key].ViewModel:SetPart(Part, ResID, GID)
 		--self[Key].ViewModel.bShowProgress = false
 		if bAddClick == true then
@@ -366,6 +366,10 @@ end
 function CurrrentEquipPageView:OnSlotClick(Part)
 	if self.SuperView then
 		self.SuperView:OnSlotClick(Part)
+		self.Btn_ShowAllModel:SetVisibility( _G.UE.ESlateVisibility.selfHitTestInvisible)
+		self:RegisterTimer(function()
+		self.Btn_ShowAllModel:SetVisibility( _G.UE.ESlateVisibility.Visible)
+	end, 0.3, 0, 1)
 	end
 end
 
@@ -381,8 +385,10 @@ function CurrrentEquipPageView:SetEquipmentDetailVsible(Visible)
 	local Animation = Visible and self.AnimListPanelIn or self.AnimListPanelOut
 	UIUtil.SetIsVisible(self.EquipmentDetail, Visible)
 	UIUtil.SetIsVisible(self.EquipmentListPage, Visible)
-	UIUtil.SetIsVisible(self.Btn_ShowAllModel, Visible, true)
 	UIUtil.SetIsVisible(self.SettingBtnsPanel, not Visible)
+	if not Visible then
+		self.Btn_ShowAllModel:SetVisibility( _G.UE.ESlateVisibility.Visible)
+	end
 end
 ----------------------------------------------右侧装备栏函数E-------------------------------
 function CurrrentEquipPageView:UpdateRedDot()

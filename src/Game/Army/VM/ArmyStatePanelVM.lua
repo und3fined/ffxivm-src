@@ -60,7 +60,11 @@ function ArmyStatePanelVM:UpdateGroupPermissionList()
     for _, GroupPermission in ipairs(self.GroupPermissionTable) do
         --GroupPermission.IsUnlock = GroupPermission.Level <= ArmyLevel
         local GroupPermissionData = {}
-        GroupPermissionData.IsUnlock = GroupPermission.Level <= ArmyLevel
+        if GroupPermission.Level and ArmyLevel then
+            GroupPermissionData.IsUnlock = GroupPermission.Level <= ArmyLevel
+        else
+            GroupPermissionData.IsUnlock = false
+        end
         GroupPermissionData.ID = GroupPermission.ID
         GroupPermissionData.Level = GroupPermission.Level
         GroupPermissionData.Permission = GroupPermission.Permission 

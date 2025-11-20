@@ -228,23 +228,27 @@ function PuzzleBurritosMoveBreadItemView:OnDragLeave(PointerEvent, Operation)
 end
 
 function PuzzleBurritosMoveBreadItemView:CheckIsRightLoc(PointerEvent, Operation)
+	local ParentView = self.ParentView
+	if not ParentView then
+		return
+	end
 	if self.bNeedType == 0 and not PuzzleMgr.bIsDebug then
 		UIUtil.CanvasSlotSetPosition(self, self.InitLocation)
-		self.ParentView:OnCheckPuzzleItemFinish(false)
+		ParentView:OnCheckPuzzleItemFinish(false)
 		return false
 	end
 	local TouchPos = _G.UE.UKismetInputLibrary.PointerEvent_GetScreenSpacePosition(PointerEvent) --UE.UWidgetLayoutLibrary.GetMousePositionOnViewport(_G.FWORLD())
 	local Size = UIUtil.GetLocalSize(self)
 	if PuzzleMgr.bIsDebug then						-- Debug模式
-		local SetPos = UIUtil.AbsoluteToLocal(self.ParentView.PanelMoveBread, TouchPos)
+		local SetPos = UIUtil.AbsoluteToLocal(ParentView.PanelMoveBread, TouchPos)
 		SetPos = UE.FVector2D(SetPos.X - Size.X / 2, SetPos.Y - Size.Y / 2)
 		UIUtil.CanvasSlotSetPosition(self, SetPos)
-		self.ParentView.PuzzleGM:UpdateSelectPuzzleItemData()
+		ParentView.PuzzleGM:UpdateSelectPuzzleItemData()
 		return
 	end
 	local bSuccess = false
 	FLOG_INFO("TouchPos.X = %s  TouchPos.Y = %s", TouchPos.X, TouchPos.Y)
-	local LocalPos = UIUtil.AbsoluteToLocal(self.ParentView.PanelYesBread, TouchPos)
+	local LocalPos = UIUtil.AbsoluteToLocal(ParentView.PanelYesBread, TouchPos)
 	FLOG_INFO("LocalPos.X = %s  LocalPos.Y = %s", LocalPos.X, LocalPos.Y)
 
 	local NeedLocalPos = UE.FVector2D(LocalPos.X - Size.X / 2, LocalPos.Y - Size.Y / 2)
@@ -265,7 +269,7 @@ function PuzzleBurritosMoveBreadItemView:CheckIsRightLoc(PointerEvent, Operation
 			UIUtil.SetIsVisible(self, true)
 			PuzzleMgr:ReCheckIsFinish()
 		end
-		self.ParentView:OnCheckPuzzleItemFinish(bSuccess)
+		ParentView:OnCheckPuzzleItemFinish(bSuccess)
 	else
 		PuzzleMgr:ReCheckIsFinish()
 	end

@@ -150,7 +150,7 @@ function ArmyItemTipsView:OnClickedDepositBtn()
 			---判断是否有可堆叠的空间
 			local NuFullItemNum = _G.ArmyMgr:GetGroupStoreItemNumberStacksByResID(self.ViewModel.Value.ResID, CurIndex)
 			if NuFullItemNum ~= 0 then
-				if self.ViewModel.Value.Num > 1 then
+				if self.ViewModel.Value.Num and self.ViewModel.Value.Num > 1 then
 					UIViewMgr:ShowView(UIViewID.ArmySelectQuantityWin, {Item = self.ViewModel.Value, DepotIndex = CurIndex, IsTake = false, NuFullItemNum = NuFullItemNum})
 				else
 					ArmyMgr:SendGroupStoreDepositItemAndCheck(CurIndex, self.ViewModel.Value.GID, self.ViewModel.Value.Num, self.ViewModel.Value.ResID)
@@ -160,7 +160,7 @@ function ArmyItemTipsView:OnClickedDepositBtn()
 			MsgTipsUtil.ShowTipsByID(145031)
 			end
 		else
-			if self.ViewModel.Value.Num > 1 then
+			if self.ViewModel.Value.Num and self.ViewModel.Value.Num > 1 then
 				UIViewMgr:ShowView(UIViewID.ArmySelectQuantityWin, {Item = self.ViewModel.Value, DepotIndex = CurIndex, IsTake = false})
 			else
 				ArmyMgr:SendGroupStoreDepositItemAndCheck(CurIndex, self.ViewModel.Value.GID, self.ViewModel.Value.Num, self.ViewModel.Value.ResID)

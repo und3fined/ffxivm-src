@@ -12,6 +12,7 @@ local RangeDataBand = require("Game/RangeCheckTrigger/RangeData/RangeDataBand")
 local RangeDataMysterMerchant = require("Game/RangeCheckTrigger/RangeData/RangeDataMysterMerchant")
 local RangeDataDiscoverNoteTutorial = require("Game/RangeCheckTrigger/RangeData/RangeDataDiscoverNoteTutorial")
 local RangeDataAetherCurrentTutorial = require("Game/RangeCheckTrigger/RangeData/RangeDataAetherCurrentTutorial")
+local RangeDataGoldSauserBlessMachineCheck = require("Game/RangeCheckTrigger/RangeData/RangeDataGoldSauserBlessMachineCheck")
 local TriggerGamePlayType = RangeCheckTriggerDefine.TriggerGamePlayType
 
 local RangeDataFactory = {}
@@ -31,6 +32,8 @@ function RangeDataFactory.CreateRangeDataInstance(GamePlayType)
 		return RangeDataDiscoverNoteTutorial.New()
 	elseif TriggerGamePlayType.AetherCurrentTutorial == GamePlayType then
 		return RangeDataAetherCurrentTutorial.New()
+	elseif TriggerGamePlayType.GoldSauserBlessMachineCheck == GamePlayType then
+		return RangeDataGoldSauserBlessMachineCheck.New()
 	else
 		return RangeDataBase.New()
 	end

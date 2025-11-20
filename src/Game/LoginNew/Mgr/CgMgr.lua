@@ -209,4 +209,10 @@ function CgMgr:SetAutoClear(bNewValue)
     end
 end
 
+function CgMgr:IsPlaying()
+    if self.MediaPlayerActor and CommonUtil.IsObjectValid(self.MediaPlayerActor) then
+        return self.MediaPlayerActor:IsPlaying()
+    end
+end
+
 return CgMgr

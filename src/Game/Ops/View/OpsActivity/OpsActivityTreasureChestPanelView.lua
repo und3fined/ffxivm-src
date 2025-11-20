@@ -279,7 +279,7 @@ function OpsActivityTreasureChestPanelView:ShowLotteryReward(MsgBody)
 	else
 		local function BtnLeftCB()
 			_G.SidePopUpMgr:Pause(SidePopUpDefine.Pause_Type.OpsActivityTreasureChest, false)
-			if USaveMgr.GetInt(SaveKey.OpsSkipAnimation, 0, true) <= 0 then
+			if _G.OpsActivityMgr:GetSkipAnimationState(self.ViewModel.ActivityID) == 0 then
 				self:PlayAnimation(self.AnimBack)
 			end
 			UIViewMgr:HideView(UIViewID.CommonRewardPanel)
@@ -304,7 +304,7 @@ function OpsActivityTreasureChestPanelView:ShowLotteryReward(MsgBody)
 		end
 	end
 	self.RewardParams = Params
-	if USaveMgr.GetInt(SaveKey.OpsSkipAnimation, 0, true) == self.ViewModel.ActivityID then
+	if _G.OpsActivityMgr:GetSkipAnimationState(self.ViewModel.ActivityID) == 1 then
 		UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
 	else
 		self.LotterySoundHandle = AudioUtil.LoadAndPlay2DSound(LotterySoundPath)
@@ -384,7 +384,7 @@ end
 
 function OpsActivityTreasureChestPanelView:OnCheckBoxClick(_, ButtonState)
 	local bChecked = UIUtil.IsToggleButtonChecked(ButtonState)
-	USaveMgr.SetInt(SaveKey.OpsSkipAnimation, bChecked and self.ViewModel.ActivityID or 0, true)
+	_G.OpsActivityMgr:UpdateSkipAnimationState(self.ViewModel.ActivityID, bChecked and 1 or 0)
 end
 
 function OpsActivityTreasureChestPanelView:OnClickRewardCheckBox(ButtonState)
@@ -411,7 +411,7 @@ function OpsActivityTreasureChestPanelView:UpdateLotteryPanelInfo()
 	for _, Node in ipairs(NodeList) do
 		local Extra = Node.Extra
 		local NodeCfg = ActivityNodeCfg:FindCfgByKey(Node.Head.NodeID)
-		if NodeCfg then
+		if NodeCfg and NodeCfg.NodeType then
 			if NodeCfg.NodeType == ProtoRes.Game.ActivityNodeType.ActivityNodeTypeExchange then
 				--已购次数
 				self.ViewModel.PurchaseNum = Extra.Progress.Value

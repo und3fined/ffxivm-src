@@ -58,6 +58,7 @@ end
 
 function TravelLogMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.PWorldFinished, self.OnGameEventPWorldFinished)
+    self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
 end
 
 function TravelLogMgr:OnGameEventPWorldFinished(PWorldResID)
@@ -70,6 +71,17 @@ function TravelLogMgr:OnGameEventPWorldFinished(PWorldResID)
         self:AddSubGenreRedDot(TravelLogCfgItem.JournaltGenreID)
         self:AddMainGenreRedDot(math.floor(TravelLogCfgItem.JournaltGenreID / 10000))
         self:ReportCollectFlow(TravelLogCfgItem)
+    end
+end
+
+function TravelLogMgr:OnGameEventPWorldMapEnter(Params)
+    if Params then
+        if not Params.bFromCutScene then
+            if self.IsPlaying then
+                self.IsPlaying = false
+                FLOG_ERROR("[TravelLog] IsPlaying==true when Enter Map")
+            end
+        end
     end
 end
 
@@ -125,7 +137,7 @@ function TravelLogMgr:AddFinishChapter(ChapterID)
 end
 
 ---播放新手动画
-function TravelLogMgr:PlayNewbieCutScene(SequenceIDList, CurrentIndex, Callback)
+function TravelLogMgr:PlayCutSceneList(SequenceIDList, CurrentIndex, Callback)
     if not self.CutSceneIDList then
         return
     end
@@ -182,6 +194,7 @@ function TravelLogMgr:RestoreMap()
                     else
                         _G.PWorldMgr:ChangeMapForCutScene(MapPath, true, UE.ELoadWorldReason.Normal, false, false)
                     end
+                    self:FinishStoryPlay()--这里再执行一次finish，天气切换一些逻辑放在finish处理
                 end
             end
         else
@@ -190,15 +203,31 @@ function TravelLogMgr:RestoreMap()
     end
 end
 
+function TravelLogMgr:FinishStoryPlay()
+    local StoryMgrInstance = UE.UStoryMgr:Get()
+    if StoryMgrInstance then
+        StoryMgrInstance:Finish() --这里再执行一次finish，天气切换一些逻辑放在finish处理
+    end
+end
+
 function TravelLogMgr:PlayNextCutScene()
-    _G.StoryMgr:ResetStatusAndCacheData()
+    local CurrSequencePlayer = StoryMgr.SequencePlayer
+    if CurrSequencePlayer then
+        if CurrSequencePlayer:IsSequenceStopedInException() then --异常,不再继续播放
+            self:FinishStoryPlay() --执行stoty完成
+            FLOG_INFO("[TravelLogMgr] PlayNextCutScene sequence stop in exception return")
+            return
+        end
+    end
+    StoryMgr:ResetStatusAndCacheData()
     if not self.CutSceneIDList then
         return
     end
-    self.CurrentPlayIndex = self.CurrentPlayIndex + 1
+
     if self.FinishCutSceneCallback then
         self.FinishCutSceneCallback(self.CurrentPlayIndex)
     end
+    self.CurrentPlayIndex = self.CurrentPlayIndex + 1
     if self.CurrentPlayIndex > #self.CutSceneIDList then
         local VisionMgrInstance = UE.UVisionMgr.Get()
         if VisionMgrInstance then
@@ -254,9 +283,9 @@ function TravelLogMgr:PlayFilmList(SequencePathList, TabIndex, ScrollOffset, Sel
 
     local FinishedCallback = function()
         if self.IsPlaying then
+            self.IsPlaying = false
             self:RestoreMap()
             TimerMgr:AddTimer(self, self.OnDelayFinishCallback, 0.1)
-            self.IsPlaying = false
         end
         _G.WorldMsgMgr:SetPlayLoadingScreen(false)
         --self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventEnterWorld)
@@ -266,14 +295,14 @@ function TravelLogMgr:PlayFilmList(SequencePathList, TabIndex, ScrollOffset, Sel
     end
     _G.WorldMsgMgr:SetPlayLoadingScreen(true)
     UIViewMgr:HideView(UIViewID.TravelLogPanel)
-    StoryMgr:PlayCutSceneSequenceByPathList(SequencePathList, FinishedCallback, CurrentIndex, StartPlayCallback)
     self.IsPlaying = true
+    StoryMgr:PlayCutSceneSequenceByPathList(SequencePathList, FinishedCallback, CurrentIndex, StartPlayCallback)
 end
 
 ---中断多段动画播放
 function TravelLogMgr:ExitPlay()
     local SequencePlayerVM = require("Game/Story/SequencePlayerVM")
-    StoryMgr:PauseSequence()
+    StoryMgr:PauseSequence(true)
 	local function LeftBtnCallback()
         StoryMgr:ContinueSequence()
         _G.UIViewMgr:HideView(UIViewID.EmotionMainPanel)

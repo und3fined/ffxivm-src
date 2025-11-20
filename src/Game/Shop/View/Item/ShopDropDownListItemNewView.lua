@@ -300,8 +300,10 @@ function ShopDropDownListItemNewView:UpdateSecondFilter(GoodsList)
 	local ScreenerData2 = ShopMgr:GetCond(self.ShopInfo, self.ScrId1, self.ScreenerListInfo2, GoodsList, self.Index1)
 	self.DropDownList2:UpdateItems(ScreenerData2)
 	local Data = {}
-	Data.Name = ScreenerData2[1].Name
-	self.ScreenerData2 = ScreenerData2
+	if ScreenerData2 and ScreenerData2[1] then
+		Data.Name = ScreenerData2[1].Name
+		self.ScreenerData2 = ScreenerData2
+	end
 	self.DropDownList2:SetSelectedIndex(1, Data)
 end
 

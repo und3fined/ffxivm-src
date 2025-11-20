@@ -16,7 +16,9 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 ---@field ImgFocus UFImage
 ---@field SwitcherIcon1 UFWidgetSwitcher
 ---@field SwitcherIcon2 UFWidgetSwitcher
+---@field SwitcherIcon3 UFWidgetSwitcher
 ---@field TextCity UFTextBlock
+---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MountSpeedListItemView = LuaClass(UIView, true)
 
@@ -25,7 +27,9 @@ function MountSpeedListItemView:Ctor()
 	--self.ImgFocus = nil
 	--self.SwitcherIcon1 = nil
 	--self.SwitcherIcon2 = nil
+	--self.SwitcherIcon3 = nil
 	--self.TextCity = nil
+	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -39,6 +43,8 @@ function MountSpeedListItemView:OnInit()
 		{ "MapName", UIBinderSetText.New(self, self.TextCity)},
 		{ "SpeedLevelOne", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon1) },
 		{ "SpeedLevelTwo", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon2) },
+		{ "SpeedLevelThere", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon3) },
+		{ "SpeedLevelThereVisible", UIBinderSetIsVisible.New(self, self.SwitcherIcon3) },
 		{ "ImgFocusVisible", UIBinderSetIsVisible.New(self, self.ImgFocus) },
 	}
 end

@@ -105,6 +105,9 @@ function NewBagMedicineSetWinView:OnShow()
 	BagMedicineSetWinVM:SetCurItemIndex(1)
 
 	self:SetCurItemInfo(BagMedicineSetWinVM:GetCurItem())
+
+	_G.EventMgr:SendEvent(EventID.ForceEndSimulatedTouchEndClick,{bSimulatedClick = true})
+	_G.EventMgr:SendCppEvent(EventID.ClearCombinationKeyState)
 end
 
 function NewBagMedicineSetWinView:OnHide()
@@ -115,6 +118,7 @@ function NewBagMedicineSetWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnSet.Button, self.OnClickedSetBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnReplace.Button, self.OnClickedSetBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnCancel.Button, self.OnClickedCancelBtn)
+	UIUtil.AddOnClickedEvent(self, self.BackpackEmpty.Btn, self.OnClickJumpMedicineShop)
 end
 
 function NewBagMedicineSetWinView:OnRegisterGameEvent()
@@ -126,6 +130,7 @@ function NewBagMedicineSetWinView:OnRegisterBinder()
 
 	self.Comm2FrameL:SetTitleText(LSTR(990087))
 	self.BackpackEmpty:SetTipsContent(LSTR(990088))
+	self.BackpackEmpty:SetBtnText(LSTR(990132))
 	self.BtnSet:SetButtonText(LSTR(990089))
 	self.BtnReplace:SetButtonText(LSTR(990090))
 	self.BtnCancel:SetButtonText(LSTR(990091))
@@ -218,6 +223,10 @@ function NewBagMedicineSetWinView:OnClickedCancelBtn()
 	self:SaveProfMedicineTable()
 
 	self:OnUpdateMedicineSetWin()
+end
+
+function NewBagMedicineSetWinView:OnClickJumpMedicineShop()
+	_G.ShopMgr:OpenShop(1005, 100502)
 end
 
 function NewBagMedicineSetWinView:SaveProfMedicineTable()

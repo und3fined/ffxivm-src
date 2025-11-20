@@ -202,6 +202,7 @@ function ArmySelectMainArmyPageView:OnShow()
 	self:OnFlagSelectChanged(self.FlagViewList.MiddleFlagView:GetFlagID())
 	if self.VM:GetIsPlayAnimReturn() then
 		self:PlayAnimation(self.AnimReturn)
+		self.IsStopAnimReturn = true
 		self.VM:SetIsPlayAnimReturn(false)
 	end
 
@@ -273,8 +274,18 @@ function ArmySelectMainArmyPageView:PlayFlagViewSwitchAnim(PlayIndex, OldIndex)
 		elseif OldIndex - PlayIndex == -1 or OldIndex - PlayIndex == 2 then
 			AnimName = string.format("AnimSelect%dStartAtRight", PlayIndex)
 		end
+		---AnimInFlag和AnimReturn播放结束的时候，有可能导致旋转动画播放出错，播放旋转动画前将其播到最后
+		if self.CurAnimIn then
+			self:PlayAnimToEnd(self.CurAnimIn)
+			self.CurAnimIn = nil
+		end
+		if self.IsStopAnimReturn then
+			self:PlayAnimToEnd(self.AnimReturn)
+			self.IsStopAnimReturn = false
+		end
 		if AnimName then
-			self:PlayAnimation(self[AnimName])
+			--self:PlayAnimation(self[AnimName])
+			self:PlayAnimationTimeRange(self[AnimName], 0, 1)
 			self.CurFlagAnim = self[AnimName]
 		end
 	end
@@ -288,17 +299,18 @@ end
 function ArmySelectMainArmyPageView:PlayAnimInFlag()
 	if self.VM then
 		local GrandCompanyID = self.VM:GetSelectedGrandCompanyID()
-		self:PlayAnimation(self[string.format("AnimInFlagID%d", GrandCompanyID)])
+		self.CurAnimIn = self[string.format("AnimInFlagID%d", GrandCompanyID)]
+		self:PlayAnimation(self.CurAnimIn)
 	end
 end
 
 function ArmySelectMainArmyPageView:OnAnimationFinished(Anim)
 	if self.SwitchAnimName and self[self.SwitchAnimName] == Anim then
-		if self.CurFlagAnim and self:IsAnimationPlaying(self.CurFlagAnim) then
-			self:StopAnimation(self.CurFlagAnim)
-			--self:PlayAnimation(self.CurFlagAnim)
-			--UIUtil.PlayAnimationTimePointPct(self, self.CurFlagAnim, 1, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, false)
-		end
+		-- if self.CurFlagAnim and self:IsAnimationPlaying(self.CurFlagAnim) then
+		-- 	self:StopAnimation(self.CurFlagAnim)
+		-- 	--self:PlayAnimation(self.CurFlagAnim)
+		-- 	--UIUtil.PlayAnimationTimePointPct(self, self.CurFlagAnim, 1, 1, _G.UE.EUMGSequencePlayMode.Forward, 1, false)
+		-- end
 		self:OpenEditPanel()
 	end
 end

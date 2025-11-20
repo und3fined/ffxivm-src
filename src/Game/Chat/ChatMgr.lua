@@ -33,6 +33,9 @@ local ChatGifCfg = require("TableCfg/ChatGifCfg")
 local SidebarMgr = require("Game/Sidebar/SidebarMgr")
 local SidebarDefine = require("Game/Sidebar/SidebarDefine")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local AudioUtil = require("Utils/AudioUtil")
+local EmotionCfg = require("TableCfg/EmotionCfg")
+local TeamHelper = require("Game/Team/TeamHelper")
 
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.CS_CHAT_CMD
@@ -59,10 +62,12 @@ local ChatParamsProtoName = "csproto.SimpleHref"
 local ChatMgr = LuaClass(MgrBase)
 
 function ChatMgr:OnInit()
+	FLOG_INFO("[ChatMgr:OnInit]")
 	self:Reset(true)
 end
 
 function ChatMgr:OnBegin()
+	self:InitEmotionStrMap()
 end
 
 function ChatMgr:OnEnd()
@@ -73,10 +78,12 @@ function ChatMgr:OnShutdown()
 end
 
 function ChatMgr:OnRegisterTimer()
+	FLOG_INFO("[ChatMgr:OnRegisterTimer]")
 	self:RegisterTimer(self.OnTimer, 0, 0.01, 0)
 end
 
 function ChatMgr:OnRegisterNetMsg()
+	FLOG_INFO("[ChatMgr:OnRegisterNetMsg]")
 	-- 默认丢弃
 	self:SetPioneerChannelNetPackDiscardFlag(true)
 
@@ -102,6 +109,7 @@ function ChatMgr:OnRegisterNetMsg()
 end
 
 function ChatMgr:OnRegisterGameEvent()
+	FLOG_INFO("[ChatMgr:OnRegisterGameEvent]")
 	self:RegisterGameEvent(EventID.ClientSetupPost, self.OnEventClientSetupPost)
 
     self:RegisterGameEvent(EventID.RoleLoginRes, 			self.OnGameEventLoginRes) 			-- 角色成功登录
@@ -116,23 +124,62 @@ function ChatMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.FriendRemoved, 			self.OnGameEventRemoveFriend)		-- 移除好友
 	self:RegisterGameEvent(EventID.TeamQueryFinish, 		self.OnGameEventTeamQueryFinish)	-- 队伍数据查询完成 
 	self:RegisterGameEvent(EventID.SceneTeamQueryFinish,	self.OnGameEventSceneTeamQueryFinish) -- 场景小队数据查询完成 
+	self:RegisterGameEvent(EventID.PWorldEnterNotify, 		self.OnGameEventPWorldEnterNotify)	-- 进入副本通知
+	self:RegisterGameEvent(EventID.PWorldTransBegin, 		self.OnGameEventPWorldTransBegin)	-- 传送开始
 
 	self:RegisterGameEvent(EventID.MapChanged, self.OnEventMapChanged)
     self:RegisterGameEvent(EventID.SidebarItemTimeOut, self.OnGameEventSidebarItemTimeOut) --侧边栏Item超时
     self:RegisterGameEvent(EventID.ChatOpenPrivateSidebarChanged, self.OnGameEventOpenPrivateSidebarChanged) -- 私聊侧边栏开关变化
+
+	self:RegisterGameEvent(EventID.PostEmotionEnd, self.OnPostEmotionEnd)
+	self:RegisterGameEvent(EventID.FriendSetNicknameSuc, self.OnGameEventFriendSetNickName)
+	self:RegisterGameEvent(EventID.FriendRemoved, self.OnGameEventFriendRemoved)
+end
+
+function ChatMgr:OnGameEventFriendRemoved(RoleIDs)
+	if RoleIDs == nil or #RoleIDs == 0 then
+		return
+	end
+
+	local VMList = ChatVM.PrivateItemVMList
+	for _, RoleID in ipairs(RoleIDs) do
+		local Item = VMList:Find(function(v) return v.RoleID == RoleID end)
+		local RVM = RoleInfoMgr:FindRoleVM(RoleID, true)
+		if Item and RVM then
+			Item:SetName(RVM.Name)
+		end
+	end
+	ChatVM:UpdateCurSelectedChannelItem()
+end
+
+function ChatMgr:OnGameEventFriendSetNickName(RoleID, Nickname)
+	if Nickname == "" or nil == Nickname then
+		return
+	end
+
+	local VMList = ChatVM.PrivateItemVMList
+	local Item = VMList:Find(function(v) return v.RoleID == RoleID end)
+	if Item then
+		Item:SetName(Nickname)
+	end
+	ChatVM:UpdateCurSelectedChannelItem()
 end
 
 function ChatMgr:OnEventClientSetupPost( EventParams )
 	if nil == EventParams then
+		FLOG_WARNING("[ChatMgr:OnEventClientSetupPost] EventParams is nil")
 		return
 	end
 
 	local IsSetRsp = EventParams.BoolParam1
     if IsSetRsp then
+		FLOG_WARNING("[ChatMgr:OnEventClientSetupPost] IsSetRsp")
         return
     end
 
     local SetupKey = EventParams.IntParam1
+	FLOG_INFO("[ChatMgr:OnEventClientSetupPost] SetupKey: %d", SetupKey)
+
     if SetupKey == ClientSetupID.ChatReadGifRedDotIDs then  -- 已读的Gif红点ID列表
         local Value = EventParams.StringParam1 or ""
         if not string.isnilorempty(Value) then
@@ -149,6 +196,8 @@ function ChatMgr:OnEventClientSetupPost( EventParams )
 end
 
 function ChatMgr:OnGameEventLoginRes()
+	FLOG_INFO("[ChatMgr:OnGameEventLoginRes] ")
+
 	-- 更新角色登录成功时间
 	ChatVM.RoleLoginTime = TimeUtil.GetServerTime()
 
@@ -168,12 +217,14 @@ function ChatMgr:OnGameEventLoginRes()
 end
 
 function ChatMgr:OnGameEventSidebarItemTimeOut(Type, TransData)
+	FLOG_INFO("[ChatMgr:OnGameEventSidebarItemTimeOut] ")
     if Type == SidebarType then 
 		SidebarMgr:RemoveSidebarItem(SidebarType)
     end
 end
 
 function ChatMgr:OnGameEventOpenPrivateSidebarChanged( )
+	FLOG_INFO("[ChatMgr:OnGameEventOpenPrivateSidebarChanged] ")
 	if not ChatSetting.IsOpenPrivateSidebar() then
 		ChatVM:ClearSidebarItem(true)
 	end
@@ -184,21 +235,61 @@ function ChatMgr:OnNetworkReconnected(Params)
         return
     end
 
+	FLOG_INFO("[ChatMgr:OnNetworkReconnected] ")
 	self:TryPullChatHistory(true)
 	self:SendQueryPioneerChannelInfo()
 end
 
 function ChatMgr:OnGameEventPWorldMapEnter()
+	FLOG_INFO("[ChatMgr:OnGameEventPWorldMapEnter] ")
+
+	local Mgr = TeamHelper.GetTeamMgr()
+	local CurChannel = ChatVM.CurChannel
+	local Channel = Mgr and Mgr.ChatChannelType or nil
+	if Mgr and (CurChannel == ChatChannel.Team or CurChannel == ChatChannel.SceneTeam) and Channel ~= nil then
+		local ChannelID = Mgr:GetTeamID()
+		if Channel ~= CurChannel or ChannelID ~= ChatVM.CurChannelID then
+			ChatVM:SetChannel(Channel, ChannelID)
+			self:OnTeamIDChanged(Mgr, Mgr:GetTeamID())
+			FLOG_INFO("ChatMgr switch team channel %s %s", Channel, ChannelID)
+		end
+	end
+
 	---更新队伍相关聊天数据
 	ChatVM:UpdateTeamChatData()
+
+	self:UpdateAreaChannel()
 end
 
 function ChatMgr:OnGameEventPWorldExit()
+	FLOG_INFO("[ChatMgr:OnGameEventPWorldExit] ")
 	--清空区域频道相关聊天信息
 	ChatVM:ClearChannelAllChatMsg(ChatChannel.Area, nil, false)
 end
 
+-- 进入副本通知事件处理（占位实现）
+function ChatMgr:OnGameEventPWorldEnterNotify()
+	self:UpdateAreaChannel()
+end
+
+-- 传送开始事件处理（占位实现）
+function ChatMgr:OnGameEventPWorldTransBegin()
+	self:UpdateAreaChannel()
+end
+
+function ChatMgr:UpdateAreaChannel()
+	local ChannelID = _G.PWorldMgr.BaseInfo and _G.PWorldMgr.BaseInfo.CurrPWorldInstID or nil
+	local ChannelVM = ChatVM:FindChannelVM(ChatChannel.Area)
+	if ChannelVM then
+		ChannelVM:SetAreaChannelID(ChannelID)
+	end
+	if ChatVM.CurChannel == ChatChannel.Area and ChannelID ~= ChatVM.CurChannelID then
+		ChatVM:SetChannel(ChatChannel.Area, ChannelID, true)
+	end
+end
+
 function ChatMgr:Reset(IsInit)
+	FLOG_INFO("[ChatMgr:Reset] ")
 	if IsInit then
 		ChatUtil.IsCheckPrivateChatDir = true 
 		ChatSetting.InitSetting()
@@ -231,6 +322,7 @@ function ChatMgr:Reset(IsInit)
 end
 
 function ChatMgr:OnTimer( )
+	--FLOG_INFO("[ChatMgr:OnTimer] ")
 	-- 私聊
 	if self.IsPrivateChatLoaded and self.IsSavePrivateChatMsg then
 		self.IsSavePrivateChatMsg = false
@@ -250,6 +342,7 @@ function ChatMgr:OnTimer( )
 end
 
 function ChatMgr:ProcessMsgsInternal()
+	FLOG_INFO("[ChatMgr:ProcessMsgsInternal] ")
     -- 批量提取
     local Batch = {}
 	local Buffer = self.MsgBuffer
@@ -270,12 +363,16 @@ function ChatMgr:ProcessMsgsInternal()
         -- 提交
         for _, v in ipairs(Groups) do
             ChatVM:AddChatMsgList(v.Channel, v.ChannelID, v.MsgList)
+			self:CheckSEAudio(v.Channel, v.MsgList)
+			self:CheckEmotionStr(v.MsgList)
         end
     end
 end
 
 --- 根据Channel、ChannelID进行连续分组
 function ChatMgr:GroupConsecutiveInternal(Batch)
+	FLOG_INFO("[ChatMgr:GroupConsecutiveInternal] ")
+
     local Ret = {}
     if #Batch == 0 then 
 		return Ret 
@@ -327,6 +424,7 @@ function ChatMgr:AddMsgListToBuffer(Channel, ChannelID, MsgList)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:AddMsgListToBuffer] ")
 	for _, v in ipairs(MsgList) do
         table.insert(Buffer, {
             Channel = Channel,
@@ -348,6 +446,7 @@ function ChatMgr:AddMsgToBuffer(Channel, ChannelID, Msg)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:AddMsgToBuffer] ")
 	table.insert(Buffer, {
 		Channel = Channel,
 		ChannelID = ChannelID,
@@ -357,10 +456,12 @@ end
 
 --- 设置先锋频道网络包丢弃标志
 function ChatMgr:SetPioneerChannelNetPackDiscardFlag(bDiscard)
+	FLOG_INFO("[ChatMgr:SetPioneerChannelNetPackDiscardFlag] bDiscard: %s", tostring(bDiscard))
 	GameNetworkMgr:SetMsgToDiscard(CS_CMD.CS_CMD_CHATC, SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_NOTIFY, bDiscard)
 end
 
 function ChatMgr:CheckAndSaveUnreadPrivateChatMsg()
+	FLOG_INFO("[ChatMgr:CheckAndSaveUnreadPrivateChatMsg] ")
 	for _, v in ipairs(ChatVM.ChannelVMList) do
 		if v:GetChannel() == ChatChannel.Person then
 			local NewMsgNum = v.NewMsgNum
@@ -372,6 +473,7 @@ function ChatMgr:CheckAndSaveUnreadPrivateChatMsg()
 end
 
 function ChatMgr:ActivateSavePrivateChatMsgMark(ChannelID)
+	FLOG_INFO("[ChatMgr:ActivateSavePrivateChatMsgMark] ChannelID: %d", ChannelID)
 	if nil == ChannelID or table.contain(self.WaitSavePrivateChannelIDs, ChannelID) then
 		return
 	end
@@ -382,16 +484,19 @@ function ChatMgr:ActivateSavePrivateChatMsgMark(ChannelID)
 end
 
 function ChatMgr:DeletePrivateChatMsgFile(ChannelIDs)
+	FLOG_INFO("[ChatMgr:DeletePrivateChatMsgFile] ")
 	for _, v in ipairs(ChannelIDs) do
 		ChatFileIO.DeletePrivateChat(v)
 	end
 end
 
 function ChatMgr:ActivateSavePrivateSessionsMark( )
+	FLOG_INFO("[ChatMgr:ActivateSavePrivateSessionsMark] ")
 	self.IsSavePrivateSessions = true
 end
 
 function ChatMgr:GetChannelHistoryMsgCfgNum(Key)
+	FLOG_INFO("[ChatMgr:GetChannelHistoryMsgCfgNum] Key: %d", Key)
 	local Data = GlobalCfg:FindValue(Key, "Value")
 	if nil == Data then 
 		return DefaultHistoryMsgNum
@@ -401,6 +506,7 @@ function ChatMgr:GetChannelHistoryMsgCfgNum(Key)
 end
 
 function ChatMgr:OnGameEventGroupListUpdate()
+	FLOG_INFO("[ChatMgr:OnGameEventGroupListUpdate] ")
 	ChatVM:UpdateGroupChannelItems()
 
 	self.IsInitGroup = true
@@ -412,15 +518,18 @@ function ChatMgr:OnGameEventGroupListUpdate()
 end
 
 function ChatMgr:OnGameEventGroupRename(LinkShellID)
+	FLOG_INFO("[ChatMgr:OnGameEventGroupRename] LinkShellID: %d", LinkShellID)
 	ChatVM:UpdateGroupChannelName(LinkShellID)
 end
 
 function ChatMgr:OnGameEventGroupDestory(LinkShellID)
+	FLOG_INFO("[ChatMgr:OnGameEventGroupDestory] LinkShellID: %d", LinkShellID)
 	-- 移除综合频道屏蔽通讯贝数据中玩家不在的通讯贝
 	ChatSetting.RemoveComprehensiveChannelBlockGroupIDs(LinkShellID)
 end
 
 function ChatMgr:OnGameEventSelfArmyIDUpdate()
+	FLOG_INFO("[ChatMgr:OnGameEventSelfArmyIDUpdate] ")
 	local ChannelArmy = ChatChannel.Army
 	if not ArmyMgr:IsInArmy() then -- 离开公会
 		local ChannelVM = ChatVM:FindChannelVM(ChannelArmy)
@@ -430,8 +539,9 @@ function ChatMgr:OnGameEventSelfArmyIDUpdate()
 	end
 
 	if ChatVM.CurChannel == ChannelArmy then
+		ChatVM.CurChannelID = ArmyMgr.SelfArmyID or 0
+		ChatVM:UpdateChatInfo()
 		ChatVM:ClearNewMsgTips()
-		ChatVM:UpdateChatBarVisible()
 		ChatVM:UpdateGoTo()
 	end
 
@@ -448,22 +558,26 @@ function ChatMgr:OnGameEventRemoveFriend(RoleIDs)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:OnGameEventRemoveFriend] ")
 	for _, v in ipairs(RoleIDs) do
 		self:UpdatePrivateChatSession(v, false)
 	end
 end
 
 function ChatMgr:OnGameEventTeamQueryFinish()
+	FLOG_INFO("[ChatMgr:OnGameEventTeamQueryFinish] ")
 	self.IsInitTeam = true 
 	self:TryPullChatHistory()
 end
 
 function ChatMgr:OnGameEventSceneTeamQueryFinish()
+	FLOG_INFO("[ChatMgr:OnGameEventSceneTeamQueryFinish] ")
 	self.IsInitSceneTeam = true 
 	self:TryPullChatHistory()
 end
 
 function ChatMgr:OnEventMapChanged()
+	FLOG_INFO("[ChatMgr:OnEventMapChanged] ")
 	local MapName = MapUtil.GetMapFullName()  
 	if string.isnilorempty(MapName) then
 		return
@@ -480,6 +594,7 @@ function ChatMgr:OnNetMsgChatMsgPush(MsgBody)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:OnNetMsgChatMsgPush] ")
 	_G.EventMgr:SendEvent(_G.EventID.ChatMsgPushed, table.clone(Rsp))
 
 	local ChannelInfo = Rsp.Channel or {}
@@ -522,10 +637,11 @@ end
 
 function ChatMgr:OnNetMsgChatMsgPull(MsgBody)
 	local Msg = MsgBody.Pull
-	if nil == Msg then
+	if nil == Msg or Msg.MsgList == nil then
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:OnNetMsgChatMsgPull] ")
 	local RoleIDList = {}
 
 	local MsgList = Msg.MsgList
@@ -557,6 +673,7 @@ function ChatMgr:OnNetMsgChatChannelHaveRead(MsgBody)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:OnNetMsgChatChannelHaveRead] ")
 	local MaxAckInfoMap = {}
 	local ReadList = Msg.ReadList
 
@@ -613,6 +730,7 @@ function ChatMgr:OnNetMsgSetChannelHaveRead(MsgBody)
 		return
 	end
 
+	FLOG_INFO("[ChatMgr:OnNetMsgSetChannelHaveRead] ")
 	for _, v in ipairs(Msg.SetSeqOk) do
 		local Channel = v.Channel
 		if Channel ~= nil and Channel.Type == ChatChannel.Person then 
@@ -623,6 +741,7 @@ end
 
 ---激活角色聊天频道 
 function ChatMgr:SendActiveRoleChannels(ChannelInfos)
+	FLOG_INFO("[ChatMgr:SendActiveRoleChannels] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_ACTIVE_ROLE
 
@@ -635,6 +754,7 @@ end
 
 -- 设置玩家已读信息 
 function ChatMgr:SendSetChatChannelHaveRead(ReadSeqList)
+	FLOG_INFO("[ChatMgr:SendSetChatChannelHaveRead] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_SET_CHANNEL_HAVE_READ
 
@@ -647,6 +767,7 @@ end
 
 -- 设置玩家-拒收非好友消息
 function ChatMgr:SendSetBlockStranger(IsBlock)
+	FLOG_INFO("[ChatMgr:SendSetBlockStranger] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_UPDATE_CLIENT_SETUP
 
@@ -659,6 +780,7 @@ end
 
 -- 获取玩家设置-拒收非好友消息状态
 function ChatMgr:SendGetBlockStranger()
+	FLOG_INFO("[ChatMgr:SendGetBlockStranger] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_GET_CLIENT_SETUP
 
@@ -670,6 +792,7 @@ end
 
 --- 获取新人频道参与者玩家
 function ChatMgr:SendQueryNewbieMembers()
+	FLOG_INFO("[ChatMgr:SendQueryNewbieMembers] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_QUERY_MEMBER
 
@@ -696,6 +819,7 @@ end
 
 --- 查询已解锁的Gifs
 function ChatMgr:SendQueryUnlockGifs()
+	FLOG_INFO("[ChatMgr:SendQueryUnlockGifs] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_QUERY_UNLOCK_GIF
 
@@ -707,6 +831,7 @@ end
 
 --- 查询先锋频道信息
 function ChatMgr:SendQueryPioneerChannelInfo()
+	FLOG_INFO("[ChatMgr:SendQueryPioneerChannelInfo] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_INFO
 
@@ -724,6 +849,7 @@ end
 
 --- 加入先锋频道
 function ChatMgr:SendJoinPioneerChannel()
+	FLOG_INFO("[ChatMgr:SendJoinPioneerChannel] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_JOIN
 
@@ -741,6 +867,7 @@ end
 
 --- 退出先锋频道
 function ChatMgr:SendQuitPioneerChannel()
+	FLOG_INFO("[ChatMgr:SendQuitPioneerChannel] ")
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_VANGUARD_QUIT
 
@@ -761,6 +888,7 @@ function ChatMgr:OnNetMsgChatMsgSeqNotify(MsgBody)
 	if nil == Msg then
 		return
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgChatMsgSeqNotify] ")
 
 	local NotifyList = Msg.NotifyList
 	local PullList = {}
@@ -786,6 +914,7 @@ function ChatMgr:OnNetMsgChatMsgDetailNotify(MsgBody)
 	if nil == Msg then
 		return
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgChatMsgDetailNotify] ")
 
 	local Callback = function(Params)
 		local Channel = Params.Channel.Type
@@ -810,6 +939,7 @@ function ChatMgr:OnNetMsgChatChannelUpdateNotify(MsgBody)
 	if nil == Msg then
 		return
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgChatChannelUpdateNotify] ")
 
 	local ChannelVM = ChatVM:FindChannelVM(Msg.Channel.Type)
 	if ChannelVM ~= nil then
@@ -821,6 +951,7 @@ function ChatMgr:OnNetMsgChatPrivateNtf(MsgBody)
 	if nil == MsgBody.PrivateChat or nil == MsgBody.PrivateChat.Msgs then
 		return
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgChatPrivateNtf] ")
 
 	local PullList = {}
 	local Data = MsgBody.PrivateChat.Msgs
@@ -857,6 +988,7 @@ function ChatMgr:OnNetMsgDeleteRoleMsg(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgDeleteRoleMsg] ")
 
 	local Rsp = MsgBody.DeleteRoleMsgRsp
 	if Rsp then 
@@ -870,6 +1002,7 @@ function ChatMgr:OnNetMsgGetClientSetup(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgGetClientSetup] ")
 
 	local Setup = (MsgBody.GetSetup or {}).Setup
 	if Setup then 
@@ -882,6 +1015,7 @@ function ChatMgr:OnNetMsgQueryMember(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgQueryMember] ")
 
     local ErrorCode = MsgBody.ErrorCode
 	if ErrorCode and ErrorCode > 0 then
@@ -905,6 +1039,7 @@ function ChatMgr:OnNetMsgQueryUnlockGifs(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgQueryUnlockGifs] ")
 
 	local QueryUnlockGif = MsgBody.QueryUnlockGif
 	if nil == QueryUnlockGif then
@@ -919,6 +1054,7 @@ function ChatMgr:OnNetMsgUnlockGifsNtf(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgUnlockGifsNtf] ")
 
 	local UnlockGif = MsgBody.UnlockGif
 	if nil == UnlockGif then
@@ -933,6 +1069,7 @@ function ChatMgr:OnNetMsgQueryPioneerChannelInfo(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgQueryPioneerChannelInfo] ")
 
 	local VanGuardInfo = MsgBody.VanGuardInfo
 	if nil == VanGuardInfo or nil == VanGuardInfo.Channel then
@@ -950,6 +1087,7 @@ function ChatMgr:OnNetMsgJoinPioneer(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgJoinPioneer] ")
 
 	local VanGuardJoin = MsgBody.VanGuardJoin
 	if nil == VanGuardJoin or nil == VanGuardJoin.Channel then
@@ -960,6 +1098,10 @@ function ChatMgr:OnNetMsgJoinPioneer(MsgBody)
 	if Channel.Type == ChatChannel.Pioneer and Channel.ChannelID == self:GetPioneerChannelID() then
 		ChatVM:UpdatePioneerChannelInfo(true, ChatVM.PioneerChannelCloseTime)
 	end
+
+	if ChatVM.IsChatMainPanelVisible then
+		ChatVM:UpdateCompSpeakChannelList()
+	end
 end
 
 --- 退出先锋频道
@@ -967,6 +1109,7 @@ function ChatMgr:OnNetMsgQuitPioneer(MsgBody)
 	if nil == MsgBody then 
 		return 
 	end
+	FLOG_INFO("[ChatMgr:OnNetMsgQuitPioneer] ")
 
 	local VanGuardQuit = MsgBody.VanGuardQuit
 	if nil == VanGuardQuit or nil == VanGuardQuit.Channel then
@@ -982,10 +1125,15 @@ function ChatMgr:OnNetMsgQuitPioneer(MsgBody)
 		ChatVM:ClearChannelAllChatMsg(ChatChannel.Pioneer, nil, false)
 		ChatVM:UpdatePioneerChannelInfo(false, ChatVM.PioneerChannelCloseTime)
 	end
+
+	if ChatVM.IsChatMainPanelVisible then
+		ChatVM:UpdateCompSpeakChannelList()
+	end
 end
 
 --- 先锋频道消息推送 先锋特殊命令字，包体内容和PULL包相同
 function ChatMgr:OnNetMsgPioneerChannelMsgNotify(MsgBody)
+	FLOG_INFO("[ChatMgr:OnNetMsgPioneerChannelMsgNotify] ")
 	self:OnNetMsgChatMsgPull(MsgBody)
 end
 
@@ -1004,6 +1152,7 @@ function ChatMgr:SendChatMsgPushMessage(ChannelType, ChannelID, Content, Facade,
 	if nil == ChannelType or nil == ChannelID then
 		return
 	end
+	FLOG_INFO("[ChatMgr:SendChatMsgPushMessage] ")
 
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_MSG_PUSH
@@ -1022,6 +1171,8 @@ function ChatMgr:SendChatMsgPushMessage(ChannelType, ChannelID, Content, Facade,
 
 	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 
+	ChatVM:UpdateChannelVMSendTimeCD(ChannelType, ChannelID)
+
 	-- 可能有任务需要检查聊天内容
 	EventMgr:SendEvent(EventID.OnSendChat, ChannelType, Content)
 end
@@ -1032,6 +1183,7 @@ function ChatMgr:SendChatMsgPullMessage(PullList)
 	if nil == PullList or #PullList <= 0 then
 		return
 	end
+	FLOG_INFO("[ChatMgr:SendChatMsgPullMessage] ")
 
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_MSG_PULL
@@ -1049,6 +1201,7 @@ function ChatMgr:SendChatMsgGetChannelRead(ChannelList)
 	if nil == ChannelList or #ChannelList <= 0 then
 		return
 	end
+	FLOG_INFO("[ChatMgr:SendChatMsgGetChannelRead] ")
 
 	local MsgID = CS_CMD.CS_CMD_CHATC
 	local SubMsgID = SUB_MSG_ID.CS_CHAT_CMD_CHANNEL_HAVE_READ
@@ -1061,6 +1214,7 @@ function ChatMgr:SendChatMsgGetChannelRead(ChannelList)
 end
 
 function ChatMgr:TryPullChatHistory(bForcePull)
+	FLOG_INFO("[ChatMgr:TryPullChatHistory] ")
 	if not bForcePull then
 		if self.IsPullChatHistory then
 			return
@@ -1111,12 +1265,16 @@ end
 
 ---DecodeChatParams
 ---@param Buffer string
----@return Buffer(Buffer不为nil), string（Buffer为nil)
+---@return any
 function ChatMgr:DecodeChatParams(Buffer)
-	return ProtoBuff:Decode(ChatParamsProtoName, Buffer)
+	local ok, data = pcall(ProtoBuff.Decode, ProtoBuff, ChatParamsProtoName, Buffer)
+	if ok then
+		return data
+	end
 end
 
 function ChatMgr:SetPrivateChatHaveRead(ChannelID, MsgID)
+	FLOG_INFO("[ChatMgr:SetPrivateChatHaveRead] ")
 	if nil == ChannelID or MsgID <= 0 then
 		return
 	end
@@ -1133,6 +1291,7 @@ function ChatMgr:SetPrivateChatHaveRead(ChannelID, MsgID)
 end
 
 function ChatMgr:LoadPrivateChatLogs()
+	FLOG_INFO("[ChatMgr:LoadPrivateChatLogs] ")
 	if self.IsPrivateChatLoaded then
 		return
 	end
@@ -1143,6 +1302,7 @@ function ChatMgr:LoadPrivateChatLogs()
 end
 
 function ChatMgr:SavePrivateChatLogs()
+	FLOG_INFO("[ChatMgr:SavePrivateChatLogs] ")
 	local Channel = ChatChannel.Person 
 
 	for _, v in ipairs(self.WaitSavePrivateChannelIDs) do
@@ -1156,6 +1316,7 @@ function ChatMgr:SavePrivateChatLogs()
 end
 
 function ChatMgr:GetHistoryMsgNum(Channel)
+	FLOG_INFO("[ChatMgr:GetHistoryMsgNum] ")
 	if Channel == ChatChannel.Newbie then -- 新人频道
 		return self.HistoryMsgNumNewbie
 
@@ -1168,6 +1329,7 @@ function ChatMgr:GetHistoryMsgNum(Channel)
 end
 
 function ChatMgr:LoadPrivateSessions()
+	FLOG_INFO("[ChatMgr:LoadPrivateSessions] ")
 	if self.IsPrivateSessionsLoaded then
 		return
 	end
@@ -1178,16 +1340,18 @@ function ChatMgr:LoadPrivateSessions()
 end
 
 function ChatMgr:SavePrivateSessions()
+	FLOG_INFO("[ChatMgr:SavePrivateSessions] ")
 	ChatFileIO.SavePrivateSessions()
 end
 
 function ChatMgr:GetMsgSortID()
-	self.MsgSortID = self.MsgSortID + 1
+	self.MsgSortID = (self.MsgSortID or 0) + 1
 	return self.MsgSortID
 end
 
 --- 清除公共频道离线小红点提示
 function ChatMgr:TryCleanPublicOfflineRedDotTips()
+	FLOG_INFO("[ChatMgr:TryCleanPublicOfflineRedDotTips] ")
 	if self.IsCleanedPublicOfflineRedDot then
 		return
 	end
@@ -1200,6 +1364,7 @@ function ChatMgr:AddMsgInternal(Channel, ChannelID, Content, ParamList, MsgType,
 	if string.isnilorempty(Content) then
 		return
 	end
+	FLOG_INFO("[ChatMgr:AddMsgInternal] ")
 
 	Sender = Sender or 0
 
@@ -1236,6 +1401,7 @@ end
 ---@param Mgr ATeamMgr
 ---@param ID  number @note may nil
 function ChatMgr:OnTeamIDChanged(Mgr, ID)
+	FLOG_INFO("[ChatMgr:OnTeamIDChanged] ")
 	local Channel = Mgr.ChatChannelType
 	if nil == Channel then
 		return
@@ -1246,8 +1412,9 @@ function ChatMgr:OnTeamIDChanged(Mgr, ID)
 	end
 
 	if ChatVM.CurChannel == Channel then
+		ChatVM.CurChannelID = ID 
+		ChatVM:UpdateChatInfo()
 		ChatVM:ClearNewMsgTips()
-		ChatVM:UpdateChatBarVisible()
 		ChatVM:UpdateGoTo()
 	end
 
@@ -1278,6 +1445,7 @@ end
 ---@param CurOpenViewID number @打开聊天的界面的界面ID，用于聊天跳转隐藏
 ---@param IsOpenEmptyClick number @是否允许点击下面界面，除主界面外应该都不行
 function ChatMgr:ShowChatView(Channel, ChannelID, Source, CurOpenViewID, IsOpenEmptyClick)
+	FLOG_INFO("[ChatMgr:ShowChatView] ")
 	if Channel == ChatChannel.Team and _G.PWorldMgr:CurrIsInDungeon() then
 		Channel = ChatChannel.SceneTeam
 		ChannelID = nil
@@ -1293,12 +1461,14 @@ end
 ---@param RoleID number @角色ID 
 ---@param CreateIfNoSession boolean @如果没有指定会话，是否创建新会话，默认true
 function ChatMgr:UpdatePrivateChatSession(RoleID, CreateIfNoSession)
+	FLOG_INFO("[ChatMgr:UpdatePrivateChatSession] ")
 	ChatVM:UpdatePrivateItem(RoleID, CreateIfNoSession ~= false)
 end
 
 ---跳转到指定聊天窗口（玩家）
 ---@param RoleID 角色ID 
 function ChatMgr:GoToPlayerChatView(RoleID)
+	FLOG_INFO("[ChatMgr:GoToPlayerChatView] ")
 	if nil == RoleID or MajorUtil.IsMajorByRoleID(RoleID) then
 		return
 	end
@@ -1320,6 +1490,7 @@ end
 ---@param Source ChatDefine.OpenSource @来源，没特殊需求可不传
 ---@param CurOpenViewID number @打开聊天的界面的界面ID，用于聊天跳转隐藏
 function ChatMgr:GoToGroupChatView(GroupID, Source, CurOpenViewID)
+	FLOG_INFO("[ChatMgr:GoToGroupChatView] ")
 	if nil == GroupID then
 		return
 	end
@@ -1339,6 +1510,7 @@ end
 ---@param Num 物品数量 
 ---@param GID 物品GID
 function ChatMgr:ShowGetGoodsTipsInSystemChannel(ResID, Num, GID)
+	FLOG_INFO("[ChatMgr:ShowGetGoodsTipsInSystemChannel] ")
 	local GoodsDesc = ChatUtil.GetGoodsChatDesc(ResID)
 	if string.isnilorempty(GoodsDesc) then
 		return
@@ -1357,6 +1529,7 @@ end
 ---@param ResID 物品ResID
 ---@param GID 物品GID
 function ChatMgr:ShowUseItemInSysChatMsgBattle(GID, ResID)
+	FLOG_INFO("[ChatMgr:ShowUseItemInSysChatMsgBattle] ")
 	if nil == GID or nil == ResID then
 		return
 	end
@@ -1376,6 +1549,7 @@ end
 ---@param ChannelTagVisible boolean @频道标签是否可见，默认可见
 ---@param IsCenterTextTips boolean @是否为显示在中间位置的文本提示
 function ChatMgr:AddPioneerChatMsg(Content, Sender, ChannelTagVisible, IsCenterTextTips)
+	FLOG_INFO("[ChatMgr:AddPioneerChatMsg] ")
 	local MsgType = IsCenterTextTips and ChatMsgType.TextTipsCenter or nil
 	self:AddMsgInternal(ChatChannel.Pioneer, nil, Content, nil, MsgType, Sender, ChannelTagVisible)
 end
@@ -1383,12 +1557,14 @@ end
 ---在系统频道插入一条消息
 ---@param Content string @消息内容 
 function ChatMgr:AddSysChatMsg(Content)
+	FLOG_INFO("[ChatMgr:AddSysChatMsg] ")
 	self:AddMsgInternal(ChatChannel.System, nil, Content)
 end
 
 ---在系统频道插入战斗信息
 ---@param Content string @消息内容 
 function ChatMgr:AddSysChatMsgBattle(Content)
+	FLOG_INFO("[ChatMgr:AddSysChatMsgBattle] ")
 	--local _ <close> = CommonUtil.MakeProfileTag("AddSysChatMsgBattle")
 	self:AddMsgInternal(ChatChannel.System, nil, Content, nil, ChatMsgType.SystemBattle)
 end
@@ -1396,6 +1572,7 @@ end
 ---在系统频道插入剧情信息
 ---@param Content string @消息内容 
 function ChatMgr:AddSysChatMsgStory(Content)
+	FLOG_INFO("[ChatMgr:AddSysChatMsgStory] ")
 	self:AddMsgInternal(ChatChannel.System, nil, Content, nil, ChatMsgType.SystemStory, nil, false)
 end
 
@@ -1405,6 +1582,7 @@ end
 ---@param Content string @文本内容
 ---@param Type ChatDefine.SysMsgType @系统消息类型, 默认系统通知消息Notice
 function ChatMgr:AddSysChatMsgGoodsTips(ResID, GID, Content, Type)
+	FLOG_INFO("[ChatMgr:AddSysChatMsgGoodsTips] ")
 	--local _ <close> = CommonUtil.MakeProfileTag("AddSysChatMsgGoodsTips")
 	local ItemHref = {}
 	ItemHref.GID 	= GID 
@@ -1435,6 +1613,7 @@ end
 ---@param QuestID number
 ---@param Cfg QuestFaultTolerantCfg
 function ChatMgr:AddQuestMsg(NeedNames, TargetName, MapID, QuestID, Cfg)
+	FLOG_INFO("[ChatMgr:AddQuestMsg] ")
 	local Href = {}
 	Href.MapID 	= MapID
 	Href.QuestID	= QuestID
@@ -1508,6 +1687,7 @@ end
 ---@param Sender number @发送者RoleID，默认为0（值为0时，本消息设置为本频道提示消息）
 ---@param IsCenterTextTips boolean @是否为显示在中间位置的文本提示
 function ChatMgr:AddTeamChatMsg(Content, TeamID, Sender, IsCenterTextTips)
+	FLOG_INFO("[ChatMgr:AddTeamChatMsg] ")
 	local MsgType = IsCenterTextTips and ChatMsgType.TextTipsCenter or nil
 	self:AddMsgInternal(ChatChannel.Team, TeamID, Content, nil, MsgType, Sender)
 end
@@ -1517,6 +1697,7 @@ function ChatMgr:AddTeamTreasureMapChatMsg(TeamID, Sender,TreasureMap)
 	if TreasureMap == nil then
 		return
 	end
+	FLOG_INFO("[ChatMgr:AddTeamTreasureMapChatMsg] ")
     local Num = 0
     local ParamList = {}
 
@@ -1561,6 +1742,7 @@ end
 ---@param ChannelTagVisible boolean @频道标签是否可见，默认可见
 ---@param IsCenterTextTips boolean @是否为显示在中间位置的文本提示
 function ChatMgr:AddArmyChatMsg(Content, Sender, ChannelTagVisible, IsCenterTextTips)
+	FLOG_INFO("[ChatMgr:AddArmyChatMsg] ")
 	if ArmyMgr:IsInArmy() then
 		local ArmyID = ArmyMgr.SelfArmyID
 		if ArmyID and ArmyID > 0 then
@@ -1574,6 +1756,7 @@ end
 ---@param Content string @消息内容 
 ---@return boolean @是否发送成功
 function ChatMgr:SendArmyChannelMsg(Content)
+	FLOG_INFO("[ChatMgr:SendArmyChannelMsg] ")
 	if string.isnilorempty(Content) then
 		return false
 	end
@@ -1582,12 +1765,12 @@ function ChatMgr:SendArmyChannelMsg(Content)
 		return false
 	end
 
-	if not ChatVM:CheckSendTimeCD() then
+	local ChannelVM = ChatVM:FindChannelVM(ChatChannel.Army)
+	if nil == ChannelVM then
 		return false
 	end
 
-	local ChannelVM = ChatVM:FindChannelVM(ChatChannel.Army)
-	if nil == ChannelVM then
+	if not ChatVM:CheckSendTimeCD(ChannelVM) then
 		return false
 	end
 
@@ -1603,12 +1786,14 @@ end
 ---@param MsgType ChatDefine.ChatMsgType @消息类型，默认为ChatMsgType.Msg
 ---@param Sender number @发送者RoleID，默认为0（值为0时，本消息设置为本频道提示消息）
 function ChatMgr:AddNearbyChatMsg(Content, MsgType, Sender)
+	FLOG_INFO("[ChatMgr:AddNearbyChatMsg] ")
 	self:AddMsgInternal(ChatChannel.Nearby, nil, Content, nil, MsgType, Sender)
 end
 
 --- 在附近频道插入一条情感动作提示消息
 --- @param Content string @消息内容 
 function ChatMgr:AddEmotionTipsMsgInNearbyChannel(Content)
+	FLOG_INFO("[ChatMgr:AddEmotionTipsMsgInNearbyChannel] ")
 	self:AddNearbyChatMsg(Content, ChatMsgType.EmotionTips)
 end
 
@@ -1619,14 +1804,16 @@ end
 ---@param ChannelTagVisible boolean @频道标签是否可见，默认不可见
 ---@param ComprehensiveInvisible boolean @频道标签是否可见，默认不可见
 function ChatMgr:AddAreaChatMsg(Content, MsgType, Sender, ChannelTagVisible)
+	FLOG_INFO("[ChatMgr:AddAreaChatMsg] ")
 	self:AddMsgInternal(ChatChannel.Area, nil, Content, nil, MsgType, Sender, ChannelTagVisible)
 end
 
 --- 添加超链接 -- 位置
 ---@param MapID number @地图ID 
 ---@param Position table @位置坐标信息，{ X = ..., Y = ... }
-function ChatMgr:AddLocationHref(MapID, Position)
-	EventMgr:SendEvent(EventID.ChatHyperLinkAddLocation, MapID, Position)
+---@param UIMapID number @UI地图ID
+function ChatMgr:AddLocationHref(MapID, Position, UIMapID)
+	EventMgr:SendEvent(EventID.ChatHyperLinkAddLocation, MapID, Position, UIMapID)
 end
 
 --- 从新人频道中移出玩家
@@ -1636,6 +1823,7 @@ end
 ---@param PlayerName string @玩家名
 ---@param Remark string @移除评述（原因）
 function ChatMgr:RemovePlayerFromNewbieChannel(RoleID, Identify, OnlineStatusCustomID, PlayerName, Remark)
+	FLOG_INFO("[ChatMgr:RemovePlayerFromNewbieChannel] ")
 	if _G.UIViewMgr:IsViewVisible(_G.UIViewID.ChatNewbieMemberPanel) then
 		ChatVM:RemoveNewbieMember(RoleID)
 	end
@@ -1645,6 +1833,7 @@ end
 
 --- 发送把玩家从新人频道移除公告消息（超链接形式）
 function ChatMgr:SendRemovePlayerFromNewbieChannelNotice(Identify, OnlineStatusCustomID, PlayerName, Remark)
+	FLOG_INFO("[ChatMgr:SendRemovePlayerFromNewbieChannelNotice] ")
 	if nil == Identify or nil == OnlineStatusCustomID then
 		FLOG_ERROR("ChatMgr:SendNoticeRemovePlayerFromNewbieChannel, params error")
 		return
@@ -1681,30 +1870,34 @@ end
 ---发送Gif表情 (超链接形式)
 ---@param ID number @Gif表情ID 
 function ChatMgr:SendGif(ID)
-	if nil == ID or not ChatVM:CheckSendTimeCD() then
+	FLOG_INFO("[ChatMgr:SendGif] ")
+	if nil == ID then
 		return false
 	end
-
-	local Href = {ID = ID}
-	local ExtraParams = { }
-	ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_GIF
-	ExtraParams.Direct 	= true
-	ExtraParams.Param 	= self:EncodeChatParams({Gif = Href})
 
 	local Channel, ChannelID = ChatVM:GetSendMsgChannelAndChannelID()
 	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID)
 	if ChannelVM then
+		if not ChatVM:CheckSendTimeCD(ChannelVM) then
+			return false
+		end
+
+		local Href = {ID = ID}
+		local ExtraParams = { }
+		ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_GIF
+		ExtraParams.Direct 	= true
+		ExtraParams.Param 	= self:EncodeChatParams({Gif = Href})
+
 		local Content = string.format("#GIF_%s", ID)
 		self:SendChatMsgPushMessage(ChannelVM:GetChannel(), ChannelVM:GetChannelID(), Content, 0, table.pack(ExtraParams))
 	end
-
-	ChatVM:UpdateSendTimeCD(Channel, ChannelID)
 
 	return true
 end
 
 --- 清空新人频道聊天消息
 function ChatMgr:ClearNewbieChannelMsg()
+	FLOG_INFO("[ChatMgr:ClearNewbieChannelMsg] ")
 	ChatVM:ClearChannelAllChatMsg(ChatChannel.Newbie, nil, false)
 end
 
@@ -1715,43 +1908,38 @@ end
 ---@param IconIDs table @成员图标ID列表
 ---@param LocList table @各位置人员情况列表（0，未招募到玩家; 1，已招募到玩家）
 ---@param TaskLimit Team.TeamRecruit.TASK_LIMIT @任务设置（场景模式）
----@param RoleID Number @玩家RoleID，默认为nil，在Channel为ChatChannel.Person时，会发送私聊消息给指定玩家
----@return boolean, number @是否分享成功，剩余冷却时间
-function ChatMgr:ShareTeamRecruit(Channel, ID, ResID, IconIDs, LocList, TaskLimit, RoleID)
+---@param ChannelID Number @频道子ID，nil，在Channel为ChatChannel.Person时，会发送私聊消息给指定玩家
+---@return boolean  @是否分享成功
+function ChatMgr:ShareTeamRecruit(Channel, ID, ResID, IconIDs, LocList, TaskLimit, ChannelID)
 	if nil == Channel or nil == ID  or nil == ResID or nil == IconIDs or table.empty(IconIDs) or nil == LocList or table.empty(LocList) or nil == TaskLimit then
 		FLOG_ERROR("ChatMgr:ShareTeamRecruit, params error")
 		return false
 	end
 
-	if not self:IsInChannel(Channel) then
+	if not self:IsInChannel(Channel, ChannelID) then
 		return false
 	end
-
-	-- 发送CD
-	local Time = ChatVM:GetSendCDRemainTime()
-	if Time > 0 then
-		Time = math.ceil(Time / 1000) 
-		return false, Time
-	end
-
-	local Href = { ID = ID, ResID = ResID, IconIDs = IconIDs, LocList = LocList, TaskLimit = TaskLimit}
-	local ExtraParams = { }
-	ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT
-	ExtraParams.Direct 	= true
-	ExtraParams.Param 	= self:EncodeChatParams({TeamRecruit = Href})
-
-	local ChannelID = nil
-	if Channel == ChatChannel.Person and RoleID and RoleID > 0 then
-		ChannelID = RoleID
-	end
+	FLOG_INFO("[ChatMgr:ShareTeamRecruit] ")
 
 	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID, true)
 	if ChannelVM then
+		-- 发送CD
+		local CDTime = ChatVM:GetSendCDRemainTime(ChannelVM)
+		if CDTime > 0 then
+			CDTime = math.ceil(CDTime / 1000) 
+			MsgTipsUtil.ShowTips(string.sformat(LSTR(1310018), CDTime))
+			return false
+		end
+
+		local Href = { ID = ID, ResID = ResID, IconIDs = IconIDs, LocList = LocList, TaskLimit = TaskLimit}
+		local ExtraParams = { }
+		ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT
+		ExtraParams.Direct 	= true
+		ExtraParams.Param 	= self:EncodeChatParams({TeamRecruit = Href})
+
 		local Content = self.MakeRecruitShareContent(ID) 
 		self:SendChatMsgPushMessage(ChannelVM:GetChannel(), ChannelVM:GetChannelID(), Content, 0, table.pack(ExtraParams))
 	end
-
-	ChatVM:UpdateSendTimeCD(Channel)
 
 	return true
 end
@@ -1773,13 +1961,7 @@ function ChatMgr:ShareTask(Channel, ID)
 	if not self:IsInChannel(Channel) then
 		return false
 	end
-
-	-- 发送CD
-	local Time = ChatVM:GetSendCDRemainTime()
-	if Time > 0 then
-		Time = math.ceil(Time / 1000) 
-		return false, Time
-	end
+	FLOG_INFO("[ChatMgr:ShareTask] ")
 
 	local ExtraParams = { }
 	ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TASK
@@ -1788,11 +1970,16 @@ function ChatMgr:ShareTask(Channel, ID)
 
 	local ChannelVM = ChatVM:FindChannelVM(Channel)
 	if ChannelVM then
+		-- 发送CD
+		local CDTime = ChatVM:GetSendCDRemainTime(ChannelVM)
+		if CDTime > 0 then
+			CDTime = math.ceil(CDTime / 1000) 
+			return false, CDTime
+		end
+
 		local Content = "TASK_SHARE" .. ID
 		self:SendChatMsgPushMessage(ChannelVM:GetChannel(), ChannelVM:GetChannelID(), Content, 0, table.pack(ExtraParams))
 	end
-
-	ChatVM:UpdateSendTimeCD(Channel)
 
 	return true
 end
@@ -1805,6 +1992,7 @@ function ChatMgr:ShareAchievement(ID, Content)
 		FLOG_ERROR("ChatMgr:ShareAchievement, params error")
 		return
 	end
+	FLOG_INFO("[ChatMgr:ShareAchievement] ")
 
 	local ItemHref = {}
 	ItemHref.ID = ID 
@@ -1821,6 +2009,7 @@ end
 --- 道具ID对应的Gif表情是否解锁 
 ---@param ItemID number @道具ID
 function ChatMgr:IsUnlockGifByItemID(ItemID)
+	FLOG_INFO("[ChatMgr:IsUnlockGifByItemID] ")
     if nil == ItemID or ItemID <= 0 then
         return false
     end
@@ -1848,6 +2037,257 @@ end
 --- 是否正在录音语音
 function ChatMgr:IsRecordingVoice()
 	return self.IsRecording
+end
+
+--- 鱼类分享
+---@param Channel ChatDefine.ChatChannel @渠道类型
+---@param ID number @鱼编号ID 
+---@param Size number @鱼大小
+---@param LocationType number @钓场类型
+---@param Time number @钓到鱼的时间
+---@param Ranking float @历史最高排名
+---@param ChannelID Number @频道子ID，默认为nil，，在Channel为ChatChannel.Person时，会发送私聊消息给指定玩家
+---@return boolean  @是否分享成功
+function ChatMgr:ShareFish(Channel, ID, Size, LocationType, Time, Ranking, ChannelID)
+	if nil == Channel or nil == ID  or nil == Size or nil == LocationType or nil == Time or nil == Ranking then
+		FLOG_ERROR("ChatMgr:ShareFish, params error")
+		return false
+	end
+
+	if not self:IsInChannel(Channel, ChannelID) then
+		return false
+	end
+	FLOG_INFO("[ChatMgr:ShareFish] ")
+
+	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID, true)
+	if ChannelVM then
+		-- 发送CD
+		local CDTime = ChatVM:GetSendCDRemainTime(ChannelVM)
+		if CDTime > 0 then
+			CDTime = math.ceil(CDTime / 1000) 
+			MsgTipsUtil.ShowTips(string.sformat(LSTR(1310018), CDTime))--分享冷却中，请于%d秒后重试
+			return false 
+		end
+
+		local Href = { ID = ID, Size = Size, LocationType = LocationType, Time = Time, Ranking = Ranking, RoleID = MajorUtil.GetMajorRoleID() }
+		local ExtraParams = { }
+		ExtraParams.Type 	= PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH
+		ExtraParams.Direct 	= true
+		ExtraParams.Param 	= self:EncodeChatParams({Fish = Href})
+
+		local Content = self.MakeFishShareContent(ID) 
+		self:SendChatMsgPushMessage(ChannelVM:GetChannel(), ChannelVM:GetChannelID(), Content, 0, table.pack(ExtraParams))
+	end
+
+	return true
+end
+
+function ChatMgr.MakeFishShareContent(ID)
+	return ChatMacros.FishShare .. tostring(ID)  
+end
+
+function ChatMgr:InitEmotionStrMap()
+	FLOG_INFO("[ChatMgr:InitEmotionStrMap] ")
+	self.EmotionData = {}
+	local EmotionDataTmp = self.EmotionData
+
+	local Count = 0
+
+	local EmotionDataCfg = EmotionCfg:FindAllCfg()
+	if not next(EmotionDataCfg) then
+		FLOG_ERROR("[ChatMgr:InitEmotionStrMap] EmotionDataCfg is nil")
+		return
+	end
+
+	for _, v in ipairs(EmotionDataCfg) do
+		if not string.isnilorempty(v.EmotionName) and v.ID then
+			EmotionDataTmp["/" .. v.EmotionName] = v.ID
+			Count = Count + 1
+			FLOG_INFO("[ChatMgr:InitEmotion] +++ [/%s]=[%d]", v.EmotionName, v.ID)
+		end
+	end
+	FLOG_INFO("[ChatMgr:InitEmotionStrMap] Initialized Count: %d", Count)
+end
+
+function ChatMgr:CheckEmotionStr(ChatMsgList)
+	if not ChatMsgList or type(ChatMsgList) ~= "table" then
+		FLOG_WARNING("[ChatMgr:CheckEmotion] Invalid ChatMsgList")
+		return
+	end
+
+	local EMOTION_PATTERN = "/[^%s%p]+"
+
+	for _, v in ipairs(ChatMsgList) do
+		if not v or not v.Data then
+			FLOG_WARNING("[ChatMgr:CheckEmotion] Invalid message data structure")
+			goto continue
+		end
+
+		local RoleID = v.Sender
+		if RoleID and RoleID > 0 and not MajorUtil.IsMajorByRoleID(RoleID) then
+			FLOG_WARNING("[ChatMgr:CheckEmotion] Not sender")
+			goto continue
+		end
+
+		local Content = v.Data.Content
+		if not Content or type(Content) ~= "string" then
+			goto continue
+		end
+
+		-- 检查是否包含"/"字符
+		--local match = string.match(Content, EMOTION_PATTERN)
+		--if match then
+		--	FLOG_INFO("[ChatMgr:CheckEmotion] Checking : %s ", Content)
+		--	for EmotionName, EmotionID in pairs(self.EmotionData) do
+		--		if string.find(Content, EmotionName) then
+		--			FLOG_INFO("[ChatMgr:CheckEmotion] Found[%d] : %s", EmotionID, EmotionName)
+		--
+		--			local EmotionParams = {}
+		--			EmotionParams.IntParam1 = EmotionID
+		--			EventMgr:SendEvent(EventID.ReqPlayEmotion, EmotionParams)
+		--			EventMgr:SendEvent(EventID.ReqPlayEmotion, { IntParam1 = EmotionID })
+		--			break
+		--		end
+		--	end
+		--end
+
+		-- 检查并提取所有"/xxx"格式的字符串
+		local EmotionIDList = {}
+		for match in string.gmatch(Content, EMOTION_PATTERN) do
+			FLOG_INFO("[ChatMgr:CheckEmotion] Found pattern: %s", match)
+
+			for EmotionName, EmotionID in pairs(self.EmotionData) do
+				if string.find(match, EmotionName) then
+					FLOG_INFO("[ChatMgr:CheckEmotion] Found[%d] : %s", EmotionID, EmotionName)
+					table.insert(EmotionIDList, EmotionID)
+					break
+				end
+			end
+		end
+
+		if #EmotionIDList > 0 then
+			self.ChatEmotionIDList = EmotionIDList
+			self.ChatEmotionIndex = 0
+			self:PlayChatEmotions()
+		end
+
+		::continue::
+	end
+end
+
+function ChatMgr:PlayChatEmotions()
+	local EmotionIDList = self.ChatEmotionIDList
+	if not EmotionIDList or not next(EmotionIDList) then
+		FLOG_WARNING("[ChatMgr:PlayChatEmotions] No emotions to play")
+		return
+	end
+
+	if not self.ChatEmotionIndex then
+		FLOG_WARNING("[ChatMgr:PlayChatEmotions] Invalid ChatEmotionIndex")
+		return
+	end
+
+	self.ChatEmotionIndex = self.ChatEmotionIndex + 1
+	local EmotionID = EmotionIDList[self.ChatEmotionIndex]
+	if not EmotionID then
+		FLOG_INFO("[ChatMgr:PlayChatEmotions] Invalid EmotionID")
+		self.ChatEmotionIDList = nil
+		return
+	end
+	FLOG_INFO("[ChatMgr:PlayChatEmotions] Playing emotion %d/%d: ID=%d", self.ChatEmotionIndex, #EmotionIDList, EmotionID)
+
+	EventMgr:SendEvent(EventID.ReqPlayEmotion, { IntParam1 = EmotionID })
+end
+
+function ChatMgr:OnPostEmotionEnd(Params)
+	if not Params or type(Params) ~= "table" then
+		FLOG_WARNING("[ChatMgr:OnPostEmotionEnd] Invalid Params")
+		return
+	end
+
+	if not self.ChatEmotionIndex or self.ChatEmotionIndex == 0 then
+		FLOG_INFO("[ChatMgr:OnPostEmotionEnd] No emotion playing (Invalid ChatEmotionIndex)")
+		return
+	end
+
+	local EmotionIDList = self.ChatEmotionIDList
+	if not EmotionIDList or not next(EmotionIDList) then
+		FLOG_INFO("[ChatMgr:OnPostEmotionEnd] Empty emotion list")
+		return
+	end
+
+	local EmotionID = Params.IntParam1 or 0
+	local bInterrupted = Params.BoolParam1 or false
+	FLOG_INFO("[ChatMgr:OnPostEmotionEnd] EmotionID: %d, bInterrupted: %s", EmotionID, tostring(bInterrupted))
+
+	local CurEmotionID = EmotionIDList[self.ChatEmotionIndex]
+	if not CurEmotionID or CurEmotionID ~= EmotionID then
+		FLOG_INFO("[ChatMgr:OnPostEmotionEnd] Invalid EmotionID, expected: %d, actual: %d", CurEmotionID or -1, EmotionID)
+		return
+	end
+
+	if bInterrupted then
+		FLOG_WARNING("[ChatMgr:OnPostEmotionEnd] Emotion %d interrupted", EmotionID)
+		self.ChatEmotionIDList = nil
+	else
+		self:PlayChatEmotions()
+	end
+end
+
+-- 音效匹配模式常量
+local SE_PATTERN = "&se(%d+)" --"^.*&se(%d+).*$"
+function ChatMgr:CheckSEAudio(Channel, ChatMsgList)
+	if Channel ~= ChatDefine.ChatChannel.Team and Channel ~= ChatDefine.ChatChannel.SceneTeam then
+		return
+	end
+
+	if not ChatMsgList or type(ChatMsgList) ~= "table" then
+		FLOG_WARNING("[ChatMgr:CheckSEAudio] Invalid ChatMsgList")
+		return
+	end
+
+	for _, v in ipairs(ChatMsgList) do
+		if not v or not v.Data then
+			FLOG_WARNING("[ChatMgr:CheckSEAudio] Invalid message data structure")
+			goto continue
+		end
+
+		local Content = v.Data.Content
+		if not Content or type(Content) ~= "string" then
+			goto continue
+		end
+
+		-- 找到第一个符合"&se(%d+)"条件的字符串
+		local SeIndexStr = string.match(Content, SE_PATTERN)
+		if SeIndexStr then
+			local SeIndex = tonumber(SeIndexStr)
+			if SeIndex then
+				self:TryPlaySEAudio(SeIndex)
+				return
+			else
+				FLOG_WARNING("[ChatMgr:CheckSEAudio] Invalid SE index format: %s", tostring(SeIndexStr))
+			end
+		end
+		::continue::
+	end
+end
+
+function ChatMgr:TryPlaySEAudio(Index)
+	FLOG_INFO("[ChatMgr:TryPlaySEAudio] Index:" .. Index)
+
+	if not Index or type(Index) ~= "number" then
+		FLOG_WARNING("[ChatMgr:TryPlaySEAudio] Invalid Index type")
+		return
+	end
+
+	if Index < 0 or Index > ChatDefine.MaxSeAudioNum then
+		FLOG_WARNING(string.format("[ChatMgr:TryPlaySEAudio] Index out of range: %d (valid: 0-%d)", Index, ChatDefine.MaxSeAudioNum))
+		return
+	end
+
+	local AudioPath = string.format(ChatDefine.BaseSeAudioPath, Index, Index)
+	FLOG_INFO("[ChatMgr:TryPlaySEAudio] AudioPath: %s", AudioPath)
+	AudioUtil.LoadAndPlay2DSound(AudioPath)
 end
 
 return ChatMgr

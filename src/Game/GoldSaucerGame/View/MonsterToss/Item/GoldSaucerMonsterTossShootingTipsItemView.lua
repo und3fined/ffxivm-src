@@ -62,7 +62,7 @@ function GoldSaucerMonsterTossShootingTipsItemView:OnInit()
 
 		{"bFailTipVisible", UIBinderSetIsVisible.New(self, self.PanelTipsFail)},
 
-		{"bSubDataVisible", UIBinderSetIsVisible.New(self, self.ImgLine)},
+		--{"bSubDataVisible", UIBinderSetIsVisible.New(self, self.ImgLine)},
 		{"bSubDataVisible", UIBinderSetIsVisible.New(self, self.TextSmall)},
 
 		{"SubTextColor", UIBinderSetColorAndOpacityHex.New(self, self.TextSmall)},
@@ -71,12 +71,14 @@ function GoldSaucerMonsterTossShootingTipsItemView:OnInit()
 	self.TextSuccess:SetText(LSTR(270008)) -- 	成功
 	self.TextFail:SetText(LSTR(270007)) -- 		失败
 	self.TextSmall:SetText(LSTR(270050)) -- 		三连命中
+	
 end
 
 function GoldSaucerMonsterTossShootingTipsItemView:OnDestroy()
 end
 
 function GoldSaucerMonsterTossShootingTipsItemView:OnShow()
+	UIUtil.SetIsVisible(self.ImgLine, false)
 end
 
 function GoldSaucerMonsterTossShootingTipsItemView:OnHide()

@@ -121,11 +121,11 @@ end
 function ChocoboSkillPanelVM:UpdateVM(SkillEffectCfg, SkillDisplayCfg)
     self.Name = SkillDisplayCfg.Name
     self.Icon = SkillDisplayCfg.Icon
-    self.ItemID = SkillDisplayCfg.ItemID
 
     self.Type = SkillEffectCfg.Type
     self.Rarity = SkillEffectCfg.Rarity
-    self.IsLock = ChocoboMgr:IsSkillLockByID(SkillEffectCfg.ID)
+    self.IsLock = ChocoboMgr:IsSkillLockByID(SkillEffectCfg.ID) -- IsLock要再ItemID之前赋值
+    self.ItemID = SkillDisplayCfg.ItemID
     self.IsSelect = false
 
     if SkillEffectCfg.Cost ~= nil then
@@ -159,15 +159,47 @@ function ChocoboSkillPanelVM:UpdateVM(SkillEffectCfg, SkillDisplayCfg)
         self.IsShowCD = true
         self.CD = CDText
     end
-    
-    local DescParam = SkillEffectCfg.Level[1].Param
-    if #DescParam == 0 then
-        self.Desc = SkillDisplayCfg.Desc
-    elseif #DescParam == 1 then
-        self.Desc = SafeFormat(SkillDisplayCfg.Desc, DescParam[1])
-    elseif #DescParam == 2 then
-        self.Desc = SafeFormat(SkillDisplayCfg.Desc, DescParam[1], DescParam[2])
+
+    self.Desc = SkillDisplayCfg.Desc
+    --if CurLevel then
+    --    -- 当前有指定等级
+    --    local CurrentParam = SkillEffectCfg.Level[CurLevel].Param
+    --    local ParamCount = #CurrentParam
+    --
+    --    if ParamCount == 1 then
+    --        self.Desc = SafeFormat(self.Desc, CurrentParam[1])
+    --    else
+    --        self.Desc = SafeFormat(self.Desc, CurrentParam[1], CurrentParam[2])
+    --    end
+    --else
+    -- 未指定等级，显示所有等级信息
+    local FirstLevelParam = SkillEffectCfg.Level[1].Param
+    local ParamCount = #FirstLevelParam
+
+    if ParamCount == 1 then
+        local AllLevelValues = {}
+        for Level = 1, 3 do
+            local LevelData = SkillEffectCfg.Level[Level]
+            if LevelData then
+                table.insert(AllLevelValues, tostring(LevelData.Param[1]))
+            end
+        end
+        self.Desc = SafeFormat(self.Desc, table.concat(AllLevelValues, "/"))
+    else
+        local FirstParamValues = {}
+        local SecondParamValues = {}
+
+        for Level = 1, 3 do
+            local LevelData = SkillEffectCfg.Level[Level]
+            if LevelData then
+                table.insert(FirstParamValues, tostring(LevelData.Param[1]))
+                table.insert(SecondParamValues, tostring(LevelData.Param[2]))
+            end
+        end
+
+        self.Desc = SafeFormat(self.Desc, table.concat(FirstParamValues, "/"), table.concat(SecondParamValues, "/"))
     end
+    --end
     
 
     local TagList = {}
@@ -202,13 +234,17 @@ function ChocoboSkillPanelVM:UpdateSkillList()
 end
 
 function ChocoboSkillPanelVM:InitHasSkillList(ChocoboID)
+    local SortSkillDisplay = function(Lhs, Rhs)
+        return Lhs.SkillID < Rhs.SkillID
+    end
+    
     local HasActiveSkillData = ChocoboMgr:GetHasActiveSkillData()
     self.HasActiveSkillVMList:Clear()
-    self.HasActiveSkillVMList:UpdateByValues(HasActiveSkillData)
+    self.HasActiveSkillVMList:UpdateByValues(HasActiveSkillData, SortSkillDisplay)
 
     local HasPassiveSkillData = ChocoboMgr:GetHasPassiveSkillData()
     self.HasPassiveSkillVMList:Clear()
-    self.HasPassiveSkillVMList:UpdateByValues(HasPassiveSkillData)
+    self.HasPassiveSkillVMList:UpdateByValues(HasPassiveSkillData, SortSkillDisplay)
 
     local SkillInfo = (ChocoboMgr:GetChocoboInfoByID(ChocoboID) or {}).Skill
     self:UpdateHasSkillList(SkillInfo)

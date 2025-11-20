@@ -27,7 +27,6 @@ local SaveKey = {
 	VideoVolume = 10023,
 	LoginFailTime = 10024,
 	LoginFailCount = 10025,
-	IOS26ResTipsCount = 10026,  -- IOS26资源下载提示次数
 
 	--Source Hotfix
 	SourceVersion = 10050,
@@ -205,6 +204,9 @@ local SaveKey = {
 	HoldWeaponIdleTime = 10947,		--自动收回武器时间（秒）
 	SwitchHoldWeaponPose = 10948,	--自动收回武器
 	SummonScale = 10949, --召唤兽缩放大小
+	ShowSelfWing = 10975, 		--副本中显示自己翅膀
+	ShowOtherWing = 10976, 		--副本中显示他人翅膀
+
 	--角色相机设置
 	ViewDis = 10950,--视距
 	ViewDisScaleSpeed = 10951,--视距缩放速度
@@ -282,6 +284,41 @@ local SaveKey = {
 	HUDNameVisiblePlayerBuddy = 18124,  -- 是否显示其他玩家搭档名字
 	HUDNameVisibleOtherBuddy = 18125,  -- 是否显示非玩家搭档名字
 
+	--手柄设置相关
+	HandleB = 19001,
+    HandleY = 19002,
+    HandleA = 19003,
+    HandleX = 19004,
+    HandleRight = 19005,
+    HandleUp = 19006,
+    HandleDown = 19007,
+    HandleLeft = 19008,
+    HandleRTB = 19009,
+    HandleRTY = 19010,
+    HandleRTA = 19011,
+    HandleRTX = 19012,
+    HandleRTRight = 19013,
+    HandleRTUp = 19014,
+    HandleRTDown = 19015,
+    HandleRTLeft = 19016,
+    HandleLTB = 19017,
+    HandleLTY = 19018,
+    HandleLTA = 19019,
+    HandleLTX = 19020,
+    HandleLTRight = 19021,
+    HandleLTUp = 19022,
+    HandleLTDown = 19023,
+    HandleLTLeft = 19024,
+    HandleLB = 19025,
+    HandleRB = 19026,
+    HandleR = 19027,
+    HandleRS = 19028,
+	HandleCursorSpeed = 19029,
+	HandleCursorKey = 19030,
+
+	--各职业技能映射(占用20000 - 21999)
+	HandleSkillType = 20000,
+
 	-- 指导者是否可以更新通知
 	MentorUpdateNoticeUI = 200000,
 	MentorUpdateEdition = 200001,
@@ -323,6 +360,7 @@ local SaveKey = {
 	PerformanceKeyboardMode = 3000108,	-- 键盘演奏模式
 	PerformanceKeySize = 3000109,		-- 按键大小
 	-- PerformanceOtherMuted = 3000110,	-- 屏蔽其他玩家的演奏声
+	PerformanceMusicSheet = 3000111,	-- 谱面形式
 	PerformanceProfChangeTipSelect = 3000113,	-- 是否进行职业提醒
 	PerformanceExitTipSelect = 3000114,	-- 是否退出提醒
 	PerformanceSettingRestoreDefaultTipSelect = 3000115,	-- 是否提醒（设置界面恢复默认按钮tips中的不再提醒）
@@ -355,9 +393,6 @@ local SaveKey = {
 	--自动寻路
 	AutoPathMove = 300700,		--自动寻路本地开关
 
-	--每个系统用一个ID段
-	--16000
-
 	--旅馆
 	HotelSleep = 300700,
 	HotelWake = 300701,
@@ -371,9 +406,10 @@ local SaveKey = {
 	AdvancePromptedAlarmGather = 300902, --采集笔记已忽略闹钟
 
 	-- 巡回乐团
-	TouringBandStoryRedDot = 301000,  --巡回乐团故事红点
-	TouringBandMostRecentBandID = 301001,  --巡回乐团相遇
-	TouringBandFansBandID = 301002,  --巡回乐团粉丝
+	--TouringBandStoryRedDot = 301000,  --巡回乐团故事红点  废弃
+	--TouringBandMostRecentBandID = 301001,  --巡回乐团相遇  废弃
+	--TouringBandFansBandID = 301002,  --巡回乐团粉丝  废弃
+	TouringBandRecordsID = 301003,  --巡回乐团默认打开的ID
 
 	-- 问卷调查
 	MURSurveyRedDot = 301100,  --问卷调查入口icon红点
@@ -401,16 +437,21 @@ local SaveKey = {
 	OpenLightCeremony = 304008, --光之盛典开场动画
 	OpenLightCeremonyDaily = 304009, --光之盛典每日点击入场动画
 	OpenLightCeremonyAutoPlayVideo = 304010, --光之盛典自动播放视频
-	OpsHalloweenAutoPlayVideo = 304011, --守护天节自动播放视频
 	LastVersion = 304011,	--上次版本
+	OpsHalloweenAutoPlayVideo = 304012, --守护天节自动播放视频
+	OpenStarlightAnimation = 304013, -- 星芒节入场动画
+	
 	WeChatLaunchPrivilege = 305000, --微信游戏中心启动特权
 	QQLaunchPrivilege = 305001, 	--QQ游戏中心启动特权
+	OpsSkiSelected = 305002, --踏雪活动选择套装
+	PlayRefreshAnim = 305003, --首次刷新动画
 
 	--搭档
 	BuddyUpLevel = 306000, 	--搭档升级
 
 	FashionDecoSetting = 307000, 	--设置
 	FashionDecoLastWearWay = 307001, 	--时尚配饰上次穿戴方式
+	FashionDecoAmeliorateReadRedDot = 307002, --配饰改良已读红点保存
 
 	-- 野外探索
 	WilderExploreUnlock = 308000,
@@ -443,10 +484,24 @@ local SaveKey = {
 	--招募
 	RecruitNewGuideShow = 322000,	--招募新手引导
 
-	--18000
-	--19000
-	--20000
-	--21000
+	-- 拍照
+	PhotoTemplateTipTime = 323000, --拍照模板提示弹窗
+
+	-- 组队
+	TeamReadyToConfirmEnable = 324000, --组队准备确认启用
+
+	-- 星芒节音游
+	StarlightRhythmGameFirstTime = 325000, --第一次打开
+
+	--回归指南
+	ReturningPageTime = 326000, 	-- 页签点击时间
+	ReturningStageTime = 326001, 	-- 页签阶段时间
+
+
+	HouseSystem = 327000, --房屋
+	--衣橱
+	StainTipsNoShowTime = 328000, 	--染色tips点击时间
+	--每个系统用一个ID段
 	--22000
 	--23000
 	--24000

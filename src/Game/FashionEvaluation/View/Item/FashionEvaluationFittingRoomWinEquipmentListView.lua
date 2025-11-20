@@ -9,6 +9,7 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
+local UIBinderSetImageBrush = require("Binder/UIBinderSetImageBrush")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 
 ---@class FashionEvaluationFittingRoomWinEquipmentListView : UIView
@@ -41,6 +42,7 @@ function FashionEvaluationFittingRoomWinEquipmentListView:OnInit()
 		{"EquipName", UIBinderSetText.New(self, self.TextName)},
 		{"OwnNumText", UIBinderSetText.New(self, self.TextQuantity)},
 		{"IsVisible", UIBinderSetIsVisible.New(self, self)},
+		{"ItemQualityIcon", UIBinderSetImageBrush.New(self, self.BackpackSlot.FImg_Quality)},
 	}
 	UIUtil.SetIsVisible(self.BackpackSlot.RedDot2, false)
 end

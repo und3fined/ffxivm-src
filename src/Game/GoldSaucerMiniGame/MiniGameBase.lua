@@ -13,12 +13,13 @@ local EobjLinktoSgAssetCfg = require("TableCfg/EobjLinktoSgAssetCfg")
 -- local _G. = require("Game/GoldSaucerMiniGame/_G.")
 local AnimationUtil = require("Utils/AnimationUtil")
 local ProtoRes = require("Protocol/ProtoRes")
+local ProtoCS = require("Protocol/ProtoCS")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ObjectGCType = require("Define/ObjectGCType")
 local QuestMainVM = require("Game/Quest/VM/QuestMainVM")
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local EffectUtil = require("Utils/EffectUtil")
-
+local SettingsTabRole = require("Game/Settings/SettingsTabRole")
 --local MainPanelVM = require("Game/Main/MainPanelVM")
 local TimeUtil = require("Utils/TimeUtil")
 local AudioUtil = require("Utils/AudioUtil")
@@ -32,6 +33,7 @@ local AnimTimeLineSourcePath = GoldSaucerMiniGameDefine.AnimTimeLineSourcePath
 --local AnimTimeLineSourceKey = GoldSaucerMiniGameDefine.AnimTimeLineSourceKey
 local MapDynType = ProtoCommon.MapDynType
 local EffectType = MapDynType.MAP_DYNAMIC_DATA_TYPE_DYN_INSTANCE
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 --local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
 local FLOG_ERROR = _G.FLOG_ERROR
 local FLOG_INFO = _G.FLOG_INFO
@@ -129,9 +131,51 @@ function MiniGameBase:Ctor()
 
 	--LightLevel里面的灯光位置都不对, 先屏蔽掉
 	self.NeedLightLevel = false
+
+	self.BlessKind = BLESSED_KIND.BLESSED_KIND_NONE -- 赐福种类
+	self.EnterTipsDelayTimer = nil -- 开场tips延迟执行GameEnter
+	self.bBlessChallengeSuccess = false -- 赐福成功与否与普通挑战判断分离
+
+	self.bResultPanelShow = false -- 是否进入了结算界面
 end
 
 --- Base逻辑
+
+function MiniGameBase:SetIsResultPanelShow(bShow)
+	self.bResultPanelShow = bShow 
+end
+
+function MiniGameBase:GetIsResultPanelShow()
+	return self.bResultPanelShow
+end
+
+function MiniGameBase:SetIsBlessChallengeSuccess(bSuccess)
+	local OldBlessChallengeSuccess = self.bBlessChallengeSuccess
+	if OldBlessChallengeSuccess ~= bSuccess then
+		self.bBlessChallengeSuccess = bSuccess
+	end
+end
+
+--- 是否赐福模式挑战成功
+function MiniGameBase:IsBlessChallengeSuccess()
+	return self.bBlessChallengeSuccess
+end
+
+--- 是否赐福模式
+function MiniGameBase:IsBless()
+	return self.BlessKind ~= BLESSED_KIND.BLESSED_KIND_NONE
+end
+
+--- 是否是大赐福模式
+function MiniGameBase:IsBigBlessMode()
+	return self.BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+end
+
+--- 获得该游戏的最大轮数
+function MiniGameBase:GetTheMaxRound()
+	return self.MaxRound
+end
+
 function MiniGameBase:LockTheTimeSettle()
 	self.bActLockForTime = true
 end
@@ -251,6 +295,7 @@ function MiniGameBase:ResetGameInfo()
 	self.PerfectTimeRecord = 0 -- 完美挑战最小用时记录
 	self.ChallengeCountRecord = 0 -- 挑战最大轮次记录
 	self.ProgressCounter = 0 
+	self.bResultPanelShow = false -- 是否进入了结算界面
 end
 
 --- 设置游戏结算是否暴击
@@ -289,11 +334,20 @@ function MiniGameBase:GetParamsByGameState(GameState)
 	return ParamsMap[GameState]
 end
 
---- 同步进入游戏传入参数
+--- 同步转入游戏某个阶段传入参数
 function MiniGameBase:OnSyncParamsByGameState(GameState, Params)
 	local ParamsMap = self.ParamsMap or {}
 	ParamsMap[GameState] = Params
 	self.ParamsMap = ParamsMap
+end
+
+--- 清除某个阶段的数据
+function MiniGameBase:CleanParamsByGameState(GameState)
+	local ParamsMap = self.ParamsMap
+	if not ParamsMap then
+		return
+	end
+	ParamsMap[GameState] = nil
 end
 
 --- 重连小游戏(奖励结算判断条件)
@@ -306,6 +360,7 @@ function MiniGameBase:NeedGameRewardAfterReconnect()
 	return GameEndState == MiniGameRoundEndState.Success
 end
 
+---@deprecated
 --- 重连小游戏(场景处理)
 function MiniGameBase:SetTheSceneViewAfterReconnect()
 	self:SetStartMode(true)
@@ -314,6 +369,7 @@ function MiniGameBase:SetTheSceneViewAfterReconnect()
 	self:SetTheMajorAvatarAndAnim()
 end
 
+---@deprecated
 --- 重连小游戏(场景处理)
 function MiniGameBase:RecoverLoopLogicAfterReconnect()
 	local GameType = self.MiniGameType
@@ -325,6 +381,7 @@ function MiniGameBase:RecoverLoopLogicAfterReconnect()
 	ViewModel.ReconnectSuccess = true
 end
 
+---@deprecated
 --- 重连小游戏(UI处理)
 function MiniGameBase:ReopenTheViewAfterReconnect()
 	local GameType = self.MiniGameType
@@ -611,7 +668,7 @@ function MiniGameBase:SetQuitMode()
 	end
 	self:SetMajorCanMove(true)
 
-	EffectUtil.SetIsInMiniGame(false)
+	self:UpdateVfxEffectState()
 	self:UpdateOtherSysForQuitMode()
 	self:RecoverTheMajorTransInGame()
 	self:RecoverTheMajorAvatarAndAnim()
@@ -619,6 +676,11 @@ function MiniGameBase:SetQuitMode()
 
 	Major:DoClientModeExit()
 	self:TryShowMiniGamesTutorial()
+end
+
+function MiniGameBase:UpdateVfxEffectState()
+	EffectUtil.SetIsInMiniGame(false)
+	self:OnRecycleVfxEffect()
 end
 
 function MiniGameBase:SetMajorCanMove(bCanMove)
@@ -657,6 +719,11 @@ function MiniGameBase:UpdateOtherSysForQuitMode()
 
 	_G.InteractiveMgr:SetCanShowInteractive(true)
    	_G.InteractiveMgr:ShowMainPanel()
+
+	-- 赐福模式挑战成功，结束此轮赐福
+	if self:IsBlessChallengeSuccess() and not self:GetIsForceEnd() then
+		_G.GoldSaucerBlessingMgr:SetMajorCompletedCurRoundAfterMiniGame()
+	end
 end
 
 -- 还原游戏退出后主角的Transform
@@ -693,8 +760,11 @@ function MiniGameBase:RecoverTheMajorAvatarAndAnim()
 	end
 
 	-- 恢复显示主武器
-	Major:HideMasterHand(false)
-	Major:HideSlaveHand(false)
+	local bShowWeapon = SettingsTabRole:GetShowWeapon() == 1 -- 2025.6.6 需判定设置内是否显示武器
+	if bShowWeapon then
+		Major:HideMasterHand(false)
+		Major:HideSlaveHand(false)
+	end
 
 	self:StopMajorSlotAnimation(GoldSaucerMiniGameDefine.DefaultSlot) -- 停止Idle
 	self:StopMajorActionAnim()										  -- 停止action动作
@@ -901,7 +971,7 @@ function MiniGameBase:StartGameTimeLoop(UpdateFunc)
 
 	self.TimeHandleGame = _G.TimerMgr:AddTimer(self, UpdateFunc, 0, GoldSaucerMiniGameDefine.MiniGameTickInterval, 0)
 	self.CurLoopFunc = UpdateFunc
-	self.PreServerTime = TimeUtil.GetServerTimeMS()
+	self.PreServerTime = TimeUtil.GetServerLogicTimeMS()
 end
 
 --- 中断/暂停游戏时间循环
@@ -1004,8 +1074,29 @@ function MiniGameBase:ResetDynAssetState()
 end
 
 --- 游戏流程
+
+--- 游戏数据预处理
+function MiniGameBase:GamePreSet()
+	self:SetGameState(MiniGameStageType.PreSet)
+	local PreSetParams = self:GetParamsByGameState(MiniGameStageType.PreSet)
+	if PreSetParams and next(PreSetParams) then
+		-- 赐福模式数据
+		local BlessKind = PreSetParams.BlessKind
+		if BlessKind then
+			self.BlessKind = BlessKind
+		end
+	end
+	self:CleanParamsByGameState(MiniGameStageType.PreSet)
+end
+
 --- 游戏进入
-function MiniGameBase:GameEnter()
+function MiniGameBase:GameEnterExcute()
+	if self.EnterTipsDelayTimer then
+		_G.TimerMgr:CancelTimer(self.EnterTipsDelayTimer)
+	end
+	if UIViewMgr:IsViewVisible(UIViewID.BlessMiniGameEnterTips) then
+		UIViewMgr:HideView(UIViewID.BlessMiniGameEnterTips)
+	end
 	local IsInstanceInit = self.bIsInit
 	if IsInstanceInit then
 		self:SetStartMode()
@@ -1017,6 +1108,30 @@ function MiniGameBase:GameEnter()
 	self:ResetDynAssetState()
 	self:SetTheMajorAvatarAndAnim()
 	self:BindViewModelToUIViewAndShow(IsInstanceInit)
+end
+
+function MiniGameBase:GameEnter()
+	-- 只要进入了小游戏就关闭二次确认进入菜单
+	if UIViewMgr:IsViewVisible(UIViewID.MooglePawOkWin) then
+		UIViewMgr:HideView(UIViewID.MooglePawOkWin)
+	end
+	
+	if self:IsBless() and self.bIsInit then
+		-- 赐福模式，赐福相关数据在预设置阶段处理
+		local BlessKind = self.BlessKind
+		UIViewMgr:ShowView(UIViewID.BlessMiniGameEnterTips, {Data = {
+			BlessKind = BlessKind,
+			EobjResID = self.EobjID
+		}})
+		self.BlessKind = BlessKind 
+		local DelayExcuteTime = 2
+		self.EnterTipsDelayTimer = _G.TimerMgr:AddTimer(self, function()
+			self:GameEnterExcute()
+		end, DelayExcuteTime)
+		self:AddTimerHandle(self.EnterTipsDelayTimer)
+	else
+		self:GameEnterExcute()
+	end
 end
 
 --- 游戏选择难度阶段的游戏循环
@@ -1054,7 +1169,7 @@ end
 
 --- 游戏进行中
 function MiniGameBase:GameRun()
-	local Now = TimeUtil.GetServerTimeMS()
+	local Now = TimeUtil.GetServerLogicTimeMS()
 	local CurTime = self.RemainSeconds
 	local RunTime = self.GameRunTime
 
@@ -1116,25 +1231,34 @@ function MiniGameBase:GameEnd()
 					else
 						local RestartContentParams = self:OnCreateRestartContentParams()
 						UIViewMgr:ShowView(self.DoubleWinViewID, RestartContentParams)
-						local Major = MajorUtil.GetMajor()
-						if Major then
-							local Location = Major:FGetActorLocation()
-							if Location then
-								FLOG_INFO("MoogleTouchError:Role DoubleView Open Pos %s %s %s", Location.X, Location.Y, Location.Z)
-							end
-						end
 					end
 				else --客户端直接走退出协议结算，显示失败原因，最后直接走客户端退出游戏流程
 					self:GameReward()
 				end
 			end
 		else
-			self:GameReward() -- 没有翻倍挑战的游戏，看UIView上监听GameState变化的事件具体处理（可能会掠过失败展示界面）
+			if self:OnIsHaveExtraStage() and self.LastGameState ~= MiniGameStageType.ExtraRound then  -- 判断是否为额外回合结束
+				self:GameExtraRound()
+			else
+				self:GameReward() -- 没有翻倍挑战的游戏，看UIView上监听GameState变化的事件具体处理（可能会掠过失败展示界面）
+			end
 		end
 	end
 
 	local DelayForViewEndShow = _G.TimerMgr:AddTimer(self, ChangeGameState, 0.2)
 	self:AddTimerHandle(DelayForViewEndShow)
+end
+
+--- 游戏额外阶段(大赐福额外回合)
+function MiniGameBase:GameExtraRound()
+	self:OnGameExtraRound()
+	self:SetGameState(MiniGameStageType.ExtraRound)
+end
+
+--- 游戏额外阶段(大赐福额外回合)
+function MiniGameBase:GameExtraRoundStart()
+	self:OnGameExtraRoundStart()
+	self:SetGameState(MiniGameStageType.ExtraRoundStart)
 end
 
 --- 游戏重启（翻倍挑战）
@@ -1152,9 +1276,10 @@ end
 
 --- 游戏奖励结算
 function MiniGameBase:GameReward()
-	self:UpdatePerfectChallengeAndNewRecordInfo()
+	if not self:IsBless() then
+		self:UpdatePerfectChallengeAndNewRecordInfo()
+	end
 	self:OnGameReward()
-
 	self:SetGameState(MiniGameStageType.Reward)
 end
 
@@ -1207,10 +1332,6 @@ function MiniGameBase:BindViewModelToUIViewAndShow(bInit)
 
 	local function GameEnterAysnc()
 		self:SetGameState(MiniGameStageType.Enter)
-		
-		if UIViewMgr:IsViewVisible(UIViewID.MooglePawOkWin) then
-			UIViewMgr:HideView(UIViewID.MooglePawOkWin)
-		end
 		
 		if self:OnIsGameHaveDifficultySelect() then
 			self:GameSetDifficulty()
@@ -1265,6 +1386,10 @@ end
 function MiniGameBase:OnIsHaveRestartStage()
 end
 
+--- 是否带有额外阶段
+function MiniGameBase:OnIsHaveExtraStage()
+end
+
 --- 翻倍挑战显示参数
 function MiniGameBase:OnCreateRestartContentParams()
 end
@@ -1285,6 +1410,16 @@ end
 function MiniGameBase:OnGetTopTipsContent(GameState)
 end
 
+--- 额外阶段数据重置
+function MiniGameBase:OnGameExtraRound()
+
+end
+
+--- 额外阶段数据重置
+function MiniGameBase:OnGameExtraRoundStart()
+
+end
+
 --- 翻倍重新开始数据整理
 function MiniGameBase:OnGameRestart()
 end
@@ -1293,6 +1428,7 @@ end
 function MiniGameBase:OnGameReward()
 
 end
+
 --- 设置历史最大的分数
 function MiniGameBase:SetMaxScore(MaxScore)
 end
@@ -1311,6 +1447,10 @@ end
 
 --- 播放主角砍伐/挖掘动画
 function MiniGameBase:PlayMajorCutAnimation()
+end
+
+--- 回收VfxEffect资源
+function MiniGameBase:OnRecycleVfxEffect()
 end
 
 function MiniGameBase:GetIdlePathByRaceID()

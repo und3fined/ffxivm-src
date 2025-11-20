@@ -41,6 +41,7 @@ local OpsCeremonyDefine =
     CelebrationMapID = 12001,
     PenguinPos = {x = 1007.7, y = 878.5},
     PenguinPosMapID = 12004,
+    StarlightActivityID = 25072101,
 }
 
 return OpsCeremonyDefine

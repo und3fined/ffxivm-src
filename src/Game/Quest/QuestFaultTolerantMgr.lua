@@ -44,8 +44,8 @@ function QuestFaultTolerantMgr:OnBegin()
 end
 
 function QuestFaultTolerantMgr:OnEnd()
-    self.ParamsListOnNpc = nil
-    self.FaultTolerantQuestMap = nil
+    self.ParamsListOnNpc = {}
+    self.FaultTolerantQuestMap = {}
     self.IsInitParams = false
 end
 

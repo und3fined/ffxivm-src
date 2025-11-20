@@ -73,7 +73,7 @@ function GoldSaucerCrystalTowerStrikerCrystalItemEFFView:ActiveSwitcherAndPlayAn
 	self.FWidgetSwitcher_0:SetActiveWidgetIndex(NewIndex)
 	self:PlayAnimation(self.AnimArrive)
 	local bEffectVisible01 = NewIndex and NewIndex > 0 and NewIndex ~= 4--CT_CATEGORY_ERROR
-	local bEffectVisible02 = NewIndex and NewIndex > 0 and NewIndex < 4--CT_CATEGORY_LOW,CT_CATEGORY_MIDDLE,CT_CATEGORY_HIGH
+	local bEffectVisible02 = NewIndex and (NewIndex > 0 and NewIndex < 4)--CT_CATEGORY_LOW,CT_CATEGORY_MIDDLE,CT_CATEGORY_HIGH
 	local bEffectVisible03 = NewIndex and NewIndex == 5 --CT_CATEGORY_FINAL_ONE
 	UIUtil.SetIsVisible(self.EFFPanel01, bEffectVisible01)
 	UIUtil.SetIsVisible(self.EFFPanel02, bEffectVisible02)

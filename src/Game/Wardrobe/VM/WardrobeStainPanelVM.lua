@@ -11,7 +11,6 @@ local WardrobeDefine = require("Game/Wardrobe/WardrobeDefine")
 local WardrobeMgr = require("Game/Wardrobe/WardrobeMgr")
 local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local DyeColorCfg = require("TableCfg/DyeColorCfg")
-local ClosetColorClassifyCfg = require("TableCfg/ClosetColorClassifyCfg")
 local ClosetCfg = require("TableCfg/ClosetCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local UIBindableList = require("UI/UIBindableList")
@@ -41,10 +40,11 @@ function WardrobeStainPanelVM:Ctor()
 	self.CurColorName = ""
 	self.CurColor = ""
     self.CurColorVisible = false
+    self.CurColorIsMetal = false
 	self.BtnUnlockTxt = ""
     self.StainTitle = ""
 	self.ItemLackVisible =  false
-    self.BtnUnlockVisible = true
+    self.PanelUnlockVisible = nil
 	self.AppearanceTabVisible = true
     self.Consume2Visible = true
     self.Consume1Visible = true
@@ -57,6 +57,12 @@ function WardrobeStainPanelVM:Ctor()
     self.BtnBlockChecked = true
     self.ShowOftenAll = false
     self.MoreOftenCheck = false
+    self.ActiveColor = false
+    self.SectionName = ""
+    self.ReNameBtnVisible = nil
+    -- <PartID, AppID, ColorID, RegionDye>
+    self.StainSuit = {}  -- 染色界面数据
+    self.PreStainSuit = {} -- 预染色数据
 end
 
 function WardrobeStainPanelVM:OnInit()
@@ -69,6 +75,84 @@ function WardrobeStainPanelVM:OnEnd()
 end
 
 function WardrobeStainPanelVM:OnShutdown()
+end
+
+function WardrobeStainPanelVM:ClearStainSuit()
+    self.StainSuit = {}
+end
+
+function WardrobeStainPanelVM:SetStainSuit(PartID, AppID, ColorID, RegionDye)
+    if PartID  == nil then
+        return
+    end
+
+    if self.StainSuit[PartID] == nil then
+		self.StainSuit[PartID] = {}
+		self.StainSuit[PartID].Avatar = AppID
+		self.StainSuit[PartID].Color = ColorID
+		self.StainSuit[PartID].RegionDye = RegionDye
+		return
+	end
+
+	for key, value in pairs(self.StainSuit) do
+		if tonumber(key) == PartID then
+			self.StainSuit[PartID].Avatar = AppID
+			self.StainSuit[PartID].Color = ColorID
+			self.StainSuit[PartID].RegionDye = RegionDye
+		end
+	end
+end
+
+function WardrobeStainPanelVM:GetStainSuit()
+    return self.StainSuit
+end
+
+function WardrobeStainPanelVM:GetStainSuitByAppID(AppID)
+    for _, v in pairs(self.StainSuit) do
+		if v.Avatar == AppID then
+			return v
+		end
+	end
+	return  {}
+end
+
+function WardrobeStainPanelVM:ClearPreStainSuit()
+    self.PreStainSuit = {}
+end
+
+function WardrobeStainPanelVM:SetPreStainSuit(PartID, AppID, ColorID, RegionDye)
+    if PartID  == nil then
+        return
+    end
+    if self.PreStainSuit[PartID] == nil then
+		self.PreStainSuit[PartID] = {}
+		self.PreStainSuit[PartID].Avatar = AppID
+		self.PreStainSuit[PartID].Color = ColorID
+		self.PreStainSuit[PartID].RegionDye = RegionDye
+		return
+	end
+
+	for key, value in pairs(self.PreStainSuit) do
+		if tonumber(key) == PartID then
+			self.PreStainSuit[PartID].Avatar = AppID
+			self.PreStainSuit[PartID].Color = ColorID
+			self.PreStainSuit[PartID].RegionDye = RegionDye
+		end
+	end
+
+end
+
+function WardrobeStainPanelVM:GetPreStainSuit()
+    return self.PreStainSuit
+end
+
+function WardrobeStainPanelVM:GetPreStainSuitByAppID(AppID)
+    for _, v in pairs(self.PreStainSuit) do
+		if v.Avatar == AppID then
+			return v
+		end
+	end
+	return  {}
 end
 
 function WardrobeStainPanelVM:UpdateTitle(StainType)
@@ -129,7 +213,20 @@ function WardrobeStainPanelVM:UpdateColorList(StainType, ColorTypeID, ApperanceI
         return
     end
 
-    for i = 1, Len do
+    local IsClothing = WardrobeMgr:GetIsClothing(ApperanceID)
+    local ColorID = IsClothing and WardrobeMgr:GetCurAppearanceDyeColor(ApperanceID, StainAreaID) or WardrobeMgr:GetDyeColor(ApperanceID, StainAreaID)
+    local IsSame = WardrobeMgr:IsSameColorRegionDye(ApperanceID, 0)
+    -- 创建一个原色
+    local TempData  = {}
+    TempData.ID = 0
+    TempData.IsNormalcy = true
+    TempData.IsMetal = false
+    TempData.IsColorUnlock = false
+    TempData.IsChecked = ColorID == 0 and IsSame and not TryStain
+    TempData.IsSelected = false
+    table.insert(DataList, TempData)
+
+    for i = 1, Len - 1 do
         local Data = {}
         local value = CfgList[i]
         if CfgList[i] ~= nil then
@@ -141,7 +238,6 @@ function WardrobeStainPanelVM:UpdateColorList(StainType, ColorTypeID, ApperanceI
                 Data.IsColorUnlock = false
                 Data.IsChecked = false
             else
-                local ColorID = WardrobeMgr:GetIsClothing(ApperanceID) and WardrobeMgr:GetCurAppearanceDyeColor(ApperanceID, StainAreaID) or WardrobeMgr:GetDyeColor(ApperanceID, StainAreaID)
                 Data.IsChecked = ColorID == value.ID
                 Data.IsColorUnlock = not WardrobeMgr:IsActiveColor(ApperanceID, value.ID)
             end
@@ -149,7 +245,8 @@ function WardrobeStainPanelVM:UpdateColorList(StainType, ColorTypeID, ApperanceI
             Data.IsSelected = false
             table.insert(DataList, Data)
         else
-            Data.ID = 0
+            -- 空格子
+            Data.ID = -1
             Data.IsNormalcy = false
             Data.IsMetal = false
             Data.IsColorUnlock = false
@@ -166,6 +263,7 @@ function WardrobeStainPanelVM:UpdateCurColorInfo(CurColorID)
     if CurColorID == 0 or CurColorID == nil then
         self.CurColorName = LSTR(1080053)
         self.CurColorVisible = false
+        self.CurColorIsMetal = false
         return
     end
 
@@ -173,7 +271,10 @@ function WardrobeStainPanelVM:UpdateCurColorInfo(CurColorID)
     if ColorCfg ~= nil then
         self.CurColorName = ColorCfg.DisplayName
         self.CurColor = WardrobeUtil.Dec2HexColor(ColorCfg.Color)
+        self.CurColorIsMetal = ColorCfg.Type == 8
         self.CurColorVisible = true
+    else
+        self.CurColorIsMetal = false
     end
 end
 
@@ -181,27 +282,43 @@ function WardrobeStainPanelVM:UpdateCurAppearanceInfo(AppearanceID)
     self.AppearanceName = WardrobeUtil.GetEquipmentAppearanceName(AppearanceID)
 end
 
+function WardrobeStainPanelVM:UpdateCurAppearanceSeationName(StainType, AppearanceID, SectionID)
+    if  StainType == WardrobeDefine.StainType.TryStain then
+        self.ReNameBtnVisible = false
+        return
+    end
+    if SectionID == -1 then
+        self.SectionName = LSTR(1080037)
+        self.ReNameBtnVisible = false
+    else
+        -- Todo 获取当前区域名字
+        self.SectionName = WardrobeMgr:GetUnlockedAppearanceRegionName(AppearanceID, SectionID)
+        self.ReNameBtnVisible = true
+    end
+end
+
 function WardrobeStainPanelVM:UpdateBtnUnlockState(StainType, AppID, ColorID, SectionID)
     if StainType == WardrobeDefine.StainType.TryStain then
         return
     end
-    
     local CurColorID = WardrobeMgr:GetIsClothing(AppID) and WardrobeMgr:GetCurAppearanceDyeColor(AppID, SectionID) or WardrobeMgr:GetDyeColor(AppID, SectionID)
-    local Actived = WardrobeMgr:IsActiveColor(AppID, ColorID)
+    local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
 
-    if CurColorID ~= 0 then
-        if Actived then
-            self.BtnUnlockTxt = ColorID == CurColorID and LSTR(1080072) or LSTR(1080062)   -- 取消染色， 染色
+    if ColorID == 0 then
+        if SectionID == -1 then
+            if  not  IsAppRegionDye then
+            self.BtnUnlockTxt = CurColorID == ColorID and LSTR(1080072) or LSTR(1080154) --染为原色
+            else
+                
+                self.BtnUnlockTxt = WardrobeMgr:IsSameColorRegionDye(AppID, ColorID) and LSTR(1080072) or LSTR(1080154)
+            end
         else
-            self.BtnUnlockTxt = LSTR(1080061)   -- 解锁
+            self.BtnUnlockTxt = CurColorID == ColorID and LSTR(1080072) or LSTR(1080154)
         end
     else
-        if Actived or ColorID == 0 then
-            self.BtnUnlockTxt = LSTR(1080062)   --染色
-        else
-            self.BtnUnlockTxt = LSTR(1080061) -- 解锁
-        end
+        self.BtnUnlockTxt = ColorID == CurColorID and LSTR(1080072) or LSTR(1080062)   -- 取消染色， 染色
     end
+
 
 end
 
@@ -215,8 +332,12 @@ function WardrobeStainPanelVM:UpdateColorListUnlockState(StainType, AppearanceID
                 ItemVM:UpdateCheckedState(false)
             else
                 ItemVM:UpdateUnlockState(not WardrobeMgr:IsActiveColor(AppearanceID, ItemVM.ID))
-                local ColorID = WardrobeMgr:GetIsClothing(AppearanceID) and WardrobeMgr:GetCurAppearanceDyeColor(AppearanceID, SectionID)  or WardrobeMgr:GetDyeColor(AppearanceID, SectionID)
-                ItemVM:UpdateCheckedState(ColorID == ItemVM.ID)
+                local ColorID = WardrobeMgr:GetIsClothing(AppearanceID) and WardrobeMgr:GetCurAppearanceDyeColor(AppearanceID, SectionID) or WardrobeMgr:GetDyeColor(AppearanceID, SectionID)
+                if SectionID == nil then
+                    ItemVM:UpdateCheckedState(ColorID == ItemVM.ID and  WardrobeMgr:IsSameColorRegionDye(AppearanceID, ColorID))
+                else
+                    ItemVM:UpdateCheckedState(ColorID == ItemVM.ID)
+                end
             end
         end
 	end
@@ -271,7 +392,11 @@ function WardrobeStainPanelVM:CreateAppearanceTabItem(AppID)
     if Cfg ~= nil then
 	    Data.StainColor = WardrobeUtil.Dec2HexColor(Cfg.Color)
     end
-	Data.StainColorVisible = WardrobeMgr:GetIsDye(AppID)
+    if WardrobeMgr:GetIsClothing(AppID) then
+        Data.StainColorVisible =  WardrobeMgr:GetCurrentIsDye(AppID)
+    else
+        Data.StainColorVisible =  WardrobeMgr:GetIsDye(AppID)
+    end
     return Data
 end
 
@@ -286,80 +411,105 @@ function WardrobeStainPanelVM:InitColorAeraList(AppID)
         return
     end
 
-    local StainViewSuit = WardrobeMgr:GetStainViewSuitByAppID(AppID)
-    local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
-    local StainColor = IsAppRegionDye and WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
-    local IsMetal = false
 
-    local DCCfg = DyeColorCfg:FindCfgByKey(StainColor)
-    if DCCfg ~= nil and DCCfg.Type == 8 then
-        IsMetal = true
-    end
+    local ColorAeraAllColor = WardrobeMgr:GetDyeColor(AppID)
+    local PreStainView = self:GetPreStainSuitByAppID(AppID)
 
+    local PreviewColorAreaAllColor =  WardrobeUtil.IsAppRegionDye(AppID) and WardrobeUtil.GetUnifyRegionDyeColor(AppID, PreStainView.RegionDye) or PreStainView.Color
+    self.ColorAreaList:Clear()
     local Temp = {
         ID = -1,
+        SocketID = -1,
         Name = LSTR(1080037),
-        IsMetal = IsMetal,
-        Color =  WardrobeUtil.GetColor(StainColor),
+        AppID = AppID,
+        ColorID = ColorAeraAllColor,
+        PreColorID = PreviewColorAreaAllColor,
     }
-
     table.insert(ColorAreaList, Temp)
-    self.ColorAreaList:Clear()
     if Cfg ~= nil then
-        for index, v in ipairs(Cfg.StainAera) do
-            if v.List ~= "" and v.Ban ~= 1 then
-                local Item = {}
-                Item.ID = index
-                Item.Name = v.Name
-                Item.List = v.List
-                local Color = WardrobeUtil.GetRegionDyeColor(StainViewSuit.RegionDye, index)
-                Item.Color = WardrobeUtil.GetColor(Color)
-                local SocketIsMetal = false
-                local DCCfg = DyeColorCfg:FindCfgByKey(Color)
-                if DCCfg ~= nil and DCCfg.Type == 8 then
-                    SocketIsMetal = true
-                end
-                Item.IsMetal = SocketIsMetal
-                table.insert(ColorAreaList, Item)
+        for i = #Cfg.StainAera, 1, -1 do
+            local v = Cfg.StainAera[i]
+            if v.List == "" or v.Ban == 1 then
+                table.remove(Cfg.StainAera, i)
             end
+        end
+        for index, v in ipairs(Cfg.StainAera) do
+            local Item = {}
+            Item.SocketID = v.SocketID
+            Item.ID = index
+            Item.AppID = AppID
+            Item.Name = WardrobeMgr:GetUnlockedAppearanceRegionName(AppID, index)
+            Item.List = v.List
+            local Color = WardrobeMgr:GetDyeColor(AppID, index)
+            Item.ColorID = Color
+            local PreColor = self:GetPreColor(AppID, index) -- 预览色
+            Item.PreColorID = PreColor -- 预览色
+            table.insert(ColorAreaList, Item)
         end
     end
 
     self.ColorAreaList:UpdateByValues(ColorAreaList)
 end
 
-function WardrobeStainPanelVM:UpdateColorAeraList(AppID, PartID, SectionID)
-    local StainViewSuit = WardrobeMgr:GetStainViewSuitByAppID(AppID)
+function WardrobeStainPanelVM:GetPreColor(AppID, SectionID)
+    local PreStainView = self:GetPreStainSuitByAppID(AppID)
+
+    for _, v in ipairs(PreStainView.RegionDye) do
+        if v.ID == SectionID then
+            return v.ColorID
+        end
+    end
+
+    return 0
+end
+
+function WardrobeStainPanelVM:UpdateColorAeraList(AppID, SectionID)
+    local PreStainView = self:GetPreStainSuitByAppID(AppID)
 
     for i = 1, self.ColorAreaList:Length(), 1 do
         if i == 1 then
             local ItemData = self.ColorAreaList:Get(i)
             if ItemData ~= nil then
-                local Color = WardrobeUtil.IsAppRegionDye(AppID) and WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
+                local Color = WardrobeMgr:GetDyeColor(AppID)
+                local PreColor = WardrobeUtil.IsAppRegionDye(AppID) and WardrobeUtil.GetUnifyRegionDyeColor(AppID, PreStainView.RegionDye) or PreStainView.Color
                 ItemData:UpdateColor(Color)
+                ItemData:UpdatePreColor(PreColor)
             end
             break
         end
     end
 
-    for i = 1,  self.ColorAreaList:Length(), 1 do
-        local ItemData = self.ColorAreaList:Get(i)
-        if i ~= 1 and ItemData ~= nil then
-            if SectionID == -1 then
-                local ColorID = WardrobeUtil.GetUnifyRegionDyeColor(AppID, StainViewSuit.RegionDye) or StainViewSuit.Color
+    -- 全部的时候 直接用当前的覆盖
+    if SectionID == -1 then
+        for i = 1, self.ColorAreaList:Length(), 1 do
+            local ItemData = self.ColorAreaList:Get(i)
+            if i > 1 and ItemData ~= nil then
+                local ColorID = WardrobeMgr:GetDyeColor(AppID, ItemData.ID)
                 ItemData:UpdateColor(ColorID)
-            else
-                if ItemData.ID == SectionID then
-                    for _, v in ipairs(StainViewSuit.RegionDye) do
+                for _, v in ipairs(PreStainView.RegionDye) do
+                    local PreColor = v.ColorID
+                    ItemData:UpdatePreColor(PreColor)
+                end
+            end
+        end
+    else
+        for i = 1, self.ColorAreaList:Length(), 1 do
+            local ItemData = self.ColorAreaList:Get(i)
+            if i > 1 and ItemData ~= nil then
+                if ItemData.ID == SectionID then 
+                    local ColorID = WardrobeMgr:GetDyeColor(AppID, ItemData.ID)
+                    ItemData:UpdateColor(ColorID)
+                    for _, v in ipairs(PreStainView.RegionDye) do
                         if v.ID == SectionID then
-                            ItemData:UpdateColor(v.ColorID)
-                            break
+                            local PreColor = v.ColorID
+                            ItemData:UpdatePreColor(PreColor)
                         end
                     end
                 end
             end
         end
     end
+
 end
 
 function WardrobeStainPanelVM:InitColorOftenList()
@@ -372,6 +522,7 @@ function WardrobeStainPanelVM:InitColorOftenList()
             Temp.ID = value.ID
             local ColorCfg  = DyeColorCfg:FindCfgByKey(value.ID)
             Temp.Color = WardrobeUtil.Dec2HexColor(ColorCfg.Color)
+            Temp.IsUnlock = true
             table.insert(TempList, Temp)
         end
     end
@@ -389,6 +540,7 @@ function WardrobeStainPanelVM:UpdateColorOfenList(bDir)
             Temp.ID = value.ID
             local ColorCfg  = DyeColorCfg:FindCfgByKey(value.ID)
             Temp.Color = WardrobeUtil.Dec2HexColor(ColorCfg.Color)
+            Temp.IsUnlock = true
             table.insert(TempList, Temp)
         end
         self.ColorOftenList:UpdateByValues(TempList)
@@ -400,6 +552,28 @@ function WardrobeStainPanelVM:UpdateColorOfenList(bDir)
             end
         end
     end
+end
+
+function WardrobeStainPanelVM:IsPreviewEmpty(AppID)
+    local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
+    local StainView = self:GetStainSuitByAppID(AppID)
+    local PreView = self:GetPreStainSuitByAppID(AppID)
+
+    if not IsAppRegionDye then
+        return StainView.ColorID == PreView.ColorID
+    end
+
+    for index, v in ipairs(StainView.RegionDye or {}) do
+        local PreViewRegionDye = PreView.RegionDye
+        if not table.is_nil_empty(PreViewRegionDye) then
+            if PreViewRegionDye[index] ~= nil and PreViewRegionDye[index].ID ~= nil and PreViewRegionDye[index].ColorID ~= nil then 
+              if PreViewRegionDye[index].ID == v.ID and PreViewRegionDye[index].ColorID ~= v.ColorID then
+                    return false
+              end
+            end
+        end
+    end
+    return true
 end
 
 

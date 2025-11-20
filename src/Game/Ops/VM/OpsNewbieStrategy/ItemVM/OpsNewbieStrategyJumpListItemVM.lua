@@ -51,12 +51,14 @@ function OpsNewbieStrategyAetherLightListItemVM:Jump()
         local JumpType = tonumber(self.JumpData[1])
         local JumpParam = tonumber(self.JumpData[2])
         if JumpType then
-            local IsCanJump = JumpUtil.IsCurJumpIDCanJump(tonumber(JumpParam))
+            --[[local IsCanJump = JumpUtil.IsCurJumpIDCanJump(tonumber(JumpParam))
             if IsCanJump then
                 _G.OpsActivityMgr:Jump(JumpType, JumpParam)
             else
                 _G.OpsNewbieStrategyMgr:JumpUnlockSys(tonumber(JumpParam))
-            end
+            end]]--
+
+            _G.OpsActivityMgr:Jump(JumpType, JumpParam)
 			if self.ActivityID then
 				DataReportUtil.ReportActivityClickFlowData(self.ActivityID ,OpsNewbieStrategyDefine.OperationPageActionType.SecondWinJumpToBtnCkicked, JumpParam)
 			end

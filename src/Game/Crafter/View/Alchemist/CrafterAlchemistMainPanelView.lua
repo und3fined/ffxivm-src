@@ -116,6 +116,7 @@ function CrafterAlchemistMainPanelView:OnRegisterGameEvent()
     self:RegisterGameEvent(_G.EventID.CrafterSkillRsp, self.OnEventCrafterSkillRsp)
 	self:RegisterGameEvent(_G.EventID.MajorLevelUpdate, self.OnMajorLevelUpdate)
     self:RegisterGameEvent(_G.EventID.BagUpdate, self.OnBagUpdate)
+	self:RegisterGameEvent(EventID.CrafterSkillCostUpdate, self.OnCrafterSkillCostUpdate)
 end
 
 function CrafterAlchemistMainPanelView:OnRegisterBinder()
@@ -160,6 +161,10 @@ function CrafterAlchemistMainPanelView:OnBagUpdate()
 		local BottleView = self["Bottle" .. Idx]
 		BottleView:OnBagUpdate()
 	end
+end
+
+function CrafterAlchemistMainPanelView:OnCrafterSkillCostUpdate(Params)
+	self.BtnAdjust:OnCrafterSkillCostUpdate(Params)
 end
 
 function CrafterAlchemistMainPanelView:OnUpdateSkillCostMaskFlag()

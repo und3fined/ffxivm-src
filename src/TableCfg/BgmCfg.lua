@@ -5,7 +5,7 @@ local CfgBase = require("TableCfg/CfgBase")
 ---@class BgmCfg : CfgBase
 local BgmCfg = {
 	TableName = "c_bgm_cfg",
-    LruKeyType = nil,
+    LruKeyType = "integer",
 	KeyName = "ID",
     bEncrypted = false,
 	Localization = {

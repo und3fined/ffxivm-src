@@ -66,7 +66,7 @@ function JobSkillSummonerVM:SetGemRenderOpacity(RenderOpacity, ShineRenderOpacit
     self.BuffCDTime = -1
 end
 
-function JobSkillSummonerVM:SetGemData(Index, Time, Pile)
+function JobSkillSummonerVM:SetGemData(Index, Time, Pile, TimerID)
     if Index < 1 or Index > 3 then return end
     self[string.format("GemPile%d", Index)] = Pile
     self.BuffCDVisible = Time > 0
@@ -76,7 +76,9 @@ function JobSkillSummonerVM:SetGemData(Index, Time, Pile)
     if Pile <= 0 then
         self[string.format("BigHiddenAnim%d", Index)] = 1
         self[string.format("BigShowAnim%d", Index)] = -1
-        self[string.format("DarkAnim%d", Index)] = 1
+        if TimerID <= 0 then
+            self[string.format("DarkAnim%d", Index)] = 1
+        end
         return
     end
     self.BuffCDTime = Time

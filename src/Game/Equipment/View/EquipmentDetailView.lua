@@ -382,7 +382,7 @@ function EquipmentDetailView:OnRegisterBinder()
 		{ "TypeName",    	UIBinderSetText.New(self, self.TextType) },
 		{ "ItemName",			UIBinderSetText.New(self, self.TextName) },
 		{ "LevelText",			UIBinderSetText.New(self, self.RichTextQuality) },
-		{ "OwnRichText", UIBinderSetText.New(self, self.RichTextOwn) },
+		--{ "OwnRichText", UIBinderSetText.New(self, self.RichTextOwn) },
 
 		{ "DepotNumText", UIBinderSetItemNumFormat.New(self, self.TextWarehouse) },
 		{ "DepotHQNumText", UIBinderSetItemNumFormat.New(self, self.TextHigh) },
@@ -553,7 +553,7 @@ end
 
 function EquipmentDetailView:OnClickedToGetBtn()
 	local ParentViewID = self.bPersonUI and UIViewID.EquipTips or nil
-	local Params = {ViewModel = self.ViewModel, ForbidRangeWidget = self.PanelTips, InTagetView = self.BtnToGet, HidePopUpBG = true, ParentViewID = ParentViewID}
+	local Params = {Offset = _G.UE.FVector2D(15, 0),ViewModel = self.ViewModel, InTagetView = self.BtnToGet, HidePopUpBG = true, ParentViewID = ParentViewID}
 	ItemTipsUtil.OnClickedToGetBtn(Params)
 end
 
@@ -569,8 +569,13 @@ function EquipmentDetailView:OnClickedRightBtn()
 		return
 	end
 
-	local EquipedItem = EquipmentMgr:GetEquipedItemByGID(GID)
-	local bEquiped = nil ~= EquipedItem
+	local EquipedItem = EquipmentMgr:GetEquipedItemByPart(EquipDetailVM.Part)
+	local bEquiped
+	if nil ~= EquipedItem then
+		bEquiped = EquipedItem.GID == self.ViewModel.Item.GID
+	else
+		bEquiped = false
+	end
 	local EquipReqInfo = {{Part = EquipDetailVM.Part, GID = GID}}
 
 	if bEquiped then
@@ -709,7 +714,6 @@ function EquipmentDetailView:OnLootItemUpdateRes(InLootList, InReason)
 		if value.Item and value.Item.ResID == MaterialID then
 			local bShow = _G.EquipmentMgr:GetImproveMaterialEnough(self.ViewModel.ResID)
 			self.RedDot:SetRedDotUIIsShow(bShow)
-			self:InitStorageBtnTips()
 		end
 	end
 end

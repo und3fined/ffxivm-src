@@ -88,25 +88,7 @@ function RoleVM:Ctor()
 	self.LaunchType = 0
 
 	self.IsCancellation = false
-end
-
-function RoleVM:SetTeamMemberMapData(Data)
-	if self.IsMajor then
-		return
-	end
-
-	local InMapResID = Data and Data.MapResID or nil
-	local InSceneResID =  Data and Data.SceneResID or nil
-	if InMapResID ~= nil then
-		self:SetMapResID(InMapResID)
-	end
-	if InMapResID ~= nil and InSceneResID ~= nil and self.RoleSimple then
-		local Location = self.RoleSimple.Location
-		if Location then
-			Location.MapResID = InMapResID
-			Location.SceneResID = InSceneResID
-		end
-	end
+	self.HouseID = nil
 end
 
 function RoleVM:SetIsOnline(Value)
@@ -129,6 +111,7 @@ function RoleVM:SetTeamID(InTeamID)
 	self.TeamID = InTeamID
 end
 
+--- 更新VM数据(主角专用)
 ---@param Value table @simple.SimpleRsp
 function RoleVM:UpdateVMBySimple(Value)
 	if nil == Value then return end
@@ -161,6 +144,8 @@ function RoleVM:UpdateVMBySimple(Value)
 
 	self:SetHeadInfo(nil, nil, nil, self.Race)
 
+	--设置跨服服务器ID
+	self:SetCrossZoneWorldID(Value.TravelWorld)
 
 	local RoleSimple = self.RoleSimple
 	if RoleSimple then
@@ -203,7 +188,7 @@ function RoleVM:UpdateVM(Value, IsForceUpdMajor)
 
 	local WorldID = Value.WorldID
 	self.WorldID = WorldID
-
+	self.HouseID = Value.HouseID
 	--设置跨服服务器ID
 	if not IsMajor then
 		self:SetCrossZoneWorldID(Value.CrossZoneID)

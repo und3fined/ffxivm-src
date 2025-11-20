@@ -23,7 +23,6 @@ local TimeUtil = require("Utils/TimeUtil")
 local PhotoMediaUtil = require("Game/Photo/Util/PhotoMediaUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
 local AccountUtil = require("Utils/AccountUtil")
-local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local SaveKey = require("Define/SaveKey")
 local ProtoBuff = require("Network/Protobuff")
 local Json = require("Core/Json")
@@ -31,13 +30,17 @@ local OperationUtil = require("Utils/OperationUtil")
 local GameNetworkMgr = require("Network/GameNetworkMgr")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
-
+local ItemUtil = require("Utils/ItemUtil")
+local UIUtil = require("Utils/UIUtil")
+local MajorUtil = require("Utils/MajorUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local LSTR = _G.LSTR
 local FLOG_INFO = _G.FLOG_INFO
 local FLOG_WARNING = _G.FLOG_WARNING
 local CS_CMD = ProtoCS.CS_CMD
-local SUB_MSG_ID = ProtoCS.Profile.PreLogin.CsPreLoginCmd
+local PRELOGIN_SUB_MSG_ID = ProtoCS.Profile.PreLogin.CsPreLoginCmd
 local IdIpCfgTableName = ProtoRes.IDip.IdIpCfgTableName
+local ProtoCS_Share = ProtoCS.Role.Share
 
 ---@class ShareMgr : LogableMgr
 local ShareMgr = LuaClass(LogableMgr, nil)
@@ -55,11 +58,14 @@ function ShareMgr:OnInit()
     self.CrystalSummonWeChatShareCfg = {
         AppID = "gh_5249c375c947",
         Link = "pages/index/index?",
-        TumbPath = "https://game.gtimg.cn/images/ff14/act/a20250214call/share.png"
+        TumbPath = "https://game.gtimg.cn/images/ff14/act/a20250214call/share.png",
+        ProgramType = 0, -- 0:正式版，2:体验版
     }
     self.RequestUrl = ""
     self.MaxRequestTime = 0.6
     self.TimerInterval = 0.03
+
+    self.ShareImageWidget = nil
 
     self:SetLogName("ShareMgr")
     self:InitShareInfo()
@@ -73,7 +79,8 @@ function ShareMgr:OnRegisterGameEvent()
 end
 
 function ShareMgr:OnRegisterNetMsg()
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PRELOGIN, SUB_MSG_ID.CS_PRELOGIN_IDIP_CFG_CMD_QUERY, self.OnIDIPCfgRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_PRELOGIN, PRELOGIN_SUB_MSG_ID.CS_PRELOGIN_IDIP_CFG_CMD_QUERY, self.OnIDIPCfgRsp)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_SHARE, ProtoCS_Share.ShareOptCmd.Share_Save, self.OnNetMsgSaveImageData)          --保存需要分享到频道的图片数据
 end
 
 function ShareMgr:InitShareInfo()
@@ -96,7 +103,7 @@ function ShareMgr:GetDefaultAppsForActivityImageShare()
     if _G.LoginMgr:IsQQLogin() then
         table.insert(Apps, ShareDefine.SharePlatformEnum.QQ)
         table.insert(Apps, ShareDefine.SharePlatformEnum.QQ_ZONE)
-        --table.insert(Apps, ShareDefine.SharePlatformEnum.QQ_PINDAO)
+        table.insert(Apps, ShareDefine.SharePlatformEnum.QQ_PINDAO)
     end
 
     if _G.LoginMgr:IsWeChatLogin() then
@@ -365,7 +372,8 @@ function ShareMgr:UpdateActivityShareRewards(Cfg, RewardContainerView)
 				Icon = RewardCfg.Icon,
 				bSyncIcon = true,
 				Num = RewardCfg.ItemCount or 0,
-				})
+                IconQuality = ItemUtil.GetItemColorIcon(RewardCfg.ItemID)
+			})
 		else
 			_G.FLOG_ERROR("missing reward id for share activity %s: %s", Cfg.ActivityID, RewardID)
 		end
@@ -405,7 +413,6 @@ function ShareMgr.ShareLinkByMSDK(ShareObj)
 
     local Title = ShareObj.Content.Title
     local Link = ShareObj.Content.Link
-    local Desc = ""
     if Title == nil or Title == "" then
         _G.FLOG_ERROR("content must specify `Title` field")
         return
@@ -414,7 +421,7 @@ function ShareMgr.ShareLinkByMSDK(ShareObj)
     ShareObj:BeforeShare()
     _G.FLOG_INFO("share with channel: %s, title: %s, link: %s", ShareObj:GetShareChannel(), Title, Link)
     ShareMgr.AfterShare()
-    _G.AccountUtil.SendLink(ShareObj:GetShareChannel(), nil, false, Title, Desc, Link, ShareObj.Content.ThumbPath, "")
+    _G.AccountUtil.SendLink(ShareObj:GetShareChannel(), nil, false, Title, Link, ShareObj.Content.ThumbPath, "")
 end
 
 ---@param ShareObj ShareObject
@@ -486,7 +493,7 @@ function ShareMgr:ShareCrystalSummon(SCode, UserOpenID)
             Path,
             self.CrystalSummonWeChatShareCfg.TumbPath,
             self.CrystalSummonWeChatShareCfg.AppID,
-            0,
+            self.CrystalSummonWeChatShareCfg.ProgramType,
             "MSG_INVITE",
             Path,
             "")
@@ -509,7 +516,7 @@ end
 
 function ShareMgr:OpenShareActivityUI(ActivityID, ShareID)
     self:SetOpsActivityInfo(ActivityID, ShareID)
-    _G.UIViewMgr:ShowView(UIViewID.ShareMain, { ShareID = ShareID })
+    self:OpenShareMainUI({ ShareID = ShareID })
 end
 
 function ShareMgr:SetOpsActivityInfo(ActivityID, ShareID)
@@ -519,7 +526,20 @@ end
 
 function ShareMgr:OpenPhotoShare(Tex, Width, Height, IsPhoto)
     self.ShareID = 1
-    _G.UIViewMgr:ShowView(_G.UIViewID.ShareMain, { ShareID = self.ShareID, Tex = Tex, W = Width, H = Height, bPhoto = IsPhoto})
+    self:OpenShareMainUI({ ShareID = self.ShareID, Tex = Tex, W = Width, H = Height, bPhoto = IsPhoto})
+end
+
+--@param Tex UTexture2D  待分享UI转换成的Texture
+--@param Width number   分享图的宽度
+--@param Height number  分享图的高度
+--@param ShareID number "G关系链表.xlsx"中配置的ShareID
+function ShareMgr:OpenShareActivityUIWithTexture(Tex, Width, Height, ShareID)
+    self.ShareID = ShareID
+    self:OpenShareMainUI({ ShareID = self.ShareID, Tex = Tex, W = Width, H = Height, bPhoto = false})
+end
+
+function ShareMgr:OpenShareMainUI(Params)
+    _G.UIViewMgr:ShowView(_G.UIViewID.ShareMain, Params)
 end
 
 ---@type 打开游戏屏幕分享
@@ -550,7 +570,7 @@ end
 
 function ShareMgr:StopCfgRequestTimer()
     if self.CfgRequestTimerID ~= nil then
-        _G.TimerMgr:CancelTimer(self.CfgRequestTimerID)
+        self:UnRegisterTimer(self.CfgRequestTimerID)
         self.CfgRequestTimerID = nil
     end
     self.ElapseTime = 0
@@ -574,7 +594,7 @@ end
 
 function ShareMgr:SendRequest(TableNameType, Version)
     local MsgID = CS_CMD.CS_CMD_PRELOGIN
-    local SubMsgID = SUB_MSG_ID.CS_PRELOGIN_IDIP_CFG_CMD_QUERY
+    local SubMsgID = PRELOGIN_SUB_MSG_ID.CS_PRELOGIN_IDIP_CFG_CMD_QUERY
 	local QueryCfg = {
         TableName = TableNameType,
         Version = (Version + 1)
@@ -678,16 +698,84 @@ function ShareMgr:GetShareActivityRewardCfg(RewardID)
     return nil
 end
 
-function ShareMgr:ShareToQQPinDao()
+function ShareMgr:SetShareImageWidget(Widget)
+    self.ShareImageWidget = Widget
+end
+
+function ShareMgr:SendSaveShareImageData()
+	local MsgID = CS_CMD.CS_CMD_SHARE
+	local SubMsgID = ProtoCS_Share.ShareOptCmd.Share_Save
+
+	local MsgBody = {}
+	MsgBody.cmd = SubMsgID
+	MsgBody.save = {
+        shareType = ProtoCS_Share.ShareType.ShareType_TxChannel
+     }
+
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function ShareMgr:OnNetMsgSaveImageData(MsgBody)
+    local Rsp = MsgBody.save
+    if nil == Rsp then
+        _G.FLOG_ERROR("ShareMgr:OnNetMsgSaveImageData, save data is nil")
+        return
+    end
+
+    if Rsp.success then
+        self:PostShareImage(Rsp.upload)
+    else
+        _G.FLOG_ERROR("ShareMgr:OnNetMsgSaveImageData, save data req fail!")
+    end
+end
+
+
+function ShareMgr:PostShareImage(Upload)
+    if table.is_nil_empty(Upload) then
+        _G.FLOG_ERROR("ShareMgr:PostShareImage, Upload data is empty")
+        return
+    end
+
+    local Widget = self.ShareImageWidget
+    if nil == Widget then
+        _G.FLOG_ERROR("ShareMgr:PostShareImage, ShareImageWidget is nil")
+        return
+    end
+
+    local Size = UIUtil.GetLocalSize(Widget)
+    _G.FLOG_INFO("ShareMgr:PostShareImage, Widget: %s, Size: (%f, %f))", Widget:GetName(), Size.X, Size.Y)
+    local DataStr = _G.UE.UMediaUtil.GetWidgetScreenshotImageData(Widget, Size, 100, false)
+    if string.isnilorempty(DataStr) then
+        _G.FLOG_ERROR("ShareMgr:PostShareImage, the widget's screenshot data is empty")
+        return
+    end
+
+    local JsonStr = Json.encode({ data = DataStr })
+    _G.HttpMgr:Post(Upload.upload_url, Upload.http_token, JsonStr, self.OnPostShareImageCallback, self)
+end
+
+function ShareMgr:OnPostShareImageCallback(MessageBody, bSucceeded)
+    _G.FLOG_INFO("ShareMgr::OnPostShareImageCallback, bSucceeded: %s, MessageBody: %s", tostring(bSucceeded), MessageBody)
+    if bSucceeded then
+        local Rsp = Json.decode(MessageBody)
+        if Rsp and not string.isnilorempty(Rsp.photo_url) then
+            self:ShareToQQPinDao(Rsp.photo_url)
+        end
+    end
+end
+
+function ShareMgr:ShareToQQPinDao(ImageUrl)
     local Desc = ""
     local Cfg = self:GetShareActivityCfg(self.ShareID)
     if Cfg then
         Desc = Cfg.PinDaoContent or ""
     end
-    --TODO:需要将图片上传到服务器然后再获取URL
-    local PicUrl = ""
 
-    local EncodePicUrl = CommonUtil.GetBase64String(PicUrl)
+    -- Just for test
+    --Desc = "测试测试测试测试测试测试测试测试"
+    --ImageUrl = "https://fmgame-dev-1258344700.cos.ap-guangzhou.tencentcos.cn/portrait/414849691017910308690_1750909032.png"
+
+    local EncodePicUrl = CommonUtil.GetBase64String(ImageUrl)
     local EncodeDesc = CommonUtil.GetUrlEncodeStr(Desc)
     local OpenUrl = string.format("%s&pic1=%s&text=%s", OperationUtil.QQPinDaoUrl, EncodePicUrl, EncodeDesc)
     local ExtraJson = {}
@@ -695,7 +783,7 @@ function ShareMgr:ShareToQQPinDao()
     ExtraJson.closeLoadingView = true
     local ExtraJsonStr = Json.encode(ExtraJson)
     _G.FLOG_INFO("ShareMgr:ShareToQQPinDao, OpenUrl: %s, ExtraJsonStr:%s", OpenUrl, ExtraJsonStr)
-    _G.AccountUtil.OpenUrl(OpenUrl, 3, true, true, ExtraJsonStr, false)
+    _G.AccountUtil.OpenUrl(OpenUrl, 3, false, true, ExtraJsonStr, false)
 end
 
 
@@ -867,25 +955,6 @@ function ShareMgr:GetArkInfo(FriendOpenIDList, DynamicParams, bShowTips)
         end
         FLOG_INFO(string.format('[ShareMgr:QueryArkInfo] request success'))
     end
-end
-
---- 联调测试Demo
---- https://doc.weixin.qq.com/doc/w3_AQMATgawABw7iFx6kHkTYylJw4cz0?scode=AJEAIQdfAAoclSSrGqAEwAlwbdAFw
-function ShareMgr:GetDynamicArkInfoDemo(FriendOpenIDList)
-    local DynamicData = {}
-    -- 最终幻想14水晶世界-水晶召唤令
-    DynamicData.prompt = _G.HttpMgr:UrlEncode(LSTR("最终幻想14水晶世界-水晶召唤令"))
-    -- 水晶召唤令
-    DynamicData.title = _G.HttpMgr:UrlEncode(LSTR("水晶召唤令"))
-    -- 冒险者与我绑定，共同探险艾欧泽亚大陆!
-    DynamicData.desc = _G.HttpMgr:UrlEncode(LSTR("冒险者与我绑定，共同探险艾欧泽亚大陆!"))
-    DynamicData.preview = "https://game.gtimg.cn/images/ff14/cp/a20250506fmweb/top-icon.png"
-    DynamicData.jumpUrl = "https://ff14m.qq.com/cp/a20250506fmweb/index.html?sCode=xxxx"
-
-    --local DynamicParams = string.format('{"area":"%d"}' , ChannelID)
-    local DynamicParams = Json.encode(DynamicData)
-    --print("[ShareMgr:GetDynamicArkInfo] DynamicParams:", DynamicParams)
-    self:GetArkInfo(FriendOpenIDList, DynamicParams)
 end
 
 --{"Data":"Base64编码后的ArkJson"}

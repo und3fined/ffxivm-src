@@ -192,11 +192,11 @@ function GoldSaucerMooglePawMoogleItemView:ShowSuccessCatchBallResult()
 	if not BallVM then
 		return
 	end
-	local BallType = BallVM.BallType
+	local BallType = BallVM.HistoryShowType
 	local BallWidget = self.GoldSaucer_MooglePawBallItem_UIBP
 	if BallWidget and BallType then
 		UIUtil.SetIsVisible(BallWidget, true)
-		BallWidget:ShowCatchResult(BallType)
+		BallWidget:ShowCatchResult(BallType, BallVM.StarAnimIndex or 1)
 		local BallCfg = MooglePawBallCfg:FindCfgByKey(BallType)
 		if BallCfg then
 			local BallSize = BallCfg.BodySize or 0

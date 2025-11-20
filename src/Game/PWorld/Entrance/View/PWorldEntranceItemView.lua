@@ -79,8 +79,18 @@ function PWorldEntranceItemView:OnInit()
 		{ "StatusText",    UIBinderSetText.New(self, self.StatusText)},
 		{ "IsMatching", UIBinderValueChangedCallback.New(self, nil, function (_, NewValue, OldValue)
 			if NewValue then
+				if self:IsAnimationPlaying(self.AnimMatchingOut) then
+                    self:StopAnimation(self.AnimMatchingOut)
+                end
 				self:PlayAnimation(self.AnimMatchingIn)
+				self:PlayAnimation(self.AnimMatchingLoop, 0, 0)
 			else
+				if self:IsAnimationPlaying(self.AnimMatchingLoop) then
+                    self:StopAnimation(self.AnimMatchingLoop)
+                end
+				if self:IsAnimationPlaying(self.AnimMatchingIn) then
+                    self:StopAnimation(self.AnimMatchingIn)
+                end
 				self:PlayAnimation(self.AnimMatchingOut)
 			end
 		end)},

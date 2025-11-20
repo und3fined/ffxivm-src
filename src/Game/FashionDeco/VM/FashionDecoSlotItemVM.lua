@@ -22,6 +22,7 @@ function FashionDecoSlotItemVM:Ctor( )
 	self.RedDot2Visible = nil
 	self.IconCollectVisible = nil
 	self.ShowImgEmpty = nil
+	self.IsAmeliorateUp = nil
 end
 
 function FashionDecoSlotItemVM:IsEqualVM(Value)
@@ -44,8 +45,9 @@ function FashionDecoSlotItemVM:UpdateVM(Value,param)
     self.NumVisible = Value.NumVisible
 	self.RedDot2Visible = Value.RedDot2Visible
 	self.IconCollectVisible = Value.IconCollectVisible
-
+	self.IsAmeliorateUp = Value.IsAmeliorateUp
 end
+
 function FashionDecoSlotItemVM:OnSelectedChange(IsSelected)
 	self.IsSelect = IsSelected
 	--if self.IsSelect == true  then
@@ -66,9 +68,9 @@ function FashionDecoSlotItemVM:GetRawName()
 end
 
 function FashionDecoSlotItemVM:AdapterOnGetIsVisible()
-
 	return true
 end
+
 function FashionDecoSlotItemVM:AdapterOnGetCanBeSelected()
 	return not self.ShowImgEmpty
 end

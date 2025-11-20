@@ -21,6 +21,9 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local CommonUtil = require("Utils/CommonUtil")
 local LSTR = _G.LSTR
 
+local GlobalCfg = require("TableCfg/GlobalCfg")
+local ProtoRes = require("Protocol/ProtoRes")
+
 ---@class LoginCreateMakeNamePanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnOK UFButton
@@ -65,6 +68,12 @@ function LoginCreateMakeNamePanelView:OnInit()
     self.ViewModel = LoginRoleSetNameVM
 	self.CommInputBox:SetCallback(self, self.OnInputBoxTextChanged, self.OnTextCommitted)
 
+	local Cfg = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GlobalCfgNewbieSceneID)
+	if Cfg and Cfg.Value[2] then
+		self.MaxNameLen = Cfg.Value[2]
+	else
+		self.MaxNameLen = 14
+	end
 end
 
 function LoginCreateMakeNamePanelView:OnDestroy()
@@ -96,7 +105,7 @@ function LoginCreateMakeNamePanelView:OnShow()
 	else
 		self:SetPlatformNickName()
 	end
-	
+	self.CommInputBox:SetMaxNum(self.MaxNameLen)
 	self.LastbEnable = false
 
 	if self.Params and self.Params.ShowBg then
@@ -143,6 +152,11 @@ end
 
 function LoginCreateMakeNamePanelView:OnAnimationFinished(Anim)
 	if Anim == self.AnimIn then
+		UIUtil.SetRenderOpacity(self.BtnOK, 1)
+		UIUtil.SetRenderOpacity(self.CommInputBox, 1)
+		UIUtil.SetRenderOpacity(self.TextFailed, 1)
+		UIUtil.SetRenderOpacity(self.TextTitle, 1)
+
 		if self.NeedCheckName then
 			self.NeedCheckName = nil
 			self.LastbEnable = false

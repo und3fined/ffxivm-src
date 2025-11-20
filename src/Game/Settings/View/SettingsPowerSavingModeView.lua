@@ -78,7 +78,7 @@ function SettingsPowerSavingModeView:Reset(bAnim)
 	-- end
 
 	self.LastPercent = 0
-
+	
 	if _G.CommonUtil.IsObjectValid(self.Object) and self.ProgressBar and _G.CommonUtil.IsObjectValid(self.ProgressBar) then
 		self.ProgressBar:SetPercent(0)
 		self.Slider:SetValue(0)

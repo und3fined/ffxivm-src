@@ -40,14 +40,14 @@ local UE = _G.UE
 ---@field ImgNode06 UFImage
 ---@field ImgNode08 UFImage
 ---@field ImgRankIcon UFImage
----@field NodeReward01 CommBackpackSlotView
----@field NodeReward02 CommBackpackSlotView
----@field NodeReward03 CommBackpackSlotView
----@field NodeReward04 CommBackpackSlotView
----@field NodeReward05 CommBackpackSlotView
----@field NodeReward06 CommBackpackSlotView
----@field NodeReward07 CommBackpackSlotView
----@field NodeReward08 CommBackpackSlotView
+---@field NodeReward01 CommBackpack74SlotView
+---@field NodeReward02 CommBackpack74SlotView
+---@field NodeReward03 CommBackpack74SlotView
+---@field NodeReward04 CommBackpack74SlotView
+---@field NodeReward05 CommBackpack74SlotView
+---@field NodeReward06 CommBackpack74SlotView
+---@field NodeReward07 CommBackpack74SlotView
+---@field NodeReward08 CommBackpack74SlotView
 ---@field PanelBtnDone UFCanvasPanel
 ---@field PanelNode01 UFCanvasPanel
 ---@field PanelNode02 UFCanvasPanel
@@ -248,13 +248,22 @@ function CardsTourneyFinalSettlementWinView:OnShow()
 				local Cfg = ItemCfg:FindCfgByKey(NodeAward.ResID or 0 )
 				local ImgPath = Cfg and ItemCfg.GetIconPath(Cfg.IconID or 0) or ""
 				AwardWidget:SetIconImg(ImgPath)
-				AwardWidget:SetNum(NodeAward.Num)
+				local NumText = _G.ScoreMgr.FormatScore(NodeAward.Num)
+				AwardWidget:SetNum(NumText)
+				AwardWidget:SetIconChooseVisible(false)
+				AwardWidget:SetIsGet(false)
 				AwardWidget:SetClickButtonCallback(self, self.OnNodeRewardClicked)
 			end
 			-- 刷新玩家积分对应的奖励
 			if PlayerScore >= NodeScore then
+				local IsReward = MagicCardTourneyMgr:IsCanGetReward()
 				if AwardWidget then
-					UIUtil.SetIsVisible(AwardWidget.FImg_Select, true)
+					if IsReward then
+						UIUtil.SetIsVisible(AwardWidget.PanelAvailable, true)
+					else
+						UIUtil.SetIsVisible(AwardWidget.PanelAvailable, false)
+						AwardWidget:SetIsGet(true)
+					end
 				end
 				if GetProgressWidget then
 					UIUtil.SetIsVisible(GetProgressWidget, true)
@@ -288,9 +297,7 @@ function CardsTourneyFinalSettlementWinView:OnShow()
 	----
 
 	UIUtil.SetIsVisible(self.SelfReward01.ImgSelect, true)
-	local Secs = TourneyVM:GetRemainTimeForReward()
-	local LocalRemainTime = LocalizationUtil.GetCountdownTimeForLongTime(Secs) --天小时 _G.DateTimeTools.TimeFormat(Secs, "dd:hh", true) 
-	local TimeText = string.format(TourneyDefine.RemainTimeForAwardText, LocalRemainTime)
+	local TimeText = TourneyVM:GetRemainTimeText()
 	self.TextTime01:SetText(TimeText)
 end
 
@@ -332,6 +339,8 @@ function CardsTourneyFinalSettlementWinView:OnPlayerRankChanged(Rank)
 		UIUtil.SetIsVisible(self.ImgRankIcon, false)
 		return
 	end
+	local CupIcon = MagicCardVMUtils.GetRankIcon(Rank)
+	UIUtil.ImageSetBrushFromAssetPath(self.ImgRankIcon, CupIcon)
 	
 	for index, RankAward in ipairs(self.RankAwardList) do
 		local SelfRewardWidget = self.SelfRewardWidgetRef[index]
@@ -340,17 +349,26 @@ function CardsTourneyFinalSettlementWinView:OnPlayerRankChanged(Rank)
 			local IsReward = MagicCardTourneyMgr:IsCanGetReward()
 			UIUtil.SetIsVisible(SelfRewardWidget.ImgSelect, false)
 			UIUtil.SetIsVisible(SelfRewardWidget.PanelAvailable, IsReward)
+			UIUtil.SetIsVisible(SelfRewardWidget.IconReceived, not IsReward)
+			
 			SelfRewardWidget:SetClickButtonCallback(self, self.OnRewardClicked)
 			if RankAward.ResID and RankAward.ResID > 0 then
 				local Cfg = ItemCfg:FindCfgByKey(RankAward.ResID)
 				local ImgPath = Cfg and ItemCfg.GetIconPath(Cfg.IconID or 0) or ""
 				SelfRewardWidget:SetIconImg(ImgPath)
-			end
-			local RewardNum = RankAward.Num
-			if RewardNum > 1 then
-				SelfRewardWidget:SetNum(RewardNum)
-			else
-				SelfRewardWidget:SetNumVisible(false)
+				local RewardNum = RankAward.Num
+				if RewardNum > 1 then
+					local NumText = RewardNum
+					local ProtoCommon = require("Protocol/ProtoCommon")
+					local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
+					if Cfg.ItemType == ITEM_TYPE_DETAIL.MISCELLANY_CURRENCY then
+						NumText = _G.ScoreMgr.FormatScore(RewardNum)
+					end
+					SelfRewardWidget:SetNumVisible(true)
+					SelfRewardWidget:SetNum(NumText)
+				else
+					SelfRewardWidget:SetNumVisible(false)
+				end
 			end
 		end
 	end

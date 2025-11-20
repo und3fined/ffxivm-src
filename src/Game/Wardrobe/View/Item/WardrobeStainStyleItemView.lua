@@ -8,11 +8,14 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetBrushTintColorHex = require("Binder/UIBinderSetBrushTintColorHex")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 
 ---@class WardrobeStainStyleItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnStyle UFButton
 ---@field ImgBg UFImage
+---@field ImgLock UFImage
+---@field ImgMetal UFImage
 ---@field ImgStainColor UFImage
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -23,6 +26,8 @@ function WardrobeStainStyleItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnStyle = nil
 	--self.ImgBg = nil
+	--self.ImgLock = nil
+	--self.ImgMetal = nil
 	--self.ImgStainColor = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -37,6 +42,8 @@ end
 function WardrobeStainStyleItemView:OnInit()
 	self.Binders = {
 		{ "Color", UIBinderSetBrushTintColorHex.New(self, self.ImgStainColor) },
+		{ "IsUnlock", UIBinderSetIsVisible.New(self, self.ImgLock, true) },
+		{ "IsMetal", UIBinderSetIsVisible.New(self, self.ImgMetal) },
 	}
 end
 

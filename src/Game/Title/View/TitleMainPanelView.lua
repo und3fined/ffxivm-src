@@ -30,6 +30,7 @@ local AllTypeID = TitleDefine.AppendTitleType[2].ID
 ---@field BtnUse CommBtnLView
 ---@field CommMenu CommMenuView
 ---@field CommonBkg CommonBkg01View
+---@field CommonTitle CommonTitleView
 ---@field ImgGatWay UFImage
 ---@field ImgGoto UFImage
 ---@field PanelContent UFCanvasPanel
@@ -38,8 +39,6 @@ local AllTypeID = TitleDefine.AppendTitleType[2].ID
 ---@field TableViewList UTableView
 ---@field TextAchive UFTextBlock
 ---@field TextEmpty UFTextBlock
----@field TextSubtitle UFTextBlock
----@field TextTitle UFTextBlock
 ---@field AnimChangeTab UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimSearch UWidgetAnimation
@@ -56,6 +55,7 @@ function TitleMainPanelView:Ctor()
 	--self.BtnUse = nil
 	--self.CommMenu = nil
 	--self.CommonBkg = nil
+	--self.CommonTitle = nil
 	--self.ImgGatWay = nil
 	--self.ImgGoto = nil
 	--self.PanelContent = nil
@@ -64,8 +64,6 @@ function TitleMainPanelView:Ctor()
 	--self.TableViewList = nil
 	--self.TextAchive = nil
 	--self.TextEmpty = nil
-	--self.TextSubtitle = nil
-	--self.TextTitle = nil
 	--self.AnimChangeTab = nil
 	--self.AnimIn = nil
 	--self.AnimSearch = nil
@@ -80,12 +78,14 @@ function TitleMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnUse)
 	self:AddSubView(self.CommMenu)
 	self:AddSubView(self.CommonBkg)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.SearchBar)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function TitleMainPanelView:OnInit()
-	UIUtil.SetIsVisible(self.TextSubtitle, true)
+	self.CommonTitle:SetSubTitleIsVisible(true)
+	self.CommonTitle:SetCommInforBtnIsVisible(false)
 	self.SearchBar:SetCallback(self, nil, self.SearchCommittedCB, self.SearchCancelCB)
 	self.BtnBack:AddBackClick(self, self.Hide)
 	self.CurrentShowType = nil
@@ -98,7 +98,7 @@ function TitleMainPanelView:OnInit()
 	end
 
 	self.Binders = {
-		{ "CurrentTitleText", UIBinderSetText.New(self, self.TextSubtitle) },
+		{ "CurrentTitleText", UIBinderValueChangedCallback.New(self, nil, self.CurrentTitleTextChange) },
 		{ "TitleList", UIBinderUpdateBindableList.New(self, self.TableViewListAdapter) },
 		{ "AchievementText", UIBinderSetText.New(self, self.TextAchive) },
 		{ "BtnFavoriteState", UIBinderSetCheckedState.New(self, self.BtnFavorite) },
@@ -127,11 +127,10 @@ function TitleMainPanelView:OnShow()
 		end
 	end
 	self.SearchBar:SetHintText(LSTR(710008))
-	self.TextTitle:SetText(LSTR(710017))
+	self.CommonTitle:SetTextTitleName(LSTR(710017))
 	self.CommMenu:UpdateItems(ShowMenuList)
 	TitleMainPanelVM:SetLastSelectTitleId(TitleMgr:GetCurrentTitle())  -- 首次打开优先选择 自己佩戴称号
 	self.CommMenu:SetSelectedKey(AllTypeID, true)   -- 首次打开优先选择 “全部”分类
-	
 	TitleMainPanelVM:SetCurrentTitleText(TitleMgr:GetCurrentTitleText())
 end
 
@@ -201,6 +200,10 @@ function TitleMainPanelView:OnSelectionChangedCommMenu(Index, ItemData, ItemView
 			self:PlayAnimation(self.AnimChangeTab)
 		end
 	end
+end
+
+function TitleMainPanelView:CurrentTitleTextChange(NewValue)
+	self.CommonTitle:SetTextSubtitle(NewValue)
 end
 
 function TitleMainPanelView:OnUseBtnStateChange(NewValue)

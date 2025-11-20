@@ -33,7 +33,7 @@ function ArmyExpandWinVM:UpdateVM(EnlargeID, StoreID)
     local CfgRow = GroupStoreEnlargeCfg:FindCfgByKey(EnlargeID)
 	if CfgRow then
         --扩充格子数量
-        local EnlargeRichText = RichTextUtil.GetText(string.format("%d", CfgRow.Enlarge), "89bd88", 0, nil)
+        local EnlargeRichText = RichTextUtil.GetText(string.format("%d", CfgRow.Enlarge), "89bd88")
         -- LSTR string:扩容%s格仓库
         self.EnlargeTitleText = string.format(LSTR(910131), EnlargeRichText)
 
@@ -45,14 +45,14 @@ function ArmyExpandWinVM:UpdateVM(EnlargeID, StoreID)
          local NeedNum = CfgRow.ItemNum
          local NeedCost = 0
          if HasNum < NeedNum then
-            local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "dc5868", 0, nil)
+            local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "dc5868")
             self.ItemNumberText = string.format("%s/%d", ItemRichText, NeedNum)
             self.LackCheckBoxVisible = true
             self.ConsumeScoreVisible = false
             NeedCost = (NeedNum - HasNum)*CfgRow.ScoreNum
             self.ExpandBtnEnable = false
          else
-            local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "d5d5d5", 0, nil)
+            local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "d5d5d5")
             self.ItemNumberText = string.format("%s/%d", ItemRichText, NeedNum)
             self.LackCheckBoxVisible = false
             self.ConsumeScoreVisible = false

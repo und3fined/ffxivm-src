@@ -139,7 +139,7 @@ function OpsConcertFriendsListItemView:ShareMiniApp(Params, UserOpenID)
 			Path,
 			WeChatMiniAppCfg.TumbPath,
 			WeChatMiniAppCfg.AppID,
-			0,
+			2,
 			"MSG_INVITE",
 			Path,
 			"")

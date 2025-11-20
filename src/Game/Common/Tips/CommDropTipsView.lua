@@ -68,14 +68,14 @@ function CommDropTipsView:OnHide()
 end
 
 function CommDropTipsView:ClearItem()
-	local ItemLen = self.FCanvasPanel:GetChildrenCount()
-	for i = 1, ItemLen do
-		local View = self.FCanvasPanel:GetChildAt(i)
-		if View then
-			self.FCanvasPanel:RemoveChild(View)
-			UIViewMgr:RecycleView(View)
-		end
-	end
+	local Counter = tonumber(self.FCanvasPanel:GetChildrenCount()) or 0
+	for i = Counter, 1, -1 do
+        local View = self.FCanvasPanel:GetChildAt(i)
+        if View then
+            self.FCanvasPanel:RemoveChild(View)
+            UIViewMgr:RecycleView(View)
+        end
+    end
 end
 
 function CommDropTipsView:OnGameEventPWorldExit()

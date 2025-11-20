@@ -23,6 +23,7 @@ end
 
 function OpsActivityTaskPanelVM:Update(ActivityData)
     local Activity = ActivityData.Activity
+    local ClassifyID = Activity.ClassifyID
     self.TextTitle = Activity.Title
     local subTitle = Activity.SubTitle
     local Info = Activity.Info
@@ -59,12 +60,13 @@ function OpsActivityTaskPanelVM:Update(ActivityData)
                         Node.JumpParam = NodeCfg.JumpParam
                         Node.JumpButton = NodeCfg.JumpButton
                         Node.NodeSort = NodeCfg.NodeSort
+                        Node.ClassifyID = ClassifyID
                         table.insert(TotalStatisticNodes,Node)
                     elseif NodeCfg.NodeType == ActivityNodeType.ActivityNodeTypeAccumulativeFinishNode then
                         local StatisticNode1 = ActivityNodeCfg:FindCfgByKey(NodeCfg.Params[1])
                         local StatisticNode2 =ActivityNodeCfg:FindCfgByKey(NodeCfg.Params[2])
-                        local Node1 = self:GetStatisticNode(NodeList, StatisticNode1.NodeID)
-                        local Node2 = self:GetStatisticNode(NodeList, StatisticNode2.NodeID)
+                        local Node1 = StatisticNode1 and self:GetStatisticNode(NodeList, StatisticNode1.NodeID) or nil
+                        local Node2 = StatisticNode2 and self:GetStatisticNode(NodeList, StatisticNode2.NodeID) or nil
                         local Node = {}
                         Node.Index = 1
                         Node.RewardStatus = v.Head.RewardStatus
@@ -72,6 +74,7 @@ function OpsActivityTaskPanelVM:Update(ActivityData)
                         Node.NodeID = v.Head.NodeID
                         Node.ActivityID = NodeCfg.ActivityID
                         Node.NodeSort = NodeCfg.NodeSort
+                        Node.ClassifyID = ClassifyID
 
                         Node.NodeDes1 = StatisticNode1.NodeDesc
                         Node.FinishedTask1 = (Node1 and Node1.Extra and Node1.Extra.Progress) and Node1.Extra.Progress.Value or 0

@@ -35,11 +35,18 @@ function LoadMapFinishState:EnterState()
         local CurrPWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
         if (_G.PWorldMgr:CurrIsInDungeon()) then
             _G.PWorldStageMgr:InitPWorldStageInfo(CurrPWorldResID)
-            MainPanelVM:SetPWorldStageVisible(true)
+            _G.PWorldStageMgr:SetPWorldStageVisible(true)
         else
             _G.PWorldWarningMgr:ClearWarningGroupData()
-            MainPanelVM:SetPWorldStageVisible(false)
+            _G.PWorldStageMgr:SetPWorldStageVisible(false)
             MainPanelVM:SetWarningSkillCDItemListVisibile(false)
+        end
+
+        if _G.PWorldMgr:CurrIsInHousing() then
+            _G.PWorldStageMgr:SetHouseStageVisible(true)
+            --这里要进行房屋逻辑数据拉取
+        else
+            _G.PWorldStageMgr:SetHouseStageVisible(false)
         end
 
         local PWorldTableCfg = _G.PWorldMgr:GetPWorldTableCfg(CurrPWorldResID)
@@ -62,8 +69,8 @@ function LoadMapFinishState:EnterState()
     elseif not bChangeMap then
         local Major = MajorUtil.GetMajor()
         if Major then
-            -- 同地图切换，包括：地图内传送，地图切线
-            -- PWorldMapExit事件处理会清掉视野，保留主角；地图切线时，要求保持主角位置、相机等一致
+            -- 同地图切换
+            -- PWorldMapExit事件处理会清掉视野，保留主角
             if _G.PWorldMgr:IsTransInSameMap() then
                 FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState trans in same map")
                 if Major:IsInFly() then
@@ -73,16 +80,17 @@ function LoadMapFinishState:EnterState()
                 _G.UE.UActorManager:Get():EnableMajor()
                 Major:OnMajorCreate(MajorEntityID, true, true)
 
-            elseif _G.PWorldMgr:IsChangeLine() then
-                FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState change line")
-                Major:OnMajorCreate(MajorEntityID, true, true)
-
-            elseif _G.PWorldMgr:IsCrossWorld() then
-                FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState cross world")
-                Major:OnMajorCreate(MajorEntityID, true, true)
-
             elseif _G.PWorldMgr:IsReconnectInSameMap() then
                 FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState reconnect in same map")
+                Major:OnMajorCreate(MajorEntityID, true, true)
+
+            elseif _G.PWorldMgr:IsChangeSameMap() then
+                -- 相同地图切换时，要求保持主角位置、相机等一致
+                FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState change same map")
+                Major:OnMajorCreate(MajorEntityID, true, true)
+
+            else
+                FLOG_INFO("PWorldMgr LoadMapFinishState:EnterState bottom line protection")
                 Major:OnMajorCreate(MajorEntityID, true, true)
             end
         else

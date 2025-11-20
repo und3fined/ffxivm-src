@@ -9,6 +9,7 @@ local FashionDecoSettingTipsVM = LuaClass(UIViewModel)
 function FashionDecoSettingTipsVM:Ctor()
     self.ListSettingTipsItemVM = nil
     self.AutoUseInRainTitle = LSTR(1030005)--雨天自动穿戴穿戴
+    self.AutoUseSelectColor = "#FFEAEAFF"
     self.bAutoUseSelect = false
 end
 
@@ -43,6 +44,7 @@ function FashionDecoSettingTipsVM:CallSettingFunction(InIndex)
 end
 function FashionDecoSettingTipsVM:HideSelf()
     self.ParentViewModel:SetSettingPanel(false)
+    self.AutoUseSelectColor = "#FFEAEAFF"
 end
 function FashionDecoSettingTipsVM:SettingCurrentChooseType(InType)
     if FashionDecoDefine.FashionDecorateAutoUseChooseType.FashionDecorateUseByNone == InType then
@@ -115,9 +117,12 @@ function FashionDecoSettingTipsVM:GenItems(InIndex,bAutoUseSelect)
         value:SetSelect(value.FashionDecorateAutoUseChooseType == InIndex)
         if bAutoUseSelect == false then
             value.bIsClickMaskVisible = true
-            value.TitleColor = "8c8c8c"
+            value.TitleColor = "#8c8c8c"
+            self.AutoUseSelectColor = "#FFEAEAFF"
         else
             value.bIsClickMaskVisible = false
+            value.TitleColor = value.FashionDecorateAutoUseChooseType == InIndex and "#D8B15C" or "#8c8c8c"
+            self.AutoUseSelectColor = "#D8B15C"
         end
 
     end

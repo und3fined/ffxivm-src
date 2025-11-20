@@ -16,6 +16,7 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 ---@field ImgCheck UFImage
 ---@field ImgColor UFImage
 ---@field ImgLock UFImage
+---@field ImgMetalHighLight UFImage
 ---@field ImgSelect UFImage
 ---@field PanelInfo UFCanvasPanel
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -27,6 +28,7 @@ function BuddySurfaceColorItemView:Ctor()
 	--self.ImgCheck = nil
 	--self.ImgColor = nil
 	--self.ImgLock = nil
+	--self.ImgMetalHighLight = nil
 	--self.ImgSelect = nil
 	--self.PanelInfo = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -44,6 +46,7 @@ function BuddySurfaceColorItemView:OnInit()
         {"bIsDyed", UIBinderSetIsVisible.New(self, self.ImgCheck)},
         {"bIsLocked", UIBinderSetIsVisible.New(self, self.ImgLock)},
 		{"IsValid",UIBinderSetIsVisible.New(self, self.PanelInfo)},
+		{"IsMetalHigh",UIBinderSetIsVisible.New(self, self.ImgMetalHighLight)},
 	}
 end
 

@@ -18,6 +18,7 @@ local UIBinderSetBrushTintColorHex = require("Binder/UIBinderSetBrushTintColorHe
 ---@field ImgSelectColor UFImage
 ---@field PanelNormal UFCanvasPanel
 ---@field PanelSelect UFCanvasPanel
+---@field AnimSelect UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local BuddySurfaceColorPanelItemView = LuaClass(UIView, true)
 
@@ -28,6 +29,7 @@ function BuddySurfaceColorPanelItemView:Ctor()
 	--self.ImgSelectColor = nil
 	--self.PanelNormal = nil
 	--self.PanelSelect = nil
+	--self.AnimSelect = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -93,6 +95,12 @@ function BuddySurfaceColorPanelItemView:OnClickButtonItem()
     end
 
     Adapter:OnItemClicked(self, Params.Index)
+end
+
+function BuddySurfaceColorPanelItemView:OnSelectChanged(IsSelected)
+	if IsSelected then
+		self:PlayAnimation(self.AnimSelect)
+	end
 end
 
 return BuddySurfaceColorPanelItemView

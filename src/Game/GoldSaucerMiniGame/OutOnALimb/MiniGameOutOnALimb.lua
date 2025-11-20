@@ -29,7 +29,7 @@ function MiniGameOutOnALimb:Ctor()
 	self.MiniGameType = Type
     self.Name = MiniGameClientConfig[Type].Name
     self.UIViewMainID = UIViewID.OutOnALimbMainPanel
-    self.DoubleWinViewID = UIViewID.OutOnALimbDoubleWin
+    self.DoubleWinViewID = UIViewID.MooglePawDoubleWin
     self.SettlementViewID = UIViewID.OutOnALimbSettlementPanel
     self.IdleStateKey = AnimTimeLineSourceKey.FellingIdle
     self.DynAssetID = DynAssetInstanceID
@@ -143,8 +143,11 @@ function MiniGameOutOnALimb:OnCreateRestartContentParams()
         GameType = self.MiniGameType,
         RemainTime = self.RemainSeconds,
         RemainChances = self.MaxRound - RoundIndex - 1,
+        NextRound = RoundIndex + 2,
+        TotalRound = self.MaxRound,
+        BaseReward = self:GetTheRewardGotInTheRoundInternal(0),
         CurReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex),
-        NewReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex + 1),
+        NextReward = self:GetTheRewardGotInTheRoundInternal(RoundIndex + 1),
     }
 end
 

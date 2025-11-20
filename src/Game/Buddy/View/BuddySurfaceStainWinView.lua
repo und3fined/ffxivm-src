@@ -10,7 +10,7 @@ local UIUtil = require("Utils/UIUtil")
 local BuddySurfaceStainVM = require("Game/Buddy/VM/BuddySurfaceStainVM")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
-
+local ChocoboDyeStuffCfg = require("TableCfg/ChocoboDyeStuffCfg")
 local BuddyMgr
 local LSTR
 
@@ -61,7 +61,24 @@ function BuddySurfaceStainWinView:OnShow()
 	end
 
 	local TargetColorID = Params.TargetColorID
-	self.ViewModel:UpdateVM(TargetColorID)
+	local DyeLists = Params.DyeLists
+	local ResetItemID = 0
+	local ResetColorItem = false
+	local CfgList = ChocoboDyeStuffCfg:FindAllCfg()
+	for _, CfgItem in ipairs(CfgList) do
+		if CfgItem.R == 0 and CfgItem.G == 0 and CfgItem.B then
+			ResetItemID = CfgItem.ItemID
+		end
+	end
+
+	for i = 1, #DyeLists do
+		if DyeLists[i].ResID == ResetItemID then
+			ResetColorItem = true
+		end
+	end
+
+
+	self.ViewModel:UpdateVM(TargetColorID, ResetColorItem)
 end
 
 function BuddySurfaceStainWinView:OnHide()

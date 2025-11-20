@@ -161,10 +161,8 @@ function MagicCardTourneyVM:UpdateTourneyInfo(TourneyInfo)
     self.CurStageIndex = math.clamp(EffectsLen, 1, 4)
     self.CurStageName = TourneyVMUtils.GetStageNameByIndex(self.CurStageIndex)
 
-    -- 领取奖励剩余时间
-    local Secs = self:GetRemainTimeForReward()
-	local LocalRemainTime = LocalizationUtil.GetCountdownTimeForLongTime(Secs) --天小时 _G.DateTimeTools.TimeFormat(Secs, "dd:hh", true) 
-	self.SettlementDateText = string.format(TourneyDefine.RemainTimeForAwardText, LocalRemainTime)
+    -- 大赛结束/领取奖励剩余时间
+	self.SettlementDateText = self:GetRemainTimeText()
     -- 大赛名称
     local TourneyData = TourneyVMUtils.GetTourneyDataByID(self.TourneyID)
     if TourneyData then
@@ -212,7 +210,7 @@ function MagicCardTourneyVM:UpdateTourneyInfo(TourneyInfo)
             self.EffectAndProgressText = self.CurEffectName..self.ProgressText
         end
 
-        local EfectStatus = self:GetCurStageEffectStatusText()
+        local EfectStatus = self:GetCurStageEffectStatusText(true)
         -- 阶段结束不显示进行中
         if EfectStatus == TourneyDefine.EffectStatusText[0] then
             EfectStatus = ""
@@ -328,7 +326,8 @@ function MagicCardTourneyVM:GetIsInSingUpTime(StartTime)
 end
 
 ---@type 获取当前阶段效果状态文本
-function MagicCardTourneyVM:GetCurStageEffectStatusText()
+---@param IsSettlement 是否阶段结算
+function MagicCardTourneyVM:GetCurStageEffectStatusText(IsSettlement)
     if self.CurEffectInfo == nil then
         return ""
     end
@@ -336,6 +335,21 @@ function MagicCardTourneyVM:GetCurStageEffectStatusText()
     local EffectStatus = self.CurEffectInfo.Status
     if EffectStatus == nil then
         return ""
+    end
+
+    local CurEffectID = self.CurEffectInfo.EffectID
+    local EffectDetail = TourneyVMUtils.GetEffectInfoByEffectID(CurEffectID)
+    if EffectDetail and EffectDetail.Type == TourneyDefine.EEffectType.FANTASY_TOURNAMENT_EFFECT_TYPE_BATTLE_FLIP then
+        if IsSettlement then
+            return ""  -- 阶段结算不显示单局效果结果
+        else
+            -- 单局翻牌只有成功或者失败
+            if self.EffectProgress >= self.EffectArg then
+                EffectStatus = TourneyDefine.EEffectStatus.EFFECT_STATUS_SUCCESS
+            else
+                EffectStatus = TourneyDefine.EEffectStatus.EFFECT_STATUS_FAIL
+            end
+        end
     end
 
     local StateText = TourneyDefine.EffectStatusText[EffectStatus]
@@ -615,18 +629,26 @@ function MagicCardTourneyVM:GetTourneyEndTime()
     return self.EndTime
 end
 
----@type 获取剩余可领奖时间
-function MagicCardTourneyVM:GetRemainTimeForReward()
+---@type 获取剩余时间
+function MagicCardTourneyVM:GetRemainTimeText()
     local CurTime = _G.TimeUtil.GetServerLogicTime()
     local EndTime = self:GetTourneyEndTime()
     local NextTourneyTime = self:GetNextTourneyTime()
     local Secs = 0
+    local TimeText = ""
     if CurTime < EndTime then
+        -- 大赛结束前，显示大赛剩余时间
         Secs = EndTime - CurTime
+        local LocalRemainTime = LocalizationUtil.GetCountdownTimeForLongTime(Secs) --天小时 _G.DateTimeTools.TimeFormat(Secs, "dd:hh", true) 
+        TimeText = string.format(TourneyDefine.RemainTimeForEndText, LocalRemainTime)
     else
+        -- 大赛结束后，显示领奖剩余时间
         Secs = NextTourneyTime - CurTime
+        local LocalRemainTime = LocalizationUtil.GetCountdownTimeForLongTime(Secs)
+        TimeText = string.format(TourneyDefine.RemainTimeForAwardText, LocalRemainTime)
     end
-    return Secs
+
+    return TimeText
 end
 
 ---@type 获取大赛信息 对外接口

@@ -40,6 +40,7 @@ local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
 local EffectUtil = require("Utils/EffectUtil")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
 
 local DialogParams = LuaClass()
@@ -131,6 +132,8 @@ function NpcDialogMgr:OnInit()
     self.HudHideState = false
 
     self.ResumeTimerTable = {}
+
+    self.RegisterHandleKeyList = {}
 end
 
 function NpcDialogMgr:OnBegin()
@@ -172,6 +175,9 @@ function NpcDialogMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.QuestErrorFarDistance, self.CheckNeedEndInteraction)
     --Fate对话Npc销毁
     self:RegisterGameEvent(EventID.OnDialogNpcDestory, self.OnDialogNpcDestory)
+    
+    --手柄
+    self:RegisterGameEvent(EventID.InputActionTypeChange, self.OnInputActionTypeChange)
 end
 
 --InteractiveMgr也保存了一份view pcw
@@ -232,104 +238,115 @@ function NpcDialogMgr:PlayDialogLib(DialogLibID, EntityID, IsDefaultDialogID, Pl
         self.MainPanel = _G.UIViewMgr:ShowView(_G.UIViewID.NpcDialogueMainPanel,{ViewType = StoryDefine.UIType.NpcDialog})
     end
 
-    if DialogLibID == nil or DialogLibID == 0 then
-        if EntityID == -1 then
-            FLOG_WARNING("no dialog, Interactive END_DIALOG, from FunctionNPCQuit")
-            self.DialogState = NpcDialogState.END_DIALOG
+    local function func()
+        if self.HoldNewInteraction then
+            coroutine.yield()
         end
+        if DialogLibID == nil or DialogLibID == 0 then
+            if EntityID == -1 then
+                FLOG_WARNING("no dialog, Interactive END_DIALOG, from FunctionNPCQuit")
+                self.DialogState = NpcDialogState.END_DIALOG
+            end
 
-        FLOG_WARNING("Interactive PlayDialogLib DialogLibID=0, ClickNextDialog")
-        if PlayDialogLibCallback ~= nil then
-            PlayDialogLibCallback({NpcEntityID = 0, DialogGroup = 0, DialogLibID = 0})
-        end
-        self:ContinueDialog()
-        return
-    end
-
-    if self.DialogLib == nil or self.DialogLib[DialogLibID] == nil then
-        if EntityID ~= nil then
-            self.DialogLib = self:ReadDialogLib(DialogLibID, EntityID)
-        else
-            self.DialogLib = self:ReadDialogLib(DialogLibID, self.LastDialog.NpcEntityID)
-        end
-        if next(self.DialogLib) == nil then
-            FLOG_WARNING("Interactive ReadDialogLib failed")
-            --如果点击二级交互的按钮后，对话逻辑失败，则结束npc的交互；  当前也处于一级交互的阶段
-            self:EndInteraction()
+            FLOG_WARNING("Interactive PlayDialogLib DialogLibID=0, ClickNextDialog")
+            if PlayDialogLibCallback ~= nil then
+                PlayDialogLibCallback({NpcEntityID = 0, DialogGroup = 0, DialogLibID = 0})
+            end
+            self:ContinueDialog()
             return
         end
-    end
 
-    FLOG_INFO("Interactive PlayDialogLib:%d", DialogLibID)
-
-    local LastGroup = self.DialogLibLastGroup[DialogLibID]
-    if LastGroup == nil then
-        LastGroup = 0
-    end
-
-    local NewGroup = 0
-    -- _G.FLOG_WARNING(string.format("NpcDialogMgr:PlayDialogLib: %d, %d", DialogLibID, EntityID))
-    -- _G.FLOG_WARNING(table_to_string(self.DialogLib))
-    local LibType = self.DialogLib[DialogLibID][1][1].DialogLibType
-    if not next(self.DialogLib[DialogLibID][1]) then 
-        FLOG_WARNING("GroupID == nil, Please Check it"..DialogLibID)
-        return 
-    end
-    if LibType == ProtoRes.dialog_lib_type.SEQUENCE or IsHintTalk then
-        NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
-
-    elseif LibType == ProtoRes.dialog_lib_type.RANDOM then
-        NewGroup = LastGroup % #self.DialogLib[DialogLibID] + 1
-
-    elseif LibType == ProtoRes.dialog_lib_type.QUEST then
-        NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
-        if NewGroup == #self.DialogLib[DialogLibID] then
-            self.DialogState = NpcDialogState.END_QUEST_DIALOG
-            if IsDefaultDialogID then
-                FLOG_ERROR("Interactive DefaultDialog is QuestDialog")
-                MsgTipsUtil.ShowTips(LSTR(1280011))
+        if self.DialogLib == nil or self.DialogLib[DialogLibID] == nil then
+            if EntityID ~= nil then
+                self.DialogLib = self:ReadDialogLib(DialogLibID, EntityID)
+            else
+                self.DialogLib = self:ReadDialogLib(DialogLibID, self.LastDialog.NpcEntityID)
+            end
+            if next(self.DialogLib) == nil then
+                FLOG_WARNING("Interactive ReadDialogLib failed")
+                --如果点击二级交互的按钮后，对话逻辑失败，则结束npc的交互；  当前也处于一级交互的阶段
+                self:EndInteraction()
+                return
             end
         end
-    else
-        NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
-    end
 
-    for _, value in ipairs(self.DialogLib[DialogLibID][NewGroup]) do
-        value.EntityID = EntityID or self.LastDialog.NpcEntityID
-        value.bUseNpcInteractionCamera = bUseNpcInteractionCamera
-        if value.Condition and value.Condition ~= 0 then
-            if ConditionMgr:CheckConditionByID(value.Condition) then
-                table.insert(self.DialogQueue, value)
+        FLOG_INFO("Interactive PlayDialogLib:%d", DialogLibID)
+
+        local LastGroup = self.DialogLibLastGroup[DialogLibID]
+        if LastGroup == nil then
+            LastGroup = 0
+        end
+
+        local NewGroup = 0
+        -- _G.FLOG_WARNING(string.format("NpcDialogMgr:PlayDialogLib: %d, %d", DialogLibID, EntityID))
+        -- _G.FLOG_WARNING(table_to_string(self.DialogLib))
+        local LibType = self.DialogLib[DialogLibID][1][1].DialogLibType
+        if not next(self.DialogLib[DialogLibID][1]) then 
+            FLOG_WARNING("GroupID == nil, Please Check it"..DialogLibID)
+            return 
+        end
+        if LibType == ProtoRes.dialog_lib_type.SEQUENCE or IsHintTalk then
+            NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
+
+        elseif LibType == ProtoRes.dialog_lib_type.RANDOM then
+            NewGroup = LastGroup % #self.DialogLib[DialogLibID] + 1
+
+        elseif LibType == ProtoRes.dialog_lib_type.QUEST then
+            NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
+            if NewGroup == #self.DialogLib[DialogLibID] then
+                self.DialogState = NpcDialogState.END_QUEST_DIALOG
+                if IsDefaultDialogID then
+                    FLOG_ERROR("Interactive DefaultDialog is QuestDialog")
+                    MsgTipsUtil.ShowTips(LSTR(1280011))
+                end
             end
         else
-            table.insert(self.DialogQueue, value)
+            NewGroup = math.min(LastGroup + 1, #self.DialogLib[DialogLibID])
+        end
+
+        for _, value in ipairs(self.DialogLib[DialogLibID][NewGroup]) do
+            value.EntityID = EntityID or self.LastDialog.NpcEntityID
+            value.bUseNpcInteractionCamera = bUseNpcInteractionCamera
+            if value.Condition and value.Condition ~= 0 then
+                if ConditionMgr:CheckConditionByID(value.Condition) then
+                    table.insert(self.DialogQueue, value)
+                end
+            elseif value.DialogContent == "<blank>" then
+                --不处理
+            else
+                table.insert(self.DialogQueue, value)
+            end
+        end
+
+        if PlayDialogLibCallback ~= nil then
+            self.DialogQueue[#self.DialogQueue].Callback = PlayDialogLibCallback
+        else
+            self.DialogQueue[#self.DialogQueue].Callback = nil
+        end
+        local Actor = ActorUtil.GetActorByEntityID(EntityID)
+
+        local Major = MajorUtil.GetMajor()
+        local AvatarCom = Major:GetAvatarComponent()
+        if AvatarCom and not self.IsTempSetAvatarBack then
+            -- 立刻收刀
+            self.IsTempSetAvatarBack = true
+            _G.EmotionMgr:SendStopEmotionAll()
+        end
+
+        --设置一次Lookat
+        if bWithTurning and Actor ~= nil and ActorType and ActorType == _G.UE.EActorType.Npc
+        and not Actor:IsInInteraction() then
+            local AnimCom = Actor:GetAnimationComponent()
+            self:SavePreIdelAnimKey(ResID, AnimCom)
+            Actor:BeginInteraction(true)
+        else
+            self:PlayDialogInQueue()
         end
     end
 
-    if PlayDialogLibCallback ~= nil then
-        self.DialogQueue[#self.DialogQueue].Callback = PlayDialogLibCallback
-    else
-        self.DialogQueue[#self.DialogQueue].Callback = nil
-    end
-    local Actor = ActorUtil.GetActorByEntityID(EntityID)
-
-    local Major = MajorUtil.GetMajor()
-    local AvatarCom = Major:GetAvatarComponent()
-    if AvatarCom and not self.IsTempSetAvatarBack then
-        -- 立刻收刀
-        self.IsTempSetAvatarBack = true
-        _G.EmotionMgr:SendStopEmotionAll()
-    end
-
-    --设置一次Lookat
-    if bWithTurning and Actor ~= nil and ActorType and ActorType == _G.UE.EActorType.Npc
-    and not Actor:IsInInteraction() then
-        local AnimCom = Actor:GetAnimationComponent()
-        self:SavePreIdelAnimKey(ResID, AnimCom)
-        Actor:BeginInteraction(true)
-    else
-        self:PlayDialogInQueue()
-    end
+    --在这一步之前，都是预处理，以下逻辑放进协程里面
+    self.BeginFunctionC0 = coroutine.create(func)
+    coroutine.resume(self.BeginFunctionC0)
 end
 
 ---NpcDialogMgr.PushDialog 向对话队列中插入一条对话
@@ -421,6 +438,13 @@ function NpcDialogMgr:OnGameEventClickNextDialog(Params)
         if _G.InteractiveMgr:GetIsResetCustomTalk() then
             return
         end
+
+        if self.DialogLibID == 19005 then
+            self:EndInteraction()
+            _G.InteractiveMgr:ShowEntrances()
+            return
+        end
+
         if (not _G.InteractiveMgr.CurInteractEntrance) and (not self.bAutoPlayDialog) then
             self:EndInteraction()
             _G.InteractiveMgr:ShowEntrances()
@@ -435,10 +459,11 @@ function NpcDialogMgr:OnGameEventClickNextDialog(Params)
         self.DialogLibID = nil
         
         if self.DialogState == NpcDialogState.START_DIALOG or self.DialogState == NpcDialogState.FUNCTION then
-            local FunctionList = _G.InteractiveMgr.CurInteractEntrance:GenFunctionList()
+            local CurInteractEntrance = _G.InteractiveMgr.CurInteractEntrance
+            local FunctionList = CurInteractEntrance and CurInteractEntrance:GenFunctionList() or {}
             local NpcType = ProtoRes.NPC_TYPE.NPC
-            if _G.InteractiveMgr.CurInteractEntrance.Cfg then
-                NpcType = _G.InteractiveMgr.CurInteractEntrance.Cfg.Type or 0
+            if CurInteractEntrance.Cfg then
+                NpcType = CurInteractEntrance.Cfg.Type or 0
             end
             if (#FunctionList == 2 and self.DialogState == NpcDialogState.START_DIALOG   -- 如果除了离开以外只有一个功能选项，自动选择这个选项
             or #FunctionList == 1) and (NpcType and NpcType ~= ProtoRes.NPC_TYPE.ARMY) then                                              -- 如果只有离开选项，自动离开
@@ -603,7 +628,9 @@ function NpcDialogMgr:SetMajorCanMove(bCanMove)
     if not bCanMove then
         local ZeroVector = _G.UE.FVector(0, 0, 0)
         local MajorPlayer = MajorUtil.GetMajor()
-        MajorPlayer:SetCharacterMove(ZeroVector, 0, true, false)
+        if MajorPlayer ~= nil then
+            MajorPlayer:SetCharacterMove(ZeroVector, 0, true, false)
+        end
     end
 end
 
@@ -613,6 +640,12 @@ function NpcDialogMgr:OnNPCFinishTurning(Params)
     --     self:PlayDefaultDialog(EntityID)
     -- end
     local EntityID = Params.ULongParam1
+    --可能会有被打断对话后转身才完成的情况
+    local Actor = ActorUtil.GetActorByEntityID(EntityID)
+    if Actor and not Actor:IsInInteraction() then
+        FLOG_INFO("Interactive OnNPCFinishTurning After FroceStop")
+        return
+    end
     FLOG_INFO("Interactive OnNPCFinishTurning")
     if self.OnlyTurnWithNotDialog then
         self:SwitchIdleAnim(EntityID)
@@ -853,9 +886,8 @@ function NpcDialogMgr:CheckCharacterMovementSpeed()
         if Velocity.Z ~= 0 then
             MsgTipsUtil.ShowErrorTips(_G.LSTR(1280012))
             return true
-        elseif self.ResumeTimerTable and next(self.ResumeTimerTable) then
-            MsgTipsUtil.ShowTips(_G.LSTR(1280013))
-            return true
+        -- elseif self.ResumeTimerTable and next(self.ResumeTimerTable) then
+        --     return true
         end
     end
 end
@@ -882,13 +914,21 @@ function NpcDialogMgr:CheckDistanceCanInteraction(EntranceNpcEntityID)
     end
 end
 
+function NpcDialogMgr:CheckOtherSystemTalkCondtion(EntranceNpcEntityID)
+    if _G.MysterMerchantMgr:IsPendingDisableMerchant(EntranceNpcEntityID) then
+        FLOG_INFO("[NpcDialogMgr]CheckOtherSystemTalkCondtion IsPendingDisableMerchant !")
+        return true
+    end
+end
+
 function NpcDialogMgr:OnEnterInteractive(EntranceItem)
     self.LastMajorPos = nil
 end
 
 --点击一级npc交互的时候过来的
 function NpcDialogMgr:BeginInteraction(EntranceNpc)
-    if self:CheckCharacterMovementSpeed() or not self:CheckDistanceCanInteraction(EntranceNpc.EntityID) then
+    if self:CheckCharacterMovementSpeed() or not self:CheckDistanceCanInteraction(EntranceNpc.EntityID) 
+    or self:CheckOtherSystemTalkCondtion(EntranceNpc.EntityID) then
         InteractiveMgr:DelayShowEntrance(0.5)
         return 
     end
@@ -902,120 +942,134 @@ function NpcDialogMgr:BeginInteraction(EntranceNpc)
     end
     InteractiveMgr:OnEnterDialogue()
 
-    local EntityID = EntranceNpc.EntityID
-    _G.FLOG_INFO("Begin Interactive: "..EntityID)
-    self.LastDialog.NpcEntityID = EntityID
-    self.LastDialog.DialogLibID = 0
-
-    local Major = MajorUtil.GetMajor()
-    local AvatarCom = Major:GetAvatarComponent()
-    if AvatarCom and not self.IsTempSetAvatarBack then
-        -- 立刻收刀
-        self.IsTempSetAvatarBack = true
-        _G.EmotionMgr:SendStopEmotionAll()
-    end
-
-    self.IsSkipInteractiveUIAfterDialog = false
-
-    --预先计算
-    self.PreDefaultDialogID = self:GetDefaultDialogID(EntranceNpc.ResID)
-
-    local Cfg = NpcCfg:FindCfgByKey(EntranceNpc.ResID)
-    local ConfigID = Cfg == nil and 0 or Cfg.InteractionCamera
-    --隐藏头顶信息
-    if not self.HudHideState then
-        FLOG_INFO("DialogMgr:HideHUD")
-        _G.HUDMgr:SetIsDrawHUD(false)
-        self.HudHideState = true
-    end
-    local Actor = ActorUtil.GetActorByEntityID(EntityID)
-    local AnimCom = Actor:GetAnimationComponent()
-    self:SavePreIdelAnimKey(EntranceNpc.ResID, AnimCom)
-    if Actor ~= nil and Actor.BeginInteraction ~= nil then
-        if Actor.IsTurning and Actor:IsTurning() and Actor:StopTurning() then
-            Actor:StopTurning()
+    local function func ()
+        local EntityID = EntranceNpc.EntityID
+        _G.FLOG_INFO("Begin Interactive: "..EntityID)
+        self.LastDialog.NpcEntityID = EntityID
+        if self.HoldNewInteraction then
+            coroutine.yield()
         end
-        local ActorType = ActorUtil.GetActorType(EntityID)
-        if ActorType and ActorType == _G.UE.EActorType.Npc then
-            Actor:BeginInteraction(ConfigID == nil or ConfigID >= 20000 or ConfigID < 10)
+        local Major = MajorUtil.GetMajor()
+        local AvatarCom = Major:GetAvatarComponent()
+        if AvatarCom and not self.IsTempSetAvatarBack then
+            -- 立刻收刀
+            self.IsTempSetAvatarBack = true
+            _G.EmotionMgr:SendStopEmotionAll()
         end
-    elseif Actor == nil then
-        _G.FLOG_ERROR("[DialogMgr] BeginInteractive Dialog Actor is Nil")
-        self:EndInteraction()
-        return
-    end
-    _G.FLOG_INFO("Begin Interactive DialogState: %d", self.DialogState)
-    
-    --任务Cut/对话存在的时候，npc对话结束，连交互都结束了  == NO_DIALOG
-    if self.DialogState == NpcDialogState.END_DIALOG or 
-        not _G.InteractiveMgr.bLockTimer then
-        self.PreDefaultDialogID = 0
-        _G.FLOG_INFO("Interactive is end")
-        return
-    end
-    
-    local bSwitchCamera = false
-    if self.PreDefaultDialogID == 0 then
-        local FunctionList = EntranceNpc:GenFunctionList()
-        local FunctionNum = #FunctionList
-        FLOG_INFO("Interactive FunctionNum:%d", FunctionNum)
-        if FunctionNum > 2 then
-            bSwitchCamera = true
-        elseif FunctionNum > 0 then
-            local FirstType = FunctionList[1].FuncType
-            if FirstType ~= LuaFuncType.QUIT_FUNC and FirstType ~= LuaFuncType.NPCQUIT_FUNC then
-                if FirstType == LuaFuncType.QUEST_FUNC then
-                    local ID = FunctionList[1].FuncParams.QuestParams.DialogOrSequenceID
-                    local DialogType = QuestDefine.GetDialogueType(ID)
-                    FLOG_INFO("Interactive QuestDialogIDOrSeqID:%d, Type:%d", ID, DialogType)
-                    if DialogType == QuestDefine.DialogueType.NpcDialog then
-                        bSwitchCamera = true
+
+        self.IsSkipInteractiveUIAfterDialog = false
+        self.LastDialog.DialogLibID = 0
+        --预先计算
+        self.PreDefaultDialogID = self:GetDefaultDialogID(EntranceNpc.ResID)
+
+        local Cfg = NpcCfg:FindCfgByKey(EntranceNpc.ResID)
+        local ConfigID = Cfg == nil and 0 or Cfg.InteractionCamera
+        --隐藏头顶信息
+        if not self.HudHideState then
+            FLOG_INFO("DialogMgr:HideHUD")
+            _G.HUDMgr:SetIsDrawHUD(false)
+            self.HudHideState = true
+        end
+
+        local Actor = ActorUtil.GetActorByEntityID(EntityID)
+        --对话面板出现之前先设置一次Lookat
+        self:SetNpcLookAt(Actor, Major, EntityID)
+        if Actor ~= nil and Actor.BeginInteraction ~= nil then
+            local AnimCom = Actor:GetAnimationComponent()
+            self:SavePreIdelAnimKey(EntranceNpc.ResID, AnimCom)
+            if Actor.IsTurning and Actor:IsTurning() and Actor:StopTurning() then
+                Actor:StopTurning()
+            end
+            local ActorType = ActorUtil.GetActorType(EntityID)
+            if ActorType and ActorType == _G.UE.EActorType.Npc then
+                if not Actor:IsInInteraction() then
+                    _G.FLOG_INFO("NpcDialogMgr:ActorBeginInteraction %d", EntityID)
+                    Actor:BeginInteraction(ConfigID == nil or ConfigID >= 20000 or ConfigID < 10)
+                else
+                    self:EndInteraction()
+                end
+            end
+        elseif Actor == nil then
+            _G.FLOG_ERROR("[DialogMgr] BeginInteractive Dialog Actor is Nil")
+            self:EndInteraction()
+            return
+        end
+        _G.FLOG_INFO("Begin Interactive DialogState: %d", self.DialogState)
+
+        --任务Cut/对话存在的时候，npc对话结束，连交互都结束了  == NO_DIALOG
+        if self.DialogState == NpcDialogState.END_DIALOG or 
+            not _G.InteractiveMgr.bLockTimer then
+            self.PreDefaultDialogID = 0
+            _G.FLOG_INFO("Interactive is end")
+            return
+        end
+
+        local bSwitchCamera = false
+        if self.PreDefaultDialogID == 0 then
+            local FunctionList = EntranceNpc:GenFunctionList()
+            local FunctionNum = #FunctionList
+            FLOG_INFO("Interactive FunctionNum:%d", FunctionNum)
+            if FunctionNum > 2 then
+                bSwitchCamera = true
+            elseif FunctionNum > 0 then
+                local FirstType = FunctionList[1].FuncType
+                if FirstType ~= LuaFuncType.QUIT_FUNC and FirstType ~= LuaFuncType.NPCQUIT_FUNC then
+                    if FirstType == LuaFuncType.QUEST_FUNC then
+                        local ID = FunctionList[1].FuncParams.QuestParams.DialogOrSequenceID
+                        local DialogType = QuestDefine.GetDialogueType(ID)
+                        FLOG_INFO("Interactive QuestDialogIDOrSeqID:%d, Type:%d", ID, DialogType)
+                        if DialogType == QuestDefine.DialogueType.NpcDialog then
+                            bSwitchCamera = true
+                        end
                     end
                 end
             end
-        end
-    else
-        bSwitchCamera = true
-    end
-
-    Major:DoClientModeEnter()
-    if bSwitchCamera and Cfg and Cfg.InteractionCamera ~= nil and Cfg.InteractionCamera > 0 and Major and Actor then
-        self.IsNeedResumeCamera = true
-        if Cfg.InteractionCamera == 1 then
-            ConfigID = self:GetCameraConfigID(EntityID)
+        else
+            bSwitchCamera = true
         end
 
-        FLOG_INFO("Interactive InteractionCamera:%d", ConfigID)
-        -----------
-        -- local ActorRotation = Actor:FGetActorRotation()
-        -- local ActorForward = ActorRotation:GetForwardVector()
+        Major:DoClientModeEnter()
+        if bSwitchCamera and Cfg and Cfg.InteractionCamera ~= nil and Cfg.InteractionCamera > 0 and Major and Actor then
+            self.IsNeedResumeCamera = true
+            if Cfg.InteractionCamera == 1 then
+                ConfigID = self:GetCameraConfigID(EntityID)
+            end
 
-        local NpcPos = Actor:FGetActorLocation()
-        self.LastMajorPos = Major:FGetActorLocation()
-        -- FLOG_INFO("=====pcw LastMajoPos :%s", tostring(self.LastMajorPos))
-        local Distance = _G.UE.FVector.Dist(self.LastMajorPos, NpcPos)
-        if Distance < MajorValidDistance then
-            local MajorPos2 = self:GetMajorBackPos(Actor, NpcPos, Major, Distance)
-            if MajorPos2 then
-                Major:K2_SetActorLocation(MajorPos2, false, nil, false)
+            FLOG_INFO("Interactive InteractionCamera:%d", ConfigID)
+            -----------
+            -- local ActorRotation = Actor:FGetActorRotation()
+            -- local ActorForward = ActorRotation:GetForwardVector()
+
+            local NpcPos = Actor:FGetActorLocation()
+            self.LastMajorPos = Major:FGetActorLocation()
+            -- FLOG_INFO("=====pcw LastMajoPos :%s", tostring(self.LastMajorPos))
+            local Distance = _G.UE.FVector.Dist(self.LastMajorPos, NpcPos)
+            if Distance < MajorValidDistance then
+                local MajorPos2 = self:GetMajorBackPos(Actor, NpcPos, Major, Distance)
+                if MajorPos2 then
+                    Major:K2_SetActorLocation(MajorPos2, false, nil, false)
+                else
+                    self.LastMajorPos = nil
+                end
             else
                 self.LastMajorPos = nil
             end
-        else
-            self.LastMajorPos = nil
-        end
-        -----------
-        local ChageViewRlt, ConfigKeyID = self:ChangeView(ConfigID)
-        if ChageViewRlt == nil then
-            self.IsNeedResumeCamera = false
-            FLOG_ERROR("Interactive ChageViewRlt failed")
-            if self.LastMajorPos then
-                Major:K2_SetActorLocation(self.LastMajorPos, false, nil, false)
+            -----------
+            local ChageViewRlt, ConfigKeyID = self:ChangeView(ConfigID)
+            if ChageViewRlt == nil then
+                self.IsNeedResumeCamera = false
+                FLOG_ERROR("Interactive ChageViewRlt failed")
+                if self.LastMajorPos then
+                    Major:K2_SetActorLocation(self.LastMajorPos, false, nil, false)
+                end
+            else
+                self:OnEnterDialogCamera(EntityID, ConfigKeyID)
             end
-        else
-            self:OnEnterDialogCamera(EntityID, ConfigKeyID)
         end
     end
+    --在这一步之前，都是预处理，以下逻辑放进协程里面
+    self.BeginFunctionC0 = coroutine.create(func)
+    coroutine.resume(self.BeginFunctionC0)
 end
 
 function NpcDialogMgr:GetMajorBackPos(NpcActor, NpcPos, Major, Distance)
@@ -1073,7 +1127,8 @@ end
 --Param包含NpcResID,Eid以及FuncType
 function NpcDialogMgr:OnlySwitchCameraOrTurn(Param, WithOutSwithCamera, CallBack)
     self.IsNeedResumeCamera = false
-    if self:CheckCharacterMovementSpeed() or not self:CheckDistanceCanInteraction(Param.EntityID) then
+    if self:CheckCharacterMovementSpeed() or not self:CheckDistanceCanInteraction(Param.EntityID) 
+    or self:CheckOtherSystemTalkCondtion(Param.EntityID) then
         InteractiveMgr:DelayShowEntrance(0.5)
         return 
     end
@@ -1085,89 +1140,108 @@ function NpcDialogMgr:OnlySwitchCameraOrTurn(Param, WithOutSwithCamera, CallBack
     if not self.MainPanel then
         self.MainPanel = _G.UIViewMgr:ShowView(_G.UIViewID.NpcDialogueMainPanel,{ViewType = StoryDefine.UIType.NpcDialog})
     end
-    self.OnlyTurnWithNotDialog = true
-    local EntityID = Param.EntityID
-    self.LastDialog.NpcEntityID = EntityID
-    self.LastDialog.DialogLibID = 0
 
-    local Major = MajorUtil.GetMajor()
-    local AvatarCom = Major:GetAvatarComponent()
-    if AvatarCom and not self.IsTempSetAvatarBack then
-        -- 立刻收刀
-        self.IsTempSetAvatarBack = true
-        _G.EmotionMgr:SendStopEmotionAll()
-    end
+    local function func()
+        local EntityID = Param.EntityID
+        self.LastDialog.NpcEntityID = EntityID
+        if self.HoldNewInteraction then
+            FLOG_ERROR("NpcDialogMgr:OnlySwitchCameraOrTurn, coroutine.yield()")
+            coroutine.yield()
+        end
+        self.OnlyTurnWithNotDialog = true
+        local Major = MajorUtil.GetMajor()
+        local AvatarCom = Major:GetAvatarComponent()
+        if AvatarCom and not self.IsTempSetAvatarBack then
+            -- 立刻收刀
+            self.IsTempSetAvatarBack = true
+            _G.EmotionMgr:SendStopEmotionAll()
+        end
 
-    --npc转向
-    local Cfg = NpcCfg:FindCfgByKey(Param.ResID)
-    local ConfigID = Cfg == nil and 0 or Cfg.InteractionCamera
+        --npc转向
+        local Cfg = NpcCfg:FindCfgByKey(Param.ResID)
+        local ConfigID = Cfg == nil and 0 or Cfg.InteractionCamera
 
-    --隐藏头顶信息
-    if not self.HudHideState then
+        --隐藏头顶信息
+        if not self.HudHideState then
         FLOG_INFO("DialogMgr:HideHUD")
         _G.HUDMgr:SetIsDrawHUD(false)
         self.HudHideState = true
-    end
-    local Actor = ActorUtil.GetActorByEntityID(EntityID)
-    local AnimCom = Actor:GetAnimationComponent()
-    self:SavePreIdelAnimKey(Param.ResID, AnimCom)
-    if Actor ~= nil then
-        --这里要重设转身回调函数，结束交互的时候清理一下
-        self.FnishTurnCallBack = CallBack
-        if Actor.IsTurning and Actor:IsTurning() and Actor:StopTurning() then
-            Actor:StopTurning()
         end
-        local ActorType = ActorUtil.GetActorType(EntityID)
-        if ActorType and ActorType == _G.UE.EActorType.Npc then
-            Actor:BeginInteraction(ConfigID == nil or ConfigID >= 20000 or ConfigID < 10)
-        end
-    else
-        _G.FLOG_ERROR("[DialogMgr] OnlySwitchCameraOrTurn Dialog Actor is Nil")
-        self:EndInteraction()
-        return
-    end
+        local Actor = ActorUtil.GetActorByEntityID(EntityID)
+        self.LastDialog.DialogLibID = 0
 
-    if WithOutSwithCamera then
+        --在对话面板出现之前设置一次Lookat
+        self:SetNpcLookAt(Actor, Major, EntityID)
+        if Actor ~= nil then
+            --这里要重设转身回调函数，结束交互的时候清理一下
+            local AnimCom = Actor:GetAnimationComponent()
+            self:SavePreIdelAnimKey(Param.ResID, AnimCom)
+            self.FnishTurnCallBack = CallBack
+            if Actor.IsTurning and Actor:IsTurning() and Actor:StopTurning() then
+                Actor:StopTurning()
+            end
+            local ActorType = ActorUtil.GetActorType(EntityID)
+            if ActorType and ActorType == _G.UE.EActorType.Npc then
+                if not Actor:IsInInteraction() then
+                    _G.FLOG_INFO("NpcDialogMgr:ActorBeginInteraction %d", EntityID)
+                    Actor:BeginInteraction(ConfigID == nil or ConfigID >= 20000 or ConfigID < 10)
+                else
+                    self:EndInteraction()
+                end
+            end
+        else
+            _G.FLOG_ERROR("[DialogMgr] OnlySwitchCameraOrTurn Dialog Actor is Nil")
+            self:EndInteraction()
+            return
+        end
+
+        if WithOutSwithCamera then
+            _G.InteractiveMgr:EnterInteractive()
+            return
+        end
+
+        self.IsSkipInteractiveUIAfterDialog = false
         _G.InteractiveMgr:EnterInteractive()
-        return
-    end
-    self.IsSkipInteractiveUIAfterDialog = false
-    _G.InteractiveMgr:EnterInteractive()
 
-    _G.FLOG_INFO("Begin Interactive: "..EntityID)
-    if Cfg and Cfg.InteractionCamera ~= nil and Cfg.InteractionCamera > 0 and Major and Actor then
-        self.IsNeedResumeCamera = true
-        if Cfg.InteractionCamera == 1 then
-            ConfigID = self:GetCameraConfigID(EntityID)
-        end
+        _G.FLOG_INFO("Begin Interactive: "..EntityID)
+        if Cfg and Cfg.InteractionCamera ~= nil and Cfg.InteractionCamera > 0 and Major and Actor then
+            self.IsNeedResumeCamera = true
+            if Cfg.InteractionCamera == 1 then
+                ConfigID = self:GetCameraConfigID(EntityID)
+            end
 
-        FLOG_INFO("NpcDialogMgr OnlySwitchCameraOrTurn:%d", ConfigID)
-        local NpcPos = Actor:FGetActorLocation()
-        self.LastMajorPos = Major:FGetActorLocation()
-        local Distance = _G.UE.FVector.Dist(self.LastMajorPos, NpcPos)
-        if Distance < MajorValidDistance then
-            local MajorPos2 = self:GetMajorBackPos(Actor, NpcPos, Major, Distance)
-            if MajorPos2 then
-                -- FLOG_INFO("pcw MajorPos2 :%s", tostring(GroudPos))
-                Major:DoClientModeEnter()
-                Major:K2_SetActorLocation(MajorPos2, false, nil, false)
+            FLOG_INFO("NpcDialogMgr OnlySwitchCameraOrTurn:%d", ConfigID)
+            local NpcPos = Actor:FGetActorLocation()
+            self.LastMajorPos = Major:FGetActorLocation()
+            local Distance = _G.UE.FVector.Dist(self.LastMajorPos, NpcPos)
+            if Distance < MajorValidDistance then
+                local MajorPos2 = self:GetMajorBackPos(Actor, NpcPos, Major, Distance)
+                if MajorPos2 then
+                    -- FLOG_INFO("pcw MajorPos2 :%s", tostring(GroudPos))
+                    Major:DoClientModeEnter()
+                    Major:K2_SetActorLocation(MajorPos2, false, nil, false)
+                else
+                    self.LastMajorPos = nil
+                end
             else
                 self.LastMajorPos = nil
             end
-        else
-            self.LastMajorPos = nil
-        end
-        -----------
-        local ChageViewRlt, ConfigKeyID = self:ChangeView(ConfigID)
-        if ChageViewRlt == nil then
-            self.IsNeedResumeCamera = false
-            if self.LastMajorPos then
-                Major:K2_SetActorLocation(self.LastMajorPos, false, nil, false)
+            -----------
+            local ChageViewRlt, ConfigKeyID = self:ChangeView(ConfigID)
+            if ChageViewRlt == nil then
+                self.IsNeedResumeCamera = false
+                if self.LastMajorPos then
+                    Major:K2_SetActorLocation(self.LastMajorPos, false, nil, false)
+                end
+            else
+                self:OnEnterDialogCamera(EntityID, ConfigKeyID)
             end
-        else
-            self:OnEnterDialogCamera(EntityID, ConfigKeyID)
         end
     end
+
+    --在这一步之前，都是预处理，以下逻辑放进协程里面
+    self.BeginFunctionC0 = coroutine.create(func)
+    coroutine.resume(self.BeginFunctionC0)
 end
 
 function NpcDialogMgr:CheckNeedEndInteraction()
@@ -1470,52 +1544,63 @@ function NpcDialogMgr:RsetActorAnimation()
         self.DialogNpcTable[ResID] = {}
         self.DialogNpcTable[ResID].EntityID = self.LastDialog.NpcEntityID
     end
-    for _, data in pairs(self.DialogNpcTable) do
+    local i = 1
+    if self.NpcLookAtData and next(self.NpcLookAtData) then
+        for EntityID, Data in pairs(self.NpcLookAtData) do
+            local Actor = ActorUtil.GetActorByEntityID(EntityID)
+            if Actor and _G.UE.UCommonUtil.IsObjectValid(Actor) then
+                 self:SetNpcLookAt(Actor, nil, EntityID)
+            end
+        end
+    end
+    for key, data in pairs(self.DialogNpcTable) do
         if data.EntityID and data.EntityID ~= 0 then
             local EntityID = data.EntityID
             local ResID = ActorUtil.GetActorResID(EntityID)
             local Actor = ActorUtil.GetActorByEntityID(data.EntityID)
-            if Actor and Actor.EndInteraction ~= nil and Actor:IsInInteraction() then
-                if self.NpcLookAtData and next(self.NpcLookAtData) then
-                    self:SetNpcLookAt(Actor, nil, EntityID)
-                end
-                local Cfg = NpcCfg:FindCfgByKey(ResID)
-                local AnimCom = Actor:GetAnimationComponent()
-                if AnimCom then
-                    self:UnRegisterTimer(self["IdleTimer"..tostring(EntityID)])
-                    self:UnRegisterTimer(self["PlayAnimtionCallBack"..tostring(EntityID)])
-                    self["IdleTimer"..tostring(EntityID)] = nil
-                    self["PlayAnimtionCallBack"..tostring(EntityID)] = nil
-                    local IdelTimeline = AnimCom:GetIdleActionTimeline()
-                    if Cfg and next(Cfg) and Cfg.IdleTimeline ~= IdelTimeline and IdelTimeline ~= 0 then
-                        local NewTimeline
-                        if self.ActorPreIdelAnimKeyTable[ResID] and self.ActorPreIdelAnimKeyTable[ResID] ~= 0 then
-                            NewTimeline = self.ActorPreIdelAnimKeyTable[ResID]
-                            self:GetEndInteracticeAnimation(IdelTimeline, NewTimeline, AnimCom, Actor, EntityID)
-                        else
-                            NewTimeline = Cfg.IdleTimeline
-                            self:GetEndInteracticeAnimation(IdelTimeline, NewTimeline, AnimCom, Actor, EntityID)
+            --多人对话第二个人开始不会转身
+            if Actor and Actor.EndInteraction ~= nil then
+                local IsInInteraction = i == 1 and Actor:IsInInteraction() or true
+                if IsInInteraction then
+                    local Cfg = NpcCfg:FindCfgByKey(ResID)
+                    local AnimCom = Actor:GetAnimationComponent()
+                    if AnimCom then
+                        self:UnRegisterTimer(self["IdleTimer"..tostring(EntityID)])
+                        self:UnRegisterTimer(self["PlayAnimtionCallBack"..tostring(EntityID)])
+                        self["IdleTimer"..tostring(EntityID)] = nil
+                        self["PlayAnimtionCallBack"..tostring(EntityID)] = nil
+                        local IdelTimeline = AnimCom:GetIdleActionTimeline()
+                        if Cfg and next(Cfg) and Cfg.IdleTimeline ~= IdelTimeline and IdelTimeline ~= 0 then
+                            local NewTimeline
+                            if self.ActorPreIdelAnimKeyTable[ResID] and self.ActorPreIdelAnimKeyTable[ResID] ~= 0 then
+                                NewTimeline = self.ActorPreIdelAnimKeyTable[ResID]
+                                self:GetEndInteracticeAnimation(IdelTimeline, NewTimeline, AnimCom, Actor, EntityID)
+                            else
+                                NewTimeline = Cfg.IdleTimeline
+                                self:GetEndInteracticeAnimation(IdelTimeline, NewTimeline, AnimCom, Actor, EntityID)
+                            end
+                        end
+                        if data.LastSpeakMontage and data.LastSpeakMontage:IsValid() then
+                            AnimCom:StopMontage(data.LastSpeakMontage)
+                            data.LastSpeakMontage = nil
                         end
                     end
-                    if data.LastSpeakMontage and data.LastSpeakMontage:IsValid() then
-                        AnimCom:StopMontage(data.LastSpeakMontage)
-                        data.LastSpeakMontage = nil
+                    if Actor.IsTurning and Actor:IsTurning() and Actor.ForceAbortTurning then
+                        Actor:ForceAbortTurning()
                     end
+                    if data.PlayingAnim and data.PlayingAnim:IsValid() then
+                        AnimCom:StopMontage(data.PlayingAnim)
+                        data.PlayingAnim = nil
+                    end
+                    if data.ExcessiveAnim and data.ExcessiveAnim:IsValid() then
+                        AnimCom:StopMontage(data.ExcessiveAnim)
+                        data.ExcessiveAnim = nil
+                    end
+                    Actor:EndInteraction()
                 end
-                if Actor.IsTurning and Actor:IsTurning() and Actor.ForceAbortTurning then
-                    Actor:ForceAbortTurning()
-                end
-                if data.PlayingAnim and data.PlayingAnim:IsValid() then
-                    AnimCom:StopMontage(data.PlayingAnim)
-                    data.PlayingAnim = nil
-                end
-                if data.ExcessiveAnim and data.ExcessiveAnim:IsValid() then
-                    AnimCom:StopMontage(data.ExcessiveAnim)
-                    data.ExcessiveAnim = nil
-                end
-                Actor:EndInteraction()
             end
         end
+        i = i + 1
     end
     self.ActorPreIdelAnimKeyTable = {}
     self.DialogNpcTable = {}
@@ -1576,9 +1661,15 @@ function NpcDialogMgr:PlayDialogAnim(EntityID, AnimPath)
                 local ExcessiveAnimationPath = AnimCom:GetActionTimeline(NextStanceStr)
                 local ExcessiveAnimation = _G.ObjectMgr:LoadObjectSync(ExcessiveAnimationPath, ObjectGCType.NoCache)
                 local Montage = Actor:CheckActionTimelineMontage(ExcessiveAnimation, "WholeBody", 0, 0, 99999)
-                DelayTime = AnimationUtil.GetAnimMontageLength(Montage)
-                local ExcessiveAnim =AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, 0)
-                self.DialogNpcTable[ResID].ExcessiveAnim = ExcessiveAnim
+                local BlendIn = 0.25
+                if CurrentStance == StanceTypeDefine.SPECIAL_SIT_GROUND then
+                    BlendIn = 0.6
+                end
+                DelayTime = AnimationUtil.GetAnimMontageLength(Montage) - BlendIn
+                local ExcessiveAnim =AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, BlendIn, 0.25)
+                if self.DialogNpcTable and self.DialogNpcTable[ResID] then
+                    self.DialogNpcTable[ResID].ExcessiveAnim = ExcessiveAnim
+                end
             end
             local IdelDelayTime = 0
             if DelayTime then
@@ -1603,9 +1694,15 @@ function NpcDialogMgr:PlayDialogAnim(EntityID, AnimPath)
                 local ExcessiveAnimationPath = AnimCom:GetActionTimeline(NextStanceStr)
                 local ExcessiveAnimation = _G.ObjectMgr:LoadObjectSync(ExcessiveAnimationPath, ObjectGCType.NoCache)
                 local Montage = Actor:CheckActionTimelineMontage(ExcessiveAnimation, "WholeBody", 0, 0, 99999)
-                DelayTime = AnimationUtil.GetAnimMontageLength(Montage)
-                local ExcessiveAnim = AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, 0)
-                self.DialogNpcTable[ResID].ExcessiveAnim = ExcessiveAnim
+                local BlendIn = 0.25
+                if CurrentStance == StanceTypeDefine.SPECIAL_SIT_GROUND then
+                    BlendIn = 0.6
+                end
+                DelayTime = AnimationUtil.GetAnimMontageLength(Montage) - BlendIn
+                local ExcessiveAnim = AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, BlendIn, 0.25)
+                if self.DialogNpcTable and self.DialogNpcTable[ResID] then
+                    self.DialogNpcTable[ResID].ExcessiveAnim = ExcessiveAnim
+                end
             end
             local IdelDelayTime = 0
             if DelayTime then
@@ -1616,17 +1713,24 @@ function NpcDialogMgr:PlayDialogAnim(EntityID, AnimPath)
     end
     local AnimCallBack = function()
         FLOG_INFO("[TimerCallBack]NpcDialogMgr:PlayDialogAnim"..tostring(AnimationAssetPath))
-        local PlayingAnim = AnimCom:PlayAnimation(AnimationAssetPath, 1, 0)
-        self.DialogNpcTable[ResID].PlayingAnim = PlayingAnim
+        if AnimCom and _G.UE.UCommonUtil.IsObjectValid(AnimCom) then
+            local PlayingAnim = AnimCom:PlayAnimation(AnimationAssetPath, 1, 0)
+            if self.DialogNpcTable and self.DialogNpcTable[ResID] then
+                self.DialogNpcTable[ResID].PlayingAnim = PlayingAnim
+            end
+        end 
     end
     if DelayTime == 0 then
         FLOG_INFO("[WithOutTimer]NpcDialogMgr:PlayDialogAnim"..tostring(AnimationAssetPath))
         self:UnRegisterTimer(self["PlayAnimtionCallBack"..tostring(EntityID)])
         self["PlayAnimtionCallBack"..tostring(EntityID)] = nil
         local PlayingAnim = AnimCom:PlayAnimation(AnimationAssetPath, 1, 0.15)
-        self.DialogNpcTable[ResID].PlayingAnim = PlayingAnim
+        if self.DialogNpcTable and self.DialogNpcTable[ResID] then
+            self.DialogNpcTable[ResID].PlayingAnim = PlayingAnim
+        end
     else
         FLOG_INFO("[WithTimer]NpcDialogMgr:PlayDialogAnim"..tostring(AnimationAssetPath))
+        DelayTime = DelayTime or 0
         self["PlayAnimtionCallBack"..tostring(EntityID)] = self:RegisterTimer(AnimCallBack, DelayTime + 0.1, 0 , 1)
     end
 end
@@ -1738,18 +1842,27 @@ function NpcDialogMgr:GetEndInteracticeAnimation(OldTimeLine, IdelTimeline, Anim
         local CallBack = function()
             self:UnRegisterTimer(self["ResumeTimer"..tostring(EntityID)])
             self.ResumeTimerTable[EntityID] = nil
+            if not next(self.ResumeTimerTable) then
+                self.HoldNewInteraction = false
+                coroutine.resume(self.BeginFunctionC0)
+            end
             AnimCom:SetIdleActionTimeline(IdelTimeline)
         end
         local NeedMontage = _G.ObjectMgr:LoadObjectSync(ExcessiveAnimationPath, ObjectGCType.NoCache)
         local Montage = Actor:CheckActionTimelineMontage(NeedMontage, "WholeBody", 0, 0, 99999)
-        local DelayTime = AnimationUtil.GetAnimMontageLength(Montage)
+        local BlendIn = 0.25
+        if CurrentStance == StanceTypeDefine.SPECIAL_SIT_GROUND then
+            BlendIn = 0.6
+        end
+        local DelayTime = AnimationUtil.GetAnimMontageLength(Montage) - BlendIn
         local ResumeTime = 0
         if DelayTime then
             ResumeTime = DelayTime * 0.8
         end
         self["ResumeTimer"..tostring(EntityID)]= self:RegisterTimer(CallBack, ResumeTime, 0 , 1)
         self.ResumeTimerTable[EntityID] = true
-        AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, 0)
+        self.HoldNewInteraction = true
+        AnimCom:PlayAnimation(ExcessiveAnimationPath, 1, BlendIn, 0.25)
     elseif IdelTimeline ~= 0 then
         AnimCom:SetIdleActionTimeline(IdelTimeline)
     end
@@ -2404,5 +2517,96 @@ function NpcDialogMgr:GetBranchListItem(BranchCfg)
         return TempUnitList
 	end
 end
+
+---手柄交互相关
+-- function NpcDialogMgr:SwitchCurSelectItem(IsDown)
+--     NpcDialogVM:SwitchCurSelectItem(IsDown)
+--     _G.EventMgr:SendEvent(EventID.GamePadUpdateInteractive)
+-- end
+
+function NpcDialogMgr:OnInputActionTypeChange(IsHandleAttached)
+    if nil == IsHandleAttached then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+    NpcDialogVM.IsHandleAttached = IsHandleAttached
+end
+
+function NpcDialogMgr:RegisterHandleKeyDownData(HandleAction)
+    --已经注册过了，无需重复
+    if self.RegisterHandleKeyList[HandleAction] and self.RegisterHandleKeyList[HandleAction] > 0 then
+        self.RegisterHandleKeyList[HandleAction] = self.RegisterHandleKeyList[HandleAction] + 1
+        return
+    end
+    self.RegisterHandleKeyList[HandleAction] = 1
+    local HandleActionID = HandleAction
+    local InteractiveName
+    local Params1 = _G.EventMgr:GetEventParams()
+    if nil ~= SettingsHandleDefine.HandleCustomActionConfig[HandleAction] and
+        SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.NpcDialogCustom
+    end
+    if nil ~= SettingsHandleDefine.HandleInputActionConfig[HandleAction] and
+       SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive
+        HandleActionID = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Index
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.NpcDialog
+    end
+    if nil == InteractiveName then
+        return
+    end
+    local InteractiveID = SettingsHandleDefine.HandleCusActionFunc[InteractiveName]
+    if nil == InteractiveID then
+        return
+    end
+	Params1.IntParam1 = HandleActionID
+	Params1.IntParam2 = InteractiveID
+	_G.EventMgr:SendCppEvent(EventID.RegisiterKeyDownData, Params1)
+    Params1.IntParam2 = 0
+    _G.EventMgr:SendCppEvent(EventID.RegisiterKeyUpData, Params1)
+    self.RegisterHandleKeyList[HandleAction] = 1
+end
+
+function NpcDialogMgr:UnRegisterHandleKeyDownData(HandleAction)
+    if nil == self.RegisterHandleKeyList[HandleAction] then
+        return
+    end
+    if self.RegisterHandleKeyList[HandleAction] <= 0 then
+        self.RegisterHandleKeyList[HandleAction] = 0
+        return
+    elseif self.RegisterHandleKeyList[HandleAction] > 1 then
+        self.RegisterHandleKeyList[HandleAction] = self.RegisterHandleKeyList[HandleAction] - 1
+        return
+    end
+    self.RegisterHandleKeyList[HandleAction] = 0
+    local HandleActionID = HandleAction
+    local InteractiveName
+    local Params1 = _G.EventMgr:GetEventParams()
+    if nil ~= SettingsHandleDefine.HandleCustomActionConfig[HandleAction] and
+        SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleCustomActionConfig[HandleAction].Interactive
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.NpcDialogCustom
+    end
+    if nil ~= SettingsHandleDefine.HandleInputActionConfig[HandleAction] and
+       SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive then
+        InteractiveName = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Interactive
+        HandleActionID = SettingsHandleDefine.HandleInputActionConfig[HandleAction].Index
+        Params1.IntParam3 = SettingsHandleDefine.HandleActionPriority.NpcDialog
+    end
+    if nil == InteractiveName then
+        return
+    end
+    local InteractiveID = SettingsHandleDefine.HandleCusActionFunc[InteractiveName]
+    if nil == InteractiveID then
+        return
+    end
+	Params1.IntParam1 = HandleActionID
+	Params1.IntParam2 = InteractiveID
+	_G.EventMgr:SendCppEvent(EventID.UnRegisiterKeyDownData, Params1)
+    Params1.IntParam2 = 0
+    _G.EventMgr:SendCppEvent(EventID.UnRegisiterKeyUpData, Params1)
+    self.RegisterHandleKeyList[HandleAction] = nil
+end
+
 
 return NpcDialogMgr

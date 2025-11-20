@@ -89,11 +89,13 @@ function CardsTourneyRewardItemView:SetNum(Num)
 end
 
 function CardsTourneyRewardItemView:SetResID(ResID)
-	self.ItemID = ResID
+	self.ItemID = ResID or 0
 end
 
 function CardsTourneyRewardItemView:OnBtnClicked()
-	ItemTipsUtil.ShowTipsByItem({ResID = self.ItemID}, self.CommSlot, {X = -2, Y = -15})
+	if self.ItemID and self.ItemID > 0 then
+		ItemTipsUtil.ShowTipsByItem({ResID = self.ItemID}, self.CommSlot, {X = -2, Y = -15})
+	end
 end
 
 return CardsTourneyRewardItemView

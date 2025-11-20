@@ -29,9 +29,13 @@ local RecommendTag = FashionEvaluationDefine.RecommendTag
 ---@field BtnChallenge CommBtnLView
 ---@field BtnRecommend UToggleButton
 ---@field BtnRecord UFButton
+---@field CommEmpty CommBackpackEmptyView
 ---@field CommSearchBar3 CommSearchBarView
 ---@field CommSearchBtn3 CommSearchBtnView
+---@field CommonTitle CommonTitleView
+---@field IconTitle UFImage
 ---@field InforBtn CommInforBtnView
+---@field PanelIcon UFCanvasPanel
 ---@field PanelTab UFCanvasPanel
 ---@field PanelTips UFCanvasPanel
 ---@field SwitchInfo UFWidgetSwitcher
@@ -62,9 +66,13 @@ function FashionEvaluationFittingRoomPanelView:Ctor()
 	--self.BtnChallenge = nil
 	--self.BtnRecommend = nil
 	--self.BtnRecord = nil
+	--self.CommEmpty = nil
 	--self.CommSearchBar3 = nil
 	--self.CommSearchBtn3 = nil
+	--self.CommonTitle = nil
+	--self.IconTitle = nil
 	--self.InforBtn = nil
+	--self.PanelIcon = nil
 	--self.PanelTab = nil
 	--self.PanelTips = nil
 	--self.SwitchInfo = nil
@@ -92,8 +100,10 @@ function FashionEvaluationFittingRoomPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BackBtn)
 	self:AddSubView(self.BtnChallenge)
+	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.CommSearchBar3)
 	self:AddSubView(self.CommSearchBtn3)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.InforBtn)
 	self:AddSubView(self.Target)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -105,7 +115,7 @@ function FashionEvaluationFittingRoomPanelView:OnInit()
 	self.Binders = {
 		{"PartThemeVMList", UIBinderUpdateBindableList.New(self, self.ThemePartsAdapterTableView)},
 		{"AppearanceInfoVMlist", UIBinderUpdateBindableList.New(self, self.AppsAdapterTableView)},
-		{"ThemeNameText", UIBinderSetText.New(self, self.TextSubTitle)},
+		{"ThemeNameText", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)},
 		{"CurSelectPart", UIBinderValueChangedCallback.New(self, nil, self.OnSelectPartIDChanged)},
 		{"CurSelectAppID", UIBinderValueChangedCallback.New(self, nil, self.OnSelectEquipResIDChanged)},
 		{"CurSelectEquipName", UIBinderSetText.New(self, self.TextThingName)},
@@ -113,6 +123,7 @@ function FashionEvaluationFittingRoomPanelView:OnInit()
 		{"CurSelectEquipIsTracked", UIBinderSetIsChecked.New(self, self.ToggleButton_144)},
 		{"IsFirstTimesEnter", UIBinderValueChangedCallback.New(self, nil, self.OnIsFirstTimesEnterChanged)},
 		{"IsHistoryEmpty", UIBinderSetIsVisible.New(self, self.BtnRecord, true, true)},
+		{"IsSearchEmpty", UIBinderSetIsVisible.New(self, self.CommEmpty)},
 	}
 
 end
@@ -131,7 +142,10 @@ function FashionEvaluationFittingRoomPanelView:OnShow()
 	self.ThemePartsAdapterTableView:SetSelectedIndex(1)
 	local IsEquipedHistory = self.FittingVM.IsEquipedHistory
 	if not IsEquipedHistory then
-		FashionEvaluationMgr:RestoreUICharacterAvatar()
+		local PartThemeList = self.FittingVM:GetPartThemeList()
+		if PartThemeList then
+			FashionEvaluationMgr:WearAppearanceList(PartThemeList)
+		end
 	end
 	UIUtil.SetIsVisible(self.InforBtn, true, true)
 end
@@ -169,7 +183,8 @@ function FashionEvaluationFittingRoomPanelView:OnRegisterBinder()
 end
 
 function FashionEvaluationFittingRoomPanelView:SetLSTR()
-	self.TextTitle:SetText(_G.LSTR(1120038)) -- 1120037("试衣间")
+	self.CommonTitle:SetCommInforBtnIsVisible(false)
+	self.CommonTitle:SetTextTitleName(_G.LSTR(1120038)) -- 1120037("试衣间")
 	self.BtnChallenge:SetBtnName(_G.LSTR(1120039)) --1120032("挑  战")
 	self.TextTryiton:SetText(_G.LSTR(1120040))--1120040("试穿")
 	self.TextHave:SetText(_G.LSTR(1120041))--1120041("衣橱拥有")
@@ -180,6 +195,7 @@ function FashionEvaluationFittingRoomPanelView:SetLSTR()
 	self.TextAllNormal:SetText(_G.LSTR(1120045))--1120045("全部")
 	self.TextAllFocus:SetText(_G.LSTR(1120045))--1120045("全部")
 	self.TextTips:SetText(_G.LSTR(1120046))--1120046("推荐中有符合主题的外观哦")
+	self.CommEmpty:SetTipsContent(_G.LSTR(1120063)) --1120063("暂无对应外观")
 end
 
 function FashionEvaluationFittingRoomPanelView:SetRender2DView(Render2DView)
@@ -262,10 +278,14 @@ function FashionEvaluationFittingRoomPanelView:OnAppearanceSelected(Index, ItemD
         if Equip then
             local EquipID = Equip.ResID
 			if EquipID and EquipID > 0 then
-				UIComplexCharacter:PreViewEquipment(EquipID, ItemData.Part)
+				if UIComplexCharacter and _G.CommonUtil.IsObjectValid(UIComplexCharacter) then
+					UIComplexCharacter:PreViewEquipment(EquipID, ItemData.Part)
+				end
 			end
         else
-			UIComplexCharacter:PreViewEquipment(0, ItemData.Part)
+			if UIComplexCharacter and _G.CommonUtil.IsObjectValid(UIComplexCharacter) then
+				UIComplexCharacter:PreViewEquipment(0, ItemData.Part)
+			end
         end
     else
 		FashionEvaluationMgr:WearAppearance(ItemData.Part, NewAppID)

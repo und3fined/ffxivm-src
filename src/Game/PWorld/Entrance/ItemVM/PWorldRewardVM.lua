@@ -18,6 +18,7 @@ function PWorldRewardVM:Ctor()
 
 	self.ShowTipDaily = false
 	self.ShowTipFirst = false
+	self.bPropDrop = false
 
 	self.Cnt = 0
 end
@@ -39,6 +40,7 @@ function PWorldRewardVM:UpdateVM(Data)
 	self.ShowTipDaily = Data.ShowTipDaily
 	self.ShowTipFirst = Data.ShowTipFirst
 	self.bWeekly = Data.bWeekly
+	self.bPropDrop = Data.bPropDrop
 end
 
 function PWorldRewardVM:IsEqualVM(Data)

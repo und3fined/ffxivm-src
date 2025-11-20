@@ -23,6 +23,7 @@ function MagicsparInlayRecomItemVM:Ctor()
     self.Name = nil
     self.Desc = nil
     self.iCount = 0
+    self.DescColor = "828282"
 end
 
 function MagicsparInlayRecomItemVM:InitItem(InResID)
@@ -49,6 +50,10 @@ function MagicsparInlayRecomItemVM:CalculateRecommend()
         AttrKey == ProtoCommon.attr_type.attr_quick then
         ---暴击 直击 信念 急速
         local AttributeComponent = MajorUtil.GetMajorAttributeComponent()
+        if AttributeComponent == nil then
+            return
+        end
+
         local AttrValue = AttributeComponent:GetAttrValue(AttrKey)
         local c_attr_param_cfg = AttrParamCfg:FindCfgByID(AttributeComponent.Level)
         

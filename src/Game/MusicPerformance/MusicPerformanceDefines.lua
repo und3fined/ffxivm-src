@@ -62,17 +62,30 @@ MusicPerformanceDefines.MetronomeSettings = {
 MusicPerformanceDefines.CommonSettings = {
 	KeyboardMode = 1,	-- 单音阶
 	KeySize = 1,		-- 小
-	-- OtherMuted = false,		-- 否，不静音
+	MusicSheet = 1,     -- 简谱
+	PerformanceAssistantDoneSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/sound/zingle/Zingle_Treasure01/Play_Zingle_Treasure01.Play_Zingle_Treasure01'", --演奏助手结束音效
+	StartSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/sound/battle/etc/SE_Bt_Etc_BattleStart/Play_SE_Bt_Etc_BattleStart.Play_SE_Bt_Etc_BattleStart'", --演奏/合奏即将开始
+	CountDownSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_UI_countdown_1.Play_UI_countdown_1'", --演奏321
+	StartTwoSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_boolean_new.Play_boolean_new'", --开始
 }
 
 MusicPerformanceDefines.Ensemble = {
 	DefaultSettings = {
 		OpenAssistant = true,
 		OpenCountDown = true,
-		Mode = 1,
+		Mode = 1, --队伍全员[Mode=1]、只怕自己[Mode=2]
 		ReadyTime = 30,
 		CountDownTime = 6,
-	}
+	},
+	EnterEnsembleWinPanelSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_UI_copy_enter.Play_UI_copy_enter'",
+	CountDownTimeSoundPath = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Play_SE_UI_SE_UI_CFTimeCount.Play_SE_UI_SE_UI_CFTimeCount'",
+}
+
+-- 谱面形式分类
+MusicPerformanceDefines.MusicSheetType = {
+    Jp = 1, --简谱
+    Ym = 2, --音名
+    Cm = 3, --唱名
 }
 
 MusicPerformanceDefines.KeyDefines = {
@@ -148,7 +161,24 @@ MusicPerformanceDefines.KeyAnimMap = {
 	[11] = 0,	-- B
 }
 
-MusicPerformanceDefines.KeyName = {
+--简谱-键名
+MusicPerformanceDefines.KeyNameJp = {
+	[0] = "1",	-- C
+	[1] = "#1",	-- C+
+	[2] = "2",	-- D
+	[3] = "b3",	-- D+
+	[4] = "3",	-- E
+	[5] = "4",	-- F
+	[6] = "#4",	-- F+
+	[7] = "5",	-- G
+	[8] = "#5.",	-- G+
+	[9] = "6",	-- A
+	[10] = "b7",	-- A+
+	[11] = "7",	-- B
+}
+
+--音名-键名
+MusicPerformanceDefines.KeyNameYm = {
 	[0] = "C",	-- C
 	[1] = "C#",	-- C+
 	[2] = "D",	-- D
@@ -161,6 +191,37 @@ MusicPerformanceDefines.KeyName = {
 	[9] = "A",	-- A
 	[10] = "Bb",	-- A+
 	[11] = "B",	-- B
+}
+--音名-德语键名
+MusicPerformanceDefines.KeyNameYmGerman = {
+	[0] = "C",	-- C
+	[1] = "C#",	-- C+
+	[2] = "D",	-- D
+	[3] = "Eb",	-- D+
+	[4] = "E",	-- E
+	[5] = "F",	-- F
+	[6] = "F#",	-- F+
+	[7] = "G",	-- G
+	[8] = "G#",	-- G+
+	[9] = "A",	-- A
+	[10] = "B",	-- A+
+	[11] = "H",	-- B
+}
+
+--唱名-键名
+MusicPerformanceDefines.KeyNameCm = {
+	[0] = "Do",	-- C
+	[1] = "",	-- C+
+	[2] = "Re",	-- D
+	[3] = "",	-- D+
+	[4] = "Mi",	-- E
+	[5] = "Fa",	-- F
+	[6] = "",	-- F+
+	[7] = "Sol",	-- G
+	[8] = "",	-- G+
+	[9] = "La",	-- A
+	[10] = "",	-- A+
+	[11] = "Ti",	-- B
 }
 
 MusicPerformanceDefines.SendInterval = MusicPerformanceDefines.PerformCommandMax * MusicPerformanceDefines.PlayInterval
@@ -219,10 +280,10 @@ MusicPerformanceDefines.AssistantFallingDownConfig = {
 	--BottomOffset = 80,
 	BottomOffset = 120,
 	BottomOffsets = {
-		LongOffset1 = 140,		-- 长按拖尾的Offset
-		AllLongOffset1 = 160,	-- 全音阶长按拖尾的Offset
-		LongOffset2 = 64,		-- 长按方块的Offset
-		ShortOffset	= 200,		-- 短按方块的Offset
+		LongOffset1 = 83,		-- 单音阶长按拖尾的Offset
+		AllLongOffset1 = 105,	-- 全音阶长按拖尾的Offset
+		LongOffset2 = 8,		-- 长按方块的Offset
+		ShortOffset	= 145,		-- 短按方块的Offset
 		EffectOffset = 0,		-- 特效的Offset
 
 	},
@@ -250,6 +311,7 @@ MusicPerformanceDefines.AssistantFallingDownConfig = {
 	StartDelayTime = 6,				-- 开启演奏助手倒计时的时间
 	AssistantDoneDelayTimeMS = 1200,	-- 演奏助手停止Tick的事件（缓冲UI更新）
 	AssistantItemDestoryTimeOffsetMS = 1000,	-- 演奏助手停止Tick的事件（缓冲UI更新）
+	AssistanNoteKeyTipsDelayTime = 3.0, -- 演奏助手音符按键消除提示的延迟检测时间(3秒未按则显示tips提示)
 
 	MinSpeedRate = 0.1,
 	MaxSpeedRate = 2.0,
@@ -272,9 +334,12 @@ MusicPerformanceDefines.AssistantFallingDownConfig = {
 		WhiteDown = 6,
 	},
 
+	--演奏助手界面(分界线的高度，区分高低按键)
+	--例如小键高度374 = 键盘高度(PerformanceNoBlackKey_UIBP)252 + 黄线资源(PanelKeyboardDecor)向下偏移75(因黄线未底部平齐,所以要减掉17) + 黄线距离键盘顶部20
+	--大小键相差70
 	KeybroadSize = {
-		BGY = 274,
-		LargeBGY = 325,
+		BGY = 330,		--小键
+		LargeBGY = 400, --大键
 	},
 
 	IsWhiteKey = {

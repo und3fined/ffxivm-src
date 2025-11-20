@@ -56,7 +56,9 @@ function WidgetPool:AddWidget(Widget, bActive)
 
 	--print("WidgetPool:AddWidget", Widget.Object)
 
-	Widget:SetIsInPool(true)
+	if nil ~= Widget then
+		Widget:SetIsInPool(true)
+	end
 
 	UUIMgr:AddChildWidget(Widget)
 end

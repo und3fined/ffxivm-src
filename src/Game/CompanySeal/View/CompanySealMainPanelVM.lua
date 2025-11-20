@@ -34,13 +34,13 @@ function CompanySealMainPanelVM:Ctor()
 	self.CurChoseID = nil
 	self.TextTime = nil
 	self.ToggleButtonState = EToggleButtonState.Unchecked
-	self.ConfimBtnVisible = nil
+	self.ConfimBtnVisible = true
 	self.ConfimBtnText = nil
 	self.TextSub = nil
 	self.RareChoesdList = nil
 	self.WarningVisible = nil
 	self.BtnColor = CommBtnColorType.Recommend
-	self.BtnTextColor = "FFFFFFFF"
+	self.BtnTextColor = "FFFFFF"
 	self.IsNeverTips = nil
 	self.ArmyLogo = nil
 	self.ArmyBG = nil
@@ -112,7 +112,7 @@ function CompanySealMainPanelVM:SetCurItemSelectIndex(Index)
 	end
 	local Items = self.CurItemSelectList:GetItems()
 	if Items then
-		if #Items > 1 then
+		if #Items > 0 then
 			for i = 1, #Items do
 				Items[i].IsSelect = Index == i
 			end
@@ -144,7 +144,9 @@ function CompanySealMainPanelVM:UpdateRewardNum(TaskIndex, IsHQ)
 	end
 
 	if TaskInfo == nil then
-		FLOG_ERROR("TaskIndex = %d， CurChoseTaskIndex = %d", TaskIndex, CompanySealMgr.CurChoseTaskIndex)
+		FLOG_ERROR("CompanySealMainPanelVM UpdateRewardNum TaskInfo Error")
+		print(TaskIndex)
+		print(CompanySealMgr.CurChoseTaskIndex)
 		return
 	end
 	
@@ -217,16 +219,6 @@ function CompanySealMainPanelVM:SetAllSlecteBtnState(Value)
 	end
 end
 
-function CompanySealMainPanelVM:UpdateBtnColor(Value)
-	if Value then
-		self.BtnColor = CommBtnColorType.Recommend
-		self.BtnTextColor = "FFFFFFFF"
-	else
-		self.BtnColor = CommBtnColorType.Disable
-		self.BtnTextColor = "828282FF"
-	end
-end
-
 function CompanySealMainPanelVM:ChosedAllRare()
 	local State =  UIUtil.IsToggleButtonChecked(self.ToggleButtonState)
 	if State then
@@ -254,34 +246,6 @@ function CompanySealMainPanelVM:ChosedAllRare()
 		end
 	end
 	EventMgr:SendEvent(EventID.CompanySealUpdateRareChoseList)
-end
-
---State CompanySealMgr SortRuler任务状态
-function CompanySealMainPanelVM:UpdateConfimBtnState(State, IsHQ, Times, IsMatch)
-	self.ConfimBtnVisible = true
-	self.BtnTextColor = "FFFFFFFF"
-	if not IsMatch and State ~= 5 then
-		self.ConfimBtnText = LSTR(1160015)
-		self.BtnColor = CommBtnColorType.Recommend
-		return
-	end
-	
-	if State == 1 or State == 2 or State == 3 then
-		self.ConfimBtnText = LSTR(1160033)  --提交
-		self.BtnColor = CommBtnColorType.Recommend
-	elseif State == 4 then
-		self.ConfimBtnText = LSTR(1160015)  --前往
-		self.BtnColor = CommBtnColorType.Recommend
-	elseif State == 5 then
-		self.ConfimBtnText = LSTR(1160077)  --前往转职
-		self.BtnColor = CommBtnColorType.Recommend
-	elseif State == 6 then
-		self.BtnColor = CommBtnColorType.Done
-		self.BtnTextColor = "B2B2B2FF"
-		self.ConfimBtnText =  LSTR(1160028)  --已提交
-		self:SetTagState(IsHQ, Times)
-	end
-
 end
 
 function CompanySealMainPanelVM:UpdateLogoIcon()

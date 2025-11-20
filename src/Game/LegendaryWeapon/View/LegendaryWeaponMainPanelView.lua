@@ -80,6 +80,7 @@ local LSTR = _G.LSTR
 ---@field PanelTop UFCanvasPanel
 ---@field PanelTopRight UFCanvasPanel
 ---@field RaidalCD URadialImage
+---@field RedDot CommonRedDotView
 ---@field ScalePanel UFCanvasPanel
 ---@field ScrollBoxCraftGuide UScrollBox
 ---@field TableViewPages UTableView
@@ -146,6 +147,7 @@ function LegendaryWeaponMainPanelView:Ctor()
 	--self.PanelTop = nil
 	--self.PanelTopRight = nil
 	--self.RaidalCD = nil
+	--self.RedDot = nil
 	--self.ScalePanel = nil
 	--self.ScrollBoxCraftGuide = nil
 	--self.TableViewPages = nil
@@ -187,6 +189,7 @@ function LegendaryWeaponMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.Material7)
 	self:AddSubView(self.Material8)
 	self:AddSubView(self.MaterialPage)
+	self:AddSubView(self.RedDot)
 	self:AddSubView(self.VerIconTabs)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -196,14 +199,12 @@ function LegendaryWeaponMainPanelView:OnInit()
 		return
 	end
 
-	-- self:SetCurrentIndexToToggleGroup()
 	self.AdapterChapterTabList = UIAdapterTableView.CreateAdapter(self, self.TableViewPages)
 	self.AdapterLAttrList = UIAdapterTableView.CreateAdapter(self, self.TableViewStat1)
 	self.AdapterSAttrList = UIAdapterTableView.CreateAdapter(self, self.TableViewStat2)
 	self.viewModel = LegendaryWeaponMainPanelVM
 	self.TimerMaps = {}
 	self.TopicIndex = 1
-	-- self.SelectedTabIndex = 1
 	self.Binders = {
 		{"WeaponDesc", UIBinderSetText.New(self, self.TextCraftGuide)},
 		{"IsComposeMode", UIBinderSetIsVisible.New(self, self.PanelMaterial) },
@@ -212,7 +213,6 @@ function LegendaryWeaponMainPanelView:OnInit()
 		{"IsComposeMode", UIBinderSetIsVisible.New(self, self.PanelCraftGuide, true) },
 		{"IsShowWeaponModel", UIBinderValueChangedCallback.New(self, nil, self.SetShowWeaponModel) },
 		{"SelectWeaponID", UIBinderValueChangedCallback.New(self, nil, self.SetSelectWeaponID) },
-		{"CameraFOV", UIBinderValueChangedCallback.New(self, nil, self.SetFieldOfView) },
 	}
 end
 
@@ -819,7 +819,6 @@ function LegendaryWeaponMainPanelView:OnAssembleAllEnd(Params)
 		self.Common_Render2D_UIBP:UpdateAllLights()
 		-- 切模型在iOS上进行GC
 		_G.ObjectMgr:CollectGarbage(false, true, false)
-		self:SetFieldOfView(60)
 		if EntityID == ID_Role and self.Common_Render2D_UIBP.ChildActor then
 			local AvatarCom = self.Common_Render2D_UIBP.ChildActor:GetAvatarComponent()
 			local IsHoldWeapon = self.Common_Render2D_UIBP.ChildActor:IsHoldWeapon()
@@ -1249,15 +1248,14 @@ function LegendaryWeaponMainPanelView:LoadSceneActor()
 			if BPActor ~= nil then
 				
 				--切换摄像机
-			--	if nil == BPActor.CameraActor then
-			--		print("[LegendaryWeapon] Switch Camera :", BPActor.CameraActor)
-			--		local CameraMgr = _G.UE.UCameraMgr.Get()
-			--		if CameraMgr ~= nil then
-			--			CameraMgr:SwitchCamera(BPActor, 0)
-			--		end
-			--	end
-				--显示武器
+				-- if nil == BPActor.CameraActor then
+					local CameraMgr = _G.UE.UCameraMgr.Get()
+					if CameraMgr ~= nil then
+						CameraMgr:SwitchCamera(BPActor, 0)
+					end
+				-- end
 
+				--加载武器
 				if BPActor.WeaponActor then
                     local Params = _G.UE.FCreateClientActorParams()
 				    Params.bUIActor = true

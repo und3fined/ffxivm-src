@@ -33,10 +33,11 @@ local CondCfg = require("TableCfg/CondCfg")
 local FuncCfg = require("TableCfg/FuncCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
-local WardrobeAppearanceItemVM = require("Game/Wardrobe/VM/WardrobeAppearanceItemVM")
+local FashionDecoVM = require("Game/FashionDeco/VM/FashionDecoVM")
 local UIBindableList = require("UI/UIBindableList")
 local ClosetGlobalCfg = require("TableCfg/ClosetGlobalCfg")
-local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
+local ClosetSuitCfg = require("TableCfg/ClosetSuitCfg")
+local SaveKey = require("Define/SaveKey")
 
 local CS_CMD = ProtoCS.CS_CMD
 local SUB_MSG_ID = ProtoCS.CsClosetCmd
@@ -68,12 +69,12 @@ function WardrobeMgr:OnInit()
 	self.ClaimedCharismReward = 0
 	--已激活/解锁外观<ApperanceID, ColorID, ActivedColor, ProfLimit, RaceLimit, GenderLimit, LevelLimit, ClassLimit, EnableDye, RegionDye>
 	self.UnlockedAppearance = {}
-	--当前的魅力值
-	self.ChrismValue = 0
-	--界面展示用的模型数据
+	--当前的外观收集魅力值(外观)
+	self.CharmValue = 0
+	--当前的所有魅力值（染剂，外观，时尚配饰）
+	self.TotalCharmValue = 0
+	--主界面展示用的模型数据
 	self.ViewSuit = {}
-	--染色界面使用的模型数据
-	self.StainViewSuit = {}
 	--正在穿戴的外观IDList MAP<PartID, <Avatar, Color, RegionDye>>
 	self.CurAppearanceIDList = {}
 	--- 点击进入界面
@@ -119,61 +120,33 @@ function WardrobeMgr:OnInit()
 		return self:GetIsUnlock(AppID)
 	end
     _G.BagMgr:RegisterItemUsedFun(ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FASHION, CheckItemUsed)
+
+	-- 染色提示的时间
+	self.StainNoShowTipsTime = 0
+
+	-- 魅力值时尚配饰增加的魅力值
+	self.FashionCharmGlobalValue = 10
 end
 
-function WardrobeMgr:ClearStainViewSuit()
-	self.StainViewSuit = {}
+function WardrobeMgr:GetStainNoShowTipsTime()
+	return self.StainNoShowTipsTime
 end
 
-function WardrobeMgr:SetStainViewSuit(PartID, AppID, ColorID, RegionDye)
-	if self.StainViewSuit == nil then
-		self.StainViewSuit  = {}
-	end
-	if PartID ~= nil then
-		if self.StainViewSuit[PartID] == nil then
-			self.StainViewSuit[PartID] = {}
-			self.StainViewSuit[PartID].Avatar = AppID
-			self.StainViewSuit[PartID].Color = ColorID
-			self.StainViewSuit[PartID].RegionDye = RegionDye
-			_G.FLOG_ERROR( "WardrobeMgr:SetStainViewSuit[part] is nil  "  .. table_to_string(self.StainViewSuit[PartID].RegionDye))
-			return
-		end
-	
-		for key, value in pairs(self.StainViewSuit) do
-			if tonumber(key) == PartID then
-				self.StainViewSuit[PartID].Avatar = AppID
-				self.StainViewSuit[PartID].Color = ColorID
-				self.StainViewSuit[PartID].RegionDye = RegionDye
-				_G.FLOG_ERROR( "WardrobeMgr:SetStainViewSuit[part] is not nil  "  .. table_to_string(self.StainViewSuit[PartID].RegionDye))
-			end
-		end
-	end
+function WardrobeMgr:SetStainNoShowTipsTime(Time)
+	self.StainNoShowTipsTime = Time
 end
 
-function WardrobeMgr:GetStainViewSuit()
-	return self.StainViewSuit
-end
-
-function WardrobeMgr:GetStainViewSuitByAppID(AppID)
-	for _, v in pairs(self.StainViewSuit) do
-		if v.Avatar == AppID then
-			return v
-		end
-	end
-	return  {}
-end
-
-
+-- 设置解锁装备的gidList
 function WardrobeMgr:SetUnlockGidsList(List)
 	self.UnlockGidsList = List
 end
 
-
+-- 获取常用染色试剂
 function WardrobeMgr:GetUsedStainList()
 	return self.UsedStainList
 end
 
-
+-- 压入常用染色试剂List
 function WardrobeMgr:PushUsedStainList(ColorID)
 	local IsContain = false
 	for _, v in ipairs(self.UsedStainList) do
@@ -183,10 +156,6 @@ function WardrobeMgr:PushUsedStainList(ColorID)
 			break
 		end
 	end
-
-	-- table.sort(self.UsedStainList, function(a, b) 
-	-- 	return a.UsedTime > b.UsedTime
-	-- end)
 
 	if not IsContain then 
 		if #self.UsedStainList >= 5 then
@@ -229,6 +198,8 @@ function WardrobeMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_QUERY, self.OnClosetQueryRsp)
 	--衣橱外观解锁					
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_UNLOCK, self.OnClosetUnLockRsp)
+	--衣橱道具外观解锁（废弃）
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_UNLOCK_NOTICE, self.OnClosetItemUnLockRsp)
 	--衣橱单件外观穿戴
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_CLOTHING, self.OnClosetClothingRsp)
 	--衣橱单件外观取消穿戴
@@ -236,7 +207,11 @@ function WardrobeMgr:OnRegisterNetMsg()
 	--衣橱收藏
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_COLLECT, self.OnClosetCollectRsp)
 	--衣橱激活染色
-	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_ACTIVE_STAIN, self.OnClosetActiveStainRsp)
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_ACTIVE_STAIN, self.OnClosetActiveRsp)
+	--衣橱激活并染色
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_REGION_UNLOCK_DYE, self.OnClosetActiveAndDyeRsp)
+	--衣橱激活染色推送
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_ACTIVE_STAIN_NOTIFY, self.OnClosetActiveColorNotify)
 	--衣橱染色	
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_DYE, self.OnClosetDyeRsp)
 	--衣橱染色取消
@@ -265,12 +240,16 @@ function WardrobeMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_RANDOM_PATTERN , self.OnClosetRandomPatternRsq)
 	--衣橱区域染色
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.Cs_CLOSET_REGION_DYE, self.OnClosetRegionDyeRsp)
+	--衣橱区域染色改名字
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_REGION_RENAME, self.OnClosetRegionDyeRenameRsp)
 	-- 常用染色查询/推送
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_USED_STAIN_QUERY, self.OnClosetUsedStainQuery)
 	-- 常用试剂保存
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_USED_STAIN_SAVE, self.OnClosetUsedStainSave)
 	-- 套装使用
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_SUIT_CLOTHING, self.OnClosetSuitClothing)
+	-- 魅力值
+	self:RegisterGameNetMsg(CS_CMD.CS_CMD_CLOSET, SUB_MSG_ID.CS_CLOSET_CHARM_UPDATE_NOTIFY, self.OnClosetCharmValueUpdate)
 end
 
 function WardrobeMgr:OnRegisterGameEvent()
@@ -278,10 +257,39 @@ function WardrobeMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MajorCreate, self.OnGameEventLoginRes)
 end
 
+function WardrobeMgr:OnBagUpdate(UpdateItem)
+	if UpdateItem == nil then
+        return 
+    end
+	
+	local bUpdate = false
+    for _, v in ipairs(UpdateItem) do
+		local ResID = v.PstItem.ResID
+		local Cfg = ItemCfg:FindCfgByKey(ResID)
+		if Cfg ~= nil then
+			if ResID == WardrobeDefine.NormalItemID or Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FASHION or 
+			Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemArmor or Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemAccessory or
+			Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemArm or Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemTool then
+				bUpdate = true
+				break
+			end
+		end
+	end
+	if bUpdate then
+		WardrobeMgr:SetRedDot()
+	end
+end
 
 function WardrobeMgr:OnGameEventLoginRes()
 	if _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDShadow) then
 		self:SendClosetQueryReq()
+	end
+
+	self.StainNoShowTipsTime = _G.UE.USaveMgr.GetInt(SaveKey.StainTipsNoShowTime, 0, true)
+
+	local Cfg = ClosetGlobalCfg:FindCfgByKey(ProtoRes.ClosetParamCfgID.ClosetAddCharm)
+	if Cfg  ~= nil then
+		self.FashionCharmGlobalValue = (Cfg and Cfg.Value[3]) and Cfg.Value[3] or 0
 	end
 end
 
@@ -350,8 +358,11 @@ function WardrobeMgr:OnClosetQueryRsp(MsgBody)
 		self.UnlockedAppearance[value.AppearanceID] = TempValue
 	end
 
-	--当前的魅力值
-	self.ChrismValue = Data.ChrismValue
+	--当前的外观魅力收集值
+	self.CharmValue = Data.ChrismValue or 0
+	--当前的所有魅力值
+	self.TotalCharmValue = Data.TotalCharmValue or 0
+
 	--当前穿戴的外观
 	self.CurAppearanceIDList = Data.Parts or {}
 
@@ -427,7 +438,7 @@ function WardrobeMgr:OnClosetUnLockRsp(MsgBody)
 	if MsgBody == nil or MsgBody.Unlock == nil then
 	    return
 	end 
-	local Data = MsgBody.Unlock 
+	local Data = MsgBody.Unlock
 
 	if table.is_nil_empty(Data.Acitves) then
 		FLOG_INFO(string.format(" =====  WardrobeMgr UnlockRsp AppID Data.Acitves Is  Nil"))
@@ -437,42 +448,35 @@ function WardrobeMgr:OnClosetUnLockRsp(MsgBody)
 	-- 解锁的外观以及对应的装备ID
 	for _, v in ipairs(Data.Acitves) do
 		-- FLOG_INFO(string.format(" =====  WardrobeMgr UnlockRsp AppID : %d", v.AppearanceID))
-		if self.UnlockedAppearance[v.AppearanceID] ~= nil then
-			self.UnlockedAppearance[v.AppearanceID]= {}
+		local AppID = v.AppearanceID
+		if self.UnlockedAppearance[AppID] ~= nil then
+			self.UnlockedAppearance[AppID]= {}
 		end
-		self.UnlockedAppearance[v.AppearanceID] = v
+		self.UnlockedAppearance[AppID] = v
 	end
 
-	self.ChrismValue = Data.CharismValue
-
-	local Params = {}
-	Params.ItemVMList = UIBindableList.New(WardrobeAppearanceItemVM)
-	Params.Title = _G.LSTR(1080001)
-	Params.HideClickItem = true
+	self.CharmValue = Data.CharismValue or 0
+	self.TotalCharmValue = Data.TotalCharmValue or 0
 	local AppList = {}
-	local ItemVMList = {}
-
-	-- 如果解锁的是成就外观，塞入list, 
 	for _, v in ipairs(Data.Acitves) do
 		local Cfg = ClosetCfg:FindCfgByKey(v.AppearanceID)
-		if Cfg then
+		if Cfg ~= nil then
 			if #WardrobeUtil.GetAchievementIDList(v.AppearanceID) > 0 then
 				table.insert(AppList, v.AppearanceID)
-			else
-				local VM = {}
-				VM.ResID = WardrobeUtil.GetIsSpecial(v.AppearanceID) and WardrobeUtil.GetUnlockCostItemID(v.AppearanceID) or WardrobeUtil.GetEquipIDByAppearanceID(v.AppearanceID)
-				VM.Num = 1
-				VM.GID = 1
-				VM.ItemName = WardrobeUtil.GetEquipmentAppearanceName(v.AppearanceID)
-				VM.ItemNameVisible = true
-				VM.IsCanBeSelected = false
-				Params.ItemVMList:AddByValue(VM)
-				table.insert(ItemVMList, VM)
 			end
 		end
 	end
-	if #ItemVMList > 0 and #AppList == 0 then
-		UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
+	
+	if table.length(Data.Acitves) > 0 and #AppList == 0 then
+		local IsDungeon = _G.PWorldMgr:CurrIsInDungeon()
+		if IsDungeon then
+			MsgTipsUtil.ShowTips(LSTR(1080131))
+			return
+		end
+		-- 如果是时装，
+		if not _G.UIViewMgr:IsViewVisible(UIViewID.BagTidyWin) then
+			WardrobeMgr:OpenAppearanceRewardView(Data.Acitves)
+		end
 	end
 	
 	if #AppList > 0 then
@@ -485,6 +489,44 @@ function WardrobeMgr:OnClosetUnLockRsp(MsgBody)
 	-- 更新魅力值
 	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
 	
+end
+
+--- 道具外观推送
+function WardrobeMgr:OnClosetItemUnLockRsp(MsgBody)
+	if MsgBody == nil or MsgBody.UnlockNotice == nil then
+	    return
+	end 
+	local IsPWorld = _G.PWorldMgr:CurrIsInDungeon()
+	local Data = MsgBody.UnlockNotice
+	
+	if Data == nil or Data.Active == nil then
+		FLOG_INFO(string.format(" =====  WardrobeMgr UnlockRsp AppID Data.Acitves Is  Nil"))
+		return
+	end
+
+	local AppearanceData = Data.Active
+
+	-- 解锁的外观以及对应的装备ID
+	if AppearanceData.AppearanceID ~= nil then
+		local AppID = AppearanceData.AppearanceID 
+		if self.UnlockedAppearance[AppID] ~= nil then
+			self.UnlockedAppearance[AppID]= {}
+		end
+		self.UnlockedAppearance[AppID] = AppearanceData
+
+		if IsPWorld then
+			MsgTipsUtil.ShowTips(LSTR(1080131))
+		else
+			
+		end
+	end
+
+	self.CharmValue = Data.CharmValue or 0
+	self.TotalCharmValue = Data.TotalCharmValue or 0
+	WardrobeMgr:SetRedDot()
+	EventMgr:SendEvent(EventID.WardrobeUnlockUpdate, {UnlockAppearanceList = {AppearanceData}})
+	-- 更新魅力值
+	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
 end
 
 --- 取消/收藏外观请求
@@ -633,7 +675,19 @@ function WardrobeMgr:OnClosetSuitSaveRsp(MsgBody)
 	end
 
 	-- 更新预设套装数据
-	local Suit = Data.Suit
+	local Suit = {}
+
+	for k , part in ipairs( WardrobeDefine.EquipmentTab) do
+		Suit[part] = {Color = 0, Avatar = 0, RegionDye = {}}
+	end
+
+	for part, value in pairs(Data.Suit) do
+		if Suit[part] ~= nil then
+			Suit[part].Avatar = value.Avatar
+			Suit[part].Color = value.Color
+			Suit[part].RegionDye = value.RegionDye
+		end
+	end
 	local ID = Data.ID
 	local ProfID = Data.ProfID
 	self.UsedSuitID = ID
@@ -644,7 +698,7 @@ function WardrobeMgr:OnClosetSuitSaveRsp(MsgBody)
 	for _, v in ipairs(self.Suits) do
 		if v.ID == ID then
 			IsExist = true
-			v.Suit = Suit
+			v.Suit = Suit  --Todo  这里需要重新重构
 			v.SuitProfID = ProfID
 			if v.RelatedProf ~= MajorID and v.RelatedProf ~= 0 then
 				CancelLinkProf = v.RelatedProf 
@@ -748,7 +802,7 @@ end
 --- 染色激活请求
 ---@param ID 外观ID
 ---@param ColorID 颜色ID
-function WardrobeMgr:SendClosetActiveStainReq(ID, ColorID)
+function WardrobeMgr:SendClosetActiveReq(ID, ColorID)
 	local MsgID = CS_CMD.CS_CMD_CLOSET
 	local SubMsgID = SUB_MSG_ID.CS_CLOSET_ACTIVE_STAIN
 
@@ -759,7 +813,7 @@ function WardrobeMgr:SendClosetActiveStainReq(ID, ColorID)
 end
 
 --- 染色激活回调
-function WardrobeMgr:OnClosetActiveStainRsp(MsgBody)
+function WardrobeMgr:OnClosetActiveRsp(MsgBody)
 	if MsgBody == nil then
 	    return
 	end 
@@ -770,17 +824,15 @@ function WardrobeMgr:OnClosetActiveStainRsp(MsgBody)
 
 	local ID = Data.ID
 	local ColorID = Data.ColorID
-	local CharismValue = Data.CharmValue
+	self.TotalCharmValue = Data.CharmValue or 0
 
-	if CharismValue then
-		self.ChrismValue = CharismValue
-	end
-	
 	--激活染色
 	if self.AppearanceActiveColor[ID] == nil then
 		self.AppearanceActiveColor[ID] = {}
 	end
-	table.insert(self.AppearanceActiveColor[ID], ColorID)
+	if not table.contain(self.AppearanceActiveColor[ID], ColorID) then
+		table.insert(self.AppearanceActiveColor[ID], ColorID)
+	end
 
 	MsgTipsUtil.ShowTips(LSTR(1080008))
 
@@ -789,6 +841,166 @@ function WardrobeMgr:OnClosetActiveStainRsp(MsgBody)
 	-- 更新魅力值
 	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
 
+end
+
+--- 染色激活并解锁
+function WardrobeMgr:SendClosetActiveAndStainReq(AppID, RegionDye, IsAllDye)
+	local MsgID = CS_CMD.CS_CMD_CLOSET
+	local SubMsgID = SUB_MSG_ID.CS_CLOSET_REGION_UNLOCK_DYE
+
+	local MsgBody = {}
+	MsgBody.Cmd = SubMsgID
+	MsgBody.RegionUnlockDye = { AppearID = AppID, Region = RegionDye, AllDye = IsAllDye}
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function WardrobeMgr:OnClosetActiveAndDyeRsp(MsgBody)
+	if MsgBody == nil then
+	    return
+	end 
+	local Data = MsgBody.RegionUnlockDye 
+	if Data == nil then
+	    return
+	end
+
+	local AppID = Data.AppearID  -- 外观ID
+	local RegionDye = Data.Region  --颜色ID
+	local IsAllDye = Data.AllDye  --全部区域
+	local ColorID = RegionDye.ColorID or 0 
+	local SectionID = RegionDye.ID or 0
+	local Name = RegionDye.Name
+
+	for _, v in ipairs(RegionDye) do
+		ColorID = v.ColorID
+		break
+	end
+
+	-- 魅力值更新
+	self.TotalCharmValue = Data.CharmValue or 0
+
+	--激活染色数据更新
+	if self.AppearanceActiveColor[AppID] == nil then
+		self.AppearanceActiveColor[AppID] = {}
+	end
+	table.insert(self.AppearanceActiveColor[AppID], ColorID)
+
+	--外观数据更新
+	local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppID)
+
+	local EquipPartID
+	local TempRegionDye = {}
+	
+	local Cfg = ClosetCfg:FindCfgByKey(AppID)
+	if Cfg ~= nil then
+		if not table.is_nil_empty(Cfg.StainAera) then
+			for index, v in ipairs(Cfg.StainAera) do
+				if v.Ban ~= 1 and v.List ~= "" then
+					table.insert(TempRegionDye, {ID = index, ColorID = 0, Name = ""})
+				end
+			end
+		end
+	end
+
+	if self.UnlockedAppearance[AppID] ~= nil and self.UnlockedAppearance[AppID].RegionDyes then
+		local DataList = self.UnlockedAppearance[AppID].RegionDyes or {}
+		for _, v in ipairs(DataList) do
+			for _, value in ipairs(TempRegionDye) do
+				if v.ID == value.ID then
+					value.ColorID = v.ColorID
+					value.Name = v.Name
+				end
+			end
+		end
+	end
+	
+	for index, v in ipairs(TempRegionDye) do
+		if v.ID == SectionID or IsAllDye then
+			v.ColorID = ColorID
+		end
+	end
+		
+	if self.UnlockedAppearance[AppID] ~= nil then
+		if not IsAppRegionDye then
+			self.UnlockedAppearance[AppID].ColorID = ColorID
+		else
+			self.UnlockedAppearance[AppID].RegionDyes = TempRegionDye
+		end
+	end
+
+	-- -- 更新当前穿戴外观List的数据
+	for partID, v in pairs(self.CurAppearanceIDList) do
+		if v.Avatar == AppID then
+			v.Color = ColorID
+			v.RegionDye = TempRegionDye
+			EquipPartID = partID
+		end
+	end
+
+	-- -- 更新当前穿戴的外观颜色
+	if EquipPartID  ~= nil then
+		local MajorRoleDetail = MajorUtil.GetMajorRoleDetail()
+		local EquipList = MajorRoleDetail.Simple.Avatar.EquipList
+		for _, v in ipairs(EquipList) do
+			if v.Part == EquipPartID then
+				v.ColorID = ColorID
+				if v.RegionDyes == nil then
+					v.RegionDyes = {}
+				end
+				v.RegionDyes = IsAppRegionDye and TempRegionDye or {}
+			end
+		end
+		MajorRoleDetail.Simple.Avatar.EquipList = EquipList
+		_G.ActorMgr:SetMajorRoleDetail(MajorRoleDetail)
+	end
+	
+	-- 更新主界面外观的颜色
+	for _, v in pairs(self.ViewSuit) do
+		if v.Avatar == AppID then
+			v.Color = ColorID
+			v.RegionDye = TempRegionDye
+		end
+	end	
+
+	MsgTipsUtil.ShowTips(LSTR(1080134))
+
+	-- 染色更新
+	-- Todo 如果不是区域染色 走WardrobeDyeUpdate 通知，否则走WardrobeRegionDyeUpdate
+	if IsAppRegionDye then
+		EventMgr:SendEvent(EventID.WardrobeRegionDyeUpdate, {ID = AppID, RegionDyes = TempRegionDye, ColorID = ColorID})
+	else
+		EventMgr:SendEvent(EventID.WardrobeDyeUpdate, {ID = AppID, RegionDyes = TempRegionDye, ColorID = ColorID})
+	end
+	-- 更新魅力值
+	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
+end
+
+function WardrobeMgr:OnClosetActiveColorNotify(MsgBody)
+	if MsgBody == nil then
+	    return
+	end 
+	local Data = MsgBody.StainUpdate 
+	if Data == nil then
+	    return
+	end
+	local AppID = Data.ID
+	local ColorIDList = Data.Colors or {}
+	self.TotalCharmValue = Data.CharmValue or 0
+
+	--激活染色
+	if self.AppearanceActiveColor[AppID] == nil then
+		self.AppearanceActiveColor[AppID] = {}
+	end
+	for _, colorID in ipairs(ColorIDList) do
+		if not table.contain(self.AppearanceActiveColor[AppID], colorID) then
+			table.insert(self.AppearanceActiveColor[AppID], colorID)
+		end
+	end
+
+	EventMgr:SendEvent(EventID.WardrobeActiveStain, {ID = AppID, ColorIDList = ColorIDList})
+
+	-- 更新魅力值
+	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
+	
 end
 
 --- 外观染色请求
@@ -822,17 +1034,20 @@ function WardrobeMgr:OnClosetDyeRsp(MsgBody)
 	local TempRegionDye = {}
 	if self.UnlockedAppearance[ID] ~= nil then
 		self.UnlockedAppearance[ID].ColorID = ColorID
-		if ColorID ~= 0 then
-			local Cfg = ClosetCfg:FindCfgByKey(ID)
-			if Cfg ~= nil then
-				if not table.is_nil_empty(Cfg.StainAera) then
-					for index, v in ipairs(Cfg.StainAera) do
-						if v.Ban ~= 1 then
-							table.insert(TempRegionDye, {ID = index, ColorID = ColorID})
-						end
+		local Cfg = ClosetCfg:FindCfgByKey(ID)
+		if Cfg ~= nil then
+			if not table.is_nil_empty(Cfg.StainAera) then
+				for index, v in ipairs(Cfg.StainAera) do
+					if v.Ban ~= 1 and v.List ~= "" then
+						--Todo 
+						table.insert(TempRegionDye, {ID = index, ColorID = ColorID})
 					end
-					self.UnlockedAppearance[ID].RegionDyes = TempRegionDye
 				end
+
+				for _, v in ipairs(TempRegionDye) do
+					v.Name = WardrobeMgr:GetUnlockedAppearanceRegionName(ID, v.ID)
+				end
+				self.UnlockedAppearance[ID].RegionDyes = TempRegionDye
 			end
 		end
 	end
@@ -864,7 +1079,7 @@ function WardrobeMgr:OnClosetDyeRsp(MsgBody)
 		_G.ActorMgr:SetMajorRoleDetail(MajorRoleDetail)
 	end
 	
-	-- 更新界面外观的颜色
+	-- 更新主界面外观的颜色
 	for _, v in pairs(self.ViewSuit) do
 		if v.Avatar == ID then
 			v.Color = ColorID
@@ -872,14 +1087,8 @@ function WardrobeMgr:OnClosetDyeRsp(MsgBody)
 		end
 	end	
 
-	for _, v in pairs(self.StainViewSuit) do
-		if v.Avatar == ID then
-			v.Color = ColorID
-			v.RegionDye = TempRegionDye
-		end
-	end	
-
-	EventMgr:SendEvent(EventID.WardrobeDyeUpdate, {ID = ID})
+	-- 更新染色界面外观颜色
+	EventMgr:SendEvent(EventID.WardrobeDyeUpdate, {ID = ID, ColorID = ColorID, RegionDyes = TempRegionDye})
 
 end
 
@@ -905,36 +1114,35 @@ function WardrobeMgr:OnClosetRecoveryRsp(MsgBody)
 	    return
 	end
 
-	local ID = Data.ID
+	local AppID = Data.ID
 
 	-- 取消染色
 	local TempRegionDye = {}
-	if self.UnlockedAppearance[ID] ~= nil then
-		self.UnlockedAppearance[ID].ColorID = 0
-		local Cfg = ClosetCfg:FindCfgByKey(ID)
+	if self.UnlockedAppearance[AppID] ~= nil then
+		self.UnlockedAppearance[AppID].ColorID = 0
+		local Cfg = ClosetCfg:FindCfgByKey(AppID)
 		if Cfg ~= nil then
 			if not table.is_nil_empty(Cfg.StainAera) then
 				for index, v in ipairs(Cfg.StainAera) do
-					table.insert(TempRegionDye, {ID = v.SocketID, ColorID = 0})
+					if v.Ban ~= 1 and v.List ~= "" then
+						table.insert(TempRegionDye, {ID = index, ColorID = 0})
+					end
 				end
-				self.UnlockedAppearance[ID].RegionDyes = TempRegionDye
+				for _, v in ipairs(TempRegionDye) do
+					v.Name = WardrobeMgr:GetUnlockedAppearanceRegionName(AppID, v.ID)
+				end
+				self.UnlockedAppearance[AppID].RegionDyes = TempRegionDye
 			end
 		end
 	end
 
 	-- 修改界面展示外观
-
+	local CurPartID = nil
 	for partID, v in pairs(self.ViewSuit) do
-		if v.Avatar == ID then
+		if v.Avatar == AppID then
 			v.Color = 0
-			self:SetViewSuit(partID, ID, v.Color, TempRegionDye)
-		end
-	end
-
-	for partID, v in pairs(self.StainViewSuit) do
-		if v.Avatar == ID then
-			v.Color = 0
-			self:SetStainViewSuit(partID, ID, v.Color, TempRegionDye)
+			CurPartID = partID
+			self:SetViewSuit(partID, AppID, v.Color, TempRegionDye)
 		end
 	end
 
@@ -943,7 +1151,7 @@ function WardrobeMgr:OnClosetRecoveryRsp(MsgBody)
 	-- 更新当前穿戴的外观颜色
 	local EquipPartID
 	for partID, v in pairs(self.CurAppearanceIDList) do
-		if v.Avatar == ID then
+		if v.Avatar == AppID then
 			v.Color = 0
 			v.RegionDye = TempRegionDye
 			EquipPartID = partID
@@ -964,7 +1172,7 @@ function WardrobeMgr:OnClosetRecoveryRsp(MsgBody)
 		_G.ActorMgr:SetMajorRoleDetail(MajorRoleDetail)
 	end
 
-	EventMgr:SendEvent(EventID.WardrobeDyeUpdate, {ID = ID, ColorID = 0})
+	EventMgr:SendEvent(EventID.WardrobeDyeUpdate, {ID = AppID, ColorID = 0, RegionDyes = TempRegionDye})
 
 end
 
@@ -990,19 +1198,29 @@ function WardrobeMgr:OnClosetCharismRewardRsp(MsgBody)
 	    return
 	end
 
+	local BeforeID = WardrobeMgr:GetClaimedCharismReward() + 1
+	local NewID = Data.ID
+
 	-- 组装奖励
 	local Params = {}
 	Params.ItemList = {}
 	Params.Title = _G.LSTR(1080009)
-	local Cfg = ClosetCharismCfg:FindCfgByKey(Data.ID)
-	if Cfg ~= nil then
-		for _, v in ipairs(Cfg.Rewards) do
-			if v.ResID ~= 0 then
-				table.insert(Params.ItemList, { ResID = v.ResID, Num = v.Num})
+	for i = BeforeID, NewID, 1 do
+		if i <= NewID then
+			local Cfg = ClosetCharismCfg:FindCfgByKey(i)
+			if Cfg ~= nil then
+				for _, v in ipairs(Cfg.Rewards) do
+					if v.ResID ~= 0 then
+						table.insert(Params.ItemList, { ResID = v.ResID, Num = v.Num})
+					end
+				end
 			end
 		end
 	end
-	UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
+
+	if #Params.ItemList > 0 then
+		UIViewMgr:ShowView(UIViewID.CommonRewardPanel, Params)
+	end
 	-- 当前魅力值阶段
 	self.ClaimedCharismReward = Data.ID
 
@@ -1038,18 +1256,27 @@ function WardrobeMgr:OnClosetClothingRsp(MsgBody)
 	-- 当前穿的外观
 	local AppID = Data.AppearanceID
 	local Part = Data.Part
+	local Color = Data.Color or 0
+	local RegionDyes = Data.RegionDyes or {}
 
 	-- 更新当前穿戴外观信息，如果存在替换，不存在创建个新的
-	if self.CurAppearanceIDList ~= nil and self.CurAppearanceIDList[Part] ~= nil then
-		self.CurAppearanceIDList[Part].Avatar = AppID
-		self.CurAppearanceIDList[Part].Color =  WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetDyeColor(AppID) or 0
-		self.CurAppearanceIDList[Part].RegionDye = WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID) or {}
-	else
-		self.CurAppearanceIDList[Part] = {}
-		self.CurAppearanceIDList[Part].Avatar = AppID
-		self.CurAppearanceIDList[Part].Color =  WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetDyeColor(AppID) or 0
-		self.CurAppearanceIDList[Part].RegionDye = WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID) or {}
+	if self.UnlockedAppearance ~= nil and self.UnlockedAppearance[AppID] ~= nil then
+		self.UnlockedAppearance[AppID].ColorID = Color
+		self.UnlockedAppearance[AppID].RegionDyes = RegionDyes
 	end
+
+	if self.CurAppearanceIDList == nil then
+		self.CurAppearanceIDList = {}
+	end
+	if self.CurAppearanceIDList[Part] == nil then
+		self.CurAppearanceIDList[Part] = {}
+	end
+
+	self.CurAppearanceIDList[Part].Avatar = AppID
+	self.CurAppearanceIDList[Part].Color =  WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetDyeColor(AppID) or 0
+	self.CurAppearanceIDList[Part].RegionDye = WardrobeMgr:GetIsUnlock(AppID) and WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID) or {}
+
+
 
 	local MajorRoleDetail = MajorUtil.GetMajorRoleDetail()
 	local EquipList = MajorRoleDetail.Simple.Avatar.EquipList
@@ -1234,11 +1461,20 @@ function WardrobeMgr:OnClosetAppearNoitfy(MsgBody)
 	self.CurAppearanceIDList = {}
 	self.CurAppearanceIDList = Data.Suit
 
+	-- 重置解锁外观
+	for _, v in pairs(Data.Suit or {}) do
+		if self.UnlockedAppearance[v.Avatar] ~=  nil then
+			self.UnlockedAppearance[v.Avatar].ColorID = v.Color
+			self.UnlockedAppearance[v.Avatar].RegionDyes = v.RegionDye
+		end
+	end
+
+
 	-- 更新RoleDetail的数据
 	local MajorRoleDetail = MajorUtil.GetMajorRoleDetail()
 	if MajorRoleDetail ~= nil then
 		local EquipList = MajorRoleDetail.Simple.Avatar.EquipList
-		-- FLOG_INFO("WardrobeMgr:OnClosetAppearNoitfy 重置前的数据 ".. table_to_string(EquipList))
+		FLOG_INFO("WardrobeMgr:OnClosetAppearNoitfy 重置前的数据 ".. table_to_string(EquipList))
 
 		-- 遍历所有部位
 		local NotExistEquipPartList = {}
@@ -1284,7 +1520,7 @@ function WardrobeMgr:OnClosetAppearNoitfy(MsgBody)
 			end
 		end
 
-		-- FLOG_INFO("WardrobeMgr:OnClosetAppearNoitfy 重置后的数据 ".. table_to_string(EquipList))
+		FLOG_INFO("WardrobeMgr:OnClosetAppearNoitfy 重置后的数据 ".. table_to_string(EquipList))
 
 		MajorRoleDetail.Simple.Avatar.EquipList = EquipList
 		_G.ActorMgr:SetMajorRoleDetail(MajorRoleDetail)
@@ -1301,6 +1537,7 @@ function WardrobeMgr:OnClosetAppearNoitfy(MsgBody)
 
 	WardrobeMgr:SetRedDot()
 	EventMgr:SendEvent(EventID.WardrobeUpdate)
+	EventMgr:SendEvent(EventID.WardrobePresetSuitUpdate)
 end
 
 --- 发送获取外观随机图案数据
@@ -1332,7 +1569,7 @@ function WardrobeMgr:OnClosetRandomPatternRsq(MsgBody)
 
 	for key, v in pairs(self.RandomAppEquipList) do
 		local AppID = tonumber(key)
-		local PartID = WardrobeUtil.GetPartIDByAppearanceID(AppID)
+		local PartID = WardrobeUtil.GetPartByAppearanceID(AppID)
 		for _, v  in pairs(EquipList) do
 			if v.Part == PartID then
 				v.RandomID = AppID
@@ -1410,6 +1647,16 @@ function WardrobeMgr:SendClosetRegionDyeReq(AppID, RegionDyeID, RegionColorID)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 end
 
+function WardrobeMgr:SendClosetRegionDyeListReq(AppID, RegionDyes)
+	local MsgID = CS_CMD.CS_CMD_CLOSET
+    local SubMsgID = SUB_MSG_ID.Cs_CLOSET_REGION_DYE
+
+    local MsgBody = {}
+	MsgBody.Cmd = SubMsgID
+	MsgBody.RegionDye = {AppearID = AppID, RegionDyes = RegionDyes}
+    GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
 function WardrobeMgr:OnClosetRegionDyeRsp(MsgBody)
 	if MsgBody == nil or MsgBody.RegionDye == nil then
 	    return
@@ -1429,38 +1676,30 @@ function WardrobeMgr:OnClosetRegionDyeRsp(MsgBody)
 	if Cfg ~= nil then
 		if not table.is_nil_empty(Cfg.StainAera) then
 			for index, v in ipairs(Cfg.StainAera) do
-				if v.Ban ~= 1 then
+				if v.Ban ~= 1 and v.List ~= "" then
 					table.insert(TempRegionDye, {ID = index, ColorID = 0})
 				end
 			end
 		end
 	end
 
+	local CurColor = nil
 	for index, v in ipairs(TempRegionDye) do
 		for pos, value in ipairs(Data.RegionDyes) do
 			if v.ID == value.ID then
-				-- v.ColorID = value.ColorID
-				TempRegionDye[index].ColorID = Data.RegionDyes[pos].ColorID
+				v.ColorID = value.ColorID
+				CurColor = value.ColorID
 			end
 		end
 	end
 
 	-- 只要使用了区域染色 这个值就值为0
 	if self.UnlockedAppearance[ID] ~= nil then
+		for _, v in ipairs(TempRegionDye) do
+			v.Name = WardrobeMgr:GetUnlockedAppearanceRegionName(ID, v.ID)
+		end
 		self.UnlockedAppearance[ID].ColorID = 0
 		self.UnlockedAppearance[ID].RegionDyes = TempRegionDye
-	end
-
-	for _, v in pairs(self.StainViewSuit) do
-		if v.Avatar == ID then
-			for key, vvlalue in ipairs(v.RegionDye) do
-				for pos, value in ipairs(Data.RegionDyes) do
-					if vvlalue.ID == value.ID then
-						vvlalue.ColorID = value.ColorID
-					end
-				end
-			end
-		end
 	end
 
 	for _, v in pairs(self.ViewSuit) do
@@ -1470,7 +1709,7 @@ function WardrobeMgr:OnClosetRegionDyeRsp(MsgBody)
 	end
 
 	-- 更新区域染色逻辑
-	for partID,  v in pairs(self.CurAppearanceIDList) do
+	for partID, v in pairs(self.CurAppearanceIDList) do
 		if v.Avatar == ID then
 			v.Color = 0
 			v.RegionDye = TempRegionDye
@@ -1492,7 +1731,68 @@ function WardrobeMgr:OnClosetRegionDyeRsp(MsgBody)
 		_G.ActorMgr:SetMajorRoleDetail(MajorRoleDetail)
 	end
 
-	EventMgr:SendEvent(EventID.WardrobeRegionDyeUpdate, {ID = ID, RegionDyes = TempRegionDye})
+	EventMgr:SendEvent(EventID.WardrobeRegionDyeUpdate, {ID = ID, ColorID = CurColor, RegionDyes = TempRegionDye})
+end
+
+function WardrobeMgr:SendRegionDyeRenameRep(RegionDye, AppID)
+	local MsgID = CS_CMD.CS_CMD_CLOSET
+    local SubMsgID = SUB_MSG_ID.CS_CLOSET_REGION_RENAME
+
+    local MsgBody = {}
+	MsgBody.Cmd = SubMsgID
+	MsgBody.RegionRename  = {Region = RegionDye, AppearID = AppID}
+    GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function WardrobeMgr:OnClosetRegionDyeRenameRsp(MsgBody)
+	if MsgBody == nil or MsgBody.RegionRename == nil then
+	    return
+	end
+	local Data = MsgBody.RegionRename
+	
+	local AppID = Data.AppearID
+	local Region = Data.Region
+
+	if Region.ID == nil or Region.Name == nil then
+		return
+	end
+
+
+	local TempRegionDye = {}
+	
+	local Cfg = ClosetCfg:FindCfgByKey(AppID)
+	if Cfg ~= nil then
+		if not table.is_nil_empty(Cfg.StainAera) then
+			for i = #Cfg.StainAera, 1, -1 do
+				local v = Cfg.StainAera[i]
+				if v.List == "" or v.Ban == 1 then
+					table.remove(Cfg.StainAera, i)
+				end
+			end
+			for index, v in ipairs(Cfg.StainAera) do
+				table.insert(TempRegionDye, {ID = index, ColorID = 0, Name = index ==  Region.ID and Region.Name or "" })
+			end
+		end
+	end
+
+	if self.UnlockedAppearance[AppID] ~= nil and self.UnlockedAppearance[AppID].RegionDyes then
+		local DataList = self.UnlockedAppearance[AppID].RegionDyes or {}
+		for _, value in ipairs(TempRegionDye) do
+			for _, v in ipairs(DataList) do
+				if v.ID == value.ID then
+					value.ColorID = v.ColorID
+					if value.ID ~= Region.ID then
+						value.Name = v.Name
+					end
+				end
+			end
+		end
+		self.UnlockedAppearance[AppID].RegionDyes = TempRegionDye
+	end
+
+	-- 通知更新
+	EventMgr:SendEvent(EventID.WardrobeRegionDyeNameUpdate, {ID = Region.ID , Name = Region.Name})
+
 end
 
 --衣橱套装使用
@@ -1578,6 +1878,19 @@ function WardrobeMgr:OnClosetSuitClothing(MsgBody)
 
 end
 
+function WardrobeMgr:OnClosetCharmValueUpdate(MsgBody)
+	if MsgBody == nil or MsgBody.CharmUpdate == nil then
+	    return
+	end
+	local Data = MsgBody.CharmUpdate
+
+	self.TotalCharmValue = Data.CharmValue  or 0
+
+	-- 更新魅力值
+	EventMgr:SendEvent(EventID.WardrobeCharismValueUpdate)
+
+end
+
 --------------------------------------------- 对外接口 ---------------------------------------------
 function WardrobeMgr:IsRandomAppID(AppID)
 	if self.RandomAppEquipList[AppID] then
@@ -1602,26 +1915,20 @@ function WardrobeMgr:StartRandomAppFreshTimer()
 end
 
 function WardrobeMgr:OnRandomAppFreshTimer()
-	local ServerTime = TimeUtil.GetServerTimeMS()
 	if self.RandomAppRefreshTime > 0 then
-		local IsCurDailyCycleTime =  TimeUtil.GetIsCurDailyCycleTime(math.floor(self.RandomAppRefreshTime / 1000))
+		local refreshTime = tonumber(self.RandomAppRefreshTime) or 0
+		local IsCurDailyCycleTime =  TimeUtil.GetIsCurDailyCycleTime(math.floor(refreshTime / 1000 + 0.5))  -- 四舍五入代替向下取整
 		if not IsCurDailyCycleTime then
 			WardrobeMgr:SendClosetRandomPatternReq()
 			self:UnRegisterTimer(self.RandomAppRefreshTimer)
 			self.RandomAppRefreshTimer = nil
+			self.RandomAppRefreshTime = 0
 		end
 	end
+
 end
 
 function WardrobeMgr:GetGameVersionName()
-    -- local GameVersionName = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GLOBAL_CFG_GAME_VERSION)
-    -- local VersionName = GameVersionName.Value
-    -- if not table.is_nil_empty(VersionName) then
-    --     VersionName = string.format("%d.%d.%d",VersionName[1],VersionName[2],VersionName[3])
-    -- else
-    --     _G.FLOG_ERROR("WardrobeMgr:GetGameVersionName GameVersionName.Value is nil")
-    --     VersionName = "2.0.0"
-    -- end
 	local VersionName = _G.UE.UVersionMgr.GetGameVersion()
 	return VersionName
 end
@@ -1861,8 +2168,14 @@ function WardrobeMgr:GetCurUsedSuitIsUsed(PresetsID, CurSuitData)
     return true
 end
 
-function WardrobeMgr:GetCharismNum()
-	return self.ChrismValue
+-- 获取当前外观收集魅力值
+function WardrobeMgr:GetCharmNum()
+	return self.CharmValue
+end
+
+-- 获取所有魅力（外观，染色 时尚配饰）
+function WardrobeMgr:GetNewCharismNum()
+	return self.TotalCharmValue
 end
 
 function WardrobeMgr:GetClaimedCharismReward()
@@ -2004,16 +2317,28 @@ function WardrobeMgr:GetCurrentIsDye(AppID)
 end
 
 ---@return int32 获取染色值，如果是区域染色，获取统一色，否则获取ColorID
-function WardrobeMgr:GetDyeColor(AppearanceID)
+function WardrobeMgr:GetDyeColor(AppearanceID, SectionID)
 	if self.UnlockedAppearance[AppearanceID] == nil then
 		return 0
+	end
+	if SectionID and SectionID == -1 then
+		SectionID = nil
 	end
 	local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(AppearanceID)
 	if not IsAppRegionDye then
 		return self.UnlockedAppearance[AppearanceID].ColorID
 	else
-		return WardrobeUtil.GetUnifyRegionDyeColor(AppearanceID, self.UnlockedAppearance[AppearanceID].RegionDyes or {})
+		if SectionID == nil  then
+			return WardrobeUtil.GetUnifyRegionDyeColor(AppearanceID, self.UnlockedAppearance[AppearanceID].RegionDyes or {})
+		end
+		local RegionDyes = self.UnlockedAppearance[AppearanceID].RegionDyes or {}
+		for _, v in ipairs(RegionDyes) do
+			if v.ID == SectionID then
+				return v.ColorID
+			end 
+		end
 	end
+	return 0
 end
 
 ---@return boolean 能不能染色
@@ -2037,6 +2362,9 @@ end
 
 ---@return boolean 返回是否是激活的颜色
 function WardrobeMgr:IsActiveColor(AppearanceID, ColorID)
+	if ColorID == 0 then
+		return true
+	end
 	if self.AppearanceActiveColor[AppearanceID] == nil then
 		return false
 	end
@@ -2208,6 +2536,20 @@ function WardrobeMgr:GetCurAppearanceRegionDyes(AppID)
 	return {}
 end
 
+
+function WardrobeMgr:IsSameColorRegionDye(App, ColorID)
+	local IsSame = true
+
+	local RegionDye = WardrobeMgr:GetUnlockedAppearanceRegionDyes(App)
+	for _, v in ipairs(RegionDye) do
+		if v.ColorID ~= ColorID then
+			return false
+		end
+	end
+
+	return IsSame
+end
+
 --- 获取解锁外观的染色区域
 function WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID)
 	if self.UnlockedAppearance[AppID] ~= nil then
@@ -2215,6 +2557,35 @@ function WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID)
 	end
 
 	return {}
+end
+
+--- 获取区域染色名字
+function WardrobeMgr:GetUnlockedAppearanceRegionName(AppID, SectionID)
+	local RegionDyes = WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID)
+	local Name = ""
+	if SectionID == -1 then
+		return LSTR(1080037)
+	end
+	for _, v in ipairs(RegionDyes) do
+		if v.ID == SectionID then
+			Name = v.Name
+			break
+		end
+	end
+	if string.isnilorempty(Name) then
+		local Cfg =  ClosetCfg:FindCfgByKey(AppID)
+		if Cfg ~= nil then
+			for index, v in ipairs(Cfg.StainAera) do
+				if v.Ban ~= 1 and v.List ~= "" then
+					if index == SectionID then
+						Name = v.Name
+						break
+					end
+				end
+			end
+		end
+	end
+	return Name
 end
 
 --- 获取当前部位穿的东西 能不能染色呢
@@ -2368,7 +2739,7 @@ function WardrobeMgr:GetBestEquipementData(AppearanceID)
 			local ItemConfig = ItemCfg:FindCfgByKey(EquipmentList[1])
 			if ItemConfig ~= nil then
 				EquipDetailData.ClassLimits = table.deepcopy({ItemConfig.ClassLimit})
-				EquipDetailData.ProfLimits =  table.deepcopy(ItemConfig.ProfLimit)
+				EquipDetailData.ProfLimits = table.deepcopy(ItemConfig.ProfLimit)
 				EquipDetailData.LevelLimit = ItemConfig.Grade
 				EquipDetailData.RaceLimits = WardrobeUtil.GetClientRaceCond(ItemConfig.UseCond)
 				EquipDetailData.GenderLimit = WardrobeUtil.GetClientGenderCond(ItemConfig.UseCond)
@@ -2431,7 +2802,7 @@ function WardrobeMgr:GetReduceEquipmentList(OwnEquipList, AppID)
 		if ItemConfig ~= nil then
 			local ClassLimit = {ItemConfig.ClassLimit}
 			local Level = ItemConfig.Grade
-			local ProfLimits = ItemConfig.ProfLimit
+			local ProfLimits = table.deepcopy(ItemConfig.ProfLimit)
 			local Race = WardrobeUtil.GetClientRaceCond(ItemConfig.UseCond)
 			local Gender = WardrobeUtil.GetClientGenderCond(ItemConfig.UseCond)
 			--种族
@@ -3003,21 +3374,16 @@ function WardrobeMgr:GetAppearanceCollectTotalNum(OutProfID)
 			local CurProfID = GetProfID(profID)
 			if self.AppearanceCollectTotal[CurProfID] then
 				self.AppearanceCollectTotal[CurProfID] = self.AppearanceCollectTotal[CurProfID] + 1
-		        --FLOG_INFO(string.format("更新职业 %s",  ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, tonumber(CurProfID))))
-				-- Desc = Desc .. string.format(" %s",  ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, tonumber(CurProfID)))
 			end
 		end
-		--FLOG_INFO(string.format("<janlog> 职业外观 ： %s ", Desc))
 	end
 
     -- 处理所有外观数据
     for appid, data in pairs(AppList) do
         if IsUniversalAppearance(data) then
-			-- FLOG_INFO(string.format("<janlog> AppList GetAppearanceCollectTotalNum 全职业外观 ： %d ", appid))
             UpdateAllProf()
         else
             local ProfLimits = GetValidProfessions(data)
-			-- FLOG_INFO(string.format("<janlog> AppList GetAppearanceCollectTotalNum 非职业外观 ： %d ", appid))
             UpdateProfessionCounts(ProfLimits)
         end
     end
@@ -3064,26 +3430,20 @@ function WardrobeMgr:GetUnlockAppearanceCollectNum(OutProfID, IsUpdate)
 				local CurProfID = GetProfID(profID)
 				if self.UnlockAppearanceCollect[CurProfID] then
 					self.UnlockAppearanceCollect[CurProfID]  = self.UnlockAppearanceCollect[CurProfID] + 1
-					-- FLOG_INFO(string.format("更新职业 %s",  ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, tonumber(CurProfID))))
-					-- Desc = Desc .. string.format(" %s",  ProtoEnumAlias.GetAlias(ProtoCommon.prof_type, tonumber(CurProfID)))
 				end
 			end
 		end
-		-- FLOG_INFO(string.format("解锁职业外观 ： %s ", Desc))
 	end
 
 	 -- 处理所有外观数据
 	 for appid, data in pairs(AppList) do
         if IsUniversalAppearance(data) then
-			-- FLOG_INFO(string.format("<janlog> AppList GetUnlockAppearanceCollectNum 全职业外观 ： %d ", appid))
             UpdateAllProf()
         else
             local ProfLimits = GetValidProfessions(data)
-			-- FLOG_INFO(string.format("<janlog> AppList GetUnlockAppearanceCollectNum 非职业外观 ： %d ", appid))
             UpdateProfessionCounts(ProfLimits)
         end
     end
-
 
 	return self.UnlockAppearanceCollect[tostring(ProfID)] or 0
 end
@@ -3364,23 +3724,6 @@ function WardrobeMgr:ClearPlanUnlockAppearanceList()
 	self.PlanUnlockAppearanceList = {}
 end
 
-function WardrobeMgr:CheckTwoHandWeaponProf(ProfID)
-	local TwoHandProfList = {
-		ProtoCommon.prof_type.PROF_TYPE_GLADIATOR,
-		ProtoCommon.prof_type.PROF_TYPE_PALADIN,
-		ProtoCommon.prof_type.PROF_TYPE_PUGILIST,
-		ProtoCommon.prof_type.PROF_TYPE_MONK,
-	}
-
-	if ProfID == nil then return false end
-	for _, profID in ipairs(TwoHandProfList) do
-		if ProfID == profID then
-			return true
-		end
-	end
-	return false
-end
-
 function WardrobeMgr:SetRedDot()
 	local _ <close> = CommonUtil.MakeProfileTag("WardrobeMgr_SetRedDot")
 
@@ -3476,7 +3819,7 @@ function WardrobeMgr:GetQuickUnlockAppearanceListVisible(IsNeedItem)
 			end
 		end
 	end
-	
+
 	return false
 end
 
@@ -3601,6 +3944,156 @@ function WardrobeMgr:GetQuickUnlockAppearanceList()
 	return AppearanceList
 end
 
+-- 获取装备对应的外观的套装list
+---@param int32 ItemID 物品id
+---@return table SuitList 套装列表
+function WardrobeMgr:GetSuitListByItemID(ItemID)
+	local SuitList = {}
+	local TempList = {}
+	local Cfgs = ClosetSuitCfg:FindAllCfg(string.format("TabIndex = 3 or TabIndex = 2"))
+	for _, v in ipairs(Cfgs) do
+		if v.AppItems and next(v.AppItems) then
+			if table.contain(v.AppItems, ItemID) then
+				table.insert(TempList, v.ID)
+			end
+		end
+	end
+
+	for _, suitID in ipairs(TempList) do
+		local Cfg = ClosetSuitCfg:FindCfgByKey(suitID)
+		if Cfg ~= nil then
+			for _, equipID in ipairs(Cfg.AppItems) do
+				local EquipCfg = EquipmentCfg:FindCfgByKey(equipID)
+				if EquipCfg then
+					if EquipCfg and EquipCfg.AppearanceID ~= 0 then
+						if not WardrobeMgr:GetIsUnlock(EquipCfg.AppearanceID) then
+							table.insert(SuitList, suitID)
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return SuitList
+end
+
+-- 测试代码
+function WardrobeMgr:TestAppearanceRewardView()
+	local DataList = {}
+	-- local TempList = {10028}
+	local TempList = {10388, 10389}
+	for _, id in ipairs(TempList) do
+		table.insert(DataList, {AppearanceID = id})
+	end
+	WardrobeMgr:OpenAppearanceRewardView(DataList)
+end
+
+-- lua _G.WardrobeMgr:OpenAppearanceRewardView({AppearanceID = 10048})
+function WardrobeMgr:OpenAppearanceRewardView(DataList)
+	local WardrobeEquipmentSlotItemVM = require("Game/Wardrobe/VM/Item/WardrobeEquipmentSlotItemVM")
+	local ViewVisible = _G.UIViewMgr:IsViewVisible(UIViewID.WardrobeUnlockPanel)
+	local Params = {}
+	Params.Title = LSTR(1080001)
+	Params.AppearanceVMList =  UIBindableList.New(WardrobeEquipmentSlotItemVM)
+	Params.BtnLeftText = LSTR(180005)
+	Params.BtnRightText = LSTR(1080132)
+	Params.ShowBtnLeft = not ViewVisible
+	Params.ShowBtnRight = not ViewVisible
+	Params.ShowHint = ViewVisible
+	Params.TextCloseTips = ViewVisible
+	Params.ShowBtn = not ViewVisible
+	Params.BtnLeftCB = function  () 
+		UIViewMgr:HideView(_G.UIViewID.CommonRewardAppearancePanel)
+	end
+	Params.BtnRightCB = function ()
+		--如果DataList长度==1  进入衣橱界面 定位到对应的part
+		--如果DataList长度> 1, 进入衣橱界面，查询对应套装id，置顶到对应套装
+		UIViewMgr:HideView(_G.UIViewID.CommonRewardAppearancePanel)
+		if table.is_nil_empty(DataList) then
+			return
+		end
+		if table.length(DataList) == 1 then
+			if DataList[1] ~= nil and DataList[1].AppearanceID ~= nil then
+			local PartID = WardrobeUtil.GetPartByAppearanceID(DataList[1].AppearanceID)
+			UIViewMgr:ShowView(UIViewID.WardrobeMainPanel, {PartID = PartID})
+			end
+		else
+			local SuitID = 0
+			local Cfgs = ClosetSuitCfg:FindAllCfg(string.format("TabIndex = 2 or TabIndex == 3"))
+			local requiredItems = {}
+			for _, v in ipairs(DataList) do
+			   if v.AppearanceID then
+				   local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(v.AppearanceID)
+				   requiredItems[EquipID] = true
+			   end
+			end
+			for _, v in ipairs(Cfgs) do
+				if v.AppItems and next(v.AppItems) then
+					if #DataList == v.AppItems then
+						local TempSuitID = self:FindMatchingSuitID(v, requiredItems)
+						if TempSuitID ~= 0 then
+							SuitID = TempSuitID
+							break
+						end
+					end
+				end
+			end
+			if SuitID ~= 0 then
+				UIViewMgr:ShowView(UIViewID.WardrobeMainPanel, {SuitID = SuitID})
+			else
+				if #DataList > 0 then
+					if DataList[1] ~= nil and DataList[1].AppearanceID ~= nil then
+						local PartID = WardrobeUtil.GetPartByAppearanceID(DataList[1].AppearanceID)
+						UIViewMgr:ShowView(UIViewID.WardrobeMainPanel, {PartID = PartID})
+					end
+				end
+			end
+		end
+	end
+	for _, v in ipairs(DataList) do
+		local Data = self:CreateAppearanceItem(v.AppearanceID)
+		Data.IsReward = true
+		Params.AppearanceVMList:AddByValue(Data, true)
+	end
+	UIViewMgr:ShowView(UIViewID.CommonRewardAppearancePanel, Params)  
+end
+
+function WardrobeMgr:FindMatchingSuitID(CfgList, DataList)
+	local cfgItemsLookup = {}
+	for _, item in ipairs(CfgList.AppItems) do
+	 cfgItemsLookup[item] = true
+	end
+	local containsAll = true
+	for id, _ in pairs(DataList) do
+	 if not cfgItemsLookup[id] then
+		 containsAll = false
+		 break
+	 end
+	end
+	if containsAll then
+	 return CfgList.ID
+	end
+ 
+	 return 0
+end
+
+function WardrobeMgr:CreateAppearanceItem(AppearanceID)
+	local Data = {}
+	Data.ID = AppearanceID
+	Data.UnlockVisible = true
+	Data.CanUnlockVisible = false
+	Data.CheckVisible = false
+	Data.FavoriteVisible = false
+	Data.CanEquip = true
+	Data.StainTagVisible = WardrobeMgr:GetDyeEnable(AppearanceID)
+	Data.StainColorVisible = false
+	Data.EquipmentIcon = WardrobeUtil.GetEquipmentAppearanceIcon(AppearanceID)
+	Data.ItemName = WardrobeUtil.GetEquipmentAppearanceName(AppearanceID)
+	Data.IsSelected = false
+	return Data
+end
 
 --要返回当前类
 return WardrobeMgr

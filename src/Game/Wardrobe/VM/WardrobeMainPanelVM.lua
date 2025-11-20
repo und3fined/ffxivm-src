@@ -64,6 +64,7 @@ function WardrobeMainPanelVM:Ctor()
 
 	self.AppearanceTabText = ""
 	self.CharmNumText = ""
+	self.NewCharmNumText = ""
 	self.AppearanceName = ""
 	self.PanelNameVisible = true
 	self.PanelStainVisible = true
@@ -185,8 +186,13 @@ function WardrobeMainPanelVM:InitAppearanceTabList()
 			Data.PositionSelectIcon = Cfg.SelectIcon
 			Data.StateIcon = AppearanceID ~= 0 and WardrobeUtil.GetEquipmentAppearanceIcon(AppearanceID) or ""
 			local IsUnlock =  WardrobeMgr:GetIsUnlock(AppearanceID) 
-			Data.StainTagVisible = IsUnlock and (WardrobeMgr:GetDyeEnable(AppearanceID) or WardrobeMgr:GetEquipPartCanDyeColor(partID)) or false
-			Data.StainColorVisible = WardrobeMgr:GetIsDye(AppearanceID)
+			-- Data.StainTagVisible = IsUnlock and (WardrobeMgr:GetDyeEnable(AppearanceID) or WardrobeMgr:GetEquipPartCanDyeColor(partID)) or false
+			if AppearanceID == 0 then
+				Data.StainTagVisible = false
+			else
+				Data.StainTagVisible = WardrobeMgr:GetEquipPartCanDyeColor(partID)
+			end
+			Data.StainColorVisible = WardrobeMgr:GetCurrentIsDye(AppearanceID)
 			table.insert(TabList, Data)
 		end
 	end
@@ -209,9 +215,12 @@ function WardrobeMainPanelVM:UpdateAppearanceTabList()
 			Data.PositionIcon = Cfg.Icon
 			Data.PositionSelectIcon = Cfg.SelectIcon
 			Data.StateIcon = AppearanceID ~= 0 and WardrobeUtil.GetEquipmentAppearanceIcon(AppearanceID) or ""
-			local IsUnlock =  WardrobeMgr:GetIsUnlock(AppearanceID) 
-			Data.StainTagVisible =  IsUnlock and (WardrobeMgr:GetDyeEnable(AppearanceID) or WardrobeMgr:GetEquipPartCanDyeColor(PartID)) or false
-			Data.StainColorVisible = WardrobeMgr:GetIsDye(AppearanceID)
+			if AppearanceID == 0 then
+				Data.StainTagVisible = false
+			else
+				Data.StainTagVisible = WardrobeMgr:GetEquipPartCanDyeColor(PartID)
+			end
+			Data.StainColorVisible =  WardrobeMgr:GetCurrentIsDye(AppearanceID)
 			ItemVM:UpdateVM(Data)
 		end
 	end
@@ -339,7 +348,7 @@ local function GetDataByFilterIndex(FilterIndex, DataList)
 					CheckNum = CheckNum + (UnlimitNum or 0)
 				end
 			else
-				for _, v in ipairs(EquipmentConditionData) do
+				for _, v in ipairs(EquipmentConditionData or {}) do
 					local Item  = ItemCfg:FindCfgByKey(v.ID)
 					if Item and not FilterList[ID] then
 						Item.ClassLimits = {Item.ClassLimit}
@@ -644,7 +653,11 @@ function WardrobeMainPanelVM:CreateAppearanceItem(AppearanceID, AppearanceName, 
 	Data.CanEquip = WardrobeMgr:CanEquipAppearance(AppearanceID)
 
 	Data.StainTagVisible = WardrobeMgr:GetDyeEnable(AppearanceID)
-	Data.StainColorVisible = WardrobeMgr:GetIsDye(AppearanceID)
+	if Data.CheckVisible  then
+		Data.StainColorVisible = WardrobeMgr:GetCurrentIsDye(AppearanceID)
+	else
+		Data.StainColorVisible =   WardrobeMgr:GetIsDye(AppearanceID)
+	end
 
 	Data.EquipmentIcon = WardrobeUtil.GetEquipmentAppearanceIcon(AppearanceID)
 	Data.ItemName = WardrobeUtil.GetEquipmentAppearanceName(AppearanceID)
@@ -657,7 +670,7 @@ function WardrobeMainPanelVM:UpdateCurrentAppearanceInfo(ApperanceID)
 
 	local IsUnlock = WardrobeMgr:GetIsUnlock(ApperanceID) 
 
-	self.AppearanceName = WardrobeUtil.GetEquipmentAppearanceName(ApperanceID)
+	self.AppearanceName = WardrobeUtil.GetEquipmentAppearanceName(ApperanceID, true)
 	self.UnlockVisible = not IsUnlock
 	self.UnlockBoxVisible = not IsUnlock
 	self.UnlockTextVisible = not IsUnlock
@@ -757,8 +770,8 @@ function WardrobeMainPanelVM:UpdateCurrentAppearanceInfo(ApperanceID)
 			local ItemValue2 = {}
 			ItemValue2.Name = LSTR(1080060)
 			local Str = RichTextUtil.GetText(string.format("%d", ItemNum), "#DC5868FF")
-			ItemValue2.Num = string.format("%s/%d",  ItemNum >= 0 and tostring(ItemNum) or Str,  WardrobeUtil.GetUnlockCostItemNum(ApperanceID) )
-			ItemValue2.Item = IsSpecial and  WardrobeUtil.GetUnlockCostItemID(ApperanceID)  or WardrobeUtil.GetEquipIDByAppearanceID(ApperanceID)
+			ItemValue2.Num = string.format("%s/%d",  ItemNum > 0 and tostring(ItemNum) or Str,  WardrobeUtil.GetUnlockCostItemNum(ApperanceID) )
+			ItemValue2.Item = IsSpecial and  WardrobeUtil.GetUnlockCostItemID(ApperanceID) or WardrobeUtil.GetEquipIDByAppearanceID(ApperanceID)
 			_G.FLOG_INFO(string.format("点击的外观 %d, 可以解锁的装备ID ====> %d", ApperanceID, IsSpecial and  WardrobeUtil.GetUnlockCostItemID(ApperanceID) or WardrobeUtil.GetEquipIDByAppearanceID(ApperanceID)))
 			self.BagSlotItemVM2:UpdateVM(ItemValue2)
 		end
@@ -912,17 +925,28 @@ function WardrobeMainPanelVM:UpdateQuickUnlockState()
 end
 
 function WardrobeMainPanelVM:UpdateCharismNum()
+	local CharmNum = WardrobeMgr:GetCharmNum()
+	local CharmTotalNum = WardrobeMgr:GetCharismTotalNum()
 	if not WardrobeMgr:IsExceedCfgLevel() then
-		self.CharmNumText = string.format("%d/%d", WardrobeMgr:GetCharismNum(), WardrobeMgr:GetCharismTotalNum())
-		self.CharmEffVisible = WardrobeMgr:GetCharismNum() >= WardrobeMgr:GetCharismTotalNum()
+		self.CharmNumText = string.format("%d/%d", CharmNum, CharmTotalNum)
+		self.CharmEffVisible = CharmNum >= CharmTotalNum
 	else
-		self.CharmNumText = string.format("%d", WardrobeMgr:GetCharismNum())
+		self.CharmNumText = string.format("%d", CharmNum)
 		self.CharmEffVisible = false
 	end
+
+	-- 新的魅力值
+	local Num = WardrobeMgr:GetNewCharismNum()
+	self.NewCharmNumText = string.format("%s:%d",_G.LSTR(1080096), Num)
 end
 
 function WardrobeMainPanelVM:SearchEquipmentList(PartID, PartSubName, SearchText)
 	self.AppearanceList:Clear()
+
+	self.PartID = PartID
+	if PartID == EquipmentPartList.EQUIP_PART_RIGHT_FINGER or PartID == EquipmentPartList.EQUIP_PART_LEFT_FINGER then
+		PartID = EquipmentPartList.EQUIP_PART_FINGER
+	end
 
 	local Cfg = PartSubName == _G.LSTR(1080037) and self:GetAppearanceDataList(PartID) or self:GetAppearanceDataListByPartAndSubID(PartID, PartSubName)
 	local EquipCfg = EquipmentCfg:FindCfgByPartID(PartID)
@@ -932,7 +956,7 @@ function WardrobeMainPanelVM:SearchEquipmentList(PartID, PartSubName, SearchText
 	local SpeacialAppIDList  = {}
 	for _, v in ipairs(Cfg) do
 		local Name = WardrobeUtil.GetEquipmentAppearanceName(v.ID)
-		if string.find(Name, SearchText) then
+		if string.find(Name, SearchText, 1, true) then
 			if not table.contain(IDList, v.ID) then
 				local Data = self:CreateAppearanceItem(v.ID, Name, PartID)
 				table.insert(IDList, v.ID)
@@ -948,7 +972,7 @@ function WardrobeMainPanelVM:SearchEquipmentList(PartID, PartSubName, SearchText
 	for _, v in ipairs(SpeacialAppIDList) do
 		local ItemC = ItemCfg:FindCfgByKey(v.UnlockCostItemID)
 		if ItemC ~= nil then
-			if string.find(ItemC.ItemName, SearchText) then
+			if string.find(ItemC.ItemName, SearchText, 1, true) then
 				if not table.contain(IDList, v.AppID) then
 					local Data = self:CreateAppearanceItem(v.AppID, WardrobeUtil.GetEquipmentAppearanceName(v.AppID), PartID)
 					table.insert(DataList, Data)
@@ -962,7 +986,7 @@ function WardrobeMainPanelVM:SearchEquipmentList(PartID, PartSubName, SearchText
 		if v.AppearanceID > 0 then
 			local ItemC = ItemCfg:FindCfgByKey(v.ID)
 			if ItemC ~= nil then
-				if string.find(ItemC.ItemName, SearchText) then
+				if string.find(ItemC.ItemName, SearchText, 1, true) then
 					if not table.contain(IDList, v.AppearanceID) and v.AppearanceID ~= 0 then
 						local Data = self:CreateAppearanceItem(v.AppearanceID,  WardrobeUtil.GetEquipmentAppearanceName(v.AppID), PartID)
 						table.insert(DataList, Data)

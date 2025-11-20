@@ -117,6 +117,7 @@ local NearTargetFieldType = {
     Chocobo = 6, --陆行鸟
     DiscoverNote = 7, --探索笔记
     AetherCurrent = 8, --风脉泉
+    GoldSauserBlessMachine = 9, -- 金碟赐福机器引导
 }
 
 local GameplayType = {
@@ -152,6 +153,11 @@ local GamePlayStage = {
     MiniCactpotOpenThreeBoxNoMoney = 16, --玩家金碟币不足无法购买
     FantasyCardRuleGuide = 17, --九宫幻卡规则详情引导
     FantasyCardCardGroup = 18, --九宫幻卡卡组预览
+    MagicCardReady = 19, --幻卡准备
+    MagicCardPlayCard = 20, --幻卡玩家出牌
+    MagicCardFlopCard = 21, --幻卡翻牌
+    MagicCardEnd = 22, --幻卡结束
+
 }
 
 -- 触发条件类型
@@ -207,7 +213,12 @@ local TutorialConditionType = {
     UseSpecialItem = 49, --使用指定物品
     TreasureNBSP = 50, --传送魔纹
     PVPMap = 51, --pvp地图
-    OpenRecruitView = 52 --打开招募界面
+    OpenRecruitView = 52, --打开招募界面
+    EnterMazeMainPanel = 53, --进入迷宫挑战界面
+    CraftingLogEsoterica = 54, --制作笔记秘籍实装
+    GatheringLogInherit = 55, --采集笔记传承录实装
+    UnlockTreasureMap = 56, --解读宝图
+    TreasureTemplateTeleporter = 57 --传送魔纹宝物库神殿
 }
 
 local InteractiveType = {

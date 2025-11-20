@@ -76,11 +76,20 @@ function CommHorTabsView:InitListData()
 	for i = 1, self.ParamTabItems:Length() do
 		local Item = self.ParamTabItems:GetRef(i)
 		local TextUkey = Item.TextUkey
+		local IconNormal = nil
+		if nil ~= Item.Normal and nil ~= Item.Normal.Icon then
+			IconNormal = Item.Normal.Icon
+		end
+		local IconSelect = nil
+		if nil ~= Item.Select and nil ~= Item.Select.Icon then
+			IconSelect = Item.Select.Icon
+		end
+
 		local Data = {
 			Index = i,
 			Name = string.isnilorempty(TextUkey) and Item.Text or _G.LSTR(TextUkey),
-			IconNormal = Item.Normal and Item.Normal.Icon or nil,
-			IconSelect = Item.Select and Item.Select.Icon or nil,
+			IconNormal = IconNormal,
+			IconSelect = IconSelect,
 			ImageNormal = self.ImageNormal,
 			ImageSelect = self.ImageSelect,
 			ColorNormal = self.ColorNormal,
@@ -242,6 +251,18 @@ function CommHorTabsView:SetTabStyle(TabStyle)
 		self.ColorSelect = "#ffeebb"
 		UIUtil.SetIsVisible(self.ImgBtnNormal, false)
 		UIUtil.SetIsVisible(self.ImgBtnLight, true)
+	end
+end
+
+---外部设置字色,在UpdateItem之前调用
+---@param ColorNormal string 未选中状态下页签的字色，如"#d5d5d5"
+---@param ColorSelect string 选中状态下页签的字色，如"#d5d5d5"
+function CommHorTabsView:SetTextColor(ColorNormal, ColorSelect)
+	if ColorNormal then
+		self.ColorNormal = ColorNormal
+	end
+	if ColorSelect then
+		self.ColorSelect = ColorSelect
 	end
 end
 return CommHorTabsView

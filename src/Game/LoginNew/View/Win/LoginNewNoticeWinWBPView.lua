@@ -68,9 +68,8 @@ local USaveMgr = _G.UE.USaveMgr
 ---@field PanelTips UFCanvasPanel
 ---@field PopUpBG UFCanvasPanel
 ---@field RichText URichTextBox
----@field TableViewDrop UTableView
----@field TextContent UFTextBlock
----@field TextContent2 UFTextBlock
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
+---@field SkillHandleCloseBtn2 SkillHandleCloseBtnView
 ---@field TextContent2_1 UFTextBlock
 ---@field TextNot UFTextBlock
 ---@field TextNoticePanel UFCanvasPanel
@@ -129,9 +128,8 @@ function LoginNewNoticeWinWBPView:Ctor()
 	--self.PanelTips = nil
 	--self.PopUpBG = nil
 	--self.RichText = nil
-	--self.TableViewDrop = nil
-	--self.TextContent = nil
-	--self.TextContent2 = nil
+	--self.SkillHandleCloseBtn = nil
+	--self.SkillHandleCloseBtn2 = nil
 	--self.TextContent2_1 = nil
 	--self.TextNot = nil
 	--self.TextNoticePanel = nil
@@ -144,6 +142,8 @@ end
 function LoginNewNoticeWinWBPView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CommSingleBox)
+	self:AddSubView(self.SkillHandleCloseBtn)
+	self:AddSubView(self.SkillHandleCloseBtn2)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -162,8 +162,10 @@ function LoginNewNoticeWinWBPView:OnDestroy()
 end
 
 function LoginNewNoticeWinWBPView:OnShow()
-	local bNoShowNoticeAgain = USaveMgr.GetInt(SaveKey.NoShowNoticeAgain, 0, false) == 1
-	FLOG_INFO("[LoginNewNoticeWinWBPView:OnShow] bNoShowNoticeAgain:%s", tostring(bNoShowNoticeAgain))
+	local NoticeID = USaveMgr.GetInt(SaveKey.NoShowNoticeAgain, 0, false)
+	local bNoShowNoticeAgain = NoticeID > 0
+	FLOG_INFO("[LoginNewNoticeWinWBPView:OnShow] NoticeID:%d, bNoShowNoticeAgain:%s", NoticeID, tostring(bNoShowNoticeAgain))
+
 	self.CommSingleBox:SetChecked(bNoShowNoticeAgain)
 
 	self.BtnClose1:SetVisibility(_G.UE.ESlateVisibility.Collapsed)
@@ -202,8 +204,15 @@ function LoginNewNoticeWinWBPView:OnClickBtnMask()
 end
 
 function LoginNewNoticeWinWBPView:OnStateChangedCallback(IsChecked, Type)
-	FLOG_INFO("[LoginNewNoticeWinWBPView:OnStateChangedCallback] IsChecked:%s", tostring(IsChecked))
-	USaveMgr.SetInt(SaveKey.NoShowNoticeAgain, IsChecked and 1 or 0, false)
+	local NoticeID = 1
+	local NoticeMgr = _G.UE.UNoticeMgr:Get()
+	if NoticeMgr then
+		NoticeID = NoticeMgr:GetCurNoticeID()
+	end
+
+	FLOG_INFO("[LoginNewNoticeWinWBPView:OnStateChangedCallback] NoticeID:%d, IsChecked:%s", NoticeID, tostring(IsChecked))
+	-- 保存设置：如果勾选了"不再显示"，则保存NoticeID，否则保存0
+	USaveMgr.SetInt(SaveKey.NoShowNoticeAgain, IsChecked and NoticeID or 0, false)
 end
 
 return LoginNewNoticeWinWBPView

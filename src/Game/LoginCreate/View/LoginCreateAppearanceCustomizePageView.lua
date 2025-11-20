@@ -431,7 +431,7 @@ function LoginCreateAppearanceCustomizePageView:OnClickedTypeSwitch(IsLeft)
 		self.TypeSwitch3:SetSwitchState(IsLeft)
 		self.ViewModel:SelectTail()
 		self.FaceTableView:SetSelectedIndex(self.ViewModel.FaceTableIndex)
-	else
+	elseif self.ViewModel.SubType == LoginAvatarMgr.CustomizeSubType.Ear then
 		self.ViewModel:UpdateSwitchSelected(IsLeft, "bShowPanelType", "bShowPanelHeight")
 		self.TypeSwitch:SetSwitchState(IsLeft)
 		self.ViewModel:SelectFacialFeature()
@@ -569,7 +569,7 @@ function LoginCreateAppearanceCustomizePageView:RefreshUIState()
 		return
 	end
 	-- 其他撤销
-	if (self.ViewModel.bOperateSub == false or self.ViewModel.bShowWordPanel) and self.ViewModel.bShowSwitch == false then
+	if (self.ViewModel.bOperateSub ~= true or self.ViewModel.bShowWordPanel) and self.ViewModel.bShowSwitch == false then
 		self:UpdateSubMenuTable(self.ViewModel.PreSelectSubIndex)
 	elseif self.ViewModel.bShowPanelColor then
 		self:OnClickedTypeSwitchParam(not self.ViewModel.bOperateSub)

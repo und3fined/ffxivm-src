@@ -7,7 +7,7 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
-local WorldExploraPlaceItemVM = require("Game/WorldExplora/ItemVM/WorldExploraPlaceItemVM")
+local WorldExploraPlaceItemVM = require("Game/WorldExplora/VM/ItemVM/WorldExploraPlaceItemVM")
 
 
 local WorldExploraVM = LuaClass(UIViewModel)

@@ -38,6 +38,7 @@ local SidePopUpMgr = _G.SidePopUpMgr
 ---@field ProBarCD UProgressBar
 ---@field SidePopUpBtn SidePopUpBtnItemView
 ---@field SizeBox USizeBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -58,6 +59,7 @@ function SidePopUpMainBagWinView:Ctor()
 	--self.ProBarCD = nil
 	--self.SidePopUpBtn = nil
 	--self.SizeBox = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -69,6 +71,7 @@ function SidePopUpMainBagWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BagSlot_UIBP)
 	self:AddSubView(self.SidePopUpBtn)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -221,8 +224,17 @@ function SidePopUpMainBagWinView:OnClickedAction()
 		end
 		
 	else
-		_G.BagMgr:UseItemNoCD(Params.GID, nil)
-		SidePopUpMgr:RemoveSidePopUp(UIViewID.SidePopUpEasyUse)
+		local ItemCfg = ItemCfg:FindCfgByKey(Params.ResID)
+		if ItemCfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_COIFFURE then
+			local UseResult = _G.HaircutMgr:OnUseNewHairItem(Params.ResID)
+			if UseResult then
+				_G.BagMgr:UseItemNoCD(Params.GID, nil)
+			end
+			SidePopUpMgr:RemoveSidePopUp(UIViewID.SidePopUpEasyUse)
+		else
+			_G.BagMgr:UseItemNoCD(Params.GID, nil)
+			SidePopUpMgr:RemoveSidePopUp(UIViewID.SidePopUpEasyUse)
+		end
 	end
 end
 

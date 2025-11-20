@@ -794,7 +794,7 @@ function QuestTrackMgr:HideNaviItems(bNoCancelNaviType)
 	if not bNoCancelNaviType then
 		NaviDecalMgr:CancelNaviType(NaviDecalMgr.EGuideType.Task)
 	end
-	
+
 	NaviDecalMgr:HideNaviPath(NaviDecalMgr.EGuideType.Task)
 
 	self:RemoveQuestBuoy()
@@ -907,5 +907,30 @@ function QuestTrackMgr:MakeGMQuestTeleportCmd()
 	local Cmd = string.format("scene enter %d 0 0 0 %d %d %d", PWorldID, P.X, P.Y, P.Z)
 	return Cmd
 end
+
+---获取任务自动寻路目标位置
+---@param QuestParam MapQuestParamClass
+---@return FVector, boolean
+function QuestTrackMgr:GetQuestAutoPathPos(QuestParam)
+	local TargetPos = QuestParam.Pos
+	local IsDstPosRejust = true
+
+	if QuestParam.AssistPos then
+		-- 辅助点优先
+		TargetPos = QuestParam.AssistPos
+		IsDstPosRejust = false
+	else
+		if QuestParam.NaviType == QuestDefine.NaviType.NpcResID then
+			local OffsetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(QuestParam.MapID, QuestParam.NaviObjID)
+			if OffsetPos then
+				TargetPos = OffsetPos
+			end
+			IsDstPosRejust = false
+		end
+	end
+
+	return TargetPos, IsDstPosRejust
+end
+
 
 return QuestTrackMgr

@@ -23,9 +23,11 @@ local LSTR = _G.LSTR
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnCancel CommBtnLView
 ---@field BtnClose CommonCloseBtnView
+---@field BtnConfirm CommBtnLView
 ---@field BtnSure CommBtnLView
 ---@field CommMoneySlot_UIBP_59 CommMoneySlotView
 ---@field IconMilitaryRank UFImage
+---@field IconMilitaryRank2 UFImage
 ---@field IconMilitaryRankAfterPromotion UFImage
 ---@field IconTicket_1 UFImage
 ---@field ImgCompanySeal_1 UFImage
@@ -34,9 +36,14 @@ local LSTR = _G.LSTR
 ---@field MI_DX_Common_CompanySeal_4_a UFImage
 ---@field MI_DX_Common_CompanySeal_5_a UFImage
 ---@field MI_DX_Common_CompanySeal_6_a UFImage
+---@field PanelHighest UFCanvasPanel
+---@field PanelPromotion UFCanvasPanel
 ---@field TableViewLeft UTableView
 ---@field TableViewRight UTableView
+---@field TextHighest UFTextBlock
+---@field TextMaximumLimit UFTextBlock
 ---@field TextMilitaryRank UFTextBlock
+---@field TextMilitaryRank2 UFTextBlock
 ---@field TextMilitaryRankAfterPromotion UFTextBlock
 ---@field TextQuantity_1 URichTextBox
 ---@field TextTitle URichTextBox
@@ -51,9 +58,11 @@ function CompanySealPromotionWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnCancel = nil
 	--self.BtnClose = nil
+	--self.BtnConfirm = nil
 	--self.BtnSure = nil
 	--self.CommMoneySlot_UIBP_59 = nil
 	--self.IconMilitaryRank = nil
+	--self.IconMilitaryRank2 = nil
 	--self.IconMilitaryRankAfterPromotion = nil
 	--self.IconTicket_1 = nil
 	--self.ImgCompanySeal_1 = nil
@@ -62,9 +71,14 @@ function CompanySealPromotionWinView:Ctor()
 	--self.MI_DX_Common_CompanySeal_4_a = nil
 	--self.MI_DX_Common_CompanySeal_5_a = nil
 	--self.MI_DX_Common_CompanySeal_6_a = nil
+	--self.PanelHighest = nil
+	--self.PanelPromotion = nil
 	--self.TableViewLeft = nil
 	--self.TableViewRight = nil
+	--self.TextHighest = nil
+	--self.TextMaximumLimit = nil
 	--self.TextMilitaryRank = nil
+	--self.TextMilitaryRank2 = nil
 	--self.TextMilitaryRankAfterPromotion = nil
 	--self.TextQuantity_1 = nil
 	--self.TextTitle = nil
@@ -79,6 +93,7 @@ function CompanySealPromotionWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnCancel)
 	self:AddSubView(self.BtnClose)
+	self:AddSubView(self.BtnConfirm)
 	self:AddSubView(self.BtnSure)
 	self:AddSubView(self.CommMoneySlot_UIBP_59)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -96,13 +111,17 @@ function CompanySealPromotionWinView:OnInit()
 		{ "LeftIcon", UIBinderSetImageBrush.New(self, self.IconMilitaryRank) },
 		{ "RightIcon", UIBinderSetImageBrush.New(self, self.IconMilitaryRankAfterPromotion) },
 		{ "TextQuantity", UIBinderSetText.New(self, self.TextQuantity_1) },	
-		{ "BtnStyle", UIBinderCommBtnUpdateImage.New(self, self.BtnSure)},
-		--{ "Img", UIBinderSetImageBrush.New(self, self.ImgCompanySeal) },
 		{ "Title", UIBinderSetText.New(self, self.TextTitle) },		
 		{ "GrandImg1", UIBinderSetIsVisible.New(self, self.ImgCompanySeal_2) },
 		{ "GrandImg2", UIBinderSetIsVisible.New(self, self.ImgCompanySeal_3) },
 		{ "GrandImg3", UIBinderSetIsVisible.New(self, self.ImgCompanySeal_1) },
 		{ "IconTicket", UIBinderSetImageBrush.New(self, self.IconTicket_1) },
+		{ "PanelPromotionVisible", UIBinderSetIsVisible.New(self, self.PanelPromotion) },
+		{ "PanelHighestVisible", UIBinderSetIsVisible.New(self, self.PanelHighest) },
+		{ "HighestText", UIBinderSetText.New(self, self.TextHighest) },	
+		{ "HighestIcon", UIBinderSetImageBrush.New(self, self.IconMilitaryRank2) },	
+		{ "HighestRankText", UIBinderSetText.New(self, self.TextMilitaryRank2) },
+		{ "HighestLimitText", UIBinderSetText.New(self, self.TextMaximumLimit) },
 	}
 end
 
@@ -113,10 +132,16 @@ end
 function CompanySealPromotionWinView:OnShow()
 	local ScoreID = CompanySealMgr:GetScoreInfo()
 	self.CommMoneySlot_UIBP_59:UpdateView(ScoreID, false, _G.UIViewID.MarketExchangeWin, true)
-	self.ViewModel:UpdateTitleText()
-	self.BtnSure.TextContent:SetText(LSTR(1160037))
-	self.BtnSure:SetColorType(self.ViewModel.BtnStyle or 1)
-	self.BtnCancel.TextContent:SetText(LSTR(1160058))
+	self.ViewModel:UpdateRankInfo()
+	self.BtnConfirm:SetIsRecommendState(true)
+	if self.ViewModel.IsCanPromoted then
+		self.BtnSure:SetIsRecommendState(true)
+	else
+		self.BtnSure:SetIsDisabledState(true, true)
+	end
+	self.BtnConfirm.TextContent:SetText(LSTR(1160064))--确认
+	self.BtnSure.TextContent:SetText(LSTR(1160037))--晋升
+	self.BtnCancel.TextContent:SetText(LSTR(1160058))--取消
 	self:PlayAnimation(self.AnimLoop, 0, 0)
 end
 
@@ -127,6 +152,8 @@ end
 function CompanySealPromotionWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnCancel, self.OnClickBtnCancel)
 	UIUtil.AddOnClickedEvent(self, self.BtnSure, self.OnClickBtnSure)
+	UIUtil.AddOnClickedEvent(self, self.BtnConfirm, self.OnClickBtnConfirm)
+	
 end
 
 function CompanySealPromotionWinView:OnRegisterGameEvent()
@@ -138,6 +165,10 @@ function CompanySealPromotionWinView:OnRegisterBinder()
 end
 
 function CompanySealPromotionWinView:OnClickBtnCancel()
+	self:Hide()
+end
+
+function CompanySealPromotionWinView:OnClickBtnConfirm()
 	self:Hide()
 end
 

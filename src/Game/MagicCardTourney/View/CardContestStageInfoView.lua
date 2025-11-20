@@ -247,6 +247,7 @@ end
 function CardContestStageInfoView:OnPanelEnrollVisibleChange(IsVisible)
 	UIUtil.SetIsVisible(self.PanelEnroll, IsVisible)
 	if IsVisible then
+		self.BtnFold:SetChecked(not IsVisible)
 		self:PlayAnimation(self.AnimUnfold)
 	end
 end
@@ -254,6 +255,7 @@ end
 function CardContestStageInfoView:OnPanelInfoVisibleChange(IsVisible)
 	UIUtil.SetIsVisible(self.PanelInfo, IsVisible)
 	if IsVisible then
+		self.BtnFold:SetChecked(not IsVisible)
 		self:PlayAnimation(self.AnimUnfold)
 	end
 end

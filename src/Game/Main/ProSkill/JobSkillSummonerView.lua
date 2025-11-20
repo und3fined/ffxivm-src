@@ -210,7 +210,7 @@ function JobSkillSummonerView:SetSpectrumState(State)
 	UIUtil.SetIsVisible(self.Gemstone, State)
 	UIUtil.SetIsVisible(self.RabbitNormal, not State)
 	if State then
-		self:PlayAnimation(self.AnimRabbitOpen)
+		self:PlayAnimationToEndTime(self.AnimRabbitOpen)
 	end
 end
 
@@ -297,6 +297,7 @@ function SkillSpectrum_Summoner_Animal:SkillSpectrumOff()
 
 	local GemView = self.View.Gemstone
 	GemView:StopAllAnimations()
+	MainView.SummonerVM:Reset()
 	GemView:PlayAnimationToEndTime(GemView.AnimState1)
 end
 
@@ -346,7 +347,7 @@ end
 
 
 function SkillSpectrum_Summoner_Animal:OnCastGemBuff(Index, TargetTime, Pile)
-	self.View.SummonerVM:SetGemData(Index, TargetTime, Pile)
+	self.View.SummonerVM:SetGemData(Index, TargetTime, Pile, self.TimerID)
 end
 
 function SkillSpectrum_Summoner_Animal:OnCastGemStatusBuff(Index, bCast)

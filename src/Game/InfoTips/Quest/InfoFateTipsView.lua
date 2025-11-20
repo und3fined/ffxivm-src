@@ -61,7 +61,7 @@ function InfoFateTipsView:OnShow()
         local CurrentFate = _G.FateMgr:GetCurrentFate()
         if (CurrentFate ~= nil) then
             local FateCfg = _G.FateMgr:GetFateCfg(CurrentFate.ID)
-            if (FateCfg ~= nil and FateCfg.bHideInArchive ~= nil and FateCfg.bHideInArchive > 0) then
+            if (FateCfg ~= nil and FateCfg.bUseCelebrateTitle ~= nil and FateCfg.bUseCelebrateTitle > 0) then
                 -- 这里是庆典标题
                 self.TextFateTitle:SetText(string.format(LSTR(190130), FateCfg.Title))
             else

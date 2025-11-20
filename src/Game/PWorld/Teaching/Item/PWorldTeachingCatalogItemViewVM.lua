@@ -25,6 +25,7 @@ function PWorldTeachingCatalogItemViewVM:Ctor()
     self.CanPreview = false
     self.CanEnter = false
     self.ShowSelected = _G.UE.ESlateVisibility.Hidden
+    self.NeedAdvancedProf = false
 end
 
 function PWorldTeachingCatalogItemViewVM:UpdateVM(Value)
@@ -43,6 +44,7 @@ function PWorldTeachingCatalogItemViewVM:UpdateVM(Value)
     self.LevelLimit = TeachingMgr:GetLevelLimit(self.InteractiveID)
     self.CanPreview = Value.MaxLevel >= self.LevelLimit and true or false
     self.CanEnter = Value.ProfLevel >= self.LevelLimit and true or false
+    self.NeedAdvancedProf = Value.NeedAdvancedProf
     -- 设置Lock状态
     local ShowEmptyImg = false
     if not self.CanPreview then

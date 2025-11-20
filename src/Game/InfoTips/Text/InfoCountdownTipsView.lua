@@ -220,7 +220,7 @@ end
 ---@param Params Type Description
 --- Params.TimeInterval or 1 -- 检查间隔，不填写默认1
 --- Params.SubTitleText -- 副标题
---- Params.BeginTime -- 默认15 秒
+--- Params.BeginTime -- 默认15 秒 -- 注意，代码是向下取整的，15秒开始不会显示15，而是14
 --- Params.EndTime -- 默认0秒
 --- Params.FinishCallback
 --- Params.RedTime or 10 -- 倒计时变红的警告时间，默认10秒变红
@@ -246,7 +246,7 @@ function InfoCountdownTipsView:BeginCountDown(Params)
         if (self.TextSubTitle ~= nil) then
             self.TextSubTitle:SetText(SubTitleText)
         end
-
+        self.EndShowType = Params.EndShowType or 0
         if (AutoCountdown) then
             self.TimeInterval = Params.TimeInterval or DefaultTimeInterval
             self.CurTime = Params.BeginTime or DefaultBeginTime -- 外部指定秒 or 15

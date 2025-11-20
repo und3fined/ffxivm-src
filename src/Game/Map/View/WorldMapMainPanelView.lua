@@ -17,7 +17,6 @@ local UIViewID = require("Define/UIViewID")
 local UIViewMgr = require("UI/UIViewMgr")
 local MapUICfg = require("TableCfg/MapUICfg")
 local UILayer = require("UI/UILayer")
-local ProtoRes = require("Protocol/ProtoRes")
 
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
@@ -30,14 +29,13 @@ local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local MapMgr = _G.MapMgr
 local WorldMapMgr = _G.WorldMapMgr
 local MapType = MapDefine.MapType
-local MapMarkerEventType = ProtoRes.MapMarkerEventType
 
 
 ---@class WorldMapMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnAetherCurrent UFButton
----@field BtnChangeLine UFButton
 ---@field BtnClose CommonCloseBtnView
+---@field BtnHouse UFButton
 ---@field BtnMountSpeed UFButton
 ---@field BtnSecondary UFButton
 ---@field BtnSet UFButton
@@ -52,14 +50,15 @@ local MapMarkerEventType = ProtoRes.MapMarkerEventType
 ---@field EFF_Fog UFCanvasPanel
 ---@field EFF_Part UFCanvasPanel
 ---@field FButton_0 UFButton
+---@field HouseMapPanel HouseMapPanelView
 ---@field ImgLocalIcon UFImage
 ---@field MI_DX_Common_WorldMap UFImage
+---@field MainPanel UFCanvasPanel
 ---@field MapContent WorldMapContentView
 ---@field MapScalePanel WorldMapScaleItemView
 ---@field PanelMapCorner UFCanvasPanel
 ---@field PanelWayFinding UFCanvasPanel
 ---@field PanelWorldMapFrame UFCanvasPanel
----@field RichTextBox_65 URichTextBox
 ---@field SecondaryDropDown WorldMapTabDropDownListView
 ---@field SecondaryPanel UFCanvasPanel
 ---@field TableViewLocateList UTableView
@@ -75,12 +74,13 @@ local MapMarkerEventType = ProtoRes.MapMarkerEventType
 ---@field ToggleButtonSecondary UToggleButton
 ---@field ToggleButtonThreeLevel UToggleButton
 ---@field WeatherTimeBar WeatherTimeBarItemView
----@field WeatherTimePanel UFCanvasPanel
+---@field WeatherTimePanel UFHorizontalBox
 ---@field WorldTitlePanel UFCanvasPanel
 ---@field WorldTitlePanel01 UFCanvasPanel
 ---@field WorldTitlePanel02 UFCanvasPanel
 ---@field AnimCloudIn UWidgetAnimation
 ---@field AnimEnter_In UWidgetAnimation
+---@field AnimEnter_In_BackUp UWidgetAnimation
 ---@field AnimEnter_Out UWidgetAnimation
 ---@field AnimFogClean UWidgetAnimation
 ---@field AnimFogCleanEnterIn UWidgetAnimation
@@ -88,6 +88,7 @@ local MapMarkerEventType = ProtoRes.MapMarkerEventType
 ---@field AnimFogSwitch UWidgetAnimation
 ---@field AnimIn1 UWidgetAnimation
 ---@field AnimLeave_In UWidgetAnimation
+---@field AnimLeave_In_BackUp UWidgetAnimation
 ---@field AnimLeave_Out UWidgetAnimation
 ---@field AnimLoop UWidgetAnimation
 ---@field AnimMap1In UWidgetAnimation
@@ -104,8 +105,8 @@ local WorldMapMainPanelView = LuaClass(UIView, true)
 function WorldMapMainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnAetherCurrent = nil
-	--self.BtnChangeLine = nil
 	--self.BtnClose = nil
+	--self.BtnHouse = nil
 	--self.BtnMountSpeed = nil
 	--self.BtnSecondary = nil
 	--self.BtnSet = nil
@@ -120,14 +121,15 @@ function WorldMapMainPanelView:Ctor()
 	--self.EFF_Fog = nil
 	--self.EFF_Part = nil
 	--self.FButton_0 = nil
+	--self.HouseMapPanel = nil
 	--self.ImgLocalIcon = nil
 	--self.MI_DX_Common_WorldMap = nil
+	--self.MainPanel = nil
 	--self.MapContent = nil
 	--self.MapScalePanel = nil
 	--self.PanelMapCorner = nil
 	--self.PanelWayFinding = nil
 	--self.PanelWorldMapFrame = nil
-	--self.RichTextBox_65 = nil
 	--self.SecondaryDropDown = nil
 	--self.SecondaryPanel = nil
 	--self.TableViewLocateList = nil
@@ -149,6 +151,7 @@ function WorldMapMainPanelView:Ctor()
 	--self.WorldTitlePanel02 = nil
 	--self.AnimCloudIn = nil
 	--self.AnimEnter_In = nil
+	--self.AnimEnter_In_BackUp = nil
 	--self.AnimEnter_Out = nil
 	--self.AnimFogClean = nil
 	--self.AnimFogCleanEnterIn = nil
@@ -156,6 +159,7 @@ function WorldMapMainPanelView:Ctor()
 	--self.AnimFogSwitch = nil
 	--self.AnimIn1 = nil
 	--self.AnimLeave_In = nil
+	--self.AnimLeave_In_BackUp = nil
 	--self.AnimLeave_Out = nil
 	--self.AnimLoop = nil
 	--self.AnimMap1In = nil
@@ -172,6 +176,7 @@ end
 function WorldMapMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose)
+	self:AddSubView(self.HouseMapPanel)
 	self:AddSubView(self.MapContent)
 	self:AddSubView(self.MapScalePanel)
 	self:AddSubView(self.SecondaryDropDown)
@@ -190,7 +195,7 @@ function WorldMapMainPanelView:OnInit()
 	self.TextSecondary:SetVisibility(_G.UE.ESlateVisibility.HitTestInvisible)
 	self.TextThreeLevel:SetVisibility(_G.UE.ESlateVisibility.HitTestInvisible)
 
-	self.AdapterThreeLevelDropDown = UIAdapterTableView.CreateAdapter(self, self.ThreeLevelDropDown.TableViewItemList, self.OnMapSelectChanged)
+	self.AdapterThreeLevelDropDown = UIAdapterTableView.CreateAdapter(self, self.ThreeLevelDropDown.TableViewItemList, self.OnMapSelectChanged, true)
 	self.AdapterSecondaryDropDown = UIAdapterTableView.CreateAdapter(self, self.SecondaryDropDown.TableViewItemList, self.OnMapSelectChanged)
 	self.AdapterFloorMapList = UIAdapterTableView.CreateAdapter(self, self.TableViewLocateList, self.OnMapSelectChanged)
 
@@ -205,14 +210,17 @@ function WorldMapMainPanelView:OnInit()
 		{
 			ViewModel = WorldMapVM,
 			Binders = {
-				{ "WorldMapName", UIBinderSetText.New(self, self.TextWorld) },  -- 一级菜单名称
-				{ "MapTitle", UIBinderSetText.New(self, self.TextSecondary) },  -- 二级菜单名称
-				{ "MapName", UIBinderSetText.New(self, self.TextThreeLevel) },  -- 三级菜单名称
-				{ "MapName", UIBinderSetText.New(self, self.TextWorld02) }, -- 副本地图名称
+				{ "WorldMapPanelVisible", UIBinderSetIsVisible.New(self, self.MainPanel) },
+				{ "HouseMapPanelVisible", UIBinderSetIsVisible.New(self, self.HouseMapPanel) },
 
-				{ "SecondaryMapList", UIBinderUpdateBindableList.New(self, self.AdapterSecondaryDropDown) },
-				{ "ThreeLevelMapList", UIBinderUpdateBindableList.New(self, self.AdapterThreeLevelDropDown) },
-				{ "FloorMapList", UIBinderUpdateBindableList.New(self, self.AdapterFloorMapList) },
+				{ "WorldMapName", UIBinderSetText.New(self, self.TextWorld) },
+				{ "MapTitle", UIBinderSetText.New(self, self.TextSecondary) },
+				{ "MapName", UIBinderSetText.New(self, self.TextThreeLevel) },
+				{ "MapName", UIBinderSetText.New(self, self.TextWorld02) },
+
+				{ "SecondaryMapVMList", UIBinderUpdateBindableList.New(self, self.AdapterSecondaryDropDown) },
+				{ "ThreeLevelMapVMList", UIBinderUpdateBindableList.New(self, self.AdapterThreeLevelDropDown) },
+				{ "FloorMapVMList", UIBinderUpdateBindableList.New(self, self.AdapterFloorMapList) },
 
 				{ "MapScale", UIBinderSetSlider.New(self, self.MapScalePanel.Slider) },
 				{ "MapScale", UIBinderValueChangedCallback.New(self, nil, self.SetProgressBar) },
@@ -237,12 +245,13 @@ function WorldMapMainPanelView:OnInit()
 				{ "BtnAetherCurrentVisible", UIBinderSetIsVisible.New(self, self.BtnAetherCurrent, false, true) },
 				{ "BtnTreasureHuntVisible", UIBinderSetIsVisible.New(self, self.BtnTreasureHunt, false, true) },
 				{ "BtnTaskListVisible", UIBinderSetIsVisible.New(self, self.BtnTaskList, false, true) },
+				{ "BtnMountSpeedVisible", UIBinderSetIsVisible.New(self, self.BtnMountSpeed, false, true)},
+				{ "BtnHouseListVisible", UIBinderSetIsVisible.New(self, self.BtnHouse, false, true)},
 
 				{ "WeatherTimePanelVisible", UIBinderSetIsVisible.New(self, self.WeatherTimePanel ) },
 
 				{ "MapAutoPathMoving", UIBinderSetIsVisible.New(self, self.ImgLocalIcon, true ) },
 				{ "MapAutoPathMoving", UIBinderSetIsVisible.New(self, self.PanelWayFinding ) },
-				{ "BtnMountSpeedVisible",UIBinderSetIsVisible.New(self, self.BtnMountSpeed, false, true)}
 			}
 		}
 	}
@@ -279,21 +288,37 @@ function WorldMapMainPanelView:OnShow()
 	end
 	self.LastUIMapType = MapUtil.GetMapType(UIMapID)
 
-	WorldMapMgr:UpdateFog(UIMapID, MapID)
-	if not WorldMapMgr:ChangeMap(UIMapID, MapID, true) then
-		self:UpdateMapList()
-		self:UpdateMapScale()
-	end
+	if nil ~= Params and Params.ContentType == MapDefine.MapContentType.IndividualHouseMap then
+		-- 独立房屋地图
+		WorldMapVM:ShowHouseMapPanel()
 
-	if UIViewMgr:IsViewVisible(UIViewID.TreasureHuntSkillPanel) then
-		local TreasureHuntView = UIViewMgr:FindView(UIViewID.TreasureHuntSkillPanel)
-		if TreasureHuntView ~= nil then
-			local InPosition = TreasureHuntView:GetPosition()
-			local Offsets = TreasureHuntView:GetOffsets()
-			UIViewMgr:ChangeLayer(UIViewID.TreasureHuntSkillPanel, UILayer.AboveNormal)
-			TreasureHuntView:SetPosition(InPosition)
-			TreasureHuntView:SetOffsets(Offsets)
+		if not WorldMapMgr:ChangeHouseMap(UIMapID, MapID, Params.StreetID, true) then
+			self:UpdateMapScale()
 		end
+
+	else
+		-- 默认大地图
+		WorldMapVM:ShowWorldMapPanel()
+
+		if MapUtil.IsHouseUIMap(UIMapID) then
+			-- 如果是房屋地图，需要设置房屋住宅区街区ID
+			local StreetID
+			if nil ~= Params and nil ~= Params.StreetID then
+				StreetID = Params.StreetID
+			else
+				StreetID = MapMgr:GetStreetID()
+			end
+			WorldMapMgr:SetStreetID(StreetID)
+		end
+
+		WorldMapMgr:UpdateFog(UIMapID, MapID)
+
+		if not WorldMapMgr:ChangeMap(UIMapID, MapID, true) then
+			self:UpdateMapList()
+			self:UpdateMapScale()
+		end
+
+		self:ChangeTreasureHuntViewLayer(true)
 	end
 
 	self.IsOpenMapShow = true
@@ -313,16 +338,7 @@ function WorldMapMainPanelView:OnHide()
 		WorldMapMgr:SetWorldMapShowQuestID(nil)
 	end
 
-	if UIViewMgr:IsViewVisible(UIViewID.TreasureHuntSkillPanel) then
-		local TreasureHuntView = UIViewMgr:FindView(UIViewID.TreasureHuntSkillPanel)
-		if TreasureHuntView ~= nil then
-			local InPosition = TreasureHuntView:GetPosition()
-			local Offsets = TreasureHuntView:GetOffsets()
-			UIViewMgr:ChangeLayer(UIViewID.TreasureHuntSkillPanel, UILayer.AboveLow)
-			TreasureHuntView:SetPosition(InPosition)
-			TreasureHuntView:SetOffsets(Offsets)
-		end
-	end
+	self:ChangeTreasureHuntViewLayer(false)
 
 	MapMgr:SetUpdateMap(false, 2)
 end
@@ -340,14 +356,16 @@ function WorldMapMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnSet, self.OnClickedBtnSet)
 	UIUtil.AddOnClickedEvent(self, self.BtnWeather, self.OnClickedBtnWeather)
 	UIUtil.AddOnClickedEvent(self, self.BtnAetherCurrent, self.OnClickedBtnAetherCurrent)
+	UIUtil.AddOnClickedEvent(self, self.BtnMountSpeed, self.OnClickBtnMountSpeed)
+	UIUtil.AddOnClickedEvent(self, self.BtnHouse, self.OnClickBtnHouseList)
 
 	UIUtil.AddOnValueChangedEvent(self, self.MapScalePanel.Slider, self.OnValueChangedScale)
 	UIUtil.AddOnMouseCaptureBeginEvent(self, self.MapScalePanel.Slider, self.OnSliderMouseCaptureBegin)
     UIUtil.AddOnMouseCaptureEndEvent(self, self.MapScalePanel.Slider, self.OnSliderMouseCaptureEnd)
 	UIUtil.AddOnClickedEvent(self, self.MapScalePanel.BtnAdd, self.OnClickedBtnScaleAdd)
 	UIUtil.AddOnClickedEvent(self, self.MapScalePanel.BtnSub, self.OnClickedBtnScaleSub)
+
 	UIUtil.AddOnClickedEvent(self, self.FButton_0, self.OnClickedBtnMajorCoordinate)
-	UIUtil.AddOnClickedEvent(self, self.BtnMountSpeed,self.OnClickBtnMountSpeed)
 end
 
 function WorldMapMainPanelView:OnRegisterGameEvent()
@@ -363,10 +381,6 @@ end
 
 function WorldMapMainPanelView:OnRegisterBinder()
 	self:RegisterMultiBinders(self.MultiBinders)
-end
-
-function WorldMapMainPanelView:OnMapSelectChanged(Index, ItemData, ItemView)
-	WorldMapMgr:ChangeMap(ItemData.ID)
 end
 
 function WorldMapMainPanelView:OnGameEventWorldMapSelectChanged()
@@ -405,13 +419,13 @@ function WorldMapMainPanelView:UpdateMapList()
 	if MapType.Area == CurrentMapType then
 		self.AdapterThreeLevelDropDown:CancelSelected()
 
-		local SmallAreaMapList = MapUtil.GetAreaDownMapList(UIMapID)
-		if #SmallAreaMapList > 0 then
+		local AreaFloorMapList = MapUtil.GetAreaFloorMapList(UIMapID)
+		if #AreaFloorMapList > 0 then
 			WorldMapVM:SetFloorMapListVisible(true)
 			if MapUtil.GetMapNameUI(UIMapID) ~= MapUtil.GetMapNameUI(WorldMapMgr:GetLastUIMapID()) then
 				self:PlayAnimation(self.AnimToggleGroupDynamicIn)
 			end
-			WorldMapVM:SetFloorMapList(SmallAreaMapList)
+			WorldMapVM:SetFloorMapList(AreaFloorMapList)
 		else
 			WorldMapVM:SetFloorMapListVisible(false)
 		end
@@ -436,6 +450,21 @@ end
 
 function WorldMapMainPanelView:OnClickedBtnTreasureHunt()
 	_G.TreasureHuntMgr:OpenTreasureHuntMainPanel()
+end
+
+---点击下拉列表切换地图
+function WorldMapMainPanelView:OnMapSelectChanged(Index, ItemData, ItemView)
+	local UIMapID = ItemData.ID
+
+	if MapUtil.IsAreaMap(UIMapID) and MapUtil.IsHouseUIMap(UIMapID) then
+		-- 房屋地图切换额外处理
+		if not WorldMapVM:CanChangeToHouseUIMap(UIMapID) then
+			WorldMapVM:OpenMapHouseListPanel(MapUtil.GetMapID(UIMapID))
+			return
+		end
+	end
+
+	WorldMapMgr:ChangeMap(UIMapID)
 end
 
 function WorldMapMainPanelView:OnClickedBtnWorld()
@@ -487,7 +516,41 @@ function WorldMapMainPanelView:OnClickBtnMountSpeed()
 	_G.MountMgr:OpenMountSpeedMainPanel()
 end
 
+function WorldMapMainPanelView:OnClickBtnHouseList()
+	WorldMapVM:OpenMapHouseListByRegion()
+end
+
+
 --region 缩放相关
+
+function WorldMapMainPanelView:UpdateMapScale()
+	local UIMapID = WorldMapMgr:GetUIMapID()
+	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
+	if nil == Cfg then
+		return
+	end
+
+	local UIMapMinScale = Cfg.UIMapMinScale
+	local UIMapMaxScale = Cfg.UIMapMaxScale
+
+	if MapUtil.IsWorldMap(UIMapID) then
+		local ViewportSize = UIUtil.GetViewportSize()
+		local Scale = UIUtil.GetViewportScale()
+		local ViewportX = ViewportSize.X / Scale
+		local ViewportY = ViewportSize.Y / Scale
+		local WorldMapWidth = 4096
+		local WorldMapHeight = 1654
+		-- 一级地图要限制缩放比例
+		local MinScaleWidth = ViewportX / WorldMapWidth
+		local MinScaleHeight = ViewportY / WorldMapHeight
+		UIMapMinScale = math.max(MinScaleWidth, MinScaleHeight)
+	end
+
+	self.UIMapMinScale = UIMapMinScale
+	self.UIMapMaxScale = UIMapMaxScale
+
+	self.MapScalePanel:UpdateSlider(UIMapMinScale, UIMapMaxScale)
+end
 
 function WorldMapMainPanelView:SetProgressBar(Value)
 	local UIMapMinScale = self.UIMapMinScale
@@ -543,16 +606,7 @@ function WorldMapMainPanelView:OnValueChangedMajorPosition(MajorLeftTopPosition)
 end
 
 function WorldMapMainPanelView:UpdateMajorCoordinate()
-	local Position = MapVM:GetMajorLeftTopPosition()
-	local InfoText = string.format("%s  %s", MapUtil.GetCoordinateText(Position), MapUtil.GetMapFullName())
-
-	if _G.PWorldMgr:IsShowPWorldLine() then
-		local CurrLineID = _G.PWorldMgr:GetCurrPWorldLineID()
-		if CurrLineID > 0 then
-			InfoText = string.format("%s（%02d）", InfoText, CurrLineID)
-		end
-	end
-
+	local InfoText = MapUtil.GetMajorCoordinateText()
 	self.TextCoordinate:SetText(InfoText)
 end
 
@@ -739,37 +793,6 @@ function WorldMapMainPanelView:PlayFogAnim(IsCallWhenShow, MapID, UIMapID)
 	end
 end
 
----播放传送门标记高亮效果
-function WorldMapMainPanelView:PlayDransDoorHighlight()
-
-	-- 查找传送门标记
-	local MarkerPredicate = function(Marker)
-		if Marker:GetType() == MapDefine.MapMarkerType.FixPoint then
-			if Marker:GetEventType() == MapMarkerEventType.MAP_MARKER_EVENT_TRANS_DOOR then
-				return true
-			end
-		end
-
-		return false
-	end
-
-	-- 是否存在传送门标记
-	local MarkerView = self.MapContent:GetMapMarkerByPredicate(MarkerPredicate)
-	if not MarkerView then
-		return
-	end
-
-	-- 首次打开该地图时才播放高亮效果
-	local UIMapID = WorldMapMgr:GetUIMapID()
-	if WorldMapVM:CanPlayDransDoorHighlight(UIMapID) then
-		local Params = {}
-		Params.MarkerPredicate = MarkerPredicate
-		self.MapContent:UpdateMarkerHighlightEffect(Params)
-
-		WorldMapVM:RecordDransDoorHighlight(UIMapID)
-	end
-end
-
 ---获取地图缩放动画时间
 ---地图主界面打开时会播放动画，动画里会缩放地图，从而影响地图标记的位置计算
 ---这里动画里缩放地图的时间是和动效沟通的，并不是动画本身的时长
@@ -781,38 +804,7 @@ function WorldMapMainPanelView:GetFadeOutMapAnimTime()
 	return self.MapContent:GetFadeOutMapAnimTime()
 end
 
---endregion
-
-
-function WorldMapMainPanelView:UpdateMapScale()
-	local UIMapID = WorldMapMgr:GetUIMapID()
-	local Cfg = MapUICfg:FindCfgByKey(UIMapID)
-	if nil == Cfg then
-		return
-	end
-
-	local UIMapMinScale = Cfg.UIMapMinScale
-	local UIMapMaxScale = Cfg.UIMapMaxScale
-
-	if MapUtil.IsWorldMap(UIMapID) then
-		local ViewportSize = UIUtil.GetViewportSize()
-		local Scale = UIUtil.GetViewportScale()
-		local ViewportX = ViewportSize.X / Scale
-		local ViewportY = ViewportSize.Y / Scale
-		local WorldMapWidth = 4096
-		local WorldMapHeight = 1654
-		local MinScaleWidth = ViewportX / WorldMapWidth
-		local MinScaleHeight = ViewportY / WorldMapHeight
-		UIMapMinScale = math.max(MinScaleWidth, MinScaleHeight)
-	end
-
-	self.UIMapMinScale = UIMapMinScale
-	self.UIMapMaxScale = UIMapMaxScale
-
-	self.MapScalePanel:UpdateSlider(UIMapMinScale, UIMapMaxScale)
-end
-
---- 蓝图发送的事件
+---蓝图动画发送的事件
 function WorldMapMainPanelView:SequenceEvent_FogCleanIn()
 	local Percent = self:GetAnimationCurrentTime(self.AnimFogCleanIn) or 1
 	local Val = self.CurveScale:GetFloatvalue(Percent) or 1
@@ -833,13 +825,62 @@ end
 function WorldMapMainPanelView:SequenceEvent_FinishMapScale()
 	if self.IsOpenMapShow then
 		self.MapContent:OnPlayAnimMapScaleFinish()
-		self:PlayDransDoorHighlight()
+		self.MapContent:PlayDransDoorHighlight()
 		self.IsOpenMapShow = false
 	end
 end
 
+--endregion
+
+
+-- 大地图打开和关闭时，修改寻宝UI层级
+function WorldMapMainPanelView:ChangeTreasureHuntViewLayer(bMapShow)
+	if bMapShow then
+		if UIViewMgr:IsViewVisible(UIViewID.TreasureHuntSkillPanel) then
+			local TreasureHuntView = UIViewMgr:FindView(UIViewID.TreasureHuntSkillPanel)
+			if TreasureHuntView ~= nil then
+				local InPosition = TreasureHuntView:GetPosition()
+				local Offsets = TreasureHuntView:GetOffsets()
+				UIViewMgr:ChangeLayer(UIViewID.TreasureHuntSkillPanel, UILayer.AboveNormal)
+				TreasureHuntView:SetPosition(InPosition)
+				TreasureHuntView:SetOffsets(Offsets)
+			end
+		end
+
+	else
+		if UIViewMgr:IsViewVisible(UIViewID.TreasureHuntSkillPanel) then
+			local TreasureHuntView = UIViewMgr:FindView(UIViewID.TreasureHuntSkillPanel)
+			if TreasureHuntView ~= nil then
+				local InPosition = TreasureHuntView:GetPosition()
+				local Offsets = TreasureHuntView:GetOffsets()
+				UIViewMgr:ChangeLayer(UIViewID.TreasureHuntSkillPanel, UILayer.AboveLow)
+				TreasureHuntView:SetPosition(InPosition)
+				TreasureHuntView:SetOffsets(Offsets)
+
+				if UIViewMgr:IsViewVisible(UIViewID.TreasureHuntBtnItem) then
+					UIViewMgr:ChangeLayer(UIViewID.TreasureHuntBtnItem, UILayer.AboveLow)
+				end
+			end
+		end
+	end
+end
+
+-- 寻宝寻找最近水晶
 function WorldMapMainPanelView:ShowTreasureHuntCrystal(MapData)
 	self.MapContent:ShowTreasureHuntCrystal(MapData)
 end
+
+-- 判断是否在播放迷雾解锁动画
+function WorldMapMainPanelView:IsAnimFogCleanPlaying()
+	if self:IsAnimationPlaying(self.AnimFogCleanIn) then
+		return true
+	end
+	if self:IsAnimationPlaying(self.AnimFogCleanEnterIn) then
+		return true
+	end
+
+	return false
+end
+
 
 return WorldMapMainPanelView

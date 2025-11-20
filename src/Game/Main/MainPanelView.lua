@@ -1,4 +1,4 @@
-﻿--
+--
 -- Author: anypkvcai
 -- Date: 2020-09-01 16:16:50
 -- Description:
@@ -34,6 +34,7 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local OperationUtil = require("Utils/OperationUtil")
 local DanmakuVM = require("Game/Danmaku/DanmakuVM")
+local MainFunctionUtil = require("Game/Main/FunctionPanel/MainFunctionUtil")
 
 local ModuleType = ProtoRes.module_type
 local EnumRidePurposeType = ProtoRes.EnumRidePurposeType
@@ -55,6 +56,7 @@ local PWorldWarringMgr = _G.PWorldWarningMgr
 ---@field FTextBlock_67 UFTextBlock
 ---@field FashionDecoSkillPanel FashionDecoSkillPanelView
 ---@field FatePanel FateStageInfoPanelNewView
+---@field GoldSaucerInfoPanel GoldSaucerGameInfoPanelView
 ---@field HatredPanel MainHatredPanelView
 ---@field IconTarget UFImage
 ---@field IconTargetBg UFImage
@@ -62,6 +64,7 @@ local PWorldWarringMgr = _G.PWorldWarningMgr
 ---@field MainActorInfoPanel MainActorInfoPanelView
 ---@field MainEntrance MainEntranceItemView
 ---@field MainFunctionList MainFunctionListView
+---@field MainHouseList MainHouseListView
 ---@field MainLBottomPanel MainLBottomPanelView
 ---@field MainMajorInfoPanel MainMajorInfoPanelView
 ---@field MainTeamPanel MainTeamPanelView
@@ -108,6 +111,7 @@ function MainPanelView:Ctor()
 	--self.FTextBlock_67 = nil
 	--self.FashionDecoSkillPanel = nil
 	--self.FatePanel = nil
+	--self.GoldSaucerInfoPanel = nil
 	--self.HatredPanel = nil
 	--self.IconTarget = nil
 	--self.IconTargetBg = nil
@@ -115,6 +119,7 @@ function MainPanelView:Ctor()
 	--self.MainActorInfoPanel = nil
 	--self.MainEntrance = nil
 	--self.MainFunctionList = nil
+	--self.MainHouseList = nil
 	--self.MainLBottomPanel = nil
 	--self.MainMajorInfoPanel = nil
 	--self.MainTeamPanel = nil
@@ -155,11 +160,13 @@ function MainPanelView:OnRegisterSubView()
 	self:AddSubView(self.ExclusiveBattleQuestInfoPanel)
 	self:AddSubView(self.FashionDecoSkillPanel)
 	self:AddSubView(self.FatePanel)
+	self:AddSubView(self.GoldSaucerInfoPanel)
 	self:AddSubView(self.HatredPanel)
 	self:AddSubView(self.JumboCactpotInfoPanel)
 	self:AddSubView(self.MainActorInfoPanel)
 	self:AddSubView(self.MainEntrance)
 	self:AddSubView(self.MainFunctionList)
+	self:AddSubView(self.MainHouseList)
 	self:AddSubView(self.MainLBottomPanel)
 	self:AddSubView(self.MainMajorInfoPanel)
 	self:AddSubView(self.MainTeamPanel)
@@ -206,6 +213,7 @@ function MainPanelView:OnInit()
 				{ "FateStageInfoVisible", UIBinderSetIsVisible.New(self, self.FatePanel) },
 				{ "PlayStyleInfoVisible", UIBinderSetIsVisible.New(self, self.PlayStyleInfoPanel)},
 				{ "JumboInfoVisible", UIBinderSetIsVisible.New(self, self.JumboCactpotInfoPanel)},
+				{ "GoldSauserBlessVisible", UIBinderSetIsVisible.New(self, self.GoldSaucerInfoPanel)},
 				{ "FunctionVisible", UIBinderSetIsVisible.New(self, self.MainFunctionList) },
 				--{ "AdventureVisible", UIBinderSetIsVisible.New(self, self.ButtonAdventure, false, true)},
 				--{ "RideVisible", UIBinderSetIsVisible.New(self, self.ControlPanel.ButtonRide, false, true)},
@@ -217,6 +225,7 @@ function MainPanelView:OnInit()
 				--{ "IsTestVersion", UIBinderSetIsVisible.New(self, self.MountPanel, true)},
 				--{ "IsTestVersion", UIBinderSetIsVisible.New(self, self.MainLBottomPanel, true)},
 				{ "PWorldStageVisible", UIBinderSetIsVisible.New(self, self.PWorldStagePanel) },
+				{ "HouseStageVisible", UIBinderSetIsVisible.New(self, self.MainHouseList) },
 				{ "ControlPanelVisible", UIBinderSetIsVisible.New(self, self.ControlPanel) },
 				{ "ProBarVisible", UIBinderSetIsVisible.New(self, self.PWorldProBar) },
 				{ "ProBar02Visible", UIBinderSetIsVisible.New(self, self.PWorldProBar02) },
@@ -299,6 +308,7 @@ function MainPanelView:OnShow()
 	-- self.CommonRedDot5:SetRedDotIDByID(OpsActivityDefine.RedDotID)
 	-- self.CommonRedDot2:SetRedDotIDByID(8000)
 
+	-- self.TextTime2:SetText("") -- 延迟 不显示
 	self.TextTime_1:SetText(_G.LSTR(1440016)) --1440016("跳过新手场景")
 
 	_G.EventMgr:SendEvent(EventID.MainPanelShow, { bShow = true })
@@ -327,6 +337,7 @@ function MainPanelView:OnHide()
 	if self.RecommendTipsTimer ~= nil then
 		self:UnRegisterTimer(self.RecommendTipsTimer)
 		self.RecommendTipsTimer = nil
+		self.AdventureTaskTips:HidePanel()
 	end
 end
 
@@ -367,6 +378,7 @@ function MainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.PWorldWarningDuring, self.OnPWorldWarningDuring)
 	self:RegisterGameEvent(EventID.PWorldWarningEnd, self.OnPWorldWarningEnd)
 	self:RegisterGameEvent(EventID.FightSkillPanelShowed, self.OnFightSkillPanelOpened)
+	self:RegisterGameEvent(EventID.GamePadFunction, self.OnGamePadFunction)
 end
 
 -- 放到OnActive里判断
@@ -665,9 +677,18 @@ function MainPanelView:OnShowAdvCareerGuideTips()
 	end
 
 	local EndPosX, EndPosY = self:GetAdvtureGuideTipsPos()
-	self.AdventureTaskTips:SetType(2, Callback)
-	self.AdventureTaskTips:SetTipsPosition(_G.UE.FVector2D(EndPosX, EndPosY))
-	UIUtil.SetIsVisible(self.AdventureTaskTips, true)
+	if EndPosX == 0 and EndPosY == 0 then 
+		FLOG_INFO("MainPanelView:GetAdvtureGuideTipsPos() Got Nil Pos")
+		return
+	end
+
+	if not MainPanelVM.FunctionVisible or not UIUtil.IsVisible(self) then 
+		self.AdventureTaskTips:HidePanel()
+	else
+		self.AdventureTaskTips:SetType(2, Callback)
+		self.AdventureTaskTips:SetTipsPosition(_G.UE.FVector2D(EndPosX, EndPosY))
+		UIUtil.SetIsVisible(self.AdventureTaskTips, true)
+	end
 end
 
 function MainPanelView:ShowNewRecommendTask()
@@ -926,10 +947,7 @@ function MainPanelView:GetMajorMaxLevel()
 end
 
 function MainPanelView:OnOpenPlatformWelfare()
-  local U2pmMgr = _G.U2.U2pmMgr
-  if U2pmMgr ~= nil then -- export module
-    U2pmMgr:Debug()
-  end
+	OperationUtil.OpenPlatformWelfare()
 end
 
 -- 临时功能，方便看网络延迟 不考虑多语言和性能
@@ -991,6 +1009,37 @@ end
 function MainPanelView:OnPWorldWarningEnd(Params)
 	MainPanelVM:Clear()
 	self.TableViewSkillCD:SetVisibility(_G.UE.ESlateVisibility.Collapsed)
+end
+
+local IE_Released = _G.UE.EInputEvent.IE_Released
+-- local IE_Pressed = _G.UE.EInputEvent.IE_Pressed
+function MainPanelView:OnGamePadFunction(Params)
+	if nil == Params then
+		return
+	end
+	if IE_Released == Params.EventType  and UIUtil.IsVisible(self) then
+		if Params.CusActionName == "OpenMenu" then
+			if _G.UIViewMgr:IsViewVisible(UIViewID.Main2ndPanel) then
+				UIViewMgr:HideView(UIViewID.Main2ndPanel)
+				_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
+			else
+				MainFunctionUtil.OnPressed(MainFunctionDefine.ButtonType.MENU)
+			end
+		elseif Params.CusActionName == "OpenBag" then
+			if not _G.LoginMgr:CheckModuleSwitchOn(ModuleType.MODULE_BAG, true) then
+				return
+			end
+			UIViewMgr:ShowView(UIViewID.BagMain)
+		elseif Params.CusActionName == "OpenChatSystem" then
+			if _G.UIViewMgr:IsViewVisible(UIViewID.ChatMainPanel) then
+				UIViewMgr:HideView(UIViewID.ChatMainPanel)
+			else
+				self.MainLBottomPanel:OnClickedButtonChat()
+			end
+		elseif Params.CusActionName == "OpenEmotionSystem" then
+			self.MainLBottomPanel:OnClickButtonEmotion()
+		end
+	end
 end
 
 return MainPanelView

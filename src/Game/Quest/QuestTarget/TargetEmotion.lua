@@ -22,6 +22,7 @@ local EActorType = _G.UE.EActorType
 local EventID = _G.EventID
 local QuestMgr = nil
 
+local MAX_WAIT_TIME = 10 --超时保护(兜底机制)
 
 local EEmotionTargetType = {
     None = 0,
@@ -78,6 +79,14 @@ function TargetEmotion:DoStartTarget(bRevert)
         AreaID = self.AreaID,
         AreaMapID = self.AreaMapID,
     })
+
+    --恢复主界面UI
+    _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
+
+    if self.OverTimerID then
+        _G.TimerMgr:CancelTimer(self.OverTimerID)
+        self.OverTimerID = nil
+    end
 end
 
 function TargetEmotion:DoClearTarget()
@@ -98,6 +107,16 @@ function TargetEmotion:DoClearTarget()
         AreaID = self.AreaID,
         AreaMapID = self.AreaMapID,
     })
+
+    if self.OverTimerID then
+        _G.TimerMgr:CancelTimer(self.OverTimerID)
+        self.OverTimerID = nil
+    end
+    -- 回包删除targetEmotion前可能又点了情感动作
+    if QuestMgr:IsSubmitingStatus() then
+        QuestMgr:SetSubmitingStatus(false)
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
+    end
 end
 
 function TargetEmotion:OnEmotionEnter(EventParams)
@@ -112,6 +131,15 @@ function TargetEmotion:OnEmotionEnter(EventParams)
         return
     end
 
+    --!不是任务指定的emotion也要隐藏主界面
+    --隐藏主界面UI
+    _G.BusinessUIMgr:HideMainPanel(UIViewID.MainPanel)
+
+    if self.OverTimerID then
+        _G.TimerMgr:CancelTimer(self.OverTimerID)
+    end
+    self.OverTimerID = _G.TimerMgr:AddTimer(self, self.OnOverTimeHandle, MAX_WAIT_TIME)
+
     local EmotionID = EventParams.IntParam1
     if EmotionID ~= self.EmotionID then
         return
@@ -124,12 +152,21 @@ end
 
 function TargetEmotion:OnEmotionEnd(EventParams)
     local FromEntityID = EventParams.ULongParam1
-    if FromEntityID ~= MajorUtil.GetMajorEntityID() then print("test EntityID failed") return end
+    if FromEntityID ~= MajorUtil.GetMajorEntityID() then 
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
+        print("test EntityID failed") 
+        return 
+    end
 
     local EmotionID = EventParams.IntParam1
 
     --设置提交状态
     QuestMgr:SetSubmitingStatus(false)
+
+    if self.OverTimerID then
+        _G.TimerMgr:CancelTimer(self.OverTimerID)
+        self.OverTimerID = nil
+    end
 
     local bInterrupted = EventParams.BoolParam1
     if bInterrupted then
@@ -140,11 +177,13 @@ function TargetEmotion:OnEmotionEnd(EventParams)
                 MsgTipsUtil.ShowTipsByID(70006)
             end
         end
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
         return
     end
 
     local ToEntityID = EventParams.ULongParam2
     if not self:CheckEmotionTarget(ToEntityID) then
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
         print("test CheckEmotionTarget failed") return
     end
 
@@ -154,7 +193,10 @@ function TargetEmotion:OnEmotionEnd(EventParams)
         -- 检查距离，情感动作未提供距离数据或检查机制，任务先自行检查
         local Major = MajorUtil.GetMajor()
         local Actor = ActorUtil.GetActorByEntityID(ToEntityID)
-        if Major == nil or Actor == nil then return end
+        if Major == nil or Actor == nil then 
+            _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
+            return 
+        end
         local Distance = (Major:FGetActorLocation() - Actor:FGetActorLocation()):Size()
         local GlobalCfg = ClientGlobalCfg:FindCfgByKey(ProtoRes.client_global_cfg_id.GLOBAL_CFG_COMMON_INTERACTIVE_RANGE)
         local CfgDistance = 600
@@ -162,14 +204,18 @@ function TargetEmotion:OnEmotionEnd(EventParams)
             CfgDistance = GlobalCfg.Value[1]
         end
         if Distance > CfgDistance then
+            _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
             MsgTipsUtil.ShowErrorTips(_G.LSTR(591005)) --591005("距离太远。")
-            print("test Distance failed") return
+            print("test Distance failed") 
+            return
         end
     end
 
     if not QuestHelper.CheckCanProceed(self.QuestID) then
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
         QuestHelper.PlayRestrictedDialog(self.QuestID, self.TargetID)
-        print("test CheckCanProceed failed") return
+        print("test CheckCanProceed failed")
+        return
     end
 
     if EmotionID ~= self.EmotionID then
@@ -177,16 +223,24 @@ function TargetEmotion:OnEmotionEnd(EventParams)
             UIViewMgr:HideView(UIViewID.EmotionMainPanel)
 
             local function PlayDialogFunc()
-                NpcDialogMgr:PlayDialogLib(self.WrongEmotionDialogID, ToEntityID, nil, nil, nil, true, true)
+                NpcDialogMgr:PlayDialogLib(self.WrongEmotionDialogID, ToEntityID, nil,
+                function() _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel) end, nil, true, true)
             end
 
             local function PlaySeqFunc()
+                _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
                 QuestHelper.QuestPlaySequence(self.WrongEmotionDialogID)
             end
 
+            if UIViewMgr:IsViewVisible(UIViewID.CommEasytoUseView) then
+		        UIViewMgr:HideView(UIViewID.CommEasytoUseView)
+	        end
             QuestHelper.PlayDialogOrSequence(self.WrongEmotionDialogID, PlayDialogFunc, PlaySeqFunc)
         end
         print("test EmotionID failed") return
+    else
+         --复原主界面UI
+        _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
     end
 
     if Type == EType.Npc then
@@ -196,6 +250,12 @@ function TargetEmotion:OnEmotionEnd(EventParams)
     else
         QuestMgr:SendFinishTarget(self.QuestID, self.TargetID)
     end
+end
+
+function TargetEmotion:OnOverTimeHandle()
+    QuestMgr:SetSubmitingStatus(false)
+    _G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel)
+    self.OverTimerID = nil
 end
 
 function TargetEmotion:GetNpcID()

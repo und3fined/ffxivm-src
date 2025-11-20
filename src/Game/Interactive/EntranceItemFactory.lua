@@ -11,6 +11,7 @@ local EntranceWorldViewObj = require("Game/Interactive/EntranceItem/EntranceWorl
 local EntranceNpcQuest = require("Game/Interactive/EntranceItem/EntranceNpcQuest")
 local EntrancePWorldBranch = require("Game/Interactive/EntranceItem/EntrancePWorldBranch")
 local EntranceArmyNpc = require("Game/Interactive/EntranceItem/EntranceArmyNpc")
+local EntranceLand = require("Game/Interactive/EntranceItem/EntranceLand")
 
 local EntranceItemFactory = LuaClass()
 
@@ -19,6 +20,7 @@ _G.LuaEntranceType = _G.LuaEntranceType or {
     GATHER = _G.UE.EActorType.Gather, --5
     PLAYER = _G.UE.EActorType.Player, --1
     EOBJ = _G.UE.EActorType.EObj,     --9
+    Land = _G.UE.EActorType.Land,     --11
 
     --非EActorType类型，可以从100开始定义
     CRYSTAL = 101,
@@ -67,6 +69,8 @@ function EntranceItemFactory:CreateEntrance(EntranceParams, ExtraParam)
         IUnit = EntrancePWorldBranch.New()
     elseif targetType == LuaEntranceType.ArmyNpc then
         IUnit = EntranceArmyNpc.New()
+    elseif targetType == LuaEntranceType.Land then
+        IUnit = EntranceLand.New()
     end
 
     if not IUnit then

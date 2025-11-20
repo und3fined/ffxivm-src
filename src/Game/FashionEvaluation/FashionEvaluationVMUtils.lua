@@ -5,6 +5,7 @@
 ---
 local UIUtil = require("Utils/UIUtil")
 local ItemCfg = require("TableCfg/ItemCfg")
+local ItemUtil = require("Utils/ItemUtil")
 local GlobalCfg = require("TableCfg/GlobalCfg")
 local ClosetCfg = require("TableCfg/ClosetCfg")
 local EquipCfg = require("TableCfg/EquipmentCfg")
@@ -25,6 +26,7 @@ local FashionBarrageCfg = require("TableCfg/FashioncheckBarrageLibCfg")
 local FahsionThemePartTextCfg = require("TableCfg/FashioncheckThemeparttextCfg")
 local FasshionAwardCfg = require("TableCfg/FashioncheckAwardCfg")
 local DefaultEquipCfg = require("TableCfg/FashioncheckDefaultEquipmentCfg")
+local LimitAppearanceCfg = require("TableCfg/FashioncheckLimitAppearanceCfg")
 local FashionCheckNpcCfg = require("TableCfg/FashioncheckNpcCfg")
 local FashioncheckPrologueCfg = require("TableCfg/FashioncheckPrologueCfg")
 local FashionEvaluationDefine = require("Game/FashionEvaluation/FashionEvaluationDefine")
@@ -192,6 +194,7 @@ function FashionEvaluationVMUtils.GetEquipInfo(EquipResID)
         EquipInfo.EquipIconPath = UIUtil.GetIconPath(IconID)
     end
     EquipInfo.EquipName =  ItemCfg:GetItemName(EquipResID)
+    EquipInfo.ItemQualityIcon = ItemUtil.GetItemColorIcon(EquipResID)
     return EquipInfo
 end
 
@@ -278,7 +281,11 @@ function FashionEvaluationVMUtils.GetAppearanceListByPartID(PartID)
     local AppearanceList = {}
     for _, Appearance in ipairs(AppearanceCfgs) do
         if Appearance.ID ~= 0 and not table.contain(AppearanceList, Appearance.ID) then
-            table.insert(AppearanceList, Appearance.ID)
+            -- 限制特殊外观，如种族
+            local LimitApp = LimitAppearanceCfg:FindCfg(string.format("AppearanceID = %d", Appearance.ID))
+            if not LimitApp then
+                table.insert(AppearanceList, Appearance.ID)
+            end
         end
     end
 
@@ -404,8 +411,8 @@ function FashionEvaluationVMUtils.GetAwardConditionList()
         return
     end
     local ConditionList = {}
-    for Index, AwardCfg in ipairs(AwardCfgList) do
-        local CondContent = FashionEvaluationDefine.AwardConditionContent[Index] or ""  --AwardCfg.Content
+    for _, AwardCfg in ipairs(AwardCfgList) do
+        local CondContent = AwardCfg.Content
         local NewContent = CondContent
         if not string.isnilorempty(CondContent) and AwardCfg.Score and AwardCfg.Score > 0 then
             NewContent = string.format(CondContent, AwardCfg.Score) -- "达到%s分"
@@ -688,12 +695,12 @@ function FashionEvaluationVMUtils:GetRemainSecondTime()
     --     FLOG_INFO("ServerTime = %s", ServerTime)
     -- end
 
-    local ServerTime = TimeUtil.GetServerTime()
+    local ServerTime = _G.TimeUtil.GetServerLogicTime()
     local ServerZone = 8 --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
-    local LocalServeTime = ServerTime + (DateTimeTools.GetTimeZone() - ServerZone) * 3600
+    local LocalServeTime = ServerTime + (_G.DateTimeTools.GetTimeZone() - ServerZone) * 3600
 	local TmTime = os.date("*t",LocalServeTime)
     local CurWeekday = TmTime.wday - 1  -- 表示周几
-    local CurDaySec = TimeUtil.GetGameDayTimeSinceServerTime()
+    local CurDaySec = _G.TimeUtil.GetGameDayTimeSinceServerTime()
     local CurWeekSec = (CurWeekday - 1) * 86400 + CurDaySec
     local NeedWeek = Cfg.Week == 0 and 7 or Cfg.Week -- 0的时候表示的是周天
     local NeedMin = Cfg.Minute == nil and 0 or Cfg.Minute
@@ -718,7 +725,7 @@ function FashionEvaluationVMUtils.GetPrologueInfo(ID)
     if PrologueCfg then
         Info.Prologue = {
             AnimIcon = PrologueCfg.AnimIcon,
-            Content = FashionEvaluationDefine.PrologueContent[ID], --PrologueCfg.Content,
+            Content = PrologueCfg.Content,
             Duration = PrologueCfg.Duration, 
         }
     end

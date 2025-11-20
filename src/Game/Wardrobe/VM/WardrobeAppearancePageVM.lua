@@ -209,7 +209,11 @@ function WardrobeAppearancePageVM:UpdateInfo(ID)
 	self.ProfLevelColor = LevelCond and NormalColor or WarningColor
 	self.ProfCondColor = ProfCond and NormalColor or WarningColor
 	self.RaceCondColor = RaceCond and NormalColor or WarningColor
-	self.DetailProfVisible = WardrobeUtil.GetDetailProfVisible(ProfLimit, ClassLimit)
+	if not ProfCond then
+		self.DetailProfVisible = true
+	else
+		self.DetailProfVisible = WardrobeUtil.GetDetailProfVisible(ProfLimit, ClassLimit)
+	end
 
 	self.CurAppUnlockLevelConditon = not LevelCond
 	self.CurAppUnlockProfCondVisible = not ProfCond
@@ -350,6 +354,7 @@ function WardrobeAppearancePageVM:UpdateSwitchList(ItemResID)
 			Data.IsRecommend = false
 			Data.ID = v.ResID
 			Data.GID = v.GID
+			Data.WithMojingShi = v.Attr and v.Attr.Equip and v.Attr.Equip.GemInfo and v.Attr.Equip.GemInfo.CarryList and not  table.is_nil_empty(v.Attr.Equip.GemInfo.CarryList)
 			table.insert(DataList, Data)
 		end
 	end
@@ -364,6 +369,7 @@ function WardrobeAppearancePageVM:UpdateSwitchList(ItemResID)
 				Data.Item = v.ResID
 				Data.Name = ItemUtil.GetItemName(v.ResID)
 				Data.IsRecommend = false
+				Data.WithMojingShi = v.Attr and v.Attr.Equip and v.Attr.Equip.GemInfo and v.Attr.Equip.GemInfo.CarryList and not  table.is_nil_empty(v.Attr.Equip.GemInfo.CarryList)
 				Data.ID = v.ResID
 				Data.GID = v.GID
 				table.insert(DataList, Data)
@@ -405,12 +411,12 @@ function WardrobeAppearancePageVM:FindRecommendIndex(DataList)
     local index = findItem(function(item) return item.IsBind end)  
     if index then return index end  
       
-    -- 然后查找 WithoutMojingShi 为 false 的装备项  
-    index = findItem(function(item) return not item.WithoutMojingShi end)  
+    -- 然后查找 WithMojingShi 为 false 的装备项  
+    index = findItem(function(item) return not item.WithMojingShi end)  
     if index then return index end  
       
-    -- 最后查找 WithoutMojingShi 为 true 的装备项  
-    index = findItem(function(item) return item.WithoutMojingShi end)  
+    -- 最后查找 WithMojingShi 为 true 的装备项  
+    index = findItem(function(item) return item.WithMojingShi end)  
     if index then return index end  
       
     -- 如果没有找到任何符合条件的装备项，返回默认索引  
@@ -421,9 +427,14 @@ function WardrobeAppearancePageVM:GetBindList()
 	return self.BindList
 end
 
-function WardrobeAppearancePageVM:ClearBindList()
+function WardrobeAppearancePageVM:ClearAllList()
 	self.BindList:Clear()
 	self.SwitchList:Clear()
+	self.BindListSelectedIndex = 0
+end
+
+function WardrobeAppearancePageVM:ClearBindList()
+	self.BindList:Clear()
 	self.BindListSelectedIndex = 0
 end
 

@@ -31,7 +31,7 @@ function DiscoverNoteIconItemVM:Ctor()
     self.bCompleted = false -- 普通探索
     self.AnimInSwitch = false
     self.AnimClickSwitch = false
-    self.RedDotName = ""
+    self.bRedDotShow = false -- 笔记红点是否显示
     self.TextNumberColor = ""
     self.OffsetAngle = 0
 
@@ -90,13 +90,15 @@ function DiscoverNoteIconItemVM:UpdateVM(Value)
         end
     end
 
-    self.RedDotName = string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID))
+    --self.RedDotName = string.format("%s/%s/%s", DiscoverNoteDefine.RedDotBaseName, tostring(RegionID), tostring(NoteItemID))
     self.OffsetAngle = Value.OffsetAngle
 
     -- 三期内容
     local bShowPerfectCondEffect = Value.bShowPerfectCondEffect
     self.bShowPerfectCondEffect = bShowPerfectCondEffect
     self.bUnderPerfectCond = bShowPerfectCondEffect
+
+    self.bRedDotShow = Value.bRedDotShow
 end
 
 function DiscoverNoteIconItemVM:SetLeftPhotoTextureParams(bPerfectComplete)

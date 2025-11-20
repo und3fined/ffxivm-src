@@ -12,8 +12,7 @@ function QQPinDaoShareObject:Ctor()
 end
 
 function QQPinDaoShareObject:IsAppToShareInstalled()
-    local AccountUtil = require("Utils/AccountUtil")
-    return AccountUtil.IsQQInstalled()
+    return true
 end
 
 function QQPinDaoShareObject:ShareExternalLink()
@@ -31,7 +30,7 @@ end
 
 function QQPinDaoShareObject:ShareImage()
     local ShareMgr = require("Game/Share/ShareMgr")
-    ShareMgr:ShareToQQPinDao()
+    ShareMgr:SendSaveShareImageData()
 end
 
 return QQPinDaoShareObject

@@ -104,7 +104,7 @@ function GoldSauserMainPanelDataWinItemVM:SetInfo(EventPool, PercentList)
             elseif FormatType == GoldSauserDataItemFormatType.TypeTimes then
                 RightStr = string.format(LSTR(350041), Num)
             end
-            local RichTextStr = RichTextUtil.GetText(RightStr, "Ffa500")
+            local RichTextStr = RichTextUtil.GetText(RightStr, "bd8213")
             ListItemData.DescriptionStr = string.format("%s（%s）",DataItemCfg.EventName,RichTextStr)
             ListItemData.BgPath = self:GetTheListItemBgPath(ListItemData.Percentage)
             table.insert(ItemList, ListItemData)

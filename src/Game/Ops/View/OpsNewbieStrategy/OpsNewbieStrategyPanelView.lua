@@ -117,6 +117,7 @@ function OpsNewbieStrategyPanelView:OnInit()
 		_G.UIViewID.CurrencyTips,
 		_G.UIViewID.CommHelpInfoTitleTipsView,
 		_G.UIViewID.SidePopUpEasyUse,
+		_G.UIViewID.HelpInfoMidWinView,
 	}
 	self.InforBtn:SetCheckClickedCallback(self, self.OnInforBtnClicked)
 end
@@ -149,8 +150,10 @@ function OpsNewbieStrategyPanelView:OnHide()
 	-- self:ClearData()
 	---界面隐藏时，防止报错导致领奖未打开，没有解除物品飘字屏蔽
 	_G.LootMgr:SetDealyState(false)
-	---界面隐藏时，把二级跳转也隐藏，防止显示bug
+	---界面隐藏时，把二级界面也隐藏，防止显示bug/未解锁跳转有其他活动在用，不关闭
 	_G.UIViewMgr:HideView(_G.UIViewID.OpsNewBieStrategyCommListWinView)
+	_G.UIViewMgr:HideView(_G.UIViewID.OpsNewbieStrategyLightofEtherWinView)
+	_G.UIViewMgr:HideView(_G.UIViewID.OpsNewbieStrategyBraveryAwardWinView)
 end
 
 function OpsNewbieStrategyPanelView:OnRegisterUIEvent()

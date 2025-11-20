@@ -3,6 +3,7 @@ local UIViewModel = require("UI/UIViewModel")
 local StoreMgr = require("Game/Store/StoreMgr")
 local ItemCfg = require("TableCfg/ItemCfg")
 local StoreCfg = require("TableCfg/StoreCfg")
+local StoreUtil = require("Game/Store/StoreUtil")
 
 ---@class StoreGiftMailVM : UIViewModel
 local StoreGiftMailVM = LuaClass(UIViewModel)
@@ -47,7 +48,7 @@ function StoreGiftMailVM:UpdateVM(Value)
 	_G.StoreMainVM:InitContainsItemList(TempData.Cfg.Items)
 	self.ContainsItemList = _G.StoreMainVM.ContainsItemList
 
-	self.ItemNameText = TempData.Cfg.Name
+	self.ItemNameText = StoreUtil.GetGoodsName(GoodID)
 	local IsProp = StoreMgr:GetIsPropsByID(GoodID)
 	self.IsProp = IsProp
 	self.PropsPanelVisible = IsProp
@@ -60,7 +61,7 @@ function StoreGiftMailVM:UpdateVM(Value)
 		end
 	end
 	self.MultiBuyIcon = StoreMgr.GetGoodIconPath(IconPath)
-    self.MultiBuyBg = TempData.Cfg.PropQualityIconPath
+    self.MultiBuyBg = StoreUtil.GetGoodsQualityImagePath(TempData.Cfg.ID)
 	self.BuyGoodIcon = StoreMgr.GetGoodIconPath(IconPath)
 	self.GiftMessage = Value.GiftMessage 
 	self.AmountText = string.format(LSTR(950041), tonumber(Value.GiftNum))	-- "数量:%d"

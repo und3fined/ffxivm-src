@@ -13,6 +13,8 @@ local UIUtil = require("Utils/UIUtil")
 ---@field ImgMaskL UFImage
 ---@field ImgMaskR UFImage
 ---@field AnimIn UWidgetAnimation
+---@field AnimSpacer1 UWidgetAnimation
+---@field AnimSpacer2 UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommonSceneMaskBkgView = LuaClass(UIView, true)
 
@@ -21,6 +23,8 @@ function CommonSceneMaskBkgView:Ctor()
 	--self.ImgMaskL = nil
 	--self.ImgMaskR = nil
 	--self.AnimIn = nil
+	--self.AnimSpacer1 = nil
+	--self.AnimSpacer2 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

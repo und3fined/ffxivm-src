@@ -19,7 +19,7 @@ local MapMarkerBPType = MapDefine.MapMarkerBPType
 local ClientEObjType = ProtoRes.ClientEObjType
 
 
----@class MapMarkerWorldMapLocation
+---@class MapMarkerWorldMapLocation : MapMarker
 local MapMarkerWorldMapLocation = LuaClass(MapMarker)
 
 function MapMarkerWorldMapLocation:Ctor()
@@ -49,12 +49,16 @@ function MapMarkerWorldMapLocation:InitMarker(Params)
 		else
 			self.TipsName = NpcCfg:FindValue(NpcResID, "Name")
 		end
+
 	elseif self.LocationType == MapDefine.MapLocationType.EObj then
 		local EObjResID = Params.MarkerID
 		if EObjResID then
 			self.TipsName = EObjCfg:FindValue(EObjResID, "Name")
 			self:ChangeTheEObjIconPath(EObjResID)
 		end
+
+	elseif self.LocationType == MapDefine.MapLocationType.Point then
+		self.TipsName = MapDefine.MapConstant.MAP_DEFAULT_MARKER_NAME -- 固定显示"坐标点"
 	end
 
 	self:UpdateMarker(Params)

@@ -106,6 +106,12 @@ function DirectionalMoveCell:StartCell()
         ArtPathParams.ConfigTargetID = TargetEntityID
     end
 
+    if CellData.IsFollowTarget then
+        --锁敌设置
+        ArtPathParams.ArtPathType = EArtPathType.TargetLock
+        ArtPathParams.TargetEntityID = TargetEntityID
+    end
+
     ArtPathParams.EndPos = TargetVector
     ArtPathParams:LuaAddCallback(self, self.PlaySingCallBack)
     self.ArtPathParams = ArtPathParams

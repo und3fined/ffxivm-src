@@ -21,13 +21,14 @@ function OpsVersionNoticeMainPanelVM:Ctor()
     self.TextInfo = nil
     self.TextTask = nil
     self.TextBtn = nil
+    self.VideoPath = nil
     self.RewardSlotNum = nil
     self.RewardSlotNumVisiable = false
     self.RewardSlotIcon = nil
     self.RewardSlotQuality = nil
     self.RewardSlotReceieved = false
     self.ShareTipsVisiable = false
-
+    self.bShowVideo = false
     self.Panel1Visiable = false
     self.Panel2Visiable = false
     self.Panel3Visiable = false
@@ -59,7 +60,8 @@ function OpsVersionNoticeMainPanelVM:Update(Params, IsUpdateActivity)
     local ActivityData = Params.Activity
     self.TextTitle = ActivityData.Title
     self.TextInfo = ActivityData.SubTitle
-
+    self.bShowVideo = false
+    self.VideoPath = nil
     local ClientShowNodeList = Params:GetNodesByNodeType(ActivityNodeType.ActivityNodeTypeClientShow)
     local nodeCount = #ClientShowNodeList
     if IsUpdateActivity == nil then
@@ -74,12 +76,17 @@ function OpsVersionNoticeMainPanelVM:Update(Params, IsUpdateActivity)
             for i = 1, nodeCount do
                 local Node = ClientShowNodeList[i]
                 local NodeCfg = ActivityNodeCfg:FindCfgByKey(Node.Head.NodeID)
-                if NodeCfg then
-                    table.insert(SortedNodes, {
-                        Node = Node,
-                        Cfg = NodeCfg,
-                        Sort = NodeCfg.NodeSort or 0
-                    })
+                if NodeCfg ~= nil then
+                    if NodeCfg.Params[1] == 2 then
+                        table.insert(SortedNodes, {
+                            Node = Node,
+                            Cfg = NodeCfg,
+                            Sort = NodeCfg.NodeSort or 0
+                        })
+                    elseif NodeCfg.Params[1] == 1 then
+                        self.bShowVideo = true
+                        self.VideoPath = NodeCfg.StrParam
+                    end
                 end
             end
 

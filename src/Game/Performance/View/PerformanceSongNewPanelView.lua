@@ -22,12 +22,17 @@ local MusicPerformanceUtil = require("Game/MusicPerformance/Util/MusicPerformanc
 local SaveKey = require("Define/SaveKey")
 local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 local DataReportUtil = require("Utils/DataReportUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local MajorUtil = require("Utils/MajorUtil")
+
+local EnsembleStatus = ProtoCS.EnsembleStatus
 
 ---@class PerformanceSongNewPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnStart CommBtnLView
 ---@field BtnSwitchInstrument UFButton
 ---@field CommBack CommBackBtnView
+---@field CommonTitle CommonTitleView
 ---@field DropDownMode CommDropDownListView
 ---@field ImgInstruIcon UFImage
 ---@field ImgInstruIconBg UFImage
@@ -45,9 +50,9 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field TextName UFTextBlock
 ---@field TextSpeed UFTextBlock
 ---@field TextSpeed1 UFTextBlock
----@field TextTitle UFTextBlock
 ---@field ToggleBtnMetronome UToggleButton
 ---@field AnimIn UWidgetAnimation
+---@field AnimMainLoop UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PerformanceSongNewPanelView = LuaClass(UIView, true)
@@ -57,6 +62,7 @@ function PerformanceSongNewPanelView:Ctor()
 	--self.BtnStart = nil
 	--self.BtnSwitchInstrument = nil
 	--self.CommBack = nil
+	--self.CommonTitle = nil
 	--self.DropDownMode = nil
 	--self.ImgInstruIcon = nil
 	--self.ImgInstruIconBg = nil
@@ -74,9 +80,9 @@ function PerformanceSongNewPanelView:Ctor()
 	--self.TextName = nil
 	--self.TextSpeed = nil
 	--self.TextSpeed1 = nil
-	--self.TextTitle = nil
 	--self.ToggleBtnMetronome = nil
 	--self.AnimIn = nil
+	--self.AnimMainLoop = nil
 	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -85,6 +91,7 @@ function PerformanceSongNewPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnStart)
 	self:AddSubView(self.CommBack)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.DropDownMode)
 	self:AddSubView(self.SliderSpeed)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -113,7 +120,7 @@ function PerformanceSongNewPanelView:OnInit()
 end
 
 function PerformanceSongNewPanelView:InitStaticText()
-	self.TextTitle:SetText(_G.LSTR(830074))
+	self.CommonTitle:SetTextTitleName(LSTR(830074))
 	self.TextSpeed1:SetText(_G.LSTR(830083))
 	self.TextMode:SetText(_G.LSTR(830055))
 	self.TextMetronome:SetText(_G.LSTR(830082))
@@ -209,9 +216,20 @@ function PerformanceSongNewPanelView:OnSwitchInstrumentClicked()
 end
 
 function PerformanceSongNewPanelView:OnBtnStartClicked()
+	local IsSelfConfirm = _G.MusicPerformanceVM.EnsembleConfirmStatus[MajorUtil.GetMajorRoleID()] == MPDefines.ConfirmStatus.ConfirmStatusConfirm
+	if _G.MusicPerformanceVM.Status == EnsembleStatus.EnsembleStatusConfirm and IsSelfConfirm then
+		_G.MsgTipsUtil.ShowTips(LSTR(830129))
+		return
+	end
+
 	if self.VM.SelectedSong then
 		_G.MusicPerformanceMgr:ShowAssistantView(self.VM.SelectedSong, self.VM.SpeedValue, self.VM.ToggleMetronome)
 		self:Hide()
+
+		--若在合奏确认过程中，进入演奏助手视为拒绝进入合奏
+		if _G.MusicPerformanceVM.Status == EnsembleStatus.EnsembleStatusConfirm then
+			_G.MusicPerformanceMgr:CancelEnsembleCmdConfirm()
+		end
         --演奏埋点(开始演奏)
 		DataReportUtil.ReportSystemFlowData("PerformanceAssistant", tostring(1), tostring(MusicPerformanceUtil.GetKeybordMode()), tostring(self.VM.TextName))
 	end

@@ -27,14 +27,14 @@ function CardsPrepareMainNewPanelViewVM:Ctor()
     -- self.GenderID = nil
     -- self.IsVisible = nil
     local LeftTablIconList = {} -- 左边的Icon list
-    local IconPath1 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_Decks01_png.UI_Cards_Icon_Tab_Decks01_png"
-    local SelectPath1 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_Decks02_png.UI_Cards_Icon_Tab_Decks02_png"
+    local IconPath1 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Magic_Cards_Normal.UI_Icon_Tab_Magic_Magic_Cards_Normal"
+    local SelectPath1 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Cards_Select.UI_Icon_Tab_Magic_Cards_Select"
     table.insert(LeftTablIconList, {IconPath = IconPath1, SelectIcon = SelectPath1})
-    local IconPath2 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_EmoAc01_png.UI_Cards_Icon_Tab_EmoAc01_png"
-    local SelectPath2 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_EmoAc02_png.UI_Cards_Icon_Tab_EmoAc02_png"
+    local IconPath2 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Action_Normal.UI_Icon_Tab_Magic_Action_Normal"
+    local SelectPath2 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Action_Select.UI_Icon_Tab_Magic_Action_Select"
     table.insert(LeftTablIconList, {IconPath = IconPath2, SelectIcon = SelectPath2})
-    local IconPath3 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_Rule01_png.UI_Cards_Icon_Tab_Rule01_png"
-    local SelectPath3 = "/Game/UI/Atlas/Cards/Frames/UI_Cards_Icon_Tab_Rule02_png.UI_Cards_Icon_Tab_Rule02_png"
+    local IconPath3 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Rules_Normal.UI_Icon_Tab_Magic_Rules_Normal"
+    local SelectPath3 = "/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Magic_Rules_Select.UI_Icon_Tab_Magic_Rules_Select"
     table.insert(LeftTablIconList, {IconPath = IconPath3, SelectIcon = SelectPath3})
     self.LeftTablIconList = LeftTablIconList
     self.LeftTabSelectIndex = 1

@@ -38,6 +38,7 @@ function NetworkImplMgr:OnBegin()
 	EventMgr = _G.EventMgr
 	GameNetworkMgr = _G.GameNetworkMgr
 	GameNetworkMgr:SetImpl(self)
+	--_G.UE.UGameNetworkMgr.Get():SetEnableTrySendMsg(true)
 end
 
 function NetworkImplMgr:OnEnd()
@@ -255,7 +256,7 @@ function NetworkImplMgr:IsMsgEnableResend(MsgID, SubMsgID)
 	--	_G.FLOG_INFO("NetworkImplMgr:IsMsgEnableResend bResend is false MsgID=%d SubMsgID=%d", MsgID, SubMsgID)
 	--end
 
-	return Config.bResend
+	return Config.bResend == true
 end
 
 return NetworkImplMgr

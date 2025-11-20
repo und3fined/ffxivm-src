@@ -10,9 +10,8 @@ local TimeUtil = require("Utils/TimeUtil")
 local CommonDefine = require("Define/CommonDefine")
 local BagDefine = require("Game/Bag/BagDefine")
 
-local CompanionListItemVM = require ("Game/Companion/VM/CompanionListItemVM")
+local CompanionArchiveItemVM = require ("Game/Companion/VM/CompanionArchiveItemVM")
 local CompanionVM = require ("Game/Companion/VM/CompanionVM")
-local CompanionArchiveFilterItemVM = require ("Game/Companion/VM/CompanionArchiveFilterItemVM")
 
 local LSTR = _G.LSTR
 local ClientVisionMgr = _G.ClientVisionMgr
@@ -143,7 +142,7 @@ function CompanionArchiveVM:ShowCompanion(SearchFilter)
  
         if self:IsInFiltered(ID, SearchFilter) then
             if not IsAddedGroup then
-                local ItemVM = CompanionListItemVM.New()
+                local ItemVM = CompanionArchiveItemVM.New()
                 ItemVM:SetArchiveData(IsMerge, Cfg)
                 table.insert(CompanionItemVMList, ItemVM)
             end
@@ -250,7 +249,7 @@ function CompanionArchiveVM:ClearData()
     self.AutoPlayInteract = false
 end
 
-function CompanionArchiveVM:ResetAnimaionState()
+function CompanionArchiveVM:ResetAnimationState()
     self:SetShowState(false)
     self:SetAttackState(false)
     self:SetMoveState(false)

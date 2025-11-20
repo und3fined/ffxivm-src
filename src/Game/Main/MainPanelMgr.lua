@@ -24,7 +24,7 @@ function MainPanelMgr:OnInit()
     self.ReadingInfos = {}
     self.SelectedEntityID = nil
     self.UpdateReadingInfoTimer = nil
-    self.CurGameBotRedDotInfo = {}
+    self.CurRedPositionInfo = {}
 end
 
 function MainPanelMgr:OnBegin()
@@ -201,20 +201,24 @@ function MainPanelMgr:OnQueryGameBotRedDot()
 end
 
 function MainPanelMgr:OnQueryGameBotRedDotRsp(MsgBody)
-    self.CurGameBotRedDotInfo = {}
+    self.CurRedPositionInfo = {}
     local GameBotRedDotList = MsgBody.Get.RedPositionList
     for _, Value in ipairs(GameBotRedDotList) do
         local RedDotPositionInfo = {}
         RedDotPositionInfo.Position = Value.Position
         RedDotPositionInfo.PositionNo = Value.PositionNo
-        self.CurGameBotRedDotInfo[Value.Position] = RedDotPositionInfo
-        OperationUtil.ShowGameBotRedDot(true, Value.Position)
+        self.CurRedPositionInfo[Value.Position] = RedDotPositionInfo
+        if Value.Position == 1 then
+            OperationUtil.ShowGameBotRedDot(true, 1)
+        elseif _G.OpsActivityMgr:IsActivityID(Value.Position) then
+            _G.OpsActivityMgr:UpdateActivityPositionRedDot(true, Value.Position)
+        end
     end
 end
 
 function MainPanelMgr:OnCancelGameBotRedDot(RedDotIndex)
-    if #self.CurGameBotRedDotInfo == 0 or nil == RedDotIndex or
-        RedDotIndex == 0 or nil == self.CurGameBotRedDotInfo[RedDotIndex] then
+    if #self.CurRedPositionInfo == 0 or nil == RedDotIndex or
+        RedDotIndex == 0 or nil == self.CurRedPositionInfo[RedDotIndex] then
         return
     end
 
@@ -226,12 +230,12 @@ function MainPanelMgr:OnCancelGameBotRedDot(RedDotIndex)
     MsgBody.Cancel.OpenID = tostring(_G.LoginMgr:GetOpenID())
     MsgBody.Cancel.RoleID = _G.LoginMgr:GetRoleID() or 0
     MsgBody.Cancel.RedPosition = {}
-    MsgBody.Cancel.RedPosition.Position = self.CurGameBotRedDotInfo[RedDotIndex].Position
-    MsgBody.Cancel.RedPosition.PositionNo = self.CurGameBotRedDotInfo[RedDotIndex].PositionNo
+    MsgBody.Cancel.RedPosition.Position = self.CurRedPositionInfo[RedDotIndex].Position
+    MsgBody.Cancel.RedPosition.PositionNo = self.CurRedPositionInfo[RedDotIndex].PositionNo
 
 	GameNetworkMgr:SendMsg(GameBotRedDotCmd, SubMsgID, MsgBody)
 
-    self.CurGameBotRedDotInfo[RedDotIndex] = nil
+    self.CurRedPositionInfo[RedDotIndex] = nil
 end
 
 function MainPanelMgr:OnCancelGameBotRedDotRsp(MsgBody)

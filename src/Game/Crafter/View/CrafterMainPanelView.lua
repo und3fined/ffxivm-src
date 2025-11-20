@@ -194,6 +194,7 @@ end
 
 function CrafterMainPanelView:OnBtnCloseClick()
 	if not self.bCanCloseBtnClick then
+		_G.CrafterMgr:QuitMake()
 		return
 	end
 	self.bCanCloseBtnClick = false

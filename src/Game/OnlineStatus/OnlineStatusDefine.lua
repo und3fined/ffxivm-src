@@ -63,6 +63,7 @@ local MentorReturnerNewbieStatus = {
     [ProtoOnlineStatusRes.OnlineStatusMakeMentor] = true,
 	[ProtoOnlineStatusRes.OnlineStatusFightMentor] = true,
     [ProtoOnlineStatusRes.OnlineStatusReturner] = true,
+    [ProtoOnlineStatusRes.OnlineStatusGoldSauserMentor] = true,
 }
 
 --未认证指导者相关身份 
@@ -79,6 +80,7 @@ local MentorStatus = {
     [ProtoOnlineStatusRes.OnlineStatusRedFlowerMentor] = true,
 	[ProtoOnlineStatusRes.OnlineStatusMakeMentor] = true,
     [ProtoOnlineStatusRes.OnlineStatusCombatMentor] = true,
+    [ProtoOnlineStatusRes.OnlineStatusGoldSauserMentor] = true,
 }
 
 --指导者相关身份集合
@@ -87,6 +89,7 @@ local MentorIdentitys = {
 	[ProtoOnlineStatusIdentify.OnlineStatusIdentifyMakeMentor] = true,
     [ProtoOnlineStatusIdentify.OnlineStatusIdentifyRedFlowerMentor] = true,
 	[ProtoOnlineStatusIdentify.OnlineStatusIdentifyBattleMentor] = true,
+    [ProtoOnlineStatusIdentify.OnlineStatusIdentifyGoldSauserMentor] = true,
 }
 
 

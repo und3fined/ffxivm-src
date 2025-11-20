@@ -28,21 +28,16 @@ function BuddyUseAccelerateWinVM:Ctor()
     self.UseCoinDescText = nil
     self.ItemVM = ItemVM.New()
 
-    self.TriggerEnabled = nil
     self.BtnaccelerateEnabled = nil
-
-    self.Trigger = false
-    self.TriggerCheck = self.Trigger
     self.NeedRefresh = false
     self.NeedItemNum = nil
     self.EFFVisible = nil
     self.Icon = nil
+    self.Desc = nil
 end
 
 function BuddyUseAccelerateWinVM:UpdateVM()
     self.Item = ItemUtil.CreateItem(BuddyMgr.AccelerateItemID)
-    self.Trigger = false
-    self.TriggerCheck = self.Trigger
     self.NeedRefresh = true
     self:UpdateAccelerateProgress()
 end
@@ -62,34 +57,25 @@ function BuddyUseAccelerateWinVM:UpdateAccelerateProgress()
         local Num = BagMgr:GetItemNum(BuddyMgr.AccelerateItemID)
         self.UseCoinVisible = NeedNum > Num
         if NeedNum > Num then
-            if self.Trigger == true then
-                self.AccelerateTimeText = DateTimeTools.TimeFormat(NeedNum * PerAccelerateTime, "hh:mm:ss", false)
-                self.AccelerateProgressPercent = 1
-                self.EFFVisible = true
-            else
-                self.AccelerateTimeText = DateTimeTools.TimeFormat(Num * PerAccelerateTime, "hh:mm:ss", false)
-                self.AccelerateProgressPercent = self.NormalProgressPercent + Num * PerAccelerateTime/BuddyMgr.DyeCDTime
-                self.EFFVisible = false
-            end
+            self.AccelerateTimeText = DateTimeTools.TimeFormat(NeedNum * PerAccelerateTime, "hh:mm:ss", false)
+            self.AccelerateProgressPercent = 1
+            self.EFFVisible = true
             
             self.ItemDesc = string.format(_G.LSTR(1000010), ItemUtil.GetItemName(BuddyMgr.AccelerateItemID))
-            self.UseCoinDescText = self:GetUseCoinDescText(NeedNum - Num)
-
-            if Num > 0 then
-                self.BtnaccelerateEnabled = true
-            end
+            self.UseCoinDescText, CoinNum = self:GetUseCoinDescText(NeedNum - Num)
+            local CoinText = string.format("%s%s", CoinNum, ScoreMgr:GetScoreNameText(ProtoRes.SCORE_TYPE.SCORE_TYPE_GOLD_CODE))
+            self.Desc = string.format(_G.LSTR(1000070), CoinText)
         else
             self.AccelerateTimeText = DateTimeTools.TimeFormat(NeedNum * PerAccelerateTime, "hh:mm:ss", false)
             self.ItemDesc = ItemUtil.GetItemName(BuddyMgr.AccelerateItemID)
             self.AccelerateProgressPercent = 1
-            self.Trigger = false
             self.EFFVisible = true
             self.BtnaccelerateEnabled = true
+            self.Desc = string.format(_G.LSTR(1000069), ItemUtil.GetItemName(BuddyMgr.AccelerateItemID))
         end
         self.NeedRefresh = false
     end
     
-
 end
 
 function BuddyUseAccelerateWinVM:GetUseCoinDescText(Num)
@@ -99,16 +85,14 @@ function BuddyUseAccelerateWinVM:GetUseCoinDescText(Num)
     self.Icon = ScoreInfo.IconName
     
     local NumColor = "d1ba8e"
-    self.TriggerEnabled = true
     self.BtnaccelerateEnabled = true
     local CoinNum = Num * ScoreExchangeNum
     if ScoreMgr:GetScoreValueByID(ScoreID) < CoinNum then
         NumColor = "dc5868"
-        self.TriggerEnabled = false
         self.BtnaccelerateEnabled = false
     end
 	local NumRichText = RichTextUtil.GetText(string.format("%d", CoinNum), NumColor, 0, nil)
-    return string.format("%s%s",  NumRichText,_G.LSTR(1000011))
+    return string.format("%s",  NumRichText),  CoinNum
 end
 
 function BuddyUseAccelerateWinVM:GetItemAccelerateTime()
@@ -129,15 +113,6 @@ function BuddyUseAccelerateWinVM:GetItemAccelerateCoin()
         return Cfg.DeductScoreType, Cfg.DeductScoreNum
     end
     return ProtoRes.SCORE_TYPE.SCORE_TYPE_GOLD_CODE, 500
-end
-
-
-
-function BuddyUseAccelerateWinVM:ChangeUseCoinTrigger()
-    self.Trigger = not self.Trigger
-    self.TriggerCheck = self.Trigger
-
-    self.NeedRefresh = true
 end
 
 function BuddyUseAccelerateWinVM:SetCDOnTime()

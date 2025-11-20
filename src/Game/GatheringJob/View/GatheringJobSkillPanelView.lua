@@ -44,12 +44,10 @@ local OneVector2D          <const> = _G.UE.FVector2D(1, 1)
 ---@field ImgIcon UFImage
 ---@field ImgPenetrateIcon UFImage
 ---@field ImgPenetrateIcon_1 UFImage
----@field JobSkillTips GatheringJobSkillTipsView
 ---@field MainMajorInfoPanel MainMajorInfoPanelView
 ---@field PanelAttackBtn UFCanvasPanel
 ---@field PanelSkill UFCanvasPanel
 ---@field PanelSkillNew UFCanvasPanel
----@field PanelSkillTips UFCanvasPanel
 ---@field PanelUnfold UFCanvasPanel
 ---@field TextPriceUpNumber UFTextBlock
 ---@field TextSteadyNumber UFTextBlock
@@ -76,12 +74,10 @@ function GatheringJobSkillPanelView:Ctor()
 	--self.ImgIcon = nil
 	--self.ImgPenetrateIcon = nil
 	--self.ImgPenetrateIcon_1 = nil
-	--self.JobSkillTips = nil
 	--self.MainMajorInfoPanel = nil
 	--self.PanelAttackBtn = nil
 	--self.PanelSkill = nil
 	--self.PanelSkillNew = nil
-	--self.PanelSkillTips = nil
 	--self.PanelUnfold = nil
 	--self.TextPriceUpNumber = nil
 	--self.TextSteadyNumber = nil
@@ -100,14 +96,13 @@ function GatheringJobSkillPanelView:OnRegisterSubView()
 	self:AddSubView(self.GatheringSkill3)
 	self:AddSubView(self.GatheringSkill4)
 	self:AddSubView(self.GatheringSkill5)
-	self:AddSubView(self.JobSkillTips)
 	self:AddSubView(self.MainMajorInfoPanel)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function GatheringJobSkillPanelView:OnInit()
-    self.WidgetLocPos = UIUtil.CanvasSlotGetPosition(self.probarlight)
-    self.WidgetSize = UIUtil.CanvasSlotGetSize(self.probarlight)
+    -- self.WidgetLocPos = UIUtil.CanvasSlotGetPosition(self.probarlight)
+    -- self.WidgetSize = UIUtil.CanvasSlotGetSize(self.probarlight)
 
     self.PassiveSkillGroupView = {
         [1] = self.BtnPriceUp,
@@ -116,12 +111,12 @@ function GatheringJobSkillPanelView:OnInit()
     }
     self.Binders = {
         --head相关
-        {"GatherPointName", UIBinderSetText.New(self, self.TextPlace)},
-        {"GatherLevel", UIBinderSetText.New(self, self.TextLevel)},
-        {"LeftTimesInfo", UIBinderSetText.New(self, self.TextNumber)},
+        --{"GatherPointName", UIBinderSetText.New(self, self.TextPlace)},
+        --{"GatherLevel", UIBinderSetText.New(self, self.TextLevel)},
+        --{"LeftTimesInfo", UIBinderSetText.New(self, self.TextNumber)},
         -- left/4
-        {"GatherHPBarPercent", UIBinderSetPercent.New(self, self.ProBar)},
-        {"GatherHPBarPercent", UIBinderValueChangedCallback.New(self, nil, self.OnGatherHPBarPercent)},
+        --{"GatherHPBarPercent", UIBinderSetPercent.New(self, self.ProBar)},
+        --{"GatherHPBarPercent", UIBinderValueChangedCallback.New(self, nil, self.OnGatherHPBarPercent)},
         --3个提纯技能按钮上显示的数值
         --提纯
         {"ScourSkill", UIBinderSetText.New(self, self.GatheringSkill5.MiddleNumber)},
@@ -150,7 +145,6 @@ end
 
 function GatheringJobSkillPanelView:OnShow()
     --CollectionMgr在ShowView之前先执行了EnterCollection()，初始化网络数据和panel数据
-    UIUtil.SetIsVisible(self.PanelSkillTips, false)
     UIUtil.SetIsVisible(self.MainMajorInfoPanel.ImgSwitch, false)
 
     self:InitSkillGroup()
@@ -168,18 +162,18 @@ function GatheringJobSkillPanelView:OnHide()
 end
 
 function GatheringJobSkillPanelView:OnGatherHPBarPercent()
-    local WidgetLocPos = self.WidgetLocPos
-    local WidgetSize = self.WidgetSize
-    local VM = _G.GatheringJobSkillPanelVM
-    local CurPercent = VM.GatherHPBarPercent
-    UIUtil.CanvasSlotSetPosition(self.probarlight, _G.UE.FVector2D(WidgetSize.X * CurPercent, WidgetLocPos.Y))
-    if VM.LastLeftTimes and VM.TotalCount then
-        local LastPercent = VM.LastLeftTimes / VM.TotalCount
-        UIUtil.CanvasSlotSetSize(self.probarlight, _G.UE.FVector2D(WidgetSize.X * (LastPercent - CurPercent), WidgetSize.Y))
-    else
-        _G.FLOG_ERROR("GatheringJobSkillPanelView: VM.LastLeftTimes or VM.TotalCount is nil")
-    end
-    self:PlayAnimation(self.AnimProBarSubtract)
+    -- local WidgetLocPos = self.WidgetLocPos
+    -- local WidgetSize = self.WidgetSize
+    -- local VM = _G.GatheringJobSkillPanelVM
+    -- local CurPercent = VM.GatherHPBarPercent
+    -- UIUtil.CanvasSlotSetPosition(self.probarlight, _G.UE.FVector2D(WidgetSize.X * CurPercent, WidgetLocPos.Y))
+    -- if VM.LastLeftTimes and VM.TotalCount then
+    --     local LastPercent = VM.LastLeftTimes / VM.TotalCount
+    --     UIUtil.CanvasSlotSetSize(self.probarlight, _G.UE.FVector2D(WidgetSize.X * (LastPercent - CurPercent), WidgetSize.Y))
+    -- else
+    --     _G.FLOG_ERROR("GatheringJobSkillPanelView: VM.LastLeftTimes or VM.TotalCount is nil")
+    -- end
+    -- self:PlayAnimation(self.AnimProBarSubtract)
 end
 
 function GatheringJobSkillPanelView:OnRegisterBinder()
@@ -213,7 +207,7 @@ end
 ---@type cast采集收藏品技能
 function GatheringJobSkillPanelView:OnClickCollectSkill()
     _G.CollectionMgr.OnClickCollectSkill = true
-    if _G.GatheringJobSkillPanelVM.bCanCollect then
+    if _G.GatheringJobSkillPanelVM.CurrentVal > 0 then --bCanCollect控制mask
         FLOG_INFO("Gather Collection Click Collect Skill")
         local ProfID = MajorUtil.GetMajorProfID()
         local SkillID = _G.GatheringJobSkillPanelVM.SkillGroup[ProfID][0]
@@ -228,18 +222,17 @@ end
 function GatheringJobSkillPanelView:OnLongClickedScour(index)
     --tip
     local ProfID = MajorUtil.GetMajorProfID()
-    self.JobSkillTips:UPdateSkillInfo(_G.GatheringJobSkillPanelVM.SkillGroup[ProfID][index], ProfID)
-    UIUtil.SetIsVisible(self.PanelSkillTips, true)
+    local Tips = _G.UIViewMgr:ShowView(_G.UIViewID.GatheringJobSkillTips)
+    Tips:UPdateSkillInfo(_G.GatheringJobSkillPanelVM.SkillGroup[ProfID][index], ProfID)
 
     local btnsize = UIUtil.CanvasSlotGetSize(self.PanelAttackBtn)
-    local InPosition = UIUtil.CanvasSlotGetPosition(self.PanelAttackBtn) - _G.UE.FVector2D(btnsize.X * 0.7 , 0)
-    UIUtil.CanvasSlotSetPosition(self.PanelSkillTips, InPosition)
+    TipsUtil.AdjustTipsPosition(Tips.PanelJobSkillTips, self.PanelAttackBtn, _G.UE.FVector2D(-btnsize.X - 15 , btnsize.Y - 20),  _G.UE.FVector2D(1,1))
 end
 
 ---@type 松开采集技能
 function GatheringJobSkillPanelView:OnLongClickReleasedScour()
     --当松开的时候，隐藏tip
-    UIUtil.SetIsVisible(self.PanelSkillTips, false)
+    _G.UIViewMgr:HideView(_G.UIViewID.GatheringJobSkillTips)
 end
 
 function GatheringJobSkillPanelView:OnPressed()
@@ -254,6 +247,9 @@ end
 ---@type 长按被动技能
 function GatheringJobSkillPanelView:OnLongClickedpassive(index)
     local rsp = _G.GatheringJobSkillPanelVM.CollectionRsp
+    if rsp == nil then
+        return
+    end
     local tips = LifeskillCollectionDescriptionCfg:FindAllCfg()
 
     local Desc = ""

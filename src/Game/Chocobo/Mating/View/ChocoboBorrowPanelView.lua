@@ -40,12 +40,12 @@ local ChocoboBorrowPanelVM = nil
 ---@field BtnBorrowed UFButton
 ---@field BtnChange CommBtnMView
 ---@field BtnClose CommonCloseBtnView
----@field BtnHelp CommInforBtnView
 ---@field BtnSub UFButton
 ---@field ChangePage ChocoboBorrowChangePageView
 ---@field CheckBoxFemale UToggleButton
 ---@field CheckBoxMale UToggleButton
 ---@field CommGesture_UIBP CommGestureView
+---@field CommonTitle CommonTitleView
 ---@field FImg_Box UFImage
 ---@field FImg_Box_1 UFImage
 ---@field FImg_Check UFImage
@@ -71,7 +71,6 @@ local ChocoboBorrowPanelVM = nil
 ---@field TextName UFTextBlock
 ---@field TextPrice UFTextBlock
 ---@field TextStat UFTextBlock
----@field TextTitle UFTextBlock
 ---@field ToggleGroupCheck UToggleGroup
 ---@field AnimIn UWidgetAnimation
 ---@field AnimSwitchBird UWidgetAnimation
@@ -87,12 +86,12 @@ function ChocoboBorrowPanelView:Ctor()
 	--self.BtnBorrowed = nil
 	--self.BtnChange = nil
 	--self.BtnClose = nil
-	--self.BtnHelp = nil
 	--self.BtnSub = nil
 	--self.ChangePage = nil
 	--self.CheckBoxFemale = nil
 	--self.CheckBoxMale = nil
 	--self.CommGesture_UIBP = nil
+	--self.CommonTitle = nil
 	--self.FImg_Box = nil
 	--self.FImg_Box_1 = nil
 	--self.FImg_Check = nil
@@ -118,7 +117,6 @@ function ChocoboBorrowPanelView:Ctor()
 	--self.TextName = nil
 	--self.TextPrice = nil
 	--self.TextStat = nil
-	--self.TextTitle = nil
 	--self.ToggleGroupCheck = nil
 	--self.AnimIn = nil
 	--self.AnimSwitchBird = nil
@@ -131,9 +129,9 @@ function ChocoboBorrowPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnBorrow)
 	self:AddSubView(self.BtnChange)
 	self:AddSubView(self.BtnClose)
-	self:AddSubView(self.BtnHelp)
 	self:AddSubView(self.ChangePage)
 	self:AddSubView(self.CommGesture_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.LevelItem)
 	self:AddSubView(self.MoneySlot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -182,7 +180,10 @@ function ChocoboBorrowPanelView:InitConstInfo()
     self.IsInitConstInfo = true
 
     -- LSTR string: 陆行鸟配种租借
-    self.TextTitle:SetText(_G.LSTR(420035))
+    self.CommonTitle:SetTextTitleName(_G.LSTR(420035))
+    self.CommonTitle:SetSubTitleIsVisible(false)
+    self.CommonTitle:SetHelpInfoID(11095)
+    
     -- LSTR string: 陆行鸟特质预期
     self.TextDetailTitle:SetText(_G.LSTR(420036))
     -- LSTR string: 性别
@@ -394,6 +395,7 @@ function ChocoboBorrowPanelView:OnClickBtnBorrowed()
     if not UIUtil.IsVisible(self.ChangePage) then
         UIUtil.SetIsVisible(self.ChangePage, true)
 
+        ChocoboMainVM:InitBorrowChocoboList()
         local Types = ChocoboDefine.OVERVIEW_FILTER_TYPE
         local FilterTypes = { Types.STAR, Types.MAX_SPEED, Types.SPRINT_SPEED, Types.ACCELERATION, Types.STAMINA, Types.SKILL_STRENGTH }
         local FilterTypeList = {}
@@ -401,8 +403,8 @@ function ChocoboBorrowPanelView:OnClickBtnBorrowed()
             FilterTypeList[Index] = {}
             FilterTypeList[Index].Name = ChocoboDefine.OVERVIEW_FILTER_TYPE_NAME[FilterType]
         end
+        self.ChangePage.DropDownSort:SetForceTrigger(true)
         self.ChangePage.DropDownSort:UpdateItems(FilterTypeList, 1)
-        ChocoboMainVM:InitBorrowChocoboList()
     end
 end
 

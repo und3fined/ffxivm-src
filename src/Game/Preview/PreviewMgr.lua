@@ -9,6 +9,7 @@ local MajorUtil = require("Utils/MajorUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
 local EventID = require("Define/EventID")
 local ObjectGCType = require("Define/ObjectGCType")
+local EquipmentCfg = require("TableCfg/EquipmentCfg")
 
 local UIViewID = _G.UIViewID
 local UIViewMgr = _G.UIViewMgr
@@ -97,7 +98,7 @@ function PreviewMgr:OpenPreviewView(ItemResID)
 		return
 	end
 
-	--- 预览时装散件、装备
+	--- 预览散件、装备
 	if (FindItemCfg.ItemMainType == ProtoCommon.ItemMainType.ItemArmor) or 
 	(FindItemCfg.ItemMainType == ProtoCommon.ItemMainType.ItemAccessory) or 
 	(FindItemCfg.ItemMainType == ProtoCommon.ItemMainType.ItemArm) or 
@@ -115,29 +116,42 @@ end
 function PreviewMgr:OnShowRoleApperanceViewForSuit(TempSuitCfg)
 	FLOG_INFO("PreviewMgr:OnShowRoleAppearancePanelByType TempSuitCfg.id=%d", TempSuitCfg.ID);
 	local EquipData = {}
-	--- 套装
-	local MajorGender = MajorUtil:GetMajorGender() -- 主角性别
+	local RegionDyesList = {}  --套装的染色数据
 	local Items = {}
 	--- 套装表中配的是[装备表]中的装备ID，获取装备的ItemData
-	for _, value in ipairs(TempSuitCfg.AppItems) do
-		-- local TempID = WardrobeUtil.GetWeaponEquipIDByAppearanceID(value)
+	for index, value in ipairs(TempSuitCfg.AppItems) do
 		local TempItemCfg = self:GetItemCfgByEquipmentID(value)
 		if value ~= 0 then
 			table.insert(Items, TempItemCfg)
+		end
+
+		--染色数据
+		local EquipmentCfg = EquipmentCfg:FindCfgByEquipID(value)
+		if EquipmentCfg ~= nil then
+			local StainAeraStr = TempSuitCfg.StainAera[index]
+			if StainAeraStr ~= nil then
+				local StainAeraList = _G.StringTools.StringSplit(StainAeraStr, ",")
+				local EquipStainAera = {}
+				for i, v in ipairs(StainAeraList) do
+					table.insert(EquipStainAera, {ID = i, ColorID = tonumber(v)})
+				end
+				table.insert(RegionDyesList, {EquipID = value, Part = EquipmentCfg.Part, ResID = EquipmentCfg.AppearanceID, RegionDyes = EquipStainAera})
+			end
 		end
 	end
 	if table.is_nil_empty(Items) then
 		return
 	end
+
 	EquipData.IsPreviewSuit = true
 	EquipData.Name = TempSuitCfg.SuitName
 	EquipData.Items = Items
-	EquipData.IsMajorSameGender = true
+	EquipData.RegionDyesList = RegionDyesList
+	EquipData.GenderLimit = MajorUtil:GetMajorGender() -- 所预览的装备性别
 	if TempSuitCfg.GenderLimit ~= 0 then
-		if TempSuitCfg.GenderLimit ~= MajorGender then
-			EquipData.IsMajorSameGender = false
-		end
+		EquipData.GenderLimit = TempSuitCfg.GenderLimit
 	end
+
 	_G.PreviewRoleAppearanceVM:UpdateViewDataByPreView(EquipData)
 	UIViewMgr:ShowView(UIViewID.PreviewRoleAppearanceView)
 
@@ -151,7 +165,6 @@ function PreviewMgr:OnShowRoleApperanceViewEquip(ItemResID)
 	FLOG_INFO("PreviewMgr:OnShowRoleApperanceViewEquip, ItemResID=%d", ItemResID);
 	local EquipData = {}
 	--- 套装
-	local MajorGender = MajorUtil:GetMajorGender() -- 主角性别
 	local Items = {}
 	local TempItemCfg = self:GetItemCfg(ItemResID)
 	if TempItemCfg == nil then
@@ -163,20 +176,17 @@ function PreviewMgr:OnShowRoleApperanceViewEquip(ItemResID)
 	EquipData.Name = TempItemCfg.Name
 	table.insert(Items, TempItemCfg)
 	EquipData.Items = Items
-	--是否与主角同性别
-	EquipData.IsMajorSameGender = true
+	EquipData.GenderLimit = MajorUtil:GetMajorGender() -- 所预览的装备性别
 	if TempItemCfg.UseCond ~= 0 then
 		local TempCondCfg = CondCfg:FindCfgByKey(TempItemCfg.UseCond)
 		if TempCondCfg ~= nil and #TempCondCfg.Cond > 0 then
 			local CondData1 = TempCondCfg.Cond[1]
 			if #CondData1.Value > 0 then
-				local EquipGender = CondData1.Value[1]
-				if MajorGender ~= EquipGender then
-					EquipData.IsMajorSameGender = false
-				end
+				EquipData.GenderLimit = CondData1.Value[1]
 			end
 		end
 	end
+
 	_G.PreviewRoleAppearanceVM:UpdateViewDataByPreView(EquipData)
 	UIViewMgr:ShowView(UIViewID.PreviewRoleAppearanceView)
 

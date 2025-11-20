@@ -45,7 +45,7 @@ function MountDetailVM:UpdateDetail(Mount)
         return
     end
     self.ResID = self.Mount.ResID
-    local c_ride_cfg = RideCfg:FindCfgByKey(self.ResID)
+    local c_ride_cfg = _G.MountMgr:GetRideCfg(self.ResID)
     self.Name = c_ride_cfg.Name
     if c_ride_cfg.MountType == ProtoCommon.MountType.MountFlying then
         self.TypeName = "浮空"

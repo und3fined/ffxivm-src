@@ -187,7 +187,7 @@ function OperationUtil.GetGameBotOpenArgs(Question)
 	end
 
 	local AppID = ""
-	local AccountType = ""
+	local AccountType = 3
 	if _G.LoginMgr:IsWeChatLogin() then
 		AppID = MSDKDefine.Config.WechatAppID
 		AccountType = 2
@@ -206,8 +206,8 @@ function OperationUtil.GetGameBotOpenArgs(Question)
 		gameId = "21225",										-- 游戏的知几ID
 		--gameId = "20004",										-- 测试游戏的知几ID
 		appId = AppID,
-		systemId = AccountType,									-- 游戏系统(1: QQ, 2: WeChat), 端游为1
-		platId = PlatformType,									-- 游戏平台id(0: iOS, 1: Android, 2: pc)
+		systemId = PlatformType,								-- 操作系统ID，Android为1, iOS为0
+		platId = AccountType,									-- 游戏平台id，1表示QQ，2表示微信，3表示游客模式
 		areaId = _G.LoginMgr:GetWorldID(),						-- 大区id
 		partitionId = "0",										-- 小区id
 		roleId = tostring(_G.LoginMgr:GetRoleID()),			-- 角色id
@@ -293,17 +293,28 @@ function OperationUtil.GetOperationMenuItems()
 			if IsEnabledEntrance then
 				if (_G.LoginMgr:IsWeChatLogin() and Info.IsShowForWeChat == 1) or
 					(_G.LoginMgr:IsQQLogin() and Info.IsShowForQQ == 1) then
-					local Item = {}
-					Item.ID = Info.ID
-					Item.ChannelID = Info.ChannelID
-					Item.Icon = Info.Icon
-					Item.BtnName = Info.BtnName
-					Item.BtnEntranceID = Info.BtnEntranceID
-					Item.IsNeedShowRedDot = Info.IsNeedShowRedDot == 1 and true or false
-					Item.OpenType = Info.OpenType
-					Item.Url = Info.Url
-					if Item.BtnEntranceID ~= MoreMenuType.Questionnaire or _G.MURSurveyMgr:IsNeedShowQuestionnaire() then
+					local IsNeedShow = true
+					-- if Info.BtnEntranceID == MoreMenuType.Questionnaire and (not _G.MURSurveyMgr:IsNeedShowQuestionnaire() or
+					-- 	not _G.MainPanelMgr:IsFunctionButtonInLayout(MainFunctionDefine.ButtonType.DEPART_OF_LIGHT)) then
+					-- 	IsNeedShow = false
+					-- end
+
+					if Info.BtnEntranceID == MoreMenuType.Questionnaire and not _G.MURSurveyMgr:IsNeedShowQuestionnaire() then
+						IsNeedShow = false
+					end
+
+					if IsNeedShow then
 						--_G.FLOG_INFO("[OperationUtil.GetOperationMenuItems] BtnName:%s, ID:%d, Channel:%d", Info.BtnName, Info.ID, Info.ChannelID)
+						local Item = {}
+						Item.ID = Info.ID
+						Item.ChannelID = Info.ChannelID
+						Item.Icon = Info.Icon
+						Item.BtnName = Info.BtnName
+						Item.BtnEntranceID = Info.BtnEntranceID
+						Item.IsNeedShowRedDot = Info.IsNeedShowRedDot == 1 and true or false
+						Item.OpenType = Info.OpenType
+						Item.Url = Info.Url
+
 						table.insert(OperationMenuSubList, Item)
 						RowNum = RowNum + 1
 						if RowNum >= 4 then
@@ -344,7 +355,7 @@ function OperationUtil.GetFreeFlowInfoRequestData()
 	RequestData.businessParameter = {}
 	RequestData.businessParameter.appId = ""												-- 应用APP标识，由联通王卡团队分配
 	RequestData.businessParameter.privateIpV4 = DataReportUtil.IPV4Address					-- 用户私网IPV4
-	RequestData.businessParameter.privateIpV6 = _G.UE.UPlatformUtil.GetIPAddress(false)		-- 用户私网IPV6
+	RequestData.businessParameter.privateIpV6 = DataReportUtil.ClientIPV6					-- 用户私网IPV6
 	--以下为可选字段
 	--RequestData.businessParameter.publicIp = ""		-- 用户的公网IP
 	--RequestData.businessParameter.imsi = ""			-- sim卡标识

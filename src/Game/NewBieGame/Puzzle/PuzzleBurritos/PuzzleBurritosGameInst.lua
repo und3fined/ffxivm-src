@@ -35,9 +35,13 @@ end
 
 --- @type 当完成一块拼图
 function PuzzleBurritosGameInst:OnFinishOnePuzzleItem(PuzzleItemID, MoveOp)
+    local PuzzleMainPanel = self.PuzzleMainPanel
+    if not PuzzleMainPanel then
+        return
+    end
     self.Super:OnFinishOnePuzzleItem(PuzzleItemID, MoveOp)
     if not self:IsTimeOut() then
-        self.PuzzleMainPanel:PlayAnimation(self.PuzzleMainPanel[string.format("AnimPaperShadow%s", self.FinishNum)])
+        PuzzleMainPanel:PlayAnimation(PuzzleMainPanel[string.format("AnimPaperShadow%s", self.FinishNum)])
     end
     self:UpdateShadowVisible(self.FinishNum)
 end

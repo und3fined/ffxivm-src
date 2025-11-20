@@ -16,7 +16,6 @@ local UIViewMgr = require("UI/UIViewMgr")
 local ProtoRes = require("Protocol/ProtoRes")
 local CommonUtil = require("Utils/CommonUtil")
 
-
 ---@class TutorialGestureMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Comm TutorialGuidanceItemView
@@ -161,7 +160,7 @@ function TutorialGestureMainPanelView:OnShow()
 		FLOG_ERROR("Cant find Cfg")
 		return
 	end
-	
+
 	--local GuideWidgetPath = self.Cfg.GuideWidgetPath
 	--local GuideWidget =  TutorialUtil:GetTutorialWidget(self,GuideWidgetPath)
 	local Type = self.Cfg.Type
@@ -174,6 +173,36 @@ function TutorialGestureMainPanelView:OnShow()
 	local WidgetPath = self.Cfg.WidgetPath
 	local Widget = nil
 
+	--[[
+
+	if self.Cfg.BPName == "Main2nd/Main2ndPanelNew_UIBP" then
+		Widget = nil
+		local Index = View:GetIndex(self.Cfg.StartParam)
+
+		if Index > 0 then
+			if Index > 20 then
+				View.TableView_Menu:SetScrollOffset(21)
+			end
+
+			Widget = TutorialUtil:GetTutorialWidgetWithAdapter(View, WidgetPath,Index)
+		end
+	else
+		if string.find(WidgetPath,"Adapter") and self.Cfg.HandleType ~= TutorialDefine.TutorialHandleType.TableView then
+			Widget = TutorialUtil:GetTutorialWidgetWithAdapter(View, WidgetPath,self.Cfg.StartParam)
+		else
+			Widget = TutorialUtil:GetTutorialWidget(View, WidgetPath)
+		end
+	end
+	--]]
+
+	if self.Cfg.BPName == "Main2nd/Main2ndPanelNew_UIBP" and self.Cfg.BtnEntranceID > 0 then
+		local RightMenuItemsCfg = require("TableCfg/RightMenuItemsCfg")
+		local MenuItemsCfg = RightMenuItemsCfg:FindAllCfg(string.format("BtnEntranceID=%d", self.Cfg.BtnEntranceID))
+		if MenuItemsCfg and MenuItemsCfg[1] then
+			self.Cfg.StartParam = MenuItemsCfg[1].SortID or self.Cfg.StartParam
+		end
+	end
+	
 	if string.find(WidgetPath,"Adapter") and self.Cfg.HandleType ~= TutorialDefine.TutorialHandleType.TableView then
 		Widget = TutorialUtil:GetTutorialWidgetWithAdapter(View, WidgetPath,self.Cfg.StartParam)
 	else
@@ -192,9 +221,10 @@ function TutorialGestureMainPanelView:OnShow()
 		self.Comm.GestureSelect:SetFunc(true)
 	end
 
-	if self.Widget == nil then
+	if self.Widget == nil or View == nil or self.Widget == View then
 		FLOG_WARNING("Widget is nil and WidgetPath is %s",WidgetPath)
-
+		_G.EventMgr:SendEvent(_G.EventID.ForceFinishTutorial)
+		return
 		--找不到控件强制关闭当前引导
 		--local Params = {}
 		--Params.TutorialID = self.TutorialID

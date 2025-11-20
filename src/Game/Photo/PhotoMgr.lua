@@ -36,7 +36,9 @@ local Json = require("Core/Json")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local ProtoRes = require("Protocol/ProtoRes")
 local PhotoUtil = require("Game/Photo/PhotoUtil")
-local MainPanelVID = UIViewID.MainPanel
+local EmotionCfg = require("TableCfg/EmotionCfg")
+local FashionDecoDefine = require("Game/FashionDeco/VM/FashionDecoDefine")
+
 local PhotoVID = UIViewID.PhotoMain
 local UIViewMgr
 local EventMgr
@@ -51,16 +53,20 @@ local PhotoTemplateVM
 local PhotoDarkEdgeVM
 local PhotoActionVM
 local PhotoEmojiVM
-local ClientReportType = ProtoCS.ReportType
+local PhotoRoleStatVM
 local GameNetworkMgr
 local TeamMgr
 local HUDMgr
+
+local ClientReportType = ProtoCS.ReportType
 local MAIN_CMD = ProtoCS.CS_CMD.CS_CMD_PHOTOS
 local SUB_CMD = ProtoCS.Role.Photos.PhotosOptCmd
 local ShowTips = MsgTipsUtil.ShowTips
 local WARN = _G.FLOG_WARNING
 local ERR = _G.FLOG_ERROR
 local LOG = _G.FLOG_INFO
+local LSTR = _G.LSTR
+local LookAtType = _G.UE.ELookAtType
 
 local PhotoMgr = LuaClass(MgrBase)
 
@@ -72,8 +78,9 @@ end
 function PhotoMgr:OnBegin()
 
     self.TemplateMap = {
+        PhotoRoleStatVM     = PhotoRoleStatVM,
         PhotoCamVM          = PhotoCamVM,
-        -- PhotoRoleSettingVM  = PhotoRoleSettingVM,
+        PhotoRoleSettingVM  = PhotoRoleSettingVM,
         PhotoSceneVM        = PhotoSceneVM,
         PhotoFilterVM       = PhotoFilterVM,
         PhotoDarkEdgeVM     = PhotoDarkEdgeVM,
@@ -81,7 +88,9 @@ function PhotoMgr:OnBegin()
         PhotoEmojiVM     = PhotoEmojiVM,
         PhotoVM          = PhotoVM,
     }
+
     self.SettingValues = {}
+
     self:BeginTemplate()
     self:BeginRoleEffect()
     self:BeginAnim()
@@ -102,10 +111,15 @@ function PhotoMgr:OnRegisterGameEvent()
     -- @todo 把事件移到photo main panel
     self:RegisterGameEvent(EventID.TrivialCombatStateUpdate,    self.OnEveCombatStat)
     self:RegisterGameEvent(EventID.SelectTarget,                self.OnEveSelt)
+    self:RegisterGameEvent(EventID.UnSelectTarget,              self.OnUnSelectTarget)
     self:RegisterGameEvent(EventID.TeamLeave,                   self.OnEveTeamChg)
     self:RegisterGameEvent(EventID.TeamJoin,                    self.OnEveTeamChg)
     self:RegisterGameEvent(EventID.ActorVelocityUpdate,         self.OnEveMoveChg)
+    self:RegisterGameEvent(EventID.MountExitEnd,                self.OnMountExitEnd)
     self:RegisterGameEvent(EventID.VisionEnter,                 self.OnVisionEnter)
+    self:RegisterGameEvent(EventID.UpdateCameraParams,          self.OnUpdateCameraParams)
+    self:RegisterGameEvent(EventID.HouseUploadPicture,          self.OnHouseUploadPicture)
+    self:RegisterGameEvent(EventID.NetStateUpdate,              self.OnActorNetStateChanged)
 end
 
 function PhotoMgr:Reset()
@@ -138,6 +152,7 @@ function PhotoMgr:InitLocalValue()
     PhotoDarkEdgeVM         = _G.PhotoDarkEdgeVM
     PhotoActionVM           = _G.PhotoActionVM
     PhotoEmojiVM            = _G.PhotoEmojiVM
+    PhotoRoleStatVM         = _G.PhotoRoleStatVM
 end
 
 -- function PhotoMgr:OnTimer()
@@ -183,10 +198,27 @@ function PhotoMgr:OnEveSelt(Params)
     if not self.IsOnPhoto then
         return
     end
-	self:EndSeltTimer()
-    self:SetSeltEntID(Params.ULongParam1)
 
-    self.SeltHdl = self:RegisterTimer(self.OnTimerSelt, 2, 0, 1)
+    local SelActorEntID = Params.ULongParam1
+    if not SelActorEntID then
+        return
+    end
+
+	--self:EndSeltTimer()
+    self:SetSeltEntID(Params.ULongParam1)
+    --self.SeltHdl = self:RegisterTimer(self.OnTimerSelt, 2, 0, 1)
+end
+
+function PhotoMgr:OnUnSelectTarget()
+    if not self.IsOnPhoto then
+        return
+    end
+    self:SetSeltEntID(MajorUtil.GetMajorEntityID())
+end
+
+function PhotoMgr:CheckSelectIsMajor(SelActorEntID)
+	local MajorEntityID = MajorUtil.GetMajorEntityID()
+    return SelActorEntID == MajorEntityID
 end
 
 function PhotoMgr:OnEveTeamChg()
@@ -215,16 +247,52 @@ function PhotoMgr:OnEveMoveChg(Params)
     end
 end
 
+function PhotoMgr:OnMountExitEnd(Params)
+    if not self.IsOnPhoto then
+        return
+    end
+    local EntID = Params.ULongParam1
+    if not EntID or not self.Role4EffectMap[EntID] then
+        return
+    end
+    if self.Role4EffectMap[EntID].ClearHdl then
+        self.Role4EffectMap[EntID].ClearHdl()
+        if not MajorUtil.IsMajor(Params.ULongParam1) then
+            ShowTips(LSTR(630065))
+        end
+    end
+    self.Role4EffectMap[EntID] = nil
+end
+
 -------------------------------------------------------------------------------------------------------
 ---@region UI显示隐藏
+--- func desc
+---@param OpenSource PhotoDefine.UIEditCropType
+---@param Params {HouseID = 1, Url = "",}
+function PhotoMgr:OpenPhotoAndLogCropType(OpenSource, Params)
+    if self:TryOpenPhotoUI() then
+        self.EditCropType = OpenSource
+        self.EditCropParams = Params
+    end
+end
 
 function PhotoMgr:TryOpenPhotoUI()
     if not _G.LoginMgr:CheckModuleSwitchOn(ProtoRes.module_type.MODULE_PHOTO, true) then
         return
     end
 
+    if _G.MountMgr:IsRequestingMount() then
+	    ShowTips(LSTR(630061))
+        return
+    end
+
     if _G.ChocoboTransportMgr:GetIsTransporting() then
 	    ShowTips(LSTR(630059))
+        return
+    end
+
+    if _G.AutoPathMoveMgr:IsAutoPathMovingState() then
+	    ShowTips(LSTR(630064)) -- 寻路中无法使用拍照
         return
     end
 
@@ -235,18 +303,20 @@ function PhotoMgr:TryOpenPhotoUI()
     local MajorEntityID = MajorUtil.GetMajorEntityID()
 	local IsCombatState = ActorUtil.IsCombatState(MajorEntityID)
 
-    if not IsCombatState then
-        self:OnOpenPhotoUI()
-        UIViewMgr:ShowView(PhotoVID)
-        return true
+    if IsCombatState then
+        ShowTips(LSTR(630012))
+        return
     end
 
-	ShowTips(LSTR(630012))
-    return false
+    self:OnOpenPhotoUI()
+    UIViewMgr:ShowView(PhotoVID)
+    return true
 end
 
 function PhotoMgr:OnOpenPhotoUI()
     self.IsOnPhoto = true
+    self.EditCropType = nil
+    self.EditCropParams = nil
     self:RecordStat()
 
     do
@@ -258,6 +328,7 @@ function PhotoMgr:OnOpenPhotoUI()
         self:SetMajorOnlineStat(true)
         self:ReqGetPhotoTemplate()
         self:SetMajorLookCamera()
+        self:CheckFashionViable()
 
         local MajorID = MajorUtil.GetMajorEntityID()
 
@@ -270,14 +341,17 @@ function PhotoMgr:OnOpenPhotoUI()
         HUDMgr:SetActorInfoVisible(false)
         _G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.Photo, true)
         
+        _G.UE.UZTestHudComponent.SetPhotoModeStat(1)
         _G.NaviDecalMgr:SetNavPathHiddenInGame(true)
         _G.NaviDecalMgr:DisableTick(true)
+        
+        PhotoMgr:SetCamDis()
         
         -- _G.UE.USettingUtil.ExeCommand("r.ScreenPercentage", 200)
         LOG('[Photo][PhotoMgr][OnOpenPhotoUI]')
     end
 
-    self:ConvertAndSetConfigTemplate()
+    self:EnsureCfgTempListInitialized()
     --
     EventMgr:SendEvent(EventID.PhotoStart)
 	EventMgr:SendCppEvent(EventID.PhotoStartCpp)
@@ -286,7 +360,7 @@ end
 
 function PhotoMgr:ClosePhotoUI()
     UIViewMgr:HideView(PhotoVID)
-    self:OnClosePhotoUI()
+    self:PostClosePhotoUI()
 end
 
 function PhotoMgr:OnClosePhotoUI()
@@ -308,21 +382,25 @@ function PhotoMgr:OnClosePhotoUI()
         self:EndNPCLookAt()
         self:ShowAllActor() --显示隐藏的Actor
 
+        self:SetMajorCanMove(true)
+
         HUDMgr:SetIsDrawHUD(true)
         HUDMgr:SetPlayerInfoVisible(true)
         HUDMgr:SetActorInfoVisible(true)
         _G.TargetMgr:SetHardLockEffectMask(CommonDefine.HardLockEffectMaskType.Photo, false)
 
+        _G.UE.UZTestHudComponent.SetPhotoModeStat(0)
         _G.NaviDecalMgr:SetNavPathHiddenInGame(false) 
         _G.NaviDecalMgr:DisableTick(false)
 
         self:TryClearAniEntList()
         self:ResumeActorPause()
-        _G.PhotoActionVM:ResetRoleActAni()
-        _G.PhotoEmojiVM:ResetRoleActAni()
+        PhotoActionVM:ResetRoleActAni()
+        PhotoEmojiVM:ResetRoleActAni()
 
         self:ResetLookAt()
         self.SeltEntID = nil
+        self:ResetCamDis()
 
         -- _G.UE.USettingUtil.ExeCommand("r.ScreenPercentage", 100)
         LOG('[Photo][PhotoMgr][OnClosePhotoUI]')
@@ -330,6 +408,7 @@ function PhotoMgr:OnClosePhotoUI()
 
     PhotoActorUtil.PauseAllActorAnim(false)
     self.IsOnPhoto = false
+    self.InitFashionHidden = nil
     self.SettingValues = {}
     EventMgr:SendEvent(EventID.PhotoEnd)
 	EventMgr:SendCppEvent(EventID.PhotoEndCpp)
@@ -339,50 +418,70 @@ function PhotoMgr:PostClosePhotoUI()
     if not self.IsOnPhoto then
         return
     end
-    self:ClosePhotoUI()
+    self:OnClosePhotoUI()
 end
 
 -------------------------------------------------------------------------------------------------------
 ---@region 拍照角色角色管理
 
----@return PhotoActorAgent
-function PhotoMgr:GetActorAgent(EntityID)
-    self.AgentPool = {}
-    self.AgentMap = {}
+-- ---@return PhotoActorAgent
+-- function PhotoMgr:GetActorAgent(EntityID)
+--     self.AgentPool = {}
+--     self.AgentMap = {}
 
-    if self.AgentMap[EntityID] then
-        return self.AgentMap[EntityID]
-    end
+--     if self.AgentMap[EntityID] then
+--         return self.AgentMap[EntityID]
+--     end
 
-    local Ret
-    if #self.AgentPool == 0 then
-        Ret = PhotoActorAgent.New()
-    else
-        Ret = table.remove(self.AgentPool)
-    end
+--     local Ret
+--     if #self.AgentPool == 0 then
+--         Ret = PhotoActorAgent.New()
+--     else
+--         Ret = table.remove(self.AgentPool)
+--     end
 
-    self.AgentMap[EntityID] = Ret
+--     self.AgentMap[EntityID] = Ret
 
-    Ret:Init(EntityID)
+--     Ret:Init(EntityID)
 
-    return Ret
+--     return Ret
+-- end
+
+-- function PhotoMgr:ClearActorAgent(EntityID)
+--     for _, Agent in pairs(self.AgentMap) do
+--         Agent:End()
+--         table.insert(self.AgentPool, Agent)
+--     end 
+
+--     self.AgentMap = {}
+-- end
+
+
+function PhotoMgr:SetCamDis()
+    local Cam = PhotoCameraUtil.GetCamCtr()
+    self.OriCamDis = Cam:GetTargetArmLength()
+    local CamDis = 500
+    Cam:SetTargetArmLength(CamDis)
 end
 
-function PhotoMgr:ClearActorAgent(EntityID)
-    for _, Agent in pairs(self.AgentMap) do
-        Agent:End()
-        table.insert(self.AgentPool, Agent)
-    end 
-
-    self.AgentMap = {}
+function PhotoMgr:ResetCamDis()
+    if self.OriCamDis then
+        local Cam = PhotoCameraUtil.GetCamCtr()
+        Cam:SetTargetArmLength(self.OriCamDis)
+    end
 end
 
 function PhotoMgr:EndNPCLookAt()
-    local NPCList = self.LookatNPCList
-    for _, NPC in pairs(NPCList or {}) do
-        --ActorUtil.SetCharacterLookAtCamera(NPC, _G.UE.ELookAtType.None)
-        self:SetNpcLookAt(NPC, false)
-        NPC:GetThinkComponent():SetEnableLookAtTick(true)
+    local NPCList = self.LookatNPCList or {}
+    for _, NPC in pairs(NPCList) do
+        --ActorUtil.SetCharacterLookAtCamera(NPC, LookAtType.None)
+        if NPC and CommonUtil.IsObjectValid(NPC) then
+            self:SetNpcLookAt(NPC, false)
+            local ThinkComp = NPC:GetThinkComponent()
+            if ThinkComp and ThinkComp:IsValid() then
+                ThinkComp:SetEnableLookAtTick(true)
+            end
+        end
     end
     self.LookatNPCList = nil
 end
@@ -393,15 +492,23 @@ function PhotoMgr:StartNPCLookAt()
     local NPCList = PhotoActorUtil.GetNPCs()
     self.LookatNPCList = NPCList
     for _, NPC in pairs(NPCList) do
-        NPC:GetThinkComponent():SetEnableLookAtTick(false)
-        --ActorUtil.SetCharacterLookAtCamera(NPC, _G.UE.ELookAtType.HeadAndEye)
-        self:SetNpcLookAt(NPC, true)
+        if NPC and CommonUtil.IsObjectValid(NPC) then
+            local ThinkComp = NPC:GetThinkComponent()
+            if ThinkComp and ThinkComp:IsValid() then
+                ThinkComp:SetEnableLookAtTick(false)
+            end
+            --ActorUtil.SetCharacterLookAtCamera(NPC, LookAtType.HeadAndEye)
+            self:SetNpcLookAt(NPC, true)
+        end
     end
 end
 
 function PhotoMgr:SetNpcLookAt(Character, bOpen)
+    if not Character then
+        return
+    end
     local NpcParams = _G.UE.FLookAtParams()
-    NpcParams.LookAtType = _G.UE.ELookAtType.ALL
+    NpcParams.LookAtType = LookAtType.ALL
 	NpcParams.Target.Type = bOpen and _G.UE.ELookAtTargetType.Camera or _G.UE.ELookAtTargetType.None
     NpcParams.bUseBlendPose = true
 	ActorUtil.SetCharacterLookAtParams(Character, NpcParams)
@@ -445,6 +552,10 @@ function PhotoMgr:IsCurSeltMajor()
     return self.SeltEntID == MajorUtil.GetMajorEntityID()
 end
 
+function PhotoMgr:IsNotLookAtActor()
+    return self.IsOnPhoto and (self.ActionID or self.MoveID)
+end
+
 function PhotoMgr:IsCurSeltPlayer()
     local Actor = ActorUtil.GetActorByEntityID(self.SeltEntID)
     if not Actor then return end
@@ -462,18 +573,14 @@ function PhotoMgr:SetSeltEntID(EntID)
     --     _G.EventMgr:SendCppEvent(_G.EventID.ManualSelectTarget, EventParams)
     --     return
     -- end
-    local IsChg = false
-    if self.SeltEntID and self.SeltEntID ~= EntID then
-        IsChg = true
-        self:OnSeltEntIDChg(EntID)
-    end
-
-    self.SeltEntID = EntID
-
+    local IsChg = self.SeltEntID and self.SeltEntID ~= EntID or false
     if IsChg then
+        -- todo
+        --self:OnSeltEntIDChg(EntID)
+        self.SeltEntID = EntID
         EventMgr:SendEvent(EventID.PhotoSeltEntChg)
+        PhotoRoleSettingVM.ProbarIsVisibility = self:IsCurSeltMajor()
     end
-
     -- local Selt = ActorUtil.GetActorByEntityID(self.SeltEntID)
     -- self:SetActorLookCamera(Selt)
 end
@@ -482,7 +589,6 @@ function PhotoMgr:OnSeltEntIDChg(EntID)
     local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
     self:StopRoleAllAnim(AnimComp)
     self:RefreshCharacterLookAt()
-
     if PhotoVM.IsPauseSelect then
         PhotoVM:SetIsPauseSelect(false)
         MsgTipsUtil.ShowTips(LSTR(630048))
@@ -507,51 +613,84 @@ function PhotoMgr:SetActorLookCamera(Actor)
 end
 
 function PhotoMgr:RefreshCharacterLookAt()
-	local Major = MajorUtil.GetMajor()
+    if self:IsCurSeltMajor() then
+        self:SetFaceAndEyeCharacterLookAtCamera()
+    end
+end
+
+function PhotoMgr:SetFaceAndEyeCharacterLookAtCamera()
+    local Major = MajorUtil.GetMajor()
     local Selt = nil
 
-    if self.SeltEntID ~= MajorUtil.GetMajorEntityID() then
+    if not self:IsCurSeltMajor() then
         Selt = ActorUtil.GetActorByEntityID(self.SeltEntID)
     end
 
-	if PhotoVM.IsFollowWithFace and PhotoVM.IsFollowWithEye then
-        self:SetCharacterLookAtCamera(Major, _G.UE.ELookAtType.HeadAndEye)
-        self:SetCharacterLookAtCamera(Selt, _G.UE.ELookAtType.HeadAndEye)
-	elseif PhotoVM.IsFollowWithEye then
-        self:SetCharacterLookAtCamera(Major, _G.UE.ELookAtType.Eye)
-        self:SetCharacterLookAtCamera(Selt, _G.UE.ELookAtType.Eye)
-	elseif PhotoVM.IsFollowWithFace then
-        self:SetCharacterLookAtCamera(Major, _G.UE.ELookAtType.Head)
-        self:SetCharacterLookAtCamera(Selt, _G.UE.ELookAtType.Head)
-	else
-        self:SetCharacterLookAtCamera(Major, _G.UE.ELookAtType.None)
-        self:SetCharacterLookAtCamera(Selt, _G.UE.ELookAtType.None)
-	end
+    -- reset
+    PhotoUtil.SetCharacterLookAtCamera(Major, LookAtType.None, false, false)
+    PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.None, false, false)
+
+    if not PhotoVM.IsFollowWithFace then
+        -- 如果眼睛跟随开启，需要修改颜色跟随的参数（改为不叠加）
+        self:SetEyeCharacterLookAt()
+        return
+    end
+
+    -- 设置面向镜头
+    PhotoUtil.SetCharacterLookAtCamera(Major, LookAtType.Head, false, false)
+    PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.Head, false, false)
+    -- 只跟随一次，0.5后执行定帧操作（只看向一次）
+    _G.TimerMgr:AddTimer(self, function ()
+        -- 设置面向镜头定帧操作
+        PhotoUtil.SetCharacterLookAtCamera(Major, LookAtType.Head, true, false)
+        PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.Head, true, false)
+        if PhotoVM.IsFollowWithEye then
+            -- 设置眼睛跟随为叠加param
+            PhotoUtil.SetCharacterLookAtCamera(Major, LookAtType.Eye, false, true)
+            PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.Eye, false, true)
+        end
+    end, 0.5, 0, 1)
+end
+
+function PhotoMgr:SetEyeCharacterLookAt()
+    local Major = MajorUtil.GetMajor()
+    local Selt = nil
+
+    if not self:IsCurSeltMajor() then
+        Selt = ActorUtil.GetActorByEntityID(self.SeltEntID)
+    end
+
+    if PhotoVM.IsFollowWithEye then
+        -- 根据面向跟随的开启状态设置眼睛跟随是否为叠加操作
+        PhotoUtil.SetCharacterLookAtCamera(Major,LookAtType.Eye, false, PhotoVM.IsFollowWithFace)
+        PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.Eye, false, PhotoVM.IsFollowWithFace)
+    elseif PhotoVM.IsFollowWithFace then
+        -- 眼睛跟随关闭，面部跟随开启时不能直接设置为ELookAtType.None，否则会将面部跟随也清除掉，所以这里先将目标设置为None（ELookAtTargetType.None），由c++层判断跳过
+        PhotoUtil.SetCharacterLookAtNone(Major, LookAtType.Eye, false, true)
+        PhotoUtil.SetCharacterLookAtNone(Selt, LookAtType.Eye, false, true)
+    else
+        PhotoUtil.SetCharacterLookAtCamera(Major, LookAtType.None, false, false)
+        PhotoUtil.SetCharacterLookAtCamera(Selt, LookAtType.None, false, false)
+    end
 end
 
 function PhotoMgr:ResetLookAt()
 	local Major = MajorUtil.GetMajor()
     local Selt = nil
 
-    if self.SeltEntID ~= MajorUtil.GetMajorEntityID() then
+    if not self:IsCurSeltMajor() then
         Selt = ActorUtil.GetActorByEntityID(self.SeltEntID)
     end
 
-    self:CancelLookAt(Major)
+    self:CancelLookAt( )
     self:CancelLookAt(Selt)
 end
 
 function PhotoMgr:CancelLookAt(Actor)
 	local LookAtParams = _G.UE.FLookAtParams()
-    LookAtParams.LookAtType = _G.UE.ELookAtType.None
+    LookAtParams.LookAtType = LookAtType.None
     LookAtParams.Target.Type = _G.UE.ELookAtTargetType.None
     ActorUtil.SetCharacterLookAtParams(Actor, LookAtParams)
-end
-
-function PhotoMgr:SetCharacterLookAtCamera(Actor, Type)
-    if Actor and Type then
-        ActorUtil.SetCharacterLookAtCamera(Actor, Type)
-    end
 end
 
 function PhotoMgr:PauseSeltAnim(IsPause)
@@ -559,9 +698,37 @@ function PhotoMgr:PauseSeltAnim(IsPause)
         return
     end
 
-    local Selt = ActorUtil.GetActorByEntityID(self.SeltEntID)
-    if Selt then
-        PhotoActorUtil.PauseActorAnim(Selt, IsPause)
+    PhotoActorUtil.PauseActorAnim(ActorUtil.GetActorByEntityID(self.SeltEntID), IsPause)
+    PhotoActionVM:SetAmimIsPause(IsPause)
+    PhotoEmojiVM:SetAmimIsPause(IsPause)
+end
+
+function PhotoMgr:GetIsDirectPause()
+    return self.IsDirectPause == true
+end
+
+function PhotoMgr:DirectPauseSeltAnim(IsPause)
+    if self.IsDirectPause == IsPause then
+        return
+    end
+    self.IsDirectPause = IsPause
+    local IsPauseAll = IsPause
+    local IsPauseMouth = IsPause
+    local IsPauseActions = IsPause
+    if IsPause == false then
+        IsPauseAll = PhotoVM.IsPauseSelect
+        if IsPauseAll == false then
+            IsPauseMouth = PhotoEmojiVM.IsPauseEmojiAnim
+            IsPauseActions = PhotoActionVM.IsPauseAnim
+        else
+            IsPauseMouth = true
+            IsPauseActions = true
+        end
+    end
+    PhotoMgr:PauseMouthMontage(IsPauseMouth)
+    PhotoMgr:PauseAllMontage(IsPauseActions)
+    if self.SeltEntID then
+        PhotoActorUtil.PauseActorAnim(ActorUtil.GetActorByEntityID(self.SeltEntID), IsPauseAll)
     end
 end
 
@@ -605,6 +772,73 @@ function PhotoMgr:CallSettingFunc(SettingType, SubType, Value)
     PhotoSettingFunc.CallRoleSettingFunc(SettingType, SubType, Value)
 end
 
+function PhotoMgr:OnUpdateCameraParams(Params)
+    if not Params or not self.IsOnPhoto then
+		return
+	end
+    -- local EUpdateCameraParamReason = Params.IntParam1
+    self.CameraPos = PhotoCameraUtil.GetOffset()
+    if self.CameraPos then
+        LOG('[Photo][PhotoMgr][RecordStat][CameraPos]X=%f,Y=%f,Z=%f', self.CameraPos.X,self.CameraPos.Y,self.CameraPos.Z)
+    end
+end
+
+function PhotoMgr:OnHouseUploadPicture(UploadHousePicMsgBody)
+    if not UploadHousePicMsgBody then
+        return
+    end
+    -- message UploadHousePicRsp {
+    -- string UploadUrl = 1;             // 上传图片的上传链接
+    -- string HttpHeaderTokenKey = 2;    // token 塞到http的header 的key
+    -- string HttpToken = 3;             // token 值
+    -- string HttpMethod = 4;            // http method   POST
+    -- }
+    LOG('[PhotoMgr][OnHouseUploadPicture] UploadHousePicMsgBody = ' .. table.tostring(UploadHousePicMsgBody))
+    local Token = UploadHousePicMsgBody.HttpToken
+    local Url = UploadHousePicMsgBody.UploadUrl
+    local ImageStream = self.CurIconStream
+
+    if string.isnilorempty(ImageStream) then
+        ERR('[PhotoMgr][OnHouseUploadPicture] ImageStream is nil or empty')
+    end
+    
+    LOG(string.format('[PhotoMgr][OnHouseUploadPicture] Token = %s, Url = %s', tostring(Token), tostring(Url)))
+
+    local JsonStr = Json.encode({ data = ImageStream })
+    if _G.HttpMgr:Post(Url, Token, JsonStr, self.UploadHouseImageCallback, self) then
+        LOG(string.format('[PhotoMgr][OnHouseUploadPicture] Post success'))
+    end
+end
+
+function PhotoMgr:OnActorNetStateChanged(Params)
+    if MajorUtil.IsMajor(Params.ULongParam1) then
+		local bInCombat = Params.BoolParam1
+		if bInCombat and self.IsOnPhoto then
+            self:ClosePhotoUI()
+            MsgTipsUtil.ShowTips(LSTR(630083))
+        end
+	end
+end
+
+function PhotoMgr:UploadHouseImageCallback(MsgBody, Succ)
+    if not MsgBody then
+        LOG("[PhotoMgr][UploadHouseImageCallback] !! MsgBody = nil")
+        return
+    end
+    LOG(string.format('[PhotoMgr][UploadHouseImageCallback] Post Callback MsgBody = %s, Succ = %s', 
+        table.tostring(MsgBody), tostring(Succ)
+    ))
+
+    MsgBody = Json.decode(MsgBody)
+
+    LOG(string.format('[PhotoMgr][UploadHouseImageCallback] icon url = %s', tostring(MsgBody.photo_url)))
+
+	MsgTipsUtil.ShowTips(LSTR(630038))
+
+    self.CurIconStream = nil
+    _G.EventMgr:SendEvent(EventID.HousePicUploadFinish)
+end
+
 function PhotoMgr:SetActorVisible(Actor, IsOpen)
     if not Actor then
         return
@@ -623,6 +857,65 @@ function PhotoMgr:SetActorVisible(Actor, IsOpen)
             end
         end
     end
+
+    self:SetEffectVisible(Actor, IsOpen)
+end
+
+-- 检查actor是否隐藏，actor的特效是要同步
+function PhotoMgr:CheckActorEffectIsVisible(EntID)
+    local Actor = ActorUtil.GetActorByEntityID(EntID)
+    if Actor and not Actor:GetActorVisibility() then
+        self:SetEffectVisible(Actor, false)
+    end
+end
+
+function PhotoMgr:SetEffectVisible(Actor, IsOpen)
+    if not Actor then
+        return
+    end
+    local EntityID = Actor:GetActorEntityID()
+    local EffInfo = self.Role4EffectMap[EntityID]
+    if EffInfo and EffInfo.EffHdlId then
+        _G.UE.UFGameFXManager.Get():SetVisibility(EffInfo.EffHdlId, IsOpen)
+    end
+end
+
+function PhotoMgr:PauseSeltActorEffect(IsPause)
+    if not self.SeltEntID then
+        return
+    end
+
+    local EffInfo = self.Role4EffectMap[self.SeltEntID]
+    if EffInfo and EffInfo.EffHdlId then
+        self:PauseActorEffect(EffInfo.EffHdlId, IsPause)
+    end
+end
+
+function PhotoMgr:PauseAllActorEffect(IsPause)
+    for _, EntID in pairs(self.Role4EffList) do
+        local EffInfo = self.Role4EffectMap[EntID]
+        if EffInfo and EffInfo.EffHdlId then
+            self:PauseActorEffect(EffInfo.EffHdlId, IsPause)
+        end
+    end
+end
+
+function PhotoMgr:PauseActorEffect(EffHdlId, IsPause)
+    _G.UE.UFGameFXManager.Get():SetPause(EffHdlId, IsPause)
+end
+
+function PhotoMgr:SetMajorCanMove(bCanMove)
+    local StateComponent = MajorUtil.GetMajorStateComponent()
+    if not StateComponent then
+        return
+    end
+    local ActorControllStat = _G.UE.EActorControllStat
+    local State = StateComponent:GetActorControlState(ActorControllStat.CanMove)
+    if State == bCanMove then
+        return
+    end
+    StateComponent:SetActorControlState(ActorControllStat.CanMove, bCanMove, "PhotoMgr")
+    StateComponent:SetActorControlState(ActorControllStat.CanAllowMove, bCanMove, "PhotoMgr")
 end
 
 -------------------------------------------------------------------------------------------------------
@@ -671,10 +964,14 @@ function PhotoMgr:RecordStat()
 
     -- 相机
     PhotoCameraUtil.BeginCameraEnv()
-    self.CameraRot = PhotoCameraUtil.GetRatateRoll()
+    self.CameraRot = PhotoCameraUtil.GetRatate()
     self.CameraFOV = PhotoCameraUtil.GetFOV()
     self.CameraDOF = PhotoCameraUtil.GetDOFBokeh()
     self.CameraPos = PhotoCameraUtil.GetOffset()
+
+    if self.CameraPos then
+        LOG('[Photo][PhotoMgr][RecordStat][CameraPos]X=%f,Y=%f,Z=%f', self.CameraPos.X,self.CameraPos.Y,self.CameraPos.Z)
+    end
     -- 相机 景深
     local Cam = PhotoCameraUtil.GetCam()
     if Cam then
@@ -706,7 +1003,7 @@ function PhotoMgr:ResumeStat()
     local _ <close> = CommonUtil.MakeProfileTag("[Photo][PhotoMgr][ResumeStat]")
 
     -- 相机
-    PhotoCameraUtil.SetRatateRoll(self.CameraRot)
+    PhotoCameraUtil.SetRatate(self.CameraRot)
     PhotoCameraUtil.SetFOV(self.CameraFOV)
     PhotoCameraUtil.SetDOFBokehNotVirtual(self.CameraDOF)
     -- 相机 景深
@@ -818,13 +1115,12 @@ end
 
 function PhotoMgr:UpdateRoleAni()
 	-- if self:RoleInPlayingAni(AnimComp) == nil then
-        self:PlayPhotoAnim(self.SeltEntID)
+        --self:PlayPhotoAnim(self.SeltEntID)
     -- end
-
+    self:PlayPhotoAnim(MajorUtil.GetMajorEntityID())
     if self.AniEntList == nil then
         return
     end
-
     for i = 1, #self.AniEntList do
 		local EntID = self.AniEntList[i]
         if EntID == "MOUNT" then
@@ -845,32 +1141,26 @@ function PhotoMgr:CurRoleInPlayingAni()
     return self:RoleInPlayingAni(AnimComp)
 end
 
-function PhotoMgr:GetCurMainAnimInfo()
+function PhotoMgr:GetCurPlayingActionAnimInfo()
     local Info = self.AnimDic[AnimType.Action] or self.AnimDic[AnimType.Movement]
     return Info
-end
-
-function PhotoMgr:GetCurMainMontage()
-    local Info = self:GetCurMainAnimInfo() --self.AnimDic[AnimType.Action] or self.AnimDic[AnimType.Movement]
-    if Info then
-        return Info.Montage
-    end
 end
 
 function PhotoMgr:RoleInPlayingAni(AnimComp)
     if AnimComp == nil then return nil end
     local AnimInstance = AnimComp:GetAnimInstance()
     if AnimInstance then
-        local Montage = self:GetCurMainMontage()
-        if AnimationUtil.MontageIsPlaying(AnimInstance, Montage) then
+        local ActionAnimInfo = self:GetCurPlayingActionAnimInfo()
+        local Montage = ActionAnimInfo and ActionAnimInfo.Montage
+        if Montage and AnimationUtil.MontageIsPlaying(AnimInstance, Montage) then
             return Montage
         end
     end
 end
 
 function PhotoMgr:AllRoleStopMontage()
-    local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
-    self:StopRoleAllAnim(AnimComp)
+    local SelAnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
+    self:StopRoleAllAnim(SelAnimComp)
     if self.AniEntList == nil then
         return
     end
@@ -878,8 +1168,7 @@ function PhotoMgr:AllRoleStopMontage()
     for i = 1, #self.AniEntList do
 		local EntID = self.AniEntList[i]
         if EntID == "MOUNT" then
-            local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
-	        self:StopMountMontage(AnimComp)
+	        self:StopMountMontage(SelAnimComp)
         else
             local AnimComp = ActorUtil.GetActorAnimationComponent(EntID)
 		    self:StopRoleAllAnim(AnimComp)
@@ -933,64 +1222,49 @@ end
 
 function PhotoMgr:DoStopRoleAnim(AnimComp, AnimType)
     local Info = self.AnimDic[AnimType]
-    if Info then
-        local Montage = Info.Montage
-        if (AnimComp and Montage) then
-            local AnimInstance = AnimComp:GetAnimInstance()
-            if AnimInstance == nil then return end
-            AnimationUtil.MontageStop(AnimInstance, Montage)
-            -- AnimComp:StopAnimationByMontage(AnimInstance, Montage) 
-        end
+    local Montage = Info and Info.Montage
+    if (AnimComp and Montage) then
+        local AnimInstance = AnimComp:GetAnimInstance()
+        if AnimInstance == nil then return end
+        AnimationUtil.MontageStop(AnimInstance, Montage)
+        -- AnimComp:StopAnimationByMontage(AnimInstance, Montage) 
     end
 end
 
-function PhotoMgr:SetCurMontagePct(Pct)
-    local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
+function PhotoMgr:SetPlayingActionMontagePct(Pct)
+    local AnimInfo = self:GetCurPlayingActionAnimInfo()
+    local Montage = AnimInfo and AnimInfo.Montage
+    if CommonUtil.IsObjectValid(Montage) then
+        local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
+        if AnimComp == nil then return end
+        local AnimInstance = AnimComp:GetAnimInstance()
+        if AnimInstance == nil then return end
 
-    if AnimComp == nil then return end
-    local AnimInstance = AnimComp:GetAnimInstance()
-    if AnimInstance == nil then return end
-
-    local Info = self:GetCurMainAnimInfo() or {}
-    local Montage = Info.Montage
-    if Montage and CommonUtil.IsObjectValid(Montage) then
+        PhotoActionVM:SetAmimIsPause(true)
 		local BlendTime = AnimationUtil.MontageGetBlendTime(AnimInstance, Montage)
         local Len = Montage.SequenceLength - BlendTime
         local CurPos = Pct * Len
-
-        self:PauseAllMontage(true)
-        AnimationUtil.MontageStop(AnimInstance, Info.Montage)
-	    Info.Montage = AnimationUtil.PlayMontage(AnimComp, Montage, nil, nil, AnimInstance, nil, 0.00001, false, 0, 0, CurPos)
-        -- AnimationUtil.SetMontagePosition(AnimInstance, Montage, CurPos) 
-        -- AnimationUtil.MontagePause(AnimInstance, Montage)
+        --AnimationUtil.SetMontagePosition(AnimInstance, Montage, CurPos)
+        AnimationUtil.MontageStop(AnimInstance, Montage)
+	    AnimInfo.Montage = AnimationUtil.PlayMontage(AnimComp, Montage, nil, nil, AnimInstance, nil, 0.00001, false, 0, 0, CurPos)
+        LOG('[Photo][PhotoMgr] Anim-Frames = ' .. tostring(CurPos))
     else
         -- debug
-        local Info = self:GetCurMainAnimInfo()
-        _G.FLOG_WARNING('PhotoMgr:SetCurMontagePct Montage = nil, table = ' .. table.tostring_block(Info))
+        WARN('PhotoMgr:SetPlayingActionMontagePct Montage = nil, table = ' .. table.tostring_block(AnimInfo))
     end
 end
 
-function PhotoMgr:PauseCurMontage()
-    self:PauseAllMontage(true)
-end
-
-function PhotoMgr:ResumeCurMontage()
-    self:PauseAllMontage(false)
-end
-
 function PhotoMgr:PauseAllMontage(IsPause)
+    if table.is_nil_empty(self.AnimDic) then return end
     local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
-
     if AnimComp == nil then return end
     local AnimInstance = AnimComp:GetAnimInstance()
     if AnimInstance == nil then return end
 
-    local AnimMap = self.AnimDic or {}
-
-    for _, Info in pairs(AnimMap) do
-        local Montage = Info.Montage
-        if Montage then
-            Info.Montage = self:DoPauseMontage(AnimComp, AnimInstance, Montage, IsPause)
+    for Key, Info in pairs(self.AnimDic) do
+        -- 口型单独处理 PauseMouthMontage
+        if Key ~= AnimType.Mouth and Info.Montage then
+            Info.Montage = self:DoPauseMontage(AnimComp, AnimInstance, Info.Montage, IsPause)
         end
     end
 end
@@ -1008,26 +1282,75 @@ function PhotoMgr:DoPauseMontage(AnimComp, AnimInst, Montage, IsPause, Pos)
     end
 end
 
-function PhotoMgr:GetCurMontagePct()
-    local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
+function PhotoMgr:SetPlayingEmojiMontagePct(Pct)
+    local Major = MajorUtil.GetMajor()
+    local EmojiAnimInst = Major:GetEmojiAnimInst()
+    if EmojiAnimInst then
+        local MouthMontage = EmojiAnimInst:GetAnimMontageBySlotName("MouthSlot")
+        if MouthMontage then
+            PhotoEmojiVM:SetAmimIsPause(true)
+            -- local BlendTime = AnimationUtil.MontageGetBlendTime(EmojiAnimInst, MouthMontage)
+            -- local Len = MouthMontage.SequenceLength - BlendTime
+            -- local Length = AnimationUtil.GetAnimMontageLength(MouthMontage)
+            -- local CurPos = Pct * Length
+            AnimationUtil.SetMontagePosition(EmojiAnimInst, MouthMontage, Pct)
+        end
+    end
+end
 
-    if AnimComp == nil then return end
-    local AnimInstance = AnimComp:GetAnimInstance()
-    if AnimInstance == nil then return end
+function PhotoMgr:PauseMouthMontage(IsPause)
+    local AnimInfo = self.AnimDic[AnimType.Mouth]
+    local Montage = AnimInfo and AnimInfo.Montage
+    if not Montage then return end
+    local AnimInstance = self:GetSelActorAnimInstance()
+    if not AnimInstance then return end
 
-    local Montage = self:GetCurMainMontage()
+    AnimationUtil.SetMontagePlayRate(AnimInstance, Montage, IsPause and 0.00001 or 1)
+    local Major = MajorUtil.GetMajor()
+    local EmojiAnimInst = Major:GetEmojiAnimInst()
+    if EmojiAnimInst then
+        local MouthMontage = EmojiAnimInst:GetAnimMontageBySlotName("MouthSlot")
+        if MouthMontage then
+            if IsPause then
+                AnimationUtil.MontagePause(EmojiAnimInst, MouthMontage)
+            else
+                AnimationUtil.MontageResume(EmojiAnimInst, MouthMontage)
+            end
+        end
+    end
+end
 
+function PhotoMgr:GetPlayingActionMontagePct()
+    local ActionAnimInfo = self:GetCurPlayingActionAnimInfo()
+    local Montage = ActionAnimInfo and ActionAnimInfo.Montage
     -- if PhotoVM.GiveType == AnimType.Action or PhotoVM.GiveType == AnimType.Movement then
     --     Montage = self.AnimDic[PhotoVM.GiveType].Montage
     -- end
+    return self:GetPlayingMontagePct(Montage)
+end
 
-    if Montage and CommonUtil.IsObjectValid(Montage) then
-		local BlendTime = AnimationUtil.MontageGetBlendTime(AnimInstance, Montage)
-        local Len = Montage.SequenceLength - BlendTime
-        local CurPos = AnimationUtil.GetMontagePosition(AnimInstance, Montage)
-        local Pct = CurPos / Len
-        return  Pct
-    end
+function PhotoMgr:GetPlayingEmojiMontagePct()
+    local AnimInfo = self.AnimDic[AnimType.Mouth]
+    local Montage = AnimInfo and AnimInfo.Montage
+    return self:GetPlayingMontagePct(Montage)
+end
+
+function PhotoMgr:GetPlayingMontagePct(Montage)
+    if not CommonUtil.IsObjectValid(Montage) then return end
+    local AnimInstance = self:GetSelActorAnimInstance()
+    if not AnimInstance then return end
+
+    local BlendTime = AnimationUtil.MontageGetBlendTime(AnimInstance, Montage)
+    local Len = Montage.SequenceLength - BlendTime
+    local CurPos = AnimationUtil.GetMontagePosition(AnimInstance, Montage)
+    local Pct = CurPos / Len
+    return Pct
+end
+
+function PhotoMgr:GetSelActorAnimInstance()
+    local AnimComp = ActorUtil.GetActorAnimationComponent(self.SeltEntID)
+    if AnimComp == nil then return end
+    return AnimComp:GetAnimInstance()
 end
 
 function PhotoMgr:StopMountMontage(AnimComp)
@@ -1042,10 +1365,18 @@ function PhotoMgr:StopMountMontage(AnimComp)
 end
 
 function PhotoMgr:PlayPhotoAnim(EntID)
-    self:CheckAndLoopAnim(EntID, AnimType.Action, self.GetEmotionPath)
-    self:CheckAndLoopAnim(EntID, AnimType.Movement, self.GetMoveMouthPath)
-    self:CheckAndLoopAnim(EntID, AnimType.Emoji, self.GetEmotionPath)
-    self:CheckAndLoopAnim(EntID, AnimType.Mouth, self.GetMoveMouthPath)
+    if self.ActionID then
+        self:CheckAndLoopAnim(EntID, AnimType.Action, self.GetEmotionPath)
+    end
+    if self.MoveID then
+        self:CheckAndLoopAnim(EntID, AnimType.Movement, self.GetMoveMouthPath)
+    end
+    if self.EmojiID then
+        self:CheckAndLoopAnim(EntID, AnimType.Emoji, self.GetEmotionPath)
+    end
+    if self.MouthID then
+        self:CheckAndLoopAnim(EntID, AnimType.Mouth, self.GetMoveMouthPath)
+    end
 end
 
 function PhotoMgr:CheckAndLoopAnim(EntID, InAnimType, PathFunc)
@@ -1056,12 +1387,21 @@ function PhotoMgr:CheckAndLoopAnim(EntID, InAnimType, PathFunc)
     local ID = Info.ID
     local Montage = Info.Montage
     local AnimInstance = AnimComp:GetAnimInstance()
-
+    -- if InAnimType == 5 and ID then
+    --     local CurPos = AnimationUtil.GetMontagePosition(AnimInstance, Montage)
+    --     LOG(string.format('[Photo][PhotoMgr][CheckAndLoopAnim] Mouth CurPos = %f', CurPos))
+    -- end
     if ID ~= nil and AnimInstance ~= nil then
         -- loop
-        if (Montage ~= nil and (not AnimationUtil.MontageIsPlaying(AnimInstance, Montage))) and (not _G.PhotoActionVM.IsPauseAnim) then
+        if (Montage ~= nil and (not AnimationUtil.MontageIsPlaying(AnimInstance, Montage))) then
             -- print("loop SET " .. tostring(self.AnimDic[AnimType].Montage))
-            self.AnimDic[InAnimType].Montage = self:PlayPhotoMontageByAnimType(EntID, InAnimType, ID, PathFunc)
+            local IsPause = PhotoActionVM.IsPauseAnim
+            if InAnimType == AnimType.Mouth then
+                IsPause = PhotoEmojiVM.IsPauseEmojiAnim
+            end
+            if not IsPause then
+                self.AnimDic[InAnimType].Montage = self:PlayPhotoMontageByAnimType(EntID, InAnimType, ID, PathFunc)
+            end
         -- start
         elseif Montage == nil then
             -- print("PLAY SET" .. tostring(self.AnimDic[AnimType].Montage))
@@ -1075,10 +1415,12 @@ function PhotoMgr:PlayPhotoMontageByAnimType(EntID, InAnimType, ID, PathFunc)
         return _G.EmotionMgr:PhotoPlayEmotion(ID, EntID)
     else
         local AnimComp = ActorUtil.GetActorAnimationComponent(EntID)
-        local ActionAniPath = PathFunc(self, ID)
-        local Rate = InAnimType == AnimType.Emoji and 0.00001 or 1
-        local StartAtTime = InAnimType == AnimType.Emoji and 1 or 0
-        return self:PlayPhotoMontage(AnimComp, ActionAniPath, Rate, nil, nil, StartAtTime)
+        if AnimComp then
+            local ActionAniPath = PathFunc(self, ID)
+            local Rate = InAnimType == AnimType.Emoji and 0.00001 or 1
+            local StartAtTime = InAnimType == AnimType.Emoji and 1 or 0
+            return self:PlayPhotoMontage(AnimComp, ActionAniPath, Rate, nil, nil, StartAtTime)
+        end
     end
 end
 
@@ -1091,10 +1433,6 @@ end
 
 function PhotoMgr:DoPlayPhotoMontage(AnimComp, StateAnim, PlayRate, BlendInTime, BlendOutTime, StartAtTime)
     return AnimComp:PlayMontage(StateAnim, nil , nil, PlayRate or 1, BlendInTime or 0.25, BlendOutTime or 0.25, nil, false, StartAtTime, true)
-end
-
-function PhotoMgr:PlayPhotoMontageByEmoSys(EntID, EmoID)
-    -- 
 end
 
 function PhotoMgr:PlayPhotoMountAnim(AnimComp)
@@ -1123,7 +1461,6 @@ end
 
 
 function PhotoMgr:GetEmotionPath(ID)
-    local EmotionDefines = require("Game/Emotion/Common/EmotionDefines")
     local EntityID = MajorUtil.GetMajorEntityID()
     local CurState = _G.EmotionMgr:GetCurState(EntityID)
     return EmotionAnimUtils.GetEmotionAtlPath(ID, EmotionDefines.AnimPathType[CurState])
@@ -1141,11 +1478,36 @@ function PhotoMgr:GetMoveMouthPath(ID)
     return AnimMgr:GetActionTimeLinePath(Cfg.Filename)
 end
 
+function PhotoMgr:CheckIsShowUseMouthTip(ID)
+    local IsUseMouth = self:GetNeedToPauseLips()
+    if IsUseMouth == true and self.MouthID then
+        local AnimInfo = self.AnimDic[AnimType.Mouth]
+        local Montage = AnimInfo and AnimInfo.Montage
+        if Montage then
+            MsgTipsUtil.ShowTips(LSTR(630082))
+        end
+    end
+end
+
+function PhotoMgr:GetNeedToPauseLips()
+    local EntityID = MajorUtil.GetMajorEntityID()
+    local BaseCharacter = ActorUtil.GetActorByEntityID(EntityID)
+    local EmojiAnimInst = BaseCharacter and BaseCharacter:GetEmojiAnimInst() or nil
+    local bPauseLips = EmojiAnimInst and EmojiAnimInst.bCpp_NeedToPauseLips
+    --print("====== 口型是否被屏蔽了 ", bPauseLips)
+    return bPauseLips
+end
+
+function PhotoMgr:GetEmotionIsUseMouth(EmotionID)
+	local EmotionData = EmotionCfg:FindCfgByKey(EmotionID)
+	if not EmotionData then return end
+    return EmotionData.IsUseMouth == 1
+end
 
 function PhotoMgr:SetActionID(ActionID)
     ---@TODO FLOW OPT
     if ActionID then
-        _G.PhotoActionVM:CancelIdxMovement()
+        PhotoActionVM:CancelIdxMovement()
         self:RoleStopAnimByType(AnimType.Movement)
         self.MoveID = nil
     end
@@ -1161,7 +1523,7 @@ end
 function PhotoMgr:SetMoveID(MoveID)
     ---@TODO FLOW OPT
     if MoveID then
-        _G.PhotoActionVM:CancelIdxMontion()
+        PhotoActionVM:CancelIdxMontion()
         self:RoleStopAnimByType(AnimType.Action)
         self.ActionID = nil
     end
@@ -1172,6 +1534,7 @@ function PhotoMgr:SetMoveID(MoveID)
 
     PhotoVM.GiveType = PhotoDefine.PhotoGiveType.Movement
     self:UpdatePlayAniRoleList()
+    self:CheckFashionViable()
 end
 
 function PhotoMgr:SetEmojiID(EmojiID)
@@ -1201,8 +1564,34 @@ function PhotoMgr:SetMouthID(MouthID)
     self:UpdatePlayAniRoleList()
 end
 
+-- 是否需要隐藏时尚配饰，目前只处理移动时对伞进行隐藏
+function PhotoMgr:CheckFashionViable()
+    local MajorActor = MajorUtil.GetMajor()
+    if not MajorActor or not MajorActor.HideOrnamentCompByType or not MajorActor.ShowOrnamentCompByType then
+        return
+    end
+    local FashionType = FashionDecoDefine.FashionDecoType.Umbrella
+    local bHidden = MajorActor:CheckFashionDecorateHiddenState(FashionType)
+    if self.InitFashionHidden == nil then
+        self.InitFashionHidden = bHidden
+    end
+    if self.MoveID then
+        if bHidden == false then
+            MajorActor:HideOrnamentCompByType(FashionType)
+        end
+    else
+        if self.InitFashionHidden == false then
+            self:RegisterTimer(function ()
+                MajorActor:ShowOrnamentCompByType(FashionType)
+            end, 0.1, 0.1, 1)
+        end
+    end
+end
 
 function PhotoMgr:UpdatePlayAniRoleList()
+    if not self:IsCurSeltMajor() then
+        return
+    end
     if PhotoVM.IsGiveAll then
         self:GetGiveActorList()
     else
@@ -1215,8 +1604,8 @@ end
 
 ---@todo temporary fix for animation not cleaning up issues
 function PhotoMgr:TryClearAniVMStat()
-    _G.PhotoActionVM:ResetRoleActAni()
-    _G.PhotoEmojiVM:ResetRoleActAni()
+    PhotoActionVM:ResetRoleActAni()
+    PhotoEmojiVM:ResetRoleActAni()
 end
 
 ---@todo temporary fix for animation not cleaning up issues
@@ -1289,10 +1678,10 @@ function PhotoMgr:OnRegisterNetMsgTemplate()
 end
 
 function PhotoMgr:ReqPhotoTemplate(SubCmd, MsgBody)
-    LOG(string.format('[Photo][PhotoMgr][ReqPhotoTemplate] SubCmd = %s, MsgBody = %s',
-        tostring(SubCmd), 
-        table.tostring(MsgBody)
-    ))
+    -- LOG(string.format('[Photo][PhotoMgr][ReqPhotoTemplate] SubCmd = %s, MsgBody = %s',
+    --     tostring(SubCmd), 
+    --     table.tostring(MsgBody)
+    -- ))
     MsgBody.cmd = SubCmd
     GameNetworkMgr:SendMsg(MAIN_CMD, SubCmd, MsgBody)
 end
@@ -1300,20 +1689,21 @@ end
 -- Save
 
 function PhotoMgr:ReqSavePhotoTemplate(ID, Template)
+    local TempJson = Json.encode(Template)
     local MsgBody = {
         save = {
             photo_id = ID,
-            photo_metadata = Json.encode(Template),
+            photo_metadata = TempJson,
         }
     }
-
+    --LOG(string.format('[Photo][PhotoMgr][ReqSavePhotoTemplate] TempJson = %s', TempJson))
     self:ReqPhotoTemplate(SUB_CMD.PhotosSave, MsgBody)
     self.ReqTemplateID = ID
     self.ReqTemplate = Template
 end
 
 function PhotoMgr:RespSavePhotoTemplate(MsgBody)
-    LOG('[Photo][PhotoMgr][RespSavePhotoTemplate] MsgBody = ' .. table.tostring(MsgBody))
+    --LOG('[Photo][PhotoMgr][RespSavePhotoTemplate] MsgBody = ' .. table.tostring(MsgBody))
     local Msg = MsgBody.save
 	if nil == Msg then
 		return
@@ -1364,7 +1754,8 @@ function PhotoMgr:PostTemplateImageCallback(MsgBody, Succ)
     LOG(string.format('[Photo][PhotoMgr][PostTemplateImage] icon url = %s', tostring(MsgBody.photo_url)))
 
     self:ReqGetPhotoTemplate()
-	MsgTipsUtil.ShowTips(_G.LSTR(630038))
+	MsgTipsUtil.ShowTips(LSTR(630038))
+    self.CurIconStream = nil
     -- if (not self.ReqTemplateID) then
     --     ERR('[Photo][PhotoMgr][PostTemplateImage] ReqTemplateImageUrl or ReqTemplateID nil')
     --     return
@@ -1455,7 +1846,7 @@ function PhotoMgr:RespGetPhotoTemplate(MsgBody)
     end
 
     self:CoverCustTemplate(CustTemplateList)
-    LOG('[Photo][PhotoMgr][RespGetPhotoTemplate] CoveTemplateList = ' .. table.tostring(CustTemplateList))
+    --LOG('[Photo][PhotoMgr][RespGetPhotoTemplate] CoveTemplateList = ' .. table.tostring(CustTemplateList))
 end
 
 ---@region Data operation
@@ -1479,12 +1870,17 @@ local function NormNum(V, Min, Max)
     return (1 - (V - Min) / (Max - Min))
 end
 
-function PhotoMgr:ConvertAndSetConfigTemplate()
-    if self.CfgTemplateList and not table.empty(self.CfgTemplateList) then
+function PhotoMgr:EnsureCfgTempListInitialized()
+    if not table.is_nil_empty(self.CfgTemplateList) then
         return
     end
-
-    local AllCfg = PhotoTemplateCfg:FindAllCfg()
+    self:ConvertAndSetConfigTemplate()
+end
+function PhotoMgr:ConvertAndSetConfigTemplate()
+    self.CfgTemplateList = {}
+    local Race = MajorUtil.GetMajorRaceID()
+    local CfgSearchCond = string.format("Race == %d", Race)
+    local AllCfg = PhotoTemplateCfg:FindAllCfg(CfgSearchCond) or {}
     -- print('[PhotoMgr]:ConvertAndSetConfigTemplate All = ' .. table.tostring_block(AllCfg, 4))
     local AllEmo = self:GetEmojCfgList()
     local AllAct = self:GetActionCfgList()
@@ -1494,27 +1890,23 @@ function PhotoMgr:ConvertAndSetConfigTemplate()
     for _, Cfg in pairs(AllCfg or {}) do
         local Item = {}
 
-        local FOV = NormNum(Cfg.FOV, PhotoDefine.CameraUnit2ValueFOVMin, 
-                        PhotoDefine.CameraUnit2ValueFOVMax) * PhotoDefine.CameraTurnplateUnitMax
-        local DOF = NormNum(Cfg.DOF, PhotoDefine.CameraUnit2ValueDOFMin, 
-                        PhotoDefine.CameraUnit2ValueDOFMax) * PhotoDefine.CameraTurnplateUnitMax
-        local Rot = NormNum(Cfg.Rot, PhotoDefine.CameraUnit2ValueRotMin, 
-                        PhotoDefine.CameraUnit2ValueRotMax) * PhotoDefine.CameraTurnplateUnitMax
+        local FOV = NormNum(Cfg.FOV, PhotoDefine.CameraUnit2ValueFOVMin, PhotoDefine.CameraUnit2ValueFOVMax) * PhotoDefine.CameraTurnplateUnitMax
+        local DOF = NormNum(Cfg.DOF, PhotoDefine.CameraUnit2ValueDOFMin, PhotoDefine.CameraUnit2ValueDOFMax) * PhotoDefine.CameraTurnplateUnitMax
+        local Rot = NormNum(Cfg.Rot, PhotoDefine.CameraUnit2ValueRotMin, PhotoDefine.CameraUnit2ValueRotMax) * PhotoDefine.CameraTurnplateUnitMax
 
         PhotoTemplateUtil.SetBaseInfo(Item, Cfg.Name, Cfg.Icon, Cfg.ID, false)
         PhotoTemplateUtil.SetMain(Item, Cfg.IsFollowFace == 1, Cfg.IsFollowEye == 1)
-        PhotoTemplateUtil.SetCam(Item, FOV, DOF, Rot, Cfg.CamOffX, Cfg.CamOffY,{Yaw = Cfg.Yaw or 0, Pitch = Cfg.Pitch or 0})
+        PhotoTemplateUtil.SetCam(Item, FOV, DOF, Rot, Cfg.CamOffX, Cfg.CamOffY, {Yaw = Cfg.Yaw or 0, Pitch = Cfg.Pitch or 0}, Cfg.CamDis)
         PhotoTemplateUtil.SetScene(Item, Cfg.WeatherID, Cfg.Time)
-        PhotoTemplateUtil.SetFilter(Item, Cfg.FilterID)
+        PhotoTemplateUtil.SetFilter(Item, Cfg.FilterID, Cfg.FilterPrecent)
         PhotoTemplateUtil.SetDarkFrame(Item, Cfg.DuskyPower, Cfg.DuskyAspect, Cfg.DuskyRed, Cfg.DuskyYellow, Cfg.DuskyBlue)
         PhotoTemplateUtil.SetRole(Item, Cfg.ActID, Cfg.EmoID, Cfg.MoveID, Cfg.MouthID)
-
-        local Pct = Cfg.ActPct -- = 0.12
+        PhotoTemplateUtil.SetActSettings(Item, Cfg.Spin)
 
         if Cfg.MoveID then
             local _, Idx = table.find_item(AllMove, Cfg.MoveID, "ID")
             if Idx then
-                PhotoTemplateUtil.SetActAndMove(Item, 1, Idx, Pct)
+                PhotoTemplateUtil.SetActOrMove(Item, 1, Idx, Cfg.MoveFrames, Cfg.MoveID)
             end
         end
 
@@ -1522,7 +1914,7 @@ function PhotoMgr:ConvertAndSetConfigTemplate()
         if Cfg.ActID then
             local _, Idx = table.find_item(AllAct, Cfg.ActID, "ID")
             if Idx then
-                PhotoTemplateUtil.SetActAndMove(Item, 0, Idx, Pct)
+                PhotoTemplateUtil.SetActOrMove(Item, 0, Idx, Cfg.ActPct, Cfg.ActID)
             end
         end
 
@@ -1537,12 +1929,11 @@ function PhotoMgr:ConvertAndSetConfigTemplate()
         end
 
         if EmoIdx or MouthIdx then
-            PhotoTemplateUtil.SetEmojAndMouth(Item, EmoIdx, MouthIdx)
+            PhotoTemplateUtil.SetEmojAndMouth(Item, EmoIdx, MouthIdx, Cfg.MouthFrames)
         end
 
-        table.insert(self.CfgTemplateList, Item)
+        self.CfgTemplateList[Cfg.ID] = Item
     end
-
 end
 
 function PhotoMgr:NextCustTempID()
@@ -1572,6 +1963,7 @@ function PhotoMgr:AddCustTemplate(Name, Icon)
     self:TemplateSave(Template, Name, ID, "")
     -- table.insert(self.CustTemplateList, Template)
     -- self:OnCustTemplateListChanged()
+    --LOG(string.format('[Photo][PhotoMgr][AddCustTemplate] Template = %s', table.tostring(Template)))
     self:ReqSavePhotoTemplate(ID, Template)
 
     return true
@@ -1893,13 +2285,48 @@ function PhotoMgr:UpdateRoleEff()
         table.tostring(self.Role4EffectMap)
     ))
 
-    self.Role4EffList = self.RoleEffInfo.IsSingle and {[1] = self.SeltEntID} or _G.TeamMgr:GetMemberRoleIDList()
+    self.Role4EffList = self:GetRoleEffectList()
+
     self:CheckAndClearRoleEff()
     self:PlayRoleEffs()
+
+    -- 更新后延迟检测暂停状态
+    -- if PhotoVM.IsPauseSelect and self.IsOnPhoto then
+    --     self:RegisterTimer(function() self:CheckSelActorIsPause() end, 0.5)
+    -- end
+end
+
+local function CheckListContainValue(list, val)
+    if table.is_nil_empty(list) or not val then
+        return
+    end
+    for _, value in pairs(list) do
+        if value == val then
+            return true
+        end
+    end
+end
+
+function PhotoMgr:GetRoleEffectList()
+    local RoleList = self.RoleEffInfo.IsSingle and {[1] = self.SeltEntID} or _G.TeamMgr:GetMemberRoleIDList()
+
+    -- 将状态效果同步给次乘
+    local PassengerEntityIDList = PhotoUtil.GetPassengerEnts()
+    if not table.is_nil_empty(PassengerEntityIDList) then
+        for _, EntID in pairs(PassengerEntityIDList) do
+            if not CheckListContainValue(RoleList, EntID) then
+                table.insert(RoleList, EntID)
+            end
+        end
+    end
+    
+    return RoleList
 end
 
 function PhotoMgr:CheckAndClearRoleEff(IsForce)
     local DelList = {}
+    local isMajor = false
+    local MajorEntID = MajorUtil.GetMajorEntityID()
     for EntID, CacheInfo in pairs(self.Role4EffectMap) do
         local ShouldDelete = false
 
@@ -1915,13 +2342,34 @@ function PhotoMgr:CheckAndClearRoleEff(IsForce)
         --     ShouldDelete = true
         -- end
 
+        if not isMajor and EntID == MajorEntID then
+            isMajor = true
+        end
+     
         if ShouldDelete then
             table.insert(DelList, EntID)
         end
     end
 
     for _, EntID in pairs(DelList) do
-        if self.Role4EffectMap[EntID].ClearHdl then
+        if self.Role4EffectMap[EntID] and self.Role4EffectMap[EntID].ClearHdl then
+            self.Role4EffectMap[EntID].ClearHdl()
+        end
+        self.Role4EffectMap[EntID] = nil
+    end
+
+    if isMajor then
+        self:ClearPassengerRoleEff()
+    end
+end
+
+function PhotoMgr:ClearPassengerRoleEff()
+    local PassengerEntityIDList = PhotoUtil.GetPassengerEnts()
+    if table.is_nil_empty(PassengerEntityIDList) then
+        return
+    end
+    for _, EntID in pairs(PassengerEntityIDList) do
+        if self.Role4EffectMap[EntID] and self.Role4EffectMap[EntID].ClearHdl then
             self.Role4EffectMap[EntID].ClearHdl()
         end
         self.Role4EffectMap[EntID] = nil
@@ -1936,11 +2384,14 @@ function PhotoMgr:PlayRoleEffs()
 
     for _, EntID in pairs(self.Role4EffList) do
 
-        local Hdl = self:PlayRoleEff(EntID, self.RoleEffInfo.CurrRoleEffID) --PhotoEffectUtil.CreateEffect(EntID, self.RoleEffInfo.CurrRoleEffID)
+        local Hdl, EffHdlId = self:PlayRoleEff(EntID, self.RoleEffInfo.CurrRoleEffID) --PhotoEffectUtil.CreateEffect(EntID, self.RoleEffInfo.CurrRoleEffID)
         self.Role4EffectMap[EntID] = {
             ClearHdl = Hdl,
             EffID = self.RoleEffInfo.CurrRoleEffID,
+            EffHdlId = EffHdlId,
         }
+
+        self:CheckActorEffectIsVisible(EntID)
     end
 end
 
@@ -1952,60 +2403,23 @@ function PhotoMgr:PlayRoleEff(EntID, RoleEffID)
         return
     end
 
-
     local EntityID = EntID
-
 
     if (not EntityID) or EntityID == 0 then
         ERR('[Photo][PhotoMgr][PlayRoleEff] Not EntityID, EntID = ' .. tostring(EntID))
         return
     end
 
-    LOG(string.format('[Photo][PhotoMgr][PlayRoleEff] Cfg = %s',
-        table.tostring(Cfg)
-    ))
+    --LOG(string.format('[Photo][PhotoMgr][PlayRoleEff] Cfg = %s', table.tostring(Cfg)))
 
     local EffHdl
-    local FuncHdl
-    local AnimHdl 
-
     -- Cfg.Effect = "VfxBlueprint'/Game/Assets/Effect/Particles/Monster/Common/VBP/BP_dk10ht_hea0s.BP_dk10ht_hea0s_C'"
     if not string.isnilorempty(Cfg.Effect) then
         EffHdl = PhotoEffectUtil.CreateEffect(EntityID, Cfg.Effect)
     end
-
-    FuncHdl = PhotoEffectUtil.PlayStat(EntityID, RoleEffID)
-
-    -- Cfg.Anim = 13
-    if Cfg.Anim and Cfg.Anim > 0 then
-        local AnimComp = ActorUtil.GetActorAnimationComponent(EntityID)
-        if AnimComp then
-            local ActionAniPath = self:GetEmotionPath(Cfg.Anim)
-            if ActionAniPath then
-                local UpValMont = AnimComp:PlayAnimation(ActionAniPath)
-                AnimHdl = function()
-                    LOG(string.format('[Photo][PhotoMgr][PlayRoleEff] Stop Anim = %s', tostring(Cfg.Anim)))
-                    
-                    if AnimComp == nil then return end
-                    local AnimInstance = AnimComp:GetAnimInstance()
-                    if AnimInstance == nil then return end
-
-                    -- local Montage = AnimInstance:GetCurrentActiveMontage()
-                    if UpValMont then
-                        -- AnimComp:StopAnimationByMontage(AnimInstance, Montage) 
-                        AnimationUtil.MontageStop(AnimInstance, UpValMont) 
-                    end
-                end
-            else
-                ERR('[Photo][PhotoMgr][PlayRoleEff] Not ActionAniPath, AnimID = ' .. tostring(Cfg.Anim))
-            end
-            
-        else
-            ERR('[Photo][PhotoMgr][PlayRoleEff] Not AnimComp, EntityID = ' .. tostring(EntityID))
-        end
-        
-    end
-
+    local FuncHdl = PhotoEffectUtil.PlayStat(EntityID, RoleEffID)
+    local AnimHdl = self:GetHdlAndPlayStateAnim(Cfg, EntityID)
+   
     return function ()
         if EffHdl then
             PhotoEffectUtil.DelEffect(EffHdl)
@@ -2018,6 +2432,42 @@ function PhotoMgr:PlayRoleEff(EntID, RoleEffID)
         if AnimHdl then
             AnimHdl()
         end
+    end, EffHdl
+end
+
+function PhotoMgr:GetHdlAndPlayStateAnim(Cfg, EntityID)
+    -- Cfg.Anim = 13
+    if Cfg.Anim and Cfg.Anim > 0 then
+        local AnimComp = ActorUtil.GetActorAnimationComponent(EntityID)
+        if not AnimComp then
+            ERR('[Photo][PhotoMgr][PlayRoleEff] Not AnimComp, EntityID = ' .. tostring(EntityID))
+            return
+        end
+
+        local AnimInstance = AnimComp:GetPlayerAnimInstance()
+        if AnimInstance and AnimInstance.bUseBed then
+            --躺下无法播放状态动画
+            LOG(string.format('[Photo][PhotoMgr][GetHdlAndPlayStateAnim] AnimInstance.bUseBed'))
+            return
+        end
+
+        local ActionAniPath = self:GetEmotionPath(Cfg.Anim)
+        if not ActionAniPath then
+            ERR('[Photo][PhotoMgr][PlayRoleEff] Not ActionAniPath, AnimID = ' .. tostring(Cfg.Anim))
+            return
+        end
+
+        local UpValMont = AnimComp:PlayAnimation(ActionAniPath)
+        local AnimHdl = function()
+            LOG(string.format('[Photo][PhotoMgr][PlayRoleEff] Stop Anim = %s', tostring(Cfg.Anim)))
+            if AnimInstance == nil then return end
+            -- local Montage = AnimInstance:GetCurrentActiveMontage()
+            if UpValMont then
+                -- AnimComp:StopAnimationByMontage(AnimInstance, Montage) 
+                AnimationUtil.MontageStop(AnimInstance, UpValMont) 
+            end
+        end
+        return AnimHdl
     end
 end
 
@@ -2094,6 +2544,26 @@ function PhotoMgr:DoUpdateDOFSetting(Dis)
     PhotoCameraUtil.SetDOFRegionAndDis(CamDis, Region)
 end
 
+function PhotoMgr:PrintCameraData()
+    LOG('### PhotoMgr:PrintCameraData() ')
+    local CamData = PhotoCamVM:GetTLogData()
+    local Cam = PhotoCameraUtil.GetCamCtr()
+    local CamDis = Cam:GetTargetArmLength()
+    local MajorRot = PhotoActorUtil.GetMajorRotator()
+    local CamRot = PhotoCameraUtil.GetRatate()
+    local RelaRat = {
+        Yaw = CamRot.Yaw - MajorRot.Yaw - 180,
+        Pitch = CamRot.Pitch - MajorRot.Pitch,
+    }
+    -- local RelaRat = {
+    --     Yaw = CamRot.Yaw ,
+    --     Pitch = CamRot.Pitch,
+    -- }
+    LOG(string.format("[PrintCameraData] DOF=%f, FOV=%f, Rot=%f, CamDis=%f, Yaw=%f, Pitch=%f, OffX=%f, OffY=%f",
+        CamData.DOF, CamData.FOV, CamData.Rot, CamDis, RelaRat.Yaw, RelaRat.Pitch, PhotoCamVM.OffX, PhotoCamVM.OffY))
+    LOG('### PhotoMgr:PrintCameraData() ')
+end
+
 -------------------------------------------------------------------------------------------------------
 ---@region 拍照
 
@@ -2112,13 +2582,18 @@ function PhotoMgr:ReqTakePhoto()
 end
 
 function PhotoMgr:OnTimerTakePhoto()
-    LOG(string.format('[Photo][PhotoMgr][OnTimerTakePhoto]'))
+    LOG('[Photo][PhotoMgr][OnTimerTakePhoto]')
 
     PhotoMediaUtil.CapScreen(function (W, H, AR) 
         local Tex = _G.UE.UMediaUtil.CovertColorsToTexture2D("", AR, W, H)
         _G.UE.UUIUtil.SetTextureHighQuality(Tex,_G.UE.TextureCompressionSettings.TC_EditorIcon)
         -- print('testinfo set succ')
-        _G.ShareMgr:OpenPhotoShare(Tex, W, H, true)
+        --self:OpenPhotoEditView(Tex, W, H)
+        if self.EditCropType then
+            self:OpenPhotoEditView(Tex, W, H)
+        else
+            _G.ShareMgr:OpenPhotoShare(Tex, W, H, true)
+        end
         -- _G.UE.USettingUtil.ExeCommand("r.ScreenPercentage", 100)
         self.TakePhotoTimerID = nil
         EventMgr:SendEvent(EventID.TakePhotoSucc)
@@ -2126,6 +2601,14 @@ function PhotoMgr:OnTimerTakePhoto()
         self:TLogTakePhoto()
 		_G.ObjectMgr:CollectGarbage(false)
 	end)
+end
+
+-------------------------------------------------------------------------------------------------------
+
+---@region 编辑
+function PhotoMgr:OpenPhotoEditView(Tex, Width, Height)
+    --self.EditCropType = PhotoDefine.UIEditCropType.House
+    _G.UIViewMgr:ShowView(_G.UIViewID.PhotoEditMainPanel, {SourceTex = Tex, SourceW = Width, SourceH = Height})
 end
 
 -------------------------------------------------------------------------------------------------------

@@ -19,6 +19,7 @@ local RichTextUtil = require("Utils/RichTextUtil")
 local MsgTipsID = require("Define/MsgTipsID")
 local LifeSkillConfig = require("Game/Skill/LifeSkillConfig")
 local CommonUtil = require("Utils/CommonUtil")
+local MainPanelVM = require("Game/Main/MainPanelVM")
 --local GatheringJobSkillPanelView = require("Game/GatheringJob/View/GatheringJobSkillPanelView")
 
 local LSTR = _G.LSTR
@@ -292,6 +293,11 @@ end
 
 function CollectionMgr:CastSkill(index, SkillID, IsExpendDurability)
     if IsExpendDurability then
+        local LeftBagNum = _G.BagMgr:GetBagLeftNum()
+        if LeftBagNum <= 0 then
+            _G.MsgTipsUtil.ShowTipsByID(MsgTipsID.WildBoxBagFull) --"背包已满"
+            return
+        end
         --如果释放(消耗耐久的)技能时是最后一次耐久，LIFE_SKILL_PRIVATE_GATHER_CMD消息要最后执行（会移除采集点，退出采集状态，在此之前保证收藏面板的刷新，收藏状态的退出）
         local LeftTimes = _G.GatheringJobSkillPanelVM.LeftTimes
         if type(LeftTimes) == "number" and LeftTimes == 1 then
@@ -395,7 +401,7 @@ function CollectionMgr:ExitCollectionPanel(ShowGatheringJobPanel)
     if ShowGatheringJobPanel then
         _G.UIViewMgr:ShowView(UIViewID.GatheringJobPanel, _G.GatherMgr.GatherJobPanelParams)
     end
-    
+
     --如有存的采集点刷新消息要执行完
     self:UpdateGatherMsg()
 
@@ -406,6 +412,9 @@ function CollectionMgr:ExitCollectionPanel(ShowGatheringJobPanel)
     _G.EventMgr:SendEvent(_G.EventID.DeActiveGatherItemView, CurActiveEntityID)
     if not ShowGatheringJobPanel then
         _G.EventMgr:SendEvent(_G.EventID.ForcePeacePanel)
+    else
+        MainPanelVM:SetEmotionVisible(false)
+        MainPanelVM:SetPhotoVisible(false)
     end
    -- _G.EventMgr:SendEvent(_G.EventID.ExitGatherCollectionState)
 end

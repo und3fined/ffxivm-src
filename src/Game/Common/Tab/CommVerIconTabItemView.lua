@@ -13,8 +13,11 @@ local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallbac
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
+local RedDotDefine = require("Game/CommonRedDot/RedDotDefine")
 local ProtoCS = require("Protocol/ProtoCS")
 local EventID = require("Define/EventID")
+
+local RedDotStyle = RedDotDefine.RedDotStyle
 
 local SelectShowTypeDefine = {
 	RepleaceIconBySelect = 0,
@@ -131,6 +134,7 @@ function CommVerIconTabItemView:OnRegisterBinder()
 		{ "TextPercentVisible", UIBinderSetIsVisible.New(self, self.TextPercent) },
 		{ "Percent", UIBinderSetText.New(self, self.TextPercent) },
 		{ "bShowlock", UIBinderSetIsVisible.New(self, self.ImgUnlock) },
+		{ "bCustomsizedRedDotShow", UIBinderValueChangedCallback.New(self, nil, self.OnSetCustomRedDotVisible) },
 	}
 
 	self:RegisterBinders(self.ViewModel, Binders)
@@ -181,8 +185,15 @@ function CommVerIconTabItemView:UpdateItem(Data)
 	self.IsUnLock = _G.ModuleOpenMgr:CheckOpenState(Data.ModuleID) 
 
 	---红点更新
-	if Data.RedDotType ~= nil or Data.RedDotData ~= nil then
-		self:UpdateRedDot(Data)
+	local bCustomsized = Data.bCustomsizedRedDot
+	if bCustomsized then
+		self:UpdateItemRedDotCustomsize(Data)
+	else
+		local RedDotType = Data.RedDotType
+		local RedDotData = Data.RedDotData
+		if RedDotType ~= nil or RedDotData ~= nil then
+			self:UpdateRedDot(Data)
+		end
 	end
 end
 
@@ -232,6 +243,39 @@ function CommVerIconTabItemView:OnIsPlayPointAniChanged()
 	else
 		self:StopAnimation(self.AnimPointLoop)
 	end
+end
+
+function CommVerIconTabItemView:UpdateItemRedDotCustomsize(ItemVM)
+	if ItemVM == nil then
+		return
+	end	
+
+	-- 屏蔽不使用
+	local RedDotWidget2 = self.RedDot2
+	if RedDotWidget2 then
+		RedDotWidget2:SetIsCustomizeRedDot(true)
+		RedDotWidget2:SetRedDotUIIsShow(false)
+	end
+
+	local RedDotWidget1 = self.CommonRedDot
+	if not RedDotWidget1 then
+		return
+	end
+	RedDotWidget1:SetIsCustomizeRedDot(true)
+	RedDotWidget1:SetStyle(RedDotStyle.SecondStyle)
+	RedDotWidget1:SetRedDotUIIsShow(ItemVM.bCustomsizedRedDotShow)
+end
+
+--- 修改自定义红点的显隐状态
+function CommVerIconTabItemView:OnSetCustomRedDotVisible(bVisible)
+	local RedDotWidget1 = self.CommonRedDot
+	if not RedDotWidget1 then
+		return
+	end
+	if not RedDotWidget1:GetIsCustomizeRedDot() then
+		return
+	end 
+	RedDotWidget1:SetRedDotUIIsShow(bVisible)
 end
 
 return CommVerIconTabItemView

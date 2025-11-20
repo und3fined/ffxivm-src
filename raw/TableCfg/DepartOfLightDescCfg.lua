@@ -28,7 +28,16 @@ local DepartOfLightDescCfg = {
                     {
                         Name = 'Content',
                     },
+                    {
+                        Name = 'Points',
+                    },
 				},
+            },
+            {
+                Name = 'NodeDescLocked',
+            },
+            {
+                Name = 'NodeDescUnlock',
             },
 		}
     },

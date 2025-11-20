@@ -110,6 +110,9 @@ function LoginMgr:OnInit()
 	self.NickName = ""
 	self.AvatarUrl = ""
 	self.RegChannelDis = ""
+	self.Pf = ""
+	self.PfKey = ""
+	self.ChannelInfoStr = ""
 	self.IsLoginSuccess = false
 	self.IsNeedSwitchAccountByWakeUp = false
 	self.IsNeedChangeWeChatAccount = false
@@ -142,9 +145,6 @@ function LoginMgr:OnInit()
 
 	-- MSDK登录参数
 	self.MSDKLoginParam = nil
-
-	-- 是否正在播放视频
-	self.IsMoviePlaying = false
 end
 
 function LoginMgr:OnBegin()
@@ -156,6 +156,7 @@ function LoginMgr:OnBegin()
 
 	self.bBackToSelectRoleFromCreate = false
 
+	--DataReportUtil.RequestPublicIPAddress()
 	DataReportUtil.SendPublicIPAddressInfoRequest()
 end
 
@@ -223,6 +224,7 @@ function LoginMgr:OnGameEventMSDKBaseRetNotify(BaseRet)
 	if (MethodNameID == MSDKDefine.MethodName.Logout) or (RetCode == MSDKDefine.MSDKError.REALNAME_FAIL and nil ~= self.MSDKModal and self.MSDKModal == 1) then
 		FLOG_INFO("MSDK log out by base ret")
 		self:RoleLogOut(ProtoCS.LogoutReason.Logout)
+		--_G.NetworkStateMgr:Disconnect()
 
 		if self.bShowHopeView then
 			self.IsNeedLogout = true
@@ -255,8 +257,11 @@ function LoginMgr:OnGameEventMSDKLoginRetNotify(LoginRet)
 	self.NickName = LoginRet[MSDKDefine.ClassMembers.LoginRetData.UserName]
 	self.AvatarUrl = LoginRet[MSDKDefine.ClassMembers.LoginRetData.PictureUrl]
 	self.RegChannelDis = LoginRet[MSDKDefine.ClassMembers.LoginRetData.RegChannelDis]
-	FLOG_INFO("LoginMgr:OnGameEventMSDKLoginRetNotify, RetCode: %d, NickName: %s, AvatarUrl: %s, RegChannelDis: %s",
-		RetCode, self.NickName, self.AvatarUrl, self.RegChannelDis)
+	self.Pf = LoginRet[MSDKDefine.ClassMembers.LoginRetData.PF]
+	self.PfKey = LoginRet[MSDKDefine.ClassMembers.LoginRetData.PFKey]
+	self.ChannelInfoStr = LoginRet[MSDKDefine.ClassMembers.LoginRetData.ChannelInfo]
+	FLOG_INFO("LoginMgr:OnGameEventMSDKLoginRetNotify, RetCode: %d, NickName: %s, AvatarUrl: %s, RegChannelDis: %s, Pf: %s, PfKey: %s",
+		RetCode, self.NickName, self.AvatarUrl, self.RegChannelDis, self.Pf, self.PfKey)
 
 	if RetCode ~= MSDKDefine.MSDKError.NEED_REALNAME and RetCode ~= MSDKDefine.MSDKError.REALNAME_FAIL then
 		self.bShowPrajnaWebView = false
@@ -265,6 +270,7 @@ function LoginMgr:OnGameEventMSDKLoginRetNotify(LoginRet)
 	if RetCode == MSDKDefine.MSDKError.REALNAME_FAIL and nil ~= self.MSDKModal and self.MSDKModal == 1 then
 		FLOG_INFO("MSDK log out by login ret")
 		self:RoleLogOut(ProtoCS.LogoutReason.Logout)
+		--_G.NetworkStateMgr:Disconnect()
 
 		if self.bShowHopeView then
 			self.IsNeedLogout = true
@@ -402,14 +408,14 @@ function LoginMgr:OnGameEventNetworkHopeRes(MsgBody)
 		self.MSDKModal = MsgInstruction.Modal
 		local JsonStr = ""
 		if MsgInstruction.Modal == 1 then
+			self.bShowPrajnaWebView = true
+			self.bShowHopeView = true
             JsonStr = "{\"url\": \""..MsgInstruction.Url.."\", \"show_titlebar\": \"0\", \"show_title\": \"0\", \"buttons\": [] }"
         else
             JsonStr = "{\"url\": \""..MsgInstruction.Url.."\", \"show_titlebar\": \"0\", \"show_title\": \"0\", \"buttons\": [{\"buttonId\": \"1\", \"name\": \"返回游戏\", \"action\": \"0\"}] }"
 		end
 		FLOG_INFO("HOPE: Open Prajna webview parameter %s", JsonStr)
 		_G.UE.UAccountMgr.Get():OpenPrajnaWebView(JsonStr)
-		self.bShowPrajnaWebView = true
-		self.bShowHopeView = true
 	elseif MsgInstruction.InstructionType == ProtoCS.INSTRUCTIONTYPE.INSTRUCTIONTYPE_PRELOGOUT then
 		FLOG_INFO("HOPE: Pre logout")
 		bShowMessageBox = true
@@ -519,6 +525,9 @@ function LoginMgr:OnNetMsgUpdateClientRes(MsgBody)
 
 		for i = 1, #LocalAppVerParams do
 			if tonumber(NewAppVerParams[i]) > tonumber(LocalAppVerParams[i]) then
+				FLOG_INFO("[LoginMgr:OnNetMsgUpdateClientRes] 120006 - VersionErrCode")
+				_G.WorldMsgMgr:HideLoadingView()
+
 				local function Callback()
 					FLOG_INFO("[LoginMgr:OnNetMsgUpdateClientRes] QuitGame ")
 					CommonUtil.RestartGame()
@@ -598,6 +607,9 @@ function LoginMgr:OnNetMsgError(MsgBody)
 
 	local ErrorCode = MsgBody.ErrCode
 	if ErrorCode == LoginNewDefine.VersionErrCode then
+		FLOG_INFO("[LoginMgr:OnNetMsgError] 120006 - VersionErrCode")
+		_G.WorldMsgMgr:HideLoadingView()
+
 		local function Callback()
 			FLOG_INFO("[LoginMgr:OnNetMsgError] 120006 - QuitGame and restart")
 			CommonUtil.RestartGame()
@@ -741,6 +753,26 @@ end
 
 function LoginMgr:GetRegChannel()
 	return tonumber(self.RegChannelDis) or 0
+end
+
+function LoginMgr:GetPf()
+	return self.Pf or ""
+end
+
+function LoginMgr:GetPfKey()
+	return self.PfKey or ""
+end
+
+function LoginMgr:GetOpenKey()
+	if self:IsWeChatLogin() then
+		return self.Token or ""
+	elseif self:IsQQLogin() then
+		local ChannelInfo = Json.decode(self.ChannelInfoStr)
+		if nil ~= ChannelInfo and nil ~= ChannelInfo["pay_token"] then
+			return ChannelInfo["pay_token"]
+		end
+	end
+	return ""
 end
 
 function LoginMgr:GetLoginChannel()
@@ -1068,7 +1100,10 @@ function LoginMgr:OnNetMsgQueryRoleListByOpenIDRes(MsgBody)
 	end
 
 	-- 初始化GVoice
-	_G.UE.UVoiceMgr.Get():Initialize(self.OpenID, LoginUtils:GetGVoiceServerUrl(), VoiceDefine.OpenGVoiceLog == true)
+	local UVoiceMgr =_G.UE.UVoiceMgr.Get()
+	if UVoiceMgr then
+		UVoiceMgr:Initialize(self.OpenID, LoginUtils:GetGVoiceServerUrl(), VoiceDefine.OpenGVoiceLog == true)
+	end
 
 	local USaveMgr = _G.UE.USaveMgr
 	LoginMgr.LoginFailTime = 0
@@ -1245,7 +1280,7 @@ function LoginMgr:OnLoginRsp(IsSuccess, ErrorCode)
 		return
 	end
 
-	if ErrorCode == LoginNewDefine.VersionErrCode then
+	if ErrorCode == LoginNewDefine.VersionErrCode or ErrorCode == LoginNewDefine.BanUser then
 		return
 	end
 
@@ -1317,6 +1352,11 @@ function LoginMgr:OnNetMsgRoleLoginRes(MsgBody)
 	end
 
 	self.RoleDetail = RoleDetail
+	if _G.DemoMajorType == 0 then
+		-- udpate major rolevm
+		_G.FLOG_INFO("loginmgr res: update major rolevm %s, reconn %s", self.RoleID, self.bReconnect)
+		_G.RoleInfoMgr:UpdateRoleVMByRoleDetail(RoleDetail)
+	end
 
 	-- if not _G.IsDemoMajor then
 	if _G.DemoMajorType == 0 then
@@ -1776,7 +1816,10 @@ function LoginMgr:GetDeviceInfo()
 		IosCAID = _G.UE.UTDMMgr.Get():GetDeviceInfo("CAID")
 		UserAgent = _G.UE.UTDMMgr.Get():GetDeviceInfo("UserAgent")
 	end
-	--DataReportUtil.GetIPAddressInfo()
+	--DataReportUtil.GetPublicIPAddressInfo()
+	if DataReportUtil.DeviceID == "" then
+		DataReportUtil.DeviceID = _G.UE.UPlatformUtil.GetDeviceID()
+	end
     local DeviceInfo = {
         DeviceType = CommonUtil.GetDeviceType(),--设备类型ios 0 android 1  2-windows，3-mac，4-其他 5-模拟器
         ClientVersion = _G.UE.UVersionMgr.GetResourceVersion(),        -- 客户端版本号
@@ -1786,7 +1829,7 @@ function LoginMgr:GetDeviceInfo()
         Network =  CommonUtil.GetNetworkConnectionType(),
 		ScreenWidth = ViewportSize.X,
 		ScreenHeight = ViewportSize.Y,
-        DeviceID = _G.UE.UPlatformUtil.GetDeviceID(),            -- 设备ID
+        DeviceID = DataReportUtil.DeviceID,            -- 设备ID
         -- RealIMEI = _G.UE.UPlatformUtil.GetIMEI(),            -- 真实IMEI
         ClientIP = DataReportUtil.IPV4Address,              -- 客户端IP
 		ClientIPv6 = DataReportUtil.IPV6Address,
@@ -1864,8 +1907,8 @@ end
 function LoginMgr:OnLoginSuccess(IsReconnect)
 	self.IsLoginSuccess = true
 	local CurChannelID = self.ChannelID or 0
-	FLOG_INFO("LoginMgr:OnLoginSuccess, IsReconnect:%s, ChannelId:%d, OpenId:%s, Token:%s, NickName:%s",
-		tostring(IsReconnect), CurChannelID, self.OpenID, self.Token, self.NickName)
+	FLOG_INFO("LoginMgr:OnLoginSuccess, IsReconnect:%s, ChannelId:%d, OpenId:%s, RoleId:%s, Token:%s, NickName:%s",
+		tostring(IsReconnect), CurChannelID, self.OpenID, tostring(self.RoleID), self.Token, self.NickName)
 	local UserOpenId = tostring(self.OpenID)
 	_G.UE.UAntiCheatMgr.Get():SetTssDataReportInterval(5.0)
 	_G.UE.UAntiCheatMgr.Get():SetUserInfo(self.ChannelID, UserOpenId)
@@ -1891,6 +1934,8 @@ function LoginMgr:OnLoginSuccess(IsReconnect)
 	CommonUtil.ReportPerformanceMetricsData()
 
 	OperationUtil.BindDevice()
+
+	_G.RechargingMgr:SendPayResultToServer("", true, "")
 end
 
 function LoginMgr:ResetLoginSuccessStatus()
@@ -1987,17 +2032,21 @@ function LoginMgr:OnMyServersResponse(MsgBody, bSucceeded)
 		local TestWorldIDs = {10, 11, 12, 13}
 		for i = 1, #TestWorldIDs do
 			local TestRoleItem = {}
-			TestRoleItem.OpenID = "TEST_OPENID"
+			TestRoleItem.OpenID = "9813432316435096332"
 			TestRoleItem.WorldID = TestWorldIDs[i]
-			TestRoleItem.RoleID = "TEST_ROLE_ID"
+			TestRoleItem.RoleID = "4463753134044485930"
 			TestRoleItem.Name = "TEST_NAME"
 			TestRoleItem.Level = 50
 			TestRoleItem.Prof = 4
 			TestRoleItem.LoginTime = "1718973549"
-			TestRoleItem.HeadPortraitID = 10001
-			TestRoleItem.LoginChannel = 1
+			TestRoleItem.HeadPortraitID = 1
+			TestRoleItem.LoginChannel = 0
 			TestRoleItem.IsOnline = false
-			TestRoleItem.HeadData = { HeadID = 2, HeadType = 1, HeadUrl = "https://fmgame-image-1258344700.cos.ap-nanjing.tencentcos.cn/portrait/17210223786192167222111_1740035929.png" }
+			if i % 2 == 0 then
+				TestRoleItem.HeadData = { HeadID = 2, HeadType = 1, HeadUrl = "https://fmgame-image-1258344700.cos.ap-nanjing.tencentcos.cn/portrait/17210223786192167222111_1740035929.png" }
+			else
+				TestRoleItem.HeadData = { HeadID = 0, HeadType = 0, HeadUrl = "" }
+			end
 			TestRoleItem.Gender = 1
 			TestRoleItem.Race = 1
 			TestRoleItem.Tribe = 1

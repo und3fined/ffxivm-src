@@ -8,8 +8,6 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-local ProtoRes = require("Protocol/ProtoRes")
-local UIViewID = require("Define/UIViewID")
 local AchievementDefine = require("Game/Achievement/AchievementDefine")
 local AchievementUtil = require("Game/Achievement/AchievementUtil")
 local AchievementAwardTypeCfg = require("TableCfg/AchievementAwardTypeCfg")
@@ -29,7 +27,9 @@ local FLOG_WARNING = LogMgr.Warning
 local EToggleButtonState = _G.UE.EToggleButtonState
 local LSTR = _G.LSTR
 local AchievementMgr = _G.AchievementMgr
-local UIViewMgr = _G.UIViewMgr
+
+local ParentViewY = 148
+local ChildViewY = 88
 
 ---@class AchievementMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -41,6 +41,7 @@ local UIViewMgr = _G.UIViewMgr
 ---@field CommonBkg02_UIBP CommonBkg02View
 ---@field CommonBkgMask_UIBP CommonBkgMaskView
 ---@field CommonGuideBG CommonGuideBkgView
+---@field CommonTitle_UIBP CommonTitleView
 ---@field DropDownList CommDropDownListView
 ---@field EFF_1 UFCanvasPanel
 ---@field Empty CommBackpackEmptyView
@@ -56,11 +57,9 @@ local UIViewMgr = _G.UIViewMgr
 ---@field TextAchieve1 UFTextBlock
 ---@field TextGetAll UFTextBlock
 ---@field TextTarget UFTextBlock
----@field TextTitle UFTextBlock
 ---@field TreeViewTabs UFTreeView
 ---@field AnimIn UWidgetAnimation
----@field AnimLoop UWidgetAnimation
----@field AnimOut1 UWidgetAnimation
+---@field backup_AnimOut1 UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local AchievementMainPanelView = LuaClass(UIView, true)
 
@@ -74,6 +73,7 @@ function AchievementMainPanelView:Ctor()
 	--self.CommonBkg02_UIBP = nil
 	--self.CommonBkgMask_UIBP = nil
 	--self.CommonGuideBG = nil
+	--self.CommonTitle_UIBP = nil
 	--self.DropDownList = nil
 	--self.EFF_1 = nil
 	--self.Empty = nil
@@ -89,11 +89,9 @@ function AchievementMainPanelView:Ctor()
 	--self.TextAchieve1 = nil
 	--self.TextGetAll = nil
 	--self.TextTarget = nil
-	--self.TextTitle = nil
 	--self.TreeViewTabs = nil
 	--self.AnimIn = nil
-	--self.AnimLoop = nil
-	--self.AnimOut1 = nil
+	--self.backup_AnimOut1 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -103,6 +101,7 @@ function AchievementMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.CommonBkg02_UIBP)
 	self:AddSubView(self.CommonBkgMask_UIBP)
 	self:AddSubView(self.CommonGuideBG)
+	self:AddSubView(self.CommonTitle_UIBP)
 	self:AddSubView(self.DropDownList)
 	self:AddSubView(self.Empty)
 	self:AddSubView(self.RedDot_1)
@@ -144,6 +143,8 @@ function AchievementMainPanelView:OnInit()
 	UIUtil.SetIsVisible(self.Empty.PanelBtn, false )
 	self.RedDot_1:SetRedDotNameByString(AchievementDefine.RedDotName .. '/0/level')
 	self.AdapterTreeViewTabs:SetAutoExpandAll(false)
+
+	self.CommonTitle_UIBP:SetSubTitleIsVisible(false)
 end
 
 function AchievementMainPanelView:OnDestroy()
@@ -151,7 +152,7 @@ function AchievementMainPanelView:OnDestroy()
 end
 
 function AchievementMainPanelView:TranslatedText()
-	self.TextTitle:SetText(LSTR(720019))
+	self.CommonTitle_UIBP:SetTextTitleName(LSTR(720019))
 	self.TextAchieve1:SetText(LSTR(720021))
 	self.TextGetAll:SetText(LSTR(10023))
 end
@@ -189,12 +190,6 @@ function AchievementMainPanelView:OnShow()
 
 	if (TypeID or 0) == 0 then
 		TypeID = AchievementDefine.OverviewCategoryDataTable[1].TypeID
-	else
-		self:RegisterTimer(
-			function()
-				local _, Index = AchievementMainPanelVM.TableViewTabsList:FindByKey(TypeID)
-				self:TreeViewTabsScrollToSelected(Index)
-			end, 0.03)
 	end
 
 	AchievementMainPanelVM:SetSelectType(TypeID)
@@ -203,6 +198,13 @@ function AchievementMainPanelView:OnShow()
 	AchievementMainPanelVM:SetSelectAchievemwntID(AchievemwntID)
 	AchievementMainPanelVM:SetTrackedBgVisible(AchievemwntID ~= 0)
 	AchievementMainPanelVM:SetLevelRewardEFFVisible(0)
+
+	if TypeID ~= AchievementDefine.OverviewCategoryDataTable[1].TypeID then
+		self:RegisterTimer(
+			function()
+				self:TreeViewTabsScrollToSelected(TypeID, CategoryID)
+			end, 0.03)
+	end
 end
 
 function AchievementMainPanelView:OnHide()
@@ -243,7 +245,22 @@ function AchievementMainPanelView:OnSelectCategoryIDChange(NewValue, OldValue)
 	self.AdapterTableViewAchievement:ScrollToTop()
 end
 
+function AchievementMainPanelView:GetTreeViewTabsChildItemSize(ItemData, ItemView)
+	if ItemView and ItemData then
+		local ItemViewY = UIUtil.GetWidgetSize(ItemView).Y
+		if (ItemViewY or 0) == 0 then 
+			return
+		end
+		if nil ~= ItemData.CategoryID then
+			ChildViewY = ItemViewY
+		else
+			ParentViewY = ItemViewY
+		end
+	end
+end
+
 function AchievementMainPanelView:OnTreeViewTabsSelectChanged(Index, ItemData, ItemView)
+	self:GetTreeViewTabsChildItemSize(ItemData, ItemView)
 	if nil ~= ItemData.CategoryID then
 		if AchievementMainPanelVM.CategoryID ~= ItemData.CategoryID then
 			AchievementMainPanelVM:SetSelectCategoryID(ItemData.CategoryID )
@@ -253,7 +270,9 @@ function AchievementMainPanelView:OnTreeViewTabsSelectChanged(Index, ItemData, I
 			AchievementMainPanelVM:SetSelectType( ItemData.TypeID )
 			AchievementMainPanelVM:SetSelectCategoryID(0)
 		end
-		self:TreeViewTabsScrollToSelected(Index)
+		if ItemData.ArrowUp then
+			self:TreeViewTabsScrollToSelected(ItemData.TypeID, AchievementMainPanelVM.CategoryID)
+		end
 	end
 end
 
@@ -291,18 +310,57 @@ function AchievementMainPanelView:OnSelectAchievementIDChange(NewValue)
 	end
 end
 
-function AchievementMainPanelView:TreeViewTabsScrollToSelected(Index)
-	local MaxNUm = self.AdapterTreeViewTabs:GetMaxItemDataDisplayNum()
-	if Index ~= nil then
-		if MaxNUm ~= Index then
-			if AchievementMainPanelVM.TrackedBgVisible then
-				self.AdapterTreeViewTabs:ScrollToIndex(Index)
-			else
-				self.AdapterTreeViewTabs:ScrollIndexIntoView(Index)
+function AchievementMainPanelView:TreeViewTabsScrollToSelected(TypeID, CategoryID)
+	local MainIndex
+	local ChildIndexPos
+	local TreeViewShowY = UIUtil.GetWidgetSize(self.TreeViewTabs).Y
+	local ParentVMList = AchievementMainPanelVM.TableViewTabsList:GetItems()
+	for ParentIndex = 1, #(ParentVMList or {}) do
+		local ParentVM = ParentVMList[ParentIndex]
+		if ParentVM then
+			if TypeID == ParentVM.TypeID then 
+				local ChildVMList = ParentVM:AdapterOnGetChildren() or {}
+				for ChildIndex = 1, #(ChildVMList) do
+					local ChildVM = ChildVMList[ChildIndex]
+					if ChildVM then
+						if ChildVM.CategoryID == CategoryID or (CategoryID or 0) == 0 then
+							MainIndex = ParentIndex
+							ChildIndexPos = ChildIndex
+							break
+						end
+					end
+				end
 			end
-		else
-			self.AdapterTreeViewTabs:ScrollToBottom()
 		end
+	end
+	if not MainIndex or not ChildIndexPos then return end
+	if MainIndex == self.AdapterTreeViewTabs:GetMaxItemDataDisplayNum() then
+		self.AdapterTreeViewTabs:ScrollToBottom()
+		return
+	end
+
+	local AfterOffsetY = self.AdapterTreeViewTabs:GetScrollOffset() * ParentViewY  --暂用父节点的长度
+	local RealSize = MainIndex * ParentViewY + ChildViewY * ChildIndexPos
+	local CurPosLength = TreeViewShowY + AfterOffsetY 
+	local ScrollOffset
+	if CurPosLength ~= 0 then
+		if RealSize > CurPosLength then
+			RealSize = RealSize + ChildViewY
+			if RealSize - MainIndex * ParentViewY > CurPosLength then
+				ScrollOffset = (RealSize - CurPosLength - MainIndex * ParentViewY) / ChildViewY + MainIndex
+			else
+				ScrollOffset = (RealSize - CurPosLength) / ParentViewY
+			end
+		elseif AfterOffsetY > math.clamp((MainIndex - 1) * ParentViewY, 0, 100000) then 
+			-- 处理上面父节点缺失
+			self.AdapterTreeViewTabs:ScrollToIndex(MainIndex)
+		end
+	end
+
+	if ScrollOffset then
+		self:RegisterTimer(function()
+			self.AdapterTreeViewTabs:SetScrollOffset(self.AdapterTreeViewTabs:GetScrollOffset() + ScrollOffset)
+		end, 0.1)
 	end
 end
 

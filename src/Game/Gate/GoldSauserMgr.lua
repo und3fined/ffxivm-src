@@ -109,18 +109,25 @@ function GoldSauserMgr:OnBegin()
 end
 
 ---GoldSauserMgr.IsCurMapGoldSauserMap 当前地图是否为金蝶主场景地图
----@param InbIgnoreChocobo bool 是否忽略陆行鸟广场
+---@param InbIgnoreChocobo bool 不包含括陆行鸟广场
 ---@return  bool Description
 function GoldSauserMgr:IsCurMapGoldSauserMap(InbIgnoreChocobo)
+    local bGoldSauserDungeon = PWorldMgr.BaseInfo.CurrMapResID == self.JDMapID
     if (InbIgnoreChocobo) then
-        return PWorldMgr.BaseInfo.CurrMapResID == self.JDMapID
+        return bGoldSauserDungeon
     else
-        return PWorldMgr.BaseInfo.CurrMapResID == self.JDMapID or PWorldMgr.BaseInfo.CurrMapResID == self.ChocoboMapID
+        local bChocoboGround = PWorldMgr.BaseInfo.CurrMapResID == self.ChocoboMapID
+        return bGoldSauserDungeon or bChocoboGround
     end
 end
 
+function GoldSauserMgr:IsCurMapChocobo()
+    local Result = PWorldMgr.BaseInfo.CurrMapResID == self.ChocoboMapID
+    return Result
+end
+
 function GoldSauserMgr:IsPlayerSignup()
-    if (not self:IsCurMapGoldSauserMap(true)) then
+    if (not self:IsCurMapGoldSauserMap()) then
         return false
     end
 
@@ -313,7 +320,7 @@ function GoldSauserMgr:ResetData(InNotResetSpecialJump)
     if (not InNotResetSpecialJump) then
         self.EnableSpecialJumpRecordGameID = 0
     end
-
+    self.bReceiveSignUp = false
     self.MarkerForChecken.bShow = false
     self:SetToggleInfoPanel(false) -- VM那边不是跟着角色的，会一直存在，换号了也是，所以这里需要关闭一下
 
@@ -322,11 +329,11 @@ function GoldSauserMgr:ResetData(InNotResetSpecialJump)
     self.HasPlaySignUp = false
     self.bHasPlayerSignUp = false -- 因为网络协议顺序的问题，报名之后需要先在本地做一个缓存
     self.CurGameClass = nil -- 当前进行的那种游戏
-    self.TeleportToStage = false -- 是否传送到了舞台
+    self:InternalSetTeleportToStageValue(false) -- 是否传送到了舞台
 
     self.CacheTableData = {} -- 表格数据缓存
     self.CliffHangerCfgCache = {} -- 表格数据缓存
-    self.SignupRecordMapID = 0
+    self:InternalSetRecordMapID(0)
     self.Index = 0
     self.Entertain = nil -- 游戏状态
     self.Player = ProtoCS.GoldSauserPlayer.GoldSauserPlayer_NotSignUp -- 默认是没报名状态
@@ -352,6 +359,9 @@ function GoldSauserMgr:ResetData(InNotResetSpecialJump)
     if UIViewMgr:IsViewVisible(UIViewID.PlayStyleCountDownTips) then
         UIViewMgr:HideView(UIViewID.PlayStyleCountDownTips)
     end
+
+    -- 机遇临门信息结束时尝试打开信息界面
+    _G.GoldSaucerBlessingMgr:TryShowRightTopPanel()
 end
 
 function GoldSauserMgr:InternalSetChickenEntityID(InValue)
@@ -432,7 +442,7 @@ function GoldSauserMgr:OnPWorldReady(Params)
     if (self.EnableSpecialJumpRecordGameID ~= nil and self.EnableSpecialJumpRecordGameID > 0) then
         if (self.EnableSpecialJumpRecordGameID == EntertainGameID.GameIDCliffhanger) then
             -- 只要当前地图不是金碟游乐场，那么弹出提示
-            if (not self:IsCurMapGoldSauserMap(true)) then
+            if (not self:IsCurMapGoldSauserMap()) then
                 self:RecoverSpecialJumpTips()
             end
         elseif (self.EnableSpecialJumpRecordGameID == EntertainGameID.GameIDLeapOfFaithA) then
@@ -459,7 +469,7 @@ function GoldSauserMgr:OnNPCCreate(Params)
         return
     end
 
-    if (not self:IsCurMapGoldSauserMap(true)) then
+    if (not self:IsCurMapGoldSauserMap()) then
         return
     end
 
@@ -523,21 +533,18 @@ function GoldSauserMgr:OnPWorldTransBegin()
         self:InternalSetChickenEntityID(0)
     else
         -- 这里是直接传送的，这里就不用缓存了，直接显示就好了
-        if (self.SignupRecordMapID ~= nil and PWorldMgr.BaseInfo.CurrMapResID == self.SignupRecordMapID) then
-            if (self.bNeedPlaySignupAnim) then
-                self.bNeedPlaySignupAnim = false
-                if (self.CurGameClass ~= nil) then
-                    self.CurGameClass:ShowInfoAfterSignup(self)
-                end
+        if (PWorldMgr.BaseInfo.CurrMapResID == self.SignupRecordMapID) then
+            if (self.CurGameClass ~= nil) then
+                self.CurGameClass:ShowInfoAfterSignup(self)
+            end
 
-                if (self.TeleportToStage == true) then
-                    self.TeleportToStage = false
-                    self:ResetCameraAfterTeleport()
-                end
+            if (self.TeleportToStage == true) then
+                self:InternalSetTeleportToStageValue(false)
+                self:ResetCameraAfterTeleport()
             end
         end
-        self.SignupRecordMapID = nil
 
+        self:InternalSetRecordMapID(0)
         if (self.Entertain ~= nil and self.Entertain.ID == EntertainGameID.GameIDCliffhanger) then
             if (self.CurGameClass ~= nil) then
                 self.CurGameClass:JudgeForNeedCheckHeight()
@@ -550,6 +557,16 @@ end
 ---SendSignUpGame      @报名游戏
 ---@param Round number @当前轮数
 function GoldSauserMgr:SendSignUpGame(InRound)
+    if (self.Entertain == nil) then
+        _G.FLOG_WARNING("GoldSauserMgr:SendSignUpGame 出错， 当前没有 Entertain")
+        return
+    end
+
+    if (self.Entertain.State ~= GoldSauserEntertainState.GoldSauserEntertainState_SignUp) then
+        _G.FLOG_WARNING("GoldSauserMgr:SendSignUpGame 警告， 当前没有状态不是 State_SignUp，还发送报名")
+        return
+    end
+
     local MsgID = CS_CMD.CS_CMD_GOLD_SAUSER
     local SubMsgID = SUB_MSG_ID.CS_GOLD_SAUSER_CMD_SIGNUP
 
@@ -561,10 +578,9 @@ function GoldSauserMgr:SendSignUpGame(InRound)
     MsgBody.Cmd = SubMsgID
     MsgBody.SignUp = {Round = TargetRound}
     self.bHasPlayerSignUp = true
-    self.SignupRecordMapID = PWorldMgr:GetCurrMapResID()
-    self.TeleportToStage = true
+    self:InternalSetRecordMapID(PWorldMgr:GetCurrMapResID())
+    self:InternalSetTeleportToStageValue(true)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
-    self.bNeedPlaySignupAnim = true
 end
 
 -- 重新报名
@@ -647,15 +663,13 @@ function GoldSauserMgr:SendTeleToStageReq()
     local MsgBody = {}
     MsgBody.Cmd = SubMsgID
 
-    local ID = self.Entertain.ID
-
-    local bSprayAir = ID == EntertainGameID.GameIDAnyWayWindBlows
-    local bSharpeKnife = ID == EntertainGameID.GameIDSliceIsRight
-
-    self.SignupRecordMapID = PWorldMgr:GetCurrMapResID()
-
-    self.TeleportToStage = true
+    self:InternalSetRecordMapID(PWorldMgr:GetCurrMapResID())
+    self:InternalSetTeleportToStageValue(true)
     GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+function GoldSauserMgr:InternalSetTeleportToStageValue(InValue)
+    self.TeleportToStage = InValue
 end
 
 function GoldSauserMgr:SendUpdateGame()
@@ -732,7 +746,8 @@ end
 
 --- @type 报名的Rsq
 function GoldSauserMgr:OnNetSignUp(MsgBody)
-    self.bNeedPlaySignupAnim = true
+    self.bReceiveSignUp = true
+    self:InternalSetTeleportToStageValue(true)
     if (self.CurGameClass ~= nil) then
         self.bHasPlayerSignUp = true
         self.Player = ProtoCS.GoldSauserPlayer.GoldSauserPlayer_SignUp
@@ -886,7 +901,7 @@ function GoldSauserMgr:OnUpdateGameInfoRsp(MsgBody)
     local bNeedReSignup = self.Player == ProtoCS.GoldSauserPlayer.GoldSauserPlayer_SignUpLeaveStage
     if (bNeedReSignup) then
         local bSignUpState = self.Entertain.State == GoldSauserEntertainState.GoldSauserEntertainState_SignUp
-        if (bSignUpState) then
+        if (bSignUpState and self:IsCurMapGoldSauserMap()) then
             self:SendReSignUpGame()
         end
     else
@@ -895,9 +910,14 @@ function GoldSauserMgr:OnUpdateGameInfoRsp(MsgBody)
         -- 如果当前是小雏鸟，并且玩家的状态报名状态，并且上一个地图不是金碟主地图,那么弹出一下机遇临门
         local bBirdGame = self.Entertain.ID == EntertainGameID.GameIDCliffhanger
         if (bBirdGame and bPlayerSignUp and bCurGameSignUpState) then
-            local LastMapResID = PWorldMgr.BaseInfo.LastPWorldResID
-            local bLastMapNotJD = LastMapResID == 0 or LastMapResID ~= self.JDMapID
-            if (bLastMapNotJD) then
+            local LastMapResID = PWorldMgr.BaseInfo.LastMapResID
+            local LastMapTransID = PWorldMgr.BaseInfo.LastTransMapResID
+
+            -- 如果当前地图是金碟，并且上一个地图不是金蝶 并且不是在金碟做的Trans
+            local bLastMapNotJD = LastMapResID ~= 0 and LastMapResID ~= self.JDMapID
+            local bJDTrans = LastMapTransID ~= 0 and LastMapTransID == self.JDMapID
+            local bNeedShowForBegin = bLastMapNotJD and not bJDTrans
+            if (bNeedShowForBegin) then
                 self:ShowGoldSauserOpportunityForBegin()
             end
         end
@@ -1059,7 +1079,7 @@ function GoldSauserMgr:GetHasSignUp()
 end
 
 --- 当前是否金蝶副本
-function GoldSauserMgr:CurrIsGoldSauserDungeon()
+function GoldSauserMgr:CurrIsAirForceDungeon()
     local PWorldResID = _G.PWorldMgr:GetCurrPWorldResID()
     if not self.RideShootingIDTable then
         self.RideShootingIDTable =
@@ -1127,7 +1147,7 @@ function GoldSauserMgr:EndGame(...)
         self.CurGameClass:EndGame(...)
     end
 
-    self.SignupRecordMapID = nil
+    self:InternalSetRecordMapID(0)
 end
 
 --- @type 小雏鸟配表的主键
@@ -1186,16 +1206,10 @@ end
 function GoldSauserMgr:OnPWorldEnter(Params)
     if (self:IsCurMapGoldSauserMap()) then
         _G.UIViewMgr:ShowView(UIViewID.GateMainCountDownPanel)
-        if (self.bNeedPlaySignupAnim) then
-            if (self.CurGameClass ~= nil) then
-                self.CurGameClass:ShowInfoAfterSignup(self)
-            end
 
-            if (self.TeleportToStage == true) then
-                self.TeleportToStage = false
-                self:ResetCameraAfterTeleport()
-            end
-            self.bNeedPlaySignupAnim = false
+        if (self.TeleportToStage == true) then
+            self:InternalSetTeleportToStageValue(false)
+            self:ResetCameraAfterTeleport()
         end
 
         local BaseInfo = PWorldMgr.BaseInfo
@@ -1231,28 +1245,34 @@ function GoldSauserMgr:OnPWorldEnter(Params)
             bNeedUpdate = true
         end
 
-        if (bNeedUpdate or bNotSameJDMap) then
-            local NotResetSpecialJump = true
-            self:ResetData(NotResetSpecialJump)
-            self:SendUpdateGame()
-        end
-
         if (self.SignupRecordMapID == PWorldMgr.BaseInfo.CurrMapResID) then
             if (self.CurGameClass ~= nil) then
                 self.CurGameClass:ShowInfoAfterSignup(self)
             end
 
             if (self.TeleportToStage == true) then
-                self.TeleportToStage = false
+                self:InternalSetTeleportToStageValue(false)
                 self:ResetCameraAfterTeleport()
             end
         end
+
+        if (bNeedUpdate or bNotSameJDMap) then
+            local NotResetSpecialJump = true
+            self:ResetData(NotResetSpecialJump)
+            self:SendUpdateGame()
+        end
+
+
         self:UpdateCactusStandPlateState()
         self.HasTransBegin = false
-        self.SignupRecordMapID = 0
+        self:InternalSetRecordMapID(0)
     else
         self:SetToggleInfoPanel(false)
     end
+end
+
+function GoldSauserMgr:InternalSetRecordMapID(InValue)
+    self.SignupRecordMapID = InValue
 end
 
 function GoldSauserMgr:SendGoldSauserUpdateReq()
@@ -1272,7 +1292,7 @@ function GoldSauserMgr:OnGameEventVisionEnter(Params)
         return
     end
 
-    if (not self:IsCurMapGoldSauserMap(true)) then
+    if (not self:IsCurMapGoldSauserMap()) then
         return
     end
 
@@ -1287,8 +1307,26 @@ end
 
 --------------------------------------------------------Npc交互-----------------------------------------------------------
 
+--- 是否取消显示机遇临门界面
+function GoldSauserMgr:IsNeedCancelShowGoldSauserOpportunity()
+    if UIViewMgr:IsViewVisible(UIViewID.GoldSauserMainPanelBodyguardGameItem) then
+        return true
+    end
+
+    return false
+end
+
 -- 开始游戏用的动画
 function GoldSauserMgr:ShowGoldSauserOpportunityForBegin(AnimFinishCallbackFunc)
+    -- 如果当前不是金碟游乐场或者空军，那么不显示，陆行鸟广场也不显示
+    if (not self:IsCurMapGoldSauserMap(true) and not self:IsCurMapAirForce()) then
+        return
+    end
+
+    if self:IsNeedCancelShowGoldSauserOpportunity() then
+        return
+    end
+
     local Params = {
         Type = GoldSauserDefine.PopType.Gate,
         AnimFinichCallback = AnimFinishCallbackFunc
@@ -1333,6 +1371,9 @@ end
 ---@param InRewardDataTable      额外奖励Table [int32,int32] goldsauser.proto 里面的 GateRewardRecord.ItemID2Num
 ---@return  Type Description
 function GoldSauserMgr:ShowGoldSauserOpportunityForResult(PopType, AwardCoins, AnimFinishCallbackFunc, InRewardDataTable)
+    if self:IsNeedCancelShowGoldSauserOpportunity() then
+        return
+    end
     local List = {}
     if (AwardCoins ~= nil and AwardCoins > 0) then
         local Elem = {}
@@ -1566,10 +1607,10 @@ function GoldSauserMgr:GetNextActivityName(InbForceNext)
 
     local NeedID = nil
 
-    if (self:GetIsInActivePeriod()) then
-        NeedID = self.Entertain.ID
-    else
+    if (InbForceNext or not self:GetIsInActivePeriod()) then
         NeedID = self.NextID
+    else
+        NeedID = self.Entertain.ID
     end
 
     local Cfg = self:GetCachedData(NeedID)
@@ -1583,7 +1624,7 @@ end
 --- @type 获取报名倒计时MS
 function GoldSauserMgr:GetRemainSignUpTime()
     local SignUpEndTime = self.SignUpEndTime
-    
+
     local CurTime = TimeUtil.GetServerLogicTimeMS()
     if (SignUpEndTime == nil or SignUpEndTime == 0) then
         SignUpEndTime = CurTime
@@ -1672,55 +1713,77 @@ function GoldSauserMgr:DestroyCurGameSignUpNpc()
     end
 end
 
---- @type 打开飘窗，拼接Content内容。 展示与NPC谈话内容
-function GoldSauserMgr:ShowWindowTips(InTipsID)
+function GoldSauserMgr:CheckShowWindowTipsCondition()
+    if (not self:IsCurMapGoldSauserMap()) then
+        return false
+    end
+
     -- 这里在空军里面不显示 TIPS
     local BaseInfo = PWorldMgr.BaseInfo
     if table.contain(AirForceMapResIDList, BaseInfo.CurrMapResID) then -- 空军副本不显示广播
-        return
+        return false
     end
 
     if (_G.GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith()) then -- 虚景跳跳乐也不显示
-        return
+        return false
     end
 
     if _G.GoldSauserMainPanelMgr:BlockByMiniGameInPanel() then -- 金碟手册界面存在小游戏不显示此飘窗tips
+        return false
+    end
+
+    return true
+end
+
+--- @type 打开飘窗，拼接Content内容。 展示与NPC谈话内容
+function GoldSauserMgr:ShowWindowTips(InTipsID)
+    
+     -- 取消已有定时器（变量首字母大写）
+    if self.TipTimer then
+        self:UnRegisterTimer(self.TipTimer)
+        self.TipTimer = nil
+    end
+
+    if not self:CheckShowWindowTipsCondition() then
         return
     end
 
-    local bViewVisible = UIViewMgr:IsViewVisible(UIViewID.GoldSauserOpportunityPanel)
-    if (bViewVisible) then
-        self:RegisterTimer(
-            function()
-                MsgTipsUtil.ShowTipsByID(InTipsID)
-            end,
-            2.5,
-            0,
-            1
-        )
+    local function ShowTips()  -- 函数名首字母大写
+        if self:CheckShowWindowTipsCondition() then
+            MsgTipsUtil.ShowTipsByID(InTipsID)
+        end
+    end
+
+    -- 局部变量首字母大写
+    local BViewVisible = UIViewMgr:IsViewVisible(UIViewID.GoldSauserOpportunityPanel)
+    
+    if BViewVisible then
+        -- 使用首字母大写的定时器变量
+        self.TipTimer = self:RegisterTimer(ShowTips, 2.5, 0, 1)
     else
-        if (self.bRequireReward) then
-            self:RegisterTimer(
-                function()
-                    self:ShowWindowTips(InTipsID)
-                end,
-                1,
-                0,
-                1
-            )
-        else
-            local RemainTime = self:GetRemainSignUpTime()
-            if (RemainTime <= 1000 and RemainTime >= -1000) then
-                self:RegisterTimer(
-                    function()
-                        MsgTipsUtil.ShowTipsByID(InTipsID)
+        -- 成员变量首字母大写
+        if self.BRequireReward then
+            -- 计数器变量首字母大写
+            self.RetryCount = (self.RetryCount or 0) + 1
+            if self.RetryCount < 5 then
+                self.TipTimer = self:RegisterTimer(
+                    function() 
+                        self:ShowWindowTips(InTipsID) 
                     end,
-                    3 + RemainTime,
-                    0,
-                    1
+                    1, 0, 1
                 )
             else
-                MsgTipsUtil.ShowTipsByID(InTipsID)
+                self.RetryCount = nil
+            end
+        else
+            -- 保持原首字母大写风格
+            local RemainTime = self:GetRemainSignUpTime()
+            local Threshold = 1000  -- 常量首字母大写
+            if math.abs(RemainTime) <= Threshold then
+                local Delay = math.max(0, 3 + RemainTime / 1000)  -- 局部变量首字母大写
+                self.TipTimer = self:RegisterTimer(ShowTips, Delay, 0, 1)
+            else
+                ShowTips()
             end
         end
     end
@@ -1730,6 +1793,20 @@ end
 function GoldSauserMgr:LoadCurGameSignUpNpc()
     if (self.Entertain == nil) then
         FLOG_ERROR("GoldSauserMgr:LoadCurGameSignUpNpc() 出错 , self.Entertain == nil")
+        return
+    end
+
+    -- 陆行鸟广场目前没有机遇临门的NPC
+    if (self:IsCurMapChocobo()) then
+        return
+    end
+
+    if (not self:IsCurMapGoldSauserMap()) then
+        return
+    end
+
+    if (self.Entertain.State == GoldSauserEntertainState.GoldSauserEntertainState_End) then
+        -- 如果活动是已经结束了的，那么不创建NPC
         return
     end
 
@@ -1768,8 +1845,7 @@ function GoldSauserMgr:IsCurGameSignUpNpc(InMapListID)
         return false
     end
 
-    local InbIgnoreChocobo = true
-    if (not self:IsCurMapGoldSauserMap(InbIgnoreChocobo)) then
+    if (not self:IsCurMapGoldSauserMap()) then
         return false
     end
 

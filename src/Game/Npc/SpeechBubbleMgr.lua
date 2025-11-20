@@ -61,14 +61,15 @@ end
 ---@param Params FEventParams
 function SpeechBubbleMgr:OnVisionLeave(Params)
 	local EntityID = Params.ULongParam1
-    if self.InVisionCharacter[EntityID] then
+    if self.InVisionCharacter and self.InVisionCharacter[EntityID] then
         self.InVisionCharacter[EntityID] = nil
     end
     self:HideBubbleViews(EntityID)
-	if table.length(self.InVisionCharacter) == 0 then
-		self:CloseBubblePanel()
+
+    if self.InVisionCharacter and type(self.InVisionCharacter) == "table" and table.length(self.InVisionCharacter) > 0 then
 		return
 	end
+    self:CloseBubblePanel()
 end
 
 function SpeechBubbleMgr:OnEventNPCDestroy(Params)
@@ -76,12 +77,15 @@ function SpeechBubbleMgr:OnEventNPCDestroy(Params)
         return
     end
     local EntityID = Params.ULongParam1
-    self.InVisionCharacter[EntityID] = nil
+    if self.InVisionCharacter and self.InVisionCharacter[EntityID] then
+        self.InVisionCharacter[EntityID] = nil
+    end
     self:HideBubbleViews(EntityID)
-	if table.length(self.InVisionCharacter) == 0 then
-		self:CloseBubblePanel()
+
+    if self.InVisionCharacter and type(self.InVisionCharacter) == "table" and table.length(self.InVisionCharacter) > 0 then
 		return
 	end
+    self:CloseBubblePanel()
 end
 
 function SpeechBubbleMgr:OnEventEnterBubbleRange(Params)
@@ -465,11 +469,7 @@ function SpeechBubbleMgr:ShowBubbleByID(EntityID,BubbleID)
         local CurBubbleDuration = CurBubble.Duration
 
         if not CurBubble.IsAwaysShow then
-            self:RegisterTimer(
-                    function()
-                        self:HideBubbleSingle(EntityID)
-                    end,
-                    CurBubbleDuration)
+            self:HideBubbleByTimer(EntityID, CurBubbleDuration)
         end
     end
 
@@ -480,6 +480,31 @@ function SpeechBubbleMgr:ShowBubbleByID(EntityID,BubbleID)
     end
     local FirstBubbleDelay = FirstBubbleInfo and FirstBubbleInfo.DelayTime or BubbleShowDelay
     self:RegisterTimer(ShowIndeed, FirstBubbleDelay)
+end
+
+function SpeechBubbleMgr:HideBubbleByTimer(EntityID, Duration)
+    if Duration == nil or Duration <= 0 then
+        return
+    end
+    if self.BubbleTimerCache == nil then
+        self.BubbleTimerCache = {}
+    end
+    ---先清掉之前没触发的Timer
+    self:ClearBubbleTimer(EntityID)
+    local function HideBalloon(_, EntityID)
+        self:ClearBubbleTimer(EntityID)
+        self:HideBalloonByID(EntityID)
+    end
+    local TimerID = self:RegisterTimer(HideBalloon,Duration, 0, 1, EntityID)
+    self.BubbleTimerCache[EntityID] = TimerID
+end
+
+function SpeechBubbleMgr:ClearBubbleTimer(EntityID)
+    if self.BubbleTimerCache and self.BubbleTimerCache[EntityID] then
+        local TimerID = self.BubbleTimerCache[EntityID]
+        self:UnRegisterTimer(TimerID)
+        self.BubbleTimerCache[EntityID] = nil
+    end
 end
 
 function SpeechBubbleMgr:ShowBubbleGroup(EntityID,BubbleGroupID)

@@ -34,6 +34,7 @@ function FishNotesWindowVM:Ctor()
     self.TextWeather = ""
     self.bWeatherVisible = false
     self.bPreWeatherVisible = false
+    self.bImgLineShow = true
 
     self.WeatherVM = WeatherBallVM.New()
     self.PreWeatherVM = WeatherBallVM.New()
@@ -66,6 +67,7 @@ function FishNotesWindowVM:UpdateVM(Value)
             self.bPreWeatherVisible = true
         end
     end
+    self.bImgLineShow = Value.bImgLineShow
 end
 
 function FishNotesWindowVM:GetKey()

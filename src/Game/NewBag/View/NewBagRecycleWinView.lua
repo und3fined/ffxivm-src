@@ -45,8 +45,9 @@ end
 
 function NewBagRecycleWinView:OnInit()
 	self.MultiTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewMultiLineItem)
+	self.MultiTableViewAdapter:SetOnClickedCallback(self.OnItemClickCallback)
 	self.SingleTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSingleLineItem)
-
+	self.SingleTableViewAdapter:SetOnClickedCallback(self.OnItemClickCallback)
 	self.Binders = {
 		{ "MultiTableBindableList", UIBinderUpdateBindableList.New(self, self.MultiTableViewAdapter) },
 		{ "SingleTableBindableList", UIBinderUpdateBindableList.New(self, self.SingleTableViewAdapter) },
@@ -69,6 +70,11 @@ function NewBagRecycleWinView:OnShow()
 	if not string.isnilorempty(self.Params.Title) then
 		self.Comm2FrameM_UIBP:SetTitleText(self.Params.Title)
 	end
+end
+
+function NewBagRecycleWinView:OnItemClickCallback(Index, ItemData, ItemView)
+	local ItemTipsUtil = require("Utils/ItemTipsUtil")
+    ItemTipsUtil.ShowTipsByResID(ItemData.ResID, ItemView)
 end
 
 function NewBagRecycleWinView:OnHide()

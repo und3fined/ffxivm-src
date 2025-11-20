@@ -46,6 +46,18 @@ local MatchIndexToGMCmdList
 local MaxResults = 7
 local MinMatchLen = 4
 
+----------------------------------------------------------------------
+-- 多语言
+local LocalizationEnum ={
+    TopLevelCN = "多语言",
+    Title = LSTR(1440036), -- "多语言"
+    LQATag = "LQA打点",
+    StartLQATag = "开启打点",
+    PauseLQATag = "暂停打点",
+    EmptyLQATag = "清空打点信息",
+    GenLQATagFile = "生成打点信息文件"
+}
+
 ---@class GMMainView : UIView
 local GMMainView = LuaClass(UIView, true)
 
@@ -86,6 +98,7 @@ function GMMainView:Ctor()
 	--self.SearchOverlay = nil
 	--self.SearchScrollBox = nil
 	--self.SecondClassTableView = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TextBlock = nil
 	--self.TextBlock_107 = nil
 	--self.TextBlock_153 = nil
@@ -109,6 +122,7 @@ function GMMainView:OnRegisterSubView()
 	self:AddSubView(self.GMItemButton_UIBP_2)
 	self:AddSubView(self.GMPlayAudio_UIBP)
 	self:AddSubView(self.InputText)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -491,7 +505,7 @@ function GMMainView:UpdateSecondAndThird(TopName, SecondName, bInit)
         end
 
         --天气面板只有选择天气时才会显示
-        if (GMCmdList[i].TopLevel == TopName and GMCmdList[i].SecondLevel == SecondName and SecondName == LSTR("天气")) or (GMCmdList[i].TopLevelCN == TopName and GMCmdList[i].SecondLevelCN == SecondName and SecondName == LSTR("天气")) then
+        if (GMCmdList[i].TopLevel == TopName and GMCmdList[i].SecondLevel == SecondName and SecondName == "天气") or (GMCmdList[i].TopLevelCN == TopName and GMCmdList[i].SecondLevelCN == SecondName and SecondName == "天气") then
             --天气是面板不在全部中显示
             if GMCmdList[i].ShowType == self.ViewType then
                 table.insert(ThirdClassGMValues, GMCmdList[i])
@@ -899,190 +913,203 @@ end
 -- -- 若 IsAutoSend=0，点击“发送”执行 GMMgr:DoClientInput(cmd) 逻辑，此时命令需要以 client 开头
 ClientCmdList =
 {
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], Desc = LSTR("开-圆形交互"), ShowType = GMMgr.GMEnum[1], CmdList = "test.opencirclerange 1", IsServerCmd = 0, IsAutoSend = 0, IsConsoleCmd = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], Desc = LSTR("关-圆形交互"), ShowType = GMMgr.GMEnum[1], CmdList = "test.opencirclerange 0", IsServerCmd = 0, IsAutoSend = 0, IsConsoleCmd = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = LSTR("炼金"), ShowType = GMMgr.GMEnum[1], CmdList = "client crafter" },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = LSTR("副本任务"), ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = LSTR("副本入口"), ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = LSTR("挂机测试"), ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[11], SecondLevelCN = GMMgr.GMEnum[11], Desc = LSTR("天气面板"), ShowType = GMMgr.GMEnum[16], IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("幻卡编辑界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardMgr:SendOpenGameStartReq(false)", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("幻卡图鉴界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardCollectionMgr:ShowMagicCardCollectionMainPanel()", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("幻卡大赛排名界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardTourneyMgr:ShowRankView()", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("时尚品鉴主界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.FashionEvaluationMgr:OnEnterFashionEvaluation()", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("光之启程主界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.DepartOfLightMgr:ShowDepartMainView()", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = LSTR("光之启程回收界面"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.DepartOfLightMgr:ShowDepartRecycleView()", IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = LSTR("路网显示"), ShowType = GMMgr.GMEnum[1], CmdList = "client showroadgraph", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = LSTR("寻路基建"), ShowType = GMMgr.GMEnum[1], CmdList = "client roadtest", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = LSTR("自动寻路测试"), ShowType = GMMgr.GMEnum[1], CmdList = "client autopathmove", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], Desc = "开-圆形交互", ShowType = GMMgr.GMEnum[1], CmdList = "test.opencirclerange 1", IsServerCmd = 0, IsAutoSend = 0, IsConsoleCmd = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[15], Desc = "关-圆形交互", ShowType = GMMgr.GMEnum[1], CmdList = "test.opencirclerange 0", IsServerCmd = 0, IsAutoSend = 0, IsConsoleCmd = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = "炼金", ShowType = GMMgr.GMEnum[1], CmdList = "client crafter" },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = "副本任务", ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = "副本入口", ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], Desc = "挂机测试", ShowType = GMMgr.GMEnum[1], IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[11], SecondLevelCN = GMMgr.GMEnum[11], Desc = "天气面板", ShowType = GMMgr.GMEnum[16], IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "幻卡编辑界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardMgr:SendOpenGameStartReq(false)", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "幻卡图鉴界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardCollectionMgr:ShowMagicCardCollectionMainPanel()", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "幻卡大赛排名界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.MagicCardTourneyMgr:ShowRankView()", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "时尚品鉴主界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.FashionEvaluationMgr:OnEnterFashionEvaluation()", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "光之启程主界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.DepartOfLightMgr:ShowDepartMainView()", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[12], SecondLevel= GMMgr.GMEnum[5], Desc = "光之启程回收界面", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.DepartOfLightMgr:ShowDepartRecycleView()", IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = "路网显示", ShowType = GMMgr.GMEnum[1], CmdList = "client showroadgraph", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = "寻路基建", ShowType = GMMgr.GMEnum[1], CmdList = "client roadtest", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = "自动寻路测试", ShowType = GMMgr.GMEnum[1], CmdList = "client autopathmove", IsServerCmd = 0, IsAutoSend = 0},
     --{ TopLevel = GMMgr.GMEnum[4], SecondLevel= "关卡", Desc = "传送带传送", ShowType = GMMgr.GMEnum[1], CmdList = "client transedge", IsServerCmd = 0, IsAutoSend = 0},
-    --{ TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = LSTR("地图自动寻路"), ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = LSTR("显示球"), ShowType = GMMgr.GMEnum[1], CmdList = "client showSphere", IsServerCmd = 0, IsAutoSend = 0},
+    --{ TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = "地图自动寻路", ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[17], Desc = "显示球", ShowType = GMMgr.GMEnum[1], CmdList = "client showSphere", IsServerCmd = 0, IsAutoSend = 0},
 
     --自动化测试-录制回放模块
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = LSTR("开始播放"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.StartPlayInput('record.IRF')", IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = LSTR("结束播放"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.StopPlayInput()", IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = LSTR("暂停播放"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.PausePlayInput()", IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = LSTR("继续播放"), ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.ContinuePlayInput()", IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = "开始播放", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.StartPlayInput('record.IRF')", IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = "结束播放", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.StopPlayInput()", IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = "暂停播放", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.PausePlayInput()", IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[14], Desc = "继续播放", ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.AutoTest.ContinuePlayInput()", IsAutoSend = 1},
 
-    { Desc = LSTR("使用艾欧泽亚文字"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client UseAozyFont", IsServerCmd = 0, IsAutoSend = 1 },
-    { Desc = LSTR("使用MainFont"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client UseMainFont", IsServerCmd = 0, IsAutoSend = 1 },
-    { Desc = LSTR("播放音频"), TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[5], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayAudio", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("播放角色动作"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleAnim", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("播放循环动作(ATL)"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleAnimLooping", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("停止循环动作(ATL)"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopPlayRoleAnimLooping", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("播放角色TPose"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleTPose", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("停止角色TPose"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopPlayRoleTPose", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("角色旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[2], CmdList = "client RotateActorInRPM {}", Minimum = -180, Maximum = 180, DefaultValue = 0.0},
-    { Desc = LSTR("停止角色旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopActorRotate", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("重置角色旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client ResetActorRotation", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("相机旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[2], CmdList = "client RotateCameraInRPM {}", Minimum = -180, Maximum = 180, DefaultValue = 0.0},
-    { Desc = LSTR("停止相机旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopCameraRotate", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("重置相机旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client ResetCameraRotation", IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("开始TPose并延迟旋转"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayTPoseDelayRotate", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("播放气泡"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayYell", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("播放Balloon"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayBalloon", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("角色缓存数量"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
-	{ Desc = LSTR("头盔机关"), ShowType = GMMgr.GMEnum[3], IsAutoSend = 1},
-    { Desc = LSTR("创建AvatarProfile"), ShowType = GMMgr.GMEnum[1], IsAutoSend = 1 },
-    { Desc = LSTR("设置客户端配置值"), ShowType = GMMgr.GMEnum[1], IsAutoSend = 0, CmdList = "client SetClientConfig" },
-    { Desc = LSTR("显示音频列表"), ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioList", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "使用艾欧泽亚文字", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client UseAozyFont", IsServerCmd = 0, IsAutoSend = 1 },
+    { Desc = "使用MainFont", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client UseMainFont", IsServerCmd = 0, IsAutoSend = 1 },
+    { Desc = "播放音频", TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[5], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayAudio", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "播放角色动作", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleAnim", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "播放循环动作(ATL)", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleAnimLooping", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "停止循环动作(ATL)", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopPlayRoleAnimLooping", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "播放角色TPose", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayRoleTPose", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "停止角色TPose", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopPlayRoleTPose", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "角色旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[2], CmdList = "client RotateActorInRPM {}", Minimum = -180, Maximum = 180, DefaultValue = 0.0},
+    { Desc = "停止角色旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopActorRotate", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "重置角色旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client ResetActorRotation", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "相机旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[2], CmdList = "client RotateCameraInRPM {}", Minimum = -180, Maximum = 180, DefaultValue = 0.0},
+    { Desc = "停止相机旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client StopCameraRotate", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "重置相机旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client ResetCameraRotation", IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "开始TPose并延迟旋转", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayTPoseDelayRotate", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "播放气泡", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayYell", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "播放Balloon", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[1], CmdList = "client PlayBalloon", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "角色缓存数量", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[4], ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
+	{ Desc = "头盔机关", ShowType = GMMgr.GMEnum[3], IsAutoSend = 1},
+    { Desc = "创建AvatarProfile", ShowType = GMMgr.GMEnum[1], IsAutoSend = 1 },
+    { Desc = "设置客户端配置值", ShowType = GMMgr.GMEnum[1], IsAutoSend = 0, CmdList = "client SetClientConfig" },
+    { Desc = "显示音频列表", ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioList", IsServerCmd = 0, IsAutoSend = 1},
     --{ Desc = "幻卡默认开局", ShowType = GMMgr.GMEnum[1], CmdList = "lua MagicCardMgr:SendNpcFantasyCard(29000009)", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("显示音频位置"), ShowType = GMMgr.GMEnum[3], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("暂停对白Sequence"), ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("停止对白Sequence"), ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("切换大世界天气"), ShowType = GMMgr.GMEnum[1], CmdList = "client changeweather", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("锁定时间与天气"), ShowType = GMMgr.GMEnum[1], CmdList = "client setweatherandlocktime time lock", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("暂停或播放天气Sequence"), ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsAutoSend = 1},
-    { Desc = LSTR("关闭BGM"), ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsAutoSend = 1},
-    { Desc = LSTR("钓鱼笔记钓场位置调整"), ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[19], SecondLevel= LSTR("制作笔记"), Desc = LSTR("制作快捷道具"), ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[19], SecondLevel= LSTR("采集笔记"), Desc = LSTR("采集笔记设置版本"), ShowType = GMMgr.GMEnum[1],CmdList = "client SetGatherNoteVersion 2.2.0", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("装备测试入口"), ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("显示染色图"), ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("天气时间"), ShowType = GMMgr.GMEnum[2], CmdList = "client weather set time {}", IsServerCmd = 0, IsAutoSend = 1, Minimum = 1, Maximum = 1440},
+    { Desc = "显示音频位置", ShowType = GMMgr.GMEnum[3], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "暂停对白Sequence", ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "停止对白Sequence", ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "切换大世界天气", ShowType = GMMgr.GMEnum[1], CmdList = "client changeweather", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "锁定时间与天气", ShowType = GMMgr.GMEnum[1], CmdList = "client setweatherandlocktime time lock", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "暂停或播放天气Sequence", ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsAutoSend = 1},
+    { Desc = "关闭BGM", ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsAutoSend = 1},
+    { Desc = "钓鱼笔记钓场位置调整", ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[19], SecondLevel= "制作笔记", Desc = "制作快捷道具", ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[19], SecondLevel= "采集笔记", Desc = "采集笔记设置版本", ShowType = GMMgr.GMEnum[1],CmdList = "client SetGatherNoteVersion 2.2.0", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "装备测试入口", ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "显示染色图", ShowType = GMMgr.GMEnum[1], CmdList = "client ShowAudioPos", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "天气时间", ShowType = GMMgr.GMEnum[2], CmdList = "client weather set time {}", IsServerCmd = 0, IsAutoSend = 1, Minimum = 1, Maximum = 1440},
     --[[ { TopLevel = GMMgr.GMEnum[19], SecondLevel = GMMgr.GMEnum[13], Desc = "可视交互范围", ShowType = GMMgr.GMEnum[2], CmdList = "client SetMaxDistance 0 {}", IsServerCmd = 0, IsAutoSend = 1, Minimum = 1, Maximum = 1440},
     { TopLevel = GMMgr.GMEnum[19], SecondLevel = GMMgr.GMEnum[13], Desc = "通用交互范围", ShowType = GMMgr.GMEnum[2], CmdList = "client SetMaxDistance 1 {}", IsServerCmd = 0, IsAutoSend = 1, Minimum = 1, Maximum = 1440},
     { TopLevel = GMMgr.GMEnum[19], SecondLevel = GMMgr.GMEnum[13], Desc = "特殊物件交互范围", ShowType = GMMgr.GMEnum[2], CmdList = "client SetMaxDistance 2 {}", IsServerCmd = 0, IsAutoSend = 1, Minimum = 1, Maximum = 1440},  ]]
-    { Desc = LSTR("大水晶传送"), ShowType = GMMgr.GMEnum[1], CmdList = "client CrystalPortalTrans 100301", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "大水晶传送", ShowType = GMMgr.GMEnum[1], CmdList = "client CrystalPortalTrans 100301", IsServerCmd = 0, IsAutoSend = 1},
     -- { Desc = "相机前后偏移", TopLevel = "基础", SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[2], CmdList = "client Camera Offset X {}", Minimum = -500, Maximum = 500, DefaultValue = 0.0},
     -- { Desc = "相机左右偏移", TopLevel = "基础", SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[2], CmdList = "client Camera Offset Y {}", Minimum = -500, Maximum = 500, DefaultValue = 0.0},
     -- { Desc = "相机上下偏移", TopLevel = "基础", SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[2], CmdList = "client Camera Offset Z {}", Minimum = -100, Maximum = 500, DefaultValue = 0.0},
     -- { Desc = "重置相机偏移", TopLevel = "基础", SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[1], CmdList = "client Camera Reset Offset"},
-    { Desc = LSTR("传送至追踪任务目标"), TopLevel = GMMgr.GMEnum[20], SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("设置ZoomSpeed"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetZoomSpeed ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("设置InterpSpeed"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetInterpSpeed ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("设置InterpSpeedToInterpolation"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetInterpSpeedToInterpolation ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("设置ResetInterpSpeedTolerance"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetResetInterpSpeedTolerance ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("打印怪物动作资源路径"), ShowType = GMMgr.GMEnum[1], CmdList = "client PrintAnimsPath ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("测试定时器崩溃"), ShowType = GMMgr.GMEnum[1], CmdList = "client TestTimer ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("CVM开关"), ShowType = GMMgr.GMEnum[1], CmdList = "client SwitchCVM ", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("路径播放Sequence"), ShowType = GMMgr.GMEnum[1], CmdList = "client seqp", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("选中的目标执行指定behavior"), ShowType = GMMgr.GMEnum[1], CmdList = "client behaviorset", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("选中的目标打开behavior日志"), ShowType = GMMgr.GMEnum[1], CmdList = "client behaviorlogopen", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("播放动态物件效果"), ShowType = GMMgr.GMEnum[1], CmdList = "client sharedgroup instanceid state", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("更改NPC对话框风格"), ShowType = GMMgr.GMEnum[1], CmdList = "client switchstyle", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("播放对话内容"), ShowType = GMMgr.GMEnum[1], CmdList = "client playdialog", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("设置怪物动作状态"), ShowType = GMMgr.GMEnum[1], CmdList = "client setModelState", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("上坐骑"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetRide 1", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("申请上他人坐骑"), ShowType = GMMgr.GMEnum[1], CmdList = "client SetOtherRide", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("邀请他人上坐骑"), ShowType = GMMgr.GMEnum[1], CmdList = "client InviteOtherRide", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("测试申请通知"), ShowType = GMMgr.GMEnum[1], CmdList = "client TestInvite", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("下坐骑"), ShowType = GMMgr.GMEnum[1], CmdList = "client CancelRide 0", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("测试FATE更新"), ShowType = GMMgr.GMEnum[1], CmdList = "client fate update", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("测试FATE结束"), ShowType = GMMgr.GMEnum[1], CmdList = "client fate end", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("在线状态设置界面"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client OnlineStatusShowSettings", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("充值"), TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("查看一等奖号码、期数"), ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("清空仙人仙彩全部数据"), ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("仙人仙彩开奖"), ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("收藏品界面"), ShowType = GMMgr.GMEnum[1],CmdList = "open collectpanel",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("莫古抓球机界面"), ShowType = GMMgr.GMEnum[1],CmdList = "open MooglePawPanel",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("矿脉探索界面"), ShowType = GMMgr.GMEnum[1],CmdList = "open TheFinerMinerPanel",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("孤树无援界面"), ShowType = GMMgr.GMEnum[1],CmdList = "open OutOnALimbPanel",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("旅行笔记界面"), ShowType = GMMgr.GMEnum[1],CmdList = "open TravelLogPanel",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("称号界面"), ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("添加称号"), ShowType = GMMgr.GMEnum[1],CmdList = "zone titlegm gainTitle ", IsServerCmd = 1, IsAutoSend = 0},
-    { Desc = LSTR("新手引导-引导ID"), ShowType = GMMgr.GMEnum[1], CmdList = "client playTutorial", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("新手引导-新手指南"), ShowType = GMMgr.GMEnum[1],  CmdList = "client playTutorialGuide", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("新手引导开关"), ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("打开新手指南"), ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("测试新手引导"), ShowType = GMMgr.GMEnum[10], CmdList = "client TestTutorial",IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("启用新手引导"), ShowType = GMMgr.GMEnum[1], CmdList = "client EnableTutorial", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("推荐任务一键置新"), ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "传送至追踪任务目标", TopLevel = GMMgr.GMEnum[20], SecondLevel = GMMgr.GMEnum[21], ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "设置ZoomSpeed", ShowType = GMMgr.GMEnum[1], CmdList = "client SetZoomSpeed ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "设置InterpSpeed", ShowType = GMMgr.GMEnum[1], CmdList = "client SetInterpSpeed ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "设置InterpSpeedToInterpolation", ShowType = GMMgr.GMEnum[1], CmdList = "client SetInterpSpeedToInterpolation ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "设置ResetInterpSpeedTolerance", ShowType = GMMgr.GMEnum[1], CmdList = "client SetResetInterpSpeedTolerance ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "打印怪物动作资源路径", ShowType = GMMgr.GMEnum[1], CmdList = "client PrintAnimsPath ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "测试定时器崩溃", ShowType = GMMgr.GMEnum[1], CmdList = "client TestTimer ", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "路径播放Sequence", ShowType = GMMgr.GMEnum[1], CmdList = "client seqp", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "选中的目标执行指定behavior", ShowType = GMMgr.GMEnum[1], CmdList = "client behaviorset", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "选中的目标打开behavior日志", ShowType = GMMgr.GMEnum[1], CmdList = "client behaviorlogopen", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "播放动态物件效果", ShowType = GMMgr.GMEnum[1], CmdList = "client sharedgroup instanceid state", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "更改NPC对话框风格", ShowType = GMMgr.GMEnum[1], CmdList = "client switchstyle", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "播放对话内容", ShowType = GMMgr.GMEnum[1], CmdList = "client playdialog", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "设置怪物动作状态", ShowType = GMMgr.GMEnum[1], CmdList = "client setModelState", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "上坐骑", ShowType = GMMgr.GMEnum[1], CmdList = "client SetRide 1", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "申请上他人坐骑", ShowType = GMMgr.GMEnum[1], CmdList = "client SetOtherRide", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "邀请他人上坐骑", ShowType = GMMgr.GMEnum[1], CmdList = "client InviteOtherRide", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "测试申请通知", ShowType = GMMgr.GMEnum[1], CmdList = "client TestInvite", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "下坐骑", ShowType = GMMgr.GMEnum[1], CmdList = "client CancelRide 0", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "测试FATE更新", ShowType = GMMgr.GMEnum[1], CmdList = "client fate update", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "测试FATE结束", ShowType = GMMgr.GMEnum[1], CmdList = "client fate end", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "在线状态设置界面", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client OnlineStatusShowSettings", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "充值", TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "查看一等奖号码、期数", ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "清空仙人仙彩全部数据", ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "仙人仙彩开奖", ShowType = GMMgr.GMEnum[1], CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "收藏品界面", ShowType = GMMgr.GMEnum[1],CmdList = "open collectpanel",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "莫古抓球机界面", ShowType = GMMgr.GMEnum[1],CmdList = "open MooglePawPanel",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "矿脉探索界面", ShowType = GMMgr.GMEnum[1],CmdList = "open TheFinerMinerPanel",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "孤树无援界面", ShowType = GMMgr.GMEnum[1],CmdList = "open OutOnALimbPanel",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "旅行笔记界面", ShowType = GMMgr.GMEnum[1],CmdList = "open TravelLogPanel",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "称号界面", ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "添加称号", ShowType = GMMgr.GMEnum[1],CmdList = "zone titlegm gainTitle ", IsServerCmd = 1, IsAutoSend = 0},
+    { Desc = "新手引导-引导ID", ShowType = GMMgr.GMEnum[1], CmdList = "client playTutorial", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "新手引导-新手指南", ShowType = GMMgr.GMEnum[1],  CmdList = "client playTutorialGuide", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "新手引导开关", ShowType = GMMgr.GMEnum[3], DefaultValue = 1, IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "打开新手指南", ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "测试新手引导", ShowType = GMMgr.GMEnum[10], CmdList = "client TestTutorial",IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "启用新手引导", ShowType = GMMgr.GMEnum[1], CmdList = "client EnableTutorial", IsServerCmd = 0, IsAutoSend = 0},
 
-    { Desc = LSTR("解锁所有系统(表现)"), ShowType = GMMgr.GMEnum[1], CmdList = "open activityui3",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("解锁X系统"), ShowType = GMMgr.GMEnum[1], CmdList = "zone moduleopen open ",  IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "推荐任务一键置新", ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1},
 
-    { Desc = LSTR("暂停侧边栏"), ShowType = GMMgr.GMEnum[1], CmdList = "client SidePopup Pause 1",  IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("开启侧边栏"), ShowType = GMMgr.GMEnum[1], CmdList = "client SidePopup Start 1",  IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "解锁所有系统(表现)", ShowType = GMMgr.GMEnum[1], CmdList = "open activityui3",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "解锁X系统", ShowType = GMMgr.GMEnum[1], CmdList = "zone moduleopen open ",  IsServerCmd = 0, IsAutoSend = 0},
 
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("请求视野"), ShowType = GMMgr.GMEnum[1], CmdList = "client ReqVision", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("PCSS 开关"), ShowType = GMMgr.GMEnum[1], CmdList = "client PcssOpen", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("PCSS 阴影距离"), ShowType = GMMgr.GMEnum[1], CmdList = "client PcssCSMDistance", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("PCSS 衰减指数"), ShowType = GMMgr.GMEnum[1], CmdList = "client PcssCSMDistributionExponente", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "暂停侧边栏", ShowType = GMMgr.GMEnum[1], CmdList = "client SidePopup Pause 1",  IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "开启侧边栏", ShowType = GMMgr.GMEnum[1], CmdList = "client SidePopup Start 1",  IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "关闭客户端活动版本验证", ShowType = GMMgr.GMEnum[1], CmdList = "client OpsVersionCheck Close", IsServerCmd = 0, IsAutoSend = 0},
+
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "请求视野", ShowType = GMMgr.GMEnum[1], CmdList = "client ReqVision", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "PCSS 开关", ShowType = GMMgr.GMEnum[1], CmdList = "client PcssOpen", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "PCSS 阴影距离", ShowType = GMMgr.GMEnum[1], CmdList = "client PcssCSMDistance", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "PCSS 衰减指数", ShowType = GMMgr.GMEnum[1], CmdList = "client PcssCSMDistributionExponente", IsServerCmd = 0, IsAutoSend = 0},
     { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "PCSS Shadow Bias", ShowType = GMMgr.GMEnum[1], CmdList = "client PcssShadowBias", IsServerCmd = 0, IsAutoSend = 0},
     { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "PCSS Shadow Slope Bias", ShowType = GMMgr.GMEnum[1], CmdList = "client PcssShadowSlopeBias", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("CSM数量 最大2"), ShowType = GMMgr.GMEnum[1], CmdList = "client CSMCascadeNum", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("占位"), ShowType = GMMgr.GMEnum[1], CmdList = "client CSMCascadeNum", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("使用简化自阴影"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineEasyHDShadow", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("使用简化自阴影日志"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineEasyHDShadowDebug", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("最近距离"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineNearCamDst", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("最近时一级面积"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineNearDistribution", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("最远距离"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineFarCamDst", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("最远时一级面积"), ShowType = GMMgr.GMEnum[1], CmdList = "client EngineFarDistribution", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("监修测试开关"), ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("地图参数开关"), ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
-    --{ TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[22], Desc = LSTR("开启特效打印"), ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("显示副本教学界面"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("副本教学引导测试"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[5], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("消息队列开关"), ShowType = GMMgr.GMEnum[3],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("显示物理材质"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("设置ShadowBias"), ShowType = GMMgr.GMEnum[1],CmdList = "client SetShadowBias",  IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("设置ShadowSlopeBias"), ShowType = GMMgr.GMEnum[1],CmdList = "client SetShadowSlopeBias",  IsServerCmd = 0, IsAutoSend = 0 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("预览模型到Socket"), ShowType = GMMgr.GMEnum[1],CmdList = "client PreviewMeshToSocket",  IsServerCmd = 0, IsAutoSend = 0 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("激活时尚配饰"), ShowType = GMMgr.GMEnum[1],CmdList = "client ActiveOrnamentByID",  IsServerCmd = 0, IsAutoSend = 0 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("设置MExtraShadowBias"), ShowType = GMMgr.GMEnum[1],CmdList = "client SetMobileMobileExtraShadowBias",  IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("设置MExtraShadowSlopeBias"), ShowType = GMMgr.GMEnum[1],CmdList = "client SetMobileMobileExtraShadowSlopeBias",  IsServerCmd = 0, IsAutoSend = 0 },
-    { TopLevel = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("重置新手引导"), ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1 },
-    { TopLevel = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("重置新手指南"), ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1 },
-    { Desc = LSTR("清除Roll奖励列表"), ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("模拟邮件内打开收礼界面1"), ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("模拟邮件内打开收礼界面2"), ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("测试赠礼邮件上限"), ShowType = GMMgr.GMEnum[1], CmdList = "open activityui3",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "CSM数量 最大2", ShowType = GMMgr.GMEnum[1], CmdList = "client CSMCascadeNum", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "占位", ShowType = GMMgr.GMEnum[1], CmdList = "client CSMCascadeNum", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "使用简化自阴影", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineEasyHDShadow", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "使用简化自阴影日志", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineEasyHDShadowDebug", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "最近距离", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineNearCamDst", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "最近时一级面积", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineNearDistribution", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "最远距离", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineFarCamDst", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "最远时一级面积", ShowType = GMMgr.GMEnum[1], CmdList = "client EngineFarDistribution", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "监修测试开关", ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "地图参数开关", ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
+    --{ TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[22], Desc = "开启特效打印", ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "显示副本教学界面", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "副本教学引导测试", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[5], SecondLevel = GMMgr.GMEnum[10], Desc = "消息队列开关", ShowType = GMMgr.GMEnum[3],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "显示物理材质", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "设置ShadowBias", ShowType = GMMgr.GMEnum[1],CmdList = "client SetShadowBias",  IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "设置ShadowSlopeBias", ShowType = GMMgr.GMEnum[1],CmdList = "client SetShadowSlopeBias",  IsServerCmd = 0, IsAutoSend = 0 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "预览模型到Socket", ShowType = GMMgr.GMEnum[1],CmdList = "client PreviewMeshToSocket",  IsServerCmd = 0, IsAutoSend = 0 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "激活时尚配饰", ShowType = GMMgr.GMEnum[1],CmdList = "client ActiveOrnamentByID",  IsServerCmd = 0, IsAutoSend = 0 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "设置MExtraShadowBias", ShowType = GMMgr.GMEnum[1],CmdList = "client SetMobileMobileExtraShadowBias",  IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "设置MExtraShadowSlopeBias", ShowType = GMMgr.GMEnum[1],CmdList = "client SetMobileMobileExtraShadowSlopeBias",  IsServerCmd = 0, IsAutoSend = 0 },
+    { TopLevel = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], Desc = "重置新手引导", ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1 },
+    { TopLevel = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], Desc = "重置新手指南", ShowType = GMMgr.GMEnum[1], IsServerCmd = 0, IsAutoSend = 1 },
+    { Desc = "清除Roll奖励列表", ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "模拟邮件内打开收礼界面1", ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "模拟邮件内打开收礼界面2", ShowType = GMMgr.GMEnum[1],  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "测试赠礼邮件上限", ShowType = GMMgr.GMEnum[1], CmdList = "open activityui3",  IsServerCmd = 0, IsAutoSend = 1},
 
-    { Desc = LSTR("邀请新人加入频道"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("加入新人频道"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("退出新人频道"), ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("新人频道发言考核"), ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("移除目标出新人频道"), ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("机遇-开启1号玩法"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain gate start 1", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("机遇-结束当前轮次"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("机遇-结算"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain gate play 1",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("机遇-报名"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("机遇-打印后台状态"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("打印Str"), ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("初始副本显示UI"), ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("运输陆行鸟NPC查询"), ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("运输陆行鸟地图"), ShowType = GMMgr.GMEnum[1],CmdList = "open ChocoboTrasportMap",  IsServerCmd = 0, IsAutoSend = 1},
-    { TopLevel = GMMgr.GMEnum[20], SecondLevel = GMMgr.GMEnum[23], Desc = LSTR("打印起点终点"), ShowType = GMMgr.GMEnum[1],CmdList = "client printnavmesh",  IsServerCmd = 1, IsAutoSend = 1},
-    { Desc = LSTR("显示网络延迟"), ShowType = GMMgr.GMEnum[3], SecondLevel = GMMgr.GMEnum[10], DefaultValue = 0, IsAutoSend = 1, CmdList = "client showrtt"},
-    { Desc = LSTR("打开示例蓝图"), ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client showsamplepanel"},
-    { Desc = LSTR("模拟断线"), ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client testdisconnect"},
-    { Desc = LSTR("模拟重连"), ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client testreconnect"},
-    { TopLevel = GMMgr.GMEnum[12], Desc = LSTR("显示地图Loading"), ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingMap ", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[12], Desc = LSTR("显示Loading池"), ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingPool ", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[12], Desc = LSTR("显示Loading内容"), ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingView ", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[12], Desc = LSTR("模拟Loading"), ShowType = GMMgr.GMEnum[1], CmdList = "client SimulateLoading ", IsServerCmd = 0, IsAutoSend = 0},
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("新任务道具提交\n界面开关"), ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
-    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = LSTR("旅行笔记全解锁"), ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
-    { TopLevel = GMMgr.GMEnum[19], SecondLevel= LSTR("地图"), Desc = LSTR("地图分线列表模拟"), ShowType = GMMgr.GMEnum[1], CmdList = "client pworldlinelist", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("玩法布点可视化"), ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("部队署名邀请"), TopLevel = GMMgr.GMEnum[19], SecondLevel = "部队",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.ArmyMgr:SendGroupSignInvite(RoleID)", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("输出所有红点路径"), TopLevel = GMMgr.GMEnum[19], SecondLevel = "红点",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.RedDotMgr:PrintAllRedDotName()", IsServerCmd = 0, IsAutoSend = 1},
-    { Desc = LSTR("修改战斗信息发送上限"), TopLevel = GMMgr.GMEnum[4], SecondLevel = "测试",ShowType = GMMgr.GMEnum[1], CmdList = "client SysChatMsgBattleLimit [条数]", IsServerCmd = 0, IsAutoSend = 0},
-    { Desc = LSTR("测试战斗信息"), TopLevel = GMMgr.GMEnum[4], SecondLevel = "测试",ShowType = GMMgr.GMEnum[1], CmdList = "client AddSysChatMsgBattle [条数] [条数]", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "邀请新人加入频道", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "加入新人频道", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "退出新人频道", ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "新人频道发言考核", ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "移除目标出新人频道", ShowType = GMMgr.GMEnum[1], CmdList = "", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "机遇-开启1号玩法", ShowType = GMMgr.GMEnum[1],CmdList = "entertain gate start 1", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "机遇-结束当前轮次", ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "机遇-结算", ShowType = GMMgr.GMEnum[1],CmdList = "entertain gate play 1",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "机遇-报名", ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "机遇-打印后台状态", ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "打印Str", ShowType = GMMgr.GMEnum[1],CmdList = "entertain time now",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "初始副本显示UI", ShowType = GMMgr.GMEnum[1],CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "运输陆行鸟NPC查询", ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "运输陆行鸟地图", ShowType = GMMgr.GMEnum[1],CmdList = "open ChocoboTrasportMap",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevel = GMMgr.GMEnum[20], SecondLevel = GMMgr.GMEnum[23], Desc = "打印起点终点", ShowType = GMMgr.GMEnum[1],CmdList = "client printnavmesh",  IsServerCmd = 1, IsAutoSend = 1},
+    { Desc = "显示网络延迟", ShowType = GMMgr.GMEnum[3], SecondLevel = GMMgr.GMEnum[10], DefaultValue = 0, IsAutoSend = 1, CmdList = "client showrtt"},
+    { Desc = "打开示例蓝图", ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client showsamplepanel"},
+    { Desc = "模拟断线", ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client testdisconnect"},
+    { Desc = "模拟重连", ShowType = GMMgr.GMEnum[1], SecondLevel = GMMgr.GMEnum[10], IsAutoSend = 1, CmdList = "client testreconnect"},
+    { TopLevel = GMMgr.GMEnum[12], Desc = "显示地图Loading", ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingMap ", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[12], Desc = "显示Loading池", ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingPool ", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[12], Desc = "显示Loading内容", ShowType = GMMgr.GMEnum[1], CmdList = "client LoadingView ", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[12], Desc = "模拟Loading", ShowType = GMMgr.GMEnum[1], CmdList = "client SimulateLoading ", IsServerCmd = 0, IsAutoSend = 0},
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "新任务道具提交\n界面开关", ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
+    { TopLevel = GMMgr.GMEnum[4], SecondLevel = GMMgr.GMEnum[10], Desc = "旅行笔记全解锁", ShowType = GMMgr.GMEnum[3], IsServerCmd = 0, IsAutoSend = 1 },
+    { TopLevel = GMMgr.GMEnum[19], SecondLevel= "地图", Desc = "地图分线列表模拟", ShowType = GMMgr.GMEnum[1], CmdList = "client pworldlinelist", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "玩法布点可视化", ShowType = GMMgr.GMEnum[3], DefaultValue = 0, IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "部队署名邀请", TopLevel = GMMgr.GMEnum[19], SecondLevel = "部队",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.ArmyMgr:SendGroupSignInvite(RoleID)", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "输出所有红点路径", TopLevel = GMMgr.GMEnum[19], SecondLevel = "红点",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.RedDotMgr:PrintAllRedDotName()", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "修改战斗信息发送上限", TopLevel = GMMgr.GMEnum[4], SecondLevel = "测试",ShowType = GMMgr.GMEnum[1], CmdList = "client SysChatMsgBattleLimit [条数]", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "测试战斗信息", TopLevel = GMMgr.GMEnum[4], SecondLevel = "测试",ShowType = GMMgr.GMEnum[1], CmdList = "client AddSysChatMsgBattle [条数] [条数]", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "设置下落加速度", TopLevel = GMMgr.GMEnum[4], SecondLevel = "测试",ShowType = GMMgr.GMEnum[1], CmdList = "client GMSetFallingDownAccel", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "部队设置邀请列表单次请求数量", TopLevel = GMMgr.GMEnum[19], SecondLevel = "部队",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.ArmyMgr:SetArmyApplyMiniNumAndLimitNum(Num)", IsServerCmd = 0, IsAutoSend = 0},
+    { Desc = "打印个人头像位置", TopLevel = GMMgr.GMEnum[19], SecondLevel = "头像",ShowType = GMMgr.GMEnum[3], CmdList = "lua _G.PersonPortraitHeadMgr:SwitchPrintMovePos()", IsServerCmd = 0, IsAutoSend = 1},
     { Desc = "release版本调时间", TopLevel = GMMgr.GMEnum[19], SecondLevel = "时间&天气",ShowType = GMMgr.GMEnum[1], CmdList = "lua _G.GMMgr:TimeGM()", IsServerCmd = 0, IsAutoSend = 1},
+    { Desc = "显示OpenKey", TopLevel = GMMgr.GMEnum[6], SecondLevel = GMMgr.GMEnum[7], ShowType = GMMgr.GMEnum[1], CmdList = "client showopenkey", IsServerCmd = 0, IsAutoSend = 0},
+
+    --------------------
+    -- 多语言
+    { TopLevelCN = LocalizationEnum.TopLevelCN, TopLevel = LocalizationEnum.Title, SecondLevel = LocalizationEnum.LQATag, Desc = LocalizationEnum.StartLQATag, ShowType = GMMgr.GMEnum[1], CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevelCN = LocalizationEnum.TopLevelCN, TopLevel = LocalizationEnum.Title, SecondLevel = LocalizationEnum.LQATag, Desc = LocalizationEnum.PauseLQATag, ShowType = GMMgr.GMEnum[1], CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevelCN = LocalizationEnum.TopLevelCN, TopLevel = LocalizationEnum.Title, SecondLevel = LocalizationEnum.LQATag, Desc = LocalizationEnum.EmptyLQATag, ShowType = GMMgr.GMEnum[1], CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+    { TopLevelCN = LocalizationEnum.TopLevelCN, TopLevel = LocalizationEnum.Title, SecondLevel = LocalizationEnum.LQATag, Desc = LocalizationEnum.GenLQATagFile, ShowType = GMMgr.GMEnum[1], CmdList = "",  IsServerCmd = 0, IsAutoSend = 1},
+
 --[[
     { Desc = "激活在线状态", TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client OnlineStatusSet ", IsServerCmd = 0, IsAutoSend = 0},
     { Desc = "取消在线状态", TopLevel = GMMgr.GMEnum[4], SecondLevel= GMMgr.GMEnum[10], ShowType = GMMgr.GMEnum[1], CmdList = "client OnlineStatusReset ", IsServerCmd = 0, IsAutoSend = 0},
@@ -1175,16 +1202,16 @@ function GMMainView:DoClientClick(Params)
         return
     end
 
-    if Desc == LSTR("幻卡默认开局") then
+    if Desc == "幻卡默认开局" then
         GMMgr:ReqGM("lua MagicCardMgr:SendNpcFantasyCard(29000009)")
-    elseif Desc == LSTR("幻卡编辑界面") then
+    elseif Desc == "幻卡编辑界面" then
         GMMgr:ReqGM("lua UIViewMgr:ShowView(2212)")
     elseif Desc == "FOV" then
         --BusinessUIMgr:ShowMainPanel(_G.UIViewID.MainPanel)
         --UIViewMgr:ShowView(UIViewID.SkillButton)
         UIViewMgr:ShowView(UIViewID.FOVView)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("显示/隐藏UI") then
+    elseif Desc == "显示/隐藏UI" then
         if UIViewMgr:IsViewVisible(UIViewID.MainPanel) then
             _G.BusinessUIMgr:HideMainPanel(UIViewID.MainPanel)
             UIViewMgr:HideView(UIViewID.SkillButton)
@@ -1193,27 +1220,27 @@ function GMMainView:DoClientClick(Params)
             _G.BusinessUIMgr:ShowMainPanel(_G.UIViewID.MainPanel)
             UIViewMgr:ShowView(UIViewID.SkillButton)
         end
-    elseif Desc == LSTR("UI性能参数") then
+    elseif Desc == "UI性能参数" then
         if UIViewMgr:IsViewVisible(UIViewID.SimplePerf) then
             UIViewMgr:HideView(UIViewID.SimplePerf)
         else
             UIViewMgr:ShowView(UIViewID.SimplePerf)
         end
-    elseif Desc == LSTR("重置相机") then
+    elseif Desc == "重置相机" then
         local Major = MajorUtil.GetMajor();
         Major:GetCameraControllComponent():ResetSpringArm()
 
-    elseif Desc == LSTR("显示/隐藏调试信息") then
+    elseif Desc == "显示/隐藏调试信息" then
         GMMgr:SwitchShowDebugTips()
 
-    elseif Desc == LSTR("开启/关闭相机环绕") then
+    elseif Desc == "开启/关闭相机环绕" then
         local Major = MajorUtil.GetMajor();
         Major:GetCameraControllComponent():SwitchAutoSurround();
 
-    elseif Desc == LSTR("重载DB") then
+    elseif Desc == "重载DB" then
         DBMgr.ReloadDataBase();
 
-    elseif Desc == LSTR("显示客户端坐标") then
+    elseif Desc == "显示客户端坐标" then
         local Major = MajorUtil.GetMajor();
         local MajorPos = Major:FGetActorLocation();
         local StrPos = "Major Client Pos : (x=" .. MajorPos.X .. ", y=" .. MajorPos.Y .. ", z=" .. MajorPos.Z .. ")";
@@ -1221,21 +1248,21 @@ function GMMainView:DoClientClick(Params)
         GMMgr.GMHistoryRecord = GMMgr.GMHistoryRecord .. Result .. "\n"
         self:UpdateGMHistory()
 
-    elseif Desc == LSTR("显示/关闭选中描边") then
+    elseif Desc == "显示/关闭选中描边" then
         GMMgr:SwitchShowSelectOutline()
 
-    elseif Desc == LSTR("显示/关闭四方向角色环绕") then
+    elseif Desc == "显示/关闭四方向角色环绕" then
         local MajorController = MajorUtil.GetMajorController();
         MajorController.EnableFourDirMove = not MajorController.EnableFourDirMove;
 
-    elseif Desc == LSTR("重载CameraMode配置") then
+    elseif Desc == "重载CameraMode配置" then
         local Major = MajorUtil.GetMajor();
         Major:GetCameraControllComponent():ReloadCameraModeDataAsset();
 
-    elseif Desc == LSTR("播放音频") then
+    elseif Desc == "播放音频" then
         UIUtil.SetIsVisible(self.GMPlayAudio_UIBP, true)
 
-    elseif Desc == LSTR("显示音频列表") then
+    elseif Desc == "显示音频列表" then
         if self.GlobalAudioEventViewer == nil then
             self.GlobalAudioEventViewer = CreateWwiseViewer(self, "Global", nil, false)
             return
@@ -1243,7 +1270,7 @@ function GMMainView:DoClientClick(Params)
 
         AudioEventViewerSwitchVisible(self.GlobalAudioEventViewer)
 
-    elseif Desc == LSTR("显示选中对象的音频列表") then
+    elseif Desc == "显示选中对象的音频列表" then
         if self.ActorAudioEventViewer == nil then
             self.ActorAudioEventViewer = CreateWwiseViewer(self, "SelectedActor", _G.UE.FVector2D(-340, -390), true)
             return
@@ -1251,7 +1278,7 @@ function GMMainView:DoClientClick(Params)
 
         AudioEventViewerSwitchVisible(self.ActorAudioEventViewer)
 
-    elseif Desc == LSTR("显示音频位置") then
+    elseif Desc == "显示音频位置" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         local UAudioMgr = _G.UE.UAudioMgr.Get()
         if SwitchValue == 1 then
@@ -1259,46 +1286,46 @@ function GMMainView:DoClientClick(Params)
         else
             UAudioMgr:SetDrawDebugPos(false)
         end
-    elseif Desc == LSTR("配置RTPC值") then
+    elseif Desc == "配置RTPC值" then
         GMMainView:OnSubmitHandle() -- 默认Text部分已填写
 
-    elseif Desc == LSTR("开始挂机") then
+    elseif Desc == "开始挂机" then
         GMMgr:StartAutoFight()
 
-    elseif Desc == LSTR("结束挂机") then
+    elseif Desc == "结束挂机" then
         GMMgr:EndAutoFight()
 
-    elseif Desc == LSTR("测试开始") then
+    elseif Desc == "测试开始" then
         GMMgr:CaptainStart()
 
-    elseif Desc == LSTR("重置UI") then
+    elseif Desc == "重置UI" then
         EventMgr:SendEvent(EventID.ResetDragUI)
 
-    elseif Desc == LSTR("移动打断预输入") then
+    elseif Desc == "移动打断预输入" then
         _G.SkillPreInputMgr:SetMoveBreak(GMMgr:GetCacheValue(Params.ID))
-    elseif Desc == LSTR("PSO采集") then
+    elseif Desc == "PSO采集" then
         _G.UE.UFlibShaderPipelineCacheHelper.EnableLogPSO(GMMgr:GetCacheValue(Params.ID))
-    elseif Desc == LSTR("PSO自动保存") then
+    elseif Desc == "PSO自动保存" then
         _G.UE.UFlibShaderPipelineCacheHelper.EnableSaveBoundPSOLog(GMMgr:GetCacheValue(Params.ID))
-    elseif Desc == LSTR("保存PSO数据") then
+    elseif Desc == "保存PSO数据" then
         _G.UE.UFlibShaderPipelineCacheHelper.SavePipelineFileCache(1)
-    elseif Desc == LSTR("角色LOD") then
+    elseif Desc == "角色LOD" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bEnableCharacterLOD = true
         else
             _G.UE.UActorManager:Get().bEnableCharacterLOD = false
         end
-    elseif Desc == LSTR("角色LOD屏占比") then
+    elseif Desc == "角色LOD屏占比" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bEnableCharacterLODSceneSize = true
         else
             _G.UE.UActorManager:Get().bEnableCharacterLODSceneSize = false
         end
-    elseif Desc == LSTR("服务器ping") then
+    elseif Desc == "服务器ping" then
         _G.PING_SHOW = GMMgr:GetCacheValue(Params.ID)
-    elseif Desc == LSTR("音效广播同步") then
+    elseif Desc == "音效广播同步" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UAudioMgr:Get().bIsPlaySound = true
@@ -1309,9 +1336,9 @@ function GMMainView:DoClientClick(Params)
         local SpecialMaterialTest = require("Game/Test/SpecialMaterialTest")
         local Param1 = CmdSplit[3] or " "
         SpecialMaterialTest.SwitchMaterial(Param1, GMMgr:GetCacheValue(Params.ID))
-    elseif Desc == LSTR("播放测试Sequence") then
+    elseif Desc == "播放测试Sequence" then
         _G.UE.UCameraMgr:PlayLevelSequence("MaterialPerformanceTestingSequence")
-    elseif Desc == LSTR("技能模块Debug") then
+    elseif Desc == "技能模块Debug" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.SkillLogicMgr.ShowSkillDebug = true
@@ -1325,21 +1352,21 @@ function GMMainView:DoClientClick(Params)
             local Param1 = SplitList[4] or " "
             SpecialMaterialTest.SwitchCharacter(Param1)
         end
-    elseif Desc == LSTR("系统配置") then
+    elseif Desc == "系统配置" then
         _G.UIViewMgr:ShowView(UIViewID.CfgMainPanel)
         --_G.UIViewMgr:CreateView(UIViewID.CfgMainPanel)
 
-    elseif Desc == LSTR("暂停对白Sequence") then
+    elseif Desc == "暂停对白Sequence" then
         _G.StoryMgr:PauseSequence()
 
-    elseif Desc == LSTR("停止对白Sequence") then
+    elseif Desc == "停止对白Sequence" then
         _G.StoryMgr:StopSequence()
 
-    elseif Desc == LSTR("暂停或播放天气Sequence") then
+    elseif Desc == "暂停或播放天气Sequence" then
         local World = FWORLD()
         _G.UE.UTodUtils.ToggleWeatherPlayStatus(World)
 
-    elseif Desc == LSTR("关闭BGM") then
+    elseif Desc == "关闭BGM" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         local UAudioMgr = _G.UE.UAudioMgr.Get()
         if SwitchValue == 1 then
@@ -1355,28 +1382,28 @@ function GMMainView:DoClientClick(Params)
     elseif Params.CmdList == "client merge equipment" then
         local SpecialMaterialTest = require("Game/Test/SpecialMaterialTest")
         SpecialMaterialTest.MergeEquipmentCharacter()
-    elseif Desc == LSTR("受击表现相关日志") then
+    elseif Desc == "受击表现相关日志" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bSuperArmorLog = true
         else
             _G.UE.UActorManager:Get().bSuperArmorLog = false
         end
-    elseif Desc == LSTR("装备测试入口") then
+    elseif Desc == "装备测试入口" then
         UIViewMgr:ShowView(UIViewID.EquipmentMainPanel)
 
-    elseif Desc == LSTR("显示染色图") then
+    elseif Desc == "显示染色图" then
          UIViewMgr:ShowView(UIViewID.PWorldAreaImageTest)
          UIViewMgr:HideView(UIViewID.GMMain)
 
-    elseif Desc == LSTR("绘制标尺") then
+    elseif Desc == "绘制标尺" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bDrawRuler = true
         else
             _G.UE.UActorManager:Get().bDrawRuler = false
         end
-    elseif Desc == LSTR("角色缓存数量") then
+    elseif Desc == "角色缓存数量" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UTestMgr:Get().bShowCacheNum = true
@@ -1384,14 +1411,14 @@ function GMMainView:DoClientClick(Params)
             _G.UE.UTestMgr:Get().bShowCacheNum = false
         end
 
-    elseif Desc == LSTR("空气墙网格") then
+    elseif Desc == "空气墙网格" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UTestMgr:Get().bShowBlockingVolumeMesh = true
         else
             _G.UE.UTestMgr:Get().bShowBlockingVolumeMesh = false
         end
-    elseif Desc == LSTR("大水晶传送") then
+    elseif Desc == "大水晶传送" then
         local SplitList = string.split(Params.CmdList, " ")
         if SplitList[1] == "client" and SplitList[2] == "CrystalPortalTrans" then
             local Param1 = tonumber(SplitList[3])
@@ -1399,19 +1426,19 @@ function GMMainView:DoClientClick(Params)
                 _G.PWorldMgr:GetCrystalPortalMgr():TransferByMap(Param1)
             end
         end
-    elseif Desc == LSTR("创建ColorCalibrator") then
+    elseif Desc == "创建ColorCalibrator" then
         local ColorCalibratorPath = "StaticMesh'/Engine/EditorMeshes/ColorCalibrator/SM_ColorCalibrator.SM_ColorCalibrator'"
         local Obj = _G.ObjectMgr:LoadObjectSync(ColorCalibratorPath, ObjectGCType.LRU)
         local Actor = CommonUtil.SpawnActor(_G.UE.AStaticMeshActor.StaticClass(), MajorUtil.GetMajor():FGetActorLocation() + MajorUtil.GetMajor():GetActorForwardVector() * 100)
         Actor.StaticMeshComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.NoCollision)
         Actor:SetMobility(_G.UE.EComponentMobility.Movable)
         Actor.StaticMeshComponent:SetStaticMesh(Obj)
-    elseif Desc == LSTR("TA测试窗口") then
+    elseif Desc == "TA测试窗口" then
         _G.UIViewMgr:ShowView(UIViewID.TATestPanel)
         self:Hide()
-    elseif Desc == LSTR("特效副本重置位置") then
+    elseif Desc == "特效副本重置位置" then
         _G.UE.UTestMgr.Get():ResetMajorPos()
-    elseif Desc == LSTR("设置ZoomSpeed") then
+    elseif Desc == "设置ZoomSpeed" then
         _G.FLOG_ERROR(Params.CmdList)
         local SplitList = string.split(Params.CmdList, " ")
         if SplitList[1] == "client" and SplitList[2] == "SetZoomSpeed" then
@@ -1422,7 +1449,7 @@ function GMMainView:DoClientClick(Params)
                 CamCtrComp:SetZoomSpeed(Param1)
             end
         end
-    elseif Desc == LSTR("设置InterpSpeed") then
+    elseif Desc == "设置InterpSpeed" then
         local SplitList = string.split(Params.CmdList, " ")
         if SplitList[1] == "client" and SplitList[2] == "SetInterpSpeed" then
             local Param1 = tonumber(SplitList[3])
@@ -1432,7 +1459,7 @@ function GMMainView:DoClientClick(Params)
                 CamCtrComp:SetZoomInterpolation_InterpSpeed(Param1)
             end
         end
-    elseif Desc == LSTR("设置InterpSpeedToInterpolation") then
+    elseif Desc == "设置InterpSpeedToInterpolation" then
         local SplitList = string.split(Params.CmdList, " ")
         if SplitList[1] == "client" and SplitList[2] == "SetInterpSpeedToInterpolation" then
             local Param1 = tonumber(SplitList[3])
@@ -1442,7 +1469,7 @@ function GMMainView:DoClientClick(Params)
                 CamCtrComp:SetZoomInterpolation_InterpSpeedToInterpolation(Param1)
             end
         end
-    elseif Desc == LSTR("设置ResetInterpSpeedTolerance") then
+    elseif Desc == "设置ResetInterpSpeedTolerance" then
         local SplitList = string.split(Params.CmdList, " ")
         if SplitList[1] == "client" and SplitList[2] == "SetResetInterpSpeedTolerance" then
             local Param1 = tonumber(SplitList[3])
@@ -1452,14 +1479,14 @@ function GMMainView:DoClientClick(Params)
                 CamCtrComp:SetZoomInterpolation_ResetInterpSpeedTolerance(Param1)
             end
         end
-    elseif Desc == LSTR("强制主角特效LOD0") then
+    elseif Desc == "强制主角特效LOD0" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         local LOD = 0
         if SwitchValue == 1 then
             LOD = -127
         end
         _G.UE.EffectLODSlover.CommonDefineLOD.MajorEffectLOD = LOD
-    elseif LSTR("显示目标ai信息") == Desc then
+    elseif "显示目标ai信息" == Desc then
         if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MainPanel) then
             if _G.UIViewMgr:IsViewVisible(_G.UIViewID.GMMonsterAIInfo) then
                 _G.UIViewMgr:HideView(_G.UIViewID.GMMonsterAIInfo)
@@ -1467,7 +1494,7 @@ function GMMainView:DoClientClick(Params)
                 _G.UIViewMgr:ShowView(_G.UIViewID.GMMonsterAIInfo)
             end
         end
-    elseif LSTR("目标监控") == Desc then
+    elseif "目标监控" == Desc then
         if _G.UIViewMgr:IsViewVisible(_G.UIViewID.MainPanel) then
             if _G.UIViewMgr:IsViewVisible(_G.UIViewID.GMTargetInfo) then
                 _G.UIViewMgr:HideView(_G.UIViewID.GMTargetInfo)
@@ -1475,14 +1502,14 @@ function GMMainView:DoClientClick(Params)
                 _G.UIViewMgr:ShowView(_G.UIViewID.GMTargetInfo)
             end
         end
-    elseif LSTR("打印技能按钮状态") == Desc then
+    elseif "打印技能按钮状态" == Desc then
         local Msg = _G.SkillLogicMgr:PrintMajorButtonState()
         print(Msg)
         table.insert(GMMgr.GMStringList, Desc)
         GMMgr.GMIndex = #GMMgr.GMStringList
         GMMgr.GMHistoryRecord = GMMgr.GMHistoryRecord .. "\nGM: " .. Desc .. "\n" .. Msg
         self:UpdateGMHistory()
-	elseif Desc == LSTR("头盔机关") then
+	elseif Desc == "头盔机关" then
 		local SwitchValue = GMMgr:GetCacheValue(Params.ID)
 		local Major = MajorUtil.GetMajor()
 		if SwitchValue == 1 then
@@ -1490,155 +1517,155 @@ function GMMainView:DoClientClick(Params)
 		else
 			Major:SwitchHelmet(false)
 		end
-    elseif Desc == LSTR("取消LookAt限制") then
+    elseif Desc == "取消LookAt限制" then
         local Major = MajorUtil.GetMajor()
         local AnimComp = Major:GetAnimationComponent()
         if AnimComp then
             AnimComp:SetLookAtLimit()
         end
-    elseif Desc == LSTR("LookAt日志开关") then
+    elseif Desc == "LookAt日志开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bLookAtLog = true
         else
             _G.UE.UActorManager:Get().bLookAtLog = false
         end
-	elseif Desc == LSTR("充值") then
+	elseif Desc == "充值" then
 		_G.RechargingMgr:ShowMainPanel()
-    elseif Desc == LSTR("查看一等奖号码、期数") then
+    elseif Desc == "查看一等奖号码、期数" then
         GMMgr:ReqGM("entertain fairycolor shownum")
-    elseif Desc == LSTR("清空仙人仙彩全部数据") then
+    elseif Desc == "清空仙人仙彩全部数据" then
         GMMgr:ReqGM("entertain fairycolor clear")
-    elseif Desc == LSTR("仙人仙彩开奖") then
+    elseif Desc == "仙人仙彩开奖" then
         GMMgr:ReqGM("entertain fairycolor open")
-    elseif Desc == LSTR("邀请新人加入频道") then
+    elseif Desc == "邀请新人加入频道" then
         local RoleID = ActorUtil.GetRoleIDByEntityID(_G.HUDMgr.TargetEntityID)
         _G.NewbieMgr:InviteJoinNewbieChannelReq(RoleID)
         --_G.ChatMgr:InviteJoinNewbieChannelNtf(nil)
-    elseif Desc == LSTR("加入新人频道") then
+    elseif Desc == "加入新人频道" then
         _G.NewbieMgr:JoinChannelReq()
-    elseif Desc == LSTR("新人频道发言考核") then
+    elseif Desc == "新人频道发言考核" then
         _G.NewbieMgr:StartNewbieSpeakEvaluation()
-    elseif Desc == LSTR("移除目标出新人频道") then
+    elseif Desc == "移除目标出新人频道" then
         local RoleID = ActorUtil.GetRoleIDByEntityID(_G.HUDMgr.TargetEntityID)
         _G.NewbieMgr:EvictNewbieChannel(RoleID)
 
-    elseif Desc == LSTR("清空本角色当期购买记录") then
+    elseif Desc == "清空本角色当期购买记录" then
         GMMgr:ReqGM("entertain fairycolor delrecord")
-    elseif Desc == LSTR("查看当前玩法服时间") then
+    elseif Desc == "查看当前玩法服时间" then
         GMMgr:ReqGM("entertain time now")
-    elseif Desc == LSTR("仙人仙彩开奖") then
+    elseif Desc == "仙人仙彩开奖" then
         GMMgr:ReqGM("entertain fairycolor open")
-    elseif Desc == LSTR("机遇-开启1号玩法") then
+    elseif Desc == "机遇-开启1号玩法" then
         GMMgr:ReqGM("entertain gate start 1")
-    elseif Desc == LSTR("机遇-结束当前轮次") then
+    elseif Desc == "机遇-结束当前轮次" then
         GMMgr:ReqGM("entertain gate end")
-    elseif Desc == LSTR("机遇-结算") then
+    elseif Desc == "机遇-结算" then
         _G.GoldSauserMgr:SendEndGameReq(0, false)
         -- GMMgr:ReqGM("entertain gate play 1")
-    elseif Desc == LSTR("机遇-报名") then
+    elseif Desc == "机遇-报名" then
         GMMgr:ReqGM("entertain gate signup")
-    elseif Desc == LSTR("机遇-发送报名") then
+    elseif Desc == "机遇-发送报名" then
         _G.GoldSauserMgr:SendSignUpGame()
-    elseif Desc == LSTR("机遇-打印后台状态") then
+    elseif Desc == "机遇-打印后台状态" then
         GMMgr:ReqGM("entertain gate show")
-    elseif Desc == LSTR("查询时尚品鉴主题") then
+    elseif Desc == "查询时尚品鉴主题" then
         _G.FashionReportMgr:SendFashionCheckQueryThemeReq()
-    elseif Desc == LSTR("时尚品鉴评分") then
+    elseif Desc == "时尚品鉴评分" then
         _G.FashionReportMgr:SendFashionCheckIsOpenReq()
-    elseif Desc == LSTR("时尚评鉴确认最高分") then
+    elseif Desc == "时尚评鉴确认最高分" then
         _G.FashionReportMgr:SendFashionConfirmHighScoreEqiu()
-    elseif Desc == LSTR("解锁所有系统(表现)") then
+    elseif Desc == "解锁所有系统(表现)" then
 		local ModuleopenCfg = require("TableCfg/ModuleopenCfg")
 		local ModuleopenAllCfg = ModuleopenCfg:FindAllCfg()
         for i = 1, #ModuleopenAllCfg do
             GMMgr:ReqGM(string.format("%s%d", "zone moduleopen open ", i))
         end
-    elseif Desc == LSTR("收藏品界面") then
+    elseif Desc == "收藏品界面" then
         _G.UIViewMgr:ShowView(UIViewID.CollectablesMainPanelView)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("莫古抓球机界面") then
+    elseif Desc == "莫古抓球机界面" then
         _G.GoldSaucerMiniGameMgr:InteractEnterTheGoldSaucerMiniGame(GoldSaucerMiniGameDefine.MiniGameType.MooglesPaw)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("矿脉探索界面") then
+    elseif Desc == "矿脉探索界面" then
         _G.GoldSaucerMiniGameMgr:InteractEnterTheGoldSaucerMiniGame(GoldSaucerMiniGameDefine.MiniGameType.TheFinerMiner)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("孤树无援界面") then
+    elseif Desc == "孤树无援界面" then
         _G.GoldSaucerMiniGameMgr:InteractEnterTheGoldSaucerMiniGame(GoldSaucerMiniGameDefine.MiniGameType.OutOnALimb)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("旅行笔记界面") then
+    elseif Desc == "旅行笔记界面" then
         UIViewMgr:ShowView(UIViewID.TravelLogPanel)
-    elseif Desc == LSTR("初始副本显示UI") then
+    elseif Desc == "初始副本显示UI" then
         _G.EventMgr:SendEvent(EventID.ShowSubViews)
-    elseif Desc == LSTR("运输陆行鸟NPC查询") then
+    elseif Desc == "运输陆行鸟NPC查询" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.ChocoboTransportMgr:SetQuestNpcQueryEnable(SwitchValue == 1)
-    elseif Desc == LSTR("运输陆行鸟地图") then
+    elseif Desc == "运输陆行鸟地图" then
         UIViewMgr:ShowView(UIViewID.ChocoboTransportPanel)
-    elseif Desc == LSTR("新手引导开关") then
+    elseif Desc == "新手引导开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 0 then -- 关
             SettingsUtils.SettingsTabUnCategory:SetTutorialState(1, true)
         elseif SwitchValue == 1 then --- 开
             SettingsUtils.SettingsTabUnCategory:SetTutorialState(2, true)
         end
-    elseif Desc == LSTR("重置新手引导") then
+    elseif Desc == "重置新手引导" then
         _G.NewTutorialMgr:ClearTutorialSchedule()
-    elseif Desc == LSTR("重置新手指南") then
+    elseif Desc == "重置新手指南" then
         _G.TutorialGuideMgr:ClearTutorialGuide()
-    elseif Desc == LSTR("启用新手引导") then
+    elseif Desc == "启用新手引导" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.NewTutorialMgr:EnableGMTutorial(SwitchValue)
         _G.TutorialGuideMgr:EnableGMTutorial(SwitchValue)
-    elseif Desc == LSTR("钓鱼笔记钓场位置调整") then
+    elseif Desc == "钓鱼笔记钓场位置调整" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.FishNotesMgr.FishingholePosAdjustGM = SwitchValue == 1
-    elseif Desc == LSTR("制作快捷道具") then
+    elseif Desc == "制作快捷道具" then
         _G.FLOG_INFO("PreSendEvent%s", EventID.CraftingLogConvenient)
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.EventMgr:SendEvent(EventID.CraftingLogConvenient, SwitchValue)
         _G.FLOG_INFO("AlreadySendEvent(%s, %s)",EventID.CraftingLogConvenient, SwitchValue)
-    elseif Desc == LSTR("副本任务") then
+    elseif Desc == "副本任务" then
         _G.PWorldQuestMgr:ShowPWQuestView()
-    elseif Desc == LSTR("副本入口") then
+    elseif Desc == "副本入口" then
         -- UIViewMgr:ShowView(UIViewID.PWorldEntranceSelectPanel)
-    elseif Desc == LSTR("挂机测试") then
+    elseif Desc == "挂机测试" then
         local BeginTime = TimeUtil.GetLocalTime() - 15 * 60
         _G.ClientReportMgr:SendClientReport(ClientReportType.ReportTypeRoleLeave, {Leave = {BeginTime = BeginTime}})
-    elseif Desc == LSTR("地图资源检测") then
+    elseif Desc == "地图资源检测" then
         UIViewMgr:ShowView(UIViewID.FieldTestPanel)
         self:Hide()
-    elseif Desc == LSTR("信息自动化") then
+    elseif Desc == "信息自动化" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = LSTR("信息自动化")})
-    elseif Desc == LSTR("实体创建") then
+        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = "信息自动化"})
+    elseif Desc == "实体创建" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = LSTR("实体创建")})
-    elseif Desc == LSTR("蓝图检查") then
+        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = "实体创建"})
+    elseif Desc == "蓝图检查" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = LSTR("蓝图检查")})        
-    elseif Desc == LSTR("传送至追踪任务目标") then
+        UIViewMgr:ShowView(UIViewID.MultiLanguageTestPanel,{ViewType = "蓝图检查"})        
+    elseif Desc == "传送至追踪任务目标" then
         local Cmd = _G.QuestTrackMgr:MakeGMQuestTeleportCmd()
         if Cmd then
             self.InputText:SetText(Cmd)
             self:OnSubmitHandle()
         end
-    elseif Desc == LSTR("推荐任务一键置新") then
+    elseif Desc == "推荐任务一键置新" then
         -- _G.EventMgr:SendEvent(EventID.RecommendTaskNewTip)
         _G.AdventureRecommendTaskMgr:DoGM()
 
-    elseif Desc == LSTR("清除Roll奖励列表") then
+    elseif Desc == "清除Roll奖励列表" then
         _G.TeamRollItemVM.AwardList:Clear()
-    elseif Desc == LSTR("打开新手指南") then
+    elseif Desc == "打开新手指南" then
         _G.TutorialGuideMgr:OpenGMGuide()
     elseif Desc == "清除Roll奖励列表" then
-    elseif Desc == LSTR("称号界面") then
+    elseif Desc == "称号界面" then
         _G.UIViewMgr:ShowView(UIViewID.TitleMainPanelView)
         UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("监修测试开关") then
+    elseif Desc == "监修测试开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         MainPanelVM:OnTestVersionChanged(SwitchValue > 0)
-    elseif Desc == LSTR("地图参数开关") then
+    elseif Desc == "地图参数开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.WorldMapMgr:ShowDebugInfo(SwitchValue > 0)
         _G.FishNotesMgr:ShowDebugInfo(SwitchValue > 0)
@@ -1652,13 +1679,13 @@ function GMMainView:DoClientClick(Params)
         local MsgBody = { LineQuery = PWorldLineQueryRsp }
         _G.PWorldMgr:OnPWorldLineQuery(MsgBody)
         _G.UIViewMgr:ShowView(_G.UIViewID.PWorldBranchPanel)
-    elseif Desc == LSTR("消息队列开关") then
+    elseif Desc == "消息队列开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.TipsQueueMgr:EnableUseQueue(SwitchValue > 0)
-    elseif Desc == LSTR("地图自动寻路") then
+    elseif Desc == "地图自动寻路" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.WorldMapMgr.OpenMapAutoPath = SwitchValue > 0
-    elseif Desc == LSTR("模拟邮件内打开收礼界面1") then
+    elseif Desc == "模拟邮件内打开收礼界面1" then
 		local Param = {
 			FriendID = 6508238788987404920,
 			GoodID = 10001,
@@ -1667,7 +1694,7 @@ function GMMainView:DoClientClick(Params)
 			Style = 1
 		}
 		_G.StoreMainVM:OnShowGiftMailPanel(true, Param)
-	elseif Desc == LSTR("模拟邮件内打开收礼界面2") then
+	elseif Desc == "模拟邮件内打开收礼界面2" then
 		local Param = {
 			FriendID = 6508238788987404920,
 			GoodID = 40001,
@@ -1676,95 +1703,125 @@ function GMMainView:DoClientClick(Params)
 			Style = 1
 		}
 		_G.StoreMainVM:OnShowGiftMailPanel(true, Param)
-    elseif Desc == LSTR("显示副本教学界面") then
+    elseif Desc == "显示副本教学界面" then
         _G.TeachingMgr:OnShowMainWindow()
-    elseif Desc == LSTR("副本教学引导测试") then
+    elseif Desc == "副本教学引导测试" then
         --_G.TeachingMgr:OnShowPWorldGuideTip(106)
         _G.EventMgr:SendEvent(_G.EventID.PWorldSkillTip,101)
-		--_G.MsgTipsUtil.ShowPWorldTeachingTips(LSTR("观察预警范围，躲避伤害"), 3)
-		--_G.MsgTipsUtil.ShowPWorldResultTips(LSTR("挑战失败"), 3, false)
+		--_G.MsgTipsUtil.ShowPWorldTeachingTips("观察预警范围，躲避伤害", 3)
+		--_G.MsgTipsUtil.ShowPWorldResultTips("挑战失败", 3, false)
         _G.UIViewMgr:HideView(UIViewID.GMMain)
-    elseif Desc == LSTR("显示网络延迟") then
+    elseif Desc == "显示网络延迟" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.EventMgr:SendEvent(_G.EventID.GMShowRTT, SwitchValue ~= 0)
-    elseif Desc == LSTR("打开示例蓝图") then
+    elseif Desc == "打开示例蓝图" then
         UIViewMgr:ShowView(UIViewID.SampleMain)
-    elseif Desc == LSTR("模拟断线") then
+    elseif Desc == "模拟断线" then
         _G.NetworkStateMgr.TestDisconnect()
-    elseif Desc == LSTR("模拟重连")then
+    elseif Desc == "模拟重连"then
         _G.NetworkStateMgr.TestReconnect()
-    elseif Desc == LSTR("测试赠礼邮件上限") then
+    elseif Desc == "测试赠礼邮件上限" then
 		local RoleID = MajorUtil.GetMajorRoleID()
 		local GMStr = string.format("%s%d%s%d%s%d%s", "zone mail sendMxRoleMail 2 ",RoleID, " ", RoleID, " ", RoleID," 40001 20")
 		GMMgr:ReqGM(GMStr)
-    elseif Desc == LSTR("显示物理材质") then
+    elseif Desc == "显示物理材质" then
         local Major = MajorUtil.GetMajor()
         local CamComp = Major:GetComponentByClass(_G.UE.UActorAudioComponent)
         _G.UE.UTestMgr:Get():PhysicsOnFeetFocusActor(Major);
         _G.UE.UTestMgr:Get():ChangeDisplayPhysicsOnFeet();
         return
-    elseif Desc == LSTR("使用艾欧泽亚文字") then
+    elseif Desc == "使用艾欧泽亚文字" then
         ---若处于英文环境，则全局替换艾欧泽亚字体，其他语言环境会发生乱码
         if CommonUtil.IsCurCultureEnglish() then
             _G.UIViewMgr:SetUseAzerothFont(true)
             _G.HUDMgr:SetAllHUDFontForAozy(true)
         end
         return
-    elseif Desc == LSTR("主角同步点绘制开关") then
+    elseif Desc == "主角同步点绘制开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UActorManager:Get().bDrawSynPos = true
         else
             _G.UE.UActorManager:Get().bDrawSynPos = false
         end
-    elseif Desc == LSTR("主角速度显示开关") then
+    elseif Desc == "主角速度显示开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         if SwitchValue == 1 then
             _G.UE.UTestMgr:Get():GMSetDisplaySpeed(true)
         else
             _G.UE.UTestMgr:Get():GMSetDisplaySpeed(false)
         end
-    elseif Desc == LSTR("新任务道具提交\n界面开关") then
+    elseif Desc == "新任务道具提交\n界面开关" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         local ItemSubmitVM = require("Game/Quest/VM/PanelVM/ItemSubmitVM")
         ItemSubmitVM.IsNewStypeUI = SwitchValue > 0
-    elseif Desc == LSTR("旅行笔记全解锁") then
+    elseif Desc == "旅行笔记全解锁" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.TravelLogMgr.IsTempTest = SwitchValue
-    elseif Desc == LSTR("玩法布点可视化") then
+    elseif Desc == "玩法布点可视化" then
         local SwitchValue = GMMgr:GetCacheValue(Params.ID)
         _G.MapMgr:SetGameplayLocationVisible(SwitchValue == 1)
-    elseif Desc == LSTR("开启交互日志") then
+    elseif Desc == "开启交互日志" then
         _G.InteractiveMgr:SetEnablePrintNormalLog(true)
-    elseif Desc == LSTR("关闭交互日志") then
+    elseif Desc == "关闭交互日志" then
         _G.InteractiveMgr:SetEnablePrintNormalLog(false)
-    elseif Desc == LSTR("启动潘多拉组件") then
+    elseif Desc == "启动潘多拉组件" then
         _G.PandoraMgr:SetEnableGamelet()
         _G.PandoraMgr:CloseGameletSDK()
         _G.PandoraMgr:InitGamelet(_G.LoginMgr:GetChannelID(), "3903467765502703339", _G.LoginMgr:GetRoleID(), false, true)
-    elseif Desc == LSTR("打开拍脸") then
+    elseif Desc == "打开拍脸" then
         _G.PandoraMgr:OpenFaceSlapApp()
-    elseif Desc == LSTR("打开资讯") then
+    elseif Desc == "打开资讯" then
         _G.PandoraMgr:OpenAnnouncement()
-    elseif Desc == LSTR("分享到小程序") then
+    elseif Desc == "分享到小程序" then
         _G.ShareMgr:ShareCrystalSummon("", "")
-    elseif Desc == LSTR("特效监控") then
+    elseif Desc == "特效监控" then
         GMMgr:ReqGM(Params.CmdList)
-    elseif Desc == LSTR("NPC对话") then
+    elseif Desc == "NPC对话" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = LSTR("NPC对话")})
-    elseif Desc == LSTR("动画文本") then
+        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = "NPC对话"})
+    elseif Desc == "动画文本" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = LSTR("动画文本")})
-    elseif Desc == LSTR("任务追踪") then
+        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = "动画文本"})
+    elseif Desc == "任务追踪" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = LSTR("任务追踪")})
-    elseif Desc == LSTR("CustomTalk") then
+        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = "任务追踪"})
+    elseif Desc == "CustomTalk" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = LSTR("CustomTalk")})
-    elseif Desc == LSTR("对话选项") then
+        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = "CustomTalk"})
+    elseif Desc == "对话选项" then
         UIViewMgr:HideView(UIViewID.GMMain)
-        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = LSTR("对话选项")})        
+        UIViewMgr:ShowView(UIViewID.NarrativeTestPanel,{ViewType = "对话选项"})        
+
+    -------------------------------------------------------------------------------------------
+    -- 多语言
+    elseif Desc == LocalizationEnum.StartLQATag then
+        UIViewMgr:HideView(UIViewID.GMMain)
+
+        _G.LocalizationUtil.SetIsEnabledLQATag(true)
+        _G.MsgTipsUtil.ShowTips("开启LQA打点")
+
+    elseif Desc == LocalizationEnum.PauseLQATag then
+        UIViewMgr:HideView(UIViewID.GMMain)
+
+        _G.LocalizationUtil.SetIsEnabledLQATag(false)
+        _G.MsgTipsUtil.ShowTips("关闭LQA打点")
+
+    elseif Desc == LocalizationEnum.EmptyLQATag then
+        UIViewMgr:HideView(UIViewID.GMMain)
+
+        _G.LocalizationUtil.EmptyLQATagData()
+        _G.MsgTipsUtil.ShowTips("清空LQA打点信息")
+
+    elseif Desc == LocalizationEnum.GenLQATagFile then
+        UIViewMgr:HideView(UIViewID.GMMain)
+
+        _G.LocalizationUtil.GenerateLQATagFile()
+        _G.MsgTipsUtil.ShowTips("生成LQA打点信息文件")
+
+    -------------------------------------------------------------------------------------------
+
+
     else
         self:OnSubmitHandle()
 	end
@@ -1780,19 +1837,18 @@ function GMMainView:SearchCommitted()
     local SearchText = self.CommSearchBar:GetText()
     local NewList = {}
     for i = 1, #AllCmd do
-        local GMName = AllCmd[i].Desc
-        local IsSame = GMMgr:SearchByInput(SearchText, GMName)
-        if IsSame then
+        local GMDesc = AllCmd[i].Desc
+        if GMDesc:find(SearchText) then
             table.insert(NewList, AllCmd[i])
         end
     end
 
-    self.Title:SetText(LSTR("搜索结果"))
+    self.Title:SetText("搜索结果")
     GMVM:UpdateVM(NewList)
 end
 
 function GMMainView:SearchCancel()
-    self.Title:SetText(LSTR("便携指令区域"))
+    self.Title:SetText("便携指令区域")
     GMVM:UpdateVM(self.LastShowList)
 end
 

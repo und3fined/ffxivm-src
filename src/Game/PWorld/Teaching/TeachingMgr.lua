@@ -16,6 +16,7 @@ local TeachingDefine = require("Game/Pworld/Teaching/TeachingDefine")
 local PworldCfg = require("TableCfg/PworldCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
+local ProfUtil = require("Game/Profession/ProfUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MainPanelVM = require("Game/Main/MainPanelVM")
@@ -54,15 +55,17 @@ function TeachingMgr:GetShowLevel()
 	local MajorClass = RoleInitCfg:FindProfClass(MajorProfID)
     local CfgMap = self:GetTableByProf(MajorClass)
 
-    -- 默认显示玩家未完成的那个难度
-    for DiffLevel,ItemList in ipairs(CfgMap) do
-        if not self:IsItemListCompleted(ItemList) then
-            return DiffLevel
+    if CfgMap then
+        -- 默认显示玩家未完成的那个难度
+        for DiffLevel,ItemList in ipairs(CfgMap) do
+            if not self:IsItemListCompleted(ItemList) then
+                return DiffLevel
+            end
         end
     end
-    
-    -- 都完成的话就显示高级难度
-    return TeachingType.Diff_Type.Hight
+
+    -- 都完成的话就显示低级难度, 最高难度不一定会配置
+    return TeachingType.Diff_Type.Low
 end
 
 function TeachingMgr:IsSelected(InteractiveID)
@@ -118,9 +121,10 @@ function TeachingMgr:InitTeachCfgMap()
         local DiffType = Param[1]
         local JobType = Param[2]
         local LevelLimit = Param[3]
+        local IsAdvancedProf = Param[5] or 0
         local TeachContent = StrParam[1]
         local TeachItemList = {}
-        
+
         -- 每个挑战的信息
         for item in string.gmatch(StrParam[2], "([^;]+)") do
             local TeachItem = {Desc = item, State = TeachingType.Item_State.UnOpened}
@@ -130,7 +134,14 @@ function TeachingMgr:InitTeachCfgMap()
         local TeachBackImg = StrParam[3]
 
         -- 挑战目标，包含多个挑战
-        local TeachItemInfo = {Content = TeachContent, InteractiveID = InteractiveID, ItemList = TeachItemList, LevelLimit = LevelLimit, BackImg = TeachBackImg}
+        local TeachItemInfo = {
+            Content = TeachContent,
+            InteractiveID = InteractiveID,
+            ItemList = TeachItemList,
+            LevelLimit = LevelLimit,
+            BackImg = TeachBackImg,
+            NeedAdvancedProf = IsAdvancedProf > 0,
+        }
 
         -- 插入不同难度和职能分段
         table.insert(self.TeachCfgMap[JobType][DiffType], TeachItemInfo)
@@ -160,8 +171,8 @@ function TeachingMgr:OnPWorldUIChange(UIType, ResultType)
     FLOG_INFO("TeachingMgr:OnPWorldUIChange (Type:%d, Result:%d)", UIType, ResultType)
 end
 
-function TeachingMgr:OnPWorldSkillTip(Index)
-    local Params = { Index = Index }
+function TeachingMgr:OnPWorldSkillTip(SkillID)
+    local Params = { SkillID = SkillID }
     UIViewMgr:ShowView(UIViewID.PWorldSkillGuidancePanel, Params)
 end
 
@@ -308,23 +319,22 @@ function TeachingMgr:GetMaxLevelCombat()
     return MaxLevel
 end
 
-function TeachingMgr:IsCrafterProf()
+function TeachingMgr:IsEnableTeaching(ShowMessage, NeedAdvancedProf)
     local MajorProfID = MajorUtil.GetMajorAttributeComponent().ProfID
-	local Specialization = RoleInitCfg:FindProfSpecialization(MajorProfID)
-	local IsCrafterProf = Specialization == ProtoCommon.specialization_type.SPECIALIZATION_TYPE_PRODUCTION
-    return IsCrafterProf
-end
-
-function TeachingMgr:IsEnableTeaching(ShowMessage)
-	local IsCrafterProf = self:IsCrafterProf()
-
-    if IsCrafterProf then
+    -- 判断生产职业
+    if ProfUtil.IsCrafterProf(MajorProfID) or ProfUtil.IsGpProf(MajorProfID) then
         if ShowMessage then
 		    MsgTipsUtil.ShowTips(LSTR(890022))
         end
         return false
 	end
-
+    -- 判断特职
+    if NeedAdvancedProf and not ProfUtil.IsAdvancedProf(MajorProfID) then
+        if ShowMessage then
+		    MsgTipsUtil.ShowTips(LSTR(890029))
+        end
+        return false
+    end
     return true
 end
 

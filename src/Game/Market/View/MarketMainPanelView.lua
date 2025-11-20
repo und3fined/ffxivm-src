@@ -167,7 +167,6 @@ function MarketMainPanelView:OnClickButtonClose()
 end
 
 function MarketMainPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.MarketStallInfoUpdata, self.OnStallInfoUpdata)
 end
 
 function MarketMainPanelView:OnRegisterBinder()
@@ -190,11 +189,7 @@ function MarketMainPanelView:OnRegisterBinder()
 end
 
 function MarketMainPanelView:OnStallInfoUpdata()
-	if MarketMgr:HasStallExpired() or MarketMgr:GetAllStallIncome() > 0 then
-		_G.RedDotMgr:AddRedDotByID(MarketDefine.MarketRedDotID.Market)
-	else
-		_G.RedDotMgr:DelRedDotByID(MarketDefine.MarketRedDotID.Market)
-	end
+
 end
 
 

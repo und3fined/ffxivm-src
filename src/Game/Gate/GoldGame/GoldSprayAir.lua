@@ -7,6 +7,7 @@ local LuaClass = require("Core/LuaClass")
 local GoldGameNewBase = require("Game/Gate/GoldGame/GoldGameNewBase")
 local AnyWayWindBlowsCfg = require("TableCfg/AnyWayWindBlowsCfg")
 local ProtoCS = require("Protocol/ProtoCS")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
 
 local LSTR = _G.LSTR
 
@@ -65,6 +66,12 @@ end
 function GoldSprayAir:UpdateDisplayText(InGameVM, InStage, InCoins)
     InGameVM.AvoidText = string.format(AVOID_TEXT_FORMAT, InStage, MAX_STAGE)
     InGameVM.GoldText = string.format(GOLD_TEXT_FORMAT, InCoins)
+end
+
+function GoldSprayAir:OnShowInfoAfterSignup(InGameMgr)
+    -- 播放文本 40241 在提丰老师准备完成之前，请在舞台上稍等片刻！
+    local TipsID = 40241
+    MsgTipsUtil.ShowTipsByID(TipsID)
 end
 
 return GoldSprayAir

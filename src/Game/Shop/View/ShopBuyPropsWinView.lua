@@ -23,11 +23,14 @@ local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
 local ItemUtil = require("Utils/ItemUtil")
+local EventMgr = require("Event/EventMgr")
 local EventID = require("Define/EventID")
 local TimeUtil = require("Utils/TimeUtil")
 local CounterMgr = require("Game/Counter/CounterMgr")
 local ShopGoodsListItemVM = require("Game/Shop/ItemVM/ShopGoodsListItemVM")
 local CounterCfg = require("TableCfg/CounterCfg")
+local CommonUtil = require("Utils/CommonUtil")
+
 
 
 local BagMgr = _G.BagMgr
@@ -49,6 +52,25 @@ local TextColor = {
 	"d5d5d5", -- 白
 }
 
+local GoodsPriceType = {
+	[ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE] = "积分",
+	[ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_ITEM] = "物品",
+}
+
+local ItemBgColor = {
+	"Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorWhite.UI_Comm_Shop_Img_ColorWhite'",
+	"Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorGreen.UI_Comm_Shop_Img_ColorGreen'",
+	"Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorBlue.UI_Comm_Shop_Img_ColorBlue'",
+	"Texture2D'/Game/UI/Texture/CommPic/UI_Comm_Shop_Img_ColorPurple.UI_Comm_Shop_Img_ColorPurple'",
+}
+
+local ImgPicColor = {
+	"ffffff07",
+	"b0ffc307",
+	"b0c8ff07",
+	"ecafff07"
+}
+
 local UpdateTextData = {}
 
 ---@class ShopBuyPropsWinView : UIView
@@ -56,8 +78,6 @@ local UpdateTextData = {}
 ---@field AmountSlider CommAmountSliderView
 ---@field BG Comm2FrameMView
 ---@field BtnBuyConfirm CommBtnLView
----@field BtnCancel CommBtnLView
----@field BtnGift CommBtnLView
 ---@field BtnGoods UFButton
 ---@field BtnMoney1 UFButton
 ---@field BtnMoney2 UFButton
@@ -69,6 +89,9 @@ local UpdateTextData = {}
 ---@field BtnTips1_1 UFButton
 ---@field BtnTips2 UFButton
 ---@field BtnTips2_1 UFButton
+---@field CommMoney CommMoneyBarView
+---@field CommSearchBar CommSearchBarView
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field FHorizontalSurplus UFHorizontalBox
 ---@field HorizontalCurrent1 UFHorizontalBox
 ---@field HorizontalCurrent2 UFHorizontalBox
@@ -107,8 +130,6 @@ function ShopBuyPropsWinView:Ctor()
 	--self.AmountSlider = nil
 	--self.BG = nil
 	--self.BtnBuyConfirm = nil
-	--self.BtnCancel = nil
-	--self.BtnGift = nil
 	--self.BtnGoods = nil
 	--self.BtnMoney1 = nil
 	--self.BtnMoney2 = nil
@@ -120,6 +141,9 @@ function ShopBuyPropsWinView:Ctor()
 	--self.BtnTips1_1 = nil
 	--self.BtnTips2 = nil
 	--self.BtnTips2_1 = nil
+	--self.CommMoney = nil
+	--self.CommSearchBar = nil
+	--self.CommWinSlotQuality = nil
 	--self.FHorizontalSurplus = nil
 	--self.HorizontalCurrent1 = nil
 	--self.HorizontalCurrent2 = nil
@@ -158,8 +182,9 @@ function ShopBuyPropsWinView:OnRegisterSubView()
 	self:AddSubView(self.AmountSlider)
 	self:AddSubView(self.BG)
 	self:AddSubView(self.BtnBuyConfirm)
-	self:AddSubView(self.BtnCancel)
-	self:AddSubView(self.BtnGift)
+	self:AddSubView(self.CommMoney)
+	self:AddSubView(self.CommSearchBar)
+	self:AddSubView(self.CommWinSlotQuality)
 	self:AddSubView(self.ShopGoods)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -178,6 +203,7 @@ function ShopBuyPropsWinView:OnInit()
 	self.NumberPanelList = {self.NumberPanel1,self.NumberPanel2}
 	self.BindingList = nil
 	self.IsCanBuy = true
+	self.CommSearchBar:SetCallback(self, nil, self.OnSearchCommit, self.OnCancelSearchClicked)
 end
 
 function ShopBuyPropsWinView:OnDestroy()
@@ -198,11 +224,20 @@ function ShopBuyPropsWinView:OnShow()
 	self.ItemID = self.Params.ItemID
 	self.ItemName = self.Params.Name
 	UIUtil.SetIsVisible(self.TextWear, false)
-	UIUtil.SetIsVisible(self.BtnGift, false, true)
-	UIUtil.SetIsVisible(self.BtnCancel, true, true)
+	local CurOpneShopID = ShopMgr.CurOpenMallId or ShopMgr.CurQueryShopID
+	local EnableSearch = ShopMgr.AllShopInfo[CurOpneShopID].EnableSearch
+	if EnableSearch == 1 then
+		self.CommSearchBar:SetHintText(LSTR(1200097))	--- 搜索商品
+		UIUtil.SetIsVisible(self.CommSearchBar, true, true)
+	else
+		UIUtil.SetIsVisible(self.CommSearchBar, false, true)
+	end
+	
 	self.TextAmount:SetText(1)
 	self.TextNumber1:SetText(LSTR(1200088))-- -10
 	self.TextNumber2:SetText(LSTR(1200089))-- +10
+	self:SetPriceListState(true)
+	self:SetItemHasNum()
 	local Cfg = ItemCfg:FindCfgByKey(self.ItemID)
 	if Cfg ~= nil then
 		self:UpdateGoodsInfo(Cfg)
@@ -217,6 +252,7 @@ function ShopBuyPropsWinView:OnShow()
 	self.GoodsItemVM:SetBuyViewState(true)
 	self.ShopGoods:SetParams({Data = self.GoodsItemVM})
 	self.ShopGoods:SetBuyViewItemState(false)
+	self.CommWinSlotQuality:UpdateUIByItem(self.ItemID)
 	if ShopMgr.JumpToGoodsState then
 		local JumpToBuyNum = ShopMgr.JumpToBuyNum or 1
 		local BuyValue = math.min(JumpToBuyNum, self.MaxNum)
@@ -225,25 +261,25 @@ function ShopBuyPropsWinView:OnShow()
 	UIUtil.SetIsVisible(self.BtnPreview, self.Params.IsCanPreView, true)
 end
 
-function ShopBuyPropsWinView:OnHide()
+function ShopBuyPropsWinView:ClearBuyInfo()
 	self.TextAmount:SetText(1)
 	if UIViewMgr:IsViewVisible(UIViewID.ItemTipsStatus) then
 		UIViewMgr:HideView(UIViewID.ItemTipsStatus)
 	end
-	--ShopMgr.CurQueryShopID = nil
-	PriceValueInfo = {}
+
+	self:SetPriceListState(false)
+end
+
+function ShopBuyPropsWinView:OnHide()
+	if CommonUtil.IsObjectValid(self) then
+		PriceValueInfo = {}
+		EventMgr:SendEvent(EventID.ShopSetPriceState, true)
+	end
 end
 
 function ShopBuyPropsWinView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnBuyConfirm, self.OnClickedConfirmBtn)
 	UIUtil.AddOnClickedEvent(self, self.BtnGoods, self.OnClickedBtnSlot)
-	UIUtil.AddOnClickedEvent(self, self.BtnCancel, self.OnClickedBtnCancel)
-	UIUtil.AddOnClickedEvent(self, self.BtnNumber1, self.OnClickedBtnNumber1)
-	UIUtil.AddOnClickedEvent(self, self.BtnNumber2, self.OnClickedBtnNumber2)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips1, self.OnClickedBtnTips1)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips2, self.OnClickedBtnTips2)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips1_1, self.OnClickedBtnTips1)
-	UIUtil.AddOnClickedEvent(self, self.BtnTips2_1, self.OnClickedBtnTips2)
 	UIUtil.AddOnClickedEvent(self, self.BtnPreview, self.OnClickedBtnPreview)
 	for i = 1, 3 do
 		UIUtil.AddOnClickedEvent(self, self.MoneyBtnList[i], self.ShowPirceTips, i)
@@ -308,34 +344,13 @@ function ShopBuyPropsWinView:UpdateGoodsInfo(Cfg)
 	for i = 1, #PanelList do 
 		if ShowNumsSelect == 1 then
 			--UIUtil.SetIsVisible(PanelList[i],true)
-			UIUtil.SetIsVisible(self.BtnNumber1, true, true)
-			UIUtil.SetIsVisible(self.BtnTips1, true, true)
-			UIUtil.SetIsVisible(self.TextNumber1, true)
-			UIUtil.SetIsVisible(self.BtnNumber2, true, true)
-			UIUtil.SetIsVisible(self.BtnTips2, true, true)
-			UIUtil.SetIsVisible(self.TextNumber2, true)
+			self.AmountSlider:SetMultipleBtn(true)
 		else
 			--UIUtil.SetIsVisible(PanelList[i],false)
-			UIUtil.SetIsVisible(self.BtnNumber1, false, true)
-			UIUtil.SetIsVisible(self.BtnTips1, false, true)
-			UIUtil.SetIsVisible(self.TextNumber1, false)
-			UIUtil.SetIsVisible(self.BtnNumber2, false, true)
-			UIUtil.SetIsVisible(self.BtnTips2, false, true)
-			UIUtil.SetIsVisible(self.TextNumber2, false)
+			self.AmountSlider:SetMultipleBtn(false)
 		end
 	end
 	
-	if OnceLimitation == 1 then
-		-- for i = 1,#PanelList do 
-		-- 	UIUtil.SetIsVisible(PanelList[i],false)
-		-- end
-		self.AmountSlider:SetBtnIsShow(false)
-	else
-		-- for i = 1,#PanelList do 
-		-- 	UIUtil.SetIsVisible(PanelList[i],true)
-		-- end
-		self.AmountSlider:SetBtnIsShow(true)
-	end
 	--self.SetNumberPanel(PanelList)
 	--self.SetNumberPanelByOnceLimitation(PanelList,OnceLimitation)
 	self:SetTitle()
@@ -353,13 +368,13 @@ function ShopBuyPropsWinView:UpdateGoodsInfo(Cfg)
 	end
 
 	if self.IsCanBuy then
-		UIUtil.SetIsVisible(self.TextAmount, true)
+		--UIUtil.SetIsVisible(self.TextAmount, true)
 		UIUtil.SetIsVisible(self.AmountSlider, true, true)
 		UIUtil.SetIsVisible(self.HorizontalPrice, true, true)
 		UIUtil.SetIsVisible(self.TextSoldout, false)
 		--UIUtil.SetIsVisible(self.NumberPanel1,true,true)
 		--UIUtil.SetIsVisible(self.NumberPanel2,true,true)
-		self:IsCurNumMax(1, self.MaxNum)
+		--self:IsCurNumMax(1, self.MaxNum)
 		self:SetSlider()
 
 		if not isCanUse then
@@ -373,18 +388,6 @@ function ShopBuyPropsWinView:UpdateGoodsInfo(Cfg)
 		UIUtil.SetIsVisible(self.TextAmount, false)
 		UIUtil.SetIsVisible(self.TextSoldout, true)
 		UIUtil.SetIsVisible(self.AmountSlider, false, true)
-		-- UIUtil.SetIsVisible(self.NumberPanel1, false, true)
-		-- UIUtil.SetIsVisible(self.NumberPanel2, false, true)
-		UIUtil.SetIsVisible(self.BtnNumber1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1_1, false, true)
-		UIUtil.SetIsVisible(self.TextNumber1, false)
-		UIUtil.SetIsVisible(self.BtnNumber2, false, true)
-		UIUtil.SetIsVisible(self.BtnTips2, false, true)
-		UIUtil.SetIsVisible(self.BtnTips2_1, false, true)
-		UIUtil.SetIsVisible(self.TextNumber2, false)
-		UIUtil.SetIsVisible(self.BtnTips1,false, true)
-		UIUtil.SetIsVisible(self.BtnTips2,false, true)
 
 		if self.IsSoldout then
 			if self.AllSurplus <= 0 then
@@ -398,6 +401,12 @@ function ShopBuyPropsWinView:UpdateGoodsInfo(Cfg)
 			self.TextSoldout:SetText(self.BuyDes)
 			UIUtil.SetIsVisible(self.HorizontalPrice, false, true)
 		end
+	end
+
+	if OnceLimitation == 1 then
+		self.AmountSlider:SetBtnIsShow(false)
+	else
+		self.AmountSlider:SetBtnIsShow(true)
 	end
 end
 
@@ -441,7 +450,6 @@ function ShopBuyPropsWinView:SetTitle()
 
 	self.BG:SetTitleText(TitleText)
 	self.BtnBuyConfirm:SetButtonText(BtnText)
-	self.BtnCancel:SetButtonText(LSTR(1200087))
 end
 
 function ShopBuyPropsWinView:SetDiscount(Info)
@@ -477,7 +485,7 @@ function ShopBuyPropsWinView:SetQuota(QuotaInfo, OnceLimitation)
 		UIUtil.SetIsVisible(self.FHorizontalSurplus, true)
 		local QuotaTtitle = ShopDefine.LimitBuyNumTipsTitle[QuotaInfo.RestrictionType]
 		local CanBuyCount = QuotaInfo.BoughtCount
-		local CurrentRestore = CounterMgr:GetCounterRestore(QuotaInfo.CounterFirstID) or 0
+		local CurrentLimit = CounterMgr:GetCounterLimit(QuotaInfo.CounterFirstID) or 0
 		local AllSurplus = 0
 		if CanBuyCount <= 0 then
 			self.IsSoldout = true
@@ -507,20 +515,21 @@ function ShopBuyPropsWinView:SetQuota(QuotaInfo, OnceLimitation)
 			end
 		end
 
-		self.MaxNum = CanBuyCount or 1
+		self.MaxNum = math.min(OnceLimitation,  CanBuyCount) or 1
 		if self.IsSoldout and AllSurplus <= 0 or not self.IsCanBuy then
 			UIUtil.SetIsVisible(self.TextSurplus, false)
 		else
 			UIUtil.SetIsVisible(self.TextSurplus, true)
 			if CanBuyCount == 0 then
-				local Text = string.format("<span color=\"#f3f3f399\">%s</><span color=\"#dc5868\">%d</><span color=\"#828282FF\">/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
+				local Text = string.format("<span color=\"#f3f3f399\">%s</><span color=\"#dc5868\">%d</><span color=\"#828282FF\">/%d</>", QuotaTtitle, CanBuyCount, CurrentLimit)
 				self.TextSurplus:SetText(Text)
 			else
-				local Text = string.format("<span color=\"#828282FF\">%s%d/%d</>", QuotaTtitle, CanBuyCount, CurrentRestore)
+				local Text = string.format("<span color=\"#828282FF\">%s%d/%d</>", QuotaTtitle, CanBuyCount, CurrentLimit)
 				self.TextSurplus:SetText(Text)
 			end
 		end
 	else
+		self.IsSoldout = false
 		self.MaxNum = OnceLimitation or 1
 		UIUtil.SetIsVisible(self.TextSurplus_2, false)
 		UIUtil.SetIsVisible(self.FHorizontalSurplus, false)
@@ -598,7 +607,8 @@ function ShopBuyPropsWinView:SetPriceInfo(PriceInfo)
 end
 
 function ShopBuyPropsWinView:SetSlider()
-	self.AmountSlider:SetSliderValueMaxMin(self.MaxNum, 1)
+	self.AmountSlider:SetBaseVisible(true, true, true)
+	self.AmountSlider:SetSliderValueMaxMin(self.MaxNum, 1, 10)
 	self.AmountSlider:SetSliderValueMaxTips(LSTR(1200033))
 	self.AmountSlider:SetSliderValueMinTips(LSTR(1200034))
 	self.AmountSlider:SetValueChangedCallback(function (v)
@@ -632,7 +642,7 @@ function ShopBuyPropsWinView:OnValueChangedSlider(Value,MaxNum)
 		self.TextNumWin:SetText(self.OverlayNum * Value)
 	end
 	self.TextAmount:SetText(Value)
-	self:IsCurNumMax(Value,MaxNum)
+	--self:IsCurNumMax(Value,MaxNum)
 	self:UpdatePriceInfo(Value)
 
 	for i = 1,#PriceValueInfo do
@@ -648,33 +658,33 @@ function ShopBuyPropsWinView:OnValueChangedSlider(Value,MaxNum)
 end
 
 function ShopBuyPropsWinView:IsCurNumMax(CurNum,MaxNum)
-	if CurNum >= MaxNum and MaxNum ~= 1 then
-		self.BtnNumber2:SetIsEnabled(false)
-		if self.ShowNumsSelect == 1 then
-			UIUtil.SetIsVisible(self.BtnTips2,true, true)
-		end
-		UIUtil.SetIsVisible(self.BtnTips2_1,true, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2, TextColor[3])
-	else
-		self.BtnNumber2:SetIsEnabled(true)
-		UIUtil.SetIsVisible(self.BtnTips2,false, true)
-		UIUtil.SetIsVisible(self.BtnTips2_1,false, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2, TextColor[1])
-	end
+	-- if CurNum >= MaxNum and MaxNum ~= 1 then
+	-- 	self.BtnNumber2:SetIsEnabled(false)
+	-- 	if self.ShowNumsSelect == 1 then
+	-- 		UIUtil.SetIsVisible(self.BtnTips2,true, true)
+	-- 	end
+	-- 	UIUtil.SetIsVisible(self.BtnTips2_1,true, true)
+	-- 	UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2, TextColor[3])
+	-- else
+	-- 	self.BtnNumber2:SetIsEnabled(true)
+	-- 	UIUtil.SetIsVisible(self.BtnTips2,false, true)
+	-- 	UIUtil.SetIsVisible(self.BtnTips2_1,false, true)
+	-- 	UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber2, TextColor[1])
+	-- end
 
-	if CurNum <= 1 and MaxNum ~= 1 then
-		self.BtnNumber1:SetIsEnabled(false)
-		if self.ShowNumsSelect == 1 then
-			UIUtil.SetIsVisible(self.BtnTips1, true, true)
-		end
-		UIUtil.SetIsVisible(self.BtnTips1_1,true, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[3])
-	else
-		self.BtnNumber1:SetIsEnabled(true)
-		UIUtil.SetIsVisible(self.BtnTips1, false, true)
-		UIUtil.SetIsVisible(self.BtnTips1_1,false, true)
-		UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[1])
-	end
+	-- if CurNum <= 1 and MaxNum ~= 1 then
+	-- 	self.BtnNumber1:SetIsEnabled(false)
+	-- 	if self.ShowNumsSelect == 1 then
+	-- 		UIUtil.SetIsVisible(self.BtnTips1, true, true)
+	-- 	end
+	-- 	UIUtil.SetIsVisible(self.BtnTips1_1,true, true)
+	-- 	UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[3])
+	-- else
+	-- 	self.BtnNumber1:SetIsEnabled(true)
+	-- 	UIUtil.SetIsVisible(self.BtnTips1, false, true)
+	-- 	UIUtil.SetIsVisible(self.BtnTips1_1,false, true)
+	-- 	UIUtil.TextBlockSetColorAndOpacityHex(self.TextNumber1,TextColor[1])
+	-- end
 end
 
 function ShopBuyPropsWinView:OnClickedConfirmBtn()
@@ -685,6 +695,8 @@ function ShopBuyPropsWinView:OnClickedConfirmBtn()
 		if IsEnough then 
 			if BagIsEnough then
 				self:GoonBuy()
+				self:ClearBuyInfo()
+				self:Hide()
 			else
 				MsgTipsUtil.ShowTips(Tips)
 				self:Hide()
@@ -736,6 +748,8 @@ function ShopBuyPropsWinView:OnClickedConfirmBtn()
 				Content = string.format("%s,%s", Tips, ExchangeName)
 				local function Callback()
 					self:GoonBuy()
+					self:ClearBuyInfo()
+					self:Hide()
 				end
 				MsgBoxUtil.ShowMsgBoxTwoOp(self, TitleText, Content, Callback, nil, LSTR(1200019), BtnText)
 			else 
@@ -895,7 +909,6 @@ function ShopBuyPropsWinView:GoonBuy()
 	if self.IsPop == 1 then
 		_G.LootMgr:SetDealyState(true)
 	end
-	self:Hide()
 end
 
 function ShopBuyPropsWinView:UpdateTextColor()
@@ -967,15 +980,25 @@ function ShopBuyPropsWinView:OnClickedBtnPreview()
 	_G.PreviewMgr:OpenPreviewView(self.ItemID)
 end
 
-function ShopBuyPropsWinView:OnClickedBtnCancel()
-	self:Hide()
+function ShopBuyPropsWinView:OnSearchCommit(Text)
+	if Text ~= "" then
+		self.IsSearching = true
+		EventMgr:SendEvent(EventID.ShopBuyViewSearch, Text, true)
+	end
+end
+
+function ShopBuyPropsWinView:OnCancelSearchClicked()
+	self.IsSearching = false
+	EventMgr:SendEvent(EventID.ShopBuyViewSearch, "", false)
 end
 
 function ShopBuyPropsWinView:ShowPirceTips(Index)
-	if PriceValueInfo[Index].Type == ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE then
-		ItemTipsUtil.CurrencyTips(PriceValueInfo[Index].ID, false, self.MoneyImgList[Index])
-	else
-		ItemTipsUtil.ShowTipsByResID(PriceValueInfo[Index].ID, self.MoneyImgList[Index])
+	if PriceValueInfo[Index] then
+		if PriceValueInfo[Index].Type == ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE then
+			ItemTipsUtil.CurrencyTips(PriceValueInfo[Index].ID, false, self.MoneyImgList[Index])
+		else
+			ItemTipsUtil.ShowTipsByResID(PriceValueInfo[Index].ID, self.MoneyImgList[Index])
+		end
 	end
 end
 
@@ -983,15 +1006,58 @@ function ShopBuyPropsWinView:SetBuyBtnState(Value, IsCanBuy)
 	if IsCanBuy then
 		if Value then
 			self.BtnBuyConfirm:SetIsRecommendState(true)
-			self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[4])
+			--self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[4])
 		else
 			self.BtnBuyConfirm:SetIsDisabledState(true, true)
-			self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[3])
+			--self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[3])
 		end
 	else
 		self.BtnBuyConfirm:SetIsDisabledState(true, true)
-		self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[3])
+		--self.BtnBuyConfirm:SetTextColorAndOpacityHex(TextColor[3])
 	end
+end
+
+function ShopBuyPropsWinView:SetPriceListState(Value)
+	if Value then
+		for i = 1, 4 do
+			local ShopID = ShopMgr.CurOpenMallId or ShopMgr.CurQueryShopID
+			local MoneyItem = "Money" .. i
+			local ScoreLimitState = ShopMgr.AllShopInfo[ShopID].ScoreLimit or 0
+			local IsShowMax = ScoreLimitState == 1
+			if ShopMgr.CurPriceList and ShopMgr.CurPriceList.Price[i] then
+				local PriceType = ShopMgr.CurPriceList.PriceType
+				local IsScore = false
+				local ScoreType = GoodsPriceType[ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE]
+				if PriceType[i] == ScoreType then
+					IsScore = true
+				end
+				UIUtil.SetIsVisible(self.CommMoney[MoneyItem], true)
+				self.CommMoney[MoneyItem]:UpdateView(ShopMgr.CurPriceList.Price[i], false, UIViewID.MarketExchangeWin, IsScore, IsShowMax)
+			else
+				UIUtil.SetIsVisible(self.CommMoney[MoneyItem], false)
+			end
+		end
+	else
+		for i = 1, 4 do
+			local MoneyItem = "Money" .. i
+			UIUtil.SetIsVisible(self.CommMoney[MoneyItem], false)
+		end
+	end
+end
+
+function ShopBuyPropsWinView:SetItemHasNum()
+	local BagNum = BagMgr:GetItemNum(self.ItemID)
+	local DepotNum = _G.DepotVM:GetDepotItemNum(self.ItemID)
+	local AllHasNum = BagNum + DepotNum
+	local Total
+	if AllHasNum >= 999 then
+		Total = string.format("%d%s", 999, "+")
+	else
+		Total = string.format("%d", AllHasNum)
+	end
+	local NumText = string.format("%s：%s", LSTR(1200101), Total)--拥有
+	self.TextWear:SetText(NumText)
+	UIUtil.SetIsVisible(self.TextWear, true)
 end
 
 return ShopBuyPropsWinView

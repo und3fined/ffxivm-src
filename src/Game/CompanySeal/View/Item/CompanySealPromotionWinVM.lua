@@ -38,11 +38,16 @@ function CompanySealPromotionWinVM:Ctor()
 	self.IsCanPromoted = nil
 	--self.Img = nil
 	self.Title = nil
-	self.BtnStyle = 1
 	self.GrandImg1 = nil
 	self.GrandImg2 = nil
 	self.GrandImg3 = nil
 	self.IconTicket = nil
+	self.PanelPromotionVisible = nil
+	self.PanelHighestVisible = nil
+	self.HighestText = nil
+	self.HighestIcon = nil
+	self.HighestRankText = nil
+	self.HighestLimitText = nil
 end
 
 function CompanySealPromotionWinVM:OnInit()
@@ -63,12 +68,35 @@ function CompanySealPromotionWinVM:OnEnd()
 
 end
 
-function CompanySealPromotionWinVM:UpdateTitleText()
-	--local Cfg = CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID][CompanySealMgr.MilitaryLevel]
+function CompanySealPromotionWinVM:UpdateRankInfo()
+	local CurLv = CompanySealMgr.MilitaryLevel
+	local CurMaxLv = #CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID]
 	local Name = ProtoEnumAlias.GetAlias(CompanyType, CompanySealMgr.GrandCompanyID)
-	--self.Img = GrandCompanyImg[CompanySealMgr.GrandCompanyID]
 	self:SetImgState(CompanySealMgr.GrandCompanyID)
 	self.Title = string.format("%s %s", Name, LSTR(1160037))
+	if CurLv < CurMaxLv then
+		self.PanelPromotionVisible = true
+		self.PanelHighestVisible = false
+		self:UpdateTitleText()
+	else
+		self.PanelPromotionVisible = false
+		self.PanelHighestVisible = true
+		self:UpdateMaxInfo(CurMaxLv)
+	end
+end
+
+function CompanySealPromotionWinVM:UpdateMaxInfo(MaxLv)
+	local MaxlvCfg = CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID] and CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID][MaxLv]
+	if MaxlvCfg then
+		self.HighestText = LSTR(1160080)--已晋升至最高军衔
+		self.HighestIcon = MaxlvCfg.Icon
+		self.HighestRankText = MaxlvCfg.RankName
+		self.HighestLimitText = string.format("%s: %s", LSTR(1160006), ScoreMgr.FormatScore(string.format("%d", MaxlvCfg.CompanySealMax)))--军票上限
+	end
+end
+
+function CompanySealPromotionWinVM:UpdateTitleText()
+	--local Cfg = CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID][CompanySealMgr.MilitaryLevel]
 	local CurLv = CompanySealMgr.MilitaryLevel
 	local NextLv = CurLv + 1
 	if NextLv >= #CompanySealMgr.CompanyRankList[CompanySealMgr.GrandCompanyID] then
@@ -87,11 +115,9 @@ function CompanySealPromotionWinVM:UpdateTitleText()
 	local CurNeed = NextlvCfg.PromotionCompanySeal
 	if CurHas >= CurNeed then
 		self.TextQuantity = string.format("<span color=\"#d1ba8e\">%s</>", ScoreMgr.FormatScore(string.format("%d", CurNeed)))
-		self.BtnStyle = 1
 		self.IsCanPromoted = true
 	else
 		self.TextQuantity = string.format("<span color=\"#dc5868\">%s</>", ScoreMgr.FormatScore(string.format("%d", CurNeed)))
-		self.BtnStyle = 2
 		self.IsCanPromoted = false
 	end
 end

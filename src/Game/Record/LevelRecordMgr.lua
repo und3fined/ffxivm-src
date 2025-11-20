@@ -31,7 +31,7 @@ local FileExt= ".rep"
 local LevelRecordMgr = LuaClass(MgrBase)
 
 function LevelRecordMgr:OnInit()
-    self.bIsOpenReplay = CommonUtil.IsMobilePlatform() and not UE.UCommonUtil.IsShipping()--  测试环境移动平台默认开启服务器录制
+    self.bIsOpenReplay = CommonUtil.IsMobilePlatform() and not _G.UE.UCommonUtil.IsShipping()--  测试环境移动平台默认开启服务器录制
     self.bIsInReplaying = false
     self.EReplayStatus = {None=0,InRecord=1,InRecordPlay=2,InRecordPause=3}
     self.RecordListData = {}
@@ -48,21 +48,22 @@ function LevelRecordMgr:OnInit()
     self.UploadLogNeedCompress = true --日志上传是否开启压缩
     self.UploadLogNeedEncrypt = true --日志上传是否开启加密
     self.IsAutoUploadLog = true --是否自动上传日志
+    self.ResearchLoginUploadToDevSvr = true --研发测试登录日志上传到内部服务器
     self.ClearSaveData = true --是否清除本地USaveMgr保存的数据
     self:SwitchClientRecord(true)--  默认勾选客户端录制
     self.ReturnToLogin = true --自动回到登录界面
     self.bOpenPureUIRecord = false --纯UI操作录制
-    UE4.UIRecordMgr:Get().OpenUIRecord = true --  默认开启客户端UI录制
+     _G.UE.UIRecordMgr:Get().OpenUIRecord = true --  默认开启客户端UI录制
     self.IsEnterMapTimeOut = nil --是否进入地图超时
-    UE4.ULevelRecordMgr:Get().MapMsgDelayTime = 10000  --  加载地图完成消息延迟时间ms(解决地图加载过慢，导致消息走到前面yi)
-    UE4.ULevelRecordMgr:Get().ClickTime = 300  --点击事件按钮按下弹起间隔事件ms(解决卡顿时按钮按下时间过长导致点击事件不触发)
+     _G.UE.ULevelRecordMgr:Get().MapMsgDelayTime = 10000  --  加载地图完成消息延迟时间ms(解决地图加载过慢，导致消息走到前面yi)
+     _G.UE.ULevelRecordMgr:Get().ClickTime = 300  --点击事件按钮按下弹起间隔事件ms(解决卡顿时按钮按下时间过长导致点击事件不触发)
     self:ChangePlaySpeed(self.PlaySpeed)
     self.LastCreateLogFileTimeStap=USaveMgr.GetInt(SaveKey.LastCreateLogFileTimeStap, 0, false)
     self:GetStartUpTime()
     USaveMgr.SetInt(SaveKey.LastCreateLogFileTimeStap, self.GameStartUpTime, false)
-    UE4.UIRecordMgr:Get():AddRecordBlackList("GetLevelRecordListPanel")
-    UE4.UIRecordMgr:Get():AddPosRecordWhiteList("SettingsMainPanel")
-    UE4.UIRecordMgr:Get():AddPosRecordWhiteList("PanelSideWin/PanelJobs/ScrollBox")
+     _G.UE.UIRecordMgr:Get():AddRecordBlackList("GetLevelRecordListPanel")
+     _G.UE.UIRecordMgr:Get():AddPosRecordWhiteList("SettingsMainPanel")
+     _G.UE.UIRecordMgr:Get():AddPosRecordWhiteList("PanelSideWin/PanelJobs/ScrollBox")
 
     self.EncryptLog = true --是否开启本地日志加密
     self.EncryptLogCompress = CommonUtil.GetDeviceType() == 5 --是否开启本地日志加密压缩(模拟器默认开启)
@@ -91,8 +92,8 @@ end
 
 function LevelRecordMgr:ReadLocalRecordFiles()
     self.RecordListData = {}
-    local Dir=UE4.UKismetSystemLibrary.GetProjectDirectory()..RecordSavePath
-    local FileList = PathMgr.GetFileList(Dir, ".*", true)
+    local Dir= _G.UE.UKismetSystemLibrary.GetProjectDirectory()..RecordSavePath
+    local FileList = PathMgr.GetFileList(Dir, "*.rep", true)
     local FileName=""
 	for key, value in pairs(FileList) do
         FileName= value:gsub('.*%/', '')
@@ -104,11 +105,21 @@ function LevelRecordMgr:ReadLocalRecordFiles()
 	end )
 end
 
+function LevelRecordMgr:DeserializeRecord(ReplayFilePath)
+    local Version = _G.UE.ULevelRecordMgr:Get():LoadRecordAndCheckVersion(ReplayFilePath)
+    if string.isnilorempty(Version)  then
+        return false
+    end
+
+    local SavePath = ReplayFilePath .. ".txt"
+    return _G.UE.ULevelRecordMgr:Get():DeserializeRecordToFile(SavePath), SavePath
+end
+
 function LevelRecordMgr:StartPlayRecord(ReplayFilePath)
     self.IsEnterMapTimeOut = nil
     local function Confirm()
         if self:IsCanExecReplayCmd() then
-            local bOpenPureUIRecord = UE4.ULevelRecordMgr:Get().OpenPureUIRecord
+            local bOpenPureUIRecord =  _G.UE.ULevelRecordMgr:Get().OpenPureUIRecord
             if  bOpenPureUIRecord == true then
                 self.ReturnToLogin = false
             end
@@ -116,19 +127,19 @@ function LevelRecordMgr:StartPlayRecord(ReplayFilePath)
                 USaveMgr.ClearSaveFile(true, "")
             end
             self:InitRecordPlayControlView();
-            UE4.ULevelRecordMgr:Get():StartPlayRecord()
+             _G.UE.ULevelRecordMgr:Get():StartPlayRecord()
             self:UpdateReplayStatu(self.EReplayStatus.InRecordPlay)
-            UIViewMgr:HideView(UIViewID.GetLevelRecordListPanel)
+            _G.UIViewMgr:HideView(UIViewID.GetLevelRecordListPanel)
         end
     end
 
-    local CurrentVersionStr = UE4.ULevelRecordMgr:Get():LoadRecordAndCheckVersion(ReplayFilePath)
+    local CurrentVersionStr = _G.UE.ULevelRecordMgr:Get():LoadRecordAndCheckVersion(ReplayFilePath)
     local ClientVersion = _G.UE.UVersionMgr.GetAppVersion()
-    local RecordWorldID=UE4.ULevelRecordMgr:Get().RecordWorldID
+    local RecordWorldID=_G.UE.ULevelRecordMgr:Get().RecordWorldID
     local RecordServerName = LoginMgr:GetMapleNodeName(RecordWorldID)
     print(string.format("[replay info]  RecordWorldID=%d  RecordServerName=%s", RecordWorldID, RecordServerName))
 
-    local bVersionMatch = CurrentVersionStr == ClientVersion or UE4.ULevelRecordMgr:Get().OpenPureUIRecord
+    local bVersionMatch = CurrentVersionStr == ClientVersion or  _G.UE.ULevelRecordMgr:Get().OpenPureUIRecord
     if  bVersionMatch then
         Confirm()
     elseif string.isnilorempty(CurrentVersionStr)  then
@@ -144,9 +155,9 @@ end
 
 function LevelRecordMgr:UpdateReplayStatu(ReplayStatu)
     if ReplayStatu == nil then
-        ReplayStatu = UE4.ULevelRecordMgr:Get():GetReplayStatu()
+        ReplayStatu =  _G.UE.ULevelRecordMgr:Get():GetReplayStatu()
     else
-        UE4.ULevelRecordMgr:Get():UpdateReplayStatu(ReplayStatu)
+         _G.UE.ULevelRecordMgr:Get():UpdateReplayStatu(ReplayStatu)
     end
     self.bIsOpenReplay = ReplayStatu == self.EReplayStatus.InRecord
     self.bIsInReplaying = ReplayStatu == self.EReplayStatus.InRecordPlay
@@ -155,29 +166,29 @@ function LevelRecordMgr:UpdateReplayStatu(ReplayStatu)
 end
 
 function LevelRecordMgr:InRecording()
-    local ReplayStatu = UE4.ULevelRecordMgr:Get():GetReplayStatu()
+    local ReplayStatu =  _G.UE.ULevelRecordMgr:Get():GetReplayStatu()
     return ReplayStatu == self.EReplayStatus.InRecord
 end
 
 function LevelRecordMgr:InRecordState()
-    local ReplayStatu = UE4.ULevelRecordMgr:Get():GetReplayStatu()
+    local ReplayStatu =  _G.UE.ULevelRecordMgr:Get():GetReplayStatu()
     return ReplayStatu ~= self.EReplayStatus.None
 end
 
 
 function LevelRecordMgr:ChangePlaySpeed(Speed)
     self.PlaySpeed = Speed
-    UE4.ULevelRecordMgr:Get():ChangePlaySpeed(Speed)
+     _G.UE.ULevelRecordMgr:Get():ChangePlaySpeed(Speed)
 end
 
 function LevelRecordMgr:PauseOrResumeRecord()
-    local ReplayStatu = UE4.ULevelRecordMgr:Get():GetReplayStatu()
+    local ReplayStatu =  _G.UE.ULevelRecordMgr:Get():GetReplayStatu()
     if ReplayStatu == self.EReplayStatus.InRecordPlay then
         ReplayStatu = self.EReplayStatus.InRecordPause
     elseif ReplayStatu == self.EReplayStatus.InRecordPause then
         ReplayStatu = self.EReplayStatus.InRecordPlay
     end
-    UE4.ULevelRecordMgr:Get():UpdateReplayStatu(ReplayStatu)
+     _G.UE.ULevelRecordMgr:Get():UpdateReplayStatu(ReplayStatu)
 end
 
 function LevelRecordMgr:GetRecordList(SendData,Callback, Listener)
@@ -204,7 +215,7 @@ function LevelRecordMgr:DowmLoadReplayFile(OnlyId, FileName, Callback, Listener)
     local SendData = {
         only_id = OnlyId
     }
-    local SavePath = UE4.UKismetSystemLibrary.GetProjectDirectory() .. RecordSavePath .. FileName
+    local SavePath =  _G.UE.UKismetSystemLibrary.GetProjectDirectory() .. RecordSavePath .. FileName
     if PathMgr.ExistFile(SavePath) then
         if nil ~= Callback then
             CommonUtil.XPCall(Listener, Callback, true, SavePath)
@@ -216,7 +227,7 @@ end
 
 
 function LevelRecordMgr:IsCanExecReplayCmd()
-    local bCan=UIViewMgr:IsViewVisible(_G.LoginMgr:GetLoginMainViewId()) or UE4.ULevelRecordMgr:Get().OpenPureUIRecord
+    local bCan=_G.UIViewMgr:IsViewVisible(_G.LoginMgr:GetLoginMainViewId()) or  _G.UE.ULevelRecordMgr:Get().OpenPureUIRecord
     if not bCan then
         _G.MsgTipsUtil.ShowTips("需要在登录界面执行哦！")
     end
@@ -232,9 +243,9 @@ function LevelRecordMgr:OnReplayOver()
     end
     _G.EventMgr:SendEvent(EventID.BlockAllInput, false)
     self:UpdateReplayStatu()
-    UIViewMgr:HideView(UIViewID.RecordPlayControlPanel)
+    _G.UIViewMgr:HideView(UIViewID.RecordPlayControlPanel)
     self:OnWorldPreLoad()
-    if not UE4.ULevelRecordMgr:Get().OpenPureUIRecord then
+    if not  _G.UE.ULevelRecordMgr:Get().OpenPureUIRecord then
         MsgBoxUtil.ShowMsgBoxOneOpRight(self, nil, "录像播放完毕", OkBtnCallback, nil, {
             CloseBtnCallback = OkBtnCallback
         })
@@ -252,7 +263,7 @@ function LevelRecordMgr:OnWorldPreLoad()
 end
 
 function LevelRecordMgr:OnWorldPostLoad()
-    local bInLogin = UIViewMgr:IsViewVisible(_G.LoginMgr:GetLoginMainViewId())
+    local bInLogin = _G.UIViewMgr:IsViewVisible(_G.LoginMgr:GetLoginMainViewId())
     if _G.LevelRecordMgr.bIsInReplaying and not bInLogin then
         local CurrentWorldName=_G.UE.UWorldMgr:Get():GetWorldName()
             self:InitRecordPlayControlView()
@@ -280,13 +291,13 @@ end
 
 
 function LevelRecordMgr:SwitchClientRecord(OpenClientRecord)
-    UE4.ULevelRecordMgr:Get():SwitchClientRecord(OpenClientRecord)
+     _G.UE.ULevelRecordMgr:Get():SwitchClientRecord(OpenClientRecord)
     self.bIsOpenClientRecord= OpenClientRecord
 end
 
 function LevelRecordMgr:SetCurrentRecordID(RecordID)
     if self.bIsOpenReplay then
-        UE4.ULevelRecordMgr:Get().CurrentRecordID = RecordID
+         _G.UE.ULevelRecordMgr:Get().CurrentRecordID = RecordID
         self.CurrentRecordID = RecordID
     end
     FLOG_INFO("CurrentRecordID:%s", tostring(RecordID))
@@ -300,7 +311,7 @@ function LevelRecordMgr:OpenPureUIRecord(OpenPureUIRecord)
     if OpenPureUIRecord == true then
         self.ReturnToLogin = false
     end
-    UE4.ULevelRecordMgr:Get().OpenPureUIRecord = OpenPureUIRecord
+     _G.UE.ULevelRecordMgr:Get().OpenPureUIRecord = OpenPureUIRecord
 end
 
 function LevelRecordMgr:GetHideOpenID()
@@ -346,8 +357,8 @@ function LevelRecordMgr:UpLoadLogFiles(Num,UploadMode,RetryTimes,NeedRetryTips,I
     local Utc8TimeDiff=8*3600
     local LogFileList = {}
     local FileName = ""
-    -- local Dir=PathMgr.PathToAbsolutePath(UE4.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath)--TDM自己读文件的接口只支持绝对路径  IOS在UE内读取文件只支持相对路径
-    local Dir=UE4.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath
+    -- local Dir=PathMgr.PathToAbsolutePath( _G.UE.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath)--TDM自己读文件的接口只支持绝对路径  IOS在UE内读取文件只支持相对路径
+    local Dir= _G.UE.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath
     local FileList = PathMgr.GetFileList(Dir, ".log", false)
 
     for key, value in pairs(FileList) do
@@ -374,8 +385,8 @@ function LevelRecordMgr:UpLoadLogFiles(Num,UploadMode,RetryTimes,NeedRetryTips,I
             if i == 2 then
                 LastModificationTime=self.LastCreateLogFileTimeStap
             end
-            FileName=UE4.UCommonUtil.GetOutputTime(LastModificationTime,"-",2).."-"..UserName.."-FGame.log"
-            UE4.ULevelRecordMgr:Get():UploadLogFile(LogFileList[i].FilePath,FileName,UserName,LastModificationTime,RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt)
+            FileName= _G.UE.UCommonUtil.GetOutputTime(LastModificationTime,"-",2).."-"..UserName.."-FGame.log"
+             _G.UE.ULevelRecordMgr:Get():UploadLogFile(LogFileList[i].FilePath,FileName,UserName,LastModificationTime,RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt)
             UploadNum=UploadNum+1
         end
     end
@@ -391,7 +402,7 @@ function LevelRecordMgr:UpLoadLogFiles(Num,UploadMode,RetryTimes,NeedRetryTips,I
 end
 
 function LevelRecordMgr:GetLogFileList()
-    local Dir = UE4.UKismetSystemLibrary.GetProjectDirectory() .. LogFilePath
+    local Dir =  _G.UE.UKismetSystemLibrary.GetProjectDirectory() .. LogFilePath
     local FileList = PathMgr.GetFileList(Dir, ".log", false)
 
     local LogFileList = {}
@@ -406,14 +417,14 @@ end
 
 function LevelRecordMgr:GetStartUpTime()
     if self.GameStartUpTime == -1 then
-        self.GameStartUpTime = UE4.ULevelRecordMgr:Get():GetStartUpTime()
+        self.GameStartUpTime =  _G.UE.ULevelRecordMgr:Get():GetStartUpTime()
     end
     return self.GameStartUpTime
 end
 
 function LevelRecordMgr:GetLogName()
     local  UserName=self:GetHideOpenID()
-    local Name=UE4.UCommonUtil.GetOutputTime(self:GetStartUpTime(),"-",2).."-"..UserName
+    local Name= _G.UE.UCommonUtil.GetOutputTime(self:GetStartUpTime(),"-",2).."-"..UserName
     return Name
 end
 
@@ -431,13 +442,13 @@ function LevelRecordMgr:UpLoadLog(UploadMode,RetryTimes,NeedRetryTips)
     if RetryTimes == nil then RetryTimes = 2 end
     if NeedRetryTips == nil then NeedRetryTips = true end
 
-    if  LoginMgr:GetIsResearchLogin() then
+    if  LoginMgr:GetIsResearchLogin() and self.ResearchLoginUploadToDevSvr then
         UploadMode = 2  --  研发测试登录日志上传到内部服务器
     end
 
     local UserName=self:GetHideOpenID()
-    -- local Dir=PathMgr.PathToAbsolutePath(UE4.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath,false)
-    local Dir=UE4.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath
+    -- local Dir=PathMgr.PathToAbsolutePath( _G.UE.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath,false)
+    local Dir= _G.UE.UKismetSystemLibrary.GetProjectDirectory()..LogFilePath
     local Path = Dir.."FGame.log"
     local BackPath = Dir.."Temp/FGame_backup.log"
     local LogName=self:GetLogName().."-FGame.log"
@@ -450,10 +461,10 @@ function LevelRecordMgr:UpLoadLog(UploadMode,RetryTimes,NeedRetryTips)
     -- end
     self.LastUploadlogTime=os.time()
     if CommonUtil.IsMobilePlatform() then
-        UE4.ULevelRecordMgr:Get():UploadLogFile(Path,LogName,UserName,self:GetStartUpTime(),RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt) 
+         _G.UE.ULevelRecordMgr:Get():UploadLogFile(Path,LogName,UserName,self:GetStartUpTime(),RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt) 
     else
         local result = PathMgr.CopyFileForce(BackPath,Path)
-        UE4.ULevelRecordMgr:Get():UploadLogFile(BackPath,LogName,UserName,self:GetStartUpTime(),RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt)
+         _G.UE.ULevelRecordMgr:Get():UploadLogFile(BackPath,LogName,UserName,self:GetStartUpTime(),RetryTimes,NeedRetryTips,UploadMode,self.UploadLogNeedCompress,self.UploadLogNeedEncrypt)
     end
     self:UpLoadLogFiles(self.UploadLogNumLimit,UploadMode)
     if self.UploadLogCnt == nil then
@@ -485,7 +496,7 @@ function LevelRecordMgr:UpLoadLogResult(Result, NeedRetryTips, RespStr)
 end
 
 function LevelRecordMgr:AutoUpLoadLogs()
-    if self.IsAutoUploadLog and CommonUtil.IsMobilePlatform() and not UE.UCommonUtil.IsShipping() then
+    if self.IsAutoUploadLog and CommonUtil.IsMobilePlatform() and not _G.UE.UCommonUtil.IsShipping() then
         self:UpLoadLogFiles(self.UploadLogNumLimit,2,2,false,true)
     end
 end
@@ -497,12 +508,12 @@ function LevelRecordMgr:EncryptLogFile()
     end
     local LogFileList = self:GetLogFileList()
     if #LogFileList >= 2 then
-        UE4.ULevelRecordMgr:Get():EncryptLog(LogFileList[2], self.EncryptLogCompress,self.EncryptLogLimitSize)
+         _G.UE.ULevelRecordMgr:Get():EncryptLog(LogFileList[2], self.EncryptLogCompress,self.EncryptLogLimitSize)
     end
 end
 
 function LevelRecordMgr:SaveWidget(Widget,Text,Type)
-    UE4.UIRecordMgr:Get():SaveWidget(Widget,Text,Type)
+     _G.UE.UIRecordMgr:Get():SaveWidget(Widget,Text,Type)
 end
 
 local TutorialCfg = require("TableCfg/TutorialCfg")
@@ -517,8 +528,8 @@ function LevelRecordMgr:Test(Param1,Param2)
     -- TutorialUtil:HandleClickGuideWidget(cfg, Widget)
 
     local cfg = TutorialCfg:FindCfgByID(44)
-    local ViewID = UIViewMgr:GetViewIDByName("Main2nd/Main2ndPanelNew_UIBP")
-    local View = UIViewMgr:FindVisibleView(ViewID)
+    local ViewID = _G.UIViewMgr:GetViewIDByName("Main2nd/Main2ndPanelNew_UIBP")
+    local View = _G.UIViewMgr:FindVisibleView(ViewID)
     local WidgetPath = TutorialCfg:GetTutorialWidgetPath(44)
     local Widget = TutorialUtil:GetTutorialWidget(View, WidgetPath)
     TutorialUtil:HandleClickGuideWidget(cfg, Widget)

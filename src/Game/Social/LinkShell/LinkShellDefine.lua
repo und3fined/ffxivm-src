@@ -68,7 +68,7 @@ local EventDescFmtConfig = {
     [LINKSHELL_EVENT.MODIFY_LINKSHELL_NAME] = 40016, --"玩家%s修改了通讯贝信息"
     [LINKSHELL_EVENT.MODIFY_MANIFESTO]      = 40016, --"玩家%s修改了通讯贝信息"
     [LINKSHELL_EVENT.MOVE_IN_BLACKLIST]     = 40017, --"管理员%s将玩家%s加入了通讯贝黑名单"
-    [LINKSHELL_EVENT.DEL_MANAGE_LINKSHELL]  = 40018, --"管理员%s被%s罢免管理员"
+    [LINKSHELL_EVENT.DEL_MANAGE_LINKSHELL]  = 40111, --"管理员%s被%s罢免管理员"
 }
 
 ---可设置模块类型，用于获取 “T通讯贝.xlsx|通讯贝未设置提示” 配置信息

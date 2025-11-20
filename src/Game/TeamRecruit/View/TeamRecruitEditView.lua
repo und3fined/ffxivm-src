@@ -304,10 +304,12 @@ function TeamRecruitEditView:ResetSet( IsClearEditData, RecruitData)
 	self.SingleBoxTask:SetChecked(RecruitData.ComplateTask, true)
 
 	--密码
-	local Password = tonumber(RecruitData.Password)
-	Password = Password ~= nil and tostring(Password) or ""
-	self.CommInputBoxCode:SetText(Password)
-	self.SingleBoxCode:SetChecked(string.len(Password) > 0, true)
+	local bHasPassword = tonumber(RecruitData.Password) ~= nil
+	local Password = bHasPassword and tostring(RecruitData.Password) or ""
+	self.SingleBoxCode:SetChecked(bHasPassword, true)
+	if bHasPassword then
+		self.CommInputBoxCode:SetText(Password)
+	end
 
 	--装备平均品级
 	self:SetEquipLv(RecruitData.EquipLv)
@@ -632,7 +634,9 @@ function TeamRecruitEditView:OnClickedReset()
 		LSTR(1310035), 
 		LSTR(1310036), 
 		function()
-			self:ResetSet(true)
+			if self and self:IsValid() then
+				self:ResetSet(true)
+			end
 		end, 
 		nil, 
 		LSTR(1310004), 
@@ -715,6 +719,14 @@ end
 function TeamRecruitEditView:NeedRecover()
 	local bEdit = self:IsEditUpdate() and not self.bCloseToHide
 	if bEdit  then
+		local function MakeProfData()
+			local Data = {}
+			for _, v in ipairs(self.Params.Prof) do
+				table.insert(Data, { Loc = v.Loc, Prof = v.Prof, RoleID = v.RoleID })
+			end
+			return Data
+		end
+
 		local ParamsA = {
 			ID			= TeamRecruitVM.EditContentID,
 			Message     = TeamRecruitVM.EditMessage or "",
@@ -729,7 +741,7 @@ function TeamRecruitEditView:NeedRecover()
 		local ParamsB = {
 			ID			= self.Params.ID,
 			Message     = self.Params.Message or "",
-			Prof        = self.Params.Prof,
+			Prof        = MakeProfData(),
 			TaskLimit   = self.Params.TaskLimit or 0,
 			Password    = self.Params.Password or "",
 			EquipLv     = self.Params.EquipLv or 0,

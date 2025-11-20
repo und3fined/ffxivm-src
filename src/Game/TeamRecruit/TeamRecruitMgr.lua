@@ -153,11 +153,6 @@ end
 function TeamRecruitMgr:OnQueryCaptainRoleInfoDataUpdate(RoleID)
     if not self.CacheCaptainData or not self.CacheCaptainData.RoleID or RoleID ~= self.CacheCaptainData.RoleID then return end
     local CaptainRoleVM = _G.RoleInfoMgr:FindRoleVM(RoleID)
-    if not CaptainRoleVM then
-        FLOG_ERROR("OnQueryCaptainRoleInfoDataUpdate FindEmpty CaptainRoleVM")
-        return
-    end
-
     local ConfirmCallBack = function()
         self:EasySendMsg(SUB_MSG_ID.CS_SUBMSGID_TEAM_RECRUIT_JOIN, "Join", { ID = self.CacheCaptainData.RoleID, PassWord = self.CacheCaptainData.PassWord})
         self.CacheCaptainData = {}
@@ -196,27 +191,13 @@ function TeamRecruitMgr:SendCreateRecruitReq()
     self:EasySendMsg(SUB_MSG_ID.CS_SUBMSGID_TEAM_RECRUIT_CREATE, "Create", {
         ID          = TeamRecruitVM.EditContentID, 
         Message     = TeamRecruitVM.EditMessage or "",
-        Prof        = TeamRecruitVM:GetEditProfs(),
+        Prof        = TeamRecruitVM:GetCreateProfsParam(),
         TaskLimit   = TeamRecruitVM.EditSceneMode,
         Password    = TeamRecruitVM:GetEditPassword(),
         EquipLv     = TeamRecruitVM.EditEquipLv or 0,
         CompleteTask = TeamRecruitVM.EditCompleteTask == true,
-        QuickMessageIDs = TeamRecruitVM.EditQuickTextIDs,
+        QuickMessage = TeamRecruitVM.EditQuickTextIDs,
         WeeklyAward = TeamRecruitVM.EditWeeklyAward == true
-    })
-end
-
----创建招募
----@param RecruitData csteamrecruitdd.TeamRecruit @招募的完整服务器信息
-function TeamRecruitMgr:SendCreateRecruitReqByRecruitData( RecruitData )
-    self:EasySendMsg(SUB_MSG_ID.CS_SUBMSGID_TEAM_RECRUIT_CREATE, "Create", {
-        ID          = RecruitData.ID, 
-        Message     = RecruitData.Message,
-        Prof        = RecruitData.Prof,
-        TaskLimit   = RecruitData.TaskLimit,
-        Password    = "",
-        EquipLv     = RecruitData.EquipLv,
-        CompleteTask = RecruitData.ComplateTask,
     })
 end
 
@@ -279,6 +260,7 @@ function TeamRecruitMgr:OnNetMsgQueryRecuiteList(MsgBody)
     end
 
     if RecuritInfoToShow then
+        TeamRecruitUtil.RestoreRecruitProfs(RecuritInfoToShow)
         self:ShowRecruitInfo(RecuritInfoToShow, bNoLimit)
     elseif self._QueringRoleID then
         if FailTipsID then
@@ -368,6 +350,10 @@ function TeamRecruitMgr:OnNetMsgGetRecruitList(MsgBody)
         return
     end
 
+    for _, v in ipairs(RecruitList) do
+        TeamRecruitUtil.RestoreRecruitProfs(v)
+    end
+
     TeamRecruitVM:UpdateRecruitItemList(RecruitList, TypeID, Offset > 0)
 
     -- query roles
@@ -404,6 +390,11 @@ function TeamRecruitMgr:TryJoinRecruit(FromView, ID, Password, TeamRecruitID)
 end
 
 function TeamRecruitMgr:SendJoinRecruitReq(ID, PassWord, TeamRecruitID)
+    if not TeamRecruitUtil.IsPassModuleUnlock(ID, true) then
+        self:LogWarn("join recruit failed for recruit %s has modules not unlocked", ID)
+        return
+    end
+    
     local TeamRecruitCfg = require("TableCfg/TeamRecruitCfg")
     local Cfg = TeamRecruitID and TeamRecruitCfg:FindCfgByKey(TeamRecruitID) or {}
     if next(Cfg) and Cfg.CrossWorldConfirm == 1 then
@@ -647,6 +638,7 @@ function TeamRecruitMgr:OpenEditOwingRecruitView()
     local Data = self:GetSelfRecruitData()
     if Data then
         local ClonedData = table.clone(Data)
+        TeamRecruitUtil.RestoreRecruitProfs(ClonedData)
         local Params = ClonedData
         Params.bEditUpdate = true
         self:SendCloseRecruitReq(ProtoCS.Team.TeamRecruit.CloseReason.CloseReasonEdit)

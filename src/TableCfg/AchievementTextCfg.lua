@@ -634,6 +634,29 @@ local AchievementTextCfg = {
             ID = 1030096,
         },
         {
+            ID = 1030097,
+        },
+        {
+            ID = 1030098,
+        },
+        {
+            ID = 1030099,
+        },
+        {
+            ID = 1030100,
+        },
+        {
+            AchievePoint = 5,
+            ID = 1030101,
+        },
+        {
+            ID = 1030102,
+        },
+        {
+            AchievePoint = 20,
+            ID = 1030103,
+        },
+        {
             AchievePoint = 20,
             ID = 1030104,
         },
@@ -1116,6 +1139,18 @@ local AchievementTextCfg = {
         {
             AchievePoint = 5,
             ID = 1050073,
+        },
+        {
+            AchievePoint = 5,
+            ID = 1050074,
+        },
+        {
+            AchievePoint = 5,
+            ID = 1050075,
+        },
+        {
+            AchievePoint = 5,
+            ID = 1050076,
         },
         {
             AchievePoint = 5,
@@ -3965,6 +4000,9 @@ local AchievementTextCfg = {
         {
             AchievePoint = 20,
             ID = 3990122,
+        },
+        {
+            ID = 3990123,
         },
         {
             AchievePoint = 5,
@@ -8750,6 +8788,15 @@ local AchievementTextCfg = {
             ID = 6050117,
         },
         {
+            AchievePoint = 20,
+            HideType = 1,
+            ID = 6050118,
+        },
+        {
+            HideType = 1,
+            ID = 6050119,
+        },
+        {
             AchievePoint = 5,
             ID = 6990001,
         },
@@ -9745,6 +9792,12 @@ local AchievementTextCfg = {
             ID = 7150154,
         },
         {
+            ID = 7190001,
+        },
+        {
+            ID = 7190002,
+        },
+        {
             AchievePoint = 5,
             ID = 7200001,
         },
@@ -9828,6 +9881,31 @@ local AchievementTextCfg = {
         },
         {
             ID = 7990022,
+        },
+        {
+            AchievePoint = 5,
+            HideType = 1,
+            ID = 7990023,
+        },
+        {
+            AchievePoint = 20,
+            HideType = 1,
+            ID = 7990024,
+        },
+        {
+            AchievePoint = 5,
+            ID = 7990025,
+        },
+        {
+            ID = 7990026,
+        },
+        {
+            AchievePoint = 20,
+            ID = 7990027,
+        },
+        {
+            AchievePoint = 20,
+            ID = 7990028,
         },
         {
             AchievePoint = 5,
@@ -10476,6 +10554,36 @@ local AchievementTextCfg = {
         },
         {
             ID = 9060009,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060010,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060011,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060012,
+        },
+        {
+            ID = 9060013,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060014,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060015,
+        },
+        {
+            AchievePoint = 5,
+            ID = 9060016,
+        },
+        {
+            ID = 9060017,
         },
         {
             AchievePoint = 20,

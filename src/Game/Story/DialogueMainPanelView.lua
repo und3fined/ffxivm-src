@@ -1,7 +1,6 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-local NpcDialogVM = require("Game/Story/NpcDialogPlayVM")
 local SequencePlayerVM = require("Game/Story/SequencePlayerVM")
 local EventID = require("Define/EventID")
 local StoryDefine = require("Game/Story/StoryDefine")
@@ -12,10 +11,11 @@ local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetActiveWidgetIndex = require("Binder/UIBinderSetActiveWidgetIndex")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderIsLoopAnimPlay = require("Binder/UIBinderIsLoopAnimPlay")
-local CommonUtil = require("Utils/CommonUtil")
 local UIViewID = require("Define/UIViewID")
 local UIViewMgr = require("UI/UIViewMgr")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local LSTR = _G.LSTR
 
@@ -123,8 +123,14 @@ function DialogueMainPanelView:OnShow()
 	self.TextVideo:SetText(LSTR(1280005))
 
 	if _G.TravelLogMgr:GetIsPlaying() then
+		FLOG_INFO("DialogueMainPanelView: TravelLogMgr hide PanelJumpOver")
 		UIUtil.SetIsVisible(self.PanelJumpOver, false)
 	end
+	self:InitPanelHandle()
+end
+
+function DialogueMainPanelView:OnHide()
+	self:HidePanelHandle()
 end
 
 function DialogueMainPanelView:OnRegisterUIEvent()
@@ -138,59 +144,48 @@ function DialogueMainPanelView:OnRegisterUIEvent()
 end
 
 function DialogueMainPanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.MajorSingBarBegin, self.OnMajorSingBarBegin)
-    self:RegisterGameEvent(EventID.MajorSingBarOver, self.OnMajorSingBarOver)
+		self:RegisterGameEvent(EventID.InputActionTypeChange, self.InitPanelHandle)
+		self:RegisterGameEvent(EventID.GamePadSkip, self.OnGamePadSkip)
+		self:RegisterGameEvent(EventID.GamePadEnter, self.OnGamePadEnter)
+		self:RegisterGameEvent(EventID.GamepadDPadUp, self.OnGamepadDPadUp)
+		self:RegisterGameEvent(EventID.GamepadDPadDown, self.OnGamepadDPadDown)
+		self:RegisterGameEvent(EventID.OnUpdateHandleCusAction, self.InitPanelHandle)
 end
 
 function DialogueMainPanelView:OnRegisterBinder()
-	if self.Params.ViewType == StoryDefine.UIType.SequenceDialog then
-		self.ViewModel = SequencePlayerVM
-		local Binders = {
-			{ "bTalkPanelVisible", UIBinderSetIsVisible.New(self, self.Dialogue) },
-			{ "bChoicePanelVisible", UIBinderSetIsVisible.New(self, self.BubbleBoxList, false, true) },
-			{ "ChoiceMessage", UIBinderSetText.New(self, self.Text) },
-			{ "ChoiceUnitList", UIBinderUpdateBindableList.New(self, self.TableViewAdapter) },
-			{ "bTouchWaitCfg", UIBinderSetIsVisible.New(self, self.Dialogue.BtnContinue) },
+	self.ViewModel = SequencePlayerVM
+	local Binders = {
+		{ "bTalkPanelVisible", UIBinderSetIsVisible.New(self, self.Dialogue) },
+		{ "bChoicePanelVisible", UIBinderSetIsVisible.New(self, self.BubbleBoxList, false, true) },
+		{ "ChoiceMessage", UIBinderSetText.New(self, self.Text) },
+		{ "ChoiceUnitList", UIBinderUpdateBindableList.New(self, self.TableViewAdapter) },
+		{ "bTouchWaitCfg", UIBinderSetIsVisible.New(self, self.Dialogue.BtnContinue) },
 
-			{ "bHideAllTopButton", UIBinderSetIsVisible.New(self, self.TopButtonGroup, true) }, -- todo 动画控制
-			{ "bInDialogHistory", UIBinderSetIsVisible.New(self, self.DialogHistory) },
-			{ "bInDialogHistory", UIBinderSetIsVisible.New(self, self.BtnClick, true, true) },
+		{ "bHideAllTopButton", UIBinderSetIsVisible.New(self, self.TopButtonGroup, true) }, -- todo 动画控制
+		{ "bInDialogHistory", UIBinderSetIsVisible.New(self, self.DialogHistory) },
+		{ "bInDialogHistory", UIBinderSetIsVisible.New(self, self.BtnClick, true, true) },
 
-			{ "bHasAnyDialog", UIBinderSetIsVisible.New(self, self.PanelReview) },
-			{ "bShowAutoPlayBtn", UIBinderSetIsVisible.New(self, self.PanelPlay) },
+		{ "bHasAnyDialog", UIBinderSetIsVisible.New(self, self.PanelReview) },
+		{ "bShowAutoPlayBtn", UIBinderSetIsVisible.New(self, self.PanelPlay) },
+		{ "bShowJumpOverBtn", UIBinderSetIsVisible.New(self, self.PanelJumpOver) },
 
-			{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.PanelVideo) },
-			{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.BackBtn, false, true) },
-			{ "TextVideoNum", UIBinderSetText.New(self, self.TextVideoNum) },
-		}
-		self:RegisterBinders(SequencePlayerVM, Binders)
-	else
-		self.ViewModel = NpcDialogVM
-		local Binders = {
-			{ "bTopButtonGroupVisible", UIBinderSetIsVisible.New(self, self.TopButtonGroup) },
-			{ "bPanelReviewVisible", UIBinderSetIsVisible.New(self, self.PanelReview) },
-			{ "bPanelPlayVisible", UIBinderSetIsVisible.New(self, self.PanelPlay) },
-			{ "bHorizontalRightVisible", UIBinderSetIsVisible.New(self, self.HorizontalRight) },
-			{ "bBackBtnVisible", UIBinderSetIsVisible.New(self, self.BackBtn) },
-			{ "bClickVisible", UIBinderSetIsVisible.New(self, self.BtnClick, false, true) },
-			{ "bTalkPanelVisible", UIBinderSetIsVisible.New(self, self.Dialogue) },
-			{ "ChoiceMessage", UIBinderSetText.New(self, self.Text) },
-			{ "DialogBranchList", UIBinderUpdateBindableList.New(self, self.TableViewAdapter) },
-			{ "bChoicePanelVisible", UIBinderSetIsVisible.New(self, self.BubbleBoxList, false, true) },
-		}
-		self:RegisterBinders(NpcDialogVM, Binders)
-	end
+		{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.PanelVideo) },
+		{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.BackBtn, false, true) },
+		{ "TextVideoNum", UIBinderSetText.New(self, self.TextVideoNum) },
 
-	-- 两边VM都要有这些变量
-	local CommonBinders = {
 		{ "SpeakerName", UIBinderSetText.New(self.Dialogue, self.Dialogue.TexTitle) },
 		{ "TalkContent", UIBinderSetText.New(self.Dialogue, self.Dialogue.TextContent) },
 		{ "bIsAutoPlay", UIBinderSetActiveWidgetIndex.New(self, self.AutoPlaySwitcher)},
 		{ "bIsAutoPlay", UIBinderIsLoopAnimPlay.New(self, nil, self.AnimAutoLoop, true) },
+		{ "bIsAutoPlay", UIBinderValueChangedCallback.New(self, nil, self.OnAutoPlayChanged) },
 		{ "bShowSpeed", UIBinderSetIsVisible.New(self, self.PanelSpeed) },
 		{ "SpeedLevel", UIBinderSetTextFormat.New(self, self.TextQuantity, "%dX") },
+		{ "bHandleBtnContinue", UIBinderSetIsVisible.New(self, self.Dialogue.HandleState)},
+		{ "bHandleBtnJumpOver", UIBinderSetIsVisible.New(self, self.HandleState)},
+		{ "HandleBtnContinue", UIBinderSetText.New(self, self.Dialogue.HandleState.TextNum)},
+		{ "HandleBtnJumpOver", UIBinderSetText.New(self, self.HandleState.TextNum)},
 	}
-	self:RegisterBinders(self.ViewModel, CommonBinders)
+	self:RegisterBinders(SequencePlayerVM, Binders)
 end
 
 ------------------------------------------功能按钮相关S------------------------------------------------
@@ -218,12 +213,10 @@ function DialogueMainPanelView:OnClickButtonJumpOver()
 	--		设置昵称的流程走完，再OnClickButtonJumpOver，完成任务
     if _G.NewbieMgr:IsNewbiePWorld(PWorldResID) and _G.StoryMgr:GetCurrentSequenceID() == 8000142 
 		and _G.DemoMajorType == 2 then
-		local UIViewConfig = require("Define/UIViewConfig")
-		local UILayer = require("UI/UILayer")
-		local ViewConfig = UIViewConfig[UIViewID.LoginCreateMakeName]
 		UIViewMgr:ShowView(UIViewID.LoginCreateMakeName, {ShowBg = true})
 		self:RegisterGameEvent(EventID.RoleLoginRes, self.OnRoleLoginRes)
 
+		FLOG_INFO("DialogueMainPanelView: LoginCreateMakeName hide PanelJumpOver")
 		UIUtil.SetIsVisible(self.BtnJumpOver, false)
 		_G.StoryMgr:PauseSequence()
 	else
@@ -232,10 +225,6 @@ function DialogueMainPanelView:OnClickButtonJumpOver()
 end
 
 function DialogueMainPanelView:OnRoleLoginRes()
-	local UIViewConfig = require("Define/UIViewConfig")
-	local UILayer = require("UI/UILayer")
-	local ViewConfig = UIViewConfig[UIViewID.LoginCreateMakeName]
-
 	UIViewMgr:HideView(UIViewID.LoginCreateMakeName)
 	self:UnRegisterGameEvent(EventID.RoleLoginRes, self.OnRoleLoginRes)
 	
@@ -264,120 +253,69 @@ function DialogueMainPanelView:OnClickButtonOpenHistory()
 	SequencePlayerVM.bInDialogHistory = true
 end
 
--------------------------------------功能按钮相关E---------------------------------
--------------------------------------Npc对话接口S----------------------------------
---Sequence原有的逻辑就不去动了，ShowUI带进来的参数控制一下
-function DialogueMainPanelView:ShowDialog(Name, Post, Content)
-	local UIViewID = require("Define/UIViewID")
-	self.ViewModel:ShowDialog(Name, Post, Content)
-
-	if self.ShowDialogTimer ~= nil then
-		self:UnRegisterTimer(self.ShowDialogTimer)
-		self.ShowDialogTimer = nil
-	end
-
-	local function SetDialog()
-		self.ViewModel:TimeFuncCallBack()
-	end
-	self.ShowDialogTimer = self:RegisterTimer(SetDialog, 0, 0.05, 0)
-	---------------- PlayDialog展开
-	_G.UIViewMgr:HideView(UIViewID.EmotionMainPanel)
-	_G.BusinessUIMgr:HideMainPanel(UIViewID.MainPanel)
-
-	--这里手动设置一下隐藏，不关闭UI，不然会导致摇杆和移动被解锁
-	local InteractiveMainView = _G.UIViewMgr:FindView(UIViewID.InteractiveMainPanel)
-	_G.InteractiveMgr:StopTickTimer()
-	
-	UIUtil.SetInputMode_UIOnly()
-    CommonUtil.HideJoyStick()
-	_G.InteractiveMgr:SetMainPanelIsVisible(InteractiveMainView, false)
-	--_G.InteractiveMgr:HideMainPanel()
-
-	if nil ~= self.Dialogue.AnimLoop then    
-		self.Dialogue:PlayAnimation(self.Dialogue.AnimLoop, 0, 0)
-	end
-	self.ViewModel.bIsDialogVisible = true
-end
-
-function DialogueMainPanelView:StopDialog()
-	local UIViewID = require("Define/UIViewID")
-	if nil ~= self.Dialogue and nil ~= self.Dialogue.AnimLoop then
-		self.Dialogue:StopAnimation(self.Dialogue.AnimLoop)
-	end
-	_G.NpcDialogMgr.PreDefaultDialogID = 0
-	_G.BusinessUIMgr:ShowMainPanel(UIViewID.MainPanel,true)
-	self.ViewModel:ResetVM()
-	self.ViewModel.bIsDialogVisible = false
-end
-
-function DialogueMainPanelView:OnMajorSingBarBegin()    
-    self.ViewModel.MajorIsSing = true
-end
-
-function DialogueMainPanelView:OnMajorSingBarOver()
-    self.ViewModel.MajorIsSing = false
-end
-
-function DialogueMainPanelView:HideDialog()
-	self:StopDialog()
-	--该恢复到一级入口
-	_G.TimerMgr:AddTimer(nil, function()
-		if not self.ViewModel.MajorIsSing then
-			self:ShowInteractiveMainView()
-		end
-	end, 0.8, 0, 1)
-end
-
---交互列表展示的逻辑挪出来这边，因为UI底层机制导致showUI会解锁移动，这里只设置UI显隐
-function DialogueMainPanelView:ShowInteractiveMainView()
-	local InteractiveMainView = _G.UIViewMgr:FindView(UIViewID.InteractiveMainPanel)
-	if not InteractiveMainView then
-		return
-	end
-	if InteractiveMainView.bMainPanelClosedByOtherUI == true then
-        return
-    end
-
-    if _G.GatherMgr:IsGatherState() then
-        return
-    end
-
-    --Sequenc播放的时候不展示交互列表了
-    if InteractiveMainView.CanShowInteractive == false then return end
-	_G.InteractiveMgr:SetMainPanelIsVisible(InteractiveMainView, true)
-
-    _G.InteractiveMgr:ShowEntrances()
-    _G.InteractiveMgr:StartTickTimer()
-end
-
-function DialogueMainPanelView:AddAutoPlayTimer(localTime)
-	if self.AutoPlayTimer ~= nil then
-		return
-	end
-	self.AutoPlayTimer = self:RegisterTimer(function ()
-		self.ViewModel:OnClickNextDialogContent()
-		self:UnRegisterTimer(self.AutoPlayTimer)
-		self.AutoPlayTimer = nil
-	end, localTime, 0)
-end
--------------------------------------Npc对话接口E----------------------------------
--------------------------------------公共函数S-------------------------------------
 function DialogueMainPanelView:SwitchStyle(StyleID)
 	_G.NpcDialogMgr.DoSwitchStyle(self.Dialogue, self, StyleID)
 end
 
-function DialogueMainPanelView:ClearAllTimer()
-	if self.ShowDialogTimer ~= nil then
-		self:UnRegisterTimer(self.ShowDialogTimer)
-		self.ShowDialogTimer = nil
+function DialogueMainPanelView:OnAutoPlayChanged()
+	if self.ViewModel.bIsAutoPlay then
+		self.Dialogue:PlayAnimation(self.Dialogue.AnimContinue0)
+	else
+		self.Dialogue:PlayAnimation(self.Dialogue.AnimContinue1)
 	end
-
-	if self.AutoPlayTimer ~= nil then
-		self:UnRegisterTimer(self.AutoPlayTimer)
-		self.AutoPlayTimer = nil
-	end
-
-	self.ViewModel.bClickVisible = false
 end
--------------------------------------公共函数E-------------------------------------
+
+---手柄交互相关
+function DialogueMainPanelView:InitPanelHandle(IsHandleAttached)
+	if nil == IsHandleAttached or type(IsHandleAttached) ~= "boolean" then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+	if self.ViewModel then
+		self.ViewModel:UpdateHandlebtn(IsHandleAttached, true)
+	end
+	if IsHandleAttached then
+		_G.NpcDialogMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.NpcDialogMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+		_G.NpcDialogMgr:RegisterHandleKeyDownData("HandleUp")
+		_G.NpcDialogMgr:RegisterHandleKeyDownData("HandleDown")
+	else
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleUp")
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleDown")
+	end
+end
+
+function DialogueMainPanelView:HidePanelHandle()
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleUp")
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleDown")
+end
+
+function DialogueMainPanelView:OnGamePadSkip()
+	self:OnClickButtonJumpOver()
+end
+
+function DialogueMainPanelView:OnGamePadEnter(Params)
+	local Priority = Params.IntParam1
+	if Priority ~= SettingsHandleDefine.HandleActionPriority.NpcDialogCustom then
+		return
+	end
+	if not UIUtil.IsVisible(self.BtnClick) then
+		return
+	end
+	self.ViewModel:OnClickScreen()
+end
+
+function DialogueMainPanelView:OnGamepadDPadUp()
+	self.ViewModel:SwitchCurSelectItem(false)
+	_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+end
+
+function DialogueMainPanelView:OnGamepadDPadDown()
+	self.ViewModel:SwitchCurSelectItem(true)
+	_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+end
+
 return DialogueMainPanelView

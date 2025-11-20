@@ -15,8 +15,8 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local GroupGlobalCfg = require("TableCfg/GroupGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
-
 local GroupUplevelpermissionCfg = require("TableCfg/GroupUplevelpermissionCfg")
+local HouseLocalDef = require("Game/House/HouseLocalDef")
 
 local ArmyWelfarePanelVM = nil
 
@@ -92,6 +92,12 @@ function ArmyWelfarePanelView:OnClickedStateItem(Index, ItemData, ItemView)
 		ArmyMgr:OpenArmyShopPanel()
 	elseif ItemData.ID == ArmyDefine.ArmyWelfarePageId.SE then
 		ArmyMgr:OpenArmySEPanel()
+	elseif ItemData.ID == ArmyDefine.ArmyWelfarePageId.House then
+		if ArmyMgr:GetIsHasHouse() then
+			_G.HouseInfoMgr:OpenHouseInfoPanel(ArmyDefine.ArmyHousePageID)
+		else
+			_G.HouseLandMgr:OpenHouseLandMianPanle(HouseLocalDef.HouseTabIndex.LandBuy, HouseLocalDef.HouseEntranceType.Army, true)
+		end
 	end
 end
 

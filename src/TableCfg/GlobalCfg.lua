@@ -7,15 +7,13 @@ local CS = {
     _1_2 = '[10]',
     _1_3 = '[1]',
     _1_4 = '[50]',
-    _1_5 = '[1800]',
-    _1_6 = '[600]',
-    _1_7 = '[20]',
-    _1_8 = '[15]',
-    _1_9 = '[300]',
-    _1_10 = '[25]',
-    _1_11 = '[19000002]',
-    _1_12 = '[3]',
-    _1_13 = '[180]',
+    _1_5 = '[600]',
+    _1_6 = '[1800]',
+    _1_7 = '[15]',
+    _1_8 = '[300]',
+    _1_9 = '[25]',
+    _1_10 = '[19000002]',
+    _1_11 = '[180]',
 }
 
 ---@class GlobalCfg : CfgBase
@@ -41,18 +39,18 @@ local GlobalCfg = {
         },
         {
             ID = 3,
-            _Value = CS._1_9,
+            _Value = CS._1_8,
         },
         {
             ID = 4,
-            _Value = CS._1_6,
+            _Value = CS._1_5,
         },
         {
             ID = 5,
         },
         {
             ID = 6,
-            _Value = CS._1_10,
+            _Value = CS._1_9,
         },
         {
             ID = 9,
@@ -86,7 +84,7 @@ local GlobalCfg = {
         },
         {
             ID = 17,
-            _Value = CS._1_7,
+            _Value = '[20]',
         },
         {
             ID = 18,
@@ -109,7 +107,7 @@ local GlobalCfg = {
         },
         {
             ID = 23,
-            _Value = CS._1_11,
+            _Value = CS._1_10,
         },
         {
             ID = 24,
@@ -128,15 +126,15 @@ local GlobalCfg = {
         },
         {
             ID = 34,
-            _Value = CS._1_5,
+            _Value = CS._1_6,
         },
         {
             ID = 35,
-            _Value = CS._1_5,
+            _Value = CS._1_6,
         },
         {
             ID = 36,
-            _Value = CS._1_12,
+            _Value = '[3]',
         },
         {
             ID = 37,
@@ -163,7 +161,7 @@ local GlobalCfg = {
         },
         {
             ID = 43,
-            _Value = CS._1_5,
+            _Value = CS._1_6,
         },
         {
             ID = 44,
@@ -171,7 +169,7 @@ local GlobalCfg = {
         },
         {
             ID = 46,
-            _Value = CS._1_13,
+            _Value = CS._1_11,
         },
         {
             ID = 47,
@@ -198,7 +196,7 @@ local GlobalCfg = {
         },
         {
             ID = 54,
-            _Value = CS._1_6,
+            _Value = CS._1_5,
         },
         {
             ID = 56,
@@ -213,7 +211,7 @@ local GlobalCfg = {
         },
         {
             ID = 61,
-            _Value = CS._1_6,
+            _Value = CS._1_5,
         },
         {
             ID = 62,
@@ -237,7 +235,7 @@ local GlobalCfg = {
         },
         {
             ID = 69,
-            _Value = CS._1_8,
+            _Value = CS._1_7,
         },
         {
             ID = 70,
@@ -245,7 +243,7 @@ local GlobalCfg = {
         },
         {
             ID = 71,
-            _Value = CS._1_13,
+            _Value = CS._1_11,
         },
         {
             ID = 72,
@@ -281,11 +279,11 @@ local GlobalCfg = {
         },
         {
             ID = 86,
-            _Value = CS._1_8,
+            _Value = CS._1_7,
         },
         {
             ID = 87,
-            _Value = CS._1_8,
+            _Value = CS._1_7,
         },
         {
             ID = 88,
@@ -301,7 +299,7 @@ local GlobalCfg = {
         },
         {
             ID = 91,
-            _Value = CS._1_11,
+            _Value = CS._1_10,
         },
         {
             ID = 92,
@@ -321,11 +319,11 @@ local GlobalCfg = {
         },
         {
             ID = 97,
-            _Value = CS._1_9,
+            _Value = CS._1_8,
         },
         {
             ID = 99,
-            _Value = CS._1_10,
+            _Value = CS._1_9,
         },
         {
             ID = 100,
@@ -336,74 +334,18 @@ local GlobalCfg = {
         },
         {
             ID = 106,
-            _Value = '[2,1,5]',
+            _Value = '[2,2,0]',
         },
         {
             ID = 113,
             _Value = '[22300]',
         },
         {
-            ID = 114,
-            _Value = CS._1_7,
-        },
-        {
-            ID = 115,
-            _Value = CS._1_1,
-        },
-        {
-            ID = 116,
-            _Value = CS._1_5,
-        },
-        {
-            ID = 117,
-            _Value = CS._1_4,
-        },
-        {
-            ID = 118,
-            _Value = CS._1_7,
-        },
-        {
-            ID = 119,
-            _Value = '[11,15]',
-        },
-        {
-            ID = 120,
-            _Value = '[150004]',
-        },
-        {
-            ID = 121,
-            _Value = '[1001,1002,2009,2010]',
-        },
-        {
-            ID = 122,
-            _Value = CS._1_12,
-        },
-        {
-            ID = 123,
-            _Value = CS._1_3,
-        },
-        {
-            ID = 124,
-            _Value = '[4]',
-        },
-        {
-            ID = 125,
-            _Value = '[74]',
-        },
-        {
             ID = 128,
         },
         {
             ID = 129,
-            _Value = '[1424030]',
-        },
-        {
-            ID = 130,
-            _Value = '[5000]',
-        },
-        {
-            ID = 131,
-            _Value = '[2000]',
+            _Value = '[1424030,14]',
         },
         {
             ID = 132,

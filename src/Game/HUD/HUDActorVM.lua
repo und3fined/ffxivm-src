@@ -110,7 +110,8 @@ function HUDActorVM:Ctor()
 	self.IsInteractiveTarget = false
 
 	self.EidMountPoint = ""
-	self.OffsetY = 0
+	self.LocationOffsetZ = 0
+	self.ExpdSmoothTimeMS = 0.0
 
 	self.CombatStateID = -1
 end
@@ -165,7 +166,9 @@ function HUDActorVM:UpdateVM(EntityID, Type)
 	--self.PickTimesLeft  这个字段在UpdateNameInfo中刷新，以及GatherAttrChange事件刷新
 
 	self.EidMountPoint = ""
-	self.OffsetY = 0
+	self.LocationOffsetZ = 0
+	self.ExpdSmoothTimeMS = 0.0
+	self.CombatStateID = -1
 
 	self:UpdateEidMountPoint()
 
@@ -502,6 +505,10 @@ end
 
 function HUDActorVM:UpdateMonStateIcon()
 	local Icon = self:GetQuestIconAsset()
+	if (string.isnilorempty(Icon)) then
+		-- 如果是空的，那么检测一下是不是寻宝库的
+		Icon = _G.TreasuryMgr:TryGetMandelaIconPath(self.EntityID)
+	end
 	self.StateIconAsset = Icon
 	self.SecondStateIconAsset = nil
 end
@@ -513,6 +520,47 @@ function HUDActorVM:UpdateEObjStateIcon()
 	end
 	self.StateIconAsset = Icon
 	self.SecondStateIconAsset = nil
+end
+
+local function GetRankIcon(EntityID)
+	--如果是友好、中立阵营的，则当成npc，不显示怪物图标
+	local Relation = SelectTargetBase:GetCampRelationByEntityID(EntityID)
+	if ProtoRes.camp_relation.camp_relation_enemy ~= Relation then
+		return nil
+	end
+
+	local Actor = ActorUtil.GetActorByEntityID(EntityID)
+	if nil == Actor then
+		FLOG_ERROR("GetRankIcon: Actor is nil.")
+		return nil
+	end
+
+	local AttributeComponent = Actor:GetAttributeComponent()
+	if nil == AttributeComponent then
+		FLOG_ERROR("GetRankIcon: AttributeComponent is nil.")
+		return nil
+	end
+
+	local ResID = AttributeComponent.ResID
+	local Cfg = MonsterCfg:FindCfgByKey(ResID)
+	if Cfg == nil then
+		FLOG_ERROR("GetRankIcon: Can not find ResID (%d) in MonsterCfg.", ResID)
+		return nil
+	end
+
+	local ProfileName = tonumber(Cfg.ProfileName)
+	if ProfileName == nil then
+		FLOG_ERROR("GetRankIcon: ProfileName is not a number.")
+		return nil
+	end
+
+	local RankType = NPCBaseCfg:FindValue(ProfileName, "Rank")
+	if RankType ~= nil and RankType < ProtoRes.NPC_RANK_TYPE.Hidden then
+		local IsActiveEnmity = EnmityCfg:FindValue(Cfg.EnmityID, "IsActiveEnmity")
+		return HUDConfig:GetMonsterRankTypeIcon(RankType, IsActiveEnmity == 1)
+	end
+
+	return nil
 end
 
 function HUDActorVM:UpdateMonsterTypeIcon()
@@ -539,42 +587,7 @@ function HUDActorVM:UpdateMonsterTypeIcon()
 		end
 	end
 
-	--如果是友好、中立阵营的，则当成npc，不显示怪物图标
-	local Relation = SelectTargetBase:GetCampRelationByEntityID(self.EntityID)
-	if ProtoRes.camp_relation.camp_relation_enemy ~= Relation then
-		return
-	end
-
-	local Actor = ActorUtil.GetActorByEntityID(self.EntityID)
-	if nil == Actor then
-		FLOG_ERROR("HUDActorVM.UpdateMonsterTypeIcon: Actor is nil.")
-		return
-	end
-
-	local AttributeComponent = Actor:GetAttributeComponent()
-	if nil == AttributeComponent then
-		FLOG_ERROR("HUDActorVM.UpdateMonsterTypeIcon: AttributeComponent is nil.")
-		return
-	end
-
-	local ResID = AttributeComponent.ResID
-	local Cfg = MonsterCfg:FindCfgByKey(ResID)
-	if Cfg == nil then
-		FLOG_ERROR("HUDActorVM.UpdateMonsterTypeIcon: Can not find ResID (%d) in MonsterCfg.", ResID)
-		return
-	end
-
-	local ProfileName = tonumber(Cfg.ProfileName)
-	if ProfileName == nil then
-		FLOG_ERROR("HUDActorVM.UpdateMonsterTypeIcon: ProfileName is not a number.")
-		return
-	end
-
-	local RankType = NPCBaseCfg:FindValue(ProfileName, "Rank")
-	if RankType ~= nil and RankType < ProtoRes.NPC_RANK_TYPE.Hidden then
-		local IsActiveEnmity = EnmityCfg:FindValue(Cfg.EnmityID, "IsActiveEnmity")
-		self.MonsterTypeIcon = HUDConfig:GetMonsterRankTypeIcon(RankType, IsActiveEnmity == 1)
-	end
+	self.MonsterTypeIcon = GetRankIcon(self.EntityID)
 end
 
 ---更新目标的标记状态图标
@@ -655,6 +668,7 @@ function HUDActorVM:UpdateHP(CurHP, MaxHP)
 	if (self.HUDType == HUDType.MonsterInfo and (OldPercent == 1 or NewPercent == 1)) or
 	(OldPercent == 0 or NewPercent == 0) then
 		self:UpdateUIColor()
+		-- self:UpdateMonsterTypeIcon()
 	end
 end
 
@@ -690,7 +704,9 @@ function HUDActorVM:DelayDrawTime()
 end
 
 function HUDActorVM:UpdateOnlineStatus()
-	if _G.ChocoboRaceMgr:IsShowChocoboRacerHUD(self.EntityID) then
+	local OnlineStatus = _G.OnlineStatusMgr:GetStatusByEntityID(self.EntityID)
+	-- 如果是陆行鸟竞赛玩家，并且不是过场动画中
+	if _G.ChocoboRaceMgr:IsShowChocoboRacerHUD(self.EntityID) and not OnlineStatusUtil.CheckBit(OnlineStatus, ProtoRes.OnlineStatus.OnlineStatusCutscene) then
 		return
 	end
 
@@ -705,13 +721,14 @@ function HUDActorVM:UpdateOnlineStatus()
 		return
 	end
 
-	local OnlineStatus = _G.OnlineStatusMgr:GetStatusByEntityID(self.EntityID)
 	local Icon = OnlineStatusUtil.GetVisionStatusIcon(OnlineStatus, self.EntityID)
+	
 	self:SetOnlineStatusIcon(Icon)
 end
 
 ---GetActorName
 ---@param EntityID number
+---@param IsReport 举报获取的搭档名称需要去掉等级显示 
 ---@return string
 function HUDActorVM.GetActorName(EntityID, IsReport)
 	if MajorUtil.IsMajor(EntityID) then
@@ -816,7 +833,7 @@ function HUDActorVM:CheckShowActorInfo(EntityID)
 	end
 
 	local Actor = ActorUtil.GetActorByEntityID(EntityID)
-	if nil == Actor then
+	if nil == Actor or not Actor:IsValid() then
 		FLOG_ERROR("HUDActorVM.CheckShowActorInfo(): Actor is invalid")
 		return false
 	end
@@ -873,11 +890,7 @@ function HUDActorVM.GetActorGender(EntityID)
 		FLOG_ERROR("HUDActorVM.GetActorGender AttributeComponent is nil")
 		return RoleGender.GENDER_UNKNOWN
 	end
-	local Attr = MajorUtil.GetMajorAttributeComponent()
-	if Attr ~= nil then
-		return Attr.Gender
-	end
-	return RoleGender.GENDER_UNKNOWN
+	return AttributeComponent.Gender
 end
 
 ---@param Name? string 可以为空
@@ -937,6 +950,11 @@ function HUDActorVM:ResetEidMountPoint()
 	self.EidMountPoint = ""
 end
 
+---@param Timestamp number
+function HUDActorVM:SetSmoothTime(Time)
+	self.ExpdSmoothTimeMS = _G.TimeUtil.GetLocalTimeMS() + Time * 1000
+end
+
 function HUDActorVM:UpdateEidMountPoint()
 	local Actor = ActorUtil.GetActorByEntityID(self.EntityID)
 	local RideComp = Actor and Actor:GetRideComponent()
@@ -944,11 +962,17 @@ function HUDActorVM:UpdateEidMountPoint()
 		local Pos = RideComp:GetSeatIndex()
 		local Eid = Pos == 0 and "EID_UI_NAME_MNT" or string.format("EID_UI_NAME_MNT%02d", Pos + 1)
 		self:SetEidMountPoint(Eid)
+		self:SetLocationOffsetZ(0)
+		return
 	end
+
+	local OffsetZ, MountPoint = EmotionMgr:GetEmotionNameOffset(self.EntityID)
+	self:SetLocationOffsetZ(OffsetZ or 0)
+	self:SetEidMountPoint(MountPoint or "")
 end
 
-function HUDActorVM:SetOffsetY(OffsetY)
-	self.OffsetY = OffsetY or 0
+function HUDActorVM:SetLocationOffsetZ(Offset)
+	self.LocationOffsetZ = Offset or 0
 end
 
 function HUDActorVM:SetOnlineStatusIcon(Icon)

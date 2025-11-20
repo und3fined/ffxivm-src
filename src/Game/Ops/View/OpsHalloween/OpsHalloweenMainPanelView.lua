@@ -21,7 +21,6 @@ local SaveKey = require("Define/SaveKey")
 ---@field BtnPaly UFButton
 ---@field BtnProm UFButton
 ---@field BtnShop UFButton
----@field CommInforBtn_UIBP CommInforBtnView
 ---@field CommonBkg02_UIBP CommonBkg02View
 ---@field CommonBkgMask_UIBP CommonBkgMaskView
 ---@field EFF1 UFCanvasPanel
@@ -64,7 +63,6 @@ function OpsHalloweenMainPanelView:Ctor()
 	--self.BtnPaly = nil
 	--self.BtnProm = nil
 	--self.BtnShop = nil
-	--self.CommInforBtn_UIBP = nil
 	--self.CommonBkg02_UIBP = nil
 	--self.CommonBkgMask_UIBP = nil
 	--self.EFF1 = nil
@@ -102,7 +100,6 @@ end
 
 function OpsHalloweenMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.CommInforBtn_UIBP)
 	self:AddSubView(self.CommonBkg02_UIBP)
 	self:AddSubView(self.CommonBkgMask_UIBP)
 	self:AddSubView(self.MakeupRedDot)

@@ -13,6 +13,7 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 ---@class FriendScreenProfListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field ImgIcon UFImage
+---@field ImgJobFigure UFImage
 ---@field TableViewProf UTableView
 ---@field TextName UFTextBlock
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -21,6 +22,7 @@ local FriendScreenProfListItemView = LuaClass(UIView, true)
 function FriendScreenProfListItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgIcon = nil
+	--self.ImgJobFigure = nil
 	--self.TableViewProf = nil
 	--self.TextName = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -40,7 +42,7 @@ function FriendScreenProfListItemView:OnDestroy()
 end
 
 function FriendScreenProfListItemView:OnShow()
-
+	local Test = 0
 end
 
 function FriendScreenProfListItemView:OnHide()
@@ -68,8 +70,10 @@ function FriendScreenProfListItemView:OnRegisterBinder()
 
 	-- 图标
 	local IconPath = Data.Icon
+	local IconBgPath = Data.IconBg
 	if not string.isnilorempty(IconPath) then
 		UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, IconPath)
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgJobFigure, IconBgPath)
 	end
 
 	-- 职业列表

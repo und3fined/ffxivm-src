@@ -13,6 +13,9 @@ local MusicAtlasRevertListItemVM = require("Game/MusicAtlas/View/Item/MusicAtlas
 local MajorUtil = require("Utils/MajorUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local LocalizationUtil = require("Utils/LocalizationUtil")
+local EventMgr = require("Event/EventMgr")
+local EventID = require("Define/EventID")
+
 
 
 local LSTR = _G.LSTR
@@ -100,7 +103,9 @@ function MusicAtlasRevertPanelVM:PlayChoseMusic(MusicID, Percent)
 	self:SetMusicSlideByPrecent(Percent)
 	if MusicPlayerMgr:GetMajorIdleStat() then
 		--当前只是播放 思考 情感动作
-		_G.EmotionMgr:PlayEmotionID(39, false, MajorEntityID)
+		local EmotionParams = {}
+		EmotionParams.IntParam1 = 2001
+		EventMgr:SendEvent(EventID.ReqPlayEmotion, EmotionParams)
 	end
 end
 

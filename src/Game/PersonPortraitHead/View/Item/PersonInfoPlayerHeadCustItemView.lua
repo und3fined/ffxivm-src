@@ -20,12 +20,12 @@ local PersonPortraitHeadHelper = require("Game/PersonPortraitHead/PersonPortrait
 ---@class PersonInfoPlayerHeadCustItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnPlayer UFButton
+---@field CommHead CommHeadView
 ---@field CommonRedDot CommonRedDotView
 ---@field IconCheck UFImage
 ---@field ImgAdd UFImage
 ---@field ImgBkg UFImage
 ---@field ImgBkg2 UFImage
----@field ImgBlack UFImage
 ---@field ImgFrame UFImage
 ---@field ImgPlayer UFImage
 ---@field ImgSelect UFImage
@@ -37,12 +37,12 @@ local PersonInfoPlayerHeadCustItemView = LuaClass(UIView, true)
 function PersonInfoPlayerHeadCustItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnPlayer = nil
+	--self.CommHead = nil
 	--self.CommonRedDot = nil
 	--self.IconCheck = nil
 	--self.ImgAdd = nil
 	--self.ImgBkg = nil
 	--self.ImgBkg2 = nil
-	--self.ImgBlack = nil
 	--self.ImgFrame = nil
 	--self.ImgPlayer = nil
 	--self.ImgSelect = nil
@@ -53,6 +53,7 @@ end
 
 function PersonInfoPlayerHeadCustItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.CommHead)
 	self:AddSubView(self.CommonRedDot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -63,17 +64,19 @@ function PersonInfoPlayerHeadCustItemView:OnInit()
 		{ "IsInUse", 	UIBinderSetIsVisible.New(self, self.IconCheck) },
 		-- { "HeadIcon", 	UIBinderSetBrushFromAssetPath.New(self, self.ImgFrame) },
 		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.PanelAdd) },
-		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.BtnPlayer, false, true) },
-		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgPlayer, true) },
+		--{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.BtnPlayer, false, true) },
+		--{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgPlayer, true) },
 
-		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgFrame, true) },
-		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgBkg, true) },
+		--{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgFrame, true) },
+		--{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgBkg, true) },
+		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.CommHead, true) },
 		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, self.ImgBkg2) },
 
 		{ "Idx", 	UIBinderValueChangedCallback.New(self, nil, self.OnValChgIdx) },
 
 		{ "HeadIconUrl", 	UIBinderValueChangedCallback.New(self, nil, self.OnValChgUrl) },
 	}
+	UIUtil.SetIsVisible(self.BtnPlayer, true, true)
 end
 
 function PersonInfoPlayerHeadCustItemView:OnDestroy()
@@ -111,7 +114,8 @@ function PersonInfoPlayerHeadCustItemView:OnValChgUrl(Val)
 		return
 	end
 
-	PersonPortraitHeadHelper.SetHeadByUrl(self.ImgPlayer, Val, 'HeadCustItem::OnValChgUrl')
+	--PersonPortraitHeadHelper.SetHeadByUrl(self.ImgPlayer, Val, 'HeadCustItem::OnValChgUrl')
+	PersonPortraitHeadHelper.SetCommHeadByUrl(self.CommHead, Val, 'HeadCustItem::OnValChgUrl')
 end
 
 function PersonInfoPlayerHeadCustItemView:OnValChgIdx(Val)
@@ -137,7 +141,21 @@ function PersonInfoPlayerHeadCustItemView:OnSelectChanged(IsSelected)
 end
 
 function PersonInfoPlayerHeadCustItemView:OnBtnEdit()
-	UIViewMgr:ShowView(UIViewID.PersonInfoHeadPanel)
+	local Params = self.Params
+	if nil == Params or nil == Params.Data then
+		return
+	end
+
+	self.VM = Params.Data
+	if self.VM.IsEmpty then
+		UIViewMgr:ShowView(UIViewID.PersonInfoHeadPanel)
+	else
+		local Adapter = Params.Adapter
+		if nil == Adapter then
+			return
+		end
+		Adapter:OnItemClicked(self, Params.Index)
+	end
 end
 
 return PersonInfoPlayerHeadCustItemView

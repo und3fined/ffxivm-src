@@ -14,6 +14,8 @@ function BehaviorHintTalk:Ctor(_, Properties, ExtraParams)
     self.NpcID = tonumber(Properties[1]) or 0
     self.EObjID = tonumber(Properties[2]) or 0
     self.DialogID = tonumber(Properties[3])
+    self.MapID = tonumber(Properties[4]) or 0
+    self.AreaID = tonumber(Properties[5]) or 0
 
     local QuestMgr = _G.QuestMgr
 
@@ -39,9 +41,11 @@ function BehaviorHintTalk:DoStartBehavior()
         end
     end
 
+    local MapAreaID64 = (self.MapID << 32) | self.AreaID
+
     -- 由Quest清除HintTalk
     local QuestMgr = _G.QuestMgr
-    QuestMgr.QuestRegister:SetHintTalk(self.NpcID, self.EObjID, self.DialogID, Callback)
+    QuestMgr.QuestRegister:SetHintTalk(self.NpcID, self.EObjID, MapAreaID64, self.DialogID, Callback)
     local ParentQuest = QuestMgr.QuestMap[self.QuestID]
     if self.NpcID ~= 0 then
         table.insert(ParentQuest.HintTalkNpcs, self.NpcID)

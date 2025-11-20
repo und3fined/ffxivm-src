@@ -26,6 +26,8 @@ local GroupGlobalCfg = require("TableCfg/GroupGlobalCfg")
 local GroupActivityTimeCfg = require("TableCfg/GroupActivityTimeCfg")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local UTF8Util = require("Utils/UTF8Util")
+local UIDefine = require("Define/UIDefine")
+local SearchBtnColorType = UIDefine.SearchBtnColorType
 
 local ArmyMainVM
 local ArmyInformationPanelVM
@@ -160,6 +162,8 @@ function ArmyEditArmyInformationWinView:OnShow()
 	---设置招募状态item文本
 	self.CheckBox01:SetText(LSTR(910393))
 	self.CheckBox02:SetText(LSTR(910049))
+	self.CheckBox01:SetColorType(UIDefine.SearchBtnColorType.Dark, false)
+	self.CheckBox02:SetColorType(UIDefine.SearchBtnColorType.Dark, false)
 	---设置活动时间item文本
 	local Cfg = GroupActivityTimeCfg:FindAllCfg()
 	for _, ActivityTimeData in ipairs(Cfg) do
@@ -245,7 +249,9 @@ function ArmyEditArmyInformationWinView:OnIsRecuritChanged(IsRecurit)
 	---策划要求关闭招募时活动这边也不能设置
 	for i = 3, 5 do
 		if self["CheckBox0"..i] then
-			self["CheckBox0"..i]:SetIsEnabled(IsRecurit)
+			--self["CheckBox0"..i]:SetIsEnabled(IsRecurit)
+			self["CheckBox0"..i]:SetClickable(IsRecurit)
+			self["CheckBox0"..i]:SetColorType(UIDefine.SearchBtnColorType.Dark, not IsRecurit)
 		end
 	end
 end
@@ -405,8 +411,10 @@ function ArmyEditArmyInformationWinView:CheckIsEnabled(Text)
 			-- LSTR string:招募标语的文本不可使用！
 			MsgTipsUtil.ShowErrorTips(LSTR(910138))
 		end
-		self.IsWaitCheck = false
-		self:UpdateBtnState() --- 敏感词回包后刷新一次按钮状态
+		if self:IsValid() then
+			self.IsWaitCheck = false
+			self:UpdateBtnState() --- 敏感词回包后刷新一次按钮状态
+		end
 	end)
 end
 

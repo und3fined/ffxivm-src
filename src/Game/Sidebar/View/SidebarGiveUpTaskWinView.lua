@@ -20,16 +20,18 @@ local TeamDefine = require("Game/Team/TeamDefine")
 ---@field BtnAccept CommBtnSView
 ---@field BtnFold UFButton
 ---@field BtnRefuse CommBtnSView
----@field EFF_ProBarLight UFImage
 ---@field PanelAgree UFCanvasPanel
 ---@field PanelBtn UHorizontalBox
 ---@field PanelHeading UFCanvasPanel
 ---@field PanelSideWin UFCanvasPanel
 ---@field ProBarCD UProgressBar
----@field RichTextNumber URichTextBox
+---@field RichTextConcurringVote URichTextBox
 ---@field RichTextTitle URichTextBox
+---@field TextContent URichTextBox
+---@field TextFail UFTextBlock
 ---@field TextNo UFTextBlock
----@field TextOther UFTextBlock
+---@field TextOther URichTextBox
+---@field TextPassed UFTextBlock
 ---@field TextYes UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -42,16 +44,18 @@ function SidebarGiveUpTaskWinView:Ctor()
 	--self.BtnAccept = nil
 	--self.BtnFold = nil
 	--self.BtnRefuse = nil
-	--self.EFF_ProBarLight = nil
 	--self.PanelAgree = nil
 	--self.PanelBtn = nil
 	--self.PanelHeading = nil
 	--self.PanelSideWin = nil
 	--self.ProBarCD = nil
-	--self.RichTextNumber = nil
+	--self.RichTextConcurringVote = nil
 	--self.RichTextTitle = nil
+	--self.TextContent = nil
+	--self.TextFail = nil
 	--self.TextNo = nil
 	--self.TextOther = nil
+	--self.TextPassed = nil
 	--self.TextYes = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -68,8 +72,7 @@ end
 
 function SidebarGiveUpTaskWinView:OnInit()
 	self.BindersGiveUp = {
-        { "GiveUpDesc",       		UIBinderSetText.New(self, self.RichTextNumber) },
-		{"VoteGiveUpCounterDescNew", UIBinderSetText.New(self, self.RichTextTitle)},
+        { "GiveUpDesc",       		UIBinderSetText.New(self, self.TextOther) },
 		{ "HasVoteGiveUp",       	UIBinderSetIsVisible.New(self, self.PanelBtn, true) },
 		{ "HasVoteGiveUp",       	UIBinderSetIsVisible.New(self, self.PanelAgree) },
 		{ "VoteOpGiveUpAccept",       	UIBinderSetIsVisible.New(self, self.TextYes) },
@@ -77,12 +80,11 @@ function SidebarGiveUpTaskWinView:OnInit()
     }
 
 	self.BindersExpelPlayer = {
-        { "ExileDesc",       			UIBinderSetText.New(self, self.RichTextNumber) },
+        { "ExileDesc",       			UIBinderSetText.New(self, self.TextOther) },
 		{ "HasVoteExile",       	UIBinderSetIsVisible.New(self, self.PanelBtn, true) },
 		{ "HasVoteExile",       	UIBinderSetIsVisible.New(self, self.PanelAgree) },
 		{ "VoteOpExileAccept",       	UIBinderSetIsVisible.New(self, self.TextYes) },
 		{ "VoteOpExileAccept",       	UIBinderSetIsVisible.New(self, self.TextNo, true) },
-		{	"VoteExileCounterDesc", UIBinderSetText.New(self, self.RichTextTitle)},
     }
 
 	local PworldVoteCfg = require("TableCfg/PworldVoteCfg")
@@ -94,27 +96,26 @@ end
 function SidebarGiveUpTaskWinView:OnShow()
 	local UIViewMgr = require("UI/UIViewMgr")
 	UIViewMgr:HideView(_G.UIViewID.PWorldQuestMenu)
-	local PWorldHelper = require("Game/PWorld/PWorldHelper")
 
 	if self.Params and self.Params.ShowType == TeamDefine.VoteType.TASK_GIVEUP then
-		self.BtnAccept:SetText(PWorldHelper.GetPWorldText("BTN_GIVEUP_YES"))
-		self.BtnRefuse:SetText(PWorldHelper.GetPWorldText("BTN_GIVEUP_NO"))
-		self.TextOther:SetText(_G.LSTR(1320186))
+		self.BtnAccept:SetText(_G.LSTR(1320257))
+		self.BtnRefuse:SetText(_G.LSTR(1320258))
 		self.TextYes:SetText(_G.LSTR(1320188))
 		self.TextNo:SetText(_G.LSTR(1320187))
+		self.RichTextTitle:SetText(_G.LSTR(1320265))
 	end
 
 	if self.Params and self.Params.ShowType == TeamDefine.VoteType.EXPEL_PLAYER then
-		self.BtnAccept:SetText(PWorldHelper.GetPWorldText("BTN_EXPEL_YES"))
-		self.BtnRefuse:SetText(PWorldHelper.GetPWorldText("BTN_EXPEL_NO"))
-		self.TextOther:SetText(_G.LSTR(1320177))
+		self.BtnAccept:SetText(_G.LSTR(1320257))
+		self.BtnRefuse:SetText(_G.LSTR(1320258))
 		self.TextYes:SetText(_G.LSTR(1320179))
 		self.TextNo:SetText(_G.LSTR(1320178))
+		self.RichTextTitle:SetText(_G.LSTR(1320255))
 	end
 end
 
 function SidebarGiveUpTaskWinView:OnHide()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
+
 end
 
 function SidebarGiveUpTaskWinView:OnRegisterUIEvent()

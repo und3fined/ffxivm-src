@@ -7,8 +7,10 @@
 local ProtoCS = require("Protocol/ProtoCS")
 local UIViewID = require("Define/UIViewID")
 local ProtoCommon = require("Protocol/ProtoCommon")
-local RaceType = ProtoCommon.race_type
+local ProtoRes = require("Protocol/ProtoRes")
 local ACTIVITY_TYPE = ProtoCS.ACTIVITY_TYPE
+local RaceType = ProtoCommon.race_type
+local GameID = ProtoRes.Game.GameID
 local ALONE_TREE_HAND_FEEL = ProtoCS.ALONE_TREE_HAND_FEEL
 local LSTR = _G.LSTR
 local UE = _G.UE
@@ -16,16 +18,39 @@ local UE = _G.UE
 
 local EmotionDefaultPath = "AnimMontage'/Game/Assets/Character/Action/%s'"
 -- AnimMontage'/Game/Assets/Character/Action/emote/amazed.amazed'
--- 小游戏类型枚举
+-- 小游戏类型枚举(统一到玩法设定中去)
 local MiniGameType = {
     ["None"] = 0,
-    ["OutOnALimb"] = ACTIVITY_TYPE.ACTIVITY_TYPE_ALONE_TREE,  --孤树无援 1 
-    ["TheFinerMiner"] = ACTIVITY_TYPE.ACTIVITY_TYPE_ORE_SEARCH,  --矿脉探索 2
-    ["MonsterToss"] = 3, -- 怪物偷投篮
-    ["Cuff"] = 4, -- 重击小游戏
-    ["MooglesPaw"] = 5, -- 莫古抓球机
-    ["CrystalTower"] = 6, -- 强袭水晶塔
+    ["OutOnALimb"] = GameID.GameIDAloneTree,  --孤树无援
+    ["TheFinerMiner"] = GameID.GameIDOreSearch,  --矿脉探索
+    ["MonsterToss"] = GameID.GameIDMonsterBasketball, -- 怪物投篮
+    ["Cuff"] = GameID.GameIDGilgamesh, -- 重击小游戏
+    ["MooglesPaw"] = GameID.GameIDCatchBall, -- 莫古抓球机
+    ["CrystalTower"] = GameID.GameIDCrystalTower, -- 强袭水晶塔
+}
 
+-- 孤树&矿脉区分专用
+local function MiniGameType2AcitvityType(GameType)
+    if GameType == GameID.GameIDAloneTree then
+        return ACTIVITY_TYPE.ACTIVITY_TYPE_ALONE_TREE
+    elseif GameType == GameID.GameIDOreSearch then
+        return ACTIVITY_TYPE.ACTIVITY_TYPE_ORE_SEARCH
+    end
+end
+
+-- 孤树&矿脉区分专用
+local function AcitvityType2MiniGameType(AcitvityType)
+    if AcitvityType == ACTIVITY_TYPE.ACTIVITY_TYPE_ALONE_TREE then
+        return GameID.GameIDAloneTree
+    elseif AcitvityType == ACTIVITY_TYPE.ACTIVITY_TYPE_ORE_SEARCH then
+        return GameID.GameIDOreSearch
+    end
+end
+
+-- 预设参数种类枚举
+local PreStageExtraParamType = {
+    ["None"] = 0,
+    ["Bless"] = 1, -- 仙人赐福
 }
 
 -- 小游戏阶段枚举
@@ -39,6 +64,9 @@ local MiniGameStageType = {
     ["Reward"] = 6,  --游戏奖励结算
     ["FailInfoShow"] = 7, -- 失败信息展示
     ["Quit"] = 8,  --游戏退出
+    ["PreSet"] = 9, -- 游戏开始前预先设置数据
+    ["ExtraRound"] = 10, -- 仙人赐福额外阶段
+    ["ExtraRoundStart"] = 11, -- 仙人赐福额外阶段正式开始
 }
 
 local MiniGameDifficulty = {
@@ -207,7 +235,25 @@ local InteractResult = {
     Perfect = 1,        -- 完美
     Excellent = 2,      -- 优秀
     Fail = 3,           -- 失误
-    Error = 4,
+    Error = 4,          -- 负面
+}
+
+local CuffCheckResultAnimWorkLen = {
+    Low = 2,
+    Middle = 2,
+    High = 2,
+    Red = 2,
+    StarLight = 2,
+    Error = 2,
+}
+
+local CuffCheckResultTime = {
+    Low = { Great = CuffCheckResultAnimWorkLen.Low * 0.55, Profect = CuffCheckResultAnimWorkLen.Low * 0.75, MissOuter = CuffCheckResultAnimWorkLen.Low * 0.25 },
+    Middle = { Great = CuffCheckResultAnimWorkLen.Middle * 0.55, Profect = CuffCheckResultAnimWorkLen.Middle * 0.7, MissOuter = CuffCheckResultAnimWorkLen.Middle * 0.15 },
+    High = { Great = CuffCheckResultAnimWorkLen.High * 0.8, Profect = CuffCheckResultAnimWorkLen.High * 0.9, MissOuter = CuffCheckResultAnimWorkLen.High * 0.5 },
+    Red = { Great = CuffCheckResultAnimWorkLen.Red * 0.6, Profect = CuffCheckResultAnimWorkLen.Red * 0.8, MissOuter = CuffCheckResultAnimWorkLen.Red * 0.2 },
+    StarLight = { Great = CuffCheckResultAnimWorkLen.StarLight * 0.55, Profect = CuffCheckResultAnimWorkLen.StarLight * 0.75, MissOuter = CuffCheckResultAnimWorkLen.StarLight * 0.25 },
+    --Error = { Great = CuffCheckResultAnimWorkLen.Error * 0.55, Profect = CuffCheckResultAnimWorkLen.Error * 0.75, MissOuter = CuffCheckResultAnimWorkLen.Error * 0.25 },错误球没有范围判定，点到就扣分
 }
 
 local DelayTime = {
@@ -238,7 +284,14 @@ local ResultCfg = {
     TimeOut = { Text = LSTR(250025), TextColor = "dfesf2" }, -- 时间结束
 }
 
-local ColorType = {Blue = 1, Purple = 2, Red = 3}
+local BigBlessSuccessIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultIcon1.UI_GoldSaucerGame_Img_ResultIcon1'"
+local BigBlessFailIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultIcon1_Grey.UI_GoldSaucerGame_Img_ResultIcon1_Grey'"
+local LittleBlessSuccessIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultIcon2.UI_GoldSaucerGame_Img_ResultIcon2'"
+local LittleBlessFailIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultIcon2_Grey.UI_GoldSaucerGame_Img_ResultIcon2_Grey'"
+local BlessSuccessItemBg = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList01.UI_GoldSaucerGame_Img_ResultList01'"
+local BlessFailItemBg = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList02.UI_GoldSaucerGame_Img_ResultList02'"
+
+local ColorType = {Blue = 1, Purple = 2, Red = 3, Green = 4}
 
 local MiniGameClientConfig = {
     [MiniGameType.OutOnALimb] = {
@@ -311,6 +364,13 @@ local MiniGameClientConfig = {
         HelpInfoIDDifficult = 11037,
         HelpInfoIDRun = 11038,
         ReconnectStableDelayTime = 0.8,
+        PointerPanelBgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/OutOnALimb/UI_OutOnALimb_Img_PointerBg1.UI_OutOnALimb_Img_PointerBg1'",
+            [2] = "Texture2D'/Game/UI/Texture/OutOnALimb/UI_OutOnALimb_Img_PointerBg1.UI_OutOnALimb_Img_PointerBg1'",
+            [3] = "Texture2D'/Game/UI/Texture/OutOnALimb/UI_OutOnALimb_Img_PointerBg2.UI_OutOnALimb_Img_PointerBg2'",
+            [4] = "Texture2D'/Game/UI/Texture/OutOnALimb/UI_OutOnALimb_Img_PointerBg2.UI_OutOnALimb_Img_PointerBg2'",
+            [5] = "Texture2D'/Game/UI/Texture/OutOnALimb/UI_OutOnALimb_Img_PointerBg3.UI_OutOnALimb_Img_PointerBg3'",
+        }
     },
     [MiniGameType.TheFinerMiner] = {
         Name = LSTR(380001), EobjID = 102, TimeLimit = 60, ExtraReset = ExtraChanceResetPolicy.TimeAndCount, DifficultySpeed = 0.7,
@@ -373,6 +433,13 @@ local MiniGameClientConfig = {
         HelpInfoIDDifficult = 11039,
         HelpInfoIDRun = 11040,
         ReconnectStableDelayTime = 0.8,
+        CirclePanelBgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/TheFinerMiner/UI_TheFinerMiner_Img_AimBg1.UI_TheFinerMiner_Img_AimBg1'",
+            [2] = "Texture2D'/Game/UI/Texture/TheFinerMiner/UI_TheFinerMiner_Img_AimBg1.UI_TheFinerMiner_Img_AimBg1'",
+            [3] = "Texture2D'/Game/UI/Texture/TheFinerMiner/UI_TheFinerMiner_Img_AimBg2.UI_TheFinerMiner_Img_AimBg2'",
+            [4] = "Texture2D'/Game/UI/Texture/TheFinerMiner/UI_TheFinerMiner_Img_AimBg2.UI_TheFinerMiner_Img_AimBg2'",
+            [5] = "Texture2D'/Game/UI/Texture/TheFinerMiner/UI_TheFinerMiner_Img_AimBg3.UI_TheFinerMiner_Img_AimBg3'",
+        }
     },
     [MiniGameType.MooglesPaw] = {
         Name = LSTR(360001), EobjID = 103, HideTipTime = 2, bNeedStageTipsAutoHide = true,
@@ -415,6 +482,13 @@ local MiniGameClientConfig = {
         IconGamePath = "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/Mooglepaw/Frames/UI_MooglePaw_Icon_Game_png.UI_MooglePaw_Icon_Game_png'",
         HelpInfoID = 11043,
         ReconnectStableDelayTime = 5, -- 重连后场景恢复稳定延迟时间
+        PanelBgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/MooglePaw/UI_BG_MooglePaw_PowerOn.UI_BG_MooglePaw_PowerOn'",
+            [2] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/MooglePaw/UI_BG_MooglePaw_PowerOn.UI_BG_MooglePaw_PowerOn'",
+            [3] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/MooglePaw/UI_BG_MooglePaw_PowerOn2.UI_BG_MooglePaw_PowerOn2'",
+            [4] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/MooglePaw/UI_BG_MooglePaw_PowerOn2.UI_BG_MooglePaw_PowerOn2'",
+            [5] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/MooglePaw/UI_BG_MooglePaw_PowerOn3.UI_BG_MooglePaw_PowerOn3'",
+        }
     },
     [MiniGameType.MonsterToss] = {
         Name = LSTR(270001), EobjID = 103, TimeLimit = 60, -- 怪物投篮
@@ -427,6 +501,7 @@ local MiniGameClientConfig = {
         -- OKWinViewID = UIViewID.MooglePawOkWin,
         StageTimeList = {
             -- EnterStage1Time = 60,
+            EnterStage1Time = 1,
             EnterStage2Time = 2,
             EnterStage3Time = 3,
             EnterStage4Time = 4,
@@ -459,7 +534,7 @@ local MiniGameClientConfig = {
             "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/MonsterToss/Frames/GoldSaucer_MonsterToss_Img_Ball_Blue_png.GoldSaucer_MonsterToss_Img_Ball_Blue_png'",
             "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/MonsterToss/Frames/GoldSaucer_MonsterToss_Img_Ball_Purple_png.GoldSaucer_MonsterToss_Img_Ball_Purple_png'",
             "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/MonsterToss/Frames/GoldSaucer_MonsterToss_Img_Ball_Orange_png.GoldSaucer_MonsterToss_Img_Ball_Orange_png'",
-            "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/MonsterToss/Frames/GoldSaucer_MonsterToss_Img_Gear_Bg5_png.GoldSaucer_MonsterToss_Img_Gear_Bg5_png'",
+            "Texture2D'/Game/UI/Texture/GoldSaucerGame/MonsterToss/GoldSaucer_MonsterToss_Img_Ball_Benediction.GoldSaucer_MonsterToss_Img_Ball_Benediction'",
         },
         ColorType = ColorType,
         ZOrderData = {
@@ -469,6 +544,13 @@ local MiniGameClientConfig = {
             {{ColorType = ColorType.Red,  ZOrder = 2}, {ColorType = ColorType.Blue,  ZOrder = 3}, {ColorType = ColorType.Purple,  ZOrder = 1}},
             {{ColorType = ColorType.Red,  ZOrder = 3}, {ColorType = ColorType.Blue,  ZOrder = 2}, {ColorType = ColorType.Purple,  ZOrder = 1}},
             {{ColorType = ColorType.Red,  ZOrder = 3}, {ColorType = ColorType.Blue,  ZOrder = 1}, {ColorType = ColorType.Purple,  ZOrder = 2}},
+            -- 赐福模式
+            {{ColorType = ColorType.Red,  ZOrder = 4}, {ColorType = ColorType.Blue,  ZOrder = 2}, {ColorType = ColorType.Purple,  ZOrder = 3}, {ColorType = ColorType.Green,  ZOrder = 1}},
+            {{ColorType = ColorType.Red,  ZOrder = 1}, {ColorType = ColorType.Blue,  ZOrder = 4}, {ColorType = ColorType.Purple,  ZOrder = 2}, {ColorType = ColorType.Green,  ZOrder = 3}},
+            {{ColorType = ColorType.Red,  ZOrder = 4}, {ColorType = ColorType.Blue,  ZOrder = 1}, {ColorType = ColorType.Purple,  ZOrder = 3}, {ColorType = ColorType.Green,  ZOrder = 2}},
+            {{ColorType = ColorType.Red,  ZOrder = 2}, {ColorType = ColorType.Blue,  ZOrder = 3}, {ColorType = ColorType.Purple,  ZOrder = 4}, {ColorType = ColorType.Green,  ZOrder = 1}},
+            {{ColorType = ColorType.Red,  ZOrder = 3}, {ColorType = ColorType.Blue,  ZOrder = 2}, {ColorType = ColorType.Purple,  ZOrder = 1}, {ColorType = ColorType.Green,  ZOrder = 4}},
+            {{ColorType = ColorType.Red,  ZOrder = 3}, {ColorType = ColorType.Blue,  ZOrder = 1}, {ColorType = ColorType.Purple,  ZOrder = 2}, {ColorType = ColorType.Green,  ZOrder = 4}},
         },
         ActionPath = {
             [RaceType.RACE_TYPE_Hyur] = "AnimComposite'/Game/Assets/Character/Human/Animation/c0801/a0001/normal/timeline/base/b0001/cbnm_gs_basket_act.cbnm_gs_basket_act'", -- 人族 ok
@@ -486,7 +568,7 @@ local MiniGameClientConfig = {
             [RaceType.RACE_TYPE_Roegadyn] = "AnimComposite'/Game/Assets/Character/Human/Animation/c0901/a0001/normal/timeline/base/b0001/cbnm_gs_basket_lp.cbnm_gs_basket_lp'",-- 鲁家族 ok
             [RaceType.RACE_TYPE_AuRa] = "AnimComposite'/Game/Assets/Character/Human/Animation/c0901/a0001/normal/timeline/base/b0001/cbnm_gs_basket_lp.cbnm_gs_basket_lp'", -- 傲龙族 ok
         },
-        ZOrder = {Max = 3, Middle = 2, Min = 1},
+        ZOrder = {Max = 3, Middle = 2, Min = 1, Bless = 4},
         StageCfg = {First = 1, Second = 2, Third = 3, Fourth = 4, Fifth = 5},
         CameraParamID = 113,
         IconGamePath = "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/MonsterToss/Frames/GoldSaucer_MonsterToss_Icon_Game_png.GoldSaucer_MonsterToss_Icon_Game_png'",
@@ -504,14 +586,7 @@ local MiniGameClientConfig = {
         ZOffset = 9.7, -- -400人物所站台阶厚度
         OKWinViewID = UIViewID.MooglePawOkWin,
         CameraParamID = 116,
-        CheckResultTime = {
-            Low = { Great = 1.27, Profect = 1.53, Miss = 1.77 },
-            Middle = { Great = 1.23, Profect = 1.53, Miss = 1.77 },
-            High = { Great = 1.33, Profect = 1.63, Miss = 1.87 },
-            Red = { Great = 1.3, Profect = 1.57, Miss = 1.80 },
-            StarLight = { Great = 1.23, Profect = 1.53, Miss = 1.77 },
-            Error = { Great = 1.23, Profect = 1.53, Miss = 1.77 },
-        },
+       
         EGameState = {
             InGame = 1,
             End = 2
@@ -526,7 +601,8 @@ local MiniGameClientConfig = {
             AnimSuccess = "AnimSuccess",
             AnimTimesup = "AnimTimesup",
             AnimFail = "AnimFail",
-            Critical = "Critical"
+            Critical = "Critical",
+            AnimScoreAdd = "AnimScoreAdd",
         },
         IdlePath = {
             [RaceType.RACE_TYPE_Hyur] = "AnimComposite'/Game/Assets/Character/Human/Animation/c0101/a0001/normal/timeline/base/b0001/cbnm_gs_punch_lp.cbnm_gs_punch_lp'", -- 人族 ok
@@ -561,6 +637,16 @@ local MiniGameClientConfig = {
             Fire = "VfxBlueprint'/Game/Assets/Effect/Particles/JDYLC/ZJJMS/BP_C_1_1_Rush.BP_C_1_1_Rush_C'",
             PunchWind = "VfxBlueprint'/Game/Assets/Effect/Particles/JDYLC/ZJJMS/BP_C_1_3_Rota.BP_C_1_3_Rota_C'",
             -- HitExplode = "VfxBlueprint'/Game/Assets/Effect/Particles/JDYLC/ZJJMS/BP_C_1_2_Hit.BP_C_1_2_Hit_C'"
+        },
+        PanelBgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/Cuff/UI_GoldSaucer_Cuff_Img_FlameBg1.UI_GoldSaucer_Cuff_Img_FlameBg1'",
+            [2] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/Cuff/UI_GoldSaucer_Cuff_Img_FlameBg2.UI_GoldSaucer_Cuff_Img_FlameBg2'",
+            [3] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/Cuff/UI_GoldSaucer_Cuff_Img_FlameBg3.UI_GoldSaucer_Cuff_Img_FlameBg3'",
+        },
+        -- 进度条变化百分比
+        PercentLimitChange = {
+            [1] = 0.3,
+            [2] = 0.68,
         }
     },
     [MiniGameType.CrystalTower] = {
@@ -584,6 +670,8 @@ local MiniGameClientConfig = {
             AnimTipsYellow = "AnimTipsYellow",
             AnimTipsGreen = "AnimTipsGreen",
             AddScoreAnimIn = "AddScoreAnimIn",
+            AnimScoreAdd = "AnimScoreAdd",
+            AnimScoreSubtract = "AnimScoreSubtract",
             AnimaNormalOut = "AnimaNormalOut",
             AnimTipsBlue = "AnimTipsBlue",
             AnimTipsFail = "AnimTipsFail",
@@ -639,11 +727,23 @@ local MiniGameClientConfig = {
         IconGamePath = "PaperSprite'/Game/UI/Atlas/GoldSaucerGame/CrystalTowerStriker/Frames/UI_CrystalTowerStriker_Icon_Game_png.UI_CrystalTowerStriker_Icon_Game_png'",
         VfxPath = {
             Hammer = "VfxBlueprint'/Game/Assets/Effect/Particles/JDYLC/QXSJT/BP_QXSJT_hanm_1.BP_QXSJT_hanm_1_C'",
-        }
+        },
+        -- 进度条变化百分比
+        PercentLimitChange = {
+            [1] = 0.44,
+            [2] = 0.68,
+        },
+        PanelBgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Img_FrameBg1.UI_CrystalTowerStriker_Img_FrameBg1'",
+            [2] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Img_FrameBg2.UI_CrystalTowerStriker_Img_FrameBg2'",
+            [3] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Img_FrameBg3.UI_CrystalTowerStriker_Img_FrameBg3'",
+        },
+        BarStageImgPath = {
+            [1] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Icon_ProgressBar_Stage1.UI_CrystalTowerStriker_Icon_ProgressBar_Stage1'",
+            [2] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Icon_ProgressBar_Stage2.UI_CrystalTowerStriker_Icon_ProgressBar_Stage2'",
+            [3] = "Texture2D'/Game/UI/Texture/GoldSaucerGame/CrystalTowerStriker/UI_CrystalTowerStriker_Icon_ProgressBar_Stage3.UI_CrystalTowerStriker_Icon_ProgressBar_Stage3'",
+        },
     },
-    
-    
-
 }
 
 
@@ -683,6 +783,8 @@ local AudioType = {
     MoogleMachineReadyTitle = 17,
     MoogleFootStep = 18,
     MoogleSuccessResult = 19,
+    BlessTipsEnter = 20,
+    BigBlessReady = 21,
 }
 
 local AudioPath = {
@@ -705,6 +807,8 @@ local AudioPath = {
     [AudioType.MoogleMachineStartTitle] = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Minigame/Gilgamesh/Play_Mini_Gilgamesh_start.Play_Mini_Gilgamesh_start'",
     [AudioType.MoogleMachineReadyTitle] = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Minigame/Gilgamesh/Play_Mini_Gilgamesh_prepare.Play_Mini_Gilgamesh_prepare'",
     [AudioType.MoogleFootStep] = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Minigame/Moogle/Play_Mini_Moogle_jump.Play_Mini_Moogle_jump'",
+    [AudioType.BlessTipsEnter] = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Minigame/Play_UI_MiniGame_Start.Play_UI_MiniGame_Start'",
+    [AudioType.BigBlessReady] = "AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_SYS/Minigame/Play_UI_MiniGame_RewardTime.Play_UI_MiniGame_RewardTime'",
 }
 
 local GoldSaucerMiniGameDefine = {
@@ -734,6 +838,8 @@ local GoldSaucerMiniGameDefine = {
     MoogleLimitPos = MoogleLimitPos,
     BallOriginVec = BallOriginVec,
     InteractResult = InteractResult,
+    CuffCheckResultAnimWorkLen = CuffCheckResultAnimWorkLen,
+    CuffCheckResultTime = CuffCheckResultTime,
     DelayTime = DelayTime,
     ResultCfg = ResultCfg,
     CuffDefine = CuffDefine,
@@ -747,6 +853,15 @@ local GoldSaucerMiniGameDefine = {
     AudioPath = AudioPath,
     NormalAnimDelayChangeNumTime = NormalAnimDelayChangeNumTime,
     CriticalAnimDelayChangeNumTime = CriticalAnimDelayChangeNumTime,
+    PreStageExtraParamType = PreStageExtraParamType,
+    BigBlessSuccessIconPath = BigBlessSuccessIconPath,
+    BigBlessFailIconPath = BigBlessFailIconPath,
+    LittleBlessSuccessIconPath = LittleBlessSuccessIconPath,
+    LittleBlessFailIconPath = LittleBlessFailIconPath,
+    BlessSuccessItemBg = BlessSuccessItemBg,
+    BlessFailItemBg = BlessFailItemBg,
+    MiniGameType2AcitvityType = MiniGameType2AcitvityType,
+    AcitvityType2MiniGameType = AcitvityType2MiniGameType,
 }
 
 return GoldSaucerMiniGameDefine

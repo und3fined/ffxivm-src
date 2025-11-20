@@ -359,6 +359,11 @@ DialogueUtil.FuncList = {
         local CompoanyInfo = _G.CompanySealMgr:GetCompanySealInfo()
         return (CompoanyInfo.GrandCompanyID == 3) and Params[1] or Params[2]
     end,
+
+    ["seriesmalmstoneseason"] = function(Params)
+        local Cfg = _G.PVPInfoMgr:GetCurVersionSeriesMalmstoneCfg()
+        return Cfg and tostring(Cfg.Season) or ""
+    end
 }
 
 function DialogueUtil.HandlePlainTextStyle(Text)

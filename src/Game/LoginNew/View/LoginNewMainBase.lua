@@ -24,7 +24,6 @@ local UIViewID = require("Define/UIViewID")
 local UIViewMgr = require("UI/UIViewMgr")
 local OperationUtil = require("Utils/OperationUtil")
 local QueueMgr = require("Game/LoginNew/Mgr/QueueMgr")
-local IOS26ResDownloadMgr = require("Game/LoginNew/Mgr/IOS26ResDownloadMgr")
 
 local AudioMgr = _G.UE.UAudioMgr:Get()
 local FLOG_ERROR = _G.FLOG_ERROR
@@ -87,7 +86,6 @@ local DEFAULT_TEST_WORLD_ID = 11    --IDC稳定测试
 ---@field PanelLogin UFCanvasPanel
 ---@field PanelLogout UFCanvasPanel
 ---@field PanelMain UFCanvasPanel
----@field PanelProBar UFCanvasPanel
 ---@field PanelScan UFCanvasPanel
 ---@field PanelScanLogin UFCanvasPanel
 ---@field PanelSever UFCanvasPanel
@@ -169,7 +167,6 @@ function LoginNewMainBase:Ctor()
 	--self.PanelLogin = nil
 	--self.PanelLogout = nil
 	--self.PanelMain = nil
-	--self.PanelProBar = nil
 	--self.PanelScan = nil
 	--self.PanelScanLogin = nil
 	--self.PanelSever = nil
@@ -257,7 +254,7 @@ function LoginNewMainBase:OnInit()
 
 	self.IsMute = USaveMgr.GetInt(SaveKey.IsCGMute, 0, false) == 1
 	self.BtnVolume:SetChecked(self.IsMute);
-	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or 1)
+	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or LoginNewDefine.LoginNewBgmVolume)
 
 	--if not LoginNewVM.HasShowAnimIn then
 	--	FLOG_INFO("[LoginNewMainBase:OnInit] LoginLogoPage.AnimInManual")
@@ -283,6 +280,7 @@ function LoginNewMainBase:OnInit()
 	if LoginMgr.OpenID then
 		FLOG_INFO("[LoginNewMainBase:OnInit] RequireMaple")
 		_G.UE.UMapleMgr.Get():RequireMaple()
+		LoginMgr:ReqMyAndFriendSevers()
 	end
 
 	LoginMgr.LoginFailTime = USaveMgr.GetInt(SaveKey.LoginFailTime, 0, false)
@@ -296,6 +294,9 @@ end
 
 function LoginNewMainBase:OnShow()
 	FLOG_INFO("[LoginNewMainBase:OnShow]")
+	--_G.UE.UMapleMgr.Get():SetMapleTreeId(3)
+	--_G.UE.UVersionMgr.SetResourceVersion("2.1.5.0")
+
 	self:HideOtherGameTips()
 
 	LoginMgr.IsStartGame = false
@@ -356,8 +357,9 @@ function LoginNewMainBase:OnShow()
 		PreDownloadMgr:CheckPreDownload()
 	end
 
-	local bNoShowNoticeAgain = USaveMgr.GetInt(SaveKey.NoShowNoticeAgain, 0, false) == 1
-	--FLOG_INFO("[LoginNewMainBase:OnShow] bNoShowNoticeAgain:%s", tostring(bNoShowNoticeAgain))
+	local NoticeID = USaveMgr.GetInt(SaveKey.NoShowNoticeAgain, 0, false)
+	local bNoShowNoticeAgain = NoticeID > 0
+	FLOG_INFO("[LoginNewMainBase:OnShow] NoticeID:%d, bNoShowNoticeAgain:%s", NoticeID, tostring(bNoShowNoticeAgain))
 	if not bNoShowNoticeAgain and not self.HasAutoShowNotice then
 		self:RegisterTimer(function()
 			self:OnClickBtnNoticeInternal(false)
@@ -400,8 +402,6 @@ function LoginNewMainBase:OnShow()
 	if nil ~= OperationUtil.IsEnableCustomService and not OperationUtil.IsEnableCustomService() then
 		UIUtil.SetIsVisible(self.BtnHelp, false)
 	end
-
-	IOS26ResDownloadMgr:CheckIOS26Res()
 end
 
 function LoginNewMainBase:OnHide()
@@ -468,8 +468,7 @@ function LoginNewMainBase:OnClickBtnServer()
 	_G.UE.UMapleMgr.Get():RequireMaple()
 
 	self.IsShowLoginMain = false
-	-- 播放视频崩溃上报比较多，减少调用次数，不重复播放:打开服务器列表
-	--self:StopMedia()
+	self:StopMedia()
 	UIViewMgr:ShowView(UIViewID.LoginServerList)
 end
 
@@ -505,7 +504,6 @@ end
 ]]
 
 function LoginNewMainBase:OnNodeInfoNotify()
-	FLOG_INFO("[LoginNewMainBase:OnNodeInfoNotify]  ")
 	--LoginVM:SetPropertyValue("WorldID", self.WorldID)
 	if LoginNewVM.NoLogin then
 		FLOG_INFO("[LoginNewMainBase:OnNodeInfoNotify] NoLogin ")
@@ -514,10 +512,12 @@ function LoginNewMainBase:OnNodeInfoNotify()
 
 	local NodeInfo = LoginMgr:GetMapleNodeInfo(self.WorldID)
 	if NodeInfo then
+		FLOG_INFO("[LoginNewMainBase:OnNodeInfoNotify] NodeInfo WorldID:%d ", self.WorldID)
 		LoginNewVM.WorldState = NodeInfo.State
 		LoginNewVM.NodeTag = NodeInfo.Tag
 		LoginMgr.OverseasSvrAreaId = NodeInfo.CustomValue2
 	else
+		FLOG_INFO("[LoginNewMainBase:OnNodeInfoNotify] RecommendWorldId WorldID:%d ", self.WorldID or 0)
 		self.WorldID = LoginMgr.RecommendWorldId;
 		NodeInfo = LoginMgr:GetMapleNodeInfo(self.WorldID)
 		if NodeInfo then
@@ -536,9 +536,6 @@ end
 
 ---@param LoginRet FAccountLoginRetData
 function LoginNewMainBase:OnLogin(LoginRet)
-	-- 播放视频崩溃上报比较多，减少调用次数，不重复播放:自动登录
-	--self:PlayMedia()
-
 	local RetCode = LoginRet.RetCode
 	local MethodNameID = LoginRet[MSDKDefine.ClassMembers.LoginRetData.MethodNameID]
 	FLOG_INFO("[Login][LoginNewMainBase:OnGameEventMSDKLogin] Login Ret. RetCode:%d, MethodNameID:%d", RetCode, MethodNameID)
@@ -552,7 +549,6 @@ function LoginNewMainBase:OnLogin(LoginRet)
 			LoginNewVM:SetAgreeProtocol(true)
 		end
 	else
-		-- 手动登录授权
 		self:PlayMedia()
 		if RetCode ~= MSDKDefine.MSDKError.SUCCESS then
 			FLOG_ERROR("[LoginNewMainBase:OnGameEventMSDKLogin] Login failed，Msg:%s RetCode:%d", LoginRet.RetMsg, RetCode)
@@ -637,10 +633,12 @@ end
 
 function LoginNewMainBase:OnLoginShowMainPanel()
 	FLOG_INFO("[Login] LoginNewMainBase:OnLoginShowMainPanel ")
+	-- 从服务器列表返回登录界面时，需要重新设置self.WorldID，以防LoginNewMainBase:OnNodeInfoNotify()中获取初始化时的self.WorldID
+	self.WorldID = LoginNewVM.WorldID
+
 	self.IsShowLoginMain = true
 	self.PanelMain:SetVisibility(ESlateVisibility.SelfHitTestInvisible)
-	-- 播放视频崩溃上报比较多，减少调用次数，不重复播放（关闭服务器列表）
-	--self:PlayMedia()
+	self:PlayMedia()
 end
 
 function LoginNewMainBase:OnShowPreDownload()
@@ -655,7 +653,6 @@ end
 
 function LoginNewMainBase:OnPlayLoginBGM()
 	FLOG_INFO("[Login] LoginNewMainBase:OnPlayLoginBGM ")
-	-- 从CG返回
 	self:PlayMedia()
 end
 
@@ -924,7 +921,7 @@ function LoginNewMainBase:OnClickBtnVolume()
 		--_G.LoginMapMgr:RestoreBGM()
 		_G.UE.UAudioMgr.Get():PlayBGM(238, UE.EBGMChannel.BaseZone)
 	end
-	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or 1)
+	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or LoginNewDefine.LoginNewBgmVolume)
 
 	--local MsgBody = {
 	--	Cmd = 1,
@@ -952,7 +949,8 @@ function LoginNewMainBase:OnClickBtnRepair()
 		-- 游戏修复
 		LoginMgr:RepairHotUpdate(false)
 	end
-	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(LoginStrID.TipsTitle), LSTR(LoginStrID.RepairContent), RepairCallback, ResetCallback, LSTR(LoginStrID.ResetBtnStr), LSTR(LoginStrID.RepairBtnStr))
+	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(LoginStrID.TipsTitle), LSTR(LoginStrID.RepairContent),
+			RepairCallback, ResetCallback, LSTR(LoginStrID.ResetBtnStr), LSTR(LoginStrID.RepairBtnStr))
 end
 
 ---显示CG
@@ -962,7 +960,6 @@ function LoginNewMainBase:OnClickBtnCG()
 		return
 	end
 
-	-- 从CG界面退出时，调用StopMedia，手动提前关闭视频并设置 IsMoviePlaying 标志
 	self:StopMedia()
 
 	--if _G.CgMgr:PlayCGVideo(_G.CgMgr:GetCGPath()) then
@@ -1070,7 +1067,6 @@ function LoginNewMainBase:PlayMedia()
 end
 
 function LoginNewMainBase:StopMedia()
-	LoginMgr.IsMoviePlaying = false
 	_G.CgMgr:StopCGVideo()
 	_G.LoginMapMgr:StopBGM()
 end
@@ -1079,7 +1075,7 @@ function LoginNewMainBase:TryPlayBGM()
 	FLOG_INFO("[LoginNewMainBase:TryPlayBGM] ")
 	self.IsShowLoginMain = true
 	self.IsMute = USaveMgr.GetInt(SaveKey.IsCGMute, 0, false) == 1
-	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or 1)
+	AudioMgr.Get():SetAudioVolumeScale(_G.UE.EWWiseAudioType.Music, self.IsMute and 0 or LoginNewDefine.LoginNewBgmVolume)
 
 	if not self.IsMute then
 		--_G.LoginMapMgr:RestoreBGM()
@@ -1088,20 +1084,19 @@ function LoginNewMainBase:TryPlayBGM()
 end
 
 function LoginNewMainBase:ShowLoginMovie()
-	-- 视频正在播放，则跳过，不重复播放
-	if LoginMgr.IsMoviePlaying then
-		FLOG_WARNING("[LoginNewMainBase:ShowLoginMovie] IsMoviePlaying...")
+	local CgMgr = _G.CgMgr
+	if CgMgr.IsPlaying and CgMgr:IsPlaying() then
+		FLOG_INFO("[LoginNewMainBase:ShowLoginMovie] IsPlaying")
 		return
 	end
-	LoginMgr.IsMoviePlaying = true
 
 	FLOG_INFO("[LoginNewMainBase:ShowLoginMovie] ")
 	self.LoginMovieImage:SetVisibility(ESlateVisibility.Collapsed)
-	_G.CgMgr:SetCGPath(_G.CgMgr:GetLoginMoviePath())
-	_G.CgMgr:PlayCGVideo(self.LoginMovieImage, true)
-	_G.CgMgr:SetNativeVolume(0)
-	_G.CgMgr:SetAutoClear(false)
-	-- _G.CgMgr:SetNoFlushSinks(true)
+	CgMgr:SetCGPath(CgMgr:GetLoginMoviePath())
+	CgMgr:PlayCGVideo(self.LoginMovieImage, true)
+	CgMgr:SetNativeVolume(0)
+	CgMgr:SetAutoClear(false)
+	-- CgMgr:SetNoFlushSinks(true)
 end
 
 function LoginNewMainBase:CheckAccountCancellation()

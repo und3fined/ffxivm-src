@@ -57,6 +57,15 @@ function SightSeeingLogListItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
+function SightSeeingLogListItemView:InitRedDotState()
+	local RedDotWidget = self.RedDot2
+	if not RedDotWidget then
+		return
+	end
+	RedDotWidget:SetIsCustomizeRedDot(true)
+	RedDotWidget:SetRedDotUIIsShow(false)
+end
+
 function SightSeeingLogListItemView:OnInit()
 	self.Binders = {
 		{"IconPath", UIBinderSetMaterialTextureFromAssetPath.New(self, self.ImgPhoto, "MainTexture")},
@@ -68,11 +77,13 @@ function SightSeeingLogListItemView:OnInit()
 		{"bCompleted", UIBinderSetIsVisible.New(self, self.ImgPhoto)},
 		{"AnimInSwitch", UIBinderValueChangedCallback.New(self, nil, self.OnPlayAnimNotify)},
 		{"bSelected", UIBinderValueChangedCallback.New(self, nil, self.OnPlayAnimClickNotify)},
-		{"RedDotName", UIBinderValueChangedCallback.New(self, nil, self.OnSetItemRedDotName)},
+		{"bRedDotShow", UIBinderValueChangedCallback.New(self, nil, self.OnShowRedDot)},
+		--{"RedDotName", UIBinderValueChangedCallback.New(self, nil, self.OnSetItemRedDotName)},
 		{"TextNumberColor", UIBinderSetColorAndOpacityHex.New(self, self.TextNumber)},
 		{"OffsetAngle", UIBinderSetRenderTransformAngle.New(self, self.FCanvasPanel_27)},
 		{"bShowPerfectCondEffect", UIBinderValueChangedCallback.New(self, nil, self.OnShowOrHidePerfectCondEffect)},
 	}
+	self:InitRedDotState()
 end
 
 function SightSeeingLogListItemView:OnDestroy()
@@ -141,11 +152,12 @@ function SightSeeingLogListItemView:OnPlayAnimClickNotify(bSelected)
 	end
 end
 
-function SightSeeingLogListItemView:OnSetItemRedDotName(Name, OldValue)
-	if Name == OldValue then
+function SightSeeingLogListItemView:OnShowRedDot(bShow)
+	local RedDotWidget = self.RedDot2
+	if not RedDotWidget then
 		return
 	end
-	self.RedDot2:SetRedDotNameByString(Name)
+	RedDotWidget:SetRedDotUIIsShow(bShow)
 end
 
 function SightSeeingLogListItemView:OnShowOrHidePerfectCondEffect(bShow)

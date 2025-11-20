@@ -78,6 +78,7 @@ local UIViewID = {
 	PersonFormerName = 1164,
 	BagTreasureChestWin = 1165,
 	UpgradeMainPanelView = 1166,
+	BagTidyWin = 1167,
 	--Main
 	MainPanel = 1201,
 	SkillButton = 1202,
@@ -198,6 +199,8 @@ local UIViewID = {
 	StoryTips = 1539,
 	InfoCountdownTipsForPVPView = 1540, -- PVP用的倒计时
 	InfoPVPColosseumKillTips = 1541,
+	ItemBtnTips = 1542, -- 带按钮的物品tips
+	InfoCountdownTipsViewNormal = 1543, -- 新的通用倒计时--Normal层级，因为在打开UI面板的时候要显示出来，上面的是low层级显示不出来
 
 	--Team
 	TeamApply = 1602,
@@ -224,6 +227,7 @@ local UIViewID = {
 	MainTeamChatTip = 1623,
 	TeamRollValuablesTips = 1624,
 	TeamRecruitFilter = 1625,
+	TeamReadyConfirm = 1626,
 	--QTE
 	QTEMain = 1701,
 
@@ -255,10 +259,14 @@ local UIViewID = {
 	CommonCostBox = 1908,
 	CommDropDownListNew = 1909,
 	CommMiniKeypadWin = 1910,
-	CommonMsgBoxMustClick = 1911,
+	--CommonMsgBoxMustClick = 1911,
 	CommInputCommitButton = 1912,
 	SettingDropDownListNew = 1913,
-
+    CommListRedDotPanel = 1914,
+	CommonFadePanelLowLayer = 1915,
+	CommonMsgBoxM = 1916,
+	CommonRewardAppearancePanel = 1917,
+	CommonMsgBoxText = 1918,
 	----Input
 	--InputPanel = 2001,
 
@@ -367,6 +375,7 @@ local UIViewID = {
 	CollectionSkillBtn = 2702,
 	CollectionPassiveSkillBtn = 2703,
 	GatheringJobSkillPanel = 2704,   --新版采集收藏品面板
+	GatheringJobSkillTips = 2705,
 
 	--社交
 	SocialMainPanel = 2800,
@@ -395,14 +404,14 @@ local UIViewID = {
 	MiniCactpotMainFrame = 3002,
 	MiniCactpotRewardTip = 3003,
 
-	-- Map
+	-- 地图
 	MiddleMapPanel = 3101,
 	WorldMapPanel = 3102,
 	WorldMapSettingPanel = 3103,
-	WorldMapPlaceMarkerPanel = 3104,
 	WorldMapTransferPanel = 3105,
 	WorldMapMarkerTipsList = 3106,
 	WorldMapMarkerTipsTransfer = 3107,
+	WorldMapMarkerTipsHouse = 3108,
 	WorldMapMarkerFateStageInfoPanel = 3109,
 	WorldMapMarkerTipsTarget = 3110,
 	WorldMapMarkerTipsChocoboTransport = 3111,
@@ -411,6 +420,12 @@ local UIViewID = {
 	WorldMapSetMarkPanel = 3114,
 	WorldMapSendMarkWin = 3115,
 	WorldMapUsePortal = 3116, -- 传送网使用券
+	WorldMapMarkerFocusItem = 3117,
+	WorldMapTaskListPanel = 3118,
+	NewMapTaskDetailPanel = 3119,
+	NewMapTaskTrackingTips = 3120,
+	PlayStyleMapWin = 3121,
+	WorldMapGoldSaucerMarkerTips = 3122,
 
 	-- 宝箱
 	TreasureOperatePanel = 3201,
@@ -419,6 +434,7 @@ local UIViewID = {
 	AdventruePanel = 3301,
 	AdventureCompletionPanel = 3304,
 	AdventrueDetailPanel = 3305,
+	AdventrueSkillPanel = 3306,
 
 	--坐骑
 	MountPanel = 3400,
@@ -484,6 +500,7 @@ local UIViewID = {
 	FateActivityResultPanel = 3721, --Fate开服活动结算界面
 	FateEmoTipsPanelView = 3722, --Fate活动用的专用情感头顶图标
 	FateCelebrateFinishPanel = 3723, -- 庆典活动中，企鹅BOSS的结算界面
+	FateStageInfoTipsView = 3724, -- FATE详细信息界面
 
 	--SDK Test
 	SDKMainPanel = 3800,
@@ -495,6 +512,9 @@ local UIViewID = {
 	SettingsPkgDownLoadPanel = 3903,
 	CDKeyExchangeView = 3904,
 	SettingsFPSMode = 3905,
+	SettingsHandleButtonItem = 3906,
+	SettingsHandleOperationItem =3907,
+	SettingHandleOperationWin = 3908,
 	--省电模式
 	PowerSavingMode = 3920,
 
@@ -551,6 +571,8 @@ local UIViewID = {
 	--侧边穿戴任务栏
 	SidebarTaskEquipmentWin = 4620,
 
+	SidebarFashionWin = 4630,
+
 	--交易所
 	MarketMainPanel = 4701,
 	MarketOnSaleWin = 4702,
@@ -575,6 +597,7 @@ local UIViewID = {
 
 	-- GM子菜单
 	GMCharacterInfo = 5100,
+	GMCharacterEditorPanel = 5101,
 
 	-- GM天气信息面板
 	GMWeatherInfoPanel = 5200,
@@ -609,6 +632,7 @@ local UIViewID = {
 	MysterShopMainPanelView = 5700, --神秘商店界面
 	MysterMerchantSettlementView = 5701, -- 任务完成结算界面
 	MysterMerchantBuyPropsWinView = 5702, -- 购买界面
+	MysterMerchantRewardView = 5703, -- 投资回报领取
 
 	--每个系统用一个ID段
 
@@ -634,6 +658,9 @@ local UIViewID = {
 
     --时尚配饰
 	OrnamentPanel = 5900,
+	--时尚配饰改良
+	FashionDecoAmelioratePanel = 5901,
+	FashionDecoAmeliorateWinPanel = 5902,
 
 	--活动系统
 	OpsActivityMainPanel = 6000,
@@ -655,14 +682,35 @@ local UIViewID = {
 	OpsVersionNoticeContentPanelView = 6016,
 	OpsSeasonAnimView = 6017,
 	OpsSkateboardRebatesWin = 6018,
+	OpsSkiFreePanel = 6020,
+	OpsSkiTips = 6021,
+	OpsMysteryBuyPropsWinView = 6022,
+	OpsMysteryBuySuitWinView = 6023,
+	OpsLoverFestivalGuideWinView = 6024,
+	OpsLolitaGiftWin = 6025,
+	OpsLolitaBuyPanel = 6026,
+    OpsNightGiftMainPanel = 6027,
+	OpsNightGiftRecord = 6028,
+	OpsNightPrepareGiftPanel = 6029,
+	OpsNightGetGiftPanel = 6030,
+	OpsStarLightNewYearActivityPanel = 6031,
+	OpsStarlightCelebrationTaskWin = 6032,
 
+	OpsSeanceScratchCardMainView = 6040, -- 降神节刮刮乐主界面
+	OpsSeanceScratchCardTaskView = 6041, -- 降神节刮刮乐任务界面
+
+	OpsGirlsDayCandyPanelView = 6042,
+	OpsGirlsDayAwardPanelView = 6043,
+	OpsGirlsDayStarPanelView = 6044,
 
 	-- PVP玩法 --
 	-- 水晶冲突
 	PVPColosseumMain = 6100,
 	PVPColosseumIntroduction = 6101,
 	PVPColosseumRecord = 6102,
-
+	PVPColosseumRecordInside = 6103, -- 局内实时战绩
+	PVPCrystallineRankChangePanel = 6104,
+	
 	-- 分享
 	ShareMain = 6200,
 	ShareExternalLink = 6201,
@@ -839,6 +887,7 @@ local UIViewID = {
 	MentorMainPanel = 200000,
 	MentorAuthenticationPanel = 200010,
 	MentorUpdateNoticePanel = 200020,
+	MentorDismissWinPanel = 200030,
 	--仙人仙彩
 	JumboCactpotMainPanel = 200100,
 	JumboCactpotExchangePanel = 200101,
@@ -908,13 +957,6 @@ local UIViewID = {
 	-- 推荐任务
 	AdventureRecommendTaskTips = 200601,
 
-	--新地图
-	WorldMapTaskListPanel = 200702,
-	NewMapTaskDetailPanel = 200703,
-	NewMapTaskTrackingTips = 200704,
-	WorldMapMarkerFocusItem = 200705,
-	PlayStyleMapWin = 200706,
-
 	--新人频道相关
 	ChatInvitationWinPanel = 200801,
 	ChatNoviceExamPagePanel = 200802,
@@ -960,8 +1002,9 @@ local UIViewID = {
 	StoreNewCouponsWin = 201407,				--- 商城优惠券选择界面
 	StoreNewCommodityExpandPanel = 201408,		--- 道具界面  新
 	StoreNewBuyWinPanel = 201409,				--- 购买弹窗
-	StoreNewBlindBoxDescription = 201410,		--- ?
-
+	StoreNewBlindBoxDescription = 201410,		--- 盲盒?按钮弹出界面
+	StoreBlindBoxPanel_UIBP = 201411,--- 盲盒主界面
+	StoreBlindBoxBuyWinPanel = 201412,
 	-- 赠礼
 	StoreGiftChooseFriendWin = 201600,		-- 赠礼选择好友界面
 	StoreGiftMailWin = 201601,				-- 赠礼确认界面
@@ -998,6 +1041,8 @@ local UIViewID = {
 	WardrobeTipsWin = 202006,		   --衣橱扩充预设界面
 	WardrobeProfAppListWin = 202007,   --衣橱职业收集弹窗
 	WardrobeSuitPanel = 202008,		   --衣橱外观数据
+	WardrobeSuitGetWayWin = 202009,	   --衣橱套装获取途径
+	WardrobePreviewColorWin = 202010,  --衣橱预览色弹窗
 
 	-- 钓鱼笔记
 	FishGuide = 300001,
@@ -1006,6 +1051,7 @@ local UIViewID = {
 	FishNoteClockSetWinView = 300004,
 	FishIngHoleTips = 300005,
 	FishIngholeInfoWin = 300006,
+	FishGuideChatTips = 300007,
 	ActivityPanel = 300501,
 
 	--采集笔记
@@ -1080,6 +1126,7 @@ local UIViewID = {
 	MooglePawGamePanel = 301115,
 	MooglePawResultPanel = 301116,
 	GoldSaucerCuffShootingTips = 301117,
+	BlessMiniGameEnterTips = 301118,
 	--endregion 金碟小游戏
 
 	--region 演奏
@@ -1097,6 +1144,9 @@ local UIViewID = {
 	PerformanceAssistantPanelView			= 300823,  --演奏完成的界面
 	PerformanceAssistantItemView			= 300824,  --音符的UI
 	PerformanceAssistantPauseWinView		= 300825,  --暂停演奏的界面
+	PerformanceBlueTipsView					= 300826,  --蓝色tips引导消除提示
+	PerformanceRedTipsView					= 300827,  --红色tips引导消除提示
+	PerformanceYellowTipsView				= 300828,  --黄色tips引导消除提示
 	--endregion 演奏
 
     --region 宠物
@@ -1132,7 +1182,7 @@ local UIViewID = {
 	ChocoboNewBornPanelView = 301025,
 	ChocoboNameWinView = 301026,
 	ChocoboModelGMPanelView = 301027,
-	ChocoboRaceGMTargetInfoView = 301028, 
+	ChocoboRaceGMTargetInfoView = 301028,
 	--endregion 陆行鸟
 
 	--region 寻宝
@@ -1172,6 +1222,8 @@ local UIViewID = {
 	PhotoWeatherPanel 		= 301510,
 	PhotoStatePanel 		= 301511,
 
+	PhotoEditMainPanel 		= 301512,
+	PhotoEditShowPictureWin = 301513,
 
 	--endregion 拍照
 
@@ -1229,6 +1281,9 @@ local UIViewID = {
 	PandoraMainPanelView = 304002,
 	PandoraActivityPanelView = 304003,
 
+	-- 主界面全屏按钮
+	MainFullScreenButtonView = 304101,
+
 	--技能面板
 	SkillMainPanel = 305001,
 
@@ -1248,7 +1303,8 @@ local UIViewID = {
 	PVPSeriesMalmstonePanel = 308002,
 	PVPOptionListPanel = 308003,
 	PVPHonorPanel = 308004,
-
+	PVPCrystalRoadPanel = 308005,
+	
 	-- 决斗
 	PVPDuelPanel = 309001,
 
@@ -1270,7 +1326,39 @@ local UIViewID = {
 	-- 野外探索
 	WorldExploraMainPanel = 311001,
 	WorldExploraWin = 311002,
+	WorldExploraAdventureWin = 311003,
+	WorldExploraAwardWin = 311004,
+	-- 虚拟光标
+	VirtualCursorView = 312001,
+	--region 星芒节贺卡
+	GreetingCardWinView = 313001,		--雪忙节贺主界面
+	--endregion
+	
+	-- 星芒节音游
+	StarLightRhythmGameMainView = 340001,
+	StarLightRhythmGameResultWinView = 340002,
+	StarLightRhythmGameActivityPanelView = 340003,
 
+	-- 房屋
+	HouseItemTips = 390001,
+	HouseMainPanelView = 390002,
+	HouseWinPanelView = 390003,
+	HouseLandMianPanelView = 390011,
+	HousePurchaseConditionsWinView = 390012,
+	HouseLandListWinView = 390013,
+	HouseLandInformationPanel = 390014,
+	HouseLandPurchaseCandidateWinView = 390015,
+	HouseLandPurchaseCandidateStatusWinView = 390016,
+	HouseInfoLocationPanelView = 390017,
+	HouseStyleWinView = 390018,
+	HouseMineMainPanelView = 390019,
+	HouseInfoSettingsWinView = 390020,
+	HouseOthersInfoPanelView = 390021,
+	HouseInfoInviteFriendsWinView = 390022,
+	HouseThingWinView = 390023,
+	HouseAssetsPanelView = 390024,
+	HouseVisitGroupRooms = 390025,
+	HousePanelViewForOther = 390099, -- 特殊ViewID（不用作界面显示ShowView使用）
 	--每个系统用一个ID段
 	--5800
 	--5900

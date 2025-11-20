@@ -63,21 +63,21 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field ImgCircleYellow UFImage
 ---@field ImgCutAxe UFImage
 ---@field ImgDecorate2 UFImage
----@field ImgDifficulty UFImage
----@field ImgDifficulty2 UFImage
+---@field ImgDifficulty USpineWidget
+---@field ImgDifficulty2 USpineWidget
 ---@field ImgLetter1 UFImage
 ---@field ImgLetter2 UFImage
 ---@field ImgLetter3 UFImage
 ---@field ImgLetter4 UFImage
 ---@field ImgLetter5 UFImage
 ---@field ImgLetter6 UFImage
----@field ImgMedium UFImage
----@field ImgMedium2 UFImage
+---@field ImgMedium USpineWidget
+---@field ImgMedium2 USpineWidget
 ---@field ImgNoCut UFImage
 ---@field ImgNoCut1 UFImage
 ---@field ImgPriceIcon UFImage
----@field ImgSimple UFImage
----@field ImgSimple2 UFImage
+---@field ImgSimple USpineWidget
+---@field ImgSimple2 USpineWidget
 ---@field ImgState UFImage
 ---@field ImgStateYellow UFImage
 ---@field ImgStone1 UFImage
@@ -90,6 +90,7 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field LevelPanel2 UFCanvasPanel
 ---@field MainLBottomPanel MainLBottomPanelView
 ---@field MainTeamPanel MainTeamPanelView
+---@field MooglePawRoundTips GoldSaucerMooglePawRoundTipsItemView
 ---@field NumberPanel UFCanvasPanel
 ---@field ObtainPanel UFCanvasPanel
 ---@field P_EFF_OutOnALimb_1 UUIParticleEmitter
@@ -140,10 +141,14 @@ local ShootTipsDelayTime = 1.3 -- 手感Tips延迟显示时间
 ---@field AnimIn UWidgetAnimation
 ---@field AnimLoop UWidgetAnimation
 ---@field AnimObtainNumberIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---@field AnimPointerNumberTrigger UWidgetAnimation
 ---@field AnimPointerTimeTrigger UWidgetAnimation
 ---@field AnimProBarChooseLoop UWidgetAnimation
 ---@field AnimProBarYellow UWidgetAnimation
+---@field AnimSection2 UWidgetAnimation
+---@field AnimSection3 UWidgetAnimation
+---@field AnimSection3Loop UWidgetAnimation
 ---@field AnimStateIn UWidgetAnimation
 ---@field AnimTips UWidgetAnimation
 ---@field AnimTopTipsIn UWidgetAnimation
@@ -203,6 +208,7 @@ function TheFinerMinerMainPanelView:Ctor()
 	--self.LevelPanel2 = nil
 	--self.MainLBottomPanel = nil
 	--self.MainTeamPanel = nil
+	--self.MooglePawRoundTips = nil
 	--self.NumberPanel = nil
 	--self.ObtainPanel = nil
 	--self.P_EFF_OutOnALimb_1 = nil
@@ -253,10 +259,14 @@ function TheFinerMinerMainPanelView:Ctor()
 	--self.AnimIn = nil
 	--self.AnimLoop = nil
 	--self.AnimObtainNumberIn = nil
+	--self.AnimOut = nil
 	--self.AnimPointerNumberTrigger = nil
 	--self.AnimPointerTimeTrigger = nil
 	--self.AnimProBarChooseLoop = nil
 	--self.AnimProBarYellow = nil
+	--self.AnimSection2 = nil
+	--self.AnimSection3 = nil
+	--self.AnimSection3Loop = nil
 	--self.AnimStateIn = nil
 	--self.AnimTips = nil
 	--self.AnimTopTipsIn = nil
@@ -269,6 +279,7 @@ function TheFinerMinerMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.ChooseDifficulty)
 	self:AddSubView(self.MainLBottomPanel)
 	self:AddSubView(self.MainTeamPanel)
+	self:AddSubView(self.MooglePawRoundTips)
 	self:AddSubView(self.TextTips)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -811,8 +822,23 @@ function TheFinerMinerMainPanelView:ShowDifficultyShowPanel()
 	end
 end
 
+--- 显示通用回合提示
+function TheFinerMinerMainPanelView:ShowGoldSauserCommRoundTips()
+	local ViewModel = self:GetTheParamsVM()
+    if ViewModel == nil then
+        return
+    end
+	local RoundTips = self.MooglePawRoundTips
+	if RoundTips then
+		UIUtil.SetIsVisible(RoundTips, true)
+		RoundTips:ShowRoundTips(ViewModel, function()
+			UIUtil.SetIsVisible(RoundTips, false)
+		end)
+	end
+end
+
 --- 显示游戏开始提示信息
-function TheFinerMinerMainPanelView:StartDelayShowPanel()
+function TheFinerMinerMainPanelView:StartDelayShowPanel(bRestart)
 	local ViewModel = self:GetTheParamsVM()
     if ViewModel == nil then
         return
@@ -827,19 +853,34 @@ function TheFinerMinerMainPanelView:StartDelayShowPanel()
 	self:SetTheHelpInfoTips(MiniGameStageType.Update)
 	self:PlayAnimation(self.AnimCutPanelIn)
 	GoldSaucerMiniGameMgr.PlayUISoundByAudioType(AudioType.CutPanelIn)
-	self:PlayAnimation(self.AnimTips)
+	if not bRestart then
+		self:PlayAnimation(self.AnimTips) -- 2025.6.16 只有第一次开始播放相关tips
+	end
 	self:PlayAnimation(self.AnimPointerTimeTrigger, 0.73)
+
 	--- 设定背景特效
 	local RoundIndex = MiniGameInst:GetRoundIndex() + 1 or 1
+	local TheFinerMinerDCfg = self.TheFinerMinerDCfg
+	if TheFinerMinerDCfg then
+		local BgPath = TheFinerMinerDCfg.CirclePanelBgPath
+		if BgPath then
+			UIUtil.ImageSetBrushFromAssetPath(self.ImgAimBg, BgPath[RoundIndex])
+		end
+	end
+
 	local bShowEffect = RoundIndex > 1
 	UIUtil.SetIsVisible(self.EFF_1, bShowEffect)
+	if self:IsAnimationPlaying(self.AnimSection3Loop) then
+		self:StopAnimation(self.AnimSection3Loop)
+	end
 	if bShowEffect then
 		if RoundIndex <= GoldSaucerMiniGameDefine.CutPanelBGEffectLimit then
-			self:PlayAnimation(self.AnimCutPanelDoubling13)
+			self:PlayAnimation(self.AnimSection2)
 			self.P_EFF_OutOnALimb_2:ResetParticle()
 			self.P_EFF_OutOnALimb_4:ResetParticle()
 		else
-			self:PlayAnimation(self.AnimCutPanelDoubling45)
+			self:PlayAnimation(self.AnimSection3)
+			self:PlayAnimation(self.AnimSection3Loop, 0, 0)
 			self.P_EFF_OutOnALimb_1:ResetParticle()
 			self.P_EFF_OutOnALimb_3:ResetParticle()
 		end
@@ -937,6 +978,7 @@ function TheFinerMinerMainPanelView:UpdateFailInfoShow()
     local function ShowFailRewardPanel()
         -- 动画后展示失败结算界面
 		UIViewMgr:ShowView(UIViewID.TheFinerMinerSettlementPanel, ViewModel)
+		MiniGameInst:SetIsResultPanelShow(true)
 		if RedCircle then
 			UIUtil.SetIsVisible(RedCircle, false)
 		end
@@ -978,7 +1020,8 @@ end
 --- 刷新再次挑战展示信息
 function TheFinerMinerMainPanelView:UpdateRestartInfo()
 	self:ShowRewardChangeInNewRound()
-    self:StartDelayShowPanel()
+	self:ShowGoldSauserCommRoundTips()
+    self:StartDelayShowPanel(true)
 end
 
 function TheFinerMinerMainPanelView:OnMiniGameStateChanged(NewValue, OldValue)
@@ -1101,8 +1144,8 @@ function TheFinerMinerMainPanelView:BindBtnCloseCallBack()
 			return
 		end
 		GameInst:SetIsForceEnd(true)
-		GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.TheFinerMiner)
 		GoldSaucerMiniGameMgr:SendMsgAloneTreeExitReq(MiniGameType.TheFinerMiner)
+		GoldSaucerMiniGameMgr:QuitMiniGame(MiniGameType.TheFinerMiner)
 	end
 
 	local function RecoverGameLoop()
@@ -1300,9 +1343,9 @@ function TheFinerMinerMainPanelView:OnAnimationFinished(Animation)
 			self:StartDifficultyBarSwingTimer(true)
 			self:PlayAnimation(self.AnimDifficultyPanelLoop, 0, 0, nil, 1.0)
 		end, 0.5, 0, 1)--]]
-	elseif Animation == self.AnimCutPanelDoubling13 then
+	elseif Animation == self.AnimSection2 then
 		self.P_EFF_OutOnALimb_1:ResetParticle()
-	elseif Animation == self.AnimCutPanelDoubling45 then
+	elseif Animation == self.AnimSection3 then
 		self.P_EFF_OutOnALimb_2:ResetParticle()
 	end
 end
@@ -1362,7 +1405,7 @@ function TheFinerMinerMainPanelView:SetTheHelpInfoTips(GameStageType)
 		return
 	end
 
-	nforBtn:SetHelpInfoID(GoldSaucerMiniGameMgr:GetThePanelHelpInfoID(MiniGameType.OutOnALimb, GameStageType) or -1)
+	nforBtn:SetHelpInfoID(GoldSaucerMiniGameMgr:GetThePanelHelpInfoID(MiniGameType.TheFinerMiner, GameStageType) or -1)
 end
 
 function TheFinerMinerMainPanelView:StopAllLoopAudio()

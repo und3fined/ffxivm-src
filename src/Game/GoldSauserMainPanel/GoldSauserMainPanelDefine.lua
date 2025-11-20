@@ -210,23 +210,6 @@ local BambooBaseTexture =
     Other = 99,
 }
 
---todo 后续看是否给策划来配,只能配 -90 ~ 90度
-local BambooStyleList = 
-{
-    [1] = { [1] = -45, },
-    [2] = { [1] = 45 },
-    [3] = { [1] = 45, [2] = -45, },
-    [4] = { [1] = 90 },
-    [5] = { [1] = 45, [2] = -45,},
-    [6] = { [1] = 45, [2] = 45,[3] = 45, },
-    [7] = { [1] = -45, [2] = -45,[3] = -45, },
-    [8] = { [1] = 0, [2] = -45, [3] = 0},
-    [9] = { [1] = 45, [2] = 45,[3] = 45 },
-    [10] = { [1] = 0, [2] = 45, [3] = 0 },
-}
-
-
-
 --- 小飞机运动阶段
 local AirplaneMoveState = {
     ["Start"] = 1,
@@ -247,6 +230,13 @@ local BodyGuardSquareAnimState = {
     ["ActSuccess"] = 3, -- 挥刀成功
     ["ActFail"] = 4, -- 挥刀失败
     ["ChallengeSuccess"] = 5, -- 挑战成功
+}
+
+--- 保镖小游戏轮次状态
+local BodyGuardEnumStage = {
+    ["NotStart"] = 1,
+    ["Running"] = 2,
+    ["Finished"] = 3
 }
 
 --- 异步拉取内容模块种类
@@ -278,6 +268,7 @@ local ViewNeedCactusCheckAfterClosed = {
     [UIViewID.GoldSauserMainPanelExchangeWin] = true,
     [UIViewID.JumboCactpotBuyTipsWin] = true,
     [UIViewID.PlayStyleMapWin] = true,
+    [UIViewID.GoldSauserMainPanelAwardWin] = true,
 }
 
 local GoldSauserMainClientType2ModuleID = {
@@ -346,7 +337,6 @@ local GoldSauserMainPanelDefine = {
     TipsDistance = TipsDistance,
     MiniGameEndCondition = MiniGameEndCondition,
     BambooBaseTexture = BambooBaseTexture,
-    BambooStyleList = BambooStyleList,
     MiniGameEnum = MiniGameEnum,
     AirplaneMoveState = AirplaneMoveState,
     BodyGuardSquareAnimState = BodyGuardSquareAnimState,
@@ -376,6 +366,7 @@ local GoldSauserMainPanelDefine = {
     AudioType = AudioType,
     AudioPath = AudioPath,
     IsInGoldSauserSysMap = IsInGoldSauserSysMap,
+    BodyGuardEnumStage = BodyGuardEnumStage,
 }
 
 return GoldSauserMainPanelDefine

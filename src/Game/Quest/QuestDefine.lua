@@ -143,7 +143,11 @@ QuestDefine.TargetClassParams = {
     [TARGET_TYPE.QUEST_TARGET_TYPE_FINISH_FATE] = {
         Class = "Game/Quest/QuestTarget/TargetFinishFate",
         Desc = LSTR(590022), --590022("完成Fate")
-    }
+    },
+    [TARGET_TYPE.QUEST_TARGET_TYPE_CLIENT_FINISH_GAME] = {
+        Class = "Game/Quest/QuestTarget/TargetFinishGame",
+        Desc = LSTR(590023), --590023("完成玩法")
+    },
 }
 
 ---客户端行为类映射
@@ -314,16 +318,20 @@ QuestDefine.RestrictedDialogType = {
     LootCount   = 6,
     GrandCompany = 7,
     TimeLimit   = 8,
-    MAX         = 9,
+    PWorld      = 9,
+    PreTask     = 10,
+    ChocoboLevel = 11,
+    MAX         = 12,
 }
 QuestDefine.RestrictedDialogID = {
-    Prof        = 510003,
-    LowLevel    = 510004,
-    FixedProf   = 510005,
-    LootCount   = 510006,
+    Prof        = 800003,
+    LowLevel    = 800004,
+    FixedProf   = 800005,
+    LootCount   = 800006,
     JoinGrandCompany = 624997,
     UpGrandCompanyLevel = 624998,
     ChangeGrandCompany = 624999,
+    PWorld = 800008,
 }
 
 QuestDefine.DialogueType = {
@@ -434,7 +442,11 @@ QuestDefine.LogTabIcon = {
     [QUEST_TYPE.QUEST_TYPE_BRANCH] = {
         Normal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Hud_Normal_Missed.UI_Icon_Tab_Hud_Normal_Missed'",
         Select = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Hud_Normal_Missed.UI_Icon_Tab_Hud_Normal_Missed'",
-    }
+    },
+    [QUEST_TYPE.QUEST_TYPE_REPEAT] = {
+        Normal = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Hud_Normal_Cycle.UI_Icon_Tab_Hud_Normal_Cycle'",
+        Select = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Hud_Normal_Cycle.UI_Icon_Tab_Hud_Normal_Cycle'",
+    },
 }
 
 QuestDefine.QuestTypeNames = {
@@ -442,6 +454,7 @@ QuestDefine.QuestTypeNames = {
         [QUEST_TYPE.QUEST_TYPE_MAIN] = LSTR(390020),
         [QUEST_TYPE.QUEST_TYPE_IMPORTANT] = LSTR(390021),
         [QUEST_TYPE.QUEST_TYPE_BRANCH] = LSTR(390022),
+        [QUEST_TYPE.QUEST_TYPE_REPEAT] = LSTR(390042),
     }
 
 QuestDefine.QuestTypeInfo = {
@@ -456,6 +469,11 @@ QuestDefine.QuestTypeInfo = {
         FinishSound = QuestDefine.Sound.NormalFinish,
 	},
 	[QUEST_TYPE.QUEST_TYPE_BRANCH] = {
+        TypeIconStr = "_Normal",
+        AcceptSound = QuestDefine.Sound.NormalAccept,
+        FinishSound = QuestDefine.Sound.NormalFinish,
+	},
+    [QUEST_TYPE.QUEST_TYPE_REPEAT] = {
         TypeIconStr = "_Normal",
         AcceptSound = QuestDefine.Sound.NormalAccept,
         FinishSound = QuestDefine.Sound.NormalFinish,
@@ -531,7 +549,7 @@ function QuestDefine.MakeIconPath(QuestType, ChapterStatus, bCanProceed, bMonste
 
     if bMonster then
         StatusStr = "_Target"
-    elseif bIsCycle and (ChapterStatus == CHAPTER_STATUS.NOT_STARTED) then
+    elseif bIsCycle and (ChapterStatus == CHAPTER_STATUS.NOT_STARTED or not bCanProceed) then
         StatusStr = "_Cycle"
     else
         StatusStr = QuestDefine.QuestStatusInfo[ChapterStatus].StatusIconStr
@@ -573,6 +591,12 @@ QuestDefine.FilterType = {
     Filter = 1,
     Search = 2,
 }
+
+QuestDefine.ErrorCodeType = {
+    InvalidDistance = 125002, --任务距离校验失败
+    StatusNotMatch = 125003, --任务状态不匹配
+}
+
 -- ==================================================
 -- debug
 -- ==================================================

@@ -95,7 +95,7 @@ local ErrorCodeConfig = {
 	[EErrorCode.kErrorChecking] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260024 }, --正在检查
 	[EErrorCode.kErrorNeedRealNameAuth] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260025 }, --请先进行实名认证
 
-	[EErrorCode.kErrorNoConnection] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260026 }, --未连接服务器
+	[EErrorCode.kErrorNoConnection] = { bReconnect = true, bRelay = true, bQuitGame = false, bReturnToLogin = true, ErrMsg = 1260026 }, --未连接服务器
 	[EErrorCode.kErrorConnectFailed] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260027 }, --连接失败，当前无网络或者服务器不可达
 	[EErrorCode.kErrorIsConnecting] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260028 }, --正在连接，请稍后再试
 	[EErrorCode.kErrorGcpError] = { bReconnect = true, bRelay = true, bQuitGame = false, ErrMsg = 1260029 }, --内部异常
@@ -125,12 +125,18 @@ local LogBlackList = {
 	CS_CMD.CS_CMD_TARGET,
 	CS_CMD.CS_CMD_VISION,
 	CS_CMD.CS_CMD_LATENCY,
-	CS_CMD.CS_CMD_CHOCOBO_RACE,
 	CS_CMD.CS_CMD_WEATHER,
-	CS_CMD.CS_CMD_CLOSET,
+	-- CS_CMD.CS_CMD_CLOSET,
 	CS_CMD.CS_CMD_FOG,
 	CS_CMD.CS_CMD_PROF,
 	CS_CMD.CS_CMD_BAG,
+}
+
+local SubMsgLogBlackList = {
+    { MsgID = CS_CMD.CS_CMD_CHOCOBO_RACE, SubMsgID = ProtoCS.ChocoboRaceCmd.ChocoboRaceCmdUpdate },
+	{ MsgID = CS_CMD.CS_CMD_CHOCOBO_RACE, SubMsgID = ProtoCS.ChocoboRaceCmd.ChocoboRaceCmdCtrl },
+    { MsgID = CS_CMD.CS_CMD_CHOCOBO_RACE, SubMsgID = ProtoCS.ChocoboRaceCmd.ChocoboRaceDebugInfo },
+    { MsgID = CS_CMD.CS_CMD_CHOCOBO_RACE, SubMsgID = ProtoCS.ChocoboRaceCmd.ChocoboRaceAilog },
 }
 
 ---@class NetworkConfig
@@ -142,6 +148,7 @@ local NetworkConfig = {
 	ErrorCodeConfig = ErrorCodeConfig,
 
 	LogBlackList = LogBlackList,
+    SubMsgLogBlackList = SubMsgLogBlackList,
 
 	--断线重连是否生效
 	ReconnectEnable = true,

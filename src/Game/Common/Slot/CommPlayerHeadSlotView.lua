@@ -8,6 +8,7 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local PersonPortraitHeadHelper = require("Game/PersonPortraitHead/PersonPortraitHeadHelper")
+local MajorUtil = require("Utils/MajorUtil")
 
 ---@class CommPlayerHeadSlotView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY

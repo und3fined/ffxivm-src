@@ -22,6 +22,8 @@ function WardrobeStainBoxItemVM:Ctor()
 	self.IsSelected = nil
 	self.ID = 0
 	self.ColorVisible = nil
+	self.ColorBgVisible = nil
+	self.IsNone = nil
 end
 
 function WardrobeStainBoxItemVM:OnInit()
@@ -42,19 +44,23 @@ function WardrobeStainBoxItemVM:UpdateVM(Value)
 	self.IsNormalcy = Value.IsNormalcy
 	self.IsColorUnlock = Value.IsColorUnlock
 	self.IsChecked = Value.IsChecked
-	self.ID = Value.ID
+	self.ID = Value.ID or -1
 	self.ColorVisible = Value.ColorVisible
+	self.IsNone = Value.ID == 0
+	self.ColorBgVisible = Value.ColorVisible or Value.ID == 0
 end
 
 function WardrobeStainBoxItemVM:UpdateUnlockState(IsUnlock)
-	if self.ID == 0 then
+	if self.ID <= 0 then
+		self.IsColorUnlock = false
 		return
 	end
 	self.IsColorUnlock = IsUnlock
 end
 
 function WardrobeStainBoxItemVM:UpdateCheckedState(IsChecked)
-	if self.ID == 0 then
+	if self.ID < 0 then
+		self.IsChecked = false
 		return
 	end
 	self.IsChecked = IsChecked
@@ -65,7 +71,7 @@ function WardrobeStainBoxItemVM:OnSelectedChange(IsSelected)
 end
 
 function WardrobeStainBoxItemVM:IsEqualVM(Value)
-	return false
+	return self.ID  == Value.ID
 end
 
 

@@ -194,11 +194,10 @@ function NavigationPathMgr:OnInit()
     self.FindPathSeqIDList = {}
     self.ConditionEnableDict = {} --交互条件是否满足
     self.MapPathsCache = {}
+    self.MultiBlockMapIDList = {} --add by sammrli 存储有多个地块的地图ID,方便做优化
     setmetatable(self.MapPathsCache, {__mode = "kv"})    
 
     self:BuildMapPathTree()
-
-    self.MultiBlockMapIDList = {} --add by sammrli 存储有多个地块的地图ID,方便做优化
 end
 
 function NavigationPathMgr:OnShutdown()
@@ -320,9 +319,8 @@ function NavigationPathMgr:FindMapPaths(SrcMapID, SrcPos, TargetMapID, TargetPos
     --条件变化（任务完成会解锁NPC传送）
     local IsConditionChanged = self:CheckConditionChanged()
 
-    local CacheKey = string.format("%d-%d-(%d,%d,%d)-(%d,%d,%d)", SrcMapID, TargetMapID,
-    math.ceil(SrcPos.X), math.ceil(SrcPos.Y), math.ceil(SrcPos.Z),
-    math.ceil(TargetPos.X), math.ceil(TargetPos.Y), math.ceil(TargetPos.Z))
+    local CacheKey = string.format("%d-%d-(%.1f,%.1f,%.1f)-(%.1f,%.1f,%.1f)", SrcMapID, TargetMapID,
+    SrcPos.X, SrcPos.Y, SrcPos.Z, TargetPos.X, TargetPos.Y, TargetPos.Z)
 
     local CacheItem = self.MapPathsCache[CacheKey]
     if (CacheItem ~= nil and (not IsConditionChanged)) then

@@ -1,3 +1,4 @@
+
 ---
 --- Author: frankjfwang
 --- DateTime: 2022-05-20 17:43
@@ -68,7 +69,10 @@ end
 
 -- 断线重连了
 function InGameService:OnRecoverGame(SvrEnterRsp)
-    self:EndGame()
+    self.NewSvrNewMoveRsp = nil
+    self:StopForTimeCountdown()
+    self.CurrentRound = 1
+
     self.HasSentAutoPlay = false
     self.NewMoveFantasyCardInfo = nil
     self.ImposedCardPlayOrder = {}
@@ -176,12 +180,12 @@ function InGameService:OnRecoverGame(SvrEnterRsp)
 
     local TotalTimeForOneMove = self:GetActualTimeOutForMove()
     self.RemainActionTime = math.clamp((SvrEnterRsp.AutoPlayTime - TimeUtil.GetServerLogicTimeMS())/1000, 0, TotalTimeForOneMove)
-    self.RemainActionTime = math.ceil(self.RemainActionTime)
+    self.RemainActionTime = math.ceil(self.RemainActionTime) - 1 -- 本地实际剩余出牌时间少1秒，防止后台先出牌
     self.PassedTime = TotalTimeForOneMove - self.RemainActionTime
     EventMgr:SendEvent(EventID.MagicCardRecoverPos, self.RemainActionTime)
     self.Vm:UpdateScore()
     -- 恢复出牌倒计时
-    self:OnGameDoStart(true)
+    Async.BeginTask(self.OnRecoverGameDoStartAsync, self)
 end
 
 function InGameService:OnEnterGame(SvrEnterRsp)
@@ -487,6 +491,14 @@ function InGameService:OnGameDoStart(IsRecover)
     self:ReadyForNewMove(IsRecover, IsRecover)
 end
 
+function InGameService:OnRecoverGameDoStartAsync()
+    if MagicCardMgr:IsTutorialGame() then
+        _G.EventMgr:SendEvent(EventID.PlayMagicCardTutorial, LocalDef.TutorialID_CardInstruction)
+    end
+    self:InternalStopNewMoveAsync()
+    self:OnGameDoStart(true)
+end
+
 function InGameService:InternalResetBeforeNewMove()
     self.IsGameFinishedAfterThisMove = false
     self.NewMoveFlipEffect = nil
@@ -521,7 +533,7 @@ function InGameService:ReadyForNewMove(TickToNextRound, IsRecover)
     self.MoveHandle.Reset(_isPlayerMove)
     self:InternalResetBeforeNewMove(_isPlayerMove)
     if not self.IsPlayerCurrentMove and MagicCardMgr.IsPVP then
-        self.RobotMoveDelay = MagicCardTourneyVMUtils.GetRobotMoveDelayTime()
+        self.RobotMoveDelay = MagicCardTourneyVMUtils.GetRobotMoveDelayTime() or 0
     end
 
     local function OnReadyNewMove()
@@ -592,7 +604,9 @@ function InGameService:StopForTimeCountdown()
     self:SetTimerForMove(nil)
     if self.CountDownSoundEffectPlayed then
         Log.I("停止播放倒计时音效")
-        AudioUtil.LoadAndPlayUISound(self.StopCountDown_SoundEffectStr)
+        if self.CountDownHandleID then
+            AudioUtil.StopAsyncAudioHandle(self.CountDownHandleID)
+        end
         self.CountDownSoundEffectPlayed = nil
     end
 end
@@ -660,7 +674,8 @@ function InGameService:HandlePlayCardAsync()
 
     Log.I("PlayCard UI update")
     EventMgr:SendEvent(EventID.MagicCardDoPlayOneCard)
-
+    
+    self:CheckTutorialHighLight()
     -- npc出牌时，角色落牌动作和界面表现是先后进行的，延迟读取配置的UI延时即可；
     -- 玩家出牌时，角色落牌动作和界面表现是同时的，这时候需要延迟两者中较长的那个
     local DelayTimeForUIPlayCardTime = LocalDef.UIPlayCardTime
@@ -669,6 +684,57 @@ function InGameService:HandlePlayCardAsync()
     end
     Log.I(" - wait [%s]s for PlayCard UI", DelayTimeForUIPlayCardTime)
     Utils.DelayAsync(DelayTimeForUIPlayCardTime)
+    
+end
+
+-- 新手引导卡牌字体高亮显示
+function InGameService:CheckTutorialHighLight()
+    if not MagicCardMgr:IsTutorialGame() then
+        return
+    end
+
+    if self.CurrentRound == 7 then
+        -- NPC出牌回合 双方比较卡牌字体高亮显示
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, self.ChosedBoardLoc, LocalDef.EnumCardNumberDir.Left) -- 当前下的卡牌
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, self.ChosedBoardLoc - 1, LocalDef.EnumCardNumberDir.Right) -- 左方卡牌
+    elseif self.CurrentRound == 8 then 
+        -- 玩家出牌结束，棋盘上玩家卡牌字体高亮显示
+        _G.EventMgr:SendEvent(EventID.MagicCardTutorialCardNumHighlight, 9, LocalDef.EnumCardNumberDir.Up) -- 棋盘目标位置卡牌
+        _G.EventMgr:SendEvent(_G.EventID.MagicCardTutorialEnd, LocalDef.TutorialID_PlayerTurn)
+    end
+end
+
+-- 新手引导框界面显示
+function InGameService:CheckTutorial()
+    if not MagicCardMgr:IsTutorialGame() then
+        return
+    end
+
+    if self.CurrentRound == 7 then
+        _G.EventMgr:SendEvent(EventID.PlayMagicCardTutorial, LocalDef.TutorialID_NPCPutCard)
+    elseif self.CurrentRound == 8 then -- 玩家出牌结束
+        _G.EventMgr:SendEvent(EventID.PlayMagicCardTutorial, LocalDef.TutorialID_Result)
+    elseif self.CurrentRound == 9 then
+        MagicCardMgr:ResumeGame()
+    end
+end
+
+-- 引导时对局暂停
+function InGameService:InternalStopNewMoveAsync()
+    if self.CurrentRound >= 9 then
+        return
+    end
+
+    if MagicCardMgr:IsTutorialGame() then
+        MagicCardMgr:PauseGame() --暂停，等待引导完成步骤恢复
+        local function CheckConditionFunc()
+            if MagicCardMgr:IsPauseGame() and not MagicCardMgr.IsGameEnd then
+                Utils.DelayAsync(0.1)
+                CheckConditionFunc()
+            end
+        end
+        CheckConditionFunc()
+    end
 end
 
 ---@param RuleEffects OneRuleEffect[]
@@ -856,6 +922,9 @@ function InGameService:InternalEndHandleNewMoveAsync(AllDone)
 
     self.PlayerPutCardWaitForServerData = false
 
+    self:CheckTutorial()
+    self:InternalStopNewMoveAsync()
+
     self:EndForThisMove()
 
     if (self.NewSvrNewMoveRsp ~= nil) then
@@ -882,12 +951,12 @@ function InGameService:OnTimerForNewMove()
     -- update timer
     EventMgr:SendEvent(EventID.MagicCardUpdateTimer, self.RemainActionTime)
     local TotalTimeForOneMove = self:GetActualTimeOutForMove()
-    local _timeLeft = self.RemainActionTime
+    local _timeLeft = self.RemainActionTime or 0
 
     if _timeLeft <= 5 and not self.CountDownSoundEffectPlayed then
         Log.I("剩5s时播放倒计时音效")
         self.CountDownSoundEffectPlayed = true
-        AudioUtil.LoadAndPlayUISound(self.BeginCountDown_SoundEffectStr)
+        self.CountDownHandleID = AudioUtil.LoadAndPlayUISound(self.BeginCountDown_SoundEffectStr)
     end
     
     if self.HasSentAutoPlay then
@@ -910,7 +979,7 @@ function InGameService:OnTimerForNewMove()
     elseif MagicCardMgr:IsPVPMode() then -- PVP模式
         -- PVP的机器人，则由客户端发起出牌，时间随机。（服务端保底，达到最大时间时客户端未发起时，服务端自动出牌)
         if MagicCardMgr:IsPVPRobotMode() then
-            if (self.PassedTime >= self.RobotMoveDelay or self.CurrentRound == 9) then
+            if (self.PassedTime and self.RobotMoveDelay and self.PassedTime >= self.RobotMoveDelay) or self.CurrentRound == 9 then
                 self.HasSentAutoPlay = true
                 FLOG_INFO(string.format("【恢复牌局】机器人对手自动出牌:%s", _timeLeft))
                 MagicCardMgr:SendNewMoveReq(-1, -1, true, self.CurrentRound)
@@ -920,10 +989,16 @@ function InGameService:OnTimerForNewMove()
     else
         -- 这里是纯NPC，走另一个计时数量
         FLOG_INFO(string.format("【恢复牌局】NPC对手出牌回合计时:%s", _timeLeft))
-        if (self.PassedTime >= LocalDef.NPCPutCardDelayTime) then
-            self.HasSentAutoPlay = true
-            FLOG_INFO(string.format("【恢复牌局】NPC对手自动出牌:%s", _timeLeft))
-            MagicCardMgr:SendNewMoveReq(-1, -1, true, self.CurrentRound)
+        if MagicCardMgr:IsTutorialGame() then
+            if (self.PassedTime >= 0) then
+                MagicCardMgr:SendNewMoveReq(-1, -1, true, self.CurrentRound)
+            end
+        else
+            if (self.PassedTime >= LocalDef.NPCPutCardDelayTime) then
+                self.HasSentAutoPlay = true
+                FLOG_INFO(string.format("【恢复牌局】NPC对手自动出牌:%s", _timeLeft))
+                MagicCardMgr:SendNewMoveReq(-1, -1, true, self.CurrentRound)
+            end
         end
     end
 

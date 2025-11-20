@@ -321,4 +321,218 @@ function MagicCardVMUtils.IsCardNPCFinishedQuest(NpcResID)
     return true
 end
 
+--------------------- 新手引导相关数据 ----------------------------------------
+
+---@type 准备界面数据
+function MagicCardVMUtils.GetTutorialGroupViewData()
+    local TutorialGroupViewData = {
+        PlayRules = {1},
+        PopularRules = {},
+        Cost = 0,
+        Record = 0,
+        AwardCoins = 0,
+        AwardCards = {},
+        AwardCardsNum = 0,
+        CardGroups = {}, --[1] = {Name = "", Cards = {61400001,61400003,61400006,61400007,61400010}},
+        DefaultIndex = 0,
+        BattleID = 0,
+        OpponentInfo = {
+            NPCID = 1011060,
+        },
+        FinishTime = 0
+    }
+
+    for i = 1, LocalDef.CardGroupCount do
+        local CardGroup = {
+            Name = "",
+        }
+        if i == 1 then
+            CardGroup.Cards = MagicCardVMUtils.GetPlayerInitCardIDs()
+        else
+            CardGroup.Cards = {}
+        end
+        table.insert(TutorialGroupViewData.CardGroups, CardGroup)
+    end
+    
+    return TutorialGroupViewData
+end
+
+---@type 进入对局数据
+function MagicCardVMUtils.GetTutorialEnterViewData()
+    local TutorialEnterViewData = {
+        CardGameID = 0, -- 牌局ID
+        Group = 1,    -- 玩家后手
+        Round = 6,         -- 当前轮次
+        AutoPlayTime = 0,  -- 下次自动出牌时间戳MS(UTC)
+      
+        -- 双方持有的卡牌
+        --{"CardID":61400001,"Group":0,"Change":0,"ScoreChange":0,"OnHandLoc":0,"FlipType":0,"IsExposed":true,"BoardLoc":-1},
+        AttackerCards = LocalDef.TutorialInitCardsDataNPC, -- MagicCardVMUtils.GetTutorialInitCardsData(LocalDef.TutorialNPCID), -- 先手方持有的卡牌
+        -- {"CardID":61400001,"Group":1,"Change":0,"ScoreChange":0,"OnHandLoc":0,"FlipType":0,"IsExposed":true,"BoardLoc":-1},
+        DefenderCards = LocalDef.TutorialInitCardsDataPlayer, -- MagicCardVMUtils.GetTutorialInitCardsData(), -- 后手方持有的卡牌
+      
+        Board = LocalDef.TutorialInitCardsDataBoard, --{},  -- 牌局状态
+      
+        -- 混乱&秩序规则下，双方强制按照系统安排的顺序使用卡组中的卡牌, 数组元素为卡牌在玩家卡组里的次序
+        CardsPlayOrder = {},
+      
+        -- 交换规则下，双方交换的卡牌在各玩家卡组里的次序, 无交换规则时值为-1
+        AttackerExchange = -1,
+        DefenderExchange = -1,
+      
+        Rules = {1},         -- 本局规则
+        PopularRules = {},  -- 流行规则
+        -- 对手信息
+        OpponentInfo = {
+            NPCID = LocalDef.TutorialNPCID,
+        },
+        OpponentEmoSetup = "",           -- 对手表情设置
+        Status = 2,                      -- 对局状态：0匹配完成，1选卡组，2进行中，3等待领奖
+    }
+
+    -- for i = 1, 9 do
+    --     table.insert(TutorialEnterViewData.Board, {
+    --     Change = 0,
+    --     ScoreChange  = 0,
+    --     FlipType = 0,
+    --     IsExposed = false,
+    --     BoardLoc = 0,
+    --     CardID = 0,
+    --     Group = 0,
+    --     OnHandLoc = 0})
+    -- end
+
+    return TutorialEnterViewData
+end
+
+---@type 获取初始卡牌数据
+function MagicCardVMUtils.GetTutorialInitCardsData(NPCID)
+    
+    local Cards = {}
+    local CardIDList = {}
+    -- 玩家卡牌
+    if NPCID == nil then
+        CardIDList = MagicCardVMUtils.GetPlayerInitCardIDs()
+        if CardIDList and #CardIDList > 0 then
+            for Index, CardID in ipairs(CardIDList) do
+                local CardData = {
+                    Change = 0,
+                    ScoreChange  = 0,
+                    FlipType = 0,
+                    IsExposed = true,
+                    BoardLoc = -1,
+                    CardID = CardID,
+                    Group = 1, --玩家后手
+                    OnHandLoc = Index - 1
+                }
+                table.insert(Cards, CardData)
+            end
+        end
+    else
+        CardIDList = MagicCardVMUtils.GetNPCInitCardIDs(NPCID)
+        if CardIDList and #CardIDList > 0 then
+            for Index, CardID in ipairs(CardIDList) do
+                local CardData = {
+                    Change = 0,
+                    ScoreChange  = 0,
+                    FlipType = 0,
+                    IsExposed = true,
+                    BoardLoc = -1,
+                    CardID = CardID,
+                    Group = 0,
+                    OnHandLoc = Index - 1
+                }
+                table.insert(Cards, CardData)
+            end
+        end
+    end
+
+    return Cards
+end
+
+---@type 获取玩家初始卡牌ID
+function MagicCardVMUtils.GetPlayerInitCardIDs()
+    local CardIDList = {}
+    local CardIDValues = GameGlobalCfg:FindValue(GLOBAL_CFG_ID.GAME_CFG_FANTASYCARD_INIT_CARDS, "Value") -- 幻卡初始卡组
+    if CardIDValues and #CardIDValues > 0 then
+        for _, Value in ipairs(CardIDValues) do
+            table.insert(CardIDList, tonumber(Value))
+        end
+    end
+    return CardIDList
+end
+
+---@type 获取NPC初始卡牌ID
+function MagicCardVMUtils.GetNPCInitCardIDs(NPCID)
+    local NPCData = FantasyCardNpcCfg:FindCfgByKey(NPCID)
+    if NPCData == nil then
+        return
+    end
+    return NPCData.Cards
+end
+
+---@type 对局中出牌数据
+---@param Round 回合数
+function MagicCardVMUtils.GetTutorialMoveDataByRound(Round, IsPlayerMove)
+    if Round == nil then
+        return
+    end
+    local TutorialMoveData = LocalDef.TutorialMoveDatas[Round]
+    if TutorialMoveData == nil then
+        return
+    end
+    -- local  CardIDList =  {}
+    -- if IsPlayerMove then
+    --     CardIDList = MagicCardVMUtils.GetPlayerInitCardIDs()
+    -- else
+    --     CardIDList = MagicCardVMUtils.GetNPCInitCardIDs(LocalDef.TutorialNPCID)
+    -- end
+    -- if Round >= 9  then
+    --     TutorialMoveData.Card.CardID = CardIDList[2]
+    -- else
+    --     TutorialMoveData.Card.CardID = CardIDList[1]
+    -- end
+    return TutorialMoveData
+end
+
+function MagicCardVMUtils:GetTutorialWidget(TutorialID)
+    local WidgetInfo = LocalDef.TutorialWidgetRef[TutorialID]
+    if WidgetInfo == nil then
+        return nil
+    end
+
+    local UIBPName = WidgetInfo.BPName or ""
+    local ViewID = _G.UIViewMgr:GetViewIDByName(UIBPName)
+    local View = _G.UIViewMgr:FindVisibleView(ViewID)
+    local WidgetPath = WidgetInfo.WidgetPath
+
+    if View == nil or WidgetPath == nil or WidgetPath == "" then
+        return View
+    end
+
+    local ResTable = string.split(WidgetPath, "/")
+    for _, v in ipairs(ResTable) do
+        if View[v] then
+            View = View[v]
+        end
+    end
+    return View
+end
+
+function MagicCardVMUtils:HandleClickGuideWidget(TutorialID, Widget, MouseEvent)
+    if Widget == nil then
+        return
+    end
+
+    FLOG_INFO("[MagicCardVMUtils]Widget Name is %s",Widget:GetName())
+
+    if MouseEvent and Widget["OnMouseButtonDown"] ~= nil then
+		Widget.OnMouseButtonDown(Widget, nil, MouseEvent)
+    elseif Widget["OnClicked"] ~= nil then
+        Widget["OnClicked"]:Broadcast()
+    end
+end
+
+--------------------- 新手引导相关数据 End----------------------------------------
+
 return MagicCardVMUtils

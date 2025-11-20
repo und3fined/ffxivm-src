@@ -7,6 +7,7 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local ProtoCS = require("Protocol/ProtoCS")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetPercent = require("Binder/UIBinderSetPercent")
@@ -16,9 +17,13 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMoney")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local GoldSaucerMiniGameMgr = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameMgr")
+local GoldSaucerBlessingMgr = require("Game/GoldSaucerMiniGame/MiniGameBless/GoldSaucerBlessingMgr")
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
+local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local MonsterTossAudioDefine = require("Game/GoldSaucerMiniGame/MonsterToss/MonsterTossAudioDefine")
+local CrystalTowerBlessCfg = require("TableCfg/CrystalTowerBlessCfg")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
 local ObjectGCType = require("Define/ObjectGCType")
 local ProtoRes = require("Protocol/ProtoRes")
 local ScoreMgr = require("Game/Score/ScoreMgr")
@@ -26,15 +31,17 @@ local UIBinderCanvasSlotSetPosition = require("Binder/UIBinderCanvasSlotSetPosit
 local UIBinderSetOutlineColor = require("Binder/UIBinderSetOutlineColor")
 local MajorUtil = require("Utils/MajorUtil")
 local AudioUtil = require("Utils/AudioUtil")
+local CommonUtil = require("Utils/CommonUtil")
 local CrystalTowerAudioDefine = require("Game/GoldSaucerMiniGame/CrystalTower/CrystalTowerAudioDefine")
 local CrystalTowerInteractionVM = require("Game/GoldSaucerGame/View/CrystalTowerStriker/ItemVM/CrystalTowerInteractionVM")
 local AudioPath = CrystalTowerAudioDefine.AudioPath
 
 local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local MiniGameClientConfig = GoldSaucerMiniGameDefine.MiniGameClientConfig
-local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local MiniGameType = GoldSaucerMiniGameDefine.MiniGameType
 local DelayTime = GoldSaucerMiniGameDefine.DelayTime
+local ChallengeTargetIconPath = GoldSaucerBlessingDefine.ChallengeTargetIconPath
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
 local LSTR = _G.LSTR
 local UE = _G.UE
 local UIViewID = _G.UIViewID
@@ -51,6 +58,8 @@ local InteractionItemBPName = "GoldSaucerGame/CrystalTowerStriker/Item/GoldSauce
 ---@field BottomPanel MainLBottomPanelView
 ---@field Btn1 CommBtnMView
 ---@field Btn2 CommBtnMView
+---@field Btn3 CommBtnLView
+---@field BtnClickCactus UFButton
 ---@field ChallengeBegins GoldSaucerCuffchallengeBeginsItemView
 ---@field ChallengeResults GoldSaucerCrystalTowerStrikerChallengeResultsItemView
 ---@field CloseBtn CommonCloseBtnView
@@ -63,12 +72,17 @@ local InteractionItemBPName = "GoldSaucerGame/CrystalTowerStriker/Item/GoldSauce
 ---@field CrystalEFF6 GoldSaucerCrystalTowerStrikerCrystalItemEFFView
 ---@field FHorizontalBox_0 UFHorizontalBox
 ---@field IconGold UFImage
+---@field ImgCactusPeople UFImage
+---@field ImgFrameBG UFImage
 ---@field ImgMask2 UFImage
+---@field ImgPzBg UFImage
 ---@field ImgTipsLight UFImage
 ---@field JunctionLine GoldSaucerCrystalTowerStrikerJunctionLineItemView
 ---@field MainTeamPanel MainTeamPanelView
 ---@field MoneySlot CommMoneySlotView
+---@field PanelCactus UFCanvasPanel
 ---@field PanelChallengeFailurePrompt UFCanvasPanel
+---@field PanelChallengeFailurePrompt_1 UFCanvasPanel
 ---@field PanelChallengeRecordList UFVerticalBox
 ---@field PanelCold UFCanvasPanel
 ---@field PanelCrystal UFCanvasPanel
@@ -78,18 +92,29 @@ local InteractionItemBPName = "GoldSaucerGame/CrystalTowerStriker/Item/GoldSauce
 ---@field ProBar UProgressBar
 ---@field ProBarScore GoldSaucerCrystalTowerStrikerProBarScoreItemView
 ---@field ScoreFeedback GoldSaucerCrystalTowerStrikerScoreFeedbackItemView
+---@field SpineCactusPeople1 USpineWidget
+---@field SpineCactusPeople2 USpineWidget
 ---@field StageTips GoldSaucerMooglePawStageTipsItemView
 ---@field TableViewList UTableView
 ---@field TableViewScoreFeedback UTableView
 ---@field TextAward UFTextBlock
 ---@field TextHint1 UFTextBlock
+---@field TextHint1_1 UFTextBlock
 ---@field TextMagnification UFTextBlock
 ---@field TextPz UFTextBlock
 ---@field TextQuantity UFTextBlock
 ---@field TextQuantity1 UFTextBlock
 ---@field AnimaNormalOut UWidgetAnimation
 ---@field AnimaNumber UWidgetAnimation
+---@field AnimClickCactus UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
+---@field AnimSection1 UWidgetAnimation
+---@field AnimSection2 UWidgetAnimation
+---@field AnimSection3 UWidgetAnimation
+---@field AnimSection3Loop UWidgetAnimation
+---@field AnimSectionGreenHide UWidgetAnimation
+---@field AnimSectionGreenShow UWidgetAnimation
 ---@field AnimSettlement UWidgetAnimation
 ---@field AnimShock UWidgetAnimation
 ---@field AnimTipsIn UWidgetAnimation
@@ -103,6 +128,8 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:Ctor()
 	--self.BottomPanel = nil
 	--self.Btn1 = nil
 	--self.Btn2 = nil
+	--self.Btn3 = nil
+	--self.BtnClickCactus = nil
 	--self.ChallengeBegins = nil
 	--self.ChallengeResults = nil
 	--self.CloseBtn = nil
@@ -115,12 +142,17 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:Ctor()
 	--self.CrystalEFF6 = nil
 	--self.FHorizontalBox_0 = nil
 	--self.IconGold = nil
+	--self.ImgCactusPeople = nil
+	--self.ImgFrameBG = nil
 	--self.ImgMask2 = nil
+	--self.ImgPzBg = nil
 	--self.ImgTipsLight = nil
 	--self.JunctionLine = nil
 	--self.MainTeamPanel = nil
 	--self.MoneySlot = nil
+	--self.PanelCactus = nil
 	--self.PanelChallengeFailurePrompt = nil
+	--self.PanelChallengeFailurePrompt_1 = nil
 	--self.PanelChallengeRecordList = nil
 	--self.PanelCold = nil
 	--self.PanelCrystal = nil
@@ -130,18 +162,29 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:Ctor()
 	--self.ProBar = nil
 	--self.ProBarScore = nil
 	--self.ScoreFeedback = nil
+	--self.SpineCactusPeople1 = nil
+	--self.SpineCactusPeople2 = nil
 	--self.StageTips = nil
 	--self.TableViewList = nil
 	--self.TableViewScoreFeedback = nil
 	--self.TextAward = nil
 	--self.TextHint1 = nil
+	--self.TextHint1_1 = nil
 	--self.TextMagnification = nil
 	--self.TextPz = nil
 	--self.TextQuantity = nil
 	--self.TextQuantity1 = nil
 	--self.AnimaNormalOut = nil
 	--self.AnimaNumber = nil
+	--self.AnimClickCactus = nil
 	--self.AnimIn = nil
+	--self.AnimOut = nil
+	--self.AnimSection1 = nil
+	--self.AnimSection2 = nil
+	--self.AnimSection3 = nil
+	--self.AnimSection3Loop = nil
+	--self.AnimSectionGreenHide = nil
+	--self.AnimSectionGreenShow = nil
 	--self.AnimSettlement = nil
 	--self.AnimShock = nil
 	--self.AnimTipsIn = nil
@@ -155,6 +198,7 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BottomPanel)
 	self:AddSubView(self.Btn1)
 	self:AddSubView(self.Btn2)
+	self:AddSubView(self.Btn3)
 	self:AddSubView(self.ChallengeBegins)
 	self:AddSubView(self.ChallengeResults)
 	self:AddSubView(self.CloseBtn)
@@ -192,13 +236,16 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnInit()
 		{"bImgMask2Visible", UIBinderSetIsVisible.New(self, self.ImgMask2)},
 		{"TextQuantityValue", UIBinderSetText.New(self, self.TextQuantity)},
 		{"CTStrengthPro", UIBinderSetPercent.New(self, self.ProBar)},
+		{"CTStrengthPro", UIBinderValueChangedCallback.New(self, nil, self.OnNotifyStrengthChange)},
 		{"CTTextMultiple", UIBinderSetText.New(self, self.TextMagnification)},
 		{"bTextMultipleVisible", UIBinderSetIsVisible.New(self, self.TextMagnification)},
-		{"bFailed", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
-		{"bSuccessed", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRltFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt)},
+		{"bRecordListPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeRecordList)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.PanelChallengeFailurePrompt_1)},
+		{"bRecordFailPanelShow", UIBinderSetIsVisible.New(self, self.Award, true)},
 		{"EndResultVMList", UIBinderUpdateBindableList.New(self, self.ResultTableViewAdapter)},
 		{"RewardGot", UIBinderSetTextFormatForMoney.New(self, self.Award.TextQuantity)},
-		{"RewardGot", UIBinderSetTextFormatForMoney.New(self, self.MainTeamPanel.TextNumber)},
+		{"MainPanelRewardGot", UIBinderSetTextFormatForMoney.New(self, self.MainTeamPanel.TextNumber)},
 		{"CTAddRewardGot",  UIBinderSetText.New(self, self.MainTeamPanel.TextNumber1)},
 
 		{"AwardIconPath", UIBinderSetBrushFromAssetPath.New(self, self.Award.Comm96Slot.Icon)},
@@ -212,13 +259,16 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnInit()
 		{"InteractResultVMList", UIBinderUpdateBindableList.New(self, self.InteractResultTableViewAdapter)},
 		{"bInEndRound", UIBinderSetIsVisible.New(self, self.ScoreFeedback)},
 		{"CriticalText", UIBinderSetText.New(self, self.Critical.TextQuantity)},
-
+		--{"bBless", UIBinderValueChangedCallback.New(self, nil, self.OnPlayBlessBgAnim)},
+		{"bBless", UIBinderSetIsVisible.New(self, self.PanelCactus)},
 	}
 	self.ArriveEffectPool = {
 		self.CrystalEFF1, self.CrystalEFF2, self.CrystalEFF3, self.CrystalEFF4, self.CrystalEFF5, self.CrystalEFF6
 	}
 
 	self.InteractionPool = {}
+
+	self.ImageStage = 0
 end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnDestroy()
@@ -230,11 +280,23 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnShow()
 	self:SetViewToDefault()
 
 	self.TextHint1:SetText(LSTR(260011)) -- 不要气馁，再挑战看看吧！
+	self.TextHint1_1:SetText(LSTR(260011))
 	self.TextAward:SetText(LSTR(260012)) -- 奖励
 	self.TextQuantity1:SetText(1) -- 阿拉伯数字1
 	self.Btn1.TextContent:SetText(LSTR(10036)) -- 离 开
+	self.Btn3.TextContent:SetText(LSTR(10036)) -- 离 开
 	self.TextPz:SetText(LSTR(260013)) -- Pz
 
+	-- 赐福仙人掌动画种类切换
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local bBigBlessMode = MiniGameInst:IsBigBlessMode()
+	UIUtil.SetIsVisible(self.SpineCactusPeople1, not bBigBlessMode)
+	UIUtil.SetIsVisible(self.SpineCactusPeople2, bBigBlessMode)
+	local TargetIconPath = bBigBlessMode and ChallengeTargetIconPath.BigBless or ChallengeTargetIconPath.LittleBless
+	UIUtil.ImageSetBrushFromAssetPath(self.MainTeamPanel.IconGold_1, TargetIconPath)
 end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnHide()
@@ -245,15 +307,18 @@ end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnPressedEvent(self, self.Btn1.Button, self.OnLeaveBtnClick)
+	UIUtil.AddOnPressedEvent(self, self.Btn3.Button, self.OnLeaveBtnClick)
 	UIUtil.AddOnPressedEvent(self, self.Btn2.Button, self.OnFightAgainBtnClick)
+	UIUtil.AddOnClickedEvent(self, self.BtnClickCactus, self.OnBtnClickCactusClick)
 	self:BindBtnCloseCallBack()
 end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MiniGameMainPanelPlayAnim, self.MiniGameCuffMainPlayAnimEvent)
 	self:RegisterGameEvent(EventID.ScoreUpdate, self.OnMoneyUpdate)
-
-
+	self:RegisterGameEvent(EventID.MiniGameCrystalTowerCenterLastPunchTipsShow, self.OnLastRoundTipsShow)
+	self:RegisterGameEvent(EventID.MiniGameBigBlessStartTipsShow, self.MiniGameBigBlessStartTipsShow)
+	self:RegisterGameEvent(EventID.MiniGameMarkerBlessStateChange, self.OnResultPanelBtnChange)
 end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnRegisterBinder()
@@ -276,6 +341,79 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnRegisterBinder()
 	self.ScoreFeedback:SetParams({Data = CenterInteractResultVM})
 end
 
+function GoldSaucerCrystalTowerStrikerMainPanelView:OnNotifyStrengthChange(NewValue)
+	local DefineCfg = MiniGameClientConfig[MiniGameType.CrystalTower]
+	if not DefineCfg then
+		return
+	end
+
+	local PercentLimitChange = DefineCfg.PercentLimitChange
+	if not PercentLimitChange then
+		return
+	end
+
+	local PanelBgPath = DefineCfg.PanelBgPath
+	if not PanelBgPath then
+		return
+	end
+
+	local BarStagePath = DefineCfg.BarStageImgPath
+	if not BarStagePath then
+		return
+	end
+
+	local OldStage = self.ImageStage
+	local CurStage = 1
+	if NewValue < PercentLimitChange[1] then
+		CurStage = 1
+	elseif NewValue < PercentLimitChange[2] then
+		CurStage = 2
+	else
+		CurStage = 3
+	end
+
+	if OldStage ~= CurStage then
+		if self:IsAnimationPlaying(self.AnimSection3Loop) then
+			self:StopAnimation(self.AnimSection3Loop)
+		end
+		if CurStage == 1 then
+			self:PlayAnimation(self.AnimSection1)
+		elseif CurStage == 2 then
+			self:PlayAnimation(self.AnimSection2)
+		elseif CurStage == 3 then
+			self:PlayAnimation(self.AnimSection3)
+			self:PlayAnimation(self.AnimSection3Loop, 0, 0)
+		else
+			FLOG_ERROR("GoldSaucerCrystalTowerStrikerMainPanelView:OnNotifyStrengthChange ErrorStage To Play")
+		end
+
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgFrameBG, PanelBgPath[CurStage])
+		UIUtil.ImageSetBrushFromAssetPath(self.ImgPzBg, BarStagePath[CurStage])
+		self.ImageStage = CurStage
+	end
+end
+
+function GoldSaucerCrystalTowerStrikerMainPanelView:OnLastRoundTipsShow()
+	local challengeBegins = self.ChallengeBegins
+	if not challengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(challengeBegins, true)
+	self:PlayAnimation(self.AnimSectionGreenHide, 0.2)
+	challengeBegins:SetBegin(function()
+		UIUtil.SetIsVisible(challengeBegins, false)
+	end, LSTR(250032), LSTR(250033))
+end
+
+function GoldSaucerCrystalTowerStrikerMainPanelView:MiniGameBigBlessStartTipsShow()
+	local ChallengeBegins = self.ChallengeBegins
+	if not ChallengeBegins then
+		return
+	end
+	UIUtil.SetIsVisible(ChallengeBegins, true)
+	ChallengeBegins:SetBlessRoundReady()
+	self:PlayAnimation(self.AnimSectionGreenShow)
+end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:ChangeShootingTips(NewValue)
 	if NewValue then
@@ -332,6 +470,18 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnLeaveBtnClick()
 	self:Hide()
 end
 
+function GoldSaucerCrystalTowerStrikerMainPanelView:OnPlayBlessBgAnim(bBless)
+	if bBless then
+		self:PlayAnimation(self.AnimSectionGreenShow)
+	else
+		self:PlayAnimation(self.AnimSectionGreenHide)
+	end
+end
+
+function GoldSaucerCrystalTowerStrikerMainPanelView:OnBtnClickCactusClick()
+	self:PlayAnimation(self.AnimClickCactus)
+end
+
 -- 点击再战按钮
 function GoldSaucerCrystalTowerStrikerMainPanelView:OnFightAgainBtnClick()
 	local OwnJdCoinNum = ScoreMgr:GetScoreValueByID(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE) --持有的金碟币
@@ -365,6 +515,12 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:MiniGameCuffMainPlayAnimEven
 	elseif InAnim == Anim.AddScoreAnimIn then
 		self:PlayAnimation(self.AnimaNumber)
 		self.ProBarScore:PlayAnimation(self.ProBarScore.AnimIn)
+	elseif InAnim == Anim.AnimScoreAdd then
+		self:PlayAnimation(self.AnimaNumber)
+		self.ProBarScore:PlayAnimation(self.ProBarScore.AnimScoreAdd)
+	elseif InAnim == Anim.AnimScoreSubtract then
+		self:PlayAnimation(self.AnimaNumber)
+		self.ProBarScore:PlayAnimation(self.ProBarScore.AnimScoreSubtract)
 	elseif InAnim == Anim.AnimaNormalOut then
 		self:OnPlayAnimNormalOut()
 	elseif InAnim == Anim.AnimVictory then
@@ -444,14 +600,17 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnReady()
 
 	ChallengeBegins:SetPrepare()
 	AudioUtil.LoadAndPlayUISound(AudioPath.OnPrepare)
+
 	local MiniGameInst = self:GetGameInst()
 	if MiniGameInst == nil then
 		return
 	end
+	--MiniGameInst:CreateInteractionProvider()
 	MiniGameInst:SetArriveEffectPool(self.ArriveEffectPool)
 	MiniGameInst:RegisterInteractionFactory(function()
 		return self:GetOrCreateInteractionItem()
 	end)
+	
 	self:RegisterTimer(function()
 		ChallengeBegins:SetBegin()
 		AudioUtil.LoadAndPlayUISound(AudioPath.OnBegin)
@@ -459,6 +618,11 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:OnReady()
 end
 
 function GoldSaucerCrystalTowerStrikerMainPanelView:GetOrCreateInteractionItem()
+	-- 受到交互回包影响, 界面可能已经被销毁了
+	if not CommonUtil.IsObjectValid(self) then
+		FLOG_ERROR("GoldSaucerCrystalTowerStrikerMainPanelView UIBP Destroyed")
+		return
+	end
 	-- 有缓存了没使用的优先选择
 	for _, v in pairs(self.InteractionPool) do
 		local Elem = v
@@ -513,26 +677,10 @@ function GoldSaucerCrystalTowerStrikerMainPanelView.OnBegin(self)
 	if MiniGameInst == nil then
 		return
 	end
-	MiniGameInst:StartGameTimeLoop(MiniGameInst.GameRun)
+
     MiniGameInst:SetTextHint(LSTR(260010), false) -- 请在晶体下落至线时点击
 	self:PlayAnimation(self.AnimTipsIn, 0, 1, _G.UE.EUMGSequencePlayMode.Reverse)
-	MiniGameInst:SetIsBegin(true)
-	local ViewModel = self:GetTheParamsVM()
-	if ViewModel == nil then
-		return
-	end
-	local RoundIntervalTime = MiniGameInst:GetRoundIntervalTime()
-	if RoundIntervalTime == nil then
-		FLOG_ERROR("CrystalTowerStriker RoundIntervalTime Cfg is nil")
-		return
-	end
-	local CurRoundIndex = MiniGameInst:GetCurRoundIndex()
-	local LogIntervalTime = RoundIntervalTime[CurRoundIndex]
-	if not LogIntervalTime then
-		FLOG_ERROR("GoldSaucerCrystalTowerStrikerMainPanelView LogIntervalTimeError CurRoundIndex:%s RoundIntervalTime:%s", CurRoundIndex, RoundIntervalTime)
-	end
-	local IntervalTime = LogIntervalTime or 0
-	self:RegisterTimer(function() MiniGameInst:OnBeginFalling()  end, IntervalTime / 2)
+	MiniGameInst:StartGameTimeLoop(MiniGameInst.GameRun)
 end
 
 --- @type 设置刚开始需要隐藏的部分
@@ -544,14 +692,36 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:SetViewToDefault()
 	UIUtil.SetIsVisible(self.TextMagnification, false)
 	UIUtil.SetIsVisible(self.CloseBtn, true)
 
+	self:PlayAnimation(self.AnimSectionGreenHide, 0.2)
+
 	UIUtil.SetIsVisible(self.PanelResult, false)
 	UIUtil.SetIsVisible(self.Critical, false)
 	-- UIUtil.SetIsVisible(self.ProBarScore, false)
 	UIUtil.SetRenderOpacity(self.PanelNormal, 1)	
 	-- UIUtil.SetRenderOpacity(self.StageTips, 1)	
 
-	self.MainTeamPanel:SwitchTab(4)
-	self.MainTeamPanel:SetShowGameInfo()
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local Params = {}
+	Params.bBless = MiniGameInst:IsBless()
+	local BlessKind = MiniGameInst.BlessKind
+	Params.BlessKind = BlessKind
+	Params.ChallengeTarget = ""
+	local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.CrystalTower)
+	local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(BlessKind)
+	if TargetCfg and BlessCfg then
+		Params.ExtraReward = BlessCfg.Reward or 0
+		if BLESSED_KIND.BLESSED_KIND_LITTLE == BlessKind then
+			Params.ChallengeTarget = TargetCfg.LChallengeTarget or ""
+		elseif BLESSED_KIND.BLESSED_KIND_BIG == BlessKind then
+			Params.ChallengeTarget = TargetCfg.BChallengeTarget or ""
+		end
+	end
+
+	-- self.MainTeamPanel:SwitchTab(4)
+	self.MainTeamPanel:SetShowGameInfo(Params)
 	self.MainTeamPanel.TextGameName:SetText(LSTR(260001))  -- 强袭水晶塔
 	self.MainTeamPanel.TextGameName_1:SetText(LSTR(250009)) -- 当前奖励
 	local IconGamePath = MiniGameClientConfig[MiniGameType.CrystalTower].IconGamePath
@@ -576,18 +746,78 @@ function GoldSaucerCrystalTowerStrikerMainPanelView:SetViewToDefault()
 	AudioUtil.LoadAndPlayUISound(AudioPath.AnimInAudio)
 end
 
+--- 封装控制赐福挑战模式面板是否显示
+function GoldSaucerCrystalTowerStrikerMainPanelView:SetBlessGameChallengeInfoPanelVisible(bVisible)
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local bBless = MiniGameInst:IsBless()
+	if not bBless then
+		UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, false)
+		return
+	end
+
+	UIUtil.SetIsVisible(self.MainTeamPanel.PanelChallengeInfo, bVisible)
+end
+
 --- @type 设置出现游戏名字和时间还是金碟币数量
 function GoldSaucerCrystalTowerStrikerMainPanelView:ChangeShowType(bEnterEndState)
 	local bMoneyVisible = bEnterEndState
-	local bShowGameDesc = not bEnterEndState
+	--local bShowGameDesc = not bEnterEndState
 	UIUtil.SetIsVisible(self.MoneySlot, bMoneyVisible)
 	-- UIUtil.SetIsVisible(self.PanelCountdown, bShowGameDesc)
 	-- UIUtil.SetIsVisible(self.HorizontalTitle, bShowGameDesc)
 	UIUtil.SetIsVisible(self.MainTeamPanel.PanelCountdown, not bEnterEndState)
 	UIUtil.SetIsVisible(self.MainTeamPanel.HorizontalGold, not bEnterEndState)
 	UIUtil.SetIsVisible(self.MainTeamPanel.HorizontalObtain, not bEnterEndState)
+	self:SetBlessGameChallengeInfoPanelVisible(not bEnterEndState)
 	if bEnterEndState then
 		self:OnMoneyUpdate()
+		local MiniGameInst = self:GetGameInst()
+		if MiniGameInst == nil then
+			return
+		end
+		local bBless = MiniGameInst:IsBless()
+        if bBless then
+			local bBlessChallengeSuccess = MiniGameInst:IsBlessChallengeSuccess()
+			UIUtil.SetIsVisible(self.Btn1, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.Btn2, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.PanelCold, not bBlessChallengeSuccess)
+			UIUtil.SetIsVisible(self.Btn3, bBlessChallengeSuccess)
+		else
+            local SgInstanceID = MiniGameInst:GetInstanceID()
+			if SgInstanceID then
+				local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+				UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+				UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
+			end
+		end
+	end
+end
+
+
+function GoldSaucerCrystalTowerStrikerMainPanelView:OnResultPanelBtnChange(_)
+	local MiniGameInst = self:GetGameInst()
+	if MiniGameInst == nil then
+		return
+	end
+	local VM = self:GetTheParamsVM()
+	if VM == nil then
+		return
+	end
+	if not UIUtil.IsVisible(self.PanelResult) then
+		return
+	end
+	local SgInstanceID = MiniGameInst:GetInstanceID()
+	if SgInstanceID then
+		local bCurMachineInBless = GoldSaucerBlessingMgr:GetSgIsInBlessing(SgInstanceID)
+		UIUtil.SetIsVisible(self.Btn1, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn2, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.PanelCold, not bCurMachineInBless)
+		UIUtil.SetIsVisible(self.Btn3, bCurMachineInBless)
 	end
 end
 

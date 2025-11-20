@@ -52,6 +52,7 @@ function ChocoboRacePlayerVM:Ctor()
     self.IsShowTextNameBlue = false
     self.IsShowTextNameWhite = false
     self.IsShowTextNameRed = false
+    self.IsPlayProgressEndAnim = false
     --进行中数据
     self.IsOver = false
     self.Progress = 0
@@ -67,7 +68,7 @@ function ChocoboRacePlayerVM:Ctor()
     self.Rank = 1
     self.ArrivedTimeS = 0
     self.ArrivedTimeText = ""
-    self.ResultRankBg = ""
+    self.ResultRankBg = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_BG_OTHER)
     
     self.RaceResultRankListBgPath = {
         Major = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_BG_MAJOR),
@@ -86,6 +87,7 @@ function ChocoboRacePlayerVM:Init(Data)
     self.Armor = Data.Armor
     self.Abilities = Data.Abilities
     self.Passive = Data.Passive
+    self.IsPlayProgressEndAnim = false
     
     local ColorCfg = BuddyColorCfg:FindCfgByKey(Data.Color)
     if ColorCfg ~= nil then
@@ -129,7 +131,7 @@ end
 
 function ChocoboRacePlayerVM:UpdateData(Data)
     self.Index = Data.Index
-    self.Progress = Data.Progress
+    self.Progress = Data.Progress / 100
     self.Stamina = Data.Stamina
     self.Rank = Data.Ranking
     self.StaminaProgress = Data.Stamina / ChocoboRaceMgr:GetRacerMaxStamina()

@@ -13,17 +13,10 @@ local UIViewMgr = require("UI/UIViewMgr")
 local ShopMainPanelVM = require("Game/Shop/ShopMainPanelVM")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetText = require("Binder/UIBinderSetText")
 local EventID = require("Define/EventID")
 local ProtoRes = require("Protocol/ProtoRes")
-local CommScreenerVM = require("Game/Common/Screener/CommScreenerVM")
-local MallMainTypeCfg = require("TableCfg/MallsMainTypeCfg")
-local MallCfg = require("TableCfg/MallCfg")
-local ItemCfg = require("TableCfg/ItemCfg")
 local EventMgr = require("Event/EventMgr")
-local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
-local ShopDefine = require("Game/Shop/ShopDefine")
 local CounterCfg = require("TableCfg/CounterCfg")
 local LegendaryWeaponMallID = 4001
 
@@ -44,6 +37,7 @@ local DropDown_Disable_TableView_Pos = _G.UE4.FVector2D(-541, -324)
 ---@field BtnBack CommBackBtnView
 ---@field BtnClose CommonCloseBtnView
 ---@field CommBackpackEmpty CommBackpackEmptyView
+---@field CommMoneyBar CommMoneyBarView
 ---@field CommSearchBar CommSearchBarView
 ---@field CommonBkg02 CommonBkg02View
 ---@field CommonBkgMask CommonBkgMaskView
@@ -51,9 +45,6 @@ local DropDown_Disable_TableView_Pos = _G.UE4.FVector2D(-541, -324)
 ---@field DropDownList ShopDropDownListItemNewView
 ---@field ImgTitle UFImage
 ---@field MarketEmptyPanel MarketEmptyPanelView
----@field MoneySlot1 CommMoneySlotView
----@field MoneySlot2 CommMoneySlotView
----@field MoneySlot3 CommMoneySlotView
 ---@field PanelTitle UFCanvasPanel
 ---@field TabList ShopTabListItemView
 ---@field TableViewList UTableView
@@ -73,6 +64,7 @@ function ShopMainPanelView:Ctor()
 	--self.BtnBack = nil
 	--self.BtnClose = nil
 	--self.CommBackpackEmpty = nil
+	--self.CommMoneyBar = nil
 	--self.CommSearchBar = nil
 	--self.CommonBkg02 = nil
 	--self.CommonBkgMask = nil
@@ -80,9 +72,6 @@ function ShopMainPanelView:Ctor()
 	--self.DropDownList = nil
 	--self.ImgTitle = nil
 	--self.MarketEmptyPanel = nil
-	--self.MoneySlot1 = nil
-	--self.MoneySlot2 = nil
-	--self.MoneySlot3 = nil
 	--self.PanelTitle = nil
 	--self.TabList = nil
 	--self.TableViewList = nil
@@ -102,27 +91,22 @@ function ShopMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommBackpackEmpty)
+	self:AddSubView(self.CommMoneyBar)
 	self:AddSubView(self.CommSearchBar)
 	self:AddSubView(self.CommonBkg02)
 	self:AddSubView(self.CommonBkgMask)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.DropDownList)
 	self:AddSubView(self.MarketEmptyPanel)
-	self:AddSubView(self.MoneySlot1)
-	self:AddSubView(self.MoneySlot2)
-	self:AddSubView(self.MoneySlot3)
 	self:AddSubView(self.TabList)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY~
 end
 
 function ShopMainPanelView:OnInit()
 	self.ViewModel = ShopMainPanelVM.New()
-	self.PriceViewList = {self.MoneySlot1, self.MoneySlot2, self.MoneySlot3}
 	self.TabInfoList = {}
 	self.GoodsTableViewAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewList, self.OnSelectChanged, true)
 	self.CommSearchBar:SetCallback(self, nil, self.OnSearchCommit, self.OnCancelSearchClicked)
-	self.ViewModel.EmptyView = self.MarketEmptyPanel
-
 	self.Binders = {
 		{ "CurGoodsList", UIBinderUpdateBindableList.New(self, self.GoodsTableViewAdapter) },
 		{ "EmptyVisible", UIBinderSetIsVisible.New(self, self.MarketEmptyPanel) },
@@ -139,14 +123,13 @@ end
 
 function ShopMainPanelView:OnShow()
 	self.CommSearchBar:SetHintText(LSTR(1200097))	--- 搜索商品
-	if self.MarketEmptyPanel ~= nil and self.MarketEmptyPanel.PanelSearchEmpty ~= nil then
-		self.MarketEmptyPanel.PanelSearchEmpty.IsBrightText = true
-	end
-	self.MarketEmptyPanel:SetSearchEmpty()
+	-- if self.MarketEmptyPanel ~= nil and self.MarketEmptyPanel.PanelSearchEmpty ~= nil then
+	-- 	self.MarketEmptyPanel.PanelSearchEmpty.IsBrightText = true
+	-- end
 	self.ShopId = self.Params.ShopId
 	self.CurIndex = 0
-	local EnableSearch = ShopMgr.AllShopInfo[self.ShopId].EnableSearch
-	if EnableSearch ~= 1 then
+	self.EnableSearch = ShopMgr.AllShopInfo[self.ShopId].EnableSearch
+	if self.EnableSearch ~= 1 then
 		UIUtil.SetIsVisible(self.CommSearchBar, false, true)
 	else
 		UIUtil.SetIsVisible(self.CommSearchBar, true, true)
@@ -178,12 +161,23 @@ function ShopMainPanelView:InitViewInfo(ShopId)
 	if Index == nil then
 		Index = 1
 	end
-
-	self.CommonTitle:SetSubTitleIsVisible(false)
-	self.CommonTitle:SetCommInforBtnIsVisible(false)
-	self.CommonTitle.TextTitleName:SetText(ShopName)
+	
+	self:SetTitleBase(ShopName)
 	--self.TabList:SetSelectedIndex(Index)
 	self:UpdatePrice(self.TabInfoList)
+end
+
+function ShopMainPanelView:SetTitleBase(ShopName)
+	local HelpID = ShopMgr.AllShopInfo[self.ShopId].HelpID or 0
+	if HelpID > 0 then
+		self.CommonTitle.CommInforBtn:SetHelpInfoID(HelpID)
+		self.CommonTitle:SetCommInforBtnIsVisible(true)
+	else
+		self.CommonTitle:SetCommInforBtnIsVisible(false)
+	end
+
+	self.CommonTitle:SetSubTitleIsVisible(false)
+	self.CommonTitle.TextTitleName:SetText(ShopName)
 end
 
 function ShopMainPanelView:UpdateFilter(FirstType ,GoodList)
@@ -214,20 +208,26 @@ function ShopMainPanelView:UpdatePrice(List)
 		PriceList = List[1]
 	end
 
-
+	local ScoreLimitState = ShopMgr.AllShopInfo[self.ShopId].ScoreLimit or 0
+	local IsShowMax = ScoreLimitState == 1
+	ShopMgr.CurPriceList = PriceList
 	--FLOG_ERROR("Test tab price = %s",List[MianTypeIndex])
-	for i = 1,3 do
-		if PriceList and PriceList.Price[i] then
-			local PriceType = PriceList.PriceType
+	for i = 1, 4 do
+		local ShopID = ShopMgr.CurOpenMallId or ShopMgr.CurQueryShopID
+		local MoneyItem = "Money" .. i
+		local ScoreLimitState = ShopMgr.AllShopInfo[ShopID].ScoreLimit or 0
+		local IsShowMax = ScoreLimitState == 1
+		if ShopMgr.CurPriceList and ShopMgr.CurPriceList.Price[i] then
+			local PriceType = ShopMgr.CurPriceList.PriceType
 			local IsScore = false
 			local ScoreType = GoodsPriceType[ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE]
 			if PriceType[i] == ScoreType then
 				IsScore = true
 			end
-			UIUtil.SetIsVisible(self.PriceViewList[i], true)
-				self.PriceViewList[i]:UpdateView(PriceList.Price[i], false, UIViewID.MarketExchangeWin, IsScore)
+			UIUtil.SetIsVisible(self.CommMoneyBar[MoneyItem], true)
+			self.CommMoneyBar[MoneyItem]:UpdateView(ShopMgr.CurPriceList.Price[i], false, UIViewID.MarketExchangeWin, IsScore, IsShowMax)
 		else
-			UIUtil.SetIsVisible(self.PriceViewList[i], false)
+			UIUtil.SetIsVisible(self.CommMoneyBar[MoneyItem], false)
 		end
 	end
 end
@@ -238,6 +238,7 @@ function ShopMainPanelView:SetBackBtnState(Open)
 end
 
 function ShopMainPanelView:OnHide()
+	self:RemoveAllTypeRed()
 	local Data = {}
 	Data.ShopId = self.Params.ShopId
 	Data.MainTypeIndex = ShopMgr.FirstTypeIndex
@@ -252,9 +253,10 @@ function ShopMainPanelView:OnHide()
 	-- end
 	ShopMgr.CurOpenShopType = nil
 	ShopMgr.CurQueryShopID = nil
+	ShopMgr.IsDefaulFirstType = false
     --- 重复跳转的流程是 收到协议-关闭旧主界面-打开新主界面，如果关闭的时候清空ID,再打开会找不到数据
 	if not ShopMgr.IsJumpAgain then
-		ShopMgr.CurOpenMallId = nil
+		ShopMgr.CurOpenMallId = 0
 	end
 	ShopMgr.CurOpenMallCounterID = 0
 	self:StopAnimation(self.AnimItemIn)
@@ -264,6 +266,7 @@ function ShopMainPanelView:OnHide()
 	ShopMgr.CurOpenTabInfo = {}
 	self.bPendingGC = false
 	ShopMgr.JumpToGoodsState = false
+	ShopMgr:RemoveTabRedDot(self.CurFirstType)
 	ShopMgr:ClearFilterData()
 	EventMgr:SendEvent(EventID.ShopPlayOutAni)
 end
@@ -281,6 +284,8 @@ function ShopMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.UpdateScore, self.OnUpdateItemValue)
 	self:RegisterGameEvent(EventID.UpdateQuestTargetOwnItem, self.OnUpdateQuestTargetOwnItem)
 	self:RegisterGameEvent(EventID.EquipUpdate, self.OnUpdateEquipUpIcon)
+	self:RegisterGameEvent(EventID.ShopSetPriceState, self.SetPriceVisible)
+	self:RegisterGameEvent(EventID.ShopBuyViewSearch, self.OnShopBuyViewSearch)
 end
 
 function ShopMainPanelView:OnRegisterBinder()
@@ -301,13 +306,14 @@ function ShopMainPanelView:OnUpdateItemValue()
 		return
 	end
 	
-	for i = 1,3 do
+	for i = 1, 4 do
 		if List[MianTypeIndex].Price ~= nil then
 			if List[MianTypeIndex].Price[i] then
+				local MoneyItem = "Money" .. i
 				local PriceType = List[MianTypeIndex].PriceType
 				local ScoreType = GoodsPriceType[ProtoRes.GoodsPriceType.GOODS_PRICE_TYPE_SCORE]
 				if PriceType[i] ~= ScoreType then
-					self.PriceViewList[i]:UpdateView(List[MianTypeIndex].Price[i], false, UIViewID.MarketExchangeWin, false)
+					self.CommMoneyBar[MoneyItem]:UpdateView(ShopMgr.CurPriceList.Price[i], false, UIViewID.MarketExchangeWin, false)
 				end		
 			end
 		end
@@ -319,20 +325,17 @@ function ShopMainPanelView:OnSearchCommit(Text)
 		return
 	end
 	self.IsSearch = true
-	self.ViewModel:MatchGoodsInfo(Text)
-
+	local Result = self.ViewModel:MatchGoodsInfo(Text)
+	
+	if Result and #Result < 1 then
+		self.MarketEmptyPanel:SetSearchEmpty(_G.LSTR(1010050))
+	end
 	if self.TabList then
 		self.TabList:CancelSelected()
 	end
 	
 	self.DropDownList:SetAllFilterVisible(false)
-	if self.FilterInfo then
-		if self.FilterInfo.FilterNum >= 1 then
-			UIUtil.CanvasSlotSetPosition(self.TableViewList, DropDown_Enable_TableView_Pos)
-		else
-			UIUtil.CanvasSlotSetPosition(self.TableViewList, DropDown_Disable_TableView_Pos)
-		end
-	else
+	if self.FilterInfo and self.FilterInfo.FilterNum >= 1 then
 		UIUtil.CanvasSlotSetPosition(self.TableViewList, DropDown_Enable_TableView_Pos)
 	end
 
@@ -389,8 +392,8 @@ function ShopMainPanelView:UpdateShopTypeList(Index, ItemData)
 	self.CurIndex = Index
 	ShopMgr.FirstTypeIndex = Index
 	local ShopMainTypeIndex
-
-	if ShopMgr.JumpToGoodsState or ShopMgr.JumpToShop then
+	local Index, IsAutoLv = ShopMgr:GetCurTabInfoFitLv()
+	if ShopMgr.JumpToGoodsState or ShopMgr.JumpToShop and not IsAutoLv then
 		ShopMainTypeIndex = ShopMgr:GetJumpType()
 	else
 		ShopMainTypeIndex = ShopMgr.FirstTypeIndex or 1
@@ -431,9 +434,13 @@ function ShopMainPanelView:FilterGoodsList(List)
 	local GoodsList
 	local FliterList
 	local FliterIndex = List.Info and List.Info.Index or 0
+	if ShopMgr.CurFirstTypeFilterList then
+		FliterList = ShopMgr.CurFirstTypeFilterList[self.ShopId] and ShopMgr.CurFirstTypeFilterList[self.ShopId][self.CurFirstType] and ShopMgr.CurFirstTypeFilterList[self.ShopId][self.CurFirstType][List.ScrId] or {}
+	else
+		FliterList = {}
+	end
 	if List.Index == 1 then
-		FliterList = ShopMgr.CurFirstTypeFilterList[self.ShopId][self.CurFirstType][List.ScrId]
-		if FliterIndex >= 1 and #FliterList[FliterIndex].GoodsList > 0 then
+		if FliterIndex >= 1 and FliterList[FliterIndex] and #FliterList[FliterIndex].GoodsList > 0 then
 			GoodsList = FliterList[FliterIndex].GoodsList
 		else
 			GoodsList = ShopMgr.CurFirstTypeGoodsList
@@ -450,17 +457,20 @@ function ShopMainPanelView:FilterGoodsList(List)
 			self.DropDownList:UpdateSecondFilter(GoodsList)
 		end
 	else
-		FliterList = ShopMgr.CurFirstTypeFilterList[self.ShopId][self.CurFirstType][List.ScrId]
 		local SencondList
 
-		if FliterIndex >= 1 and ShopMgr.AfterFistFilterList[FliterIndex] then
-			SencondList = ShopMgr.AfterFistFilterList[FliterIndex].GoodsList
+		if FliterIndex >= 1 and ShopMgr.AfterFistFilterList[self.ShopId] and ShopMgr.AfterFistFilterList[self.ShopId][FliterIndex] then
+			SencondList = ShopMgr.AfterFistFilterList[self.ShopId][FliterIndex].GoodsList
 		else
-			FLOG_WARNING("ShopMgr.AfterFistFilterList[FliterIndex] = nil")
-			SencondList = FliterList[1].GoodsList
+			if FliterList[FliterIndex] and FliterList[FliterIndex].GoodsList then
+				SencondList = FliterList[FliterIndex].GoodsList
+			else
+				FLOG_WARNING("ShopMgr.AfterFistFilterList[FliterIndex] = nil")
+				SencondList = FliterList[1].GoodsList
+			end
 		end
 
-		if FliterIndex and #FliterList[FliterIndex].GoodsList > 0 then
+		if FliterIndex and FliterList[FliterIndex] and #FliterList[FliterIndex].GoodsList > 0 then
 			GoodsList = ShopMgr:GetSecondFilterList(ShopMgr.FilterAfterGoodsList, SencondList)
 		else
 			GoodsList = ShopMgr.FilterAfterGoodsList
@@ -540,6 +550,7 @@ function ShopMainPanelView:OnSelectChanged(Index, ItemData, ItemView)
 
 	ShopMgr.CurQueryShopID = self.ShopId
 	UIViewMgr:ShowView(UIViewID.ShopBuyPropsWinView, ItemData)
+	self:SetPriceVisible(false)
 end
 
 function ShopMainPanelView:ScrollToSelectedGoods(Index)
@@ -563,11 +574,13 @@ function ShopMainPanelView:CheckJumpState(GoodsList)
 			local ItemData = self.ViewModel:GetJumpGoodsInfo(GoodsList[i].GoodsId)
 			ShopMgr.CurQueryShopID = self.ShopId
 			UIViewMgr:ShowView(UIViewID.ShopBuyPropsWinView, ItemData)
+			self:SetPriceVisible(false)
 			--ShopMgr.JumpToGoodsState = false 
-			ShopMgr.IsJumpAgain = false
 			break
 		end
 	end
+
+	ShopMgr.IsJumpAgain = false
 	ShopMgr.JumpToGoodsState = false
 	ShopMgr.JumpToBuyNum = 0
 end
@@ -588,12 +601,12 @@ function ShopMainPanelView:CheckJumpAgainState(ShopID)
 			local ItemData = self.ViewModel:GetJumpGoodsInfo(GoodsList[i].GoodsId)
 			ShopMgr.CurQueryShopID = self.ShopId
 			UIViewMgr:ShowView(UIViewID.ShopBuyPropsWinView, ItemData)
+			self:SetPriceVisible(false)
 			--ShopMgr.JumpToGoodsState = false 
-			ShopMgr.IsJumpAgain = false
 			break
 		end
 	end
-
+	ShopMgr.IsJumpAgain = false
 	ShopMgr.JumpToGoodsState = false
 	ShopMgr.JumpToBuyNum = 0
 end
@@ -642,14 +655,12 @@ function ShopMainPanelView:OnUpdateMallCounterLimitInfo(ItemData)
 	self:OnUpdateTableListPos(MallCounterID ~= 0)
 	UIUtil.ImageSetBrushFromAssetPath(self.ImgTitle, ItemData.CounterImgPath)
 	self.Text1:SetText(ItemData.TabName)
-	local Test = _G.CounterMgr:GetCounterRestore(MallCounterID)
-	local Test2 = _G.CounterMgr:GetCounterCurrValue(MallCounterID)
 	self.Text2:SetText(string.format(LSTR(1200098), _G.CounterMgr:GetCounterRestore(MallCounterID) - _G.CounterMgr:GetCounterCurrValue(MallCounterID), _G.CounterMgr:GetCounterRestore(MallCounterID)))	--- 每周限购
 	local Now = _G.TimeUtil.GetServerLogicTime()
-	if ShopMgr:GetNextMonday_ZeroMS() - Now <= 60 then
-		self.MallCounterTimerID = self:RegisterTimer(function() self.Text3:SetText(_G.LocalizationUtil.GetCountdownTimeForSimpleTime(ShopMgr:GetNextMonday_ZeroMS(), "s")) end, 0, 1, ShopMgr:GetNextMonday_ZeroMS() - Now)
+	if ShopMgr:GetNextMonday_FiveMS() - Now <= 60 then
+		self.MallCounterTimerID = self:RegisterTimer(function() self.Text3:SetText(_G.LocalizationUtil.GetCountdownTimeForSimpleTime(ShopMgr:GetNextMonday_FiveMS() - _G.TimeUtil.GetServerLogicTime(), "s")) end, 0, 1, ShopMgr:GetNextMonday_FiveMS() - Now)
 	end
-	self.Text3:SetText(_G.LocalizationUtil.GetCountdownTimeForLongTime(ShopMgr:GetNextMonday_ZeroMS() - Now))	--- 刷新：x天y小时
+	self.Text3:SetText(_G.LocalizationUtil.GetCountdownTimeForSimpleTime(ShopMgr:GetNextMonday_FiveMS() - Now, "s"))	--- 刷新：x天y小时
 end
 
 function ShopMainPanelView:OnUpdateTableListPos(IsDownPos)
@@ -657,6 +668,38 @@ function ShopMainPanelView:OnUpdateTableListPos(IsDownPos)
 		UIUtil.CanvasSlotSetPosition(self.TableViewList, DropDown_Disable_TableView_Pos)
 	else
 		UIUtil.CanvasSlotSetPosition(self.TableViewList, DropDown_Enable_TableView_Pos)
+	end
+end
+
+function ShopMainPanelView:OnShopBuyViewSearch(Text, IsSearch)
+	if IsSearch and Text ~= "" then
+		self.CommSearchBar:SetText(Text)
+		self:OnSearchCommit(Text)
+	else
+		self:OnCancelSearchClicked()
+	end
+end
+
+function ShopMainPanelView:SetPriceVisible(Value)
+	if self.EnableSearch == 1 and Value then
+		UIUtil.SetIsVisible(self.CommSearchBar, true, true)
+	else
+		UIUtil.SetIsVisible(self.CommSearchBar, false, true)
+	end
+
+	if Value then 
+		self:UpdatePrice(self.TabInfoList)
+	else
+		for i = 1, 4 do
+			local MoneyItem = "Money" .. i
+			UIUtil.SetIsVisible(self.CommMoneyBar[MoneyItem], Value, true)
+		end
+	end
+end
+
+function ShopMainPanelView:RemoveAllTypeRed()
+	for _, Value in ipairs(self.TabInfoList) do
+		ShopMgr:RemoveTabRedDot(Value.FirstType)
 	end
 end
 

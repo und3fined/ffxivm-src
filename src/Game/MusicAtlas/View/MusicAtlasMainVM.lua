@@ -96,7 +96,9 @@ function MusicAtlasMainVM:SetPageInfo(CurPage, MaxPage)
 	self:UpdatePageInfo(CurPage, MaxPage)
 end
 
-function MusicAtlasMainVM:UpdatePageInfo(CurPage,MaxPage)
+function MusicAtlasMainVM:UpdatePageInfo(FirstPage, SecondPage)
+	local CurPage = FirstPage or 1
+	local MaxPage = SecondPage or 1
 	self.PageText = string.format("%d/%d", CurPage, MaxPage)
 
 	if CurPage == 1 and MaxPage == 1 then

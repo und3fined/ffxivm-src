@@ -43,6 +43,7 @@ function ChatMsgItemVM:Ctor()
 	self.Extend = nil
 	self.ComprehensiveInvisible = nil -- 综合频道不可见
 	self.ChannelTagVisible = nil
+	self.Name = nil
 
 	-- 语音
 	self.VoiceID = nil 
@@ -60,6 +61,9 @@ function ChatMsgItemVM:Ctor()
 
 	-- 任务分享 
 	self.TaskMsg = nil
+
+	-- 鱼类分享
+	self.FishMsg = nil
 
 	self.WidgetIndex = nil
 end
@@ -125,6 +129,7 @@ function ChatMsgItemVM:UpdateVM(Value)
 	local SpecTips = nil
 	local TeamRecruit = nil
 	local TeamTreasureHunt = nil
+	local Fish = nil
 
 	local MsgData = ChatMsg.Data
 	self.MsgData = MsgData
@@ -143,6 +148,7 @@ function ChatMsgItemVM:UpdateVM(Value)
 			or Type == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_SPC_TIPS	-- 特殊提示 
 			or Type == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT	--  队伍招募
 			or Type == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_TREASUREHUNT	--  队伍寻宝 
+			or Type == PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH	--  鱼类分享
 		then
 			local SimpleHref = _G.ChatMgr:DecodeChatParams(v.Param)
 			if SimpleHref then
@@ -155,6 +161,7 @@ function ChatMsgItemVM:UpdateVM(Value)
 				SpecTips 	= SpecTips or SimpleHref.SpecTips
 				TeamRecruit = TeamRecruit or SimpleHref.TeamRecruit
 				TeamTreasureHunt = TeamTreasureHunt or SimpleHref.TeamTreasureHunt
+				Fish = Fish or SimpleHref.Fish
 			end
 		end
 	end
@@ -214,8 +221,13 @@ function ChatMsgItemVM:UpdateVM(Value)
 	elseif TeamRecruit then --队伍招募
 		self.TeamRecruitMsg = TeamRecruit
 		self.MsgType = ChatMsgType.TeamRecruit
+
 	elseif TeamTreasureHunt then --队伍寻宝
 		self.TreasureMapMsg = TeamTreasureHunt
+
+	elseif Fish then --鱼类分享
+		self.FishMsg = Fish 
+		self.MsgType = ChatMsgType.FishShare
 	end
 
 	local MsgType = self.MsgType
@@ -301,6 +313,10 @@ end
 
 function ChatMsgItemVM:IsOtherPlayerMsg()
 	return self.WidgetIndex == ChatMsgEntryWidgetIndex.PlayerMsgLeft
+end
+
+function ChatMsgItemVM:SetName(Value)
+	self.Name = Value
 end
 
 return ChatMsgItemVM

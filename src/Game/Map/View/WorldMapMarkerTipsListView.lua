@@ -78,18 +78,23 @@ function WorldMapMarkerTipsListView:OnShow()
 
 	-- 调整tips位置，确保显示在安全区内
 	self:RegisterTimer(function ()
-		local NeedAdjust, OffSetX, OffSetY = MapUtil.GetAdjustTipsPosition(self.LoctionListPanel)
-		if NeedAdjust then
-			local OffSetVector2D = FVector2D(OffSetX, OffSetY)
-			local WorldMapPanel = _G.UIViewMgr:FindVisibleView(UIViewID.WorldMapPanel)
-			if WorldMapPanel then
-				self.IsMovingViewByOffset = true
-				WorldMapPanel.MapContent:MoveMapByOffect(OffSetVector2D, function (DeltaPostion, IsMoveFinish)
-					UIUtil.CanvasSlotSetPosition(self.LoctionListPanel, ViewportPosition + DeltaPostion)
-					if IsMoveFinish then
-						self.IsMovingViewByOffset = false
-					end
-				end)
+		if self.LoctionListPanel and _G.CommonUtil.IsObjectValid(self.LoctionListPanel) then
+			local NeedAdjust, OffSetX, OffSetY = MapUtil.GetAdjustTipsPosition(self.LoctionListPanel)
+			if NeedAdjust then
+				local OffSetVector2D = FVector2D(OffSetX, OffSetY)
+				local WorldMapPanel = _G.UIViewMgr:FindVisibleView(UIViewID.WorldMapPanel)
+				if WorldMapPanel then
+					self.IsMovingViewByOffset = true
+					WorldMapPanel.MapContent:MoveMapByOffect(OffSetVector2D, function (DeltaPostion, IsMoveFinish)
+						if not self:IsValid() then
+							return
+						end
+						UIUtil.CanvasSlotSetPosition(self.LoctionListPanel, ViewportPosition + DeltaPostion)
+						if IsMoveFinish then
+							self.IsMovingViewByOffset = false
+						end
+					end)
+				end
 			end
 		end
 	end, self.AnimIn:GetEndTime())

@@ -30,6 +30,12 @@ local MapMgr = _G.MapMgr
 local UIViewMgr = _G.UIViewMgr
 local UIViewID = _G.UIViewID
 
+local TArray = UE.TArray
+local AActor = UE.AActor
+local UGameplayStatics = UE.UGameplayStatics
+local AStaticMeshActor = UE.AStaticMeshActor
+local TreasureTempleMapResID = 2015 -- 宝物库神殿地图ID
+
 local WeatherMgr = LuaClass(MgrBase)
 
 function WeatherMgr:OnBegin()
@@ -82,6 +88,7 @@ function WeatherMgr:OnGameEventExitWorld()
 end
 
 function WeatherMgr:OnWorldPostLoad()
+    self.GraphicWeather_ = Weather.WeatherInfo.INVALID_WEATHER_ID
     self.EnableVaryWeatherEffect = false
 end
 
@@ -92,6 +99,15 @@ end
 
 function WeatherMgr:OnGameEventPWorldEnter(Params)
     local MapID = PWorldMgr:GetCurrMapResID()
+
+    --ncut内部切地图，因为此时天气ID跟实际地图不匹配（NCut结束后恢复到原地图bFromCutScene是false）,根据当前地图路径获取天气ID
+    if Params.bFromCutScene then
+        --新手关创建跳过ncut的时候，self.MapID还没重新赋值（此时可能是nil或者上一个地图的值）
+       self.MapID = MapID
+        
+        self:SetWeatherByWorldPath()
+        return
+    end
 
     --本地切地图
     if MapID == self.MapID then
@@ -120,6 +136,77 @@ function WeatherMgr:OnGameEventPWorldEnter(Params)
     end
 
     self.MapID = MapID
+end
+
+function WeatherMgr:GetWeatherIDByLevelID(LevelID)
+    local WeatherID = 0
+    local MapCfg = require("TableCfg/MapCfg")
+    local AllMapCfg = MapCfg:FindAllCfg(string.format("LevelID = %d", LevelID))
+    for _, Cfg in ipairs(AllMapCfg) do
+        --不使用单人特殊副本地图的天气
+        if (Cfg.SpecialPWorldMap == 0 and Cfg.WeatherPlanID > 0) then
+            local Weather = self:GetWeatherAndParams(Cfg.ID, true, 0)
+            WeatherID = Weather[1]
+            if (WeatherID == 0) then
+                local WeatherRateCfg = require("TableCfg/WeatherRateCfg")
+                local WeatherPlanCfg = WeatherRateCfg:FindCfgByKey(Cfg.WeatherPlanID)
+                if WeatherPlanCfg ~= nil then
+                    WeatherID = WeatherPlanCfg.Weather[1]
+                end
+            end
+
+            if (WeatherID > 0) then
+                break
+            end
+        end
+
+    end
+
+    return WeatherID
+end
+
+--ncut本地切地图后设置天气
+function WeatherMgr:SetWeatherByWorldPath()
+    --ncut里有配置使用天气，不用地图默认天气
+    if (_G.StoryMgr:CurrentSequenceIsUseWeather()) then
+        --_G.FLOG_INFO('[WeatherMgr:SetWeatherByWorldPath] CurrentSequenceIsUseWeather!')
+        return
+    end
+
+    local DefaultWeatherID = 2 --晴朗，每个地图都有
+    local CurrentWorldPath = _G.WorldMsgMgr:GetCurrWorldFullPath()
+    local MapResCfg = require("TableCfg/MapresCfg")
+    if (CurrentWorldPath ~= "") then
+        local MapResCfgItem = MapResCfg:FindCfg(string.format("PersistentLevelPath = \"%s\"", CurrentWorldPath))
+        if (MapResCfgItem) then
+            local WeatherID = self:GetWeatherIDByLevelID(MapResCfgItem.LevelID)
+            if (WeatherID > 0) then
+                DefaultWeatherID = WeatherID
+            end
+        end
+
+    else
+        --下面这段代码是为了解决: c++获取地图路径的接口还没暴露给lua的情况(改了c++，不能热更，如果不热更的话就不会执行到，先保留)
+        local CurrentWorldName = _G.WorldMsgMgr:GetWorldName()
+        if (CurrentWorldName ~= "") then
+            local AllMapResCfg = MapResCfg:FindAllCfg()
+            for _, MapResCfgItem in ipairs(AllMapResCfg) do
+                if(MapResCfgItem.PersistentLevelPath ~= nil) then
+                    local MapName = MapResCfgItem.PersistentLevelPath:match("([^/]+)/?$")
+                    if(MapName == CurrentWorldName) then
+                        local WeatherID = self:GetWeatherIDByLevelID(MapResCfgItem.LevelID)
+                        if (WeatherID > 0) then
+                            DefaultWeatherID = WeatherID
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    local PEnvMgrInstance = _G.UE.UEnvMgr:Get()
+    PEnvMgrInstance:SetWeather(DefaultWeatherID, 0.0)
 end
 
 function WeatherMgr:SendWeatherForcastReq()
@@ -284,12 +371,12 @@ function WeatherMgr:StartUpdateTimer()
 end
 
 function WeatherMgr:NextUpdateTimer()
-    if self.UpdateWeatherTimer ~= nil then
-        self:UnRegisterTimer(self.UpdateWeatherTimer)
-        self.UpdateWeatherTimer = nil
-    end
+    --if self.UpdateWeatherTimer ~= nil then
+        --self:UnRegisterTimer(self.UpdateWeatherTimer)
+        --self.UpdateWeatherTimer = nil
+    --end
 
-    self.UpdateWeatherTimer = self:RegisterTimer(self.OnTimer, UpdDelta, 0, 1)
+    --self.UpdateWeatherTimer = self:RegisterTimer(self.OnTimer, UpdDelta, 0, 1)
 end
 
 function WeatherMgr:OnTimer(Seconds)
@@ -347,7 +434,11 @@ function WeatherMgr:OnTimer(Seconds)
 
     --MapMgr:UpdateWeather(WeatherID)
 
-    self:SetServerWeather(WeatherID,20.0,false,CurrentWeatherTime,IsFixed)
+    local TransTime = 20.0 -- 端游默认天气变化时间
+    if (MapID == TreasureTempleMapResID) then -- 宝物库神殿特殊处理
+        TransTime = 2.0 -- 宝库使用默认2秒的过度时间
+    end
+    self:SetServerWeather(WeatherID, TransTime, false, CurrentWeatherTime, IsFixed)
 
     self:RegisterTimer(function()
     EventMgr:SendEvent(EventID.UpdateWeatherForecast)
@@ -444,6 +535,10 @@ function WeatherMgr:OnUpdate()
         self.InstantIndividualWeather = false
 
         if Weather ~= nil then
+            local MapID = _G.PWorldMgr:GetCurrMapResID() or 0
+            if (MapID == TreasureTempleMapResID) then -- 宝物库神殿特殊处理
+                Weather:SetGraphicTransitionTime(2.0) -- 使用默认的2秒的过度时间
+            end
             Weather:SetCppWeather()
             MapMgr:UpdateWeather(self.GraphicWeather_)
         end
@@ -602,11 +697,17 @@ function WeatherMgr:GetWeatherAndParams(MapID,NeedFindForcast,Index)
     end
 end
 
+function WeatherMgr:GetCurrentCutSceneWeather()
+    return self.CutWeatherId
+end
+
 function WeatherMgr:ZoneInit(WeatherID,IsContent,WeatherParams)
     self.ServerWeather:ZoneInit(WeatherID,IsContent,WeatherParams)
     self.GraphicWeather_ = WeatherID
 
-    MapMgr:UpdateWeather(WeatherID)
+    if self.CutWeatherId == Weather.WeatherInfo.INVALID_WEATHER_ID then
+        MapMgr:UpdateWeather(WeatherID)
+    end
 
     self:RegisterTimer(function()
         EventMgr:SendEvent(EventID.UpdateWeatherForecast)
@@ -648,6 +749,20 @@ function WeatherMgr:SetClientWeatherPlanWithFindParams(WeatherPlanID)
         else
             self:SetClientWeather(WeatherID,2.0,0,false)
         end
+
+        --这里给入侵关卡做保底
+        local MapID = _G.PWorldMgr:GetCurrMapResID()
+
+        if (MapID == 8003 or MapID == 8004) and WeatherID == 21 then
+            local LayoutWorld = _G.UE.LayoutWorld
+            if LayoutWorld ~= nil then
+                local LayoutWorldInstance = LayoutWorld:Get()
+                if LayoutWorldInstance ~= nil then
+                    LayoutWorldInstance:RefreshRefInstances()
+                end
+            end
+        end
+
     else
         ---WeatherPlanID为0意为取消client weather
         local WeatherID = self.ClientWeather:GetWeatherId()
@@ -705,11 +820,23 @@ function WeatherMgr:SetCutSceneWeather(WeatherID,TransitionTime,Time,IsFixed)
         --table.remove(self.CutWeatherIdStack,#self.CutWeatherIdStack)
    end
 
+    --切换天气类型（这里不是天气ID指的是SERVER天气切本地天气，CUTSCENE属于本地天气)
+    if WeatherID ~= Weather.WeatherInfo.INVALID_WEATHER_ID and #self.CutWeatherIdStack == 1 then
+        TransitionTime = 0.0
+    end
+
     self.CutTime = Time
 
     --恢复游戏天气
     if WeatherID == Weather.WeatherInfo.INVALID_WEATHER_ID then
         PEnvMgrInstance:SetWeather(self.GraphicWeather_,0.0)
+        MapMgr:UpdateWeather(self.GraphicWeather_)
+
+        local Params = EventMgr:GetEventParams()
+        Params.IntParam1 = self.GraphicWeather_
+        Params.IntParam2 = 0.0
+        _G.EventMgr:SendCppEvent(EventID.MapWeatherChanged, Params)
+
         self.CutWeatherIdStack = {}
 
         if self:GetActiveWeather() == self.ServerWeather then

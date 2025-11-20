@@ -2,6 +2,8 @@
 
 local Util = {}
 local TimeUtil = require("Utils/TimeUtil")
+local TimeDefine = require("Define/TimeDefine")
+local AozyTimeDefine = TimeDefine.AozyTimeDefine
 
 local TransTime = 0.1
 local IsFixed = true
@@ -16,7 +18,8 @@ function Util.GetOneDaySec()
     --     tostring(DateTable.min),
     --     tostring(Time)
     -- ))
-    local AZTime = TimeUtil.GetAozySec()
+    local ServerTime = TimeUtil.GetServerLogicTime()
+    local AZTime = math.floor(ServerTime * AozyTimeDefine.RealSec2AozyMin) * 60
     -- AZTime = 60 * 60 * 24 + 60 * 60 * 12
     -- print('testinfo aozy time = ' .. tostring(AZTime))
     local Time = AZTime % (60 * 60 * 24)

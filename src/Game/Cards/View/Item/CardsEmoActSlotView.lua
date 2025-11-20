@@ -46,7 +46,8 @@ function CardsEmoActSlotView:OnInit()
     local _binders = {
         {"IsSelected", UIBinderSetIsVisible.New(self, self.ImgSelect)},
         {"IsUsed", UIBinderSetIsVisible.New(self, self.ImgUse)},
-        {"IsDisabled", UIBinderSetIsVisible.New(self, self.ImgDisable)},
+        --{"IsDisabled", UIBinderSetIsVisible.New(self, self.ImgDisable)},
+        {"IsDisabled", UIBinderValueChangedCallback.New(self, nil, self.OnIsDisabledChanged)},
         {"EmotionTableID", UIBinderValueChangedCallback.New(self, nil, self.OnTableIDChanged)}
     }
     self.Binders = _binders
@@ -75,7 +76,7 @@ function CardsEmoActSlotView:OnIsDisabledChanged(IsDisabled)
 end
 
 function CardsEmoActSlotView:OnShow()
-
+    UIUtil.SetIsVisible(self.ImgDisable, false)
 end
 
 function CardsEmoActSlotView:GetEmoActIconPath(EmotionData)

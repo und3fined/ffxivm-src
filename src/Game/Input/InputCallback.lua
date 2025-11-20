@@ -13,6 +13,7 @@ local MainPanelVM = require("Game/Main/MainPanelVM")
 local MajorUtil = require("Utils/MajorUtil")
 local SkillUtil = require("Utils/SkillUtil")
 local SkillMainCfg = require("TableCfg/SkillMainCfg")
+local GameplayStaticsUtil = require("Utils/GameplayStaticsUtil")
 
 local UHUDMgr
 local IE_Pressed = _G.UE.EInputEvent.IE_Pressed
@@ -103,29 +104,100 @@ end
 
 local IsCurrentFocusInputBox <const> = _G.UE.UUIUtil.IsCurrentFocusInputBox
 
-function InputCallback.OnSkillPressed(Index)
+function InputCallback.InputCallBackRegisiter()
+
+	if not EventMgr:IsEventRegistered(EventID.SimulatedTouchStartClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchStart) then 
+		EventMgr:RegisterEvent(EventID.SimulatedTouchStartClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchStart, "ConfirmInputCallback_SimulatedTouchStart")
+	end
+
+	if not EventMgr:IsEventRegistered(EventID.ForceEndSimulatedTouchEndClick, InputCallback, InputCallback.ForceEndSimulatedTouchEndClick) then 
+		EventMgr:RegisterEvent(EventID.ForceEndSimulatedTouchEndClick, InputCallback, InputCallback.ForceEndSimulatedTouchEndClick, "ConfirmInputCallback_ForceEndSimulatedTouchEndClick")
+	end
+
+	if not EventMgr:IsEventRegistered(EventID.SimulatedTouchEndClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchEnd) then 
+		EventMgr:RegisterEvent(EventID.SimulatedTouchEndClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchEnd, "ConfirmInputCallback_SimulatedTouchEnd")
+	end
+end
+
+function InputCallback.OnSkillPressed(Params)
 	-- 当前聚焦在输入框时, 屏蔽InputAction, 防止打字误触技能
 	if not IsCurrentFocusInputBox() then
 		-- print("InputCallback.OnSkillPressed", Index)
-		EventMgr:SendEvent(EventID.InputActionSkillPressed, Index)
+
+		
+		if Params.bSimulatedClick ~= nil and Params.bSimulatedClick == true then
+			InputCallback.LastSimulatedIndex = Params.Index
+			local MajorController = MajorUtil.GetMajorController()
+			if MajorController == nil then return end
+			EventMgr:SendEvent(EventID.SimulatedTouchStartClick,Params)
+		else
+			EventMgr:SendEvent(EventID.InputActionSkillPressed, Params.Index)
+		end
 	end
 end
 
-function InputCallback.OnSkillReleased(Index)
+function InputCallback.OnSkillReleased(Params)
 	if not IsCurrentFocusInputBox() then
-		-- print("InputCallback.OnSkillReleased", Index)
-		EventMgr:SendEvent(EventID.InputActionSkillReleased, Index)
+
+
+		if Params.bSimulatedClick ~= nil and Params.bSimulatedClick == true then
+			local MajorController = MajorUtil.GetMajorController()
+			if MajorController == nil then return end
+				EventMgr:SendEvent(EventID.SimulatedTouchEndClick,Params)
+		else
+			InputCallback.LastSimulatedIndex = Params.Index
+			InputCallback.InputActionSkillReleasedNum = 0
+			EventMgr:SendEvent(EventID.InputActionSkillReleased, Params.Index)
+		end
+	end
+end
+function InputCallback.ForceEndSimulatedTouchEndClick(InputCallbackInst,Params)
+	if not IsCurrentFocusInputBox() then
+		if Params.bSimulatedClick ~= nil and Params.bSimulatedClick == true then
+			local MajorController = MajorUtil.GetMajorController()
+			if MajorController == nil then return end
+			
+			EventMgr:SendEvent(EventID.SimulatedTouchEndClickConfirm,InputCallback.LastSimulatedScreenPosition)
+		end
 	end
 end
 
-function InputCallback.OnHandlePressed(ButtonName)
-	InputCallback.HandleControllerEvent(ButtonName, IE_Pressed)
+
+function InputCallback.OnHandlePressed(Params)
+	--print("InputCallback.OnHandlePressed%s", ButtonName)
+	if Params ~= nil then
+		_G.SettingsHandleMgr:StartHandleCusAction(Params, IE_Pressed)
+	end
+	--InputCallback.HandleControllerEvent(ButtonName, IE_Pressed)
 end
 
-function InputCallback.OnHandleReleased(ButtonName)
-	InputCallback.HandleControllerEvent(ButtonName, IE_Released)
+function InputCallback.OnHandleReleased(Params)
+	--print("InputCallback.OnHandleReleased%s", ButtonName)
+	if Params ~= nil then
+		_G.SettingsHandleMgr:StartHandleCusAction(Params, IE_Released)
+	end
+	--InputCallback.HandleControllerEvent(ButtonName, IE_Released)
+end
+function InputCallback.OnHandleCancelPressed(Params)
+	--print("InputCallback.OnHandlePressed%s", ButtonName)
+		if not IsCurrentFocusInputBox() and InputCallback.LastSimulatedScreenPosition ~= nil then
+			local MajorController = MajorUtil.GetMajorController()
+			if MajorController == nil then return end
+			InputCallback.SimulatedTouchMove(InputCallback.LastSimulatedScreenPosition)
+			EventMgr:SendEvent(EventID.SimulatedTouchEndClickConfirm,InputCallback.LastSimulatedScreenPosition)
+
+			--EventMgr:SendCppEvent(EventID.ClearCombinationKeyState)
+		end
+	--InputCallback.HandleControllerEvent(ButtonName, IE_Pressed)
 end
 
+function InputCallback.OnHandleCancelReleased(Params)
+	--print("InputCallback.OnHandleReleased%s", ButtonName)
+	if Params ~= nil then
+		--_G.SettingsHandleMgr:StartHandleCusAction(Params, IE_Released)
+	end
+	--InputCallback.HandleControllerEvent(ButtonName, IE_Released)
+end
 function InputCallback.HandleControllerEvent(ButtonName, EventType)
 	if ButtonName == "B" then
 		if MainPanelVM.IsFightState then
@@ -211,9 +283,9 @@ function InputCallback.HandleSkillButtonEvent(Param, ButtonName, ButtonEventType
 		if InputCallback.SelectButtonName ~= ButtonName then
 			if InputCallback.ControllerSkillPressedIndex[ButtonName] then
 				local StoredParam = InputCallback.ControllerSkillPressedIndex[ButtonName]
-				InputCallback.OnSkillReleased(StoredParam)
+				InputCallback.OnSkillReleased({Index = StoredParam})
 			else
-				InputCallback.OnSkillReleased(Param)
+				InputCallback.OnSkillReleased({Index = Param})
 			end
 			InputCallback.ControllerSkillPressedIndex[ButtonName] = nil
 		else
@@ -245,6 +317,76 @@ function InputCallback.GetSkillSelectIdList(Index)
 	return nil
 end
 
+function InputCallback.SimulatedTouchStart(ButtonEventType)
+	if not EventMgr:IsEventRegistered(EventID.SimulatedTouchStartClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchStart) then 
+		EventMgr:RegisterEvent(EventID.SimulatedTouchStartClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchStart, "ConfirmInputCallback_SimulatedTouchStart")
+	end
+	
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	EventMgr:SendEvent(EventID.SimulatedTouchStartClick)
+end
+function InputCallback.ConfirmSimulatedTouchStart(SELF,ScreenPosition, bDragOrSelectSkill)
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	if MajorController == nil then return end
+	InputCallback.LastSimulatedScreenPosition = ScreenPosition
+	if ScreenPosition == nil then return end
+	if bDragOrSelectSkill then
+		MajorController:SimulatedTouchDown(ScreenPosition.X, ScreenPosition.Y, false)
+	else
+		MajorController:SimulatedTouchDown(ScreenPosition.X, ScreenPosition.Y)
+	end
+end
+
+function InputCallback.SimulatedTouchEnd(ButtonEventType)
+	if not EventMgr:IsEventRegistered(EventID.SimulatedTouchEndClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchEnd) then 
+		EventMgr:RegisterEvent(EventID.SimulatedTouchEndClickConfirm, InputCallback, InputCallback.ConfirmSimulatedTouchEnd, "ConfirmInputCallback_SimulatedTouchEnd")
+	end
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	if MajorController == nil then return end
+	EventMgr:SendEvent(EventID.SimulatedTouchEndClick)
+end
+function InputCallback.ConfirmSimulatedTouchEnd(SELF,ScreenPosition)
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	if MajorController == nil or ScreenPosition == nil then return end
+	MajorController:SimulatedTouchEnd(ScreenPosition.X, ScreenPosition.Y)
+end
+
+function InputCallback.SimulatedTouchMove(Position)
+
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	if MajorController == nil then return end
+	MajorController:SimulatedTouchMove(Position.X, Position.Y)
+end
+function InputCallback.SimulatedDoubleClick(ButtonEventType)
+
+	local MajorController = MajorUtil.GetMajorController()
+	if MajorController == nil then 
+		MajorController = InputCallback.GetDefaultMajorController()
+	end
+	if MajorController == nil then return end
+	MajorController:SimulatedTouchStartClick(2299, 512)
+end
+
+function InputCallback.GetDefaultMajorController()
+	local PlayerController = GameplayStaticsUtil.GetPlayerController()
+	local MajorController = PlayerController:Cast(_G.UE.AMajorController)
+	return MajorController
+end
 function InputCallback.HandleJumpButtonEvent(ButtonEventType)
 	local MajorController = MajorUtil.GetMajorController()
 	if MajorController == nil then return end

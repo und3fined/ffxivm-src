@@ -2,7 +2,7 @@ local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
 local UIBindableBagSlotList = require("Game/NewBag/VM/UIBindableBagSlotList")
-local BuddySurfaceTabItemVM = require("Game/Buddy/VM/BuddySurfaceTabItemVM")
+local BuddySurfaceNewSlotVM = require("Game/Buddy/VM/BuddySurfaceNewSlotVM")
 local BuddySurfaceTabItem02VM = require("Game/Buddy/VM/BuddySurfaceTabItem02VM")
 local BuddySurfaceSlotVM = require("Game/Buddy/VM/BuddySurfaceSlotVM")
 local BuddySurfaceColorItemVM = require("Game/Buddy/VM/BuddySurfaceColorItemVM")
@@ -31,18 +31,17 @@ local BuddySurfaceVM = LuaClass(UIViewModel)
 BuddySurfaceVM.MenuType = {Equipment = 1,  Dye = 2}
 BuddySurfaceVM.EquipmentMenuType = {Head = 1,  Body = 2, Leg = 3}
 BuddySurfaceVM.DyeMenuType = {Normal = 1,  Fast = 2}
-local EquipmentCapacity = 300
 local FoodCapacity = 10
 local ColorCapacity = 20
 
 local FruitBasis = 10
 local FruitCombination = {NegativeFruit = {61000001, 61000002, 61000003}, PlusFruit = {61000004, 61000005, 61000006}}
+local InitiColorID = ProtoCommon.Color.ColorDesertYellow
 
 ---Ctor
 function BuddySurfaceVM:Ctor()
 	BuddyMgr = _G.BuddyMgr
 	LSTR = _G.LSTR
-	--self.TabPageVMList = UIBindableList.New(BuddySurfaceTabItemVM)
 	self.EquipmentPageVisible = nil
 	self.NormalDyePageVisible = nil
 	self.FastDyePageVisible = nil
@@ -51,12 +50,11 @@ function BuddySurfaceVM:Ctor()
 	self.AttachType = nil
 
 	self.DyeDescPanelVisible = nil
-	--self.SubTitleText = nil
 	self.EquipmentText = nil
 
 	self.SubTabVMList = UIBindableList.New(BuddySurfaceTabItem02VM)
 
-	self.EquipmentItemVMList = UIBindableBagSlotList.New(BuddySurfaceSlotVM, {IsShowNum = false})
+	self.EquipmentItemVMList = UIBindableBagSlotList.New(BuddySurfaceNewSlotVM)
 
 	self.DyeItemVMList = UIBindableBagSlotList.New(BuddySurfaceSlotVM, {IsShowNum = true})
 	self.DyeColorVMList = UIBindableBagSlotList.New(BuddySurfaceColorItemVM)
@@ -119,9 +117,8 @@ function BuddySurfaceVM:Ctor()
 
 	self.NormalDyeItemList01Visible = nil
 	self.NormalDyeItemList02Visible = nil
-	self.NormalDyeList = {}
 	self.NormalDyeFruitItemVMList = UIBindableList.New(ItemVM, {IsShowNumProgress = true, IsCanBeSelected = false})
-	self.NormalDyeUnselectedVisible = nil
+
 	
 	self.LockFastDyeText = nil
 	self.FastDyeTipsText = nil
@@ -138,6 +135,12 @@ function BuddySurfaceVM:Ctor()
 
 	self.StainBtnVisible = nil
 	self.BtnStain02Visible = nil
+
+	self.PanelEmptyVisible = nil
+
+	self.ColorDetailVisible = nil
+	self.UseLemonVisible = nil
+	self.ImgLine01Visible = nil
 
 	self.ResID = nil -- 用于绑定获取途径
 end
@@ -207,6 +210,21 @@ end
 
 --普通染色，选中染色道具
 function BuddySurfaceVM:SelectedDyeItem(ID)
+	local ResetItemID = 0
+	local CfgList = ChocoboDyeStuffCfg:FindAllCfg()
+	for _, CfgItem in ipairs(CfgList) do
+		if CfgItem.R == 0 and CfgItem.G == 0 and CfgItem.B then
+			ResetItemID = CfgItem.ItemID
+		end
+	end
+
+	for i = 1, #self.NormalDyeItemList do
+		if self.NormalDyeItemList[i].ItemID == ResetItemID then
+			table.remove(self.NormalDyeItemList, i)
+			break
+		end
+	end
+
 	for i = 1, self.DyeItemVMList:Length() do
 		local ItemVM = self.DyeItemVMList:Get(i)
 		ItemVM:UpdateIconState(ID)	
@@ -221,7 +239,22 @@ function BuddySurfaceVM:SelectedDyeItem(ID)
 	end
 
 	self.DyeItemID = ID
-	self.NormalDyeUnselectedVisible = not BuddyMgr:SurfaceBInDyeCD()
+
+	local InDyeCD = BuddyMgr:SurfaceBInDyeCD()
+	self.ColorDetailVisible = not InDyeCD
+	self.ImgLine01Visible = not InDyeCD
+	self.UseLemonVisible = not InDyeCD
+
+	if not InDyeCD and DyeStuffCfg then
+		if DyeStuffCfg.R == 0 and DyeStuffCfg.G == 0 and DyeStuffCfg.B == 0 then
+			self.ColorDetailVisible = false
+			self.UseLemonVisible = true
+		else
+			self.ColorDetailVisible = true
+			self.UseLemonVisible = false
+		end
+	end
+
 	self.NormalDyeItemList01Visible = true
 	self.StainBtnVisible = not BuddyMgr:SurfaceBInDyeCD()
 
@@ -263,6 +296,55 @@ function BuddySurfaceVM:SetDyeItemAmount(Value)
 	
 	local DyeTargetColorCfg, TargetColorR, TargetColorG, TargetColorB = self:CalculateDyeTargetColor()
 	self:RefreshBuddyTargetColorShow(DyeTargetColorCfg, TargetColorR, TargetColorG, TargetColorB)
+
+	local ItemList = {}
+	self.DyeLists = {}
+	for i = 1, #self.NormalDyeItemList do
+		local ItemID = self.NormalDyeItemList[i].ItemID
+		local Num = self.NormalDyeItemList[i].Num
+		if Num > 0 then
+			table.insert(ItemList, ItemUtil.CreateItem(ItemID, Num))
+			table.insert(self.DyeLists, {ResID = ItemID, Count = Num})
+		end
+	end
+
+	self.NormalDyeItemList02Visible = #ItemList > 0
+	self.NormalDyeFruitItemVMList:UpdateByValues(ItemList)
+end
+
+
+function BuddySurfaceVM:SetUseLemon(Value)
+	self.DyeType = ChocoboDyeType.ChocoboDyeTypeNormal
+
+	local NeedAddItem = true
+	self.NormalDyeItemList = {}
+
+	if Value == 0 then
+		NeedAddItem = false
+	end 
+
+	if NeedAddItem == true then
+		table.insert(self.NormalDyeItemList, {ItemID = self.DyeItemID, Num = Value})
+	end
+
+	for i = 1, self.DyeItemVMList:Length() do
+		local ItemVM = self.DyeItemVMList:Get(i)
+		if ItemVM.ResID == self.DyeItemID then
+			ItemVM:SetNumProgress(self.DyeItemID, Value)	
+		end	
+	end
+
+	local TargetColorR = 0
+	local TargetColorG = 0
+	local TargetColorB = 0
+	local ColorCfg = BuddyColorCfg:FindCfgByKey(InitiColorID)
+	if ColorCfg then
+		TargetColorR = ColorCfg.R
+	 	TargetColorG = ColorCfg.G
+		TargetColorB = ColorCfg.B
+	end
+	
+	self:RefreshBuddyTargetColorShow(ColorCfg, TargetColorR,  TargetColorG, TargetColorB)
 
 	local ItemList = {}
 	self.DyeLists = {}
@@ -449,7 +531,6 @@ function BuddySurfaceVM:UpdateEquipmentPanel()
 
 	self.EquipmentCount = #ItemList
 
-	ItemList = BagMainVM:FillCapacityByEmptyItem(ItemList, EquipmentCapacity - #ItemList)
 	self.EquipmentItemVMList:UpdateByValues(ItemList)
 
 	local SelectedEquipID = nil
@@ -471,11 +552,12 @@ function BuddySurfaceVM:UpdateEquipmentPanel()
 	self:SelectedEquipmentItem(SelectedEquipID)
 
 	if SelectedEquipID == nil then
-		self.WearBtnVisible = true
+		self.WearBtnVisible = self.EquipmentCount > 0
 		self.WearBtnEnabled = false
 		self.UnLoadBtnVisible = false
 	end
 
+	self.PanelEmptyVisible = self.EquipmentCount == 0
 end
 
 function BuddySurfaceVM:UpdateMountState()
@@ -544,7 +626,11 @@ function BuddySurfaceVM:UpdateDyeNormalPanel()
 	
 
 	self.DyeItemVMList:UpdateByValues(ItemList)
-	self.NormalDyeUnselectedVisible = false
+
+	self.ColorDetailVisible = false
+	self.ImgLine01Visible = false
+	self.UseLemonVisible = false
+
 	self.NormalDyeItemList = {}
 	self.NormalDyeItemList02Visible = false
 

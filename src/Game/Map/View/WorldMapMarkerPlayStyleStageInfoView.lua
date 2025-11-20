@@ -1,7 +1,7 @@
 ---
 --- Author: Administrator
 --- DateTime: 2024-04-28 14:36
---- Description:
+--- Description: 地图机遇临门玩法标记tips
 ---
 
 local UIView = require("UI/UIView")

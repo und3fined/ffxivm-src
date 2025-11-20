@@ -24,6 +24,7 @@ local ProtoCommon = require("Protocol/ProtoCommon")
 local MsgTipsID = require("Define/MsgTipsID")
 local AttrType = ProtoCommon.attr_type
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
+local MainControlPanelVM = require("Game/Main/VM/MainControlPanelVM")
 
 local KIL = _G.UE.UKismetInputLibrary
 local WBL = _G.UE.UWidgetBlueprintLibrary
@@ -114,6 +115,8 @@ function MainSkillBaseView:OnHide()
 	self:StopLongClickTimer()
 
 	self:UnRegisterAsyncTask()
+
+	self:OnSimulatedTouchEndClick({Index = self.ButtonIndex})
 end
 
 function MainSkillBaseView:OnRegisterUIEvent()
@@ -144,10 +147,57 @@ function MainSkillBaseView:OnRegisterGameEvent()
 			RegisterGameEventFunc(self, EventID.MajorUseSkill, self.OnGameEventMajorUseSkillBase)
 			RegisterGameEventFunc(self, EventID.SimulateMajorSkillCast, self.OnSimulateMajorSkillCast)
 			RegisterGameEventFunc(self, EventID.MajorSkillCastFailed, self.OnSkillCastFailed)
+
+			RegisterGameEventFunc(self, EventID.SimulatedTouchStartClick, self.OnSimulatedTouchStartClick)
+			RegisterGameEventFunc(self, EventID.SimulatedTouchEndClick, self.OnSimulatedTouchEndClick)
 		end
 
 		RegisterGameEventFunc(self, EventID.SkillStatusUpdate, self.OnSkillStatusUpdate)
+		
 	end
+end
+
+local ZeroVector2D = _G.UE.FVector2D(0,0)
+
+local function GetWidgetScreenPosition(Widget)
+	if not Widget then return end
+	local ScreenPosition = UIUtil.LocalToAbsolute(Widget, ZeroVector2D)
+	if ScreenPosition.X ~= 0 and ScreenPosition.Y ~= 0 then
+		local WidgetSize = UIUtil.GetAbsoluteSize(Widget)
+		ScreenPosition.X = ScreenPosition.X + WidgetSize.X / 2
+		ScreenPosition.Y = ScreenPosition.Y + WidgetSize.Y / 2
+		return ScreenPosition
+	end
+end
+
+function MainSkillBaseView:OnSimulatedTouchStartClick(Params)
+	if not Params or Params.Index ~= self.ButtonIndex then return end
+	if MainControlPanelVM:AllowHandleSkill(self.bTriggerBtn or self.bAbleBtn, false, self.bLimitBtn) then
+		
+		local ScreenPosition = GetWidgetScreenPosition(self)
+		local bDragSubSkill = SkillMainCfg:FindValue(self.BtnSkillID, "IsEnableSkillJoyStick") or 0
+		local bDrag = bDragSubSkill ~= 0 and self.bMajor and self:bSupportSecondJoyStick()
+		if ScreenPosition then
+			EventMgr:SendEvent(EventID.SimulatedTouchStartClickConfirm, ScreenPosition, bDrag == true or self.bCurSelectSkill)
+			self.bSimulatedPressed = true
+		end
+	end
+end
+
+function MainSkillBaseView:OnSimulatedTouchEndClick(Params)
+	if not Params or Params.Index ~= self.ButtonIndex then return end
+	if self.bSimulatedPressed then
+		local ScreenPosition = GetWidgetScreenPosition(self)
+		if not ScreenPosition then
+			ScreenPosition = ZeroVector2D
+		end
+		EventMgr:SendEvent(EventID.SimulatedTouchEndClickConfirm, ScreenPosition)
+		self.bSimulatedPressed = false
+	end
+end
+
+function MainSkillBaseView:ClearSkillHandleEvent()
+	self:OnSimulatedTouchEndClick({Index = self.ButtonIndex})
 end
 
 function MainSkillBaseView:OnRegisterTimer()
@@ -238,6 +288,8 @@ function MainSkillBaseView:OnSkillReplace(Params, bSync)
 		return
 	end
 
+	self:ClearSkillHandleEvent()
+
 	local _ <close> = CommonUtil.MakeProfileTag("MainSkillBaseView:OnSkillReplace")
 	self.BtnSkillID = Params.SkillID
 	if not bSync and LogicData:AllowAsync() then
@@ -318,7 +370,7 @@ function MainSkillBaseView:OnSkillReplaceDisplay(Params)
 	self:ChangeSkillIcon(Params.SkillID)
 
 	if Params.Type ~= nil and self.AnimAlternate ~= nil then
-		self:PlayAnimation(self.AnimAlternate)
+		self:PlayAnimationToEndTime(self.AnimAlternate)
 	end
 end
 
@@ -337,7 +389,7 @@ function MainSkillBaseView:ClearCDMask(bPlayAnim)
 	self.BaseBtnVM.bNormalCD = false
 	self.BaseBtnVM.SkillCDText = ""
 	if bPlayAnim == true and self.AnimCDFinish ~= nil then
-		self:PlayAnimation(self.AnimCDFinish, 0, 1, nil, 1, true)
+		self:PlayAnimationToEndTime(self.AnimCDFinish, 0, 1, nil, 1, true)
 	end
 end
 --技能CD更新
@@ -445,7 +497,16 @@ end
 
 function MainSkillBaseView:OnInputActionSkillReleased(Params)
 	if Params ~= self.ButtonIndex then return end
-
+	if rawget(self, "LongClickTimerID") then
+		local CurTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
+		if CurTime - self.StartLongClickTime > SkillCommonDefine.SkillTipsClickTime * 1000 then
+			self:StopLongClickTimer()
+			self:OnLongClickReleased()
+			return 
+		else
+			self:StopLongClickTimer()
+		end
+	end
 	self:OnCastSkill()
 end
 
@@ -676,17 +737,20 @@ function MainSkillBaseView:OnMouseButtonUp(MyGeometry, MouseEvent)
 
 	if self.MouseDown and (not MouseEvent or IsValidEffectingButton(MouseEvent)) then
 		self.MouseDown = false
+		local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
 		if rawget(self, "LongClickTimerID") then
 			local CurTime = _G.UE.UTimerMgr:Get().GetLocalTimeMS()
 			if CurTime - self.StartLongClickTime > SkillCommonDefine.SkillTipsClickTime * 1000 then
 				self:StopLongClickTimer()
 				self:OnLongClickReleased()
+				if LogicData then
+					LogicData:SetSkillPressFlag(self.ButtonIndex, false)
+				end
 				return WBL.ReleaseMouseCapture(Handled)
 			else
 				self:StopLongClickTimer()
 			end
 		end
-		local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
 		if not LogicData or not LogicData:IsSkillPress(self.ButtonIndex) then
 			self:SkillCastFailed()
 			return WBL.ReleaseMouseCapture(Handled)
@@ -774,7 +838,6 @@ function MainSkillBaseView:OnCastSkill(Params)
 		if SkillStorageMgr:IsStorageSkill(BtnSkillID) and SkillStorageMgr.EntityID ~= EntityID then
 			return true
 		end
-
 		local Cfg = SkillMainCfg:FindCfgByKey(BtnSkillID)
 		local bJoyStick = Cfg and (Cfg.IsEnableSkillJoyStick > 0) or nil
 		-- 清状态

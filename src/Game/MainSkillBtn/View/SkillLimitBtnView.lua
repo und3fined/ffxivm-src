@@ -18,6 +18,7 @@ local WBL = _G.UE.UWidgetBlueprintLibrary
 local SBL = _G.UE.USlateBlueprintLibrary
 local AudioUtil = require("Utils/AudioUtil")
 local MsgTipsID = require("Define/MsgTipsID")
+local UIViewID = require("Define/UIViewID")
 
 ---@class SkillLimitBtnView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -81,12 +82,8 @@ function SkillLimitBtnView:OnInit()
 		self.ButtonIndex = LimitSkillIndex
 	end
 
+	self.bLimitBtn = true
 	-- self.LastSkillID = 0
-	self.IsEntrance = false
-end
-
-function SkillLimitBtnView:SetParentView(NewMainSkillView)
-	self.MainSkillPanelView = NewMainSkillView
 end
 
 function SkillLimitBtnView:OnDestroy()
@@ -107,6 +104,14 @@ function SkillLimitBtnView:OnShow()
 	self.IsLimitSkill = true
 
 	self:RefreshUI()
+
+	if self.IsEntrance then
+		if _G.SkillLimitMgr.EntranceLoopAniming then
+			self:PlaySingLoopAnim()
+		end
+	else
+		UIUtil.SetIsVisible(self.FBtn_Skill, true, false)
+	end
 end
 
 --因为ButtonIndex和ButtonSkillID可能会变的
@@ -116,19 +121,28 @@ function SkillLimitBtnView:SkillReplace(Params)
 	self.Super:OnSkillReplace(Params)
 end
 
-function SkillLimitBtnView:RefreshUI(IsPlayPhaseBarEff)
+local function GetIsPlayPhaseBarEff()
+	local SkillLimitMgr = _G.SkillLimitMgr
+	local CurPhase = SkillLimitMgr:GetCurPhase()
+	local LastPhase = SkillLimitMgr:GetLastPhase()
+	local IsPlayPhaseBarEff = false
+	if LastPhase and LastPhase ~= CurPhase then
+		IsPlayPhaseBarEff = true
+	end
+
+	return IsPlayPhaseBarEff
+
+end
+
+function SkillLimitBtnView:RefreshUI()
+
+	local IsPlayPhaseBarEff = GetIsPlayPhaseBarEff()
+
 	local MaxValue = _G.SkillLimitMgr:GetLimitMaxValue()
 	local Value = _G.SkillLimitMgr:GetLimitValue()
 	local LimitSkillID = _G.SkillLimitMgr:GetLimitSkillID()
 	local MaxPhase = _G.SkillLimitMgr:GetMaxPhase()
 	if MaxPhase and MaxValue > 0 and LimitSkillID > 0 and MaxPhase > 0 then
-		-- if self.LastSkillID ~= LimitSkillID then
-		-- 	local MainSkillCfg = SkillMainCfg:FindCfgByKey(LimitSkillID)
-		-- 	if MainSkillCfg then
-		-- 		self.LastSkillID = LimitSkillID
-		-- 		UIUtil.ImageSetBrushFromAssetPath(self.Icon_Skill, MainSkillCfg.Icon)
-		-- 	end
-		-- end
 
 		--这个是极限值的进度，不是cd
 		local ValuePerPhase = _G.SkillLimitMgr:GetValuePerPhase()
@@ -212,7 +226,11 @@ function SkillLimitBtnView:RefreshUI(IsPlayPhaseBarEff)
 end
 
 function SkillLimitBtnView:OnHide()
+	self:CancelPressStatus()
 
+	if not self.IsEntrance then
+		self:OnSimulatedTouchEndClick({Index = self.ButtonIndex})
+	end
 end
 
 function SkillLimitBtnView:OnRegisterUIEvent()
@@ -221,16 +239,31 @@ end
 
 function SkillLimitBtnView:OnRegisterGameEvent()
 	self.Super:OnRegisterGameEvent()
-	self:RegisterGameEvent(EventID.EndUseLimitSkill, self.OnLimitSkillEnd)
-	self:RegisterGameEvent(EventID.BeginUseLimitSkill, self.OnLimitSkillBegin)
+	if self.IsEntrance then
+		self:RegisterGameEvent(EventID.EndUseLimitSkill, self.OnLimitSkillEnd)
+		self:RegisterGameEvent(EventID.BeginUseLimitSkill, self.OnLimitSkillBegin)
+	end
 	--对于break，是在StopSingLoopAnim那面监听这2个事件，然后处理的
 	-- self:RegisterGameEvent(EventID.ThirdPlayerSkillSingBreak, self.OnOtherSingBreak)
 	-- self:RegisterGameEvent(EventID.MajorBreakSing, self.OnMajorSingBreak)
 	self:RegisterGameEvent(EventID.SkillReplace, self.OnSkillReplace)
+	self:RegisterGameEvent(EventID.SkillLimitValChg, self.OnSkillLimitValChg)
 end
 
 function SkillLimitBtnView:OnRegisterBinder()
 
+end
+
+function SkillLimitBtnView:CancelPressStatus()
+	if self.CancelJoyStickView then
+		UIUtil.SetIsVisible(self.SecondJoyStick, false)
+		_G.UIViewMgr:HideView(UIViewID.SkillCancelJoyStick, true)
+	end
+
+	local LogicData = _G.SkillLogicMgr:GetSkillLogicData(self.EntityID)
+	if LogicData then
+		LogicData:SetSkillPressFlag(self.ButtonIndex, false)
+	end
 end
 
 function SkillLimitBtnView:OnSkillReplace(Params)
@@ -246,7 +279,6 @@ function SkillLimitBtnView:OnLimitSkillBegin(Params)
 		else
 			print("limit other cast limitskill")
 			_G.SkillLimitMgr.EntranceLoopAniming = true
-
 			if self.IsEntrance then
 				self:PlaySingLoopAnim()
 			end
@@ -264,7 +296,6 @@ function SkillLimitBtnView:OnLimitSkillEnd(Params)
 		print("limit other cast limitskill over =======")
 		if self.IsEntrance then
 			-- self:StopSingLoopAnim()
-
 			if Params.IsMsgUpdateLimit then
 				local CurPhase = _G.SkillLimitMgr:GetCurPhase()
 				if MaxPhase >= 1 and MaxPhase <= 3 and CurPhase < Params.LastPhase then
@@ -299,15 +330,19 @@ end
 
 --NewMainSkill会控制该按钮是否透传（右上角的是可点击，右下角的是透传的）
 function SkillLimitBtnView:OnClickBtn()
-	if self.MainSkillPanelView then
-		local ParentView = self.MainSkillPanelView.ParentView
-		if ParentView and ParentView.GetIsPeaceAniming and ParentView:GetIsPeaceAniming() then
-			-- FLOG_INFO("             ================== SkillLimit ===========")
-			return 
+	if self.IsEntrance then
+		--TODO[chaooren]25.6.24 这里移除了点击按钮时的peace动画判断，进入极限技不应受peace状态的影响
+		--切换到peace状态还要播放peace动画，此时触发点击UI显示会有问题
+		local ParentView = _G.SkillHandleMgr:GetParentPanelAndSlot()
+		if ParentView and not ParentView:GetFightState() then
+			return
 		end
-
 		_G.EventMgr:SendEvent(EventID.SkillLimitEntranceClick)
-		self.MainSkillPanelView:SwitchToLimitSkillCastState()
+
+		local ParentView = rawget(self, "ParentView")
+		if ParentView and rawget(ParentView, "bMainSkillPanel") then
+			ParentView:SwitchToLimitSkillCastState()
+		end
 	end
 end
 
@@ -365,7 +400,7 @@ local SkillUtil = require("Utils/SkillUtil")
 local SkillSubCfg = require("TableCfg/SkillSubCfg")
 -- local KIL = _G.UE.UKismetInputLibrary
 local MinMoveDistSquared = 200	--拖拽视为移动时的最小判定
-local UIViewID = require("Define/UIViewID")
+
 
 function SkillLimitBtnView:bSupportSecondJoyStick()
 	return true
@@ -407,7 +442,10 @@ function SkillLimitBtnView:DoDragSkillMove(MyGeometry, MouseEvent)
 end
 
 function SkillLimitBtnView:DoDragSkillEnd()
-	local bCancelEnter = self.CancelJoyStickView:GetCancelStatus()
+	local bCancelEnter = true
+	if self.CancelJoyStickView then
+		bCancelEnter = self.CancelJoyStickView:GetCancelStatus()
+	end
 	if bCancelEnter == false then
 		local JoystickValid = self.SecondJoyStick:IsJoystickValid()
 		local DecalState = self.SecondJoyStick:GetDecalState()
@@ -429,10 +467,56 @@ function SkillLimitBtnView:DoDragSkillEnd()
 	end
 	UIUtil.SetIsVisible(self.SecondJoyStick, false)
 	_G.UIViewMgr:HideView(UIViewID.SkillCancelJoyStick, true)
-
+	self.CancelJoyStickView = nil
 	if self.IsLimitSkill then
 		_G.EventMgr:SendEvent(EventID.DragSkillEnd)
 	end
+end
+
+function SkillLimitBtnView:OnSkillLimitValChg(CurPhaseVal, CurPhase, CurSkillID)
+	if _G.SkillLimitMgr.CanUseLimitSkill ~= 1 then	--不能使用极限技
+		return 
+	end
+
+	--local IsPlayPhaseBarEff = self:NeedPlayPhaseBarEff(CurPhase)
+
+	local LimitSkillID = _G.SkillLimitMgr:GetLimitSkillID()
+	local LimitSkillIndex = _G.SkillLimitMgr:GetLimitSkillIndex()
+	if self.ButtonIndex ~= LimitSkillIndex or self.BtnSkillID ~= LimitSkillID then
+		self:OnSkillReplace({SkillIndex = LimitSkillIndex, SkillID = LimitSkillID})
+	end
+
+	self:RefreshUI()
+end
+
+function SkillLimitBtnView:OnSimulatedTouchStartClick(Params)
+	if self.IsEntrance then
+		return
+	else
+		self.Super:OnSimulatedTouchStartClick(Params)
+	end
+end
+
+function SkillLimitBtnView:OnSimulatedTouchEndClick(Params)
+	if self.IsEntrance then
+		if Params.BtnName then	--真实的手柄输入
+			self:OnClickBtn()
+		end
+	else
+		self.Super:OnSimulatedTouchEndClick(Params)
+	end
+end
+
+--TODO[kanohchen]25.9.9 低帧下狂点击，UE处理显隐和输入不同步(这部分需要详细看看)
+--导致被设置为SelfHitTestInvisible的控件也会响应OnMouseButtonUp事件
+function SkillLimitBtnView:OnMouseButtonUp(MyGeometry, MouseEvent)
+	if self.IsEntrance then
+		print("SkillLimitBtnView：OnMouseButtonUp But self.IsEntrance = ",self.IsEntrance)
+		return WBL.Unhandled()
+	end
+	self.__Current = self.__BaseType
+	self.Super:OnMouseButtonUp(MyGeometry, MouseEvent)
+	return WBL.ReleaseMouseCapture(WBL.Handled())
 end
 
 return SkillLimitBtnView

@@ -54,11 +54,12 @@ function MailUtil.GetMailSenderName(Sender)
 	if string.find(Sender, "[^0-9]") then
 		return Sender
 	else
-		local RoleVM = _G.RoleInfoMgr:FindRoleVM(tonumber(Sender), true)
-		if nil == RoleVM then
-			return ""
-		end
-		return RoleVM.Name or ""
+        if #tostring(Sender) < 10 then  -- roleid的规则
+            return Sender
+        else
+            local RoleVM = _G.RoleInfoMgr:FindRoleVM(tonumber(Sender), true) or {}
+            return RoleVM.Name or ""
+        end
 	end
 end
 

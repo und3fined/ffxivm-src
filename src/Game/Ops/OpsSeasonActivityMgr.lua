@@ -1,6 +1,5 @@
 local LuaClass = require("Core/LuaClass")
 local MgrBase = require("Common/MgrBase")
-local ProtoCS = require("Protocol/ProtoCS")
 local OpsCommTabChildItemVM = require("Game/Ops/VM/OpsCommTabChildItemVM")
 local OpsSeasonActivityDefine = require("Game/Ops/OpsSeasonActivityDefine")
 local SaveKey = require("Define/SaveKey")
@@ -10,6 +9,7 @@ local EventID = require("Define/EventID")
 local TimeUtil = require("Utils/TimeUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
 local ReportButtonType = require("Define/ReportButtonType")
+local ProtoRes = require("Protocol/ProtoRes")
 local OpsActivityMgr
 local RedDotMgr
 local USaveMgr
@@ -18,8 +18,8 @@ local LocalizationUtil = require("Utils/LocalizationUtil")
 local MainFunctionDefine = require("Game/Main/FunctionPanel/MainFunctionDefine")
 local OpsCeremonyDefine = require("Game/Ops/View/OpsCeremony/OpsCeremonyDefine")
 local LSTR
-
-
+local ActivityNodeType = ProtoRes.Game.ActivityNodeType
+local ProtoCS = require("Protocol/ProtoCS")
 ---@class OpsSeasonActivityMgr : MgrBase
 local OpsSeasonActivityMgr = LuaClass(MgrBase)
 
@@ -40,6 +40,7 @@ function OpsSeasonActivityMgr:OnBegin()
 
     self.OpenHalloweenAnimation = _G.UE.USaveMgr.GetInt(SaveKey.OpenHalloweenAnimation, 0, true) or 0
     self.OpenCeremonyAnimation = _G.UE.USaveMgr.GetInt(SaveKey.OpenLightCeremony, 0, true) or 0
+    self.OpenStarlightAnimation = _G.UE.USaveMgr.GetInt(SaveKey.OpenStarlightAnimation, 0, true) or 0
 end
 
 function OpsSeasonActivityMgr:OnEnd()
@@ -66,12 +67,18 @@ function OpsSeasonActivityMgr:GetSeasonActivity()
 	end
 
     local SeasonActivityTab =  OpsActivityMgr.SeasonActivitys
+    local VersionNoticeActivity = nil
 	for i = 1, #SeasonActivityTab do
 		local Activity = SeasonActivityTab[i].Activity
 		if (Activity.FatherID == nil or Activity.FatherID == 0) and not string.isnilorempty(Activity.BPName) then
-			return Activity
+			if Activity.BPName == "Ops/OpsVersionNotice/OpsVersionNoticeContentPanel_UIBP" then
+                VersionNoticeActivity = Activity
+            else
+                return Activity
+            end
 		end
 	end
+    return VersionNoticeActivity
 end
 
 function OpsSeasonActivityMgr:SendQuerySeasonActivitys()
@@ -146,6 +153,8 @@ function OpsSeasonActivityMgr:HasOpenSeasonAni()
         return true
     elseif Activity.ActivityID == OpsCeremonyDefine.ActivityID and self.OpenCeremonyAnimation == 0 then
         return true
+    elseif Activity.ActivityID == OpsCeremonyDefine.StarlightActivityID and self.OpenStarlightAnimation == 0 then
+        return true
     end
 
     return false
@@ -157,10 +166,10 @@ function OpsSeasonActivityMgr:IsShowNewContent()
         return false
     end
     if Activity.BPName == "Ops/OpsVersionNotice/OpsVersionNoticeContentPanel_UIBP" then
-        local LastVersion = _G.UE.USaveMgr.GetString(SaveKey.LastVersion, "", false)
+        local LastVersion = _G.UE.USaveMgr.GetString(SaveKey.LastVersion, "", true)
         local CurrentVersion = _G.UE.UVersionMgr.GetGameVersion()
         if LastVersion ~= CurrentVersion then
-            _G.UE.USaveMgr.SetString(SaveKey.LastVersion, CurrentVersion, false)
+            _G.UE.USaveMgr.SetString(SaveKey.LastVersion, CurrentVersion, true)
             return true
         else
             return false
@@ -187,6 +196,12 @@ function OpsSeasonActivityMgr:PlayOpenSeasonAni(CallBack)
         self.OpenCeremonyAnimation = 1
         USaveMgr.SetInt(SaveKey.OpenLightCeremony, self.OpenCeremonyAnimation , true)
         return
+
+    elseif Activity.ActivityID == OpsCeremonyDefine.StarlightActivityID and self.OpenStarlightAnimation == 0 then
+        self:PlayStarlightAni(CallBack)
+        self.OpenStarlightAnimation = 1
+        USaveMgr.SetInt(SaveKey.OpenStarlightAnimation, self.OpenStarlightAnimation , true)
+        return
     end
     return
 end
@@ -197,6 +212,10 @@ end
 
 function OpsSeasonActivityMgr:PlayCeremonyAni(CallBack)
     _G.UIViewMgr:ShowView(_G.UIViewID.OpsSeasonAnimView, {Ani = "Ceremony", CallBack = CallBack})
+end
+
+function OpsSeasonActivityMgr:PlayStarlightAni(CallBack)
+    _G.UIViewMgr:ShowView(_G.UIViewID.OpsSeasonAnimView, {Ani = "Starlight", CallBack = CallBack})
 end
 
 function OpsSeasonActivityMgr:ShowNewVersionContentUI()
@@ -231,7 +250,22 @@ function OpsSeasonActivityMgr:UpdateActivityRedDot()
         local Detail = OpsActivityMgr.ActivityNodeMap[Activity.ActivityID] or {}
         self:UpdatesVersionNoticeRedDot(Activity.ActivityID, Detail)
     end
+
+    if Activity.BPName == "StarlightCelebration/StarlightCelebrationMain_UIBP" then
+        local Detail = OpsActivityMgr.ActivityNodeMap[Activity.ActivityID] or {}
+        self:UpdateStarlightRedDot(Activity.ActivityID, Detail)
+    end
+
     _G.EventMgr:SendEvent(EventID.SeasonActivityUpdatRedDot)
+end
+
+function OpsSeasonActivityMgr:IsStarlightCelebration()
+    local Activity = self:GetSeasonActivity()
+    if Activity == nil then
+        return false
+    end
+
+    return Activity.BPName == "StarlightCelebration/StarlightCelebrationMain_UIBP"
 end
 
 function OpsSeasonActivityMgr:SetSeasonActivityIcon()
@@ -366,6 +400,7 @@ function OpsSeasonActivityMgr:UpdateFatPenguinBlessRedDot(bShowRedDot)
         RedDotMgr:DelRedDotByName(OpsSeasonActivityMgr:GetRedDotName(tostring(OpsCeremonyDefine.ActivityID).."/"..tostring(NodeIDDefine.FatPenguin)))
     end
 end
+
 function OpsSeasonActivityMgr:UpdateHalloweenRedDot(ActivityID, Detail)
     local NodeList = Detail.NodeList or {}
 
@@ -443,6 +478,78 @@ function OpsSeasonActivityMgr:UpdateHalloweenRedDot(ActivityID, Detail)
     end
 end
 
+function OpsSeasonActivityMgr:UpdateStarlightRedDot(ActivityID, Detail)
+    local NodeList = Detail.NodeList or {}
+
+    -- 星芒节的协助者们
+    local Task1Finish = false
+    local Node, ActivityNode = self:NodeByNodeTitle(NodeList, LSTR(1700047))
+    if Node and ActivityNode then
+        Task1Finish = Node.Head.Finished
+        local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/Task/"..tostring(Node.Head.NodeID))
+        if self:HasRecordRedDotID(Node.Head.NodeID) == false and not Task1Finish then
+            RedDotMgr:AddRedDotByName(ActivityRedDotName)
+        else
+            RedDotMgr:DelRedDotByName(ActivityRedDotName)
+        end
+    end
+
+    -- 回响在星芒节的歌声
+    local Task2Finish = false
+    Node, ActivityNode = self:NodeByNodeTitle(NodeList, LSTR(1700048))
+    if Node and ActivityNode then
+        Task2Finish = Node.Head.Finished
+        local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/Task/"..tostring(Node.Head.NodeID))
+        if self:HasRecordRedDotID(Node.Head.NodeID) == false and Task1Finish and not Task2Finish then
+            RedDotMgr:AddRedDotByName(ActivityRedDotName)
+        else
+            RedDotMgr:DelRedDotByName(ActivityRedDotName)
+        end
+    end
+
+    --星芒之歌
+    local NodeID = OpsSeasonActivityDefine.StarlightRhythmGameNodeID
+    local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/"..tostring(NodeID))
+    if self:HasRecordRedDotID(NodeID) == false and Task2Finish then
+        RedDotMgr:AddRedDotByName(ActivityRedDotName)
+    else
+        RedDotMgr:DelRedDotByName(ActivityRedDotName)
+    end
+
+    -- 献给所有人的星芒节
+    Node, ActivityNode = self:NodeByNodeTitle(NodeList, LSTR(1700049))
+    if Node and ActivityNode then
+        local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/Task/"..tostring(Node.Head.NodeID))
+        if self:HasRecordRedDotID(Node.Head.NodeID) == false and Task2Finish then
+            RedDotMgr:AddRedDotByName(ActivityRedDotName)
+        else
+            RedDotMgr:DelRedDotByName(ActivityRedDotName)
+        end
+    end
+
+    --星芒夜之礼
+    local PutGiftNum = OpsSeasonActivityMgr:GetPutGiftNum()
+    local GetNum = OpsSeasonActivityMgr:GetGetGiftNum()
+    local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/NightGift")
+    if self:IsStartGetGift() and PutGiftNum > GetNum then
+        RedDotMgr:AddRedDotByName(ActivityRedDotName)
+    else
+        RedDotMgr:DelRedDotByName(ActivityRedDotName)
+    end
+
+    --跨年好礼
+    Node, ActivityNode = self:NodeByNodeTitle(NodeList, LSTR(1700045))
+    if Node and ActivityNode then
+        local ActivityRedDotName = OpsSeasonActivityMgr:GetRedDotName(tostring(ActivityID).."/"..tostring(Node.Head.NodeID))
+
+        local StartTime = _G.OpsActivityMgr:GetTimeStampByTimeStr(ActivityNode.StartTime)
+        if (self:HasRecordRedDotID(Node.Head.NodeID) == false and StartTime <= TimeUtil.GetServerLogicTime()) or Node.Head.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then
+            RedDotMgr:AddRedDotByName(ActivityRedDotName)
+        else
+            RedDotMgr:DelRedDotByName(ActivityRedDotName)
+        end
+    end
+end
 
 function OpsSeasonActivityMgr:NodeByNodeTitle(NodeList, NodeTitle)
     if NodeList == nil then
@@ -592,6 +699,51 @@ end
 function OpsSeasonActivityMgr:GetDataTable(TimeText)
 	local Year, Month, Day, Hour, Min, Sec = TimeText:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
 	return {year = Year, month = Month, day = Day, hour = Hour, min = Min, sec = Sec}
+end
+
+function OpsSeasonActivityMgr:GetPutGiftNum()
+    local Activity = self:GetSeasonActivity()
+    if Activity then
+        local PutGiftNodeList = OpsActivityMgr:GetNodesByNodeType(Activity.ActivityID, ActivityNodeType.ActivityNodeTypeStarDayPutGift)
+        if PutGiftNodeList and #PutGiftNodeList > 0 then
+            local PutGiftNode = PutGiftNodeList[1]
+            local PutGift = PutGiftNode.Extra.StarPutGift or {}
+            return PutGift.Gifts and #PutGift.Gifts or 0
+        end
+    end
+
+    return 0
+end
+
+function OpsSeasonActivityMgr:IsStartGetGift()
+    local Activity = self:GetSeasonActivity()
+    if Activity then
+        local GetGiftNodeList = OpsActivityMgr:GetNodesByNodeType(Activity.ActivityID, ActivityNodeType.ActivityNodeTypeStarDayGetGift)
+        if GetGiftNodeList and #GetGiftNodeList > 0 then
+            local GetGiftNode = GetGiftNodeList[1]
+            local NodeID  = GetGiftNode.Head.NodeID
+            local ActivityCfg = ActivityNodeCfg:FindCfgByKey(NodeID)
+            if ActivityCfg then
+                return _G.OpsActivityMgr:GetTimeStampByTimeStr(ActivityCfg.StartTime) <= TimeUtil.GetServerLogicTime()
+            end
+        end
+    end
+
+    return false
+end
+
+function OpsSeasonActivityMgr:GetGetGiftNum()
+    local Activity = self:GetSeasonActivity()
+    if Activity then
+        local GetGiftNodeList = OpsActivityMgr:GetNodesByNodeType(Activity.ActivityID, ActivityNodeType.ActivityNodeTypeStarDayGetGift)
+        if GetGiftNodeList and #GetGiftNodeList > 0 then
+            local GetGiftNode = GetGiftNodeList[1]
+            local GetGift = GetGiftNode.Extra.StarGift or {}
+            return GetGift.Gifts and #GetGift.Gifts or 0
+        end
+    end
+
+    return 0
 end
 -------------------------------------------------------------------------------------------------------
 

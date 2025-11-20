@@ -13,19 +13,13 @@ local SpecSkillEndAnimCfg = {
     },
     DefaultValues = {
         ActiveTime = 3.0,
-        SkillID = 120301,
+        SkillID = 1020001,
     },
 	LuaData = {
         {
         },
         {
-            SkillID = 1020001,
-        },
-        {
             SkillID = 1020101,
-        },
-        {
-            SkillID = 1020201,
         },
         {
             SkillID = 1020601,

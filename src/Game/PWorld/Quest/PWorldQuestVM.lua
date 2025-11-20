@@ -173,6 +173,13 @@ function PWorldQuestVM:SetCanExpel(Value)
 end
 
 function PWorldQuestVM:UpdateExit()
+    local PWorldID = PWorldMgr:GetCurrPWorldResID()
+    local SECfg = SceneEnterCfg:FindCfgByKey(PWorldID)
+    if SECfg and SECfg.PunishmentTime and SECfg.PunishmentTime <= 0 then
+        self.CanExit = true
+        return
+    end
+
     local IsFromMatch = PWorldMgr:IsFromMatch() or false
     local HasMemExited = PWorldTeamMgr.HasMemExited
     if IsFromMatch then

@@ -30,7 +30,7 @@ function SitTask:OnTaskEnter(Params)
 		EmotionMgr:SetCameraLookAt(Params.IntParam1, true)	-- ネームプレートとカメラの注視点のセット
 		EmotionMgr:MajorCanUseSkill(false, self.FromID, self.EmotionID)
 	end
-	EmotionMgr:UpdateName(self.FromID, -30)
+	EmotionMgr:UpdateName(self.FromID, 10)
 	-- _G.EmotionMgr:OnNameTask(Params.IntParam1, self.FromID)  --暂不使用此方案（实时调整名字位置）
 
 	local FromActor = ActorUtil.GetActorByEntityID(self.FromID)

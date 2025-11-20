@@ -125,9 +125,9 @@ function MagicCardRoleManager:OnHandleOpponentAndMajor(IsPVP, OpponentRoleSimple
         DeskID, LocationInfoList = self:GetAvailableDeskLocationAndRotation()
     end
 
-    --未找到空闲位置，默认取第一桌
+    --未找到空闲位置，默认取第3桌,视野好
     if DeskID == nil then
-        DeskID = 1
+        DeskID = 3
         LocationInfoList = TourneyVMUtils.GetLocationAndRotationOfPlayers(DeskID)
         self:RemoveVirtualPlayerByDeskID(DeskID)
     end
@@ -164,20 +164,10 @@ function MagicCardRoleManager:GetAvailableDeskLocationAndRotation()
     if DeskCount <= 0 then
         return
     end
-    local DeskID = 0
-    if self.AllPlayingDeskCache == nil or next(self.AllPlayingDeskCache) == nil then
-        DeskID = math.random(DeskCount)
-    else
-        local EmptyDeskList = {}
-        for i = 1, DeskCount do
-            if not self.AllPlayingDeskCache[i] then
-                table.insert(EmptyDeskList, i)
-            end
-        end
-        local EmptyCount = #EmptyDeskList
-        local RandomIndex = math.random(EmptyCount)
-        DeskID = EmptyDeskList[RandomIndex]
-    end
+    local DeskIDList = {3,4,5,6} -- 中间4个位置，视野好，无遮挡
+    local Count = #DeskIDList
+    local RandomInex = math.random(Count)
+    local DeskID = DeskIDList[RandomInex]
 
     if DeskID and DeskID > 0 then
         return DeskID, TourneyVMUtils.GetLocationAndRotationOfPlayers(DeskID)
@@ -239,18 +229,12 @@ function MagicCardRoleManager:CreateOpponentVirtualCharacter(OpponentRoleSimple,
         if OpponentRace == RaceTypeEnum.RACE_TYPE_Lalafell then
             StoolActor = self:AllocStool(NewLocation, NewRotation)
             NewLocation.Z = NewLocation.Z + StoolHigh + HalfHeight --角色放凳子上方
-            NpcActor:K2_SetActorLocation(NewLocation, false, nil, false)
         else
             NewLocation = _G.UE.FVector(NewLocation.X, NewLocation.Y, NewLocation.Z + HalfHeight)
         end
+
+        NpcActor:K2_SetActorLocation(NewLocation, false, nil, false)
         _G.HUDMgr:UpdateActorVisibility(CreatedNPCEntityID, false, false)
-        local CollisionComponent = NpcActor:GetComponentByClass(_G.UE.UCapsuleComponent)
-        if (CollisionComponent) then
-            local CapsuleComponent = CollisionComponent:Cast(_G.UE.UCapsuleComponent)
-            if (CapsuleComponent) then
-                CapsuleComponent:SetCollisionEnabled(_G.UE.ECollisionEnabled.NoCollision)
-            end
-        end
     else
         _G.FLOG_ERROR("错误，加载角色失败，请检查！")
     end
@@ -277,7 +261,8 @@ function MagicCardRoleManager:HandleMajor(LocationInfo, LookAtLocation)
         local function SwitchToGameState()
            self:StopAnimationAndSkill()
             --生成凳子垫高
-            if MajorUtil:GetMajorRaceID() == RaceTypeEnum.RACE_TYPE_Lalafell then
+            local RaceID = MajorUtil:GetMajorRaceID()
+            if (RaceID == RaceTypeEnum.RACE_TYPE_Lalafell) then
                 self.MajorStool = self:AllocStool(MajorLocation, MajorRotation)
                 MajorLocation.Z = MajorLocation.Z + 100 --角色放凳子上方
             end
@@ -412,7 +397,7 @@ function MagicCardRoleManager:OnMagicCardBattleQuit()
         self.MajorDeskID = 0
     end
     self:RemoveCurStool()
-    _G.UE.UActorManager:Get():HideAllPlayer(false)
+    self.PVPRealOpponentRoleID = 0
     self:HideAllVirtualPlayers(false)
 end
 

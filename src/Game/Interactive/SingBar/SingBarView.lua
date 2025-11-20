@@ -69,6 +69,8 @@ function SingBarView:UpdateProcessBar()
 		self:CloseSingTimer()
 		self:Hide()
 
+		self.ProgressSingBar:SetPercent(1)
+		_G.SingBarMgr:SetSingPercent(1)
 		FLOG_INFO("SingBarView:UpdateProcessBar, OnMajorSingOver: " .. tostring(PassTime / self.SingTime) .. " time: " .. TimeUtil.GetLocalTimeMS())
 
 		--正常结束
@@ -81,6 +83,7 @@ function SingBarView:UpdateProcessBar()
 		Percent = 1
 	end
 
+	_G.SingBarMgr:SetSingPercent(Percent)
 	-- FLOG_INFO("SingBar percent: " .. tostring(Percent) .. " time: " .. TimeUtil.GetLocalTimeMS() .. " passTime: " .. PassTime .. "Sing: " .. self.SingTime)
 	self.ProgressSingBar:SetPercent(Percent)
 	_G.InteractiveMgr:SetMajorIsinging(true)
@@ -100,6 +103,7 @@ function SingBarView:BeginSingBar(SingTime, SingName)
 		self.SingTimerID = TimerMgr:AddTimer(self, self.UpdateProcessBar, 0, 0.02, 0)
 	end
 
+	_G.SingBarMgr:SetSingPercent(0)
 	self.ProgressSingBar:SetPercent(0)
 
 	FLOG_INFO("SingBar BeginSingBar time: " .. TimeUtil.GetLocalTimeMS() .. " singTime: " .. SingTime)

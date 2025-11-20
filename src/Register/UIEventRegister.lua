@@ -48,7 +48,7 @@ function UIEventRegister:Register(Listener, Callback, EventName, Widget, Params)
 	local Registers = self.Registers
 
 	local Callbacks = Widget[EventName]
-	if nil == Callbacks then
+	if nil == Callbacks or type(Callbacks.Add) ~= 'function' then
 		FLOG_ERROR("UIEventRegister:Register can't find EventName=%s", EventName)
 		FLOG_WARNING(debug.traceback())
 		return

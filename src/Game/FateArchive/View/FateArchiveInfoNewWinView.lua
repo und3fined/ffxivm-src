@@ -18,6 +18,7 @@ local FateArchiveMainVM = require("Game/FateArchive/VM/FateArchiveMainVM")
 local ItemCfg = require("TableCfg/ItemCfg")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local FateModelParamCfg = require("TableCfg/FateModelParamCfg")
+local FateIconCfgTable = require("TableCfg/FateIconCfg")
 
 local LSTR = _G.LSTR
 local FateMgr = _G.FateMgr
@@ -162,6 +163,16 @@ function FateArchiveInfoNewWinView:RefreshMonsterPanel()
     self.TextNotJoin:SetText(LSTR(190017))
     self.TextUnknown:SetText(LSTR(190017))
     local FateID = self.MonsterInfo.FateID
+
+    local FateCfg = _G.FateMgr:GetFateCfg(FateID)
+    if (FateCfg) then
+        local IconCfg = FateIconCfgTable:FindCfg(string.format("Type = %d", FateCfg.Type))
+        if (IconCfg) then
+            UIUtil.ImageSetBrushFromAssetPath(self.ImgEventIcon, IconCfg.IconPath)
+            UIUtil.ImageSetBrushFromAssetPath(self.ImgEventIcon1, IconCfg.IconPath)
+        end
+    end
+
     local ModelData = FateModelParamCfg:FindCfgByKey(FateID)
     if (ModelData ~= nil) then
         local BGPath = ModelData.MonsterBGIcon
@@ -232,6 +243,14 @@ function FateArchiveInfoNewWinView:RefreshFateEventPanel()
     UIUtil.SetIsVisible(self.PanelInfoTextOnly, true)
     local FateInfo = self.CurEventData[self.SelectedIndex]
     self.FateInfo = FateInfo
+    local FateCfg = _G.FateMgr:GetFateCfg(FateInfo.FateID)
+    if (FateCfg) then
+        local IconCfg = FateIconCfgTable:FindCfg(string.format("Type = %d", FateCfg.Type))
+        if (IconCfg) then
+            UIUtil.ImageSetBrushFromAssetPath(self.ImgEventIcon, IconCfg.IconPath)
+            UIUtil.ImageSetBrushFromAssetPath(self.ImgEventIcon1, IconCfg.IconPath)
+        end
+    end
     self.TextNotJoin:SetText(LSTR(190016))
     local bIsDefeat = FateInfo.AvatarDone or FateArchiveMainVM.bForceShowAll
     if bIsDefeat then
@@ -240,7 +259,11 @@ function FateArchiveInfoNewWinView:RefreshFateEventPanel()
         UIUtil.SetIsVisible(self.BorderNotJoin, false)
 
         local FateTextCfg = FateTextCfgTable:FindCfgByKey(FateInfo.FateID)
-        self.TextDescription1:SetText(FateTextCfg.StoryCh)
+        if (FateTextCfg) then
+            self.TextDescription1:SetText(FateTextCfg.StoryCh)
+        else
+            _G.FLOG_ERROR("错误 FateTextCfgTable:FindCfgByKey 无法找到, ID : %s", tostring(FateInfo.FateID))
+        end
     else
         self.TextDescription1:SetText(LSTR(190087))
         self.TextEventName1:SetText(LSTR(190115))

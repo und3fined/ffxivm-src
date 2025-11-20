@@ -31,6 +31,8 @@ local UIUtil = require("Utils/UIUtil")
 local UIViewID = require("Define/UIViewID")
 local UIViewMgr = require("UI/UIViewMgr")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local GroupPermissionType = ProtoCS.GroupPermissionType
 local ArmyMgr
 
 ---@class ArmyMemEditPowerPageVM : UIViewModel
@@ -93,6 +95,7 @@ function ArmyMemEditPowerPageVM:Ctor()
     self.InfoEditPermisstionList = nil
     self.StorePermisstionList = nil
     self.MemberPermisstionList = nil
+    self.HousePermisstionList = nil
     self.SelectedMemberList = nil
     self.MemberEditCategoryList = nil
     self.BatchStr = nil
@@ -108,6 +111,7 @@ function ArmyMemEditPowerPageVM:Ctor()
     self.BGMaskColor = nil
     self.SaveErrorStr = nil
     self.IsNoMember = nil
+    self.IsShowHousePermisstionList = nil
 end
 
 function ArmyMemEditPowerPageVM:OnInit()
@@ -128,6 +132,8 @@ function ArmyMemEditPowerPageVM:OnInit()
     self.InfoEditPermisstionList = UIBindableList.New(ArmyMemberClassInfoEditItemVM)
     self.StorePermisstionList = UIBindableList.New(ArmyMemberClassInfoEditItemVM)
     self.MemberPermisstionList = UIBindableList.New(ArmyMemberClassInfoEditItemVM)
+    self.HousePermisstionList = UIBindableList.New(ArmyMemberClassInfoEditItemVM)
+    self.HouseMaintenancePermisstionList = UIBindableList.New(ArmyMemberClassInfoEditItemVM)
     self.MemberEditCategoryList = UIBindableList.New(ArmyBatchGroupItemVM)
     self.UpdataMenuList = false
     self.BGIcon = ""
@@ -144,6 +150,8 @@ function ArmyMemEditPowerPageVM:InitPermisstionList()
         local InfoEditPermisstionTypes = {}
         local StorePermisstionTypes = {}
         local MemberPermisstionTypes = {}
+        local HousePermisstionTypes = {}
+        local HouseMaintenancePermisstionTypes = {}
         --- 权限读表初始化设置
         local PermssionCfg = GroupPermissionCfg:GetAllPermissionCfg()
         --- 金币储物柜显示走正常处理，和其他储物柜不一样
@@ -184,6 +192,10 @@ function ArmyMemEditPowerPageVM:InitPermisstionList()
                 end
             elseif PermisstionDataTemp.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_MemberManage then
                 table.insert(MemberPermisstionTypes, ItemData)
+            elseif PermisstionDataTemp.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_House then
+                table.insert(HousePermisstionTypes, ItemData)
+            elseif PermisstionDataTemp.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_HouseMaintenance then
+                table.insert(HouseMaintenancePermisstionTypes, ItemData)
             end
         end
         if GoldItemData then
@@ -193,6 +205,12 @@ function ArmyMemEditPowerPageVM:InitPermisstionList()
         self.InfoEditPermisstionList:UpdateByValues(InfoEditPermisstionTypes)
         self.StorePermisstionList:UpdateByValues(StorePermisstionTypes)
         self.MemberPermisstionList:UpdateByValues(MemberPermisstionTypes)
+        self.IsShowHousePermisstionList = true
+        self.IsShowHousePermisstionList = ArmyMgr:GetArmyPerermissionData(ArmyDefine.ArmyUpLevelPerermissionType.ArmyHouseLevel)
+        if self.IsShowHousePermisstionList then
+            self.HousePermisstionList:UpdateByValues(HousePermisstionTypes)
+            self.HouseMaintenancePermisstionList:UpdateByValues(HouseMaintenancePermisstionTypes)
+        end
 end
 
 function ArmyMemEditPowerPageVM:OnBegin()
@@ -328,12 +346,13 @@ function ArmyMemEditPowerPageVM:OnCategorySelectChanged(Index, ItemData, ItemVie
     local OldIndex = self.SelectedCategoryIndex
     local OldData = self.Categories[OldIndex]
 	-- LSTR string:未命名新分组
-	if OldData.Name ~= "" and OldData.Name ~= LSTR(910158) then
+	if OldData and OldData.Name ~= "" and OldData.Name ~= LSTR(910158) then
         self:SetIsErrorName(false, OldData.ID)
     end
     --- 不是部队长和满足最小分组配置
     local MinNum = ArmyMgr:GetDefaultCategoryNum()
-    if ItemData.ID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT or self.CurCategoryNum <= MinNum then
+    local IsCanEdit = ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory)
+    if ItemData.ID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT or self.CurCategoryNum <= MinNum or not IsCanEdit then
         self.IsDeleteBtnEnabled = false
     else
         self.IsDeleteBtnEnabled = true
@@ -481,10 +500,13 @@ function ArmyMemEditPowerPageVM:UpdatePermisstionList(SelectedCategoryIndex)
     local InfoEditPermisstionTypes = self.InfoEditPermisstionList:GetItems()
     local StorePermisstionTypes = self.StorePermisstionList:GetItems()
     local MemberPermisstionTypes = self.MemberPermisstionList:GetItems()
-    self:SetPermisstionTypesBaseState(SelectedCategoryIndex, InfoEditPermisstionTypes)
-    self:SetPermisstionTypesBaseState(SelectedCategoryIndex, StorePermisstionTypes)
-    self:SetPermisstionTypesBaseState(SelectedCategoryIndex, MemberPermisstionTypes)
-
+    local HousePermisstionTypes = self.HousePermisstionList:GetItems()
+    local HouseMaintenancePermisstionTypes = self.HouseMaintenancePermisstionList:GetItems()
+    self:SetPermisstionTypesBaseState( InfoEditPermisstionTypes)
+    self:SetPermisstionTypesBaseState( StorePermisstionTypes)
+    self:SetPermisstionTypesBaseState( MemberPermisstionTypes)
+    self:SetPermisstionTypesBaseState( HousePermisstionTypes)
+    self:SetPermisstionTypesBaseState( HouseMaintenancePermisstionTypes)
     ---部队长权限不可变更
     if self.CurCategoryID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT then
         return
@@ -493,13 +515,17 @@ function ArmyMemEditPowerPageVM:UpdatePermisstionList(SelectedCategoryIndex)
     local PermisstionTypes =  self.Categories[SelectedCategoryIndex].PermisstionTypes
     for _, PermisstionType in pairs(PermisstionTypes) do
         local PermisstionData = GroupPermissionCfg:GetPermissionByType(PermisstionType) 
-        local PermisstionItemList
+        local PermisstionItemList = {} ---防止新增类型报错
         if PermisstionData.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_InfoEdit then
             PermisstionItemList = InfoEditPermisstionTypes
         elseif PermisstionData.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_STORE then
             PermisstionItemList = StorePermisstionTypes
         elseif PermisstionData.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_MemberManage then
             PermisstionItemList = MemberPermisstionTypes
+        elseif PermisstionData.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_House then
+            PermisstionItemList = HousePermisstionTypes
+        elseif PermisstionData.Class  == GroupPermissionClass.GRAND_PERMISSION_CLASS_HouseMaintenance then
+            PermisstionItemList = HouseMaintenancePermisstionTypes
         end
         for _, PermisstionItem in ipairs(PermisstionItemList) do
             --PermisstionItem.bChecked = false
@@ -633,7 +659,7 @@ function ArmyMemEditPowerPageVM:CreateMemberData(RoleID, RoleVM, IsChecked)
     return MemberData
 end
 
-function ArmyMemEditPowerPageVM:SetPermisstionTypesBaseState(SelectedCategoryIndex, PermisstionTypes)
+function ArmyMemEditPowerPageVM:SetPermisstionTypesBaseState(PermisstionTypes)
     for _, PermisstionItem in ipairs(PermisstionTypes) do
         --- 部队长有所有权限
         if self.CurCategoryID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT then
@@ -641,8 +667,8 @@ function ArmyMemEditPowerPageVM:SetPermisstionTypesBaseState(SelectedCategoryInd
         else
             PermisstionItem.bChecked = false
         end
-       ---部队长权限不可变更
-        if self.CurCategoryID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT then
+       ---部队长权限不可变更/无权限玩家不可修改
+        if self.CurCategoryID == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT or not ArmyMgr:GetSelfIsHavePermisstion( GroupPermissionType.GROUP_PERMISSION_TYPE_EditCategory) then
             PermisstionItem.bCanEdit = false
         else
             PermisstionItem.bCanEdit = true

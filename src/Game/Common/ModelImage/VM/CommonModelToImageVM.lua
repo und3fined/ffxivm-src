@@ -46,16 +46,21 @@ function CommonModelToImageVM:Ctor()
 end
 
 function CommonModelToImageVM:SetCameraLocation()
-	if not self.TargetActor or not self.CameraActor then
+	local TargetActor = self.TargetActor
+	if not TargetActor or not _G.CommonUtil.IsObjectValid(TargetActor) then
 		return
 	end
-	local ActorLocation = self.TargetActor:K2_GetActorLocation()
+	local CameraActor = self.CameraActor
+	if not CameraActor or not _G.CommonUtil.IsObjectValid(CameraActor) then
+		return
+	end
+	local ActorLocation = TargetActor:K2_GetActorLocation()
 	local Rotator = UE.FRotator(self.PitchAngle, self.Angle, 0)
-	self.CameraActor:K2_SetActorRotation(Rotator, false)
+	CameraActor:K2_SetActorRotation(Rotator, false)
 	local Dir = Rotator:GetForwardVector() * -1
 	local PanDir = Rotator:GetRightVector()
 	local CameraLocation = ActorLocation + Dir * self.Distance + PanDir * self.PanOffset + UE.FVector(0, 0, self.HightOffset)
-	self.CameraActor:K2_SetActorLocation(CameraLocation, false, nil, false)
+	CameraActor:K2_SetActorLocation(CameraLocation, false, nil, false)
 end
 
 function CommonModelToImageVM:__AddEffectToShowByDocumentComponent(DocumentComponent, CaptureComp)
@@ -330,7 +335,6 @@ function CommonModelToImageVM:SwitchModelCamera(Show)
 	local CameraMgr = UE.UCameraMgr.Get()
 	if CameraMgr then
 		if Show then
-			_G.UILevelMgr:SwitchLevelStreaming(false)
 			if self.CameraActor then
 				CameraMgr:SwitchCamera(self.CameraActor, 0)
 			else
@@ -338,7 +342,6 @@ function CommonModelToImageVM:SwitchModelCamera(Show)
 			end
 		else
 			CameraMgr:ResumeCamera(0, true, self.CameraActor)
-			_G.UILevelMgr:SwitchLevelStreaming(true)
 		end
 	end
 end

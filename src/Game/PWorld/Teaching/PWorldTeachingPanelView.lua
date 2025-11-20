@@ -7,9 +7,9 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local MajorUtil = require("Utils/MajorUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local TeachingVM = require("Game/Pworld/Teaching/TeachingVM")
-local TeachingType = require("Game/Pworld/Teaching/TeachingType")
 local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
 local UIBinderSetProfName = require("Binder/UIBinderSetProfName")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
@@ -17,9 +17,7 @@ local TeachingDefine = require("Game/Pworld/Teaching/TeachingDefine")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderSetVisibility = require("Binder/UIBinderSetVisibility")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
-local UIAdventureAdapterTableView = require("Game/Adventure/UIAdventureAdapterTableView")
 
 local TeachingMgr = _G.TeachingMgr
 
@@ -32,6 +30,7 @@ local TeachingMgr = _G.TeachingMgr
 ---@field BtnSwitchProfession CommBtnLView
 ---@field CommTab CommMenuView
 ---@field CommonBkg CommonBkg01View
+---@field CommonTitle CommonTitleView
 ---@field IconProfession UFImage
 ---@field IconProfession2 UFImage
 ---@field ImgMaskBg UFImage
@@ -40,7 +39,6 @@ local TeachingMgr = _G.TeachingMgr
 ---@field TableViewCatalog UTableView
 ---@field TextLv UFTextBlock
 ---@field TextProfession UFTextBlock
----@field TextTitle UFTextBlock
 ---@field TextType UFTextBlock
 ---@field AnimChangeTab UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
@@ -56,6 +54,7 @@ function PWorldTeachingPanelView:Ctor()
 	--self.BtnSwitchProfession = nil
 	--self.CommTab = nil
 	--self.CommonBkg = nil
+	--self.CommonTitle = nil
 	--self.IconProfession = nil
 	--self.IconProfession2 = nil
 	--self.ImgMaskBg = nil
@@ -64,12 +63,10 @@ function PWorldTeachingPanelView:Ctor()
 	--self.TableViewCatalog = nil
 	--self.TextLv = nil
 	--self.TextProfession = nil
-	--self.TextTitle = nil
 	--self.TextType = nil
 	--self.AnimChangeTab = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
-	self.SelectIndex = 0
 end
 
 function PWorldTeachingPanelView:OnRegisterSubView()
@@ -80,6 +77,7 @@ function PWorldTeachingPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnSwitchProfession)
 	self:AddSubView(self.CommTab)
 	self:AddSubView(self.CommonBkg)
+	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -101,8 +99,9 @@ function PWorldTeachingPanelView:OnDestroy()
 end
 
 function PWorldTeachingPanelView:OnShow()
+	self.SelectIndex = 0
 	-- 设置默认文本
-	self.TextTitle:SetText(LSTR(890010))--设置机制特训Title
+	self.CommonTitle:SetTextTitleName(LSTR(890010))	--设置机制特训Title
 	self.BtnQuit:SetText(LSTR(890013))--设置退出训练按钮
 	self.BtnSwitchProfession:SetText(LSTR(80015))--设置切换职业按钮
 	self.BackpackEmpty:SetTipsContent(LSTR(890028))--设置无法参与特训，需要切换为战斗职业
@@ -121,14 +120,13 @@ function PWorldTeachingPanelView:OnShow()
 		UIUtil.SetIsVisible(self.PanelSwitch, true)
 	end
 
-	local IsCrafterProf = TeachingMgr:IsCrafterProf()
+	local IsCrafterProf = MajorUtil.IsCrafterProf() or MajorUtil.IsGpProf()
 	if IsCrafterProf then
 		self:ShowPanelEmpty(true)
 	else
 		self:ShowPanelEmpty(false)
 		self:ShowContentPanel()
 	end
-	self:PlayAnimation(self.AnimIn)
 end
 
 function PWorldTeachingPanelView:OnHide()
@@ -137,8 +135,11 @@ end
 
 function PWorldTeachingPanelView:OnSelectionChangedCommMenu(Index)
 	TeachingVM:UpdateCatalogItems(Index)
+	-- 只在切换页签时播放动画, 显示过程中会播放AnimIn
+	if self.SelectIndex > 0 then
+		self:PlayAnimation(self.AnimChangeTab)
+	end
 	self.SelectIndex = Index
-	self:PlayAnimation(self.AnimChangeTab)
 end
 
 function PWorldTeachingPanelView:OnRegisterUIEvent()
@@ -163,15 +164,15 @@ function PWorldTeachingPanelView:OnClickedBack()
 end
 
 function PWorldTeachingPanelView:OnClickButtonExit()
-	UIViewMgr:HideView(self.ViewID)
+	_G.UIViewMgr:HideView(self.ViewID)
 end
 
 function PWorldTeachingPanelView:OnBtnSwitchClick()
-	UIViewMgr:ShowView(_G.UIViewID.ProfessionToggleJobTab)
+	_G.UIViewMgr:ShowView(_G.UIViewID.ProfessionToggleJobTab)
 end
 
 function PWorldTeachingPanelView:OnEventMajorProfSwitch()
-	local IsCrafterProf = TeachingMgr:IsCrafterProf()
+	local IsCrafterProf = MajorUtil.IsCrafterProf() or MajorUtil.IsGpProf()
 	if IsCrafterProf then
 		self:ShowPanelEmpty(true)
 	else
@@ -205,11 +206,7 @@ end
 function PWorldTeachingPanelView:ShowContentPanel()
 	self.CommTab:UpdateItems(TeachingDefine.MainTabs)
 	local SelectedLevel = TeachingMgr:GetShowLevel()
-	if self.SelectIndex and self.SelectIndex == SelectedLevel then
-		self:OnSelectionChangedCommMenu(SelectedLevel)
-	else
-		self.CommTab:SetSelectedIndex(SelectedLevel)
-	end
+	self.CommTab:SetSelectedIndex(SelectedLevel)
 end
 
 return PWorldTeachingPanelView

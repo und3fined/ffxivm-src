@@ -189,11 +189,14 @@ function CardsReadinessPanelVM:UpdateUIPerform()
     local NormalBG = MagicCardTourneyDefine.ImgPath.MagicCardReadinessBGNormal
     local RuleTourneyBG = MagicCardTourneyDefine.ImgPath.MagicCardReadinessRuleBGTourney
     local RuleNormalBG = MagicCardTourneyDefine.ImgPath.MagicCardReadinessRuleBGNormal
+    local LineIconNormal = MagicCardTourneyDefine.ImgPath.MagicCardReadinessLineNormal
+    local LineIconTourney = MagicCardTourneyDefine.ImgPath.MagicCardReadinessLineTourney
     local ScoreImgPath = MagicCardTourneyDefine.ImgPath.Score
     local CoinIconPath = ScoreMgr:GetScoreIconName(ProtoRes.SCORE_TYPE.SCORE_TYPE_KING_DEE)
     self.CoinIconName = self.IsInTourney and ScoreImgPath or CoinIconPath
     self.BigBGPath = self.IsInTourney and TourneyBG or NormalBG
     self.RuleBGPath = self.IsInTourney and RuleTourneyBG or RuleNormalBG
+    self.LineIconPath = self.IsInTourney and LineIconTourney or LineIconNormal
 end
 
 --- 更新对手信息

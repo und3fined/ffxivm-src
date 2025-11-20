@@ -122,6 +122,9 @@ end
 function CommGetWayItemView:ClosePanelOnJump()
 	UIViewMgr:HideView(UIViewID.CommGetWayTipsView)
 	UIViewMgr:HideView(UIViewID.CommonMsgBox)
+	UIViewMgr:HideView(UIViewID.FishNotesOtherBait)
+	UIViewMgr:HideView(UIViewID.FishReleaseTipsPanel)
+	-- UIViewMgr:HideView(UIViewID.WardrobeSuitGetWayWin)
 end
 
 function CommGetWayItemView:OnClickedGoBtn()

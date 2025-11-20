@@ -76,33 +76,24 @@ function Util.GetMask(Temp)
     return Temp.Mask
 end
 
-function Util.SetActAndMove(Temp, Type, Idx, Pct)
+function Util.SetActOrMove(Temp, Type, Idx, Pct, ID)
     Temp.Act = {
         Type = Type,
         Idx = Idx,
         Pct = Pct,
+        ID = ID,
     }
 end
 
-function Util.GetActAndMove(Temp)
+function Util.GetActOrMove(Temp)
     return Temp.Act
 end
 
-function Util.SetCam(Temp, FOV, DOF, Rot, OffX, OffY, RelaRot)
-    Temp.Cam = {
-        FOV     = FOV,
-        DOF     = DOF,
-        Rot     = Rot,
-        OffX    = OffX,
-        OffY    = OffY,
-        RelaRot = RelaRot,
-    }
-end
-
-function Util.SetEmojAndMouth(Temp, EmojIdx, MouthIdx)
+function Util.SetEmojAndMouth(Temp, EmojIdx, MouthIdx, MouthFrames)
     Temp.Emoj = {
         EmojIdx = EmojIdx,
         MouthIdx = MouthIdx,
+        MouthFrames = MouthFrames,
     }
 end
 
@@ -110,7 +101,7 @@ function Util.GetEmojAndMouth(Temp)
     return Temp.Emoj
 end
 
-function Util.SetCam(Temp, FOV, DOF, Rot, OffX, OffY, RelaRot)
+function Util.SetCam(Temp, FOV, DOF, Rot, OffX, OffY, RelaRot, CamDis)
     Temp.Cam = {
         FOV     = FOV,
         DOF     = DOF,
@@ -118,6 +109,7 @@ function Util.SetCam(Temp, FOV, DOF, Rot, OffX, OffY, RelaRot)
         OffX    = OffX,
         OffY    = OffY,
         RelaRot = RelaRot,
+        CamDis  = CamDis
     }
 end
 
@@ -136,9 +128,10 @@ function Util.GetScene(Temp)
     return Temp.Scene
 end
 
-function Util.SetFilter(Temp, ID)
+function Util.SetFilter(Temp, ID, FilterPre)
     Temp.Filter = {
         ID     = ID,
+        FilterPrecent = FilterPre,
     }
 end
 
@@ -173,6 +166,27 @@ end
 
 function Util.GetRole(Temp)
     return Temp.Role
+end
+
+
+function Util.SetActSettings(Temp, Spin)
+    Temp.ActSettings = {
+        Spin = Spin,
+    }
+end
+
+function Util.GetActSettings(Temp)
+    return Temp.ActSettings
+end
+
+function Util.SetRoleStat(Temp, StatID)
+    Temp.RoleStat = {
+        StatID = StatID,
+    }
+end
+
+function Util.GetRoleStat(Temp)
+    return Temp.RoleStat
 end
 
 return Util

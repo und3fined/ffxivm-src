@@ -86,6 +86,15 @@ function ActorMgr:OnRegisterNetMsg()
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_LOGIN, 0, self.OnNetMsgRoleLoginRes)
 	self:RegisterGameNetMsg(CS_CMD.CS_CMD_SAMPLE, ProtoCS.SampleCmd.SampleCmdLogin, self.OnNetMsgDemoRoleLoginRes)
 
+	--TODO: 临时修复其他玩家脚印特效不显示问题，P5时需移除
+	--修复其他玩家脚印特效看不见问题，当发现玩家穿上带脚印特效的时装时，将其从视野控制中移除，这样会使其一直显示，脚印特效也能正常播放
+	if CommonDefine.bVisionEnableFixBugPlayerFootPrint then
+		self:RegisterGameNetMsg(CS_CMD.CS_CMD_VISION, ProtoCS.CS_VISION_CMD.CS_VISION_CMD_ENTER, self.OnNetMsgVisionEnter)	    --进入视野同步
+		self:RegisterGameNetMsg(CS_CMD.CS_CMD_VISION, ProtoCS.CS_VISION_CMD.CS_VISION_CMD_QUERY, self.OnNetMsgVisionQuery)	    --初次登陆查询
+		self:RegisterGameNetMsg(CS_CMD.CS_CMD_VISION, ProtoCS.CS_VISION_CMD.CS_VISION_CMD_LEAVE, self.OnNetMsgVisionLeave)	    --视野离开
+		self:RegisterGameNetMsg(CS_CMD.CS_CMD_VISION, ProtoCS.CS_VISION_CMD.CS_VISION_CMD_AVATAR_CHG, self.OnNetMsVisionAvatarChange)	    --视野内发生变化
+	end
+	--END
 end
 
 function ActorMgr:OnRegisterGameEvent()
@@ -159,6 +168,85 @@ function ActorMgr:OnNetMsgDemoRoleLoginRes(MsgBody)
 	self:SetMajorRoleDetail(RoleDetail, true)
 end
 
+--TODO: 临时修复其他玩家脚印特效不显示问题，P5时需移除
+function ActorMgr:OnNetMsgVisionEnter(MsgBody)
+	self.AlwaysShowPlayers = self.AlwaysShowPlayers or {}
+    for _, VEntity in ipairs(MsgBody.Enter.Entities or {}) do
+        if VEntity.Role then
+            if VEntity.Role.Avatar ~= nil and VEntity.Role.Avatar.EquipList ~= nil then
+				local EntityID = VEntity.ID
+				local EquipList = VEntity.Role.Avatar.EquipList or {}
+				self:CheckPlayerFootPrintEffect(EntityID, EquipList)
+            end
+        end
+    end
+end
+
+function ActorMgr:OnNetMsgVisionQuery(MsgBody)
+	self.AlwaysShowPlayers = self.AlwaysShowPlayers or {}
+    for _, VEntity in ipairs(MsgBody.Query.Entities or {}) do
+		if VEntity.Role then
+            if VEntity.Role.Avatar ~= nil and VEntity.Role.Avatar.EquipList ~= nil then
+				local EntityID = VEntity.ID
+				local EquipList = VEntity.Role.Avatar.EquipList or {}
+				self:CheckPlayerFootPrintEffect(EntityID, EquipList)
+            end
+        end
+    end
+end
+
+function ActorMgr:CheckPlayerFootPrintEffect(EntityID, EquipList)
+	-- print("CheckPlayerFootPrintEffect", EntityID)
+	if not EntityID or not EquipList then return end
+	for _, Equip in pairs(EquipList) do
+		-- 特殊处理，记录穿炎火上衣的玩家
+		if Equip.ResID == 10952 then
+			self.AlwaysShowPlayers[EntityID] = {ID=EntityID, AlwaysShow = false}
+			-- print("CheckPlayerFootPrintEffect", EntityID)
+			local Character = ActorUtil.GetExistActorByEntityID(EntityID)
+			if Character then
+				_G.UE.UVisionMgr.Get():RemoveFromVision(Character)
+				self.AlwaysShowPlayers[EntityID].AlwaysShow = true
+				-- print("RemoveFromVision", EntityID)
+			end
+		end
+	end
+end
+
+function ActorMgr:OnNetMsgVisionLeave(MsgBody)
+	self.AlwaysShowPlayers = self.AlwaysShowPlayers or {}
+    for _, EntityID in ipairs(MsgBody.Leave.Entities or {}) do
+		self.AlwaysShowPlayers[EntityID] = nil
+		-- print("OnNetMsgVisionLeave", EntityID)
+    end
+end
+
+function ActorMgr:OnNetMsVisionAvatarChange(MsgBody)
+	self.AlwaysShowPlayers = self.AlwaysShowPlayers or {}
+    if MsgBody ~= nil and MsgBody.AvatarChg ~= nil and MsgBody.AvatarChg.Type == ProtoCommon.avatar_personal.AvatarEquipOnOffOnly then
+        if MsgBody.AvatarChg.Avatar ~= nil and MsgBody.AvatarChg.Avatar.EquipList ~= nil then
+			local EntityID = MsgBody.AvatarChg.EntityID
+			local EquipList = MsgBody.AvatarChg.Avatar.EquipList or {}
+			self:CheckPlayerFootPrintEffect(EntityID, EquipList)
+        end
+    end
+end
+
+function ActorMgr:OnAlwaysShowPlayersEnter(EntityID)
+	print("OnAlwaysShowPlayersEnter", EntityID)
+	self.AlwaysShowPlayers = self.AlwaysShowPlayers or {}
+	local Info = self.AlwaysShowPlayers[EntityID]
+	if Info and not Info.AlwaysShow then
+		local Character = ActorUtil.GetExistActorByEntityID(EntityID)
+		if Character then
+			_G.UE.UVisionMgr.Get():RemoveFromVision(Character)
+			self.AlwaysShowPlayers[EntityID].AlwaysShow = true
+			print("RemoveFromVision", EntityID)
+		end
+	end
+end	
+--END
+
 ---FindActorVM
 ---@param EntityID table
 ---@return ActorVM
@@ -221,6 +309,12 @@ function ActorMgr:OnGameEventVisionEnter(Params)
 	if nil ~= BuddyVM then
 		BuddyVM:UpdateLevel()
 	end
+	
+	--TODO: 临时修复其他玩家脚印特效不显示问题，P5时需移除
+	if CommonDefine.bVisionEnableFixBugPlayerFootPrint then
+		self:OnAlwaysShowPlayersEnter(EntityID)
+	end
+	--END
 end
 
 ---OnGameEventVisionLeave
@@ -618,6 +712,7 @@ end
 function ActorMgr:OnGameEventPWorldExit(Params)
 	print("ActorMgr:OnGameEventPWorldExit")
 	self:ClearActor()
+	_G.UE.UActorManager.Get():SetVirtualJoystickIsSprintLocked(false)
 end
 
 ---OnGameEventBuddyCreate

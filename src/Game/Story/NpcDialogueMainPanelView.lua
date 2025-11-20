@@ -17,6 +17,7 @@ local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetP
 local UIBinderIsLoopAnimPlay = require("Binder/UIBinderIsLoopAnimPlay")
 local CommonUtil = require("Utils/CommonUtil")
 local EffectUtil = require("Utils/EffectUtil")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 ---@class DialogueMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -118,7 +119,10 @@ function DialogueMainPanelView:OnShow()
 	self.TextMultiple:SetText(LSTR(1280003))
 	self.TextJumpOver:SetText(LSTR(1280004))
 	self.TextVideo:SetText(LSTR(1280005))
+	self:InitPanelHandle()
+	self.ViewType = self.Params.ViewType
 end
+
 
 function DialogueMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self.Dialogue, self.Dialogue.BtnContinue, self.OnClickNextDialogContent)
@@ -136,6 +140,12 @@ function DialogueMainPanelView:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.MajorSingBarOver, self.OnMajorSingBarOver)
 	self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
     self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
+	self:RegisterGameEvent(EventID.InputActionTypeChange, self.InitPanelHandle)
+	self:RegisterGameEvent(EventID.GamePadSkip, self.OnGamePadSkip)
+	self:RegisterGameEvent(EventID.GamePadEnter, self.OnGamePadEnter)
+	self:RegisterGameEvent(EventID.GamepadDPadUp, self.OnGamepadDPadUp)
+	self:RegisterGameEvent(EventID.GamepadDPadDown, self.OnGamepadDPadDown)
+	self:RegisterGameEvent(EventID.OnUpdateHandleCusAction, self.InitPanelHandle)
 end
 
 function DialogueMainPanelView:OnRegisterBinder()
@@ -156,6 +166,10 @@ function DialogueMainPanelView:OnRegisterBinder()
 			{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.PanelVideo) },
 			{ "bIsPlayMultiple", UIBinderSetIsVisible.New(self, self.BackBtn, false, true) },
 			{ "TextVideoNum", UIBinderSetText.New(self, self.TextVideoNum) },
+			{ "bHandleBtnContinue", UIBinderSetIsVisible.New(self, self.Dialogue.HandleState)},
+			{ "bHandleBtnJumpOver", UIBinderSetIsVisible.New(self, self.HandleState)},
+			{ "HandleBtnContinue", UIBinderSetText.New(self, self.Dialogue.HandleState.TextNum)},
+			{ "HandleBtnJumpOver", UIBinderSetText.New(self, self.HandleState.TextNum)},
 		}
 		self:RegisterBinders(SequencePlayerVM, Binders)
 	else
@@ -174,6 +188,10 @@ function DialogueMainPanelView:OnRegisterBinder()
 			{ "IsArrowHide", UIBinderSetIsVisible.New(self, self.Dialogue.BtnContinue, true) },
 			{ "DialogTexturePath", UIBinderSetBrushFromAssetPath.New(self, self.Dialogue.UpgradeNpcDialogue.ImgPaper)},
 			{ "IsTextureShow", UIBinderSetIsVisible.New(self, self.Dialogue.UpgradeNpcDialogue) },
+			{ "bHandleBtnContinue", UIBinderSetIsVisible.New(self, self.Dialogue.HandleState)},
+			{ "bHandleBtnJumpOver", UIBinderSetIsVisible.New(self, self.HandleState)},
+			{ "HandleBtnContinue", UIBinderSetText.New(self, self.Dialogue.HandleState.TextNum)},
+			{ "HandleBtnJumpOver", UIBinderSetText.New(self, self.HandleState.TextNum)},
 		}
 		self:RegisterBinders(NpcDialogVM, Binders)
 	end
@@ -379,6 +397,7 @@ function DialogueMainPanelView:OnHide()
 		self.CurrentStyleID = nil
 	end
 	--self.Dialogue:PlayAnimation(self.Dialogue.OutAnim)
+	self:HidePanelHandle()
 end
 
 function DialogueMainPanelView:OnAutoPlayChanged()
@@ -389,4 +408,66 @@ function DialogueMainPanelView:OnAutoPlayChanged()
 	end
 end
 -------------------------------------公共函数E-------------------------------------
+
+---手柄交互相关
+function DialogueMainPanelView:InitPanelHandle(IsHandleAttached)
+	if nil == IsHandleAttached or type(IsHandleAttached) ~= "boolean" then
+		IsHandleAttached = _G.SettingsHandleMgr:GetIsHandleAttached()
+	end
+	if self.ViewModel then
+		self.ViewModel:UpdateHandlebtn(IsHandleAttached, true)
+	end
+	if IsHandleAttached then
+		_G.NpcDialogMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.NpcDialogMgr:RegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+		_G.NpcDialogMgr:RegisterHandleKeyDownData("HandleUp")
+		_G.NpcDialogMgr:RegisterHandleKeyDownData("HandleDown")
+	else
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleUp")
+		_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleDown")
+	end
+end
+
+function DialogueMainPanelView:HidePanelHandle()
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.NormalSkill)
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData(SettingsHandleDefine.HandleCustomActionType.Jump)
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleUp")
+	_G.NpcDialogMgr:UnRegisterHandleKeyDownData("HandleDown")
+end
+
+function DialogueMainPanelView:OnGamePadSkip(Params)
+	local Priority = Params.IntParam1
+	if Priority ~= SettingsHandleDefine.HandleActionPriority.NpcDialogCustom then
+		return
+	end
+	self.ViewModel:OnClickButtonJumpOver()
+end
+
+function DialogueMainPanelView:OnGamePadEnter(Params)
+	local Priority = Params.IntParam1
+	if Priority ~= SettingsHandleDefine.HandleActionPriority.NpcDialogCustom then
+		return
+	end 
+	if self.AutoPlayTimer ~= nil then
+		self:UnRegisterTimer(self.AutoPlayTimer)
+		self.AutoPlayTimer = nil
+	end
+	if not UIUtil.IsVisible(self.BtnClick) then
+		return
+	end
+	self.ViewModel:OnClickScreen()
+end
+
+function DialogueMainPanelView:OnGamepadDPadUp()
+	self.ViewModel:SwitchCurSelectItem(false)
+	_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+end
+
+function DialogueMainPanelView:OnGamepadDPadDown()
+	self.ViewModel:SwitchCurSelectItem(true)
+	_G.EventMgr:SendEvent(EventID.GamePadUpdateDialogue)
+end
+
 return DialogueMainPanelView

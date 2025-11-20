@@ -9,7 +9,14 @@ local GoldSaucerAwardBelongCfg = {
 	KeyName = "BelongType",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'BelongType',
+            },
+            {
+                Name = 'TypeName',
+            },
+		}
     },
     DefaultValues = nil,
 	LuaData = nil,

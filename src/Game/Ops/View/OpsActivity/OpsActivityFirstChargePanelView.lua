@@ -39,6 +39,7 @@ local OpType ={
 ---@field BkgMask CommonBkgMaskView
 ---@field Btn CommBtnLView
 ---@field CommonBkg CommonBkg02View
+---@field CommonRedDot2 CommonRedDotView
 ---@field PreviewBtn OpsActivityPreviewBtnView
 ---@field TableViewSlot UTableView
 ---@field TextAward UFTextBlock
@@ -56,6 +57,7 @@ function OpsActivityFirstChargePanelView:Ctor()
 	--self.BkgMask = nil
 	--self.Btn = nil
 	--self.CommonBkg = nil
+	--self.CommonRedDot2 = nil
 	--self.PreviewBtn = nil
 	--self.TableViewSlot = nil
 	--self.TextAward = nil
@@ -73,6 +75,7 @@ function OpsActivityFirstChargePanelView:OnRegisterSubView()
 	self:AddSubView(self.BkgMask)
 	self:AddSubView(self.Btn)
 	self:AddSubView(self.CommonBkg)
+	self:AddSubView(self.CommonRedDot2)
 	self:AddSubView(self.PreviewBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -91,7 +94,6 @@ function OpsActivityFirstChargePanelView:OnInit()
 		{"HelpID", UIBinderValueChangedCallback.New(self, nil, self.OnHelpIDChanged)},
 		{"RewardBtnText", UIBinderSetText.New(self, self.Btn.TextContent)},
 		{"RewardBtnText", UIBinderValueChangedCallback.New(self, nil, self.OnRewardStatusChanged)},
-
 	}
 end
 
@@ -109,6 +111,8 @@ function OpsActivityFirstChargePanelView:OnShow()
 	if not(Head.RewardStatus) then return end
 	local Status = Head.RewardStatus
 	OpsActivityFirstChargeMgr:SetFirstChargerStatus(Status)
+
+	self.CommonRedDot2:SetRedDotIDByID(24000)
 
 	self.ViewModel:UpdateBaseInfo()
 	self.ViewModel:UpdateRewardList()
@@ -149,19 +153,29 @@ end
 
 function OpsActivityFirstChargePanelView:OpsNodeRewardGet(MsgBody)
 	local NodeData = _G.OpsActivityMgr:GetActivtyNodeInfo(self.Params.ActivityID)
-	self.Params.NodeList = NodeData.NodeList
-	local Head = self.Params.NodeList[1].Head
-	if not(Head.RewardStatus) then return end
-	local Status = Head.RewardStatus
-	OpsActivityFirstChargeMgr:SetFirstChargerStatus(Status)
-	self.ViewModel:UpdateRewardList()
-	self.ViewModel:UpdateRewardBtn()
+	if NodeData ~= nil then
+		self.Params.NodeList = NodeData.NodeList
+		local Head = self.Params.NodeList[1].Head
+		if not(Head.RewardStatus) then return end
+		local Status = Head.RewardStatus
+		OpsActivityFirstChargeMgr:SetFirstChargerStatus(Status)
+		self.ViewModel:UpdateRewardList()
+		self.ViewModel:UpdateRewardBtn()
+	end
 end
 
 
 function OpsActivityFirstChargePanelView:OnRewardStatusChanged()
 	local Status = OpsActivityFirstChargeMgr:GetFirstChargerStatus()
-	self.Btn:SetIsDisabledState(Status == ProtoCS.Game.Activity.RewardStatus.RewardStatusDone, true)
+	if Status == ProtoCS.Game.Activity.RewardStatus.RewardStatusDone then
+		self.Btn:SetIsDoneState(true, self.ViewModel.RewardBtnText)
+	elseif  Status == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet  then
+		self.Btn:SetIsRecommendState(true)
+	elseif Status == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo then
+		self.Btn:SetIsRecommendState(true)
+	end
+
+	OpsActivityFirstChargeMgr:SetRedDot()
 end
 
 -- 点击预览按钮

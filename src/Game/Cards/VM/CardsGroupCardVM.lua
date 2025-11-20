@@ -55,19 +55,25 @@ end
 --- func desc
 ---@param TargetItemVM CardsSingleCardVM
 function CardsGroupCardVM:OnDragEnter(TargetItemVM)
-    self.__ParentVM:OnDragEnter(TargetItemVM)
+    if self.__ParentVM and self.__ParentVM.OnDragEnter then
+        self.__ParentVM:OnDragEnter(TargetItemVM)
+    end
 end
 
 --- func desc
 ---@param TargetItemVM CardsSingleCardVM
 function CardsGroupCardVM:OnDragLeave(TargetItemVM)
-    self.__ParentVM:OnDragLeave(TargetItemVM)
+    if self.__ParentVM and self.__ParentVM.OnDragLeave then
+        self.__ParentVM:OnDragLeave(TargetItemVM)
+    end
 end
 
 --- func desc
 ---@param TargetItemVM CardsSingleCardVM
 function CardsGroupCardVM:OnDrop(TargetItemVM)
-    self.__ParentVM:OnDrop(TargetItemVM)
+    if self.__ParentVM and self.__ParentVM.OnDrop then
+        self.__ParentVM:OnDrop(TargetItemVM)
+    end
 end
 
 function CardsGroupCardVM:ChangeCheckNotify()

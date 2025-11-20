@@ -4,7 +4,7 @@ local TimeUtil = require("Utils/TimeUtil")
 local ItemUtil = require("Utils/ItemUtil")
 local ItemCfg = require("TableCfg/ItemCfg")
 local MarketDefine = require("Game/Market/MarketDefine")
-
+local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMoney")
 local LSTR = _G.LSTR
 
 local FLOG_WARNING = _G.FLOG_WARNING
@@ -41,13 +41,12 @@ function MarketStallItemVM:Ctor()
 
     self.HasGetVisible = nil
 
-    self.RedDotID = nil
 end
 
 function MarketStallItemVM:UpdateVM(Value)
     self.Status = Value.Status
     self.Index = Value.Index
-    self.RedDotID = 0
+
     self.PlayUnlockAni = Value.PlayUnlockAni
     if Value.Status == MarketStallItemVM.StallStatus.Occupancy then
         self:SetStallStatusInfo(Value.StallItem)
@@ -100,7 +99,7 @@ function MarketStallItemVM:SetStallCommodityInfo(OneStallItem)
     end
 
     local Income = _G.MarketMgr:GetStallIncome(self.StallItem)
-    self.MoneyValue = Income
+    self.MoneyValue = string.format("%s（ %s %s ）", UIBinderSetTextFormatForMoney:GetText(Income), LSTR(1010075), UIBinderSetTextFormatForMoney:GetText(self.StallItem.SinglePrice))
     self.HasGetVisible  = Income > 0
     self.RetrieveVisible = self.HasGetVisible
 
@@ -108,19 +107,21 @@ function MarketStallItemVM:SetStallCommodityInfo(OneStallItem)
         self.RelistingText = ""
     else
         if OneStallItem.ExpireTick > TimeUtil:GetServerTime() then
-            self.RelistingText = LSTR(1010095)
+            self.RelistingText = string.format("%s（ %s %s ）", LSTR(1010095), LSTR(1010075), UIBinderSetTextFormatForMoney:GetText(self.StallItem.SinglePrice))
         end
     end
 
 
-    if self.MoneyValue > 0 or self.ExpiredTextVisible then
-       self.RedDotID = MarketDefine.MarketRedDotID.Stall
-    end
 end
 
 function MarketStallItemVM:SetStallExpiredSold()
     self.TimePanelVisible = false
-    self.ExpiredTextVisible = self.StallItem and (self.StallItem.TotalNum - self.StallItem.SoldNum) > 0 or true
+    if self.StallItem then
+        self.ExpiredTextVisible = self.StallItem.TotalNum - self.StallItem.SoldNum > 0 
+    else
+        self.ExpiredTextVisible = true
+    end
+    
     local Income = _G.MarketMgr:GetStallIncome(self.StallItem)
     if Income == 0 then
         self.RetrieveVisible = false

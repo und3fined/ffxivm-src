@@ -22,7 +22,9 @@ local LSTR = _G.LSTR
 ---@field BtnFishInherit UFButton
 ---@field Clock UToggleButton
 ---@field FishSlot CommLight152SlotView
+---@field TextLv UFTextBlock
 ---@field TextName UFTextBlock
+---@field TextObtain UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimUpdate UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -35,7 +37,9 @@ function FishIngholeInformationItemView:Ctor()
 	--self.BtnFishInherit = nil
 	--self.Clock = nil
 	--self.FishSlot = nil
+	--self.TextLv = nil
 	--self.TextName = nil
+	--self.TextObtain = nil
 	--self.AnimIn = nil
 	--self.AnimUpdate = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -50,7 +54,8 @@ end
 function FishIngholeInformationItemView:OnInit()
 	self.Binders = {
 		{"FishDetailsName", UIBinderSetText.New(self, self.TextName) },
-		--{"FishDetailsNameColor", UIBinderSetColorAndOpacityHex.New(self, self.TextName)},
+		{"SelectFishObtainPower", UIBinderSetText.New(self, self.TextObtain) },
+		{"SelectFishLv", UIBinderSetText.New(self, self.TextLv) },
 		{"bBtnBuffVisible", UIBinderSetIsVisible.New(self, self.BtnBuff, false, true)},
 		{"FishDetailStatusBuffIcon", UIBinderSetBrushFromAssetPath.New(self, self.BtnBuff)},
 		{"BtnCollectVisible", UIBinderSetIsVisible.New(self, self.BtnCollect, false, true)},

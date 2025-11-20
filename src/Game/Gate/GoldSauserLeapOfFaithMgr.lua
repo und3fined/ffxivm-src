@@ -107,19 +107,13 @@ function GoldSauserLeapOfFaithMgr:ResetData()
     self.NoReachEndRewardCoin = 200 -- 没有到达终点的奖励
 
     self.EndPoiontEActorEntityID = 0 -- 终点的EobjEntityID
-
-    self.TargetMapResIDTable = {} -- 地图ID，通过遍历表格获取
-
     self.RoundData = nil -- 服务器下发的游戏轮次相关数据
 
     self.MainEntertainState = nil --  金碟游乐场主状态
     self.MainRound = nil -- 金碟游乐场主 Round
     self.NeedLeaveScene = false -- 是否需要离开场景，在WorldReady之后
 
-    local AllDataList = LeapOfFaithMapconfigCfg:FindAllCfg()
-    for Key, Value in pairs(AllDataList) do
-        self.TargetMapResIDTable[Value.SceneID] = 1
-    end
+    self:InternalLoadMapInfo()
 
     -- 获取游戏时间
     do
@@ -717,8 +711,8 @@ function GoldSauserLeapOfFaithMgr:OnGameEventLoginRes(Params)
 end
 
 function GoldSauserLeapOfFaithMgr:OnReconnect()
-    self:SendGetGameInfo()
     _G.GoldSauserMgr:SendUpdateGame()
+    self:SendGetGameInfo()
     UIViewMgr:HideView(UIViewID.GateLeapOfFaithTopInfo)
     UIViewMgr:ShowView(UIViewID.GateLeapOfFaithTopInfo)
 end
@@ -1165,19 +1159,41 @@ function GoldSauserLeapOfFaithMgr:InternalShowShorcut(InShortCutAreaID, InShortC
     end
 end
 
---- 当前地图是否为虚景跳跳乐地图
-function GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith()
-    if (self.TargetMapResIDTable == nil) then
-        return false
+-- 上一个地图是不是跳跳乐
+function GoldSauserLeapOfFaithMgr:IsLastWorldLeapOfFaith()
+    self:InternalLoadMapInfo()
+    local LastWorldResID = _G.PWorldMgr.BaseInfo.LastPWorldResID
+    for Key, Value in pairs(self.TargetMapResIDTable) do
+        if (Value == LastWorldResID) then
+            return true
+        end
     end
 
+    return false
+end
+
+function GoldSauserLeapOfFaithMgr:InternalLoadMapInfo()
+    if (self.TargetMapResIDTable == nil or #self.TargetMapResIDTable < 1) then
+        self.TargetMapResIDTable = {}
+
+        local AllDataList = LeapOfFaithMapconfigCfg:FindAllCfg()
+        for Key, Value in pairs(AllDataList) do
+            table.insert(self.TargetMapResIDTable, Value.SceneID)
+        end
+    end
+end
+
+--- 当前地图是否为虚景跳跳乐地图
+function GoldSauserLeapOfFaithMgr:IsCurMapLeapOfFaith()
     if (_G.PWorldMgr.BaseInfo == nil) then
         return false
     end
 
+    self:InternalLoadMapInfo()
+
     local CurrPWorldResID = _G.PWorldMgr.BaseInfo.CurrPWorldResID
     for Key, Value in pairs(self.TargetMapResIDTable) do
-        if (Key == CurrPWorldResID) then
+        if (Value == CurrPWorldResID) then
             return true
         end
     end

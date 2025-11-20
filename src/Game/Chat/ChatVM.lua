@@ -116,6 +116,7 @@ local ChatVM = LuaClass(UIViewModel)
 ---Ctor
 function ChatVM:Ctor()
 	self.NotShowDeletePrivateMsgTip = false
+	self.MsgDataUpdateCount = 0
 	rawset(self, "WTListMsg", setmetatable({}, {__mode = "kv"}))
 end
 
@@ -174,9 +175,6 @@ function ChatVM:Reset( IsInit )
 	self.NewMsgTipsText = ""
 
 	self.MsgScroolToBottom = nil 
-
-	self.SendTimeCD = 0
-
 	self.CurClickedMsgItem = nil -- 当前点击的聊天消息Item
 
 	self.IsNoShowPrivateChatItem = true
@@ -228,6 +226,9 @@ function ChatVM:Reset( IsInit )
 
 	-- 侧边栏
 	self.LatestPrivateChatMsg = nil
+
+	-- 聊天设置
+	self.IsSettingGroupChecked = false
 
 	if IsInit then
 		self.ChannelVMList = {}
@@ -595,6 +596,7 @@ function ChatVM:UpdateChatInfo(IsSortMsg)
 				self.ChatMsgItemVMList:RegisterRemoveItemsCallback(self, self.OnChatMsgListUpdate)
 			end
 		end
+
 	end
 
 	self:UpdateMsgIsEmpty()
@@ -769,6 +771,14 @@ function ChatVM:HandleNewMsgInternal(Channel, MsgItemVM)
 				self:TryAddSidebarItem(MsgItemVM)
 			end
 		end
+
+	else
+		if IsPerson then
+			local MsgType = MsgItemVM:GetMsgType()
+			if MsgType == ChatMsgType.TeamRecruit then -- 当前玩家发送的队伍招募分享消息
+				_G.TeamRecruitVM:AddSharedRole(MsgItemVM:GetChannelID())
+			end
+		end
 	end
 
 	local Sender = MsgItemVM.Sender
@@ -929,7 +939,7 @@ function ChatVM:FilterPrivateItemByType( ItemType )
 
 	self.ShowingPrivateItemVMList = self.FilteredPrivateItemList
 	self:UpdateIsNoPrivateChatItem()
-	self:CheckCurSelectedChannelItem()
+	self:CheckCurSelectedPrivateChannelItem()
 end
 
 --- 通过玩家名关键词过滤
@@ -954,10 +964,10 @@ function ChatVM:FilterPrivateItemsByKeyword( Keyword )
 	self.ShowingPrivateItemVMList = self.FilteredPrivateItemList
 	self:UpdateIsNoPrivateChatItem()
 
-	self:CheckCurSelectedChannelItem()
+	self:CheckCurSelectedPrivateChannelItem()
 end
 
-function ChatVM:CheckCurSelectedChannelItem()
+function ChatVM:CheckCurSelectedPrivateChannelItem()
 	local VMList = self.ShowingPrivateItemVMList
 	if nil == VMList:Find(function(e) return e.ChannelID == self.CurChannelID end) then
 		local ChannelID = VMList:Length() > 0 and VMList:Get(1).ChannelID or nil
@@ -1220,23 +1230,28 @@ function ChatVM:ClearChannelAllChatMsg(Channel, ChannelID, ShowNoMsgTips)
 	self:UpdateMsgIsEmpty()
 end
 
-function ChatVM:GetSendCDRemainTime()
+function ChatVM:GetSendCDRemainTime(ChannelVM)
+	if nil == ChannelVM then
+		return -1 
+	end
+
+	local SendTimeCD = ChannelVM:GetSendTimeCD()
 	local Time = TimeUtil.GetServerTimeMS()
-	return self.SendTimeCD - Time
+	return SendTimeCD - Time
 end
 
-function ChatVM:CheckSendTimeCD()
-	local Time = self:GetSendCDRemainTime()
+function ChatVM:CheckSendTimeCD(ChannelVM)
+	local Time = self:GetSendCDRemainTime(ChannelVM)
 	if Time > 0 then
-		-- 50037("您的发言太频繁请稍后再试")
-		MsgTipsUtil.ShowTips(LSTR(50037))
+		-- 50193("发言太快了，%s秒可以发言")
+		MsgTipsUtil.ShowTips(string.format(LSTR(50193), math.ceil(Time / 1000)))
 		return false
 	end
 
 	return true
 end
 
-function ChatVM:UpdateSendTimeCD(Channel, ChannelID)
+function ChatVM:UpdateChannelVMSendTimeCD(Channel, ChannelID)
 	if nil == Channel then
 		return
 	end
@@ -1247,11 +1262,9 @@ function ChatVM:UpdateSendTimeCD(Channel, ChannelID)
 	end
 
 	local Config = ChatUtil.FindChatChannelConfig(Channel)
-	local Time = TimeUtil.GetServerTimeMS()
-	local SendTimeCD = Time + (Config.MsgCD or 1000)
-
-	ChannelVM:SetSendTimeCD(SendTimeCD)
-	self.SendTimeCD = SendTimeCD
+	local CurTime = TimeUtil.GetServerTimeMS()
+	local CDTime = CurTime + (Config.MsgCD or 1000)
+	ChannelVM:SetSendTimeCD(CDTime)
 end
 
 function ChatVM:IsPrivateChatCurrent()
@@ -1259,8 +1272,8 @@ function ChatVM:IsPrivateChatCurrent()
 end
 
 function ChatVM:GetCurInputMsgMaxLength()
-	local Config = ChatUtil.FindChatChannelConfig(self.CurChannel) or {}
-	return Config.MsgLength or 999 
+	local Channel = self:GetSendMsgChannelAndChannelID()
+	return ChatUtil.GetChatChannelMsgMaxLength(Channel)
 end
 
 function ChatVM:CheckInputMsgLengthLimit(Text)
@@ -1563,6 +1576,23 @@ end
 
 -------------------------------------------------------------------------------------------------------
 ---Gif
+
+function ChatVM:IsGiftRedotRead(ID)
+	if type(ID) ~= "number" or ID <= 0 then
+		return
+	end
+
+	local IDMap = self.GifReadRedDotIDMap
+	if  IDMap then
+		return IDMap[ID] ~= nil and IDMap[ID] ~= false
+	end
+end
+
+function ChatVM:IsGiftUnlocked(ID)
+	if ID and self.UnlockGifIDMap then
+		return self.UnlockGifIDMap[ID] ~= nil
+	end
+end
 
 function ChatVM:UpdateUnlockGifs(IDs)
 	if table.is_nil_empty(IDs) then
@@ -1906,7 +1936,7 @@ function ChatVM:TryAddSidebarItem(MsgItemVM)
 
 	local ItemVM = SidebarMgr:GetSidebarItemVM(SidebarType)
 	if ItemVM ~= nil then
-		UIViewMgr:ShowView(UIViewID.SidebarPrivateChat, ItemVM)
+		SidebarMgr:ShowPrivateChatSidebarWin(ItemVM)
 	end
 end
 
@@ -1963,7 +1993,7 @@ end
 
 ---@private
 function ChatVM:OnChatMsgListUpdate()
-	self.MsgDataUpdateCount = (self.MsgDataUpdateCount or 0) + 1
+	self.MsgDataUpdateCount = self.MsgDataUpdateCount + 1
 	self:UpdateMsgIsEmpty()
 end
 

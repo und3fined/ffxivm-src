@@ -13,6 +13,8 @@ local ItemUtil = require("Utils/ItemUtil")
 local ItemVM = require("Game/Item/ItemVM")
 local ProtoRes = require("Protocol/ProtoRes")
 local MajorUtil = require("Utils/MajorUtil")
+local PVPColosseumStarItemVM = require("Game/PVP/Record/VM/PVPColosseumStarItemVM")
+local CrystallineRankCfg = require("TableCfg/CrystallineRankCfg")
 
 
 ---@class PVPColosseumRecordVM : UIViewModel
@@ -59,6 +61,18 @@ function PVPColosseumRecordVM:Ctor()
 
 	-- 是否获得比赛结果
 	self.HasSetGameResult = false
+
+	-- 段位赛数据
+	self.IsRank = false
+	self.OldRankIsWinStar = true
+	self.OldRankName = ""
+	self.OldStarList = UIBindableList.New(PVPColosseumStarItemVM)
+	self.OldRankScore = 0
+	self.NewRankIsWinStar = true
+	self.NewRankName = ""
+	self.NewStarList = UIBindableList.New(PVPColosseumStarItemVM)
+	self.NewRankScore = 0
+	
 end
 
 function PVPColosseumRecordVM:Reset()
@@ -69,7 +83,7 @@ function PVPColosseumRecordVM:Reset()
 end
 
 ---更新比赛结果
-function PVPColosseumRecordVM:UpdateVM(IsWinner, ExitEndTime, PvPColosseumGameResultRsp)
+function PVPColosseumRecordVM:UpdateVM(IsWinner, ExitEndTime, PvPColosseumGameResultRsp, IsRank)
 	self.SceneInstID = PvPColosseumGameResultRsp.SceneInstID
 	self.PlayResult = IsWinner
 	self.PlayResultText = IsWinner and _G.LSTR(810031) or _G.LSTR(810032)
@@ -106,6 +120,8 @@ function PVPColosseumRecordVM:UpdateVM(IsWinner, ExitEndTime, PvPColosseumGameRe
 	self.RightTeamRecordList:UpdateByValues(EnemyTeamData.Members)
 
 	self:UpdateTeamAward(MyTeamData)
+
+	self:UpdateRankData(IsRank, MyTeamData)
 end
 
 ---更新队伍数据
@@ -181,6 +197,58 @@ function PVPColosseumRecordVM:UpdateTeamAward(PvPColosseumTeam)
 	end
 
 	self.AwardList:UpdateByValues(ItemList)
+end
+
+function PVPColosseumRecordVM:UpdateRankData(IsRank, MyTeamData)
+	if IsRank then
+		local OldRankID = 0
+		local OldScore = 0
+		local NewRankID = 0
+		local NewScore = 0
+		for _, Member in ipairs(MyTeamData.Members) do
+			if Member.RoleID == MajorUtil.GetMajorRoleID() then
+				OldRankID = Member.LastRankID
+				OldScore = Member.LastCrystalPoint
+				NewRankID = Member.RankID
+				NewScore = Member.CrystalPoint
+				break
+			end
+		end
+
+		local OldRankCfg = CrystallineRankCfg:FindCfgByKey(OldRankID)
+		local NewRankCfg = CrystallineRankCfg:FindCfgByKey(NewRankID)
+		if OldRankCfg and NewRankCfg then
+			self.OldRankName = OldRankCfg.RankName
+			self.NewRankName = NewRankCfg.RankName
+
+			self.OldRankIsWinStar = OldRankCfg.ResultMode == ProtoRes.Game.pvp_rank_result_mode.RRM_WINSTAR
+			self.NewRankIsWinStar = NewRankCfg.ResultMode == ProtoRes.Game.pvp_rank_result_mode.RRM_WINSTAR
+
+			if self.OldRankIsWinStar then
+				local DataList = {}
+				for Index = 1, _G.PVPInfoMgr:GetCrystallineRankWinStarMax() do
+					local IsGlow = OldRankCfg.WinStar >= Index
+					table.insert(DataList, { IsGlow = IsGlow })
+				end
+				self.OldStarList:UpdateByValues(DataList)
+			else
+				self.OldRankScore = OldScore
+			end
+
+			if self.NewRankIsWinStar then
+				local DataList = {}
+				for Index = 1, _G.PVPInfoMgr:GetCrystallineRankWinStarMax() do
+					local IsGlow = NewRankCfg.WinStar >= Index
+					table.insert(DataList, { IsGlow = IsGlow })
+				end
+				self.NewStarList:UpdateByValues(DataList)
+			else
+				self.NewRankScore = NewScore
+			end
+		end
+	end
+
+	self.IsRank = IsRank
 end
 
 ---切换显示战绩还是数据

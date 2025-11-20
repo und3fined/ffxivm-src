@@ -13,6 +13,7 @@ function BuddySurfaceColorItemVM:Ctor()
 	self.bIsDyed = nil
 	self.bIsLocked = nil
 	self.IsValid = nil
+	self.IsMetalHigh = nil
 end
 
 function BuddySurfaceColorItemVM:UpdateVM(Value)

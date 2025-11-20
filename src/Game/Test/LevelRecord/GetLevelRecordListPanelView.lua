@@ -15,6 +15,7 @@ local SettingsDefine = require("Game/Settings/SettingsDefine")
 ---@class GetLevelRecordListPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Block UButton
+---@field BtnDeserialize UButton
 ---@field BtnGetRecord UButton
 ---@field BtnPlay UButton
 ---@field BtnPlayByRecordID UButton
@@ -26,6 +27,9 @@ local SettingsDefine = require("Game/Settings/SettingsDefine")
 ---@field CheckBoxUIRecordClose CommCheckBoxView
 ---@field CheckBoxUIRecordOpen CommCheckBoxView
 ---@field CheckBoxUIRecordOpt CommCheckBoxView
+---@field ClearCacheToggleGroup UToggleGroup
+---@field ClearCache_Close CommCheckBoxView
+---@field ClearCache_Open CommCheckBoxView
 ---@field ClientRecoreToggleGroup UToggleGroup
 ---@field DropDownList CommDropDownListView
 ---@field DropDownList_Culture CommDropDownListView
@@ -58,6 +62,8 @@ function GetLevelRecordListPanelView:OnRegisterSubView()
     self:AddSubView(self.CheckBoxUIRecordOpt)
     self:AddSubView(self.ReturnToLogin_Open)
     self:AddSubView(self.ReturnToLogin_Close)
+    self:AddSubView(self.ClearCache_Open)
+    self:AddSubView(self.ClearCache_Close)
     -- AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -70,6 +76,8 @@ function GetLevelRecordListPanelView:OnInit()
     self.CheckBoxUIRecordOpt:SetText(self.CheckBoxUIRecordOpt.Content)
     self.ReturnToLogin_Open:SetText(self.ReturnToLogin_Open.Content)
     self.ReturnToLogin_Close:SetText(self.ReturnToLogin_Close.Content)
+    self.ClearCache_Open:SetText(self.ClearCache_Open.Content)
+    self.ClearCache_Close:SetText(self.ClearCache_Close.Content)
     self.Languages = CommonUtil.GetCultureList()
     self.CurLanguageIndex = self:GetCurLanguageIndex()
     if self.CurLanguageIndex == nil then self.CurLanguageIndex = 1 end
@@ -121,12 +129,22 @@ function GetLevelRecordListPanelView:OnShow()
         Index=1
     end
     self.ReturnToLoginToggleGroup:SetCheckedIndex(Index, true)
+
+    if _G.LevelRecordMgr.ClearSaveData then
+        Index=0
+    else
+        Index=1
+    end
+    self.ClearCacheToggleGroup:SetCheckedIndex(Index, true)
+
+    self.IsShow = true
 end
 
 function GetLevelRecordListPanelView:OnHide()
     if _G.LevelRecordMgr.bIsInReplaying then
         _G.EventMgr:SendEvent(EventID.BlockAllInput, true)
     end
+    self.IsShow = false
 end
 
 
@@ -135,6 +153,7 @@ function GetLevelRecordListPanelView:OnRegisterUIEvent()
     UIUtil.AddOnClickedEvent(self, self.BtnGetRecord, self.OnClickBtnGetRecord)
     UIUtil.AddOnClickedEvent(self, self.BtnRecord, self.OnClickBtnRecord)
     UIUtil.AddOnClickedEvent(self, self.BtnPlay, self.OnClickBtnPlay)
+    UIUtil.AddOnClickedEvent(self, self.BtnDeserialize, self.OnClickBtnDeserialize)
     UIUtil.AddOnClickedEvent(self, self.BtnPlayByRecordID, self.OnClickBtnPlayByRecordID)
     UIUtil.AddOnSelectionChangedEvent(self, self.DropDownList, self.OnDropDownListSelectionChanged)
     UIUtil.AddOnSelectionChangedEvent(self, self.DropDownList_Culture, self.OnDropDownList_CultureSelectionChanged)
@@ -142,6 +161,7 @@ function GetLevelRecordListPanelView:OnRegisterUIEvent()
     UIUtil.AddOnStateChangedEvent(self, self.ClientRecoreToggleGroup, self.OnGroupStateChangedQuest)
     UIUtil.AddOnStateChangedEvent(self, self.UIRecoreToggleGroup, self.OnGroupStateChangedUIRecord)
     UIUtil.AddOnStateChangedEvent(self, self.ReturnToLoginToggleGroup, self.OnGroupStateChangedReturnToLogin)
+    UIUtil.AddOnStateChangedEvent(self, self.ClearCacheToggleGroup, self.OnGroupStateChangedClearCache)
 end
 
 function GetLevelRecordListPanelView:OnRegisterGameEvent()
@@ -178,6 +198,20 @@ function GetLevelRecordListPanelView:OnClickBtnPlay()
         _G.LevelRecordMgr:StartPlayRecord(RecordUrl)
     end
 end
+
+function GetLevelRecordListPanelView:OnClickBtnDeserialize()
+    if self.SelectRecordIndex == -1 then
+        _G.MsgTipsUtil.ShowTips("请先拉取录像列表并选择一个录像")
+        return
+    end
+
+    local RecordListItem = _G.LevelRecordMgr:GetRecordListData(self.SelectRecordIndex)
+    local bSuccess, SavePath = _G.LevelRecordMgr:DeserializeRecord(RecordListItem.RecordFilePath)
+    if bSuccess then
+        MsgBoxUtil.ShowMsgBoxOneOpRight(self, "", "成功写入文本到文件\n" .. SavePath, nil, "确认")
+    end
+end
+
 
 
 function GetLevelRecordListPanelView:OnClickBtnPlayByRecordID()
@@ -287,6 +321,7 @@ function GetLevelRecordListPanelView:OnGroupStateChangedQuest(ToggleGroup, Toggl
 end
 
 function GetLevelRecordListPanelView:OnGroupStateChangedUIRecord(ToggleGroup, ToggleButton, Index, State)
+    if not self.IsShow then return end
     UE4.UIRecordMgr:Get().OpenUIRecord = Index ~= 1
     _G.LevelRecordMgr:OpenPureUIRecord(Index == 2)
 end
@@ -295,6 +330,9 @@ function GetLevelRecordListPanelView:OnGroupStateChangedReturnToLogin(ToggleGrou
     _G.LevelRecordMgr.ReturnToLogin = Index == 0
 end
 
+function GetLevelRecordListPanelView:OnGroupStateChangedClearCache(ToggleGroup, ToggleButton, Index, State)
+    _G.LevelRecordMgr.ClearSaveData = Index == 0
+end
 
 function GetLevelRecordListPanelView:GetCurLanguageIndex()
    local CurLan = CommonUtil.GetCurrentCultureName()

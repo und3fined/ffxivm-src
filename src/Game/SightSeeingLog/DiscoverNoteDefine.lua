@@ -14,6 +14,10 @@ local TutorialTriggerRange = 500 -- 探索笔记新手指南触发范围
 
 local GuideID = 44 -- 探索笔记新手引导组ID
 
+local NpcLeaveSpeed = 250 -- Npc离场速度
+
+local NpcLeaveWaitMaxTime = 5 -- Npc离场最大等待时间
+
 local NoteUnlockType = {
     ["Locked"] = 0,
     ["NormalUnlock"] = 1,
@@ -55,9 +59,9 @@ local NoteClueSrcType = {
     ["NpcDialog"] = 4,
 }
 
-local NoteDetailSevReturnType = {
-    ["Notify"] = 1,
-    ["ClientReq"] = 2,
+local RegionTabRedDotUpdateReason = {
+    ["NewRegionOpen"] = 1, -- 新页签开放（强红点）
+    ["PassByNoteItem"] = 2, -- 笔记红点传递(弱红点)
 }
 
 local DiscoverNoteDefine = {
@@ -70,9 +74,11 @@ local DiscoverNoteDefine = {
     TextureGreyOpacityParam = TextureGreyOpacityParam,
     NoteClueType = NoteClueType,
     NoteClueSrcType = NoteClueSrcType,
-    NoteDetailSevReturnType = NoteDetailSevReturnType,
     TutorialTriggerRange = TutorialTriggerRange,
     GuideID = GuideID,
+    NpcLeaveSpeed = NpcLeaveSpeed,
+    NpcLeaveWaitMaxTime = NpcLeaveWaitMaxTime,
+    RegionTabRedDotUpdateReason = RegionTabRedDotUpdateReason,
 }
 
 return DiscoverNoteDefine

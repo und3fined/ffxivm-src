@@ -33,6 +33,10 @@ end
 
 function ArmyWelfarePanelVM:UpdateArmyWelfareInfo()
     self:UpdateUnlockState()
+    local ArmyID = ArmyMgr:GetArmyID()
+    if ArmyID and ArmyID ~= 0 then
+        _G.HouseInfoMgr:SendGroupHouseInfo(ArmyID)
+    end
 end
 
 function ArmyWelfarePanelVM:UpdateUnlockState()
@@ -100,7 +104,17 @@ function ArmyWelfarePanelVM:UpdateUnlockState()
         elseif WelfareData.ID == ArmyDefine.ArmyWelfarePageId.SE then
             WelfareData.UnLockLevel = 3
         elseif WelfareData.ID == ArmyDefine.ArmyWelfarePageId.House then
-            WelfareData.IsLocked = true
+            --WelfareData.IsLocked = true
+            local AllData = GroupUplevelpermissionCfg:GetPermissionByType(ArmyUpLevelPerermissionType.ArmyHouseLevel)
+            local Data = table.find_by_predicate(AllData, function(Data)
+                return Data.FuncLevel == 1
+            end)
+            if Data then
+                local GroupLevel = Data.Level
+                if GroupLevel then
+                    WelfareData.UnLockLevel = GroupLevel
+                end
+            end
         end
         local CfgData = table.find_by_predicate(PrivilegeList, function(Data)
             return Data.Type == WelfareData.ID

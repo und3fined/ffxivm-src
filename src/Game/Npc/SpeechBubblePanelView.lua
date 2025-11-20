@@ -120,6 +120,10 @@ function SpeechBubblePanelView:UpdateBubblePos(ActorEntityID)
 end
 
 function SpeechBubblePanelView:Tick(_, InDeltaTime)
+    if self.BubbleList == nil then
+        return
+    end
+
     for EntityID, SpeechBubble in pairs(self.BubbleList) do
         local BubbleView = SpeechBubble.BubbleView
         if BubbleView and BubbleView:IsVisible()then
@@ -145,7 +149,25 @@ function SpeechBubblePanelView:OnShow()
 end
 
 function SpeechBubblePanelView:OnHide()
+    if self.BubbleList then
+        for _, BubbleInfo in pairs(self.BubbleList) do
+            if BubbleInfo.BubbleView then
+                _G.UIViewMgr:RecycleView(BubbleInfo.BubbleView)
+            end
+        end
+        self.BubbleList = {}
+    end
 
+    if self.BubbleViewCache then
+        for _, BubbleList in pairs(self.BubbleViewCache) do
+            for _, BubbleInfo in pairs(BubbleList) do
+                if BubbleInfo.BubbleView then
+                    _G.UIViewMgr:RecycleView(BubbleInfo.BubbleView)
+                end
+            end
+        end
+        self.BubbleViewCache = {}
+    end
 end
 
 function SpeechBubblePanelView:OnRegisterUIEvent()
@@ -202,7 +224,7 @@ function SpeechBubblePanelView:GetBubble(BubbleStyle, BubbleID)
 end
 
 function SpeechBubblePanelView:PushBubbleView(EntityID)
-    local SpeechBubble = self.BubbleList[EntityID]
+    local SpeechBubble = self.BubbleList and self.BubbleList[EntityID]
     if (SpeechBubble == nil) then
         return
     end
@@ -243,11 +265,15 @@ function SpeechBubblePanelView:ShowBubbleView(Params)
         return
     end
 
-    if (self.BubbleList[ActorEntityID] == nil) then
+    if self.BubbleList == nil then
+        self.BubbleList = {}
+    end
+
+    if (self.BubbleList and self.BubbleList[ActorEntityID] == nil) then
         self.BubbleList[ActorEntityID] = self:GetBubble(BubbleStyle, BubbleID)
     end
 
-    local BubbleInfo = self.BubbleList[ActorEntityID]
+    local BubbleInfo = self.BubbleList and self.BubbleList[ActorEntityID]
     if BubbleInfo == nil then
         return
     end
@@ -274,7 +300,7 @@ function SpeechBubblePanelView:HideBubbleView(Params)
         return
     end
     
-    local BubbleInfo = self.BubbleList[EntityID]
+    local BubbleInfo = self.BubbleList and self.BubbleList[EntityID]
     if BubbleInfo == nil then
         return
     end

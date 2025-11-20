@@ -230,7 +230,8 @@ function QuestFactory.CreateLogic(QuestID, LogicID, Cfg)
         return nil
     end
 
-    local CtorParams = { QuestID = QuestID, LogicID = LogicID, CondBit = CondBit }
+    local AffectedTargets = Cfg.AffectedTargets
+    local CtorParams = { QuestID = QuestID, LogicID = LogicID, CondBit = CondBit, AffectedTargets = AffectedTargets }
     local NewLogic = LogicChildClass.New(CtorParams, Cfg.Properties)
 
     return NewLogic, Cfg.LogicType

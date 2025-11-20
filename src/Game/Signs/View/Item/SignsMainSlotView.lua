@@ -131,7 +131,7 @@ function SignsMainSlotView:OnTouchStarted(InGeometry, InTouchEvent)
 	FLOG_WARNING("TouchStart")
 
 	if not _G.UIViewMgr:IsViewVisible(_G.UIViewID.SceneMarkersMainPanel) then
-		return
+		return _G.UE.UWidgetBlueprintLibrary.Unhandled()
 	end
 	local DoubleClick = false
 

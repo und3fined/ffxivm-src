@@ -1,7 +1,5 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
-local ProtoCommon = require("Protocol/ProtoCommon")
-local CompanionCfg = require ("TableCfg/CompanionCfg")
 
 local CompanionVM = require ("Game/Companion/VM/CompanionVM")
 local RedDotItemVM = require("Game/CommonRedDot/VM/RedDotItemVM")
@@ -20,8 +18,6 @@ function CompanionListItemVM:Ctor()
     self.IsSelected = false
     self.IsFavourite = false
     self.IsNew = false
-    self.IsNotOwn = false
-    self.IsStoryProtect = false
     self.IsShowReddot = false
 	self.ReddotVM = RedDotItemVM.New()
 end
@@ -61,38 +57,6 @@ end
 --- 刷新宠物列表数据
 function CompanionListItemVM:UpdateListData()
     self:SetListData(self.IsMerge, self.Cfg)
-end
-
---- 刷新宠物图鉴列表数据
-function CompanionListItemVM:UpdateArchiveData()
-    self:SetArchiveData(self.IsMerge, self.Cfg)
-end
-
---- 设置图鉴列表数据
-function CompanionListItemVM:SetArchiveData(IsMerge, Cfg)
-    local CompanionID = Cfg.ID
-    self.CompanionID = CompanionID
-    self.IsMerge = IsMerge
-    self.Cfg = Cfg
-
-    if not IsMerge then
-        local IsNotOwn = not CompanionVM:IsOwnCompanion(CompanionID)
-        self.IsStoryProtect = Cfg.IsStoryProtect == 1 and IsNotOwn
-        self.Icon = self.IsStoryProtect and "" or Cfg.Icon
-        self.IsNotOwn = IsNotOwn
-        self.IsNew = CompanionVM:IsCompanionArchiveNew(CompanionID)
-    else
-        local TempCompanionID = self.Cfg.CompanionID[1]
-        local IsNotOwn = not CompanionVM:IsOwnCompanion(TempCompanionID)
-        self.IsStoryProtect = Cfg.IsStoryProtect == 1 and IsNotOwn
-        self.Icon = self.IsStoryProtect and "" or Cfg.Icon
-        self.IsNotOwn = IsNotOwn
-        self.IsNew = CompanionVM:IsCompanionArchiveNew(TempCompanionID)
-    end
-
-    -- 红点控制
-    self.IsShowReddot = true
-    self.ReddotVM.IsVisible = self.IsNew
 end
 
 function CompanionListItemVM:OnSelectChanged(IsSelected)

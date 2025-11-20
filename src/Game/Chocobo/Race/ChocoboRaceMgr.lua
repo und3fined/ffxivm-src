@@ -29,6 +29,7 @@ local EffectUtil = require("Utils/EffectUtil")
 local ChocoboRaceSkillCfg = require("TableCfg/ChocoboRaceSkillCfg")
 local ChocoboRaceStatusCfg = require("TableCfg/ChocoboRaceStatusCfg")
 local AudioUtil = require("Utils/AudioUtil")
+local ChocoboNameCfg = require("TableCfg/ChocoboNameCfg")
 
 local GameNetworkMgr = nil
 local TeamMgr = nil
@@ -41,6 +42,8 @@ local EventMgr = nil
 local HUDMgr = nil
 local PWorldMgr = nil
 local RoleInfoMgr = nil
+local FLOG_INFO = nil
+local FLOG_ERROR = nil
 local SUB_MSG_ID = ProtoCS.ChocoboRaceCmd
 local CS_CMD_CHOCOBO_RACE = ProtoCS.CS_CMD.CS_CMD_CHOCOBO_RACE
 
@@ -71,8 +74,8 @@ function ChocoboRaceMgr:OnInit()
     self.AssembleTimeoutTimer = nil    -- 超时计时器句柄
 
     self.MaxRacerNum = ProtoCS.ChocoboRaceConst.ChocoboRaceConstRacerNum
-    self.GameState = ChocoboDefine.GAME_STATE_ENUM.NONE
-    self.RaceStatus = ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusNone
+    self.GameState = ChocoboDefine.GAME_STATE_ENUM.NONE  -- 客户端状态
+    self.RaceStatus = ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusNone -- 服务器状态
 end
 
 function ChocoboRaceMgr:OnBegin()
@@ -87,6 +90,8 @@ function ChocoboRaceMgr:OnBegin()
     HUDMgr = _G.HUDMgr
     PWorldMgr = _G.PWorldMgr
     RoleInfoMgr = _G.RoleInfoMgr
+    FLOG_INFO = _G.FLOG_INFO
+    FLOG_ERROR = _G.FLOG_ERROR
 
     _G.UE.FTickHelper.GetInst():SetTickIntervalByFrame(self.TickTimerID, 10)
     _G.UE.FTickHelper.GetInst():SetTickDisable(self.TickTimerID)
@@ -155,7 +160,7 @@ function ChocoboRaceMgr:UpdateCountDown()
     end
 
     local CurrentTime = TimeUtil.GetServerTime()
-    ChocoboRaceUtil.Log("UpdateCountDown LeftTime :" .. (CurrentTime - self.GoTime))
+    FLOG_INFO("[ChocoboRace] UpdateCountDown LeftTime :" .. (CurrentTime - self.GoTime))
     if self.GoTime <= CurrentTime then
         self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.BEGIN) -- 这里是唯一正常流程进入Begin的地方
     end
@@ -174,7 +179,6 @@ function ChocoboRaceMgr:UpdateProgress()
         if Racer then
             Racer:UpdateData(Data)
             Racer:Update()
-            Data.Progress = Racer:GetRacerProgress()
         end
     end
 end
@@ -188,6 +192,7 @@ function ChocoboRaceMgr:ResetRace()
 
     self.IsClientReady  = false
     self.IsServerReady   = false
+    self.IsTickResultSequence = false
     self.GameRaceID = 0
     self.GoTime = 0
     self.CurFrameID = 0
@@ -232,18 +237,15 @@ function ChocoboRaceMgr:OnRegisterGameEvent()
 
     self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
     self:RegisterGameEvent(EventID.PWorldExit, self.OnGameEventExitWorld)
+    self:RegisterGameEvent(EventID.WorldPreLoad, self.OnGameEventWorldPreLoad)
     self:RegisterGameEvent(EventID.PWorldReady, self.OnGameEventPWorldReady)
     self:RegisterGameEvent(EventID.AreaTriggerBeginOverlap, self.OnEnterAreaTrigger)
     
     self:RegisterGameEvent(EventID.MountAssembleAllEnd, self.OnAssembleAllEnd)
-    
-    self:RegisterGameEvent(EventID.ChocoboRaceArrival, self.OnChocoboRaceArrival)
-    self:RegisterGameEvent(EventID.AppEnterForeground, self.OnAppEnterForeground)
 end
 
 --region 协议请求
 function ChocoboRaceMgr:ReqRaceQuery()
-    ChocoboRaceUtil.Log("ReqRaceQuery  ReqRaceQuery  ReqRaceQuery")
     local Params = {}
     Params.Cmd = SUB_MSG_ID.ChocoboRaceCmdQuery
     Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
@@ -257,6 +259,18 @@ function ChocoboRaceMgr:ReqRaceJoin()
     GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceCmdJoin, Params)
 end
 
+function ChocoboRaceMgr:TriggerGlobalCooldown()
+    local GCDEndTime = TimeUtil.GetServerTimeMS() + self:GetGCDDuration()
+
+    -- 更新所有技能CD
+    for i = 1, ChocoboDefine.SKILL_NUM do
+        ChocoboRaceMainVM:FindSkillVM(i):UpdateSkillCD(GCDEndTime)
+    end
+
+    -- 更新物品CD
+    ChocoboRaceMainVM:UpdateItemCD(GCDEndTime)
+end
+
 function ChocoboRaceMgr:ReqRaceCtrl(Ctrl, Do, Close)
     if Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility1 or
             Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility2 or
@@ -265,6 +279,10 @@ function ChocoboRaceMgr:ReqRaceCtrl(Ctrl, Do, Close)
             self:UnRegisterTimer(self.DelayTutorialChocoboRaceSkillTimerID)
             self.DelayTutorialChocoboRaceSkillTimerID = nil
         end
+        -- 统一处理全局CD
+        self:TriggerGlobalCooldown()
+    elseif Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbilityItem then
+        self:TriggerGlobalCooldown()
     end
 
     local Params = {}
@@ -275,16 +293,6 @@ function ChocoboRaceMgr:ReqRaceCtrl(Ctrl, Do, Close)
     Params.Cmd = SUB_MSG_ID.ChocoboRaceCmdCtrl
     Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
     GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceCmdCtrl, Params)
-end
-
--- 请求当前服务器路径最新数据，用于断线重连
-function ChocoboRaceMgr:ReqRaceQueryProgress()
-    local Params = {}
-    Params.Cmd = SUB_MSG_ID.ChocoboRaceCmdQueryProgress
-    Params.Progress = {}
-    Params.Progress.Index = -1
-    Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
-    GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceCmdQueryProgress, Params)
 end
 
 function ChocoboRaceMgr:ReqRaceReward()
@@ -322,15 +330,32 @@ function ChocoboRaceMgr:ReqRaceNpcChallengeData(NpcID)
     Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
     GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceNpcchallengeData, Params)
 end
+
+function ChocoboRaceMgr:ReqRaceShowAwardTips()
+    local Cmd = SUB_MSG_ID.ChocoboRaceFinish
+    local Params = {}
+    Params.Cmd = Cmd
+    Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
+    GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceFinish, Params)
+end
+
+-- 请求当前服务器路径最新数据，用于断线重连
+function ChocoboRaceMgr:ReqRaceQueryProgress()
+    local Params = {}
+    Params.Cmd = SUB_MSG_ID.ChocoboRaceCmdQueryProgress
+    Params.Progress = {}
+    Params.Progress.Index = -1
+    Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
+    GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceCmdQueryProgress, Params)
+end
 --endregion
 
 --region 协议回包
 function ChocoboRaceMgr:OnNetMsgRaceAllUserIn(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceAllUserIn: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceAllUserIn: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceAllUserIn: " .. _G.table_to_string_block(MsgBody))
 
     --self.IsServerReady = true
     --if self.IsClientReady and self.IsServerReady then
@@ -355,7 +380,7 @@ local function LoadVfx(VfxID)
     
     local AudioPath = Cfg.AudioPath
     if not string.isnilorempty(AudioPath) then
-        ChocoboRaceUtil.Log( "PreLoadAudio AudioPath = " .. AudioPath)
+        FLOG_INFO("[ChocoboRace] PreLoadAudio AudioPath = " .. AudioPath)
         _G.ObjectMgr:PreLoadObject(AudioPath, _G.UE.EObjectGC.Cache_Map)
     end
 
@@ -378,7 +403,7 @@ local function LoadVfx(VfxID)
         VfxParameter:AddTarget(Actor, 0, _G.UE.EVFXAttachPointType.AttachPointType_Body, 0)
     end
 
-    ChocoboRaceUtil.Log( "PreLoadVfx VfxID = " .. VfxID)
+    FLOG_INFO("[ChocoboRace] PreLoadVfx VfxID = " .. VfxID)
     return EffectUtil.LoadVfx(VfxParameter)
 end
 
@@ -460,10 +485,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceQuery(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceQuery: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceQuery: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceQuery: " .. _G.table_to_string_block(MsgBody))
 
     local Query = MsgBody.Query
     if nil == Query then
@@ -489,6 +513,13 @@ function ChocoboRaceMgr:OnNetMsgRaceQuery(MsgBody)
         local Data = RacerData[i]
         Data.Index = Index
         Data.IsRide = false
+        
+        -- 处理名字
+        if Data.Name2 and Data.Name2.Name1 and Data.Name2.Name1 > 0 then
+            local NameCfg1 = ChocoboNameCfg:FindValue(Data.Name2.Name1, "Name") or ""
+            local NameCfg2 = ChocoboNameCfg:FindValue(Data.Name2.Name2, "Name") or ""
+            Data.Name = NameCfg1 .. " " .. NameCfg2
+        end
 
         --初始化数据
         self.ChocoboRacerData[Index] = Data
@@ -540,19 +571,21 @@ function ChocoboRaceMgr:OnNetMsgRaceQuery(MsgBody)
         EventMgr:SendEvent(EventID.ChocoboRaceHUDUpdate, { ULongParam1 = Data.EntityID })
     end
 
-    -- 请求坐标数据
-    self:ReqRaceQueryProgress()
     --初始化游戏状态
     if self.RaceStatus == ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusRunning then
         self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.BEGIN)
-    elseif self.RaceStatus >= ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusResult then
-        self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.RESULT)
-        self:ReqRaceReward()
-        self:ReqRaceResult()
+    --elseif self.RaceStatus == ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusGoal then
+    --    self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.GOAL)
+    --elseif self.RaceStatus >= ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusResult then
+    --    self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.RESULT)
+    --    self:ReqRaceReward()
+    --    self:ReqRaceResult()
     end
     
     ChocoboRaceMainVM:UpdateRaceSetup(self.RaceSetup)
     ChocoboRaceMainVM:UpdatePlayerInfoList()
+    
+    -- 游戏已经开始就默认所有人都播放完Cutscene
     if self.RaceSetup.GoTime > 0 then
         self.GoTime = self.RaceSetup.GoTime
         if self.GoTime <= TimeUtil.GetServerTime() then
@@ -571,17 +604,29 @@ function ChocoboRaceMgr:OnNetMsgRaceQuery(MsgBody)
     EventMgr:SendEvent(EventID.ChocoboRacerMapUpdate)
     EventMgr:SendEvent(EventID.ChocoboRaceItemMapUpdate)
     EventMgr:SendEvent(EventID.ChocoboRaceGameQuerySuc)
-    
-    -- 预加载特效
-    self:PreloadSkillVFX()
+
+    if self.RaceStatus < ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusRunning then
+        -- 预加载特效
+        self:PreloadSkillVFX()
+    else
+        if self.IsPWorldReady then
+            -- 发生断线重连，请求一下数据
+            FLOG_INFO("[ChocoboRace] OnNetMsgRaceQuery.ReqRaceQueryProgress")
+            self:ReqRaceQueryProgress()
+        end
+
+        if self.RaceStatus >= ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusResult then
+            self:ReqRaceReward()
+            self:ReqRaceResult()
+        end
+    end
 end
 
 function ChocoboRaceMgr:OnNetMsgRaceJoin(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceJoin: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceJoin: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceJoin: " .. _G.table_to_string_block(MsgBody))
 
     local Join = MsgBody.Join
     if nil == Join then
@@ -606,7 +651,7 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceCtrl(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceCtrl: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceCtrl: MsgBody is nil")
         return
     end
 
@@ -632,15 +677,8 @@ function ChocoboRaceMgr:OnNetMsgRaceCtrl(MsgBody)
     Racer:UpdateCtrl(Ctrl)
     
     if self:IsMajorByIndex(Index) then
-        ChocoboRaceUtil.Log( "OnNetMsgRaceCtrl: " .. _G.table_to_string_block(MsgBody))
-        if Ctrl.Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbilityItem then
-            ChocoboRaceMainVM:UpdatePickup()
-            for i = 1, ChocoboDefine.SKILL_NUM do
-                -- 触发全局CD
-                local SkillVM = ChocoboRaceMainVM:FindSkillVM(i)
-                SkillVM:UpdateSkillCD(TimeUtil.GetServerTimeMS() + self:GetGCDDuration())
-            end
-        elseif Ctrl.Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility1 or
+        FLOG_INFO("[ChocoboRace] OnNetMsgRaceCtrl: " .. table.tostring(MsgBody))
+        if Ctrl.Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility1 or
                 Ctrl.Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility2 or
                 Ctrl.Ctrl == ProtoCS.ChocoboRaceCtrl.ChocoboRaceParamAbility3 then
             local NowTimeMS = TimeUtil.GetServerTimeMS()
@@ -649,9 +687,6 @@ function ChocoboRaceMgr:OnNetMsgRaceCtrl(MsgBody)
                     local SkillVM = ChocoboRaceMainVM:FindSkillVM(i)
                     if SkillVM.SkillID == Ctrl.AbilityID then
                         SkillVM:UpdateSkillCD(Ctrl.CDTime)
-                    else
-                        -- 触发全局CD
-                        SkillVM:UpdateSkillCD(TimeUtil.GetServerTimeMS() + self:GetGCDDuration())
                     end
                 end
             end
@@ -661,10 +696,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRacePickup(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRacePickup: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRacePickup: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRacePickup: " .. _G.table_to_string_block(MsgBody))
 
     local Pickup = MsgBody.Pickup
     if nil == Pickup then
@@ -691,10 +725,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceProgress(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceProgress: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceProgress: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceProgress: " .. _G.table_to_string_block(MsgBody))
 
     local Progress = MsgBody.Progress
     if nil == Progress then
@@ -706,10 +739,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceUpdate(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceUpdate: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceUpdate: MsgBody is nil")
         return
     end
-    --ChocoboRaceUtil.Log( "OnNetMsgRaceUpdate: " .. _G.table_to_string_block(MsgBody))
 
     local Update = MsgBody.Update
     if nil == Update then
@@ -728,10 +760,6 @@ function ChocoboRaceMgr:OnNetMsgRaceUpdateHandle(Update)
         return
     end
     
-    if self:GetGameState() < ChocoboDefine.GAME_STATE_ENUM.BEGIN or self:GetGameState() >= ChocoboDefine.GAME_STATE_ENUM.RESULT then
-        return
-    end
-
     --if self.GameRaceID ~= 0 and self.GameRaceID ~= Update.RaceID then
     --    return
     --end
@@ -759,7 +787,7 @@ function ChocoboRaceMgr:OnNetMsgRaceUpdateHandle(Update)
         
         if self:IsMajorByIndex(Params.Index) then
             ChocoboRaceMainVM.MajorSpeed = "Speed : " .. Params.Speed
-            ChocoboRaceUtil.Log( "OnNetMsgRaceUpdate: " .. table.tostring(Value))
+            --FLOG_INFO("[ChocoboRace] OnNetMsgRaceUpdate: " .. table.tostring(Value))
         end
 
         --更新VM
@@ -773,15 +801,30 @@ function ChocoboRaceMgr:OnNetMsgRaceUpdateHandle(Update)
             local Racer = self:GetRacerByIndex(Params.Index)
             if Racer ~= nil and RacerVM ~= nil and RacerVM.IsOver == false then
                 Racer:SetRank(Params.Ranking)
-                -- 如果是断线重连的情况下，此处计算不准，以result的为准
-                RacerVM:SetArrivedTimeS(self.CurFrameID * FrameInterval)
+                RacerVM:SetArrivedTimeS(Params.RunTimesS)
             end
 
             if self:IsMajorByIndex(Params.Index) then
-                CheckRank = true
-                
                 if self:GetGameState() < ChocoboDefine.GAME_STATE_ENUM.GOAL then
                     self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.GOAL)
+                    self:PlayResultSequence()
+                    self:ReqRaceReward()
+                end
+            end
+        elseif Params.Status == ProtoCS.ChocoboRacerStatus.ChocoboRacerStatusArrived then
+            local Racer = self:GetRacerByIndex(Params.Index)
+            if Racer ~= nil then
+                Racer:SetIsArrival(true)
+                Racer:SetRank(Params.Ranking)
+            end
+            
+            if RacerVM and RacerVM.IsOver == false then
+                RacerVM:SetArrivedTimeS(Params.RunTimesS)
+            end
+
+            if self:IsMajorByIndex(Params.Index) then
+                if self:GetGameState() < ChocoboDefine.GAME_STATE_ENUM.RESULT then
+                    self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.RESULT)
                     self:ReqRaceReward()
                 end
             end
@@ -795,10 +838,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceReady(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceReady: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceReady: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceReady: " .. _G.table_to_string_block(MsgBody))
 
     local Ready = MsgBody.Ready
     if nil == Ready then
@@ -814,8 +856,8 @@ function ChocoboRaceMgr:OnNetMsgRaceReady(MsgBody)
         return
     end
     
-    ChocoboRaceUtil.Log(string.format(
-            "OnNetMsgRaceReady | GoTime:%d | ServerTime:%d | LeftTime:%d",
+    FLOG_INFO(string.format(
+            "[ChocoboRace] OnNetMsgRaceReady | GoTime:%d | ServerTime:%d | LeftTime:%d",
             self.GoTime,
             TimeUtil.GetServerTime(),
             (self.GoTime - TimeUtil.GetServerTime())
@@ -829,7 +871,7 @@ function ChocoboRaceMgr:OnNetMsgRaceReady(MsgBody)
         else
             if self:GetGameState() == ChocoboDefine.GAME_STATE_ENUM.READY then
                 if self.GoTime - TimeUtil.GetServerTime() > 0.5 then  -- 还没开始游戏，并且剩余时间大于0.5
-                    ChocoboRaceUtil.Log("OnNetMsgRaceReady PlayCountDown PlayCountDown PlayCountDown")
+                    FLOG_INFO("[ChocoboRace] OnNetMsgRaceReady PlayCountDown PlayCountDown PlayCountDown")
                     UIViewMgr:ShowView(UIViewID.ChocoboRaceCountDownView, {
                         Mode = "COUNTDOWN",
                         EndTime = self.GoTime,
@@ -842,10 +884,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceResult(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceResult: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceResult: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceResult: " .. _G.table_to_string_block(MsgBody))
 
     local Result = MsgBody.Result
     if nil == Result or nil == Result.Results then
@@ -890,7 +931,6 @@ function ChocoboRaceMgr:OnNetMsgRaceResult(MsgBody)
         end
     end
 
-    self:ReqRaceQueryProgress()
     ChocoboRaceMainVM:UpdateResult(Result)
     ChocoboRaceMainVM:SortChocoboRaceVMList()
     
@@ -901,10 +941,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceReward(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceReward: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceReward: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceReward: " .. _G.table_to_string_block(MsgBody))
 
     if not self:IsChocoboRacePWorld() then
         return
@@ -921,17 +960,16 @@ function ChocoboRaceMgr:OnNetMsgRaceReward(MsgBody)
 
     ChocoboRaceMainVM:UpdateRewards(Award.Rewards)
 
-    if self:GetGameState() < ChocoboDefine.GAME_STATE_ENUM.GOAL then
-        self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.GOAL)
-    end
+    --if self:GetGameState() < ChocoboDefine.GAME_STATE_ENUM.GOAL then
+    --    self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.GOAL)
+    --end
 end
 
 function ChocoboRaceMgr:OnNetMsgRaceEffectTrigger(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceEffectTrigger: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceEffectTrigger: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceEffectTrigger: " .. _G.table_to_string_block(MsgBody))
 
     if not self:IsChocoboRacePWorld() then
         return
@@ -961,10 +999,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceNpcchallengeData(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceNpcchallengeData: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceNpcchallengeData: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceNpcchallengeData: " .. _G.table_to_string_block(MsgBody))
 
     local Data = MsgBody.challengedata
     if nil == Data then
@@ -976,10 +1013,9 @@ end
 
 function ChocoboRaceMgr:OnNetMsgRaceSkillCDChange(MsgBody)
     if nil == MsgBody then
-        ChocoboRaceUtil.Err( "OnNetMsgRaceSkillCDChange: MsgBody is nil")
+        FLOG_ERROR("[ChocoboRace] OnNetMsgRaceSkillCDChange: MsgBody is nil")
         return
     end
-    ChocoboRaceUtil.Log( "OnNetMsgRaceSkillCDChange: " .. _G.table_to_string_block(MsgBody))
 
     if not self:IsChocoboRacePWorld() then
         return
@@ -1028,16 +1064,21 @@ function ChocoboRaceMgr:OnAssembleAllEnd(Params)
     if not self:IsChocoboRacePWorld() then
         return
     end
+
+    local EntityID = Params.ULongParam1
+    local Racer = ChocoboRaceMgr:GetRacerByEntityID(EntityID)
+    if Racer then
+        Racer:VisionEnter()
+    end
     
     if self.IsJoinRequestSent then
         return
     end
 
-    local EntityID = Params.ULongParam1
     EventMgr:SendEvent(EventID.ChocoboRaceHUDUpdate, { ULongParam1 = EntityID })
     if self.PendingEntities[EntityID] ~= nil then
         self.PendingEntities[EntityID] = true
-        ChocoboRaceUtil.Log("Entity Assembled: "..tostring(EntityID))
+        FLOG_INFO("[ChocoboRace] Entity Assembled: "..tostring(EntityID))
     end
 
     local AllAssembled = true
@@ -1049,37 +1090,8 @@ function ChocoboRaceMgr:OnAssembleAllEnd(Params)
     end
 
     if AllAssembled then
-        ChocoboRaceUtil.Log("All Entities Assembled")
+        FLOG_INFO("[ChocoboRace] All Entities Assembled")
         self:TrySendRaceJoin()
-    end
-end
-
-function ChocoboRaceMgr:OnChocoboRaceArrival(Params)
-    if not self:IsChocoboRacePWorld() then
-        return
-    end
-
-    local Index = Params.IntParam1
-    ChocoboRaceUtil.Log("OnChocoboRaceArrival Index = " .. Index)
-    local Racer = self:GetRacerByIndex(Index + 1)
-    Racer:SetIsArrival(true)
-
-    if Racer.IsMajor then
-        -- 没有正在播放，也没有创建
-        if not self.IsTickResultSequence and not self.ChocoboCamera then
-            self:JumpToFinalFrame()
-        end
-    end
-end
-
-function ChocoboRaceMgr:OnAppEnterForeground()
-    if not self:IsChocoboRacePWorld() then
-        return
-    end
-
-    if self:GetGameState() >= ChocoboDefine.GAME_STATE_ENUM.BEGIN then
-        ChocoboRaceUtil.Log("OnAppEnterForeground OnAppEnterForeground OnAppEnterForeground")
-        self:ReqRaceQueryProgress()
     end
 end
 
@@ -1093,7 +1105,7 @@ function ChocoboRaceMgr:TrySendRaceJoin()
     end
 
     self.IsJoinRequestSent = true
-    ChocoboRaceUtil.Log("Sending Race Join Request")
+    FLOG_INFO("[ChocoboRace] Sending Race Join Request")
 
     self:ReqRaceJoin()
 end
@@ -1101,8 +1113,9 @@ end
 function ChocoboRaceMgr:StartAssemblyTimeout()
     if self.AssembleTimeoutTimer then return end
 
-    ChocoboRaceUtil.Log("Starting Assembly Timeout Timer")
+    FLOG_INFO("[ChocoboRace] StartAssemblyTimeout RegisterTimer Timer")
     self.AssembleTimeoutTimer = self:RegisterTimer(function()
+        FLOG_INFO("[ChocoboRace] StartAssemblyTimeout Timeout")
         self:TrySendRaceJoin()
     end, 10)
 end
@@ -1258,7 +1271,7 @@ function ChocoboRaceMgr:OnGameEventMajorCreate(Params)
         return
     end
 
-    ChocoboRaceUtil.Log( "OnGameEventMajorCreate EntityID = " .. EntityID)
+    FLOG_INFO("[ChocoboRace] OnGameEventMajorCreate EntityID = " .. EntityID)
     self:HandleChocoboByResID(EntityID, VChocobo)
 end
 
@@ -1282,7 +1295,7 @@ function ChocoboRaceMgr:OnGameEventPlayerCreate(Params)
         return
     end
 
-    ChocoboRaceUtil.Log( "OnGameEventPlayerCreate EntityID = " .. EntityID)
+    FLOG_INFO("[ChocoboRace] OnGameEventPlayerCreate EntityID = " .. EntityID)
     self:HandleChocoboByResID(EntityID, VChocobo)
 end
 
@@ -1310,7 +1323,7 @@ function ChocoboRaceMgr:OnGameEventNPCCreate(Params)
         return
     end
 
-    ChocoboRaceUtil.Log("OnGameEventNPCCreate EntityID = " .. EntityID)
+    FLOG_INFO("[ChocoboRace] OnGameEventNPCCreate EntityID = " .. EntityID)
     self:HandleChocoboByResID(EntityID, VChocobo)
 end
 
@@ -1321,11 +1334,16 @@ function ChocoboRaceMgr:OnGameEventVisionLeave(Params)
     end
     
     local EntityID = Params.ULongParam1
+    local Racer = ChocoboRaceMgr:GetRacerByEntityID(EntityID)
+    if Racer then
+        Racer:VisionLeave()
+    end
+    
     if self.VisionCacheAvatar[EntityID] == nil then
         return
     end
 
-    ChocoboRaceUtil.Log( "OnGameEventVisionLeave EntityID = " .. EntityID)
+    FLOG_INFO("[ChocoboRace] OnGameEventVisionLeave EntityID = " .. EntityID)
     local VChocobo = self.VisionCacheAvatar[EntityID].VChocobo
     --重连的时候主角会离开下视野
     if VChocobo ~= nil and not MajorUtil.IsMajor(EntityID) then
@@ -1371,15 +1389,18 @@ function ChocoboRaceMgr:HandleChocoboByResID(EntityID, VChocobo)
             Feet = Armor.Feet
         end
 
-        ChocoboRaceUtil.Log(string.format("HandleChocoboByResID entity %d (RoleID:%d)", EntityID, VChocobo.RoleID))
+        FLOG_INFO(string.format("[ChocoboRace] HandleChocoboByResID entity %d (RoleID:%d)", EntityID, VChocobo.RoleID))
         local HeadChocoboEquipCfg = BuddyEquipCfg:FindCfgByKey(Head)
         local HeadString = HeadChocoboEquipCfg and HeadChocoboEquipCfg.ModelString or ""
         local FeetChocoboEquipCfg = BuddyEquipCfg:FindCfgByKey(Feet)
         local FeetString = FeetChocoboEquipCfg and FeetChocoboEquipCfg.ModelString or ""
         local BodyChocoboEquipCfg = BuddyEquipCfg:FindCfgByKey(Body)
         local BodyString = BodyChocoboEquipCfg and BodyChocoboEquipCfg.ModelString or ""
-        RideComp:UseRide(ChocoboDefine.CHOCOBO_RIDE_ID, 0, StainID, HeadString, BodyString, "", FeetString)
+        RideComp:UseRide(ChocoboDefine.CHOCOBO_RIDE_ID, 0, 0, StainID, HeadString, BodyString, "", FeetString)
         RideComp:EnableAnimationRotating(false)
+        
+        -- hide fashion deco
+        _G.FashionDecoMgr:OnGameEventMountCall({ EntityID = EntityID })
     end
     EventMgr:SendEvent(EventID.ChocoboRaceHUDUpdate, { ULongParam1 = EntityID })
 end
@@ -1397,7 +1418,7 @@ local function PreLoadRacerActionTimeline()
             if nil ~= RaceData then
                 local AttachType = RaceData.AttachType
                 local AtlAllData = ChocoboActiontimelineCfg:FindAllCfg()
-                ChocoboRaceUtil.Log(string.format( "Lua.PreLoadAllActionTimeline RoleID = %d AttachType = %s", RoleID, AttachType))
+                FLOG_INFO(string.format( "[ChocoboRace] PreLoadAllActionTimeline RoleID = %d AttachType = %s", RoleID, AttachType))
 
                 for i = 1, #AtlAllData do
                     if AtlAllData[i].ID ~= ProtoRes.CHOCOBO_ACTION_TIMELINE_TYPE.EXD_ACTION_TIMELINE_CHOCOBORACE_BRAKE then
@@ -1419,20 +1440,22 @@ function ChocoboRaceMgr:OnGameEventPWorldMapEnter(Params)
     if not self:IsChocoboRacePWorld() then
         return
     end
-    ChocoboRaceUtil.Log( "OnGameEventPWorldMapEnter")
-    
-    PreLoadRacerActionTimeline()
+    FLOG_INFO("[ChocoboRace] OnGameEventPWorldMapEnter")
     
     local bReconnect = false
     if Params ~= nil then
         bReconnect = Params.bReconnect
         if not bReconnect then
+            PreLoadRacerActionTimeline()
             self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.SEQUENCE)
+        else
+            self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.NONE)
         end
     end
 
     BusinessUIMgr:ShowMainPanel(UIViewID.ChocoboRaceMainView)
     self.IsClientReady = true
+    self.IsPWorldReady = false
     --local ShouldSendRaceQuery = self.IsClientReady and self.IsServerReady
     --if ShouldSendRaceQuery or bReconnect then
         self:ReqRaceQuery()
@@ -1451,22 +1474,38 @@ function ChocoboRaceMgr:OnGameEventPWorldReady()
     if not self:IsChocoboRacePWorld() then
         return
     end
-    ChocoboRaceUtil.Log( "OnGameEventPWorldReady")
+    FLOG_INFO("[ChocoboRace] OnGameEventPWorldReady")
 
     -- sequince 播放完需要 HideJoyStick
     CommonUtil.DisableShowJoyStick(true)
     CommonUtil.HideJoyStick()
     EventMgr:SendEvent(EventID.ChocoboRaceHUDUpdate, { ULongParam1 = MajorUtil.GetMajorEntityID() })
     _G.MapMgr:SetUpdateMap(true, 3)
-    if self:GetGameState() <= ChocoboDefine.GAME_STATE_ENUM.SEQUENCE then
-        self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.READY)
-    end
 
     self.IsPWorldReady = true
-    self:StartAssemblyTimeout()
-    
-    if not next(self.PendingEntities) then
-        self:TrySendRaceJoin()
+    if self.RaceStatus <= ProtoCS.ChocoboRaceStatus.ChocoboRaceStatusReady then
+        self:SetGameState(ChocoboDefine.GAME_STATE_ENUM.READY)
+
+        self:StartAssemblyTimeout()
+        if not next(self.PendingEntities) then
+            self:TrySendRaceJoin()
+        end
+    else
+        FLOG_INFO("[ChocoboRace] OnGameEventPWorldReady.ReqRaceQueryProgress")
+        -- 发生断线重连，请求一下数据
+        self:ReqRaceQueryProgress()
+    end
+end
+
+function ChocoboRaceMgr:OnGameEventWorldPreLoad(Params)
+    local PWorldTableCfg = PWorldMgr:GetLastPWorldTableCfg()
+    if PWorldTableCfg and PWorldTableCfg.SubType == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_CHOCOBO_RACE then
+        FLOG_INFO("[ChocoboRace] ChocoboRaceMgr:OnGameEventWorldPreLoad")
+        if self.ChocoboCamera ~= nil then
+            --_G.LuaCameraMgr:ResumeCamera(true)
+            CommonUtil.DestroyActor(self.ChocoboCamera)
+            self.ChocoboCamera = nil
+        end
     end
 end
 
@@ -1474,16 +1513,17 @@ function ChocoboRaceMgr:OnGameEventExitWorld(LeavePWorldResID, LeaveMapResID)
     local PWorldTableCfg = PWorldCfg:FindCfgByKey(LeavePWorldResID)
     local PWorldSubType = (PWorldTableCfg ~= nil and PWorldTableCfg.SubType or 0)
     if PWorldSubType == ProtoRes.pworld_sub_type.PWORLD_SUB_TYPE_CHOCOBO_RACE then
+        FLOG_INFO("[ChocoboRace] ChocoboRaceMgr:OnGameEventExitWorld")
+        if self.AssembleTimeoutTimer then
+            self:UnRegisterTimer(self.AssembleTimeoutTimer)
+            self.AssembleTimeoutTimer = nil
+        end
+
         ChocoboRaceMainVM:ResetRace()
         _G.UE.UBGMMgr.Get():Resume()
         _G.MapMgr:SetUpdateMap(false, 3)
         _G.EventMgr:SendEvent(_G.EventID.ChocoboRacerMapClear)
         _G.EventMgr:SendEvent(_G.EventID.ChocoboRaceItemMapClear)
-        if self.ChocoboCamera ~= nil then
-            _G.LuaCameraMgr:ResumeCamera(true)
-            CommonUtil.DestroyActor(self.ChocoboCamera)
-            self.ChocoboCamera = nil
-        end
         self:ClearChocoboPipeline()
         self:ClearChocoboInput()
         self:ResetRace()
@@ -1500,11 +1540,11 @@ end
 
 function ChocoboRaceMgr:CreateChocoboPipeline()
     if self.IsCreatePipeline then
-        ChocoboRaceUtil.Wrn("Pipeline already created, skipping")
+        FLOG_ERROR("[ChocoboRace] Pipeline already created, skipping")
         return
     end
 
-    ChocoboRaceUtil.Log("Creating chocobo pipeline...")
+    FLOG_INFO("[ChocoboRace] Creating chocobo pipeline...")
     self.IsCreatePipeline = true
     _G.UE.UChocoboRaceMgr.Get():CreateMajorPipeline()
 end
@@ -1572,7 +1612,7 @@ end
 --        return
 --    end
 --
---    ChocoboRaceUtil.Err("OnGameEventEnterInteractionRange EntityID = %d", Params.ULongParam1)
+--    FLOG_ERROR("OnGameEventEnterInteractionRange EntityID = %d", Params.ULongParam1)
 --end
 
 function ChocoboRaceMgr:OnEnterAreaTrigger(EventParam)
@@ -1587,7 +1627,7 @@ function ChocoboRaceMgr:OnEnterAreaTrigger(EventParam)
 
     for __, Value in pairs(Treasure) do
         if EventParam.AreaID == Value then
-            --ChocoboRaceUtil.Err( "OnEnterAreaTrigger AreaID = %d", EventParam.AreaID)
+            --FLOG_ERROR( "OnEnterAreaTrigger AreaID = %d", EventParam.AreaID)
             --_G.MsgTipsUtil.ShowTips(LSTR("宝箱出现"))
             ChocoboRaceMainVM:SetIsShowTreasureTips(true)
         end
@@ -1682,6 +1722,24 @@ function ChocoboRaceMgr:GetRacerByIndex(InIndex)
     return Racer
 end
 
+function ChocoboRaceMgr:GetRacerNum()
+    local Count = 0
+    for _ in pairs(self.ChocoboRacerData) do
+        Count = Count + 1
+    end
+    return Count
+end
+
+function ChocoboRaceMgr:GetRacerByEntityID(EntityID)
+    for __, Racer in pairs(self.ChocoboRacer) do
+        if Racer.EntityID == EntityID then
+            return Racer
+        end
+    end
+
+    return nil
+end
+
 function ChocoboRaceMgr:GetGCDDuration()
     if self.GCDDuration then
         return self.GCDDuration
@@ -1720,10 +1778,47 @@ function ChocoboRaceMgr:IterChocoboRaceItem()
     return IterFunc, (self.RaceSetup and self.RaceSetup.Treasure) or {}, 0
 end
 
+function ChocoboRaceMgr:ChocoboRaceTutorial()
+    do
+        ---陆行鸟竞赛新手引导提示: 使用加速
+        local function ShowChocoboRaceSpeedTutorial(Params)
+            local EventParams = _G.EventMgr:GetEventParams()
+            EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
+            EventParams.Param1 = TutorialDefine.GameplayType.Chocobo
+            EventParams.Param2 = TutorialDefine.GamePlayStage.ChocoboSpeed
+            _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+        end
+
+        local TutorialConfig = { Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowChocoboRaceSpeedTutorial, Params = {} }
+        _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
+    end
+
+    do
+        ---陆行鸟竞赛新手引导提示: 30秒内沒有使用技能引导
+        local function DelayTutorialChocoboRaceSkillCallback()
+            local function ShowChocoboRaceUseSkillTutorial(Params)
+                local EventParams = _G.EventMgr:GetEventParams()
+                EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
+                EventParams.Param1 = TutorialDefine.GameplayType.Chocobo
+                EventParams.Param2 = TutorialDefine.GamePlayStage.ChocoboUseSkill
+                _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+            end
+
+            local TutorialConfig = { Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowChocoboRaceUseSkillTutorial, Params = {} }
+            _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
+            if self.DelayTutorialChocoboRaceSkillTimerID ~= nil then
+                self:UnRegisterTimer(self.DelayTutorialChocoboRaceSkillTimerID)
+            end
+            self.DelayTutorialChocoboRaceSkillTimerID = nil
+        end
+        self.DelayTutorialChocoboRaceSkillTimerID = self:RegisterTimer(DelayTutorialChocoboRaceSkillCallback, 30)
+    end
+end
+
 ---SetGameState
 ---@param Value number ChocoboDefine.GAME_STATE_ENUM
 function ChocoboRaceMgr:SetGameState(Value)
-    ChocoboRaceUtil.Log(string.format("Game state changed: %s -> %s", self.GameState, Value))
+    FLOG_INFO(string.format("[ChocoboRace] Game state changed: %s -> %s", self.GameState, Value))
     
     if self.GameState == Value then
         return
@@ -1748,41 +1843,16 @@ function ChocoboRaceMgr:SetGameState(Value)
         ChocoboRaceMainVM.IsShowPanelPhysical = true
         ChocoboRaceMainVM.IsShowPanelNumber = true
         EventMgr:SendEvent(EventID.ChocoboRaceGameBegin)
-        
-        do
-            ---陆行鸟竞赛新手引导提示: 使用加速
-            local function ShowChocoboRaceSpeedTutorial(Params)
-                local EventParams = _G.EventMgr:GetEventParams()
-                EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
-                EventParams.Param1 = TutorialDefine.GameplayType.Chocobo
-                EventParams.Param2 = TutorialDefine.GamePlayStage.ChocoboSpeed
-                _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+    
+        -- 游戏已经开始就刷新一下每个玩家的HUD
+        for _, Racer in pairs(self.ChocoboRacerData) do
+            local EntityID = Racer.EntityID
+            if Racer.Index and EntityID > 0 then
+                self.AfterCutsceneRacer[Racer.Index] = EntityID
+                EventMgr:SendEvent(EventID.ChocoboRaceHUDUpdate, { ULongParam1 = EntityID })
             end
-
-            local TutorialConfig = { Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowChocoboRaceSpeedTutorial, Params = {} }
-            _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
         end
-
-        do
-            ---陆行鸟竞赛新手引导提示: 30秒内沒有使用技能引导
-            local function DelayTutorialChocoboRaceSkillCallback()
-                local function ShowChocoboRaceUseSkillTutorial(Params)
-                    local EventParams = _G.EventMgr:GetEventParams()
-                    EventParams.Type = TutorialDefine.TutorialConditionType.GamePlayCondition--新手引导触发类型
-                    EventParams.Param1 = TutorialDefine.GameplayType.Chocobo
-                    EventParams.Param2 = TutorialDefine.GamePlayStage.ChocoboUseSkill
-                    _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
-                end
-
-                local TutorialConfig = { Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowChocoboRaceUseSkillTutorial, Params = {} }
-                _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
-                if self.DelayTutorialChocoboRaceSkillTimerID ~= nil then
-                    self:UnRegisterTimer(self.DelayTutorialChocoboRaceSkillTimerID)
-                end
-                self.DelayTutorialChocoboRaceSkillTimerID = nil
-            end
-            self.DelayTutorialChocoboRaceSkillTimerID = self:RegisterTimer(DelayTutorialChocoboRaceSkillCallback, 30)
-        end
+        self:ChocoboRaceTutorial()
 
     elseif self.GameState == ChocoboDefine.GAME_STATE_ENUM.GOAL then
         CommonUtil.DisableShowJoyStick(true)
@@ -1790,7 +1860,22 @@ function ChocoboRaceMgr:SetGameState(Value)
         ChocoboRaceMainVM:UpdateSelfResult()
         EventMgr:SendEvent(EventID.ChocoboRaceGameGoal)
         UIViewMgr:ShowView(UIViewID.ChocoboRaceCountDownView, { Mode = "ARRIVED" })
-        if (self.RaceSetup or {}).Mode ~= ProtoCS.ChocoboRaceMode.ChocoboRaceModeChallenge then
+    elseif self.GameState == ChocoboDefine.GAME_STATE_ENUM.RESULT then
+        CommonUtil.DisableShowJoyStick(true)
+        CommonUtil.HideJoyStick()
+        ChocoboRaceMainVM.IsShowSkillPanel = false
+        if UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceMainView) then
+            _G.BusinessUIMgr:HideMainPanel(UIViewID.ChocoboRaceMainView)
+        end
+        if UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceCountDownView) then
+            _G.UIViewMgr:HideView(UIViewID.ChocoboRaceCountDownView)
+        end
+
+        if not UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceResultPanelView) then
+            UIViewMgr:ShowView(UIViewID.ChocoboRaceResultPanelView)
+        end
+
+        if self.RaceSetup and self.RaceSetup.Mode ~= ProtoCS.ChocoboRaceMode.ChocoboRaceModeChallenge then
             _G.UE.UBGMMgr.Get():Pause()
             local MajorRacer = ChocoboRaceMgr:GetRacerByIndex()
             local Rank = MajorRacer.Ranking or 1
@@ -1804,22 +1889,6 @@ function ChocoboRaceMgr:SetGameState(Value)
                 AudioUtil.SyncLoadAndPlaySoundEvent(MajorUtil.GetMajorEntityID(), ChocoboDefine.CHOCOBO_RACE_LOST_SOUND_PATH, true)
             end
         end
-        self:PlayResultSequence()
-    elseif self.GameState == ChocoboDefine.GAME_STATE_ENUM.RESULT then
-        CommonUtil.DisableShowJoyStick(true)
-        CommonUtil.HideJoyStick()
-        ChocoboRaceMainVM.IsShowSkillPanel = false
-        if UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceMainView) then
-            _G.BusinessUIMgr:HideMainPanel(UIViewID.ChocoboRaceMainView)
-        end
-        if UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceCountDownView) then
-            _G.UIViewMgr:HideView(UIViewID.ChocoboRaceCountDownView)
-        end
-        
-        if not UIViewMgr:IsViewVisible(UIViewID.ChocoboRaceResultPanelView) then
-            UIViewMgr:ShowView(UIViewID.ChocoboRaceResultPanelView)
-        end
-        
         -- 没有正在播放，也没有创建
         if not self.IsTickResultSequence and not self.ChocoboCamera then
             self:JumpToFinalFrame()
@@ -1897,7 +1966,7 @@ function ChocoboRaceMgr:GetInterpolatedValue(Timeline, CurrentFrame)
 end
 
 function ChocoboRaceMgr:PlayResultSequence()
-    ChocoboRaceUtil.Log("PlayResultSequence PlayResultSequence PlayResultSequence ")
+    FLOG_INFO("[ChocoboRace] PlayResultSequence PlayResultSequence PlayResultSequence ")
     if self.IsTickResultSequence or self.ChocoboCamera then
         return
     end
@@ -1905,7 +1974,10 @@ function ChocoboRaceMgr:PlayResultSequence()
     -- 初始化摄像机
     self.ElapsedFrames = 0
     self.ChocoboCamera = CommonUtil.SpawnActor(_G.UE.AChocoboRaceCamera, _G.UE.FVector(0, 0, 0), _G.UE.FRotator(0, 0, 0))
-    if not self.ChocoboCamera then return end
+    if not self.ChocoboCamera then
+        FLOG_INFO("[ChocoboRace] PlayResultSequence Error self.ChocoboCamera == nil ")
+        return 
+    end
 
     local MajorActor = MajorUtil.GetMajor()
     local MajorPos = MajorActor and MajorActor:FGetActorLocation() or _G.UE.FVector(0, 0, 0)
@@ -2112,10 +2184,6 @@ function ChocoboRaceMgr:ShowArea()
     end
 end
 
-function ChocoboRaceMgr:ShowPath()
-    _G.UE.UChocoboRaceMgr.Get():DebugDrawPathPoints()
-end
-
 function ChocoboRaceMgr:ShowDecArea()
     local PWorldDynDataMgr = _G.PWorldMgr.GetPWorldDynDataMgr()
     if PWorldDynDataMgr == nil then
@@ -2170,7 +2238,7 @@ function ChocoboRaceMgr:PlayAtl(ActionTimelineID, IsChocobo)
 end
 
 function ChocoboRaceMgr:EnterRace()
-    _G.GMMgr:ReqGM("entertain race matchrace 1216001 1")
+    _G.GMMgr:ReqGM("entertain race matchrace 1216002 1")
 end
 
 function ChocoboRaceMgr:OpenChocoboRaceGMPanel()

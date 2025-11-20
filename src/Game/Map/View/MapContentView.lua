@@ -1,7 +1,7 @@
 --
 -- Author: anypkvcai
 -- Date: 2023-03-07 14:57
--- Description:
+-- Description: 地图内容基类
 --
 
 local UIView = require("UI/UIView")
@@ -352,6 +352,11 @@ function MapContentView:OnCreateMarker(Marker, View)
 	local X, Y = MapUtil.AdjustMapMarkerPosition(MarkerScale, Marker:GetPosition())
 	UIUtil.CanvasSlotSetPosition(View, FVector2D(X, Y))
 
+	if IsRegionMarker then
+		-- Region二级地图块居中对齐，须要蓝图配合修改
+		UIUtil.CanvasSlotSetAlignment(View, FVector2D(0.5, 0.5))
+	end
+
 	UIUtil.CanvasSlotSetZOrder(View, Marker:GetPriority())
 end
 
@@ -394,6 +399,9 @@ function MapContentView:SetContentSize(Size)
 end
 
 
+--region 各种地图标记查找接口
+
+---通过标记ID查找，除非能确定标记ID全地图唯一，否则不建议使用
 ---@return MarkerView, MapMarker
 function MapContentView:GetMapMarkerByID(MarkerID)
 	for MapMarker, Info in pairs(self.MarkerInfos) do
@@ -403,50 +411,62 @@ function MapContentView:GetMapMarkerByID(MarkerID)
 	end
 end
 
----获取任务
+---查找任务
 ---@return MarkerView, MapMarker
 function MapContentView:GetMapMarkerQuest(QuestID, TargetID)
 	for MapMarker, Info in pairs(self.MarkerInfos) do
 		if MapMarker:GetType() == MapMarkerType.Quest
 			and MapMarker:GetID() == QuestID
-			and	MapMarker.TargetID == TargetID then
+			and	MapMarker:GetSubID() == TargetID then
 			return Info.View, MapMarker
 		end
 	end
 end
 
----获取传送水晶
+---查找传送水晶
 ---@return MapMarker
 function MapContentView:GetMapMarkerCrystal(CrystalID)
 	for MapMarker, _ in pairs(self.MarkerInfos) do
-		if MapMarker.GetEventArg and MapMarker.GetEventType then
-			local EventType = MapMarker:GetEventType()
-			local EventArg = MapMarker:GetEventArg()
-			if EventType == MapMarkerEventType.MAP_MARKER_EVENT_TELEPO and EventArg == CrystalID then
-				return MapMarker
+		if MapMarker:GetType() == MapMarkerType.FixPoint then
+			if MapMarker.GetEventArg and MapMarker.GetEventType then
+				local EventType = MapMarker:GetEventType()
+				local EventArg = MapMarker:GetEventArg()
+				if EventType == MapMarkerEventType.MAP_MARKER_EVENT_TELEPO and EventArg == CrystalID then
+					return MapMarker
+				end
 			end
 		end
 	end
 end
 
----查找标记。通过标记类型、标记子类型、标记ID三个参数查找，这是最通用的唯一确定一个标记的方法
+---通过标记类型、标记子类型、标记ID、标记子ID参数查找，这是最通用的唯一确定一个地图标记的方法
 ---@param MarkerType number 标记类型
 ---@param MarkerID number 标记ID
 ---@param MarkerSubType number 标记子类型
----@param SubID number 子ID
+---@param MarkerSubID number 子ID
 ---@return MarkerView, MapMarker
-function MapContentView:GetMapMarkerByTypeAndID(MarkerType, MarkerID, MarkerSubType, SubID)
+function MapContentView:GetMapMarkerByTypeAndID(MarkerType, MarkerID, MarkerSubType, MarkerSubID)
 	for MapMarker, Info in pairs(self.MarkerInfos) do
 		if MapMarker:GetType() == MarkerType
 			and MapMarker:GetID() == MarkerID
 			and MapMarker:GetSubType() == MarkerSubType then
-			if not SubID then
+			if not MarkerSubID then
 				return Info.View, MapMarker
 			else
-				if MapMarker:GetSubID() == SubID then
+				if MapMarker:GetSubID() == MarkerSubID then
 					return Info.View, MapMarker
 				end
 			end
+		end
+	end
+end
+
+function MapContentView:GetMapMarkerByLandAddr(ResidenceNumber, LandNumber)
+	for MapMarker, Info in pairs(self.MarkerInfos) do
+		local LandInfo = MapMarker.LandInfo
+		if LandInfo and LandInfo.ResidenceNumber == ResidenceNumber 
+			and LandInfo.LandNumber == LandNumber  then
+			return Info.View, MapMarker
 		end
 	end
 end
@@ -482,6 +502,8 @@ function MapContentView:GetMapMarkerViewModeByMarker(MapMarker)
 		end
 	end
 end
+
+--endregion
 
 
 function MapContentView:OnClickedMap(ScreenPosition)
@@ -583,7 +605,8 @@ function MapContentView:UpdateMarkerByOpenFlag()
 	end
 end
 
----更新地图标记显示优先级，目前只有任务标记有这个需求
+---更新地图标记显示优先级
+---目前只有任务标记有这个需求
 function MapContentView:UpdateMarkerPriority()
 	for Marker, Info in pairs(self.MarkerInfos) do
 		if Marker:GetType() == MapMarkerType.Quest then
@@ -618,6 +641,7 @@ function MapContentView:UpdateMarkerHighlightEffect(Params)
 end
 
 ---更新地图标记扩展图标
+---目前只有切图标记有这个需求
 function MapContentView:UpdateMarkerExtraIcon()
 	for Marker, Info in pairs(self.MarkerInfos) do
 		if Marker:GetType() == MapMarkerType.FixPoint and Marker:IsEventTypeChangeMap() then
@@ -628,5 +652,6 @@ function MapContentView:UpdateMarkerExtraIcon()
 		end
 	end
 end
+
 
 return MapContentView

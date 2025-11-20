@@ -8,6 +8,8 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIBinderSetText = require("Binder/UIBinderSetText")
+local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local BattlePassDefine = require("Game/BattlePass/BattlePassDefine")
@@ -66,6 +68,8 @@ function BattlePassRewardListItemView:OnShow()
 		return
 	end
 
+
+	ViewModel.IsShow = true
 	_G.EventMgr:SendEvent(_G.EventID.BattlePassLevelRewardItemShow, ViewModel.Lv)
 end
 
@@ -84,6 +88,7 @@ function BattlePassRewardListItemView:OnHide()
 		return
 	end
 
+	ViewModel.IsShow = false
 	_G.EventMgr:SendEvent(_G.EventID.BattlePassLevelRewardItemHide, ViewModel.Lv)
 end
 
@@ -112,6 +117,8 @@ function BattlePassRewardListItemView:OnRegisterBinder()
 		{ "Lv", UIBinderSetText.New(self, self.TextNum)},
 		{ "IsCurLv", UIBinderSetIsVisible.New(self, self.ImgSelectList)},
 		{ "IsCurLv", UIBinderSetIsVisible.New(self, self.EffectBGSelect)},
+		{ "LvIcon", UIBinderSetBrushFromAssetPath.New(self, self.ImgNumBG)},
+		{ "LvColor", UIBinderSetColorAndOpacityHex.New(self, self.TextNum)},
 
 	}
 

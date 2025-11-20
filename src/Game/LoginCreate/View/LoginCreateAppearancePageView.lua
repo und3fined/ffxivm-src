@@ -52,6 +52,9 @@ function LoginCreateAppearancePageView:OnInit()
 	self.ViewModel = LoginCreateAvatarVM
 	self.RoleTableView = UIAdapterTableView.CreateAdapter(self, self.TableViewLooks, self.OnRoleTableSelectChange, true, false)
 	self.TextRabdom:SetText(_G.LSTR(980098)) --"随机生成"
+
+	UIUtil.SetIsVisible(self.TextPreviewTips, true)
+	self.TextPreviewTips:SetText(_G.LSTR(980118)) --"下一步可以调整外貌细节"
 end
 
 function LoginCreateAppearancePageView:OnDestroy()
@@ -104,18 +107,44 @@ function LoginCreateAppearancePageView:OnRoleTableSelectChange(Index, ItemData, 
 end
 
 function LoginCreateAppearancePageView:OnClickBtnRandom()
-	local function NewComformCallback()
-		LoginAvatarMgr:SetRandomAvatar()
-		LoginAvatarMgr:RefreshPlayerAvatarFace()
-		self.ViewModel:SetPlayerCreate(true)
-		self.ViewModel:AddRoleList()
-		self.RoleTableView:SetSelectedIndex(self.ViewModel.RoleTableIndex)
-		self.RoleTableView:ScrollToIndex(self.ViewModel.RoleTableIndex)
-	end
-	local Content = _G.LSTR(980101)
-	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(980022), Content, NewComformCallback, nil, _G.LSTR(980007), _G.LSTR(980035), nil)
+	-- local function NewComformCallback()
+	-- 	self:SetRandomAvatarFace()
+	-- 	local IsNeverAgain = Params.IsNeverAgain
+	-- 		if IsNeverAgain then
+	-- 			--不再提醒
+	-- 			_G.UE.USaveMgr.SetInt(SaveKey.MetronomeSettingRestoreDefaultTipSelect, 1, true)
+	-- 		end
+	-- end
+	
+	-- local Params = { bUseNever = true,  NeverMindText = _G.LSTR(980117)}
+	-- _G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(980022), Content, NewComformCallback, nil, _G.LSTR(980007), _G.LSTR(980035), Params)
 	--self.RoleTableView:CancelSelected()
+	local bFirstClick = LoginAvatarMgr:GetRandomNeverShow() or LoginAvatarMgr:GetReportRdTimes() == 0;
+	if bFirstClick then
+		self:SetRandomAvatarFace()
+	else
+		local Content = _G.LSTR(980101)
+		local Params = { bUseNever = true,  NeverMindText = _G.LSTR(980117)}
+		_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, _G.LSTR(980022), Content, function(_, Inform)
+			local IsNeverAgain = Inform.IsNeverAgain
+			if IsNeverAgain then
+				--不再提醒
+				--_G.UE.USaveMgr.SetInt(SaveKey.LoginAvatarRandom, 1, true)
+				LoginAvatarMgr:SetRandomNeverShow(true)
+			end
+			self:SetRandomAvatarFace()
+		end, nil, _G.LSTR(980007), _G.LSTR(980035), Params)
+	end
 	_G.ObjectMgr:CollectGarbage(false)
+end
+
+function LoginCreateAppearancePageView:SetRandomAvatarFace()
+	LoginAvatarMgr:SetRandomAvatar()
+	LoginAvatarMgr:RefreshPlayerAvatarFace()
+	self.ViewModel:SetPlayerCreate(true)
+	self.ViewModel:AddRoleList()
+	self.RoleTableView:SetSelectedIndex(self.ViewModel.RoleTableIndex)
+	self.RoleTableView:ScrollToIndex(self.ViewModel.RoleTableIndex)
 end
 
 function LoginCreateAppearancePageView:OnLoginCreatFaceServerReset(bTribeGender)

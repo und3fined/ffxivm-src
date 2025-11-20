@@ -10,11 +10,17 @@ local UIUtil = require("Utils/UIUtil")
 
 ---@class UpgradeNpcDialogueItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
+---@field ImgPaper UFImage
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local UpgradeNpcDialogueItemView = LuaClass(UIView, true)
 
 function UpgradeNpcDialogueItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
+	--self.ImgPaper = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

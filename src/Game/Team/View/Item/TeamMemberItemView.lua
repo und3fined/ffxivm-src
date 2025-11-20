@@ -18,6 +18,7 @@ local PersonInfoDefine = require("Game/PersonInfo/PersonInfoDefine")
 local UIBinderSetProfIcon = require("Binder/UIBinderSetProfIcon")
 local UIBinderSetIsVisiblePred = require("Binder/UIBinderSetIsVisiblePred")
 local TeamRecruitMgr = require("Game/TeamRecruit/TeamRecruitMgr")
+local UIBinderLambdaComputeChange = require("Binder/UIBinderLambdaComputeChange")
 
 local LSTR = _G.LSTR
 
@@ -72,6 +73,30 @@ function TeamMemberItemView:OnRegisterSubView()
 end
 
 function TeamMemberItemView:OnInit()
+	self.LocBinder = UIBinderLambdaComputeChange.CustomNew(self, function(_, Value)
+		self.TextLocation:SetText(Value)
+	end, function()
+		if not self.ViewModel then
+			return
+		end
+
+		local MajorRoleVM = MajorUtil.GetMajorRoleVM(true) or {}
+		local RoleID = self.ViewModel.RoleID 
+		if MajorUtil.IsMajorByRoleID(RoleID) then
+			return MajorRoleVM.MapResName
+		elseif (RoleID and RoleID ~= 0) then
+			local RVM = _G.RoleInfoMgr:FindRoleVM(RoleID, true)
+			if RVM then
+				if RVM.CurWorldID ~= MajorRoleVM.CurWorldID then
+					return  _G.LoginMgr:GetMapleNodeName(RVM.CurWorldID)	
+				end
+			end
+
+			return self.ViewModel.MapResName
+		end
+	end
+	)
+
 	self.MemSimpleBinders = {
 		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, 	self.PanelEmpty) },
 		{ "IsEmpty", 	UIBinderSetIsVisible.New(self, 	self.PanelPlayer, true) },
@@ -82,6 +107,8 @@ function TeamMemberItemView:OnInit()
 		end) },
 		{ "StatusIcon", UIBinderSetImageBrush.New(self, self.ImgOnlineStatus)},
 		{ "bShowStatus", UIBinderSetIsVisible.New(self, self.ImgOnlineStatus)},
+		{ "MapResName", self.LocBinder},
+		{ "RoleID", self.LocBinder},
 	}
 
 	local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
@@ -100,10 +127,9 @@ function TeamMemberItemView:OnInit()
 			end
 		end)},
 		{ "CurWorldID", TeamRecruitUtil.NewCrossServerShowBinder(nil, self, self.SizeBoxServer)},
+		{ "CurWorldID", self.LocBinder},
+		{ "MapResName", self.LocBinder},
 	}
-	TeamRecruitUtil.AddRoleLocationShowBinders(self.RoleBinders, function()
-		return self.ViewModel and self.ViewModel.RoleID or nil
-	end, self, self.TextLocation)
 
 	self.ShowInviteBinder = UIBinderSetIsVisiblePred.NewByPred(function()
 		if self.ViewModel then

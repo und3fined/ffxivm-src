@@ -46,7 +46,10 @@ local CommBtnColorType = UIDefine.CommBtnColorType
 local InviteSignSideDefine = require("Game/Common/InviteSignSideWin/InviteSignSideDefine")
 local InviteMenu = InviteSignSideDefine.InviteMenu
 local MenuValues = InviteSignSideDefine.MenuValues
+local GroupReputationLevelCfg = require("TableCfg/GroupReputationLevelCfg")
 local ConditionMgr = require("Game/Interactive/ConditionMgr")
+local EstateInfoCfg = require("TableCfg/EstateInfoCfg")
+local HouseCfg = require("TableCfg/HouseCfg") 
 
 local ArmyLogType = ArmyDefine.ArmyLogType
 local ArmyUpLevelPerermissionType = ArmyDefine.ArmyUpLevelPerermissionType
@@ -141,16 +144,14 @@ function ArmyMgr:OnInit()
     self.ArmyState = nil
     ---部队解锁状态，用于判断是否是被邀请解锁（超过25级自动解锁的情况，这个bool是false,不能判断部队是否解锁）
     self.IsInvitedUnlock = nil
+    ---申请列表是否已经获取完了
+    self.ApplyListIsEnd = false
+    ---自身部队是否有房屋
+    self.IsHasHouse = false
 end
 
 ---region 分页
-local PageType = {
-    AllArmy = 1, -- 部队
-    ArmySearch = 2, -- 部队条件
-    Log = 3, -- 日志
-    JoinApply = 4, -- 加入部队申请
-    ArmyInvite = 5, -- 部队邀请
-}
+local PageType = ArmyDefine.PageType
 
 --- 获取初始分页数据
 ---@param Limit number @条数
@@ -296,7 +297,7 @@ function ArmyMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_NOTIFY_MEMBER_JOIN, self.OnMsgNotifyMemberJoin)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_NOTIFY_MEMBER_LEAVE, self.OnMsgNotifyMemberLeave)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_QUERY_MEMBERS, self.OnMsgQueryMembers)
-    self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_NOTIFY_REDS, self.OnMsgNotifyRed)
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_NOTIFY_REDS, self.OnMsgNotifyRed) --- 部队红点变化更新
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_READ_BAG, self.OnMsgDelStoreRedDot)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_QUERY_ROLES_GROUP, self.OnNetMsgQueryArmyInfoByRoleIDs)
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_CATEGORY_INTERN_UP_CONFIRM, self.OnNetMsgGroupCategoryInternUpConfirm)
@@ -338,6 +339,8 @@ function ArmyMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_GRAND_COMPANY_TOC, self.OnNetMsgGroupGrandCompanyToc)-- 【部队数据】推送国防联军变化
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_PROFILE_EDIT, self.OnNetMsgProfileEdit)-- 【情报】部队情报界面编辑
     self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_NOTIFY_REPUTATION, self.OnNetMsgNotifyReputation)-- 【特效】部队友好关系变化推送
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_RECRUIT_STATUS_TOC, self.OnNetMsgRecruitStatusToc)-- 【特效】部队友好关系变化推送
+    self:RegisterGameNetMsg(CS_CMD.CS_CMD_GROUP, SUB_MSG_ID.CS_CMD_GROUP_AUTO_TRANSFER_LEADER_TOC, self.OnNetMsgAutoTransferLeaderToc)-- 【特效】部队长自动转让推送
 
 end
 
@@ -346,6 +349,8 @@ function ArmyMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.SidebarItemTimeOut, self.OnGameEventSidebarItemTimeOut) --侧边栏Item超时
     self:RegisterGameEvent(EventID.ModuleOpenNotify, self.OnRecommendArmyModuleOpen) -- 解锁时显示红点
     self:RegisterGameEvent(EventID.LoadMapFinish, self.OnLeavePWorld) --- 离开副本处理弹窗(进出副本都会触发，但是进入副本不会有邀请缓存，不用额外判断)/之前的事件显示tips会不成功，改成进入地图时触发
+    self:RegisterGameEvent(EventID.HouseGroupInfoUpdate, self.OnGameEventHouseGroupInfoUpdate) --- 更新部队房屋数据
+    self:RegisterGameEvent(EventID.HousePullArmyMemberRoom, self.OnPullArmyMemberRoom) --- 更新部队个人房屋数据
 end
 -------------- Request Part Start-------------------------
 
@@ -382,8 +387,8 @@ function ArmyMgr:OnNetMsgMyArmyInfo(MsgBody)
     end
     local Alias
     ---清理一下署名提醒创建红点/创建提醒红点用于断线重连时更新 / 对应状态进判断自己重新添加
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, ArmyDefine.RedDotCheckID)
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], ArmyDefine.RedDotCheckID)
     local RoleGroupStateData = Msg.RoleGroupStateData
     if RoleGroupStateData then
         if self.ArmyState == ProtoCS.RoleGroupState.RoleGroupStateInit then
@@ -408,9 +413,9 @@ function ArmyMgr:OnNetMsgMyArmyInfo(MsgBody)
             end
             local MaxSignNum = GroupGlobalCfg:GetValueByType(ArmyDefine.GlobalCfgType.GlobalCfgGroupSignNum) or 1
             if SignNum >= MaxSignNum then
-                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, nil, nil, ArmyDefine.RedDotCheckID)
             else
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, ArmyDefine.RedDotCheckID)
             end
         elseif self.ArmyState == ProtoCS.RoleGroupState.RoleGroupStateSignedOtherPetition then
             ---已署名
@@ -422,9 +427,9 @@ function ArmyMgr:OnNetMsgMyArmyInfo(MsgBody)
             end
             local MaxSignNum = GroupGlobalCfg:GetValueByType(ArmyDefine.GlobalCfgType.GlobalCfgGroupSignNum) or 1
             if SignNum >= MaxSignNum then
-                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], nil, nil, ArmyDefine.RedDotCheckID)
             else
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], ArmyDefine.RedDotCheckID)
             end
         elseif self.ArmyState == ProtoCS.RoleGroupState.RoleGroupStateJoinedGroup then
             ---加入部队
@@ -492,6 +497,8 @@ function ArmyMgr:OnNetMsgMyArmyInfo(MsgBody)
                     self:SetRoleArmyAlias(ArmySimples)
                     ---队徽设置
                     self:SetEmblem(JoinedGroup.Emblem)
+                    ---招募设置
+                    self:SetRecruitStatus(JoinedGroup.RecruitStatus)
                 end
             end
         end
@@ -530,17 +537,20 @@ function ArmyMgr:OnNetMsgMyArmyInfo(MsgBody)
         local bJoinedArmy = ArmyID > 0
         if bJoinedArmy then
             self.bIsOnlyGetData = true
-            ArmyMgr:SendGetArmyDataMsg(ArmyID)
+            self:SendGetArmyDataMsg(ArmyID)
         end
     end
     --- 根据招募状态/是否是部队长/本地红点数据 判断是否显示招募红点，登录不下发部队长roleid,用CategoryID判断
     if self:GetCategoryIDByRoleID(MajorUtil.GetMajorRoleID()) == ProtoCommon.group_category_type.GROUP_CATEGORY_TYPE_PRESIDENT and not RedDotMgr:GetIsSaveDelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind)  then
-        RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, nil, true)
+        RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, nil, true, ArmyDefine.RedDotCheckID)
         self.IsRecruitPanelHaveOpened = false
     else
         self.IsRecruitPanelHaveOpened = true
     end
-    
+
+    if ArmyID and ArmyID > 0 then
+        _G.HousingMgr:SendPullSelfGroupMemberRoom(ArmyID)
+    end
 end
 
 --- 查询指定部队的信息Rsp
@@ -622,7 +632,7 @@ function ArmyMgr:OnNetMsgArmyCreate(MsgBody)
     ChatMgr:AddArmyChatMsg(FormatText, 0, true)
     self:ClearInvitePopUpInfo()
     --- 显示招募红点
-    RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, nil, true)
+    RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, nil, true, ArmyDefine.RedDotCheckID)
     self.IsRecruitPanelHaveOpened = false
     self:SetArmyState(ProtoCS.RoleGroupState.RoleGroupStateJoinedGroup)
     --- 大字提示
@@ -858,9 +868,12 @@ function ArmyMgr:OnMsgClassPermissionChange(MsgBody)
     end
     if IsSelfCategoryChange then    
         --- 更新自身权限数据
-        self.SelfCategoryData = self:GetCategoryDataByID(self.SelfRoleInfo.CategoryID)
+        if self.SelfRoleInfo then
+            self.SelfCategoryData = self:GetCategoryDataByID(self.SelfRoleInfo.CategoryID)
+        end
         local RedDotData = self:GetRedDotDataByType(ProtoCS.GroupRedDotType.GroupRedDotTypeApply)
         self:ArmyRedDotDataUpdate(RedDotData)
+        EventMgr:SendEvent(EventID.ArmySelfPermisstionToc)
     end
 end
 
@@ -900,9 +913,10 @@ function ArmyMgr:OnMsgTransferLeader(MsgBody)
         return
     end
     -- LSTR string:转让部队长权限成功
-    _G.MsgTipsUtil.ShowTips(LSTR(910239))
-    local NewLeaderData, OldLeaderData = self:UpdateTransferLeader(Msg.NewLeaderRoleID, Msg.LastLeaderRoleID, Msg.LastLeaderCategoryID)
+    _G.MsgTipsUtil.ShowTips(LSTR(910239))   
+    local NewLeaderData, OldLeaderData = self:UpdateTransferLeader(Msg.LastLeaderRoleID, Msg.NewLeaderRoleID, Msg.LastLeaderCategoryID)
     ArmyMainVM:RefreshTransferLeaderData(NewLeaderData, OldLeaderData)
+    EventMgr:SendEvent(EventID.ArmySelfPermisstionToc)
 end
 
 --- 搜索部队Rsp
@@ -970,13 +984,14 @@ function ArmyMgr:OnMsgQueryApplyList(MsgBody)
         return
     end
     local NextOffset = Msg.Offset + #Msg.ApplyRoles
+    self:SetApplyListIsEnd(#Msg.ApplyRoles < Msg.Limit)
     self:SetPageDataOffset(PageType.JoinApply, NextOffset)
-    --if Msg.Offset == 0 then
+    if Msg.Offset == 0 then
         ArmyMainVM:UpdateApplyJoinArmyRoleList(Msg.ApplyRoles)
-    --else
-        --ArmyMainVM:AddApplyJoinArmyRoleList(Msg.ApplyRoles)
-    -- end
-    local IsHaveApplyRedDot = RedDotMgr:FindRedDotNodeByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeInvite])
+    else
+        ArmyMainVM:AddApplyJoinArmyRoleList(Msg.ApplyRoles)
+    end
+    local IsHaveApplyRedDot = RedDotMgr:FindRedDotNodeByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeApply])
     local IsHaveApply = false
     if Msg.ApplyRoles and #Msg.ApplyRoles > 0 then
         IsHaveApply = true
@@ -996,11 +1011,16 @@ function ArmyMgr:OnMsgArmyAcceptApply(MsgBody)
     local Msg = MsgBody.AcceptApply
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
+        self:ResetPageData(PageType.JoinApply)
         self:SendGetArmyQueryApplyListMsg()
         return
     end
     if Msg == nil then
         return
+    end
+    local PageData = self:GetPageDataByType(PageType.JoinApply)
+    if PageData and PageData.Offset and PageData.Offset > 0 then
+        PageData.Offset = PageData.Offset - 1
     end
     -- LSTR string:通过成功
     MsgTipsUtil.ShowTips(LSTR(910242))
@@ -1055,11 +1075,17 @@ function ArmyMgr:OnMsgArmyRefuseApply(MsgBody)
     local Msg = MsgBody.RefuseApply
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
+        ---改为增量更新，出错后刷新界面，申请第一页数据
+        self:ResetPageData(PageType.JoinApply)
         self:SendGetArmyQueryApplyListMsg()
         return
     end
     if Msg == nil then
         return
+    end
+    local PageData = self:GetPageDataByType(PageType.JoinApply)
+    if PageData and PageData.Offset and PageData.Offset > 0 then
+        PageData.Offset = PageData.Offset - 1
     end
     -- LSTR string:拒绝成功
     MsgTipsUtil.ShowTips(LSTR(910134))
@@ -1168,7 +1194,16 @@ end
 function ArmyMgr:OnMsgArmyAcceptInvita(MsgBody)
     local ErrorCode = MsgBody.ErrorCode
     if ErrorCode then
-        self:SendArmyGetInviteListMsg()
+        ---已有部队时接受邀请报错
+        if ErrorCode == ArmyDefine.ArmyErrorCode.NoRepeatJoinArmy then
+            self:HideAllArmyView()
+            --- 如果客户端本身判断无部队，重新拉一次数据
+            if not self:IsInArmy() then
+                self:SendGetArmyInfoMsg()
+            end
+        else
+            self:SendArmyGetInviteListMsg()
+        end
         return
     end
     local Msg = MsgBody.AcceptInvite
@@ -1401,18 +1436,8 @@ function ArmyMgr:OnMsgCategoryChange(MsgBody)
     if Msg == nil then
         return
     end
-    local RoleID = MajorUtil.GetMajorRoleID()
-    self:UpdateMemCategoryID(RoleID, Msg.CategoryId)
-    --- 更新自身权限数据 todo 后面放到权限/分组更新函数处理
-    if  self.SelfRoleInfo == nil then
-        self.SelfRoleInfo = {}
-    end
-    self.SelfRoleInfo.CategoryID = Msg.CategoryId
-    self.SelfCategoryData = self:GetCategoryDataByID(self.SelfRoleInfo.CategoryID)
-    ArmyMainVM:UpdateMemberCategory(RoleID, Msg.CategoryId)
-    --- 更新一次申请红点显示
-    local RedDotData = self:GetRedDotDataByType(ProtoCS.GroupRedDotType.GroupRedDotTypeApply)
-    self:ArmyRedDotDataUpdate(RedDotData)
+    self:UpdataSelfCategoryData(Msg.CategoryId) 
+    EventMgr:SendEvent(EventID.ArmySelfPermisstionToc)
 end
 --------- 部队仓库 End---------
 
@@ -1595,8 +1620,9 @@ function ArmyMgr:OnNetMsgGroupBonusStateBuy(MsgBody)
     local StateShowCfg = GroupBonusStateDataCfg:FindCfgByKey(Msg.ID)
     local Name = StateShowCfg.EffectName
     local Num = Msg.Num
-    -- LSTR string:已购买
-    MsgTipsUtil.ShowTips(string.format("%s%d%s'%s'",LSTR(910116), Num, LSTR(910031), Name))
+    -- LSTR string:已购买{1}个{2}
+    MsgTipsUtil.ShowTips(StringTools.Format(LSTR(910116), Num, Name))
+
     ---购买完成关闭
     UIViewMgr:HideView(UIViewID.ArmySEBuyWin)
 
@@ -1792,7 +1818,7 @@ function ArmyMgr:OnNetMsgGroupPeitionCancel(MsgBody)
     self:UpdataArmyCreatePeitionData()
     ArmyMainVM:UpdataArmyCreatePeitionData()
     ---清理提醒红点
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, ArmyDefine.RedDotCheckID)
     ---弹提示
     --LSTR  已撤销创建部队
     MsgTipsUtil.ShowTips(LSTR(910346))
@@ -1831,7 +1857,7 @@ function ArmyMgr:OnNetMsgGroupSignCancel()
     --local SignCancel = MsgBody.SignCancel
     self:SendGroupSignQueryInvites()
     ---清理提醒红点
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], ArmyDefine.RedDotCheckID)
     self:SetArmyState(ProtoCS.RoleGroupState.RoleGroupStateInit)
 end
 
@@ -1934,10 +1960,12 @@ function ArmyMgr:OnNetMsgGroupGrandCompanyToc(MsgBody)
     MsgTipsUtil.ShowTips(TipsText)
 end
 
+---编辑部队情报
 function ArmyMgr:OnNetMsgProfileEdit(MsgBody)
     local GroupProfileEdite = MsgBody.GroupProfileEdite
     if GroupProfileEdite then
         ArmyMainVM:UpdateInformationByEdit(GroupProfileEdite)
+        self:SetRecruitStatus(GroupProfileEdite.RecruitStatus)
         ---[保存成功]
         MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.SaveSucceed)
     end
@@ -1956,6 +1984,26 @@ function ArmyMgr:OnNetMsgNotifyReputation(MsgBody)
         if UIViewMgr:IsViewVisible(UIViewID.ArmySEBuyWin) then
             UIViewMgr:HideView(UIViewID.ArmySEBuyWin)
         end
+    end
+end
+
+function ArmyMgr:OnNetMsgRecruitStatusToc(MsgBody)
+    local RecruitStatusToc = MsgBody.RecruitStatusToc
+    if RecruitStatusToc then
+        self:SetRecruitStatus(RecruitStatusToc.RecruitStatus)
+    end
+end
+
+---部队长变化
+function ArmyMgr:OnNetMsgAutoTransferLeaderToc(MsgBody)
+    local AutoTransferLeaderToc = MsgBody.AutoTransferLeaderToc
+    if AutoTransferLeaderToc then
+        local NewLeaderData, OldLeaderData = self:UpdateTransferLeader(AutoTransferLeaderToc.OldLeaderID, AutoTransferLeaderToc.NewLeaderID, AutoTransferLeaderToc.OldLeaderCategoryID)
+        ArmyMainVM:RefreshTransferLeaderData(NewLeaderData, OldLeaderData)
+        local RoleID = MajorUtil.GetMajorRoleID()
+        if RoleID == AutoTransferLeaderToc.NewLeaderID or RoleID == AutoTransferLeaderToc.OldLeaderID then
+            EventMgr:SendEvent(EventID.ArmySelfPermisstionToc)
+        end   
     end
 end
 
@@ -1996,15 +2044,15 @@ function ArmyMgr:OnSignNumToc(MsgBody)
         if SelfRoleID == SignNumToc.RoleID then
             ---目前的逻辑是只要人数变满就一定亮红点，不满就消失
             if SignNumToc.Num >= MaxSignNum then
-                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, nil, nil, ArmyDefine.RedDotCheckID)
             else
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, ArmyDefine.RedDotCheckID)
             end
         else
             if SignNumToc.Num >= MaxSignNum then
-                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], nil, nil, ArmyDefine.RedDotCheckID)
             else
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], ArmyDefine.RedDotCheckID)
             end
         end
     end
@@ -2353,7 +2401,7 @@ end
 
 --- 搜索部队
 ---@param Input any 部队Id或者名称
-function ArmyMgr:SendArmySearchByInputMsg(Input)
+function ArmyMgr:SendArmySearchByInputMsg(Input, bFull)
     self.SearchArmyTab = {}
     local PageData
     LastSearchArmyInput = Input
@@ -2365,7 +2413,7 @@ function ArmyMgr:SendArmySearchByInputMsg(Input)
         LastSearchArmyInput = tostring(Input)
         PageData = self:ResetPageData(PageType.ArmySearch)
     end
-    self:SendArmySearchMsg(PageData, nil)
+    self:SendArmySearchMsg(PageData, bFull)
 end
 
 --- 根据上一次条件搜索下一页
@@ -2564,7 +2612,7 @@ end
 
 --- 获取申请加入部队的玩家列表
 function ArmyMgr:SendGetArmyQueryApplyListMsg()
-    self:ResetPageData(PageType.JoinApply)
+    --self:ResetPageData(PageType.JoinApply)
     local PageData = self:GetPageDataByType(PageType.JoinApply)
     if PageData == nil or PageData.bPulling then
         return
@@ -3164,9 +3212,13 @@ function ArmyMgr:OpenArmyMainPanel(SkipPanelID, SkipParams)
             self:SendGetArmyDataMsg(ArmyID)
         else
             ArmyMainVM:SetIsOpenPanel(true)
-            self:SendArmySearchByInputMsg()
+            --self:SendArmySearchByInputMsg()
             if not UIViewMgr:IsViewVisible(UIViewID.ArmyPanel) then
                 UIViewMgr:ShowView(UIViewID.ArmyPanel)
+                ---非跳转界面才需要请求部队列表数据
+                if not SkipPanelID then
+                    self:SendArmySearchByInputMsg(nil, false)
+                end
             elseif SkipPanelID then
                 local ArmyView = UIViewMgr:FindView(UIViewID.ArmyPanel)
                 if ArmyView and ArmyView.OnRefreshUI then
@@ -3902,6 +3954,7 @@ function ArmyMgr:GetArmyCategories()
     end
 end
 
+---获取招募数据
 function ArmyMgr:GetRecruitInfo()
     if self.SelfArmyInfo then
         local ArmySimple = self.SelfArmyInfo.Simple
@@ -3909,6 +3962,18 @@ function ArmyMgr:GetRecruitInfo()
         local RecruitSlogan = ArmySimple.RecruitSlogan
         return RecruitStatus, RecruitSlogan
     end
+end
+
+---设置招募状态
+---@param RecruitStatus ProtoCS.GroupRecruitStatus 招募公开状态 0 公开 1关闭
+function ArmyMgr:SetRecruitStatus(RecruitStatus)
+    if self.SelfArmyInfo == nil then
+        self.SelfArmyInfo = {}
+    end
+    if self.SelfArmyInfo.Simple == nil then
+        self.SelfArmyInfo.Simple = {}
+    end
+    self.SelfArmyInfo.Simple.RecruitStatus = RecruitStatus
 end
 
 function ArmyMgr:UpdateRecruitInfo(RecruitStatus, RecruitSlogan)
@@ -4244,10 +4309,17 @@ function ArmyMgr:UpdateTransferLeader(OldLeaderRID, NewLeaderRID, OldLeaderNewCa
     end)
     NewLeaderMemData.Simple.CategoryID = ArmyDefine.LeaderCID
     if OldLeaderMemData then
+        ---旧部队长可能离开部队
         OldLeaderMemData.Simple.CategoryID = OldLeaderNewCategoryID
     end
     ArmySimData.Leader = NewLeaderMemData
     MyArmyInfo.TransferLeaderTime = _G.TimeUtil.GetServerTime()
+    local RoleID = MajorUtil.GetMajorRoleID()
+    if RoleID == OldLeaderRID then
+        self:UpdataSelfCategoryData(OldLeaderNewCategoryID)  
+    elseif  RoleID == NewLeaderRID then
+        self:UpdataSelfCategoryData(ArmyDefine.LeaderCID)    
+    end   
     return NewLeaderMemData, OldLeaderMemData
 end
 
@@ -4442,20 +4514,19 @@ function ArmyMgr:ShowInviteWindow(InviterName, ArmyName, GroupID, Time, RoleID)
 
     local RichName = RichTextUtil.GetText(InviterName,  ArmyTextColor.BlueHex)
     local Params = {}
+    local OptDesc = "" 
     local CurSidebarType = SidebarType.ArmyInvite
-    -- LSTR string:玩家%s
-    Params.Desc1 = string.format(LSTR(910177), RichName)
     if ArmyName and ArmyName ~= "" then
         -- LSTR string:部队邀请
         Params.Title = LSTR(910263)
         -- LSTR string:邀请你加入部队[%s]
-        Params.Desc2 = string.format(LSTR(910243), ArmyName)
+        OptDesc = string.format(LSTR(910243), ArmyName)
         CurSidebarType = SidebarType.ArmyInvite
     else
         -- LSTR string:部队署名邀请
         Params.Title = LSTR(910410)
         -- LSTR string:邀请你署名部队组建
-        Params.Desc2 = string.format(LSTR(910403))
+        OptDesc = string.format(LSTR(910403))
         CurSidebarType = SidebarType.ArmySignInvite
     end
 
@@ -4474,6 +4545,8 @@ function ArmyMgr:ShowInviteWindow(InviterName, ArmyName, GroupID, Time, RoleID)
         CountDown = CountDownCfgTime
     end
 
+    -- LSTR string:玩家%s
+    Params.Desc1 = string.format(LSTR(910177), RichName) .. OptDesc
     Params.RoleID = RoleID
     Params.GroupID = GroupID
     Params.TransData = {}
@@ -4743,6 +4816,8 @@ function ArmyMgr:ArmyRedDotUpdate(RedDotMap, IsClientTrigger)
         if RedDotData then
             --- 申请红点变化时，需要保证申请列表同步刷新
             if Data.Tid == ProtoCS.GroupRedDotType.GroupRedDotTypeApply and RedDotData.Status ~= Data.Status then
+                ---红点变化请求0-15
+                self:ResetPageData(PageType.JoinApply)
                 self:SendGetArmyQueryApplyListMsg()
             end
             --- 邀请红点变化时，需要保证邀请列表同步刷新
@@ -4754,6 +4829,8 @@ function ArmyMgr:ArmyRedDotUpdate(RedDotMap, IsClientTrigger)
             table.insert(self.RedDotMap, Data)
             --- 申请红点变化时，需要保证申请列表同步刷新(只有服务器下发的变化触发)
             if Data.Tid == ProtoCS.GroupRedDotType.GroupRedDotTypeApply and not IsClientTrigger then
+                ---红点变化请求0-15
+                self:ResetPageData(PageType.JoinApply)
                 self:SendGetArmyQueryApplyListMsg()
             end
             --- 邀请红点变化时，需要保证邀请列表同步刷新(只有服务器下发的变化触发)
@@ -4786,7 +4863,7 @@ function ArmyMgr:ArmyRedDotDataUpdate(RedDotData)
                 local RedDotState = BitUtil.IsBitSetByInt64(RedDotData.Status, Index, false)
                 if nil == self.StoreRedDotNameList[Index] then
                     if RedDotState then
-                        self.StoreRedDotNameList[Index] = RedDotMgr:AddRedDotByParentRedDotID(ArmyDefine.ArmyRedDotID[RedDotData.Tid])
+                        self.StoreRedDotNameList[Index] = RedDotMgr:AddRedDotByParentRedDotID(ArmyDefine.ArmyRedDotID[RedDotData.Tid], nil, nil, ArmyDefine.RedDotCheckID)
                         self:DelSendCancelStoreRedDot(Index)
                     end
                 end
@@ -4799,7 +4876,7 @@ function ArmyMgr:ArmyRedDotDataUpdate(RedDotData)
             local IsHavePermisstion = self:GetSelfIsHavePermisstion(ProtoRes.GroupPermissionType.GROUP_PERMISSION_TYPE_AcceptApply)
             ---无权限不显示申请红点
             if not IsHavePermisstion and RedDotData.Tid == ProtoCS.GroupRedDotType.GroupRedDotTypeApply then
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid])
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid], ArmyDefine.RedDotCheckID)
                 return
             end
             if RedDotState then
@@ -4808,9 +4885,9 @@ function ArmyMgr:ArmyRedDotDataUpdate(RedDotData)
                 if  not _G.ModuleOpenMgr:CheckOpenState(ModuleID.ModuleIDArmy) then
                     return
                 end
-                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid])
+                RedDotMgr:AddRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid], nil, nil, ArmyDefine.RedDotCheckID)
             else
-                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid])
+                RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[RedDotData.Tid], ArmyDefine.RedDotCheckID)
             end
         end
     end
@@ -4928,8 +5005,8 @@ end
 
 function ArmyMgr:ClearNoArmyRedDot()
     ---清理提醒红点/其他邀请红点在同意时会清理
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull])
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind)
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID[ProtoCS.GroupRedDotType.GroupRedDotTypeSignFull], ArmyDefine.RedDotCheckID)
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyCreateRemind, ArmyDefine.RedDotCheckID)
 end
 
 ---清理某个类型的红点
@@ -4938,8 +5015,7 @@ function ArmyMgr:ClearRedDotByType(Type)
     if RedData then
         RedData.Status = 0
     else
-        RedData = {Tid = Type, Status = 0}
-        self:SetRedDotDataByType(Type, RedData)
+        self:SetRedDotDataByType(Type, 0)
     end
 end
 
@@ -4959,10 +5035,10 @@ function ArmyMgr:ArmyQuit()
     end
     self:ArmyRedDotDataUpdateByType(ProtoCS.GroupRedDotType.GroupRedDotTypeApply)
     for _, RedDotName in pairs(self.StoreRedDotNameList) do
-        RedDotMgr:DelRedDotByID(RedDotName)
+        RedDotMgr:DelRedDotByID(RedDotName, ArmyDefine.RedDotCheckID)
     end
     ---清除本地红点（招募红点）
-    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind)
+    RedDotMgr:DelRedDotByID(ArmyDefine.ArmyRedDotID.ArmyInformationEditRemind, ArmyDefine.RedDotCheckID)
     self.StoreRedDotNameList = {}
     self.CancelStoreRedDotList = {}
     -- ---清除见习转正倒计时
@@ -5257,12 +5333,23 @@ function ArmyMgr:DelArmyBonusState(ID, Num)
  end
 
 ---根据类型获取日志ICON
-function ArmyMgr:GetArmyLogIconByLogType(LogType)
+function ArmyMgr:GetArmyLogIconByLogType(LogType, LagData)
     local CfgData = GroupLogCfg:FindCfgByKey(LogType)
     if CfgData == nil then
         return
     end
-    local LogIcon = CfgData.Icon
+    local LogIcon
+    if LogType == ArmyLogType.LogTypeGrandCompanyChanged or LogType == ArmyLogType.LogTypeGrandCompanyLvChanged then
+        local GrandID = LagData.Params[1]
+        if GrandID then
+            local GrandCompanyCfgData = GrandCompanyCfg:FindCfgByKey(GrandID)
+            if GrandCompanyCfgData then
+                LogIcon = GrandCompanyCfgData.LogIcon
+            end
+        end
+        return LogIcon
+    end
+    LogIcon = CfgData.Icon
     return LogIcon
 end
 
@@ -5448,6 +5535,157 @@ function ArmyMgr:GetArmyLogTextByLogData(LogData, CallBack)
         local Text = StringTools.Format(FormatText, RoleVM.Name or "")
         CallBack(Text)
         end, nil, true)
+    elseif Type == ArmyLogType.LogTypeGrandCompanyLvChanged then
+        -- 国防联军关系等级提升
+        local GrandCompanyName = ""
+        for _, UnitedArmyTab in ipairs(ArmyDefine.UnitedArmyTabs) do
+            if LogData.Params[1] == UnitedArmyTab.ID then
+                GrandCompanyName = UnitedArmyTab.Name
+            end
+        end
+        local ReputationText = self:GetReputationText(LogData.Params[2])
+        -- 与“{1}”的友好关系提升为“{2}”！
+        local Text = StringTools.Format(FormatText, GrandCompanyName, ReputationText)
+        CallBack(Text)
+    elseif Type == ArmyLogType.LogTypeArmyLandLottey then
+        -- 部队土地抽选
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}参与了{2}第{3}区{4}号土地抽选。
+            local HouseZoneID = LogData.Params[2]
+            local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseZoneName, LogData.Params[3], LogData.Params[4])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeArmyLandPurchase then
+        -- 部队土地购买
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}购买了{2}第{3}区{4}号土地。
+            local HouseZoneID = LogData.Params[2]
+            local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseZoneName, LogData.Params[3], LogData.Params[4])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeArmyHouseConstructtion then
+        -- 部队房屋搭建
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}在{2}第{3}区{4}号土地上搭建起了“{5}”。
+            local HouseZoneID = LogData.Params[2]
+            local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+            local HouseStyleItemID = LogData.Params[5]
+            local SearchConditions = string.format("%s%s", "ItemIds=", tostring(HouseStyleItemID))
+            local HouseStyleInfo = HouseCfg:FindCfg(SearchConditions)
+            local HouseStyleName = ""
+            if HouseStyleInfo then
+                HouseStyleName = HouseStyleInfo.HouseTypeName or ""
+            end
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseZoneName, LogData.Params[3], LogData.Params[4], HouseStyleName)
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeArmyHouseDemolition then
+        -- 部队房屋拆除
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}拆除了“{2}”。
+            local HouseName = LogData.StringParams[1]
+            if string.isnilorempty(HouseName) then
+                local Addr = {
+                    EstateID = LogData.Params[2],
+                    Area = LogData.Params[3],
+                    Number = LogData.Params[4],
+                }
+                HouseName = _G.HouseInfoMgr:GetHouseNameStr("", Addr)
+            end
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseName)
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeArmyLandAbandoned then
+        -- 部队土地废弃
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}废弃了{2}第{3}区{4}号土地。
+            local HouseZoneID = LogData.Params[2]
+            local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseZoneName, LogData.Params[3], LogData.Params[4])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeStopAutoDemolition then
+        -- 上线停止自动拆除
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}上线了，自动拆除准备已经取消。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "")
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTpyeArmyLandRecyle then
+        -- 部队土地回收
+        -- 因为长时间没有使用，{1}第{2}区{3}号土地已被回收，部分资产由住宅区管理员代为保管。
+        local HouseZoneID = LogData.Params[1]
+        local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+        local Text = StringTools.Format(FormatText, HouseZoneName, LogData.Params[2], LogData.Params[3])
+        CallBack(Text)
+    elseif Type == ArmyLogType.LogTypeArmyHouseReName then
+        -- 部队房屋改名
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}将{2}第{3}区{4}号住房名称改成了“{5}”。
+            local HouseZoneID = LogData.Params[2]
+            local HouseZoneName = self:GetHouseZoneNameByID(HouseZoneID)
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", HouseZoneName, LogData.Params[3], LogData.Params[4], LogData.StringParams[1])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeArmyGreetingsRevision then
+        -- 部队房屋问候语修改
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}修改了“{2}”的问候语。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", LogData.StringParams[1])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeSetHouseDisplayTag then
+        -- 部队房屋宣传标签设定
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}设定了房屋宣传标签。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "")
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeSetHouseDisplayIcon then
+        -- 部队房屋展示图片修改
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}设定了房屋展示图片。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "")
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeCreateNewPersonalRoom then
+        -- 部队房屋新建个人房间
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}增设了个人用{2}号房间。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", LogData.Params[2])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeSetHouseInteriorDecoration then
+        -- 设置房屋内部装潢
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}更换了“{2}”的内部装潢。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", LogData.StringParams[1])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeSetHouseExteriorDecoration then
+        -- 设置房屋外部装潢
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            -- {1}更换了“{2}”的外部装潢。
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", LogData.StringParams[1])
+            CallBack(Text)
+            end, nil, true)
+    elseif Type == ArmyLogType.LogTypeAutoTransferLeader then
+        RoleInfoMgr:QueryRoleSimple(LogData.Params[1], function(_, RoleVM)
+            local CategoryID = ArmyDefine.LeaderCID
+            local CategoryData = self:GetCategoryDataByID(CategoryID)
+            local CategoryName
+            if CategoryData then
+                CategoryName = CategoryData.Name or ""
+            else
+                local Cfg = GroupDefaultCategoryCfg:FindCfgByKey(CategoryID)
+                CategoryName = Cfg and Cfg.Name or ""
+            end
+            -- 由于{1}不在，“{2}”已被转让
+            local Text = StringTools.Format(FormatText, RoleVM.Name or "", CategoryName)
+            CallBack(Text)
+            end, nil, true)
     end
 end
 
@@ -5457,6 +5695,14 @@ end
 
 function ArmyMgr:SetSearchArmyListIsEnd(IsEnd)
     self.ArmyListIsEnd = IsEnd
+end
+
+function ArmyMgr:GetApplyListIsEnd()
+    return self.ApplyListIsEnd
+end
+
+function ArmyMgr:SetApplyListIsEnd(IsEnd)
+    self.ApplyListIsEnd = IsEnd
 end
 
 function ArmyMgr:ClearLastSearchArmyInput()
@@ -5608,7 +5854,31 @@ end
 
 --- 部队除名弹窗
 function ArmyMgr:KickMemberMsgBox(RoleID)
+    if self.KickMemberRoleID then
+        ---正在等房屋回包，防阻塞用定时器置空
+        if self.KickMemberTimer == nil then
+            self.KickMemberTimer = self:RegisterTimer(self.OnTimerClearKickMember, 2)
+        end
+        return 
+    end
+    self.KickMemberRoleID = RoleID
+    _G.HouseInfoMgr:SendPullArmyMemberRoom(self:GetArmyID())
+end
+
+function ArmyMgr:KickMemberByQueryRoomEvent(RoleID)
     local RoleVM = RoleInfoMgr:FindRoleVM(RoleID)
+    local Params = {}
+    if RoleVM == nil then
+        return
+    end
+    if self.Rooms then
+        local IsHave = table.find_by_predicate(self.Rooms,function(Room) 
+            return Room.RoleID == RoleID
+        end)
+        if IsHave then
+            Params.TipsText = RichTextUtil.GetText(LSTR(910447),  ArmyTextColor.NoEnoughRedHex)
+        end
+    end
     --- 删除成员
     MsgBoxUtil.ShowMsgBoxTwoOp(
     self,
@@ -5618,8 +5888,22 @@ function ArmyMgr:KickMemberMsgBox(RoleID)
     string.format(LSTR(910195), RichTextUtil.GetText(RoleVM.Name,  ArmyTextColor.BlueHex)),
     function()
         ArmyMgr:SendKickMemberMsg(RoleID)
-    end
+    end,
+    nil,
+    nil,
+    nil,
+    Params
     )
+end
+
+---清空除名定时器
+function ArmyMgr:OnTimerClearKickMember()
+    self:UnRegisterTimer(self.KickMemberTimer)
+    self.KickMemberTimer = nil
+    -- if self.KickMemberRoleID then
+    --     self:KickMemberByQueryRoomEvent(self.KickMemberRoleID)
+    -- end
+    self.KickMemberRoleID = nil
 end
 
 --- 取消署名弹窗
@@ -5703,7 +5987,7 @@ function ArmyMgr:ArmyTransferLeaderMsgBox(MemberSimpleData)
         Callback,
         nil,
         -- LSTR string:取消
-        LSTR(910083),
+        LSTR(910081),
         -- LSTR string:转让
         LSTR(910236),
         { RightBtnCD = 10 }
@@ -6181,6 +6465,7 @@ function ArmyMgr:HideAllArmyView()
      UIViewMgr:HideView(UIViewID.ArmyEditRecruitPanel)
      UIViewMgr:HideView(UIViewID.ArmyEditInfoPanel)
      UIViewMgr:HideView(UIViewID.ArmySelectQuantityWin)
+     UIViewMgr:HideView(UIViewID.ArmyJoinInfoViewWin)
 end
 
 ---显示部队结成提示，只有创建者和署名者会有，后续加入无
@@ -6194,6 +6479,31 @@ function ArmyMgr:ShowJoinArmyTips()
         MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmySignJoinTipsID)
         self.IsShowJoinTips = false
     end
+end
+
+function ArmyMgr:UpdataSelfCategoryData(CategoryId)    
+    --- 更新自身权限数据
+    local RoleID = MajorUtil.GetMajorRoleID()
+    self:UpdateMemCategoryID(RoleID, CategoryId)
+    --- 更新自身权限数据 todo 后面放到权限/分组更新函数处理
+    if  self.SelfRoleInfo == nil then
+        self.SelfRoleInfo = {}
+    end
+    self.SelfRoleInfo.CategoryID = CategoryId
+    self.SelfCategoryData = self:GetCategoryDataByID(self.SelfRoleInfo.CategoryID)
+    ArmyMainVM:UpdateMemberCategory(RoleID, CategoryId)
+    --- 更新一次申请红点显示
+    local RedDotData = self:GetRedDotDataByType(ProtoCS.GroupRedDotType.GroupRedDotTypeApply)
+    self:ArmyRedDotDataUpdate(RedDotData)
+end
+
+function ArmyMgr:GetReputationText(Level)
+	local Cfg = GroupReputationLevelCfg:FindCfgByKey(Level)
+	local Str = ""
+	if Cfg then
+		Str = Cfg.Text
+	end
+	return Str
 end
 
 -----仓库拦截判断，累计充值不达到30的，不允许开启仓库
@@ -6241,5 +6551,94 @@ function ArmyMgr:SendGroupMoneyBagWithDrawAndCheck(Num, TotalNum)
         _G.MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.NoOpenArmyStore)
     end
 end
+
+
+-- // 拉取部队的房屋信息
+-- message PullGroupInfoRsp {
+--     uint64              GroupID         = 1;    // 部队ID
+--     ClientHouseDetail   HouseDetail     = 2;    // 部队房屋
+--     HouseRecycleSimple  GroupRecycle    = 3;    // 部队房屋回收简要信息
+-- }
+
+-- message ClientHouseDetail {
+--     HouseBasicInfo              Basic       = 1;
+-- 	repeated HouseRoommateOne   Roommates   = 2;	// 室友信息
+-- }
+
+-- message HouseBasicInfo {
+--     uint64      HouseID         = 1;        // 房屋ID
+--     HouseType   HouseType       = 2;
+-- 	uint64      OwnerID         = 3;     
+-- 	bytes       Name            = 4;
+-- 	int32       HouseResID      = 5;
+-- 	repeated VisitPrivilegeOne  VisitSetting    = 6; 	// 访客设置
+    
+-- 	bytes       Greeting        = 7;        // 问候语
+-- 	int32       BeLikeNum       = 8;        // 点赞数
+-- 	uint64      Tags            = 9;        // （HouseTagCfg 的bit位)
+--     uint64      EtherGid        = 10;       // 私有以太之光ID  
+--     HouseAddr   Addr            = 11;       // 房屋位置
+--     string      PicUrl          = 12;       // 房屋图片
+--     int32       WorldID         = 13;       // 房屋区服
+-- }
+
+function ArmyMgr:OnGameEventHouseGroupInfoUpdate(PullGroupInfo)
+	if PullGroupInfo and PullGroupInfo.GroupID == self:GetArmyID() then
+		if PullGroupInfo.HouseDetail then
+			self.IsHasHouse = true
+		else
+			self.IsHasHouse = false
+		end
+	end
+end
+
+function ArmyMgr:GetIsHasHouse()
+    return self.IsHasHouse
+end
+
+-- message GroupMemberRoomOne {
+--     int32   Index       = 1;    // 房间序号
+--     uint64  HouseID     = 2;    // 房屋ID
+--     uint64  RoleID      = 3;    // 房主ID
+--     string  Name        = 4;    // 房间名字
+--     int32   BeLikeNum   = 5;    // 被点赞数
+--     string  PicUrl      = 6;    // 房屋图片
+--     repeated VisitPrivilegeOne  VisitSetting    = 7; 	// 访客设置
+
+-- }
+
+function ArmyMgr:OnPullArmyMemberRoom(MsgBody)
+    if MsgBody and MsgBody.GroupID == self:GetArmyID() then
+        self.Rooms = MsgBody.Rooms
+	end
+    if self.KickMemberRoleID then
+        self:KickMemberByQueryRoomEvent(self.KickMemberRoleID)
+        self.KickMemberRoleID = nil
+    end
+end
+
+function ArmyMgr:GetHouseZoneNameByID(HouseZoneID)
+    local HouseZoneName = ""
+    if HouseZoneID == nil then
+        return HouseZoneName
+    end
+    local EstateInfo = EstateInfoCfg:FindCfgByKey(HouseZoneID)
+    if EstateInfo then
+        HouseZoneName = EstateInfo.EstateName or ""
+    end
+    return HouseZoneName
+end
+------GM---------
+-----设置申请列表初始请求数量和单次增量拉取数量
+function ArmyMgr:SetArmyApplyMiniNumAndLimitNum(Num)
+    ArmyDefine.MiniApplyNum = Num
+    ArmyDefine.PageNums[PageType.JoinApply] = Num
+end
+
+ --- 清理加入部队列表数据缓存，用于处理切换显示满员和未满员部队时的拉取问题
+function ArmyMgr:ClearSearchArmyTab()
+    self.SearchArmyTab = {} --- 清理缓存
+end
+
 
 return ArmyMgr

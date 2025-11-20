@@ -56,6 +56,10 @@ local UnlockStateGetters = {
     [ButtonType.DEPART_OF_LIGHT] = function()
         return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLightJourney)
     end,
+
+    [ButtonType.HOUSE_SYS] = true,
+
+    [ButtonType.HOUSE_DECORATE] = true,
 }
 
 ---IsButtonUnlock
@@ -120,6 +124,14 @@ local function OnDeparturePressed()
 	_G.DepartOfLightMgr:ShowDepartMainView()
 end
 
+local function OnHouseSysPressed()
+    _G.UIViewMgr:ShowView(UIViewID.HouseLandMianPanelView)
+end
+
+local function onHouseDecoratePressed()
+    _G.HousingMgr:OpenMainHousePanel()
+end
+
 local OnPressedCallbacks = {
     [ButtonType.NONE] = nil,
     [ButtonType.MENU] = OnMenuPressed,
@@ -133,6 +145,8 @@ local OnPressedCallbacks = {
     [ButtonType.PRE_DOWNLOAD] = OnPreDownloadPressed,
     [ButtonType.MUR_SURVEY] = OnMURSurveyPressed,
     [ButtonType.DEPART_OF_LIGHT] = OnDeparturePressed,
+    [ButtonType.HOUSE_SYS] = OnHouseSysPressed,
+    [ButtonType.HOUSE_DECORATE] = onHouseDecoratePressed,
 }
 
 ---OnPressed

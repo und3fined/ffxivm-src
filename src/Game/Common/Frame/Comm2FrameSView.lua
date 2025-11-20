@@ -18,6 +18,7 @@ local UIUtil = require("Utils/UIUtil")
 ---@field NamedSlotChild UNamedSlot
 ---@field Panel2Btn UFCanvasPanel
 ---@field PopUpBG CommonPopUpBGView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field HideOnClick bool
@@ -36,6 +37,7 @@ function Comm2FrameSView:Ctor()
 	--self.NamedSlotChild = nil
 	--self.Panel2Btn = nil
 	--self.PopUpBG = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
 	--self.HideOnClick = nil
@@ -50,6 +52,7 @@ function Comm2FrameSView:OnRegisterSubView()
 	self:AddSubView(self.Btn1)
 	self:AddSubView(self.Btn2Right)
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

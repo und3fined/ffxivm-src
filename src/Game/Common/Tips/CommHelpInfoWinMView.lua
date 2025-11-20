@@ -65,9 +65,10 @@ end
 
 function CommHelpInfoWinMView:OnShow()
 	local Params = self.Params or {}
-	UIUtil.SetIsVisible(self.Panel2Btns, Params.ShowBtn == true )
-	UIUtil.SetIsVisible(self.CommTipsBtn1, Params.ShowBtn == true )
-	UIUtil.SetIsVisible(self.CommTipsBtn2, Params.ShowBtn == true )
+	local ExtraParam = Params.ExtraParam or {}
+	UIUtil.SetIsVisible(self.Panel2Btns, Params.ShowBtn == true or ExtraParam.ShowBtn == true)
+	UIUtil.SetIsVisible(self.CommTipsBtn1, Params.ShowBtn == true or ExtraParam.ShowBtn == true)
+	UIUtil.SetIsVisible(self.CommTipsBtn2, Params.ShowBtn == true or ExtraParam.ShowBtn == true)
 	UIUtil.SetIsVisible(self.CheckBoxNoReminder, false)
 	-- 先暂时隐藏  等后面CommTipsBtnItemView处理了 再调接口
 	UIUtil.SetIsVisible(self.CommMoneyBar, Params.MoneyElement == true)
@@ -80,17 +81,17 @@ function CommHelpInfoWinMView:OnShow()
 		self.LeftBtnOp:SetIsNormalState(true)
 	end
 	
-	if Params.LeftBtnText ~= nil then
-		self.LeftBtnOp:SetText(Params.LeftBtnText)
+	if Params.LeftBtnText or ExtraParam.CommTipsBtn1Str then
+		self.LeftBtnOp:SetText(Params.LeftBtnText or ExtraParam.CommTipsBtn1Str)
 	end
-	if Params.RightBtnText ~= nil then
-		self.RightBtnOp:SetText(Params.RightBtnText)
+	if Params.RightBtnText or ExtraParam.CommTipsBtn2Str then
+		self.RightBtnOp:SetText(Params.RightBtnText or ExtraParam.CommTipsBtn2Str)
 	end
-	if Params.RightBtnCB ~= nil then
-		self.RightBtnCB = Params.RightBtnCB
+	if Params.RightBtnCB or ExtraParam.Btn2Callback then
+		self.RightBtnCB = Params.RightBtnCB or ExtraParam.Btn2Callback
 	end
-	if Params.LeftBtnCB ~= nil then
-		self.LeftBtnCB = Params.LeftBtnCB
+	if Params.LeftBtnCB or ExtraParam.Btn1Callback  then
+		self.LeftBtnCB = Params.LeftBtnCB or ExtraParam.Btn1Callback 
 	end
 	if Params.CloseBtnCB ~= nil then
 		self.CloseBtnCB = Params.CloseBtnCB
@@ -107,23 +108,29 @@ function CommHelpInfoWinMView:OnShow()
 		self.CommTipsBtn2.RichTextTips:SetText(self.Params.WarningText)
 	end
 
-	if self.Params and self.Params.CostNum and self.Params.CostItemID then
+	local CostNum = Params.CostNum or ExtraParam.CostNum
+	local CostItemID = Params.CostItemID or ExtraParam.CostItemID
+	local CostColor = Params.CostColor or ExtraParam.CostColor
+	if CostNum and CostItemID then
 		UIUtil.SetIsVisible(self.CommTipsBtn2.PanelMoney, true)
-		self.CommTipsBtn2.Money1:SetMoneyNum(self.Params.CostNum)
-		self.CommTipsBtn2.Money1:SetMoneyIconByID(self.Params.CostItemID)
-		if self.Params.CostColor then
-			local LinearColor = _G.UE.FLinearColor.FromHex(self.Params.CostColor)
+		self.CommTipsBtn2.Money1:SetMoneyNum(CostNum)
+		self.CommTipsBtn2.Money1:SetMoneyIconByID(CostItemID)
+		if CostColor then
+			local LinearColor = _G.UE.FLinearColor.FromHex(CostColor)
 			if LinearColor then
 				self.CommTipsBtn2.Money1:SetTextMoneyColorAndOpacity(LinearColor)
 			end
 		end
 	end
 
-	if self.Params and self.Params.RightBtnOpState then
-		self:SetBtnTypeByState(self.RightBtnOp, self.Params.RightBtnOpState)
+	local RightBtnOpState = Params.RightBtnOpState or ExtraParam.RightBtnOpState
+	if RightBtnOpState then
+		self:SetBtnTypeByState(self.RightBtnOp, RightBtnOpState)
 	end
-	if self.Params and self.Params.LeftBtnOpState then
-		self:SetBtnTypeByState(self.LeftBtnOp, self.Params.LeftBtnOpState)
+
+	local LeftBtnOpState = Params.LeftBtnOpState or ExtraParam.LeftBtnOpState
+	if LeftBtnOpState then
+		self:SetBtnTypeByState(self.LeftBtnOp, LeftBtnOpState)
 	end
 end
 

@@ -12,18 +12,21 @@ local PerformanceAssistNewItemVM = LuaClass(UIViewModel)
 
 ---Ctor
 function PerformanceAssistNewItemVM:Ctor()
-	self.ImgAllBlackVisible = false
-	self.ImgAllBlackLongVisible = false
-	self.ImgAllBlackLong2Visible = false
-	self.ImgAllWhiteVisible = false
-	self.ImgAllWhiteLongVisible = false
-	self.ImgAllWhiteLong2Visible = false
-	self.ImgUPLongBarBVisible = false
-	self.ImgUPLongBarB2Visible = false
-	self.ImgUPLongBarWVisible = false
-	self.ImgUPLongBarW2Visible = false
-	self.ImgUpPointBVisible = false
-	self.ImgUpPointWVisible = false
+	self.ImgAllBlackVisible = false --全音阶短按黑键
+	self.ImgAllBlackLongVisible = false --全音阶长按黑键
+	self.ImgAllBlackLong2Visible = false --全音阶长按黑键(掉落中音符底部的菱形小方块)
+
+	self.ImgAllWhiteVisible = false --全音阶短按白键
+	self.ImgAllWhiteLongVisible = false --全音阶长按白键
+	self.ImgAllWhiteLong2Visible = false --全音阶长按白键(掉落中音符底部的菱形小方块)
+
+	self.ImgUPLongBarBVisible = false --单音阶长按黑键
+	self.ImgUPLongBarB2Visible = false --单音阶长按黑键(掉落中音符底部的菱形小方块)
+	self.ImgUPLongBarWVisible = false --单音阶长按白键
+	self.ImgUPLongBarW2Visible = false --单音阶长按白键(掉落中音符底部的菱形小方块)
+
+	self.ImgUpPointBVisible = false --单音阶短按白键
+	self.ImgUpPointWVisible = false --单音阶短按黑键
 
 	self.ImgAllBlackImgPath = ""
 	self.ImgAllBlackLongImgPath = ""

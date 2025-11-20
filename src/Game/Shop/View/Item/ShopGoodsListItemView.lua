@@ -35,9 +35,11 @@ local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacity
 ---@field MaskPanel UFCanvasPanel
 ---@field PanelArrow UFCanvasPanel
 ---@field PanelHQ UFCanvasPanel
+---@field PanelHotSale UFCanvasPanel
 ---@field PanelTask UFCanvasPanel
 ---@field TagPanel UFCanvasPanel
 ---@field TextDiscount UFTextBlock
+---@field TextHotSale UFTextBlock
 ---@field TextName UFTextBlock
 ---@field TextNum UFTextBlock
 ---@field TextTime UFTextBlock
@@ -68,9 +70,11 @@ function ShopGoodsListItemView:Ctor()
 	--self.MaskPanel = nil
 	--self.PanelArrow = nil
 	--self.PanelHQ = nil
+	--self.PanelHotSale = nil
 	--self.PanelTask = nil
 	--self.TagPanel = nil
 	--self.TextDiscount = nil
+	--self.TextHotSale = nil
 	--self.TextName = nil
 	--self.TextNum = nil
 	--self.TextTime = nil
@@ -93,7 +97,6 @@ function ShopGoodsListItemView:OnInit()
 		{ "Name", UIBinderSetText.New(self, self.TextName) },
 		{ "ItemQuality", UIBinderSetBrushFromAssetPath.New(self, self.ImgColor) },
 		{ "Icon", UIBinderSetBrushFromIconID.New(self, self.ImgInlet) },
-		{ "QuotaVisible", UIBinderSetIsVisible.New(self, self.FHorizontalQuota) },
 		--{ "FVerticalBoxVisible", UIBinderSetIsVisible.New(self, self.FVerticalBox) },
 		{ "HQVisible", UIBinderSetIsVisible.New(self, self.PanelHQ) },
 		{ "SpeciaIcon", UIBinderSetIsVisible.New(self, self.ImgFlame) },
@@ -113,6 +116,8 @@ function ShopGoodsListItemView:OnInit()
 		{ "PanelTaskVisible", UIBinderSetIsVisible.New(self, self.PanelTask) },
 		{ "ImgXVisible", 		UIBinderSetIsVisible.New(self, self.ImgX) },
 		{ "ImgXColor", 			UIBinderSetColorAndOpacityHex.New(self, self.ImgX) },
+		{ "SaleRuleText", UIBinderSetText.New(self, self.TextHotSale) },
+		{ "bSaleTagVisible", UIBinderSetIsVisible.New(self, self.PanelHotSale) },
 
 		-- { "GoodsMoneyVisible", UIBinderSetIsVisible.New(self, self.GoodsMoney) },
 		-- { "GoodsMoneyVisible", UIBinderSetIsVisible.New(self, self.SizeBoxName) },
@@ -125,7 +130,15 @@ function ShopGoodsListItemView:OnDestroy()
 end
 
 function ShopGoodsListItemView:OnShow()
-	UIUtil.SetIsVisible(self.BtnGoods, true, false)
+	if self.Params ~= nil and self.Params.IsOpsMysteryShop then
+		return
+	end
+	
+	if not self.ViewModel then
+		return
+	end
+
+	UIUtil.SetIsVisible(self.BtnGoods, true, self.ViewModel.BtnVisible)
 	self.GoodsID = self.ViewModel.GoodsId
 	self.RedDotName = _G.ShopMgr.RedDotName .. "/".. self.GoodsID
 	if self.ViewModel.IsCanBuy then
@@ -173,18 +186,42 @@ end
 function ShopGoodsListItemView:SetBuyViewItemState(Value)
 	UIUtil.SetIsVisible(self.GoodsMoney, Value)
 	--UIUtil.SetIsVisible(self.TextNum, Value)
+	if nil == self.ViewModel then
+		self.ViewModel = self.Params and self.Params.Data
+	end
 	if self.ViewModel ~= nil then
 		self.ViewModel.ImgXVisible = Value
 		self.ViewModel.ArrowIconVisible = Value
+		self.ViewModel.bSaleTagVisible = self.ViewModel.bSaleTagVisible and Value
 	end
 	--UIUtil.SetIsVisible(self.SizeBoxName, Value)
 	UIUtil.SetIsVisible(self.ImgShopMask, Value)
 	UIUtil.SetIsVisible(self.ImgTipsBg, Value)
 	UIUtil.SetIsVisible(self.TextTips, Value)
 	UIUtil.SetIsVisible(self.ImgBar, Value)
-	--UIUtil.SetIsVisible(self.FHorizontalQuota, Value)
 	UIUtil.SetIsVisible(self.TextName, Value)
 	UIUtil.SetIsVisible(self.Textcondition, Value)
+	UIUtil.CanvasSlotSetPosition(self.ImgInlet, _G.UE4.FVector2D(0, 0))
+end
+
+--由于此处两个系统公用
+function ShopGoodsListItemView:SetBuyViewItemStateByMarket(State)
+	UIUtil.SetIsVisible(self.GoodsMoney, State)
+	--UIUtil.SetIsVisible(self.TextNum, Value)
+	if nil == self.ViewModel then
+		self.ViewModel = self.Params and self.Params.Data
+	end
+	if self.ViewModel ~= nil then
+		self.ViewModel.ImgXVisible = State
+		self.ViewModel.ArrowIconVisible = State
+		self.ViewModel.bSaleTagVisible = self.ViewModel.bSaleTagVisible and State
+	end
+	--UIUtil.SetIsVisible(self.SizeBoxName, Value)
+	UIUtil.SetIsVisible(self.ImgShopMask, State)
+	UIUtil.SetIsVisible(self.ImgTipsBg, State)
+	UIUtil.SetIsVisible(self.TextTips, State)
+	UIUtil.SetIsVisible(self.ImgBar, State)
+	UIUtil.SetIsVisible(self.TextName, State)
 	UIUtil.CanvasSlotSetPosition(self.ImgInlet, _G.UE4.FVector2D(0, 0))
 end
 

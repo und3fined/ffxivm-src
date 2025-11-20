@@ -19,6 +19,9 @@ local HeadFrameCfg = {
             {
                 Name = 'Access',
             },
+            {
+                Name = 'LifeTimeDesc',
+            },
 		}
     },
     DefaultValues = {
@@ -26,8 +29,7 @@ local HeadFrameCfg = {
         FrameType = 2,
         ID = 1,
         ItemID = 0,
-        LifeTimeDesc = '',
-        Timelimit = 0,
+        TimeLimit = 0,
         UnlockType = 2,
     },
 	LuaData = {
@@ -71,7 +73,6 @@ local HeadFrameCfg = {
             FrameIcon = 'Texture2D\'/Game/UI/Texture/PersonInfo/UI_Profile_Img_Frame9.UI_Profile_Img_Frame9\'',
             FrameType = 4,
             ID = 1001,
-            LifeTimeDesc = '战令赛季限时',
             UnlockType = 0,
         },
 	},

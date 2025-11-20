@@ -35,8 +35,9 @@ local PreLoadConfig =
         --"Texture2D'/Game/UI/Texture/CommonBkg/UI_Config_Img_Bkg.UI_Config_Img_Bkg'",
 
         --预加载公共图集
-        "Texture2D'/Game/UI/Atlas/HUD/Textures/HUD_Atlas_0.HUD_Atlas_0'",
         "Texture2D'/Game/UI/Atlas/HUD/Textures/HUD_Atlas_1.HUD_Atlas_1'",
+        "Texture2D'/Game/UI/Atlas/HUD/Textures/HUD_Atlas_2.HUD_Atlas_2'",
+        -- "Texture2D'/Game/UI/Atlas/HUD/Textures/HUD_Atlas_3.HUD_Atlas_3'",  -- Atlas3 目前仅PVP使用，不需要预加载
         "Texture2D'/Game/UI/Atlas/HUDQuest/Textures/HUDQuest_Atlas_0.HUDQuest_Atlas_0'",
         "Texture2D'/Game/UI/Atlas/HUDQuest/Textures/HUDQuest_Atlas_1.HUDQuest_Atlas_1'",
         "Texture2D'/Game/UI/Atlas/HUDSigns/Textures/HUDSigns_Atlas_0.HUDSigns_Atlas_0'",
@@ -54,7 +55,7 @@ local PreLoadConfig =
         --预加载公共、常驻UI蓝图
         "WidgetBlueprint'/Game/UI/BP/Common/Menu/CommMenu_UIBP.CommMenu_UIBP_C'",
         "WidgetBlueprint'/Game/UI/BP/Common/DropDownList/CommDropDownListNew_UIBP.CommDropDownListNew_UIBP_C'",
-        "WidgetBlueprint'/Game/UI/BP/Common/Tips/CommMsgBoxNew_UIBP.CommMsgBoxNew_UIBP'",
+        "WidgetBlueprint'/Game/UI/BP/Common/Tips/CommMsgBoxNew_UIBP.CommMsgBoxNew_UIBP_C'",
         "WidgetBlueprint'/Game/UI/BP/Common/Tips/CommDropTips_UIBP.CommDropTips_UIBP_C'",
         "WidgetBlueprint'/Game/UI/BP/InfoTips/AreaTips_UIBP.AreaTips_UIBP_C'",
         "WidgetBlueprint'/Game/UI/BP/InfoTips/CommonTips_UIBP.CommonTips_UIBP_C'",

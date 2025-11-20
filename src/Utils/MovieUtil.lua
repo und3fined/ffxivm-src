@@ -34,16 +34,16 @@ local MOVIE_NAME_MAP = {
 }
 
 -- 端游CG动画资源相关参数
--- { CG动画类型, 字幕起始ID, 是否有职员表 }
+-- { CG动画类型, 字幕起始ID, 是否有职员表, 是否无多语言 }
 local MOVIE_RESOURCE_PARAMS = {
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_OPENING] = { MOVIE_TYPE.MOVIE_TYPE_OPENING, 125000, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE, 0, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_GIN] = { MOVIE_TYPE.MOVIE_TYPE_VOYAGE, 125050, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_BAHA] = { MOVIE_TYPE.MOVIE_TYPE_NONE, 0, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_V3TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE, 0, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_V4TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE, 0, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_V5TITLE] = { MOVIE_TYPE.MOVIE_TYPE_VER500, 125100, false },
-	[MOVIE_RESOURCE.MOVIE_RESOURCE_V6TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE, 0, true },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_OPENING] = { MOVIE_TYPE.MOVIE_TYPE_OPENING, 125000, false, false },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_TITLE]   = { MOVIE_TYPE.MOVIE_TYPE_NONE,    0,      false, false },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_GIN]     = { MOVIE_TYPE.MOVIE_TYPE_VOYAGE,  125050, false, false },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_BAHA]    = { MOVIE_TYPE.MOVIE_TYPE_NONE,    0,      false, true },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_V3TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE,    0,      false, true },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_V4TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE,    0,      false, true },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_V5TITLE] = { MOVIE_TYPE.MOVIE_TYPE_VER500,  125100, false, false },
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_V6TITLE] = { MOVIE_TYPE.MOVIE_TYPE_NONE,    0,      true,  false },
 }
 
 -- 根据当前语言类型, 选择不同的字幕刷新时间配置
@@ -67,6 +67,7 @@ local CULTURETYPE_NAME = {
 
 local MOVIE_BGM_FORMAT = {
 	[MOVIE_RESOURCE.MOVIE_RESOURCE_GIN] = "AkAudioEvent'/Game/WwiseAudio/Events/cut/ffxiv/movie/Ginruiko_%s/Play_Ginruiko_%s.Play_Ginruiko_%s'",
+	[MOVIE_RESOURCE.MOVIE_RESOURCE_BAHA] = "AkAudioEvent'/Game/WwiseAudio/Events/cut/ffxiv/movie/ARR_DRA/Play_ARR_DRA.Play_ARR_DRA'",
 }
 
 local MOVIE_SUBTITLE_FORMAT = {
@@ -142,6 +143,11 @@ function MovieUtil.GetMovieBGM(MovieResource, CultureType)
 	local BGMFormat = MOVIE_BGM_FORMAT[MovieResource]
 	if not BGMFormat then
 		return nil
+	end
+	local Params = MOVIE_RESOURCE_PARAMS[MovieResource]
+	-- 没有多语言的音频不需要考虑语言设置
+	if Params and Params[4] then
+		return BGMFormat
 	end
 	local CultureName = CULTURETYPE_NAME[CultureType]
 	if not CultureName then

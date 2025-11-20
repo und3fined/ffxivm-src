@@ -10,6 +10,7 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIUtil = require("Utils/UIUtil")
 local TipsUtil = require("Utils/TipsUtil")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
+local HelpCfg = require("TableCfg/HelpCfg")
 local CommHelpInfoVM =  require("Game/Common/Tips/VM/CommHelpInfoVM")
 local FVector2D = _G.UE.FVector2D
 
@@ -18,6 +19,13 @@ local InfoTipMargin = {
     Top = -26,
     Right = -35,
     Bottom = -31,
+}
+
+local InfoTipMargin2 = {
+    Left = -15,
+    Top = -40,
+    Right = -15,
+    Bottom = -40,
 }
 
 local InfoTipGap = 10
@@ -55,10 +63,11 @@ function CommHelpInfoTips1View:OnInit()
 	self.TableViewContentAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewContent)
 	self.Binders = {}
 	self.AnimIn = nil
+	self.ParentViewID = nil
 end
 
 function CommHelpInfoTips1View:OnDestroy()
-
+	self.ParentViewID = nil
 end
 
 function CommHelpInfoTips1View:OnShow()
@@ -83,21 +92,29 @@ function CommHelpInfoTips1View:OnShow()
 		self.PopUpBG:SetCallback(self.Params.View, self.Params.HidePopUpBGCallback)
 	end
 
+	self.ParentViewID = Params.ParentViewID or nil
+
 	local Offset = Params.Offset
 	local Alignment = Params.Alignment
 
-	if Alignment.X == 0.0 and Alignment.Y  == 0.0 then
-		Offset.X = Offset.X - InfoTipMargin.Left - InfoTipGap
-		Offset.Y = Offset.Y - InfoTipMargin.Top
+	local LocalInfoTipMargin = InfoTipMargin
+
+	if Params.Type ~= nil and Params.Type == 4 or Params.Type == 5 then
+		LocalInfoTipMargin = InfoTipMargin2
+	end
+
+	if Alignment.X == 0.0 and Alignment.Y == 0.0 then
+		Offset.X = Offset.X - LocalInfoTipMargin.Left - InfoTipGap
+		Offset.Y = Offset.Y - LocalInfoTipMargin.Top
 	elseif Alignment.X == 1.0 and Alignment.Y == 1.0 then
-		Offset.X = Offset.X + InfoTipMargin.Right - InfoTipGap
-		Offset.Y = Offset.Y + InfoTipMargin.Bottom
+		Offset.X = Offset.X + LocalInfoTipMargin.Right - InfoTipGap
+		Offset.Y = Offset.Y + LocalInfoTipMargin.Bottom
 	elseif Alignment.X == 1.0 and Alignment.Y == 0.0 then
-		Offset.X = Offset.X + InfoTipMargin.Right - InfoTipGap
-		Offset.Y = Offset.Y - InfoTipMargin.Top
+		Offset.X = Offset.X + LocalInfoTipMargin.Right - InfoTipGap
+		Offset.Y = Offset.Y - LocalInfoTipMargin.Top
 	elseif Alignment.X == 0.0 and Alignment.Y == 1.0 then
-		Offset.X = Offset.X - InfoTipMargin.Left - InfoTipGap
-		Offset.Y = Offset.Y + InfoTipMargin.Bottom
+		Offset.X = Offset.X - LocalInfoTipMargin.Left - InfoTipGap
+		Offset.Y = Offset.Y + LocalInfoTipMargin.Bottom
 	end
 
 	UIUtil.CanvasSlotSetPosition(self.PanelTips, FVector2D(0, 0))

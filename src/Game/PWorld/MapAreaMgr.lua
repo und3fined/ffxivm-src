@@ -435,6 +435,79 @@ function MapAreaMgr:GetUIMapIDByLocation(Pos, MapID)
     return UIMapID
 end
 
+---@type 获取FishGimmickArea
+---@param Pos table@X,Y,Z坐标
+---@param MapID number@地图ID(为nil则取当前地图)
+---@return table table@当前所在的所有渔场，当前位于的渔场
+function MapAreaMgr:GetFishGimmickAreaByPos(Pos, MapID)
+    local Priority = 0
+    local ID = 0
+    local CurrArea = nil
+    local CurrAreaList = {}
+    local Location = _G.UE.FVector(Pos.X, Pos.Y, Pos.Z)
+
+    local MapEditData = nil
+    if not MapID or MapID == _G.PWorldMgr:GetCurrMapResID() then
+        MapEditData = _G.MapEditDataMgr:GetMapEditCfg()
+    else
+        MapEditData = _G.MapEditDataMgr:GetMapEditCfgByMapIDEx(MapID)
+    end
+    if not MapEditData then
+        return 0
+    end
+
+    for _, Area in ipairs(MapEditData.AreaList) do
+        if Area.FuncType == ProtoRes.area_func_type.AREA_FUNC_TYPE_GIMMICK then
+            if Area.Gimmick.Type == ProtoRes.gimmick_type.GIMMICK_TYPE_FISHING then
+                if Area.ShapeType == ProtoRes.area_shape_type.AREA_SHAPE_TYPE_BOX then
+                    local Box = Area.Box
+                    local Extent = _G.UE.FVector(Box.Extent.X, Box.Extent.Y, Box.Extent.Z)
+                    local Center = _G.UE.FVector(Box.Center.X, Box.Center.Y, Box.Center.Z)
+                    local Min = Center - Extent
+                    local Max = Center + Extent
+                    if Box.Rotator.Z == 0 then
+                        if Location.X > Min.X and Location.X < Max.X and Location.Y > Min.Y and Location.Y < Max.Y and Location.Z > Min.Z and Location.Z < Max.Z then
+                            table.insert(CurrAreaList,Area)
+                            if Area.Priority >= Priority then
+                                Priority = Area.Priority
+                                ID = Area.ID
+                                CurrArea = Area
+                            end
+                        end
+                    else
+                        --用目标位置反方向旋转
+                        local RotatedPoint = Rotate(Location, Center, Box.Rotator.Z * -1)
+                        if RotatedPoint.X > Min.X and RotatedPoint.X < Max.X and RotatedPoint.Y > Min.Y and RotatedPoint.Y < Max.Y and RotatedPoint.Z > Min.Z and RotatedPoint.Z < Max.Z then
+                            table.insert(CurrAreaList,Area)
+                            if Area.Priority >= Priority then
+                                Priority = Area.Priority
+                                ID = Area.ID
+                                CurrArea = Area
+                            end
+                        end
+                    end
+                elseif Area.ShapeType == ProtoRes.area_shape_type.AREA_SHAPE_TYPE_CYLINDER then
+                    local Cylinder = Area.Cylinder
+                        local Radius = Cylinder.Radius
+                        local Height = Cylinder.Height
+                        local Center = _G.UE.FVector(Cylinder.Start.X, Cylinder.Start.Y, Cylinder.Start.Z - Height)
+                        local PointOnCylinder = _G.UE.FVector(Location.X, Location.Y, Center.Z)
+                        local DistanceToCenter = _G.UE.FVector.Dist(PointOnCylinder, Center)
+                        if DistanceToCenter <= Radius and Location.Z >= Center.Z and Location.Z <= Center.Z + Height then
+                            table.insert(CurrAreaList,Area)
+                            if Area.Priority >= Priority then
+                                Priority = Area.Priority
+                                ID = Area.ID
+                                CurrArea = Area
+                            end
+                        end
+                end
+            end
+        end
+    end
+    return CurrAreaList, CurrArea
+end
+
 ---@type 设置地名
 ---@param Block number@街道id
 ---@param Spot number@地点ID

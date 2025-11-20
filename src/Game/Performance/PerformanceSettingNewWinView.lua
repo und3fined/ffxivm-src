@@ -27,6 +27,7 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field BtnScale1 UFButton
 ---@field BtnScale2 UFButton
 ---@field DropDownKeyBoard CommDropDownListView
+---@field DropDownMusicSheet CommDropDownListView
 ---@field ImgSelect1 UFImage
 ---@field ImgSelect2 UFImage
 ---@field PanelSlider UFCanvasPanel
@@ -35,6 +36,7 @@ local DataReportUtil = require("Utils/DataReportUtil")
 ---@field SliderBar2 CommSliderHorizontalView
 ---@field TextKeyBoard UFTextBlock
 ---@field TextMode UFTextBlock
+---@field TextMusicSheet UFTextBlock
 ---@field TextScale1 UFTextBlock
 ---@field TextScale2 UFTextBlock
 ---@field TextSliderValue UFTextBlock
@@ -53,6 +55,7 @@ function PerformanceSettingNewWinView:Ctor()
 	--self.BtnScale1 = nil
 	--self.BtnScale2 = nil
 	--self.DropDownKeyBoard = nil
+	--self.DropDownMusicSheet = nil
 	--self.ImgSelect1 = nil
 	--self.ImgSelect2 = nil
 	--self.PanelSlider = nil
@@ -61,6 +64,7 @@ function PerformanceSettingNewWinView:Ctor()
 	--self.SliderBar2 = nil
 	--self.TextKeyBoard = nil
 	--self.TextMode = nil
+	--self.TextMusicSheet = nil
 	--self.TextScale1 = nil
 	--self.TextScale2 = nil
 	--self.TextSliderValue = nil
@@ -77,6 +81,7 @@ function PerformanceSettingNewWinView:OnRegisterSubView()
 	self:AddSubView(self.BtnDefault)
 	self:AddSubView(self.BtnOK)
 	self:AddSubView(self.DropDownKeyBoard)
+	self:AddSubView(self.DropDownMusicSheet)
 	self:AddSubView(self.SliderBar)
 	self:AddSubView(self.SliderBar2)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -103,14 +108,15 @@ function PerformanceSettingNewWinView:InitStaticText()
 	self.TextMode:SetText(_G.LSTR(830055))
 	self.TextKeyBoard:SetText(_G.LSTR(830056))
 	-- self.TextShield:SetText(_G.LSTR(830057))
+	self.TextMusicSheet:SetText(_G.LSTR(830024))
 	self.TextVolume:SetText(_G.LSTR(830094))
 	self.TextVolume2:SetText(_G.LSTR(830126))
 	self.TextScale1:SetText(_G.LSTR(830058))
 	self.TextScale2:SetText(_G.LSTR(830059))
 	
-	self.BtnCancel:SetBtnName(_G.LSTR(830060))
+	self.BtnCancel:SetBtnName(_G.LSTR(10003))
 	self.BtnDefault:SetBtnName(_G.LSTR(830061))
-	self.BtnOK:SetBtnName(_G.LSTR(830062))
+	self.BtnOK:SetBtnName(_G.LSTR(10002))
 end
 
 function PerformanceSettingNewWinView:UpdateSlider()
@@ -124,8 +130,12 @@ end
 function PerformanceSettingNewWinView:UpdateDropDown()
 	local SizeDropDownList = { {Name = LSTR(830023)}, {Name = LSTR(830022)} }
 	self.DropDownKeyBoard:UpdateItems(SizeDropDownList, self.VM.KeySize)
+
 	-- local SwitchDropDownList = { {Name = LSTR(830024)}, {Name = LSTR(830008)} }
 	-- self.DropDownShield:UpdateItems(SwitchDropDownList, self.VM.OtherMuted and 1 or 2)
+
+	local MusicSheetDropDownList = { {Name = LSTR(830008)}, {Name = LSTR(830135)}, {Name = LSTR(830136)}}
+	self.DropDownMusicSheet:UpdateItems(MusicSheetDropDownList, self.VM.MusicSheet)
 end
 
 function PerformanceSettingNewWinView:CheckBtnState()
@@ -162,6 +172,10 @@ function PerformanceSettingNewWinView:OnRegisterUIEvent()
 	-- 	self.VM.OtherMuted = Value == 1
 	-- 	self:CheckBtnState()
 	-- end)
+	UIUtil.AddOnSelectionChangedEvent(self, self.DropDownMusicSheet, function(_, Value) 
+		self.VM.MusicSheet = Value
+		self:CheckBtnState()
+	end)
 
 	UIUtil.AddOnClickedEvent(self, self.BtnOK.Button, self.OnClickBtnOK)
 	UIUtil.AddOnClickedEvent(self, self.BtnDefault.Button, self.OnClickBtnDefault)
@@ -174,6 +188,7 @@ function PerformanceSettingNewWinView:OnClickBtnOK()
 	_G.UE.USaveMgr.SetInt(SaveKey.PerformanceKeyboardMode, self.VM.KeyboardMode, true)
 	_G.UE.USaveMgr.SetInt(SaveKey.PerformanceKeySize, self.VM.KeySize, true)
 	-- _G.UE.USaveMgr.SetInt(SaveKey.PerformanceOtherMuted, self.VM.OtherMuted and 1 or 0, true)
+	_G.UE.USaveMgr.SetInt(SaveKey.PerformanceMusicSheet, self.VM.MusicSheet, true)
 	
 	_G.SettingsMgr:SetValueBySaveKey(MPDefines.InstrumentValSaveKey, self.VM.Volume)
 	_G.SettingsMgr:SetValueByClientSetupKey("CSInstrumentsMainPlayerVol", self.VM.Volume)
@@ -181,6 +196,7 @@ function PerformanceSettingNewWinView:OnClickBtnOK()
 	_G.SettingsMgr:SetValueBySaveKey(MPDefines.InstrumentValSaveKey2, self.VM.Volume2)
 	_G.SettingsMgr:SetValueByClientSetupKey("CSInstrumentsOthersVol", self.VM.Volume2)
 
+	_G.EventMgr:SendEvent(_G.EventID.MusicPerformanceCommonSettingUpdate)
 	self:CheckBtnState()
 	self:Hide()
 
@@ -191,14 +207,14 @@ end
 function PerformanceSettingNewWinView:OnClickBtnDefault()
 	local Select = _G.UE.USaveMgr.GetInt(SaveKey.PerformanceSettingRestoreDefaultTipSelect, 0, true)
 	if Select == 0 then
-		MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(830031), LSTR(830041), function(_, Params)
+		MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(10004), LSTR(830041), function(_, Params)
 			local IsNeverAgain = Params.IsNeverAgain
 			if IsNeverAgain then
 				--不再提醒
 				_G.UE.USaveMgr.SetInt(SaveKey.PerformanceSettingRestoreDefaultTipSelect, 1, true)
 			end
 			self:SaveRestoreDefaultSettingData()
-		end, nil, LSTR(830014), LSTR(830038), {bUseNever = true, NeverMindText = LSTR(830006)})
+		end, nil, LSTR(10003), LSTR(10002), {bUseNever = true, NeverMindText = LSTR(830006)})
 	elseif Select == 1 then
 		self:SaveRestoreDefaultSettingData()
 	end

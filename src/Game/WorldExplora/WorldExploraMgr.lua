@@ -147,8 +147,32 @@ function WorldExploraMgr:OpenWorldExploreMain()
     self:InitTreasureHuntVMData()                       -- 初始化寻宝VM信息
     self:InitMonsterVMData()                            -- 初始化怪物狩猎VM信息
     self:InitFriendlyTribeVMData()                      -- 初始化友好部族VM信息
-    UIViewMgr:ShowView(UIViewID.WorldExploraMainPanel)
+
+    self.MainView = UIViewMgr:ShowView(UIViewID.WorldExploraMainPanel)
 end
+
+--跳转到探索界面对应的页签（临危受命，冒险游商团等）
+function WorldExploraMgr:JumpToExploraFateTable()
+    self:JumpToExploraTableByGameType(Wilder_Explore_GameType.WILDER_EXPLORE_GAMEPLAY_FATE)
+end
+
+function WorldExploraMgr:JumpToExploraMystermechTable()
+    self:JumpToExploraTableByGameType(Wilder_Explore_GameType.WILDER_EXPLORE_GAMEPLAY_MYSTERMECH)
+end
+
+function WorldExploraMgr:JumpToExploraTableByGameType(GameTypeEnum)
+    if (self.MainView == nil) then
+        _G.FLOG_ERROR("WorldExploraMgr: WorldExploraMainPanel is not show!")
+        return
+    end
+
+	--切换到第二个tab
+	self.MainView.SelectionPanel:SetSelectedIndex(2)
+
+    --切换到fate玩法
+    self.MainView.ExploraPanel:SelectGameBtnByType(GameTypeEnum)
+end
+
 
 --- @type 主界面是否默认选择活动
 function WorldExploraMgr:bSelectActivityModule()
@@ -502,7 +526,7 @@ end
 --------------------------------友好部族相关---------------------------------------
 --- @type 友好部族是否解锁
 function WorldExploraMgr:FriendlyTribeIsUnLocked()
-    return true -- ModuleOpenMgr:CheckOpenState(ModuleID.XXX)
+    return false -- ModuleOpenMgr:CheckOpenState(ModuleID.XXX)
 end
 
 --- @type 获取推荐部族
@@ -527,7 +551,7 @@ end
 
 --- @type 初始化友好部族VM数据
 function WorldExploraMgr:InitFriendlyTribeVMData()
-    WorldExploraVM.bFTLockImgVisible = not self:FriendlyTribeIsUnLocked()
+    WorldExploraVM.bFTLockImgVisible = false
     WorldExploraVM.FTRemainCount = self:GetTribeRemainCountData()
     WorldExploraVM.RecommRace = "X"..self:GetRecommendTribe()
     WorldExploraVM.RaceLevel = self:GetRecommendTribeRaceLevel()

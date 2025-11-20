@@ -23,29 +23,32 @@ function MooglePawBallItemVM:Ctor()
     self.BallID = 0
     self.BallType = MogulBallType.MogulBallTypeInvalid
     self.Position = BindableVector2D.New()
-    self.ShowStateChange = MoogleBallShowState.Normal
     self:SetNoCheckValueChange("ShowStateChange", true)
+    self.StarAnimIndex = 0 -- 星光球的随机循环动画序号
+    self.HistoryShowType = MogulBallType.MogulBallTypeInvalid
 end
 
-function MooglePawBallItemVM:IsEqualVM(Value)
+function MooglePawBallItemVM:IsEqualVM(_)
     return false
 end
 
 function MooglePawBallItemVM:UpdateVM(Value)
     self.BallID = Value.BallID
+    self.StarAnimIndex = Value.StarAnimIndex
     local BallType = Value.BallType
     self.BallType = BallType
+    self.HistoryShowType = BallType
     local PosX = Value.PosX or 0
     local PosY = Value.PosY or 0
     self.Position:SetValue(PosX, PosY)
+    
 end
 
--- 显示结果时不考虑不存在的球
-function MooglePawBallItemVM:ChangeShowState(MoogleBallShowState)
-    if self.BallID == 0 then
-        return
+-- 修改球的显示状态
+function MooglePawBallItemVM:DeleteTheCaughtBall(BallID)
+    if BallID == self.BallID then
+        self.BallType = MogulBallType.MogulBallTypeInvalid
     end
-    self.ShowStateChange = MoogleBallShowState
 end
 
 return MooglePawBallItemVM

@@ -111,7 +111,7 @@ function MerchantGoodsListItemVM:UpdateVM(List)
 	Price.GoldCoinPrice = self.GoldCoinPrice
 	self.MoneyList = Price
 	self.ShopGoodsMoneyItemNewVM:UpdateVM(self.MoneyList)
-	self.IsCanPreView = Cfg.EquipmentID == 0 and (Cfg.ItemType == ItemType.COLLAGE_MOUNT or Cfg.ItemType == ItemType.COLLAGE_MINION or Cfg.ItemType == ItemType.COLLAGE_FASHION)
+	self.IsCanPreView = (Cfg.ItemType == ItemType.COLLAGE_MOUNT or Cfg.ItemType == ItemType.COLLAGE_MINION or Cfg.ItemType == ItemType.COLLAGE_FASHION)
 end
 
 function MerchantGoodsListItemVM:UpdateGoodsState(List)

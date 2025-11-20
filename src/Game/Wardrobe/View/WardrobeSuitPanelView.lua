@@ -12,12 +12,14 @@ local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local TimeUtil = require("Utils/TimeUtil")
+local ItemTipsUtil = require("Utils/ItemTipsUtil")
 
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
+local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 
 local WardrobeSuitPanelVM = require("Game/Wardrobe/VM/WardrobeSuitPanelVM")
 local WardrobeMainPanelVM = require("Game/Wardrobe/VM/WardrobeMainPanelVM")
@@ -35,30 +37,44 @@ local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local ClosetSuitCfg = require("TableCfg/ClosetSuitCfg")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local ClosetCharismCfg = require("TableCfg/ClosetCharismCfg")
+local HelpInfoUtil = require("Utils/HelpInfoUtil")
 local EquipmentPartList = ProtoCommon.equip_part
 
 ---@class WardrobeSuitPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnBox UFButton
+---@field BtnCharm UFButton
 ---@field BtnClose CommonCloseBtnView
 ---@field BtnCollect2 UFButton
+---@field BtnPresets UFButton
+---@field BtnReduce UFButton
 ---@field BtnSearch CommSearchBtnView
 ---@field BtnUse CommBtnLView
 ---@field CommEmpty CommBackpackEmptyView
 ---@field CommonBkg CommonBkg01View
+---@field CommonRedDot CommonRedDotView
 ---@field CommonTitle CommonTitleView
 ---@field DropDownList CommDropDownListView
 ---@field EFF_Reward UFCanvasPanel
 ---@field ImgMask UFImage
+---@field ImgPresets UFImage
+---@field PanelArrow2 UFCanvasPanel
 ---@field PanelBg UFCanvasPanel
+---@field PanelCharm UFCanvasPanel
 ---@field PanelEmpty UFCanvasPanel
+---@field PanelPresets2 UFCanvasPanel
+---@field PanelReduce UFCanvasPanel
 ---@field PanelSlot UFCanvasPanel
 ---@field PanelSwitch UFCanvasPanel
 ---@field PanelTab UFCanvasPanel
 ---@field SearchBar CommSearchBarView
 ---@field TableViewList UTableView
 ---@field TableViewPosition UTableView
+---@field TextName UFTextBlock
 ---@field TextNum UFTextBlock
+---@field TextNumCharm UFTextBlock
+---@field TextPresets UFTextBlock
+---@field TextReduce UFTextBlock
 ---@field ToggleBtnSwitch UToggleButton
 ---@field WardrobeOperateItem WardrobeOperateItemView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -67,25 +83,38 @@ local WardrobeSuitPanelView = LuaClass(UIView, true)
 function WardrobeSuitPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnBox = nil
+	--self.BtnCharm = nil
 	--self.BtnClose = nil
 	--self.BtnCollect2 = nil
+	--self.BtnPresets = nil
+	--self.BtnReduce = nil
 	--self.BtnSearch = nil
 	--self.BtnUse = nil
 	--self.CommEmpty = nil
 	--self.CommonBkg = nil
+	--self.CommonRedDot = nil
 	--self.CommonTitle = nil
 	--self.DropDownList = nil
 	--self.EFF_Reward = nil
 	--self.ImgMask = nil
+	--self.ImgPresets = nil
+	--self.PanelArrow2 = nil
 	--self.PanelBg = nil
+	--self.PanelCharm = nil
 	--self.PanelEmpty = nil
+	--self.PanelPresets2 = nil
+	--self.PanelReduce = nil
 	--self.PanelSlot = nil
 	--self.PanelSwitch = nil
 	--self.PanelTab = nil
 	--self.SearchBar = nil
 	--self.TableViewList = nil
 	--self.TableViewPosition = nil
+	--self.TextName = nil
 	--self.TextNum = nil
+	--self.TextNumCharm = nil
+	--self.TextPresets = nil
+	--self.TextReduce = nil
 	--self.ToggleBtnSwitch = nil
 	--self.WardrobeOperateItem = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -98,6 +127,7 @@ function WardrobeSuitPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnUse)
 	self:AddSubView(self.CommEmpty)
 	self:AddSubView(self.CommonBkg)
+	self:AddSubView(self.CommonRedDot)
 	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.DropDownList)
 	self:AddSubView(self.SearchBar)
@@ -125,7 +155,11 @@ function WardrobeSuitPanelView:OnInit()
 				{ "EmptyVisible", UIBinderSetIsVisible.New(self, self.PanelEmpty)},
 				{ "UseBtnVisible", UIBinderSetIsVisible.New(self, self.BtnUse, false, false)},
 				{ "CharmNumText", UIBinderSetText.New(self, self.TextNum)},
+				{ "NewCharmNumText", UIBinderSetText.New(self, self.TextNumCharm)},
 				{ "CharmEffVisible", UIBinderSetIsVisible.New(self, self.EFF_Reward)},
+				{ "CurSuitName", UIBinderSetText.New(self, self.TextName)},
+				{ "GetWayVisible", UIBinderSetIsVisible.New(self, self.TextName)},
+				{ "GetWayVisible", UIBinderSetIsVisible.New(self, self.PanelReduce)},
 			}
 		},
 		{
@@ -163,9 +197,10 @@ function WardrobeSuitPanelView:OnShow()
 	end
 	self.CurSuitID = self.Params.SuitID
 	self.LastHatBtnTime = 0
-	self.NeededChangeSearch = false  --是否切换搜索
+	self.NeededChangeSearch = true  --是否切换搜索
 	self.Common_Render2D_UIBP = self.Params.SuperView.Common_Render2D_UIBP
 	UIUtil.SetIsVisible(self.CommonBkg, false)
+	UIUtil.SetIsVisible(self.PanelCharm, true)
 	
 	UIUtil.SetIsVisible(self.WardrobeOperateItem.BtnCamera, false, true)
 	
@@ -180,16 +215,21 @@ function WardrobeSuitPanelView:OnShow()
 	self:InitDropDownList()
 	self.IsFirstEnter = false
 	self.VM:UpdateCharismNum()
+	self:UpdateBtnHatStyleState(WardrobeMgr:CheckHeadHasGimmick())
 	self.AppearanceTabListAdapter:SetSelectedIndex(1)
+
+	self.CommonRedDot:SetRedDotIDByID(WardrobeDefine.RedDotList.SuitUnlock)
 end
 
 function WardrobeSuitPanelView:OnHide()
 	self.CurSuitID = nil
+	UIViewMgr:HideView(UIViewID.WardrobeSuitGetWayWin)
 end
 
 function WardrobeSuitPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnBox, self.OnClickedBtnBox)
 	UIUtil.AddOnClickedEvent(self, self.BtnCollect2, self.OnClickedBtnCollect2)
+	UIUtil.AddOnClickedEvent(self, self.BtnCharm, self.OnClickedBtnCharm1)
 	UIUtil.AddOnClickedEvent(self, self.BtnSearch.BtnSearch, self.OnClickedBtnSearch)
 	UIUtil.AddOnClickedEvent(self, self.BtnUse.Button, self.OnClickedBtnUseBtn)
 	UIUtil.AddOnSelectionChangedEvent(self, self.DropDownList, self.OnDropDownListSelectionChanged)
@@ -200,17 +240,30 @@ function WardrobeSuitPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnStateChangedEvent(self, self.WardrobeOperateItem.BtnHatStyle, self.OnClickedBtnHatStyle)
 	UIUtil.AddOnStateChangedEvent(self, self.WardrobeOperateItem.BtnPose, self.OnClickedBtnPose)
 
+
+	UIUtil.AddOnClickedEvent(self, self.BtnPresets, self.OnClickedBtnPresets1)
+
 	UIUtil.AddOnStateChangedEvent(self, self.ToggleBtnSwitch, self.OnClickedBtnSwitch)
+	UIUtil.AddOnClickedEvent(self, self.BtnReduce, self.OnClickedBtnGetWay)
 
 end
 
 function WardrobeSuitPanelView:OnRegisterGameEvent()
 	-- 衣橱魅力值更新
 	self:RegisterGameEvent(EventID.WardrobeCharismValueUpdate, self.OnWardrobeCharismValueUpdate)
+	self:RegisterGameEvent(EventID.WardrobeSuitIDOpen, self.OnWardrobeSuitIDOpen)
+	-- 衣橱解锁更新
+	self:RegisterGameEvent(EventID.WardrobeUnlockUpdate, self.OnWardrobeUnlockUpdate)
 end
 
 function WardrobeSuitPanelView:OnRegisterBinder()
 	self:RegisterMultiBinders(self.MultiBinders)
+end
+
+function WardrobeSuitPanelView:OnWardrobeUnlockUpdate()
+	if self.VM ~= nil then
+		self.VM:UpdateSuitList(self.TabIndex, self:GetFilterProfListIndex(self.CurDropDownIndex))
+	end
 end
 
 function WardrobeSuitPanelView:OnWardrobeCharismValueUpdate()
@@ -231,50 +284,97 @@ end
 
 -- 点击收集奖励界面
 function WardrobeSuitPanelView:OnClickedBtnBox()
-	local function OnGetAwardCallBack(Index, ItemData, ItemView)
-        if ItemData then
-			local CurRewardID = WardrobeMgr:GetClaimedCharismReward()
-			WardrobeMgr:SendClosetCharismRewardReq(Index)
-        end
-    end
 	local LevelAwardInfoList = ClosetCharismCfg:FindAllCfg()
 
 	if LevelAwardInfoList == nil then
 		return
 	end
 
-	-- local MaxCollectNum = LevelAwardInfoList[table.length(LevelAwardInfoList)].Charism
-	local MaxCollectNum = WardrobeMgr:GetCharismTotalNum()
+	local TempMaxIndex = 1
+
+	local function OnClickedItem(Index, ItemData, ItemView)
+		if ItemData ~= nil then
+			if ItemData.IsGetProgress then
+				-- 判断最大index
+				WardrobeMgr:SendClosetCharismRewardReq(TempMaxIndex)
+			else
+				ItemTipsUtil.ShowTipsByResID(ItemData.AwardID, ItemView)
+			end
+		end
+	end
+
+	local function OnGetAwardCallBack(Index, ItemData, ItemView)
+        if ItemData then
+			if ItemData.IsGetProgress then
+				-- 判断最大index
+				WardrobeMgr:SendClosetCharismRewardReq(TempMaxIndex)
+			end
+        end
+    end
 
 	local Params = {
 		ModuleID = nil,
-		CollectedNum = WardrobeMgr:GetCharismNum(),
+		CollectedNum = WardrobeMgr:GetCharmNum(),
 		MaxCollectNum = WardrobeMgr:GetCharismTotalNum(),
 		AreaName = nil,
 		OnGetAwardCallBack = OnGetAwardCallBack,
 		TextCurrent = _G.LSTR(1080111),     -- "外观收集进度"
 		IgnoreIsGetProgress = true,
+		ItemClickCallback = OnClickedItem,
 	}
+	
 
+	local AwardInfoList, AwardSelectIndex, MaxIndex = self:GetAwardInfo()
+
+	Params.AwardList = AwardInfoList
+	Params.AwardSelectIndex = AwardSelectIndex
+	TempMaxIndex = MaxIndex
+
+    UIViewMgr:ShowView(UIViewID.CollectionAwardPanel, Params)
+end
+
+-- 点击魅力值tips
+function WardrobeSuitPanelView:OnClickedBtnCharm1()
+	HelpInfoUtil.ShowHelpInfo({HelpInfoID = WardrobeDefine.CharismHelpID, BtnInfor = self.PanelCharm})
+end
+
+function WardrobeSuitPanelView:GetAwardInfo()
+	local LevelAwardInfoList = ClosetCharismCfg:FindAllCfg()
+	
+	if LevelAwardInfoList == nil then
+		return
+	end
+	
 	local AwardSelectIndex = 1
 	local AwardInfoList = {}
+	local MaxIndex = 1
 	for index, v in ipairs(LevelAwardInfoList) do
 		local Reward = v.Rewards
 		local AwardInfo = {
 			CollectTargetNum = v.Charism,
 			AwardID = Reward[1].ResID,
 			AwardNum = Reward[1].Num,
-			IsGetProgress =  v.Charism <= WardrobeMgr:GetCharismNum(), -- 是否已达到奖励进度
+			IsGetProgress =  v.Charism <= WardrobeMgr:GetCharmNum() and  not (index <= WardrobeMgr:GetClaimedCharismReward()), -- 是否已达到奖励进度
 			IsCollectedAward = index <= WardrobeMgr:GetClaimedCharismReward(), -- 是否已领奖
 		}
+		if AwardInfo.IsGetProgress and index >= MaxIndex then
+			MaxIndex = index
+		end
 		AwardSelectIndex = WardrobeMgr:GetClaimedCharismReward() + 1
 		table.insert(AwardInfoList, AwardInfo)
 	end
 
-	Params.AwardList = AwardInfoList
-	Params.AwardSelectIndex = AwardSelectIndex
+	return AwardInfoList, AwardSelectIndex, MaxIndex
+end
 
-    UIViewMgr:ShowView(UIViewID.CollectionAwardPanel, Params)
+function WardrobeSuitPanelView:OnClickedBtnPresets1()
+	if self.SuperView ~= nil then
+		self.MainVM.BtnSuitSwitchChecked = false
+		self.SuperView.ResetSelected(self.SuperView)
+		self.SuperView.ShowMainPanel(self.SuperView, true) 
+		self.SuperView.OnClickedBtnPresets(self.SuperView)
+		self:Hide()
+	end
 end
 
 function WardrobeSuitPanelView:OnClickedBtnSwitch(ToggleButton, State)
@@ -282,7 +382,8 @@ function WardrobeSuitPanelView:OnClickedBtnSwitch(ToggleButton, State)
 	if UIUtil.IsToggleButtonChecked(State) then
 		self.MainVM.BtnSuitSwitchChecked = false
 		self.SuperView.ResetSelected(self.SuperView)
-		self.SuperView.ShowMainPanel(self.SuperView, true) self:Hide()
+		self.SuperView.ShowMainPanel(self.SuperView, true)
+		self:Hide()	
 	end
 end
 
@@ -293,17 +394,14 @@ function WardrobeSuitPanelView:OnClickedBtnHand(ToggleButton, State)
 	end
 end
 
--- function WardrobeSuitPanelView:OnClickedBtnHat(ToggleButton, State)
--- 	local bChanged = self.SuperView.OnClickedBtnHat(self.SuperView, ToggleButton, State)
--- 	if not bChanged then
--- 		self.WardrobeOperateItem.BtnHat:SetChecked(self.MainVM.BtnHatChecked, false)
--- 	end
--- end
-
 function WardrobeSuitPanelView:OnClickedBtnHatStyle(ToggleButton, State)
 	local bChanged = self.SuperView.OnClickedBtnHatStyle(self.SuperView, ToggleButton, State)
 	if not bChanged then
-		self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.MainVM.BtnHatStyleChecked, false)
+		if not self.MainVM.BtnHatStyleVisible then
+			self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+		else
+			self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.MainVM.BtnHatStyleChecked, false)
+		end
 	end
 end
 
@@ -317,13 +415,21 @@ end
 function WardrobeSuitPanelView:OnClickedBtnCamera(ToggleButton, State)
 	local IsShow = State == _G.UE.EToggleButtonState.Checked
 	self.MainVM.BtnCameraChecked = IsShow
-	-- if IsShow then
-	-- 	self:ShowModelFocusPart(self.CurPartID)
-	-- 	_G.FLOG_INFO(string.format("WardrobeSuitPanelView 切换镜头到 %s", ProtoEnumAlias.GetAlias(ProtoCommon.equip_part, self.CurPartID)))
-	-- else
-	-- 	_G.FLOG_INFO(string.format("WardrobeSuitPanelView 切换全身镜头"))
-	-- 	self:ShowAllModel(true)
-	-- end
+end
+
+-- 打开获取途径逻辑
+function WardrobeSuitPanelView:OnClickedBtnGetWay()
+	-- local ViewModel = {}
+	-- ViewModel.ParentViewID =  _G.UIViewID.WardrobeMainPanel
+	UIViewMgr:ShowView(UIViewID.WardrobeSuitGetWayWin, {SuitID = self.CurSelectedSuit, SuperView = self})
+end
+
+function WardrobeSuitPanelView:HideSuitPanelView(AppID)
+	self.MainVM.BtnSuitSwitchChecked = false
+	self.SuperView.ResetSelected(self.SuperView)
+	self.SuperView.ShowMainPanel(self.SuperView, true)
+	self.SuperView.OpenWardrobeUnlockPanel(self.SuperView,AppID)
+	self:Hide()
 end
 
 function WardrobeSuitPanelView:InitText()
@@ -333,6 +439,8 @@ function WardrobeSuitPanelView:InitText()
 	self.BtnUse:SetText(_G.LSTR(1080066))
 	self.CommEmpty.RichTextNone:SetText(_G.LSTR(1080109))  -- 暂无对应外观
 	self.CommEmpty.RichTextNoneBright:SetText(_G.LSTR(1080109))  -- 暂无对应外观
+	self.TextReduce:SetText(_G.LSTR(1080157)) --获取
+	self.TextPresets:SetText(_G.LSTR(1080106))
 end
 
 -- 初始化职业下拉框
@@ -382,13 +490,17 @@ function WardrobeSuitPanelView:OnDropDownListSelectionChanged(Index, ItemData, I
 				local ItemVM = self.AppearanceSuitListAdapter:GetItemDataByIndex(i)
 				if ItemVM ~= nil then
 					if ItemVM.ID == self.CurSuitID then
-						self.AppearanceSuitListAdapter:ScrollToIndex(i)
+						self.AppearanceSuitListAdapter:CancelSelected()
 						self.AppearanceSuitListAdapter:SetSelectedIndex(i)
+						self.AppearanceSuitListAdapter:ScrollToIndex(i)
 						self.CurSuitID = nil
 						return
 					end
 				end
 			end
+		else
+			self.AppearanceSuitListAdapter:CancelSelected()
+			self.CurSuitID = nil
 		end
 	end
 end
@@ -461,18 +573,24 @@ function WardrobeSuitPanelView:OnAppearanceSuitListChanged(Index, ItemData, Item
 		return
 	end
 
-	if not IsSelected then
-		self.CurSelectedSuit = nil
-		self.TabSelectedListID[self.TabIndex] = 0
-		self:ResetAppearance()
-		self.CurViewSuit = {}
-		return
+	if IsSelected ~= nil then
+		if not IsSelected then
+			self.CurSelectedSuit = nil
+			self.TabSelectedListID[self.TabIndex] = 0
+			self:ResetAppearance()
+			self.CurViewSuit = {}
+			self.VM.GetWayVisible = false
+			return
+		end
 	end
 
 	self.CurSelectedSuit = ItemData.ID
 
 	self.TabSelectedListID[self.TabIndex] =  ItemData.ID
 
+	self.VM.GetWayVisible = true
+	
+	self.VM.CurSuitName = Cfg.SuitName
 	for _, v in ipairs(Cfg.AppItems) do
 		local ECfg = EquipmentCfg:FindCfgByKey(v)
 		if ECfg	~= nil then
@@ -483,23 +601,49 @@ function WardrobeSuitPanelView:OnAppearanceSuitListChanged(Index, ItemData, Item
 		end
 	end
 
+
+
 	self:ResetAppearance()
 	--选中，预览套装内的装备
+	local HasHead = false
+	local UnlockEnable = false
 	for _, v in ipairs(Cfg.AppItems) do
 		local ECfg = EquipmentCfg:FindCfgByKey(v)
 		if ECfg ~= nil then
 			local AppID = ECfg.AppearanceID
+			if not WardrobeMgr:GetIsUnlock(AppID) then
+				if not UnlockEnable then
+					UnlockEnable =  WardrobeUtil.JudgeUnlockAppearanceWithouItem(AppID)
+				end
+			end
 			local Color = WardrobeMgr:GetDyeColor(AppID)
 			local RegionDyes = WardrobeMgr:GetUnlockedAppearanceRegionDyes(AppID)
 			if ECfg.Part ~= nil then
-				if self.CurViewSuit[ECfg.Part] == nil then
-					self.CurViewSuit[ECfg.Part] = {}
+				local Part =  ECfg.Part ~= EquipmentPartList.EQUIP_PART_FINGER and ECfg.Part or EquipmentPartList.EQUIP_PART_LEFT_FINGER
+				if self.CurViewSuit[Part] == nil then
+					self.CurViewSuit[Part] = {}
 				end
-				self.CurViewSuit[ECfg.Part] = {Avatar = AppID, Color = Color, RegionDyes = RegionDyes}
+				self.CurViewSuit[Part] = {Avatar = AppID, Color = Color, RegionDyes = RegionDyes}
+				self:PreviewAppearance(Part, ECfg.ID, Color)
+				self:StainPartForSection(AppID, ECfg.Part, RegionDyes)
+				if ECfg.Part == EquipmentPartList.EQUIP_PART_HEAD then
+					HasHead = true
+					self:UpdateBtnHatStyleState(_G.EquipmentMgr:IsEquipHasGimmick(v))
+				end
 			end
-			self:PreviewAppearance(ECfg.Part, ECfg.ID, Color)
-			self:StainPartForSection(AppID, ECfg.Part, RegionDyes)
+			
 		end
+	end
+
+	if not HasHead then
+		self:UpdateBtnHatStyleState(WardrobeMgr:CheckHeadHasGimmick())
+	end
+
+	-- 获取按钮红点
+	if UnlockEnable then
+		RedDotMgr:AddRedDotByID(WardrobeDefine.RedDotList.SuitUnlock, nil, false)
+	else
+		RedDotMgr:DelRedDotByID(WardrobeDefine.RedDotList.SuitUnlock)
 	end
 	
 	-- 更新当前按钮状态
@@ -520,6 +664,20 @@ function WardrobeSuitPanelView:OnAppearanceSuitListChanged(Index, ItemData, Item
 		self.BtnUse:SetIsRecommendState(true)
 	end
 
+	
+
+
+end
+
+function WardrobeSuitPanelView:UpdateBtnHatStyleState(HasGimmick)
+	if HasGimmick then
+		self.MainVM.BtnHatStyleDisabled = false
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(self.MainVM.BtnHatStyleChecked and _G.UE.EToggleButtonState.Checked  or _G.UE.EToggleButtonState.Unchecked, false)
+		-- self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(self.MainVM.BtnHatStyleChecked and _G.UE.EToggleButtonState.Checked or _G.UE.EToggleButtonState.Unchecked, false)
+	else
+	    self.MainVM.BtnHatStyleDisabled = true
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+	end
 end
 
 -- Todo 发送使用
@@ -589,7 +747,7 @@ function WardrobeSuitPanelView:ResetAppearance()
 	for index, partID in pairs(WardrobeDefine.EquipmentTab) do
 		if Suit[partID] ~= nil and Suit[partID].Avatar ~= 0 then
 			local AppID = Suit[partID].Avatar
-			local EquipID = WardrobeMgr:IsRandomAppID(AppID) and WardrobeMgr:GetEquipIDByRandomApp(AppID) or Suit[partID].Avatar
+			local EquipID = WardrobeMgr:IsRandomAppID(AppID) and WardrobeMgr:GetEquipIDByRandomApp(AppID) or WardrobeUtil.GetEquipIDByAppearanceID(AppID)
 			local ColorID =  Suit[partID].Color
 			local RegionDye = WardrobeUtil.GetRegionDye(AppID, Suit[partID].RegionDye)
 			if CurCurrentSuit[partID] ~= nil and CurCurrentSuit[partID].Avatar == Suit[partID].Avatar and CurCurrentSuit[partID].Color ~= Suit[partID].Color then
@@ -725,8 +883,6 @@ function WardrobeSuitPanelView:OnClickCancelSearchBar()
 
 	if TargetDropDownIndex then
 		self.DropDownList:SetDropDownIndex(TargetDropDownIndex)
-	-- else
-	-- 	self.VM:UpdateSuitList(self.TabIndex, self:GetFilterProfListIndex(self.CurDropDownIndex))
 	end
 
 	if SelectedID then
@@ -817,5 +973,21 @@ function WardrobeSuitPanelView:OnClickedBtnHat(ToggleButton, State)
 	return true
 end
 
+function WardrobeSuitPanelView:OnWardrobeSuitIDOpen()
+	if self.Params.SuitID ~= nil then
+		for i = 1, self.AppearanceSuitListAdapter:GetNum() do
+			local ItemVM = self.AppearanceSuitListAdapter:GetItemDataByIndex(i)
+			if ItemVM ~= nil then
+				if ItemVM.ID == self.Params.SuitID then
+					self.AppearanceSuitListAdapter:CancelSelected()
+					self.AppearanceSuitListAdapter:SetSelectedIndex(i)
+					self.AppearanceSuitListAdapter:ScrollToIndex(i)
+					self.CurSuitID = nil
+					return
+				end
+			end
+		end
+	end
+end
 
 return WardrobeSuitPanelView

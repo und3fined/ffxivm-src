@@ -25,9 +25,9 @@ local LSTR = _G.LSTR
 ---@class JumboCactpotPlateView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnGoExchange UFButton
----@field BtnHelp_1 CommInforBtnView
 ---@field BtnSkip UFButton
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonTitle CommonTitleView
 ---@field Image_32 UImage
 ---@field MiddlePlate JumboCactpotPlatePanelView
 ---@field PanelBought UFCanvasPanel
@@ -40,7 +40,6 @@ local LSTR = _G.LSTR
 ---@field TextCountDown UFTextBlock
 ---@field TextGoExchange UFTextBlock
 ---@field TextSkip UFTextBlock
----@field TextTitle UFTextBlock
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -49,9 +48,9 @@ local JumboCactpotPlateView = LuaClass(UIView, true)
 function JumboCactpotPlateView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnGoExchange = nil
-	--self.BtnHelp_1 = nil
 	--self.BtnSkip = nil
 	--self.CloseBtn = nil
+	--self.CommonTitle = nil
 	--self.Image_32 = nil
 	--self.MiddlePlate = nil
 	--self.PanelBought = nil
@@ -64,7 +63,6 @@ function JumboCactpotPlateView:Ctor()
 	--self.TextCountDown = nil
 	--self.TextGoExchange = nil
 	--self.TextSkip = nil
-	--self.TextTitle = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -72,8 +70,8 @@ end
 
 function JumboCactpotPlateView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
-	self:AddSubView(self.BtnHelp_1)
 	self:AddSubView(self.CloseBtn)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.MiddlePlate)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -136,7 +134,6 @@ function JumboCactpotPlateView:OnShow()
 	MsgTipsUtil.ShowInfoTextTips(1, TipContent)
 
 	UIUtil.SetIsVisible(self.PanelGoeExchange, false)
-	UIUtil.SetIsVisible(self.BtnHelp_1, false)
 	UIUtil.SetIsVisible(self.MiddlePlate, true)
 
 	self.CloseBtn:SetCallback(self, self.OnBtnCloseBtnClick)
@@ -147,7 +144,7 @@ function JumboCactpotPlateView:OnShow()
 end
 
 function JumboCactpotPlateView:InitLSTRText()
-	self.TextTitle:SetText(LSTR(240084)) -- 仙彩开奖
+	self.CommonTitle:SetTextTitleName(LSTR(240084)) -- 仙彩开奖
 	self.TextSkip:SetText(LSTR(240085)) -- 跳过动画
 	self.TextGoExchange:SetText(LSTR(240086)) -- 去兑奖
 	self.TextBought:SetText(LSTR(240078)) -- 已购：

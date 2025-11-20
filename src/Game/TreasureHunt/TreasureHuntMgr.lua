@@ -134,8 +134,6 @@ function TreasureHuntMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.TrivialSkillStart, self.OnGameEventTrivialSkillStart)
 	self:RegisterGameEvent(EventID.PWorldReady, self.OnPWorldReady)
 
-	self:RegisterGameEvent(EventID.MajorSingBarOver, self.OnGameEventMajorSingBarOver)
-
 	--角色移动，使用技能、死亡、触发交互时，都会取消当前的挖宝动作
 	self:RegisterGameEvent(EventID.ActorVelocityUpdate, self.OnGameEventActorVelocityUpdate)    -- 角色速度改变
 	self:RegisterGameEvent(EventID.MajorFirstMove, self.OnGameEventBreakAnim)   -- 停止时首次移动
@@ -146,6 +144,8 @@ function TreasureHuntMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MajorHit, self.OnGameEventBreakAnim) -- 主角受击
 	self:RegisterGameEvent(EventID.PostEmotionEnter, self.OnGameEventBreakAnim) -- 主角受击
 	self:RegisterGameEvent(EventID.TreasureHuntBreakAnim, self.OnGameEventBreakAnim)
+	self:RegisterGameEvent(EventID.MajorSingBarBegin, self.OnGameEventSingBarBegin)
+	self:RegisterGameEvent(EventID.OthersSingBarBegin, self.OnGameEventSingBarBegin)
 end
 
 function TreasureHuntMgr:OnGameEventPWorldMapEnter(Params)
@@ -184,6 +184,11 @@ end
 ------------------------------------------
 -- 使用未解读的地图
 function TreasureHuntMgr:DecodeTreasureMap(ResID)
+	if PWorldMgr:CurrIsInDungeon() then
+		MsgTipsUtil.ShowTipsByID(109210) --副本中不可解读宝图
+		return
+	end
+
 	local Major = MajorUtil.GetMajor()
 	if Major:IsInFly() then 
 		MsgTipsUtil.ShowTips(LSTR(640001)) -- 飞行状态下，无法解读宝图
@@ -337,7 +342,7 @@ function TreasureHuntMgr:TreasureMarkPointReq(ID)
 end
 
 --打开野外宝箱
-function TreasureHuntMgr:OpenWildBoxReq(ResID,EntityID)
+function TreasureHuntMgr:OpenWildBoxReq(ResID, EntityID)
 	local SubMsgID = TREASURE_HUNT_CMD.OpenWildBox
 
     local MsgBody = {}
@@ -429,9 +434,14 @@ function TreasureHuntMgr:OnNetMsgNotifyOpenMap(MsgBody)
 
 			--标记后在场景中显示标记
 			self:CreateMarkedObject(MapData.Pos)
+
+			local MajorRoleID = MajorUtil.GetMajorRoleID()
+			if MajorRoleID ~= TreasureMap.RoleID then
+				UIViewMgr:HideView(UIViewID.TreasureHuntBtnItem)
+			end
 		end
 	elseif TreasureMap.Ops == TreasureHuntEOpsType.OpenMap then
-		if _G.TreasureHuntMgr:IsInDungeon(false) then return end
+		if self:IsInDungeon(false) then return end
 		self.TeamMapData = MapData
 
 		local TreasureMapEx = MapData
@@ -553,6 +563,8 @@ function TreasureHuntMgr:OnNetMsgInterpretFinMap(MsgBody)
 		TreasureMapEx.RoleID = MajorRoleID
 		_G.ChatMgr:AddTeamTreasureMapChatMsg(TeamMgr:GetTeamID(), MajorRoleID,TreasureMapEx)
 	end
+
+	self:HandleInterpretMapTutorial()
 end
 
 -- 挖宝回包
@@ -644,7 +656,12 @@ function TreasureHuntMgr:OnNetMsgNotifyTeleportInvite(MsgBody)
     -- 新魔纹生成时旧魔纹会算寻宝结束，要把结束弹窗清掉
     self:ClearSettleTimer()
     -- 出现魔纹时弹出新手引导，对队伍内所有队员都会弹出
-	self:HandleTeleportTutorial()
+
+	if (NotifyTeleportInvite.Type == ProtoCS.Game.TreasureHunt.ETreasurType.Normal) then
+		self:HandleTeleportTutorial(TutorialDefine.TutorialConditionType.TreasureNBSP)
+	elseif (NotifyTeleportInvite.Type == ProtoCS.Game.TreasureHunt.ETreasurType.Roulette) then
+		self:HandleTeleportTutorial(TutorialDefine.TutorialConditionType.TreasureTemplateTeleporter)
+	end
 end
 
 function TreasureHuntMgr:OnNetMsgNotifyTreasureDigFin(MsgBody)
@@ -678,19 +695,22 @@ function TreasureHuntMgr:OnNetMsgNotifyTreasureDigFin(MsgBody)
 	if FindData then
 		EventMgr:SendEvent(EventID.TreasureHuntRemoveMapMine, { FinishData })
 
-		if TeamMgr:IsInTeam() then
-			self.IsTeamTreasureHunt = true
-		end
-
-		local AskDelay = 3
-		self.SettleTimerID = self:RegisterTimer(function()
-			if MajorUtil.GetMajorRoleID() == FinishData.RoleID then
-				local Cfg = InterpretTreasureMapCfg:FindCfgByKey(FinishData.ID)
-				self:ShowSettlementPanel(Cfg)
+		-- 过期的寻宝StartTime会为0，不用弹窗
+		if FinishData.StartTime ~= 0 then
+			if TeamMgr:IsInTeam() then
+				self.IsTeamTreasureHunt = true
 			end
-			self.SettleTimerID = nil
-			self.IsTeamTreasureHunt = false
-		end, AskDelay)
+
+			local AskDelay = 3
+			self.SettleTimerID = self:RegisterTimer(function()
+				if MajorUtil.GetMajorRoleID() == FinishData.RoleID then
+					local Cfg = InterpretTreasureMapCfg:FindCfgByKey(FinishData.ID)
+					self:ShowSettlementPanel(Cfg)
+				end
+				self.SettleTimerID = nil
+				self.IsTeamTreasureHunt = false
+			end, AskDelay)
+		end
 	end
 end
 
@@ -1105,17 +1125,6 @@ function TreasureHuntMgr:OnPWorldReady(Params)
 	end
 end
 
-function TreasureHuntMgr:OnGameEventMajorSingBarOver(EntityID, IsBreak, SingStateID)
-	if EntityID == MajorUtil.GetMajorEntityID() then
-		if SingStateID == 58 and IsBreak then
-			local NewTutorialMgr = _G.NewTutorialMgr
-			if NewTutorialMgr.TutorialState and NewTutorialMgr:GetRunningSubGroup() then
-				NewTutorialMgr:OnForceFinishTutorial()
-			end
-		end
-	end
-end
-
 --- 动起来时中止动作
 function TreasureHuntMgr:OnGameEventActorVelocityUpdate(Params)
 	local EntityID = Params and Params.ULongParam1
@@ -1140,6 +1149,14 @@ function TreasureHuntMgr:OnGameEventBreakAnim(Params)
 		EntityID = MajorUtil.GetMajorEntityID()
 	end
 
+	if not self:GetEntityIsDigging(EntityID) then return end
+
+	self:ExitDiggingState(EntityID, true)
+end
+
+function TreasureHuntMgr:OnGameEventSingBarBegin(EntityID)
+	if EntityID == nil then return end
+	
 	if not self:GetEntityIsDigging(EntityID) then return end
 
 	self:ExitDiggingState(EntityID, true)
@@ -1334,11 +1351,11 @@ function TreasureHuntMgr:PlayBoxLockEffect(EntityID, Actor)
 	end
 end
 
-function TreasureHuntMgr:HandleTeleportTutorial()
+function TreasureHuntMgr:HandleTeleportTutorial(InType)
 	local function OnTelportInvite(Params)
         --发送新手引导触发传送魔纹开启消息
         local EventParams = EventMgr:GetEventParams()
-        EventParams.Type = TutorialDefine.TutorialConditionType.TreasureNBSP	--新手引导触发类型
+        EventParams.Type = InType	--新手引导触发类型
         _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
     end
 
@@ -1422,13 +1439,20 @@ function TreasureHuntMgr:ShowDigWeapon(EntityID)
 	local WeaponModel = "7001,1,2,0"
 	local AvatarComp = Actor:GetAvatarComponent()
 	if AvatarComp then 
-		AvatarComp:SetAvatarHiddenInGame(UE.EAvatarPartType.WEAPON_MASTER_HAND, true, false, false)
+		AvatarComp:TempSetAvatarBack(1)
+		ActorUtil.LockTransformPosKeys(AvatarComp)
 		local ModelParams = string.split(WeaponModel, ",")
 		if #ModelParams >= 3 then
 			local ModelPath = string.format("w%04d", tonumber(ModelParams[1]))
 			local SubModelPath = string.format("b%04d", tonumber(ModelParams[2]))
 			local ImagechangeID = tonumber(ModelParams[3])
 			AvatarComp:ChangeAvatarWeapon(ModelPath, SubModelPath, ImagechangeID, 0, UE.EAvatarPartType.WEAPON_SYSTEM, 0) 
+			local AnimComp = Actor:GetAnimationComponent()
+			local SoftPath = _G.UE.FSoftObjectPath()
+			SoftPath:SetPath("/Game/Assets/Character/Action/weapon/battle_idle.battle_idle")
+			if AnimComp then
+				AnimComp:PlayWeaponAnimation(UE.EAvatarPartType.WEAPON_SYSTEM, SoftPath, 1, 0.25, 0.25)
+			end
 		end
 	end
 end
@@ -1440,7 +1464,8 @@ function TreasureHuntMgr:HideDigWeapon(EntityID)
 
 	local AvatarComp = Actor:GetAvatarComponent()
 	if AvatarComp then 
-		AvatarComp:SetAvatarHiddenInGame(UE.EAvatarPartType.WEAPON_MASTER_HAND, false, false, false)
+		ActorUtil.UnlockTransformPosKeys(AvatarComp)
+		Actor:SetWeaponAttachmentSocketByState()
 		AvatarComp:TakeOffAvatarPart(UE.EAvatarPartType.WEAPON_SYSTEM, false)
 	end
 end
@@ -1571,7 +1596,7 @@ function TreasureHuntMgr:CheckCanDigTreasure(IsNeedTips)
 
 		local SkillObject = SkillObjectMgr:GetOrCreateEntityData(MajorUtil.GetMajorEntityID()).CurrentSkillObject
 		if SkillObject then
-			TipsID = 109216 -- 技能中无法挖掘
+			TipsID = 109216
 			CanDig = false
 		end
 	else
@@ -1624,4 +1649,16 @@ function TreasureHuntMgr:GetRoleIsDigging(RoleID)
 		return self.DiggingMap[RoleID]
 	end
 end
+
+function TreasureHuntMgr:HandleInterpretMapTutorial()
+	local function OnInterpretMap(Params)
+        local EventParams = EventMgr:GetEventParams()
+        EventParams.Type = TutorialDefine.TutorialConditionType.UnlockTreasureMap	--新手引导触发类型
+        _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+    end
+
+    local TutorialConfig = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = OnInterpretMap, Params = {}}
+    _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
+end
+
 return TreasureHuntMgr

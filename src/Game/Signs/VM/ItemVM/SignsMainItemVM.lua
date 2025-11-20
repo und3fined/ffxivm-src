@@ -34,6 +34,10 @@ function SignsMainItemVM:UpdateVM(Value)
 	self.SignsSlots:UpdateByValues(Children)
 end
 
+function SignsMainItemVM:IsEqualVM()
+	return true
+end
+
 function SignsMainItemVM:OnShutdown()
 	
 end

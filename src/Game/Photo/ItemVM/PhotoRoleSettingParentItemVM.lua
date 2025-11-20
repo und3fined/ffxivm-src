@@ -1,8 +1,6 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 
-local PhotoSettingFunc = require("Game/Photo/Util/PhotoSettingFunc")
-
 local PhotoRoleSettingParentItemVM = LuaClass(UIViewModel)
 
 local PhotoDefine = require("Game/Photo/PhotoDefine")

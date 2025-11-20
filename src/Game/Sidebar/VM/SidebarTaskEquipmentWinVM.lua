@@ -14,7 +14,7 @@ local UIBindableList = require("UI/UIBindableList")
 
 local ItemCfg = require("TableCfg/ItemCfg")
 
-local EquipmentSlotItemVM = require("Game/Equipment/VM/EquipmentSlotItemVM")
+local ItemVM = require("Game/Item/ItemVM")
 
 ---@class SidebarTaskEquipmentWinVM : UIViewModel
 ---@field EquipmentList UIBindableList @可穿戴装备列表
@@ -23,7 +23,8 @@ local SidebarTaskEquipmentWinVM = LuaClass(UIViewModel)
 function SidebarTaskEquipmentWinVM:Ctor()
     self.TextTitle = _G.LSTR(596202) --596202("任务所需装备")
     self.TextBtn = _G.LSTR(596203) --596203("装备")
-    self.EquipmentList = UIBindableList.New(EquipmentSlotItemVM)
+
+    self.EquipmentList = UIBindableList.New(ItemVM)
 end
 
 ---@param MissItemList table<number, table>
@@ -72,29 +73,12 @@ function SidebarTaskEquipmentWinVM:UpdateView(MissItemList)
         end
     end
 
-    local function OnSlotItemClick(EquipmentSlotItemVM)
-        local OnSlotItemClickCallback = self.OnSlotItemClickCallback
-        if OnSlotItemClickCallback then
-            OnSlotItemClickCallback(EquipmentSlotItemVM)
-        end
-        if EquipmentSlotItemVM then
-            local ItemVMs = self.EquipmentList:GetItems()
-            for i=1, #ItemVMs do
-                local ItemVM = ItemVMs[i]
-                ItemVM.bSelect = ItemVM.GID == EquipmentSlotItemVM.GID
-            end
-        end
-    end
-
     local EquipSlotVMList = {}
     for _,EquipItem in pairs(ShowTable) do
         local EquipSlotVM = {}
         EquipSlotVM.Part = EquipItem.Attr.Equip.Part
         EquipSlotVM.ResID = EquipItem.ResID
         EquipSlotVM.GID = EquipItem.GID
-        EquipSlotVM.ParentType = 1
-        EquipSlotVM.bBtnVisibel = true
-        EquipSlotVM.OnClick = OnSlotItemClick
         table.insert(EquipSlotVMList, EquipSlotVM)
     end
 

@@ -5,8 +5,14 @@ local ExistAttachIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_UnR
 local NoExistAttachIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_Receive_png.UI_Mail_Icon_Receive_png'"
 local UnReadIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_UnBrowse_png.UI_Mail_Icon_UnBrowse_png'"
 local ReadIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_Browse_png.UI_Mail_Icon_Browse_png'"
+local ReadedSelectIcon = "Texture2D'/Game/UI/Texture/Mail/UI_Mail_Icon_Browse.UI_Mail_Icon_Browse'"
+local NoExistAttachSelectIcon = "Texture2D'/Game/UI/Texture/Mail/UI_Mail_Icon_Receive.UI_Mail_Icon_Receive'"
+local GreetingCardSelectIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_4_png.UI_Mail_Icon_4_png'"
+local GreetingCardUnReadIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_2_png.UI_Mail_Icon_2_png'"
+local GreetingCardReadIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_3_png.UI_Mail_Icon_3_png'"
 
 local OutBoxMailIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_Gift_Give_png.UI_Mail_Icon_Gift_Give_png'"
+local OutBoxGreetingCardMailIcon = "PaperSprite'/Game/UI/Atlas/Mail/Frames/UI_Mail_Icon_6_png.UI_Mail_Icon_6_png'"
 
 local FirstFlyInStep1AnimPath = "AnimSequence'/Game/Assets/Character/Demihuman/d1013/Animation/a0001/event/A_d1013a0001_event-cbfm_item.A_d1013a0001_event-cbfm_item'"
 local FirstFlyInStep2AnimPath = "AnimSequence'/Game/Assets/Character/Demihuman/d1013/Animation/a0001/event/A_d1013a0001_event-cbfm_greeting.A_d1013a0001_event-cbfm_greeting'"
@@ -58,6 +64,7 @@ local MailTypeInfo = {
 		NameText = ProtoEnumAlias.GetAlias(ProtoRes.MailType, MailType.System or ""),
 		PanelEmptyText = LSTR(740010),
 		OutBoxPanelEmptyText = LSTR(740010),
+		IsVisible = true,
 	},
 
 	[MailType.Gift] = {
@@ -65,6 +72,7 @@ local MailTypeInfo = {
 		NameText =  ProtoEnumAlias.GetAlias(ProtoRes.MailType, MailType.Gift or ""),
 		PanelEmptyText = LSTR(740008),
 		OutBoxPanelEmptyText = LSTR(740009),
+		IsVisible = true,
 	},
 }
 
@@ -79,6 +87,12 @@ local MailDefine = {
 	UnReadIcon = UnReadIcon,
 	ReadIcon = ReadIcon,
 	OutBoxMailIcon = OutBoxMailIcon,
+	OutBoxGreetingCardMailIcon = OutBoxGreetingCardMailIcon,
+	GreetingCardSelectIcon = GreetingCardSelectIcon,
+	GreetingCardUnReadIcon = GreetingCardUnReadIcon,
+	GreetingCardReadIcon = GreetingCardReadIcon,
+	ReadedSelectIcon = ReadedSelectIcon,
+	NoExistAttachSelectIcon = NoExistAttachSelectIcon,
 
 	FirstFlyInStep1AnimPath = FirstFlyInStep1AnimPath,
 	FirstFlyInStep2AnimPath = FirstFlyInStep2AnimPath,

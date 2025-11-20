@@ -32,9 +32,10 @@ local FLinearColor = _G.UE.FLinearColor
 ---@field CommonGuideBkg CommonGuideBkgView
 ---@field DropDown CommDropDownListView
 ---@field FishGuideSlotTips FishGuideSlotTipsPanelView
+---@field FishNotesBtnMore FishNotesBtnMoreView
 ---@field FishSearchEmpty CommBackpackEmptyView
 ---@field SearchBar CommSearchBarView
----@field TableViewGridList UTableView
+---@field TableViewGridListNew UTableView
 ---@field TextFishKing UFTextBlock
 ---@field TextFishKing1 UFTextBlock
 ---@field TextFishKing2 UFTextBlock
@@ -66,9 +67,10 @@ function FishGuidePanelView:Ctor()
 	--self.CommonGuideBkg = nil
 	--self.DropDown = nil
 	--self.FishGuideSlotTips = nil
+	--self.FishNotesBtnMore = nil
 	--self.FishSearchEmpty = nil
 	--self.SearchBar = nil
-	--self.TableViewGridList = nil
+	--self.TableViewGridListNew = nil
 	--self.TextFishKing = nil
 	--self.TextFishKing1 = nil
 	--self.TextFishKing2 = nil
@@ -99,6 +101,7 @@ function FishGuidePanelView:OnRegisterSubView()
 	self:AddSubView(self.CommonGuideBkg)
 	self:AddSubView(self.DropDown)
 	self:AddSubView(self.FishGuideSlotTips)
+	self:AddSubView(self.FishNotesBtnMore)
 	self:AddSubView(self.FishSearchEmpty)
 	self:AddSubView(self.SearchBar)
 	self:AddSubView(self.TextTitleName)
@@ -106,7 +109,7 @@ function FishGuidePanelView:OnRegisterSubView()
 end
 
 function FishGuidePanelView:OnInit()
-	self.FishGridAdapterTableView = UIAdapterTableView.CreateAdapter(self, self.TableViewGridList, self.OnFishGridSelectChanged, false, false)
+	self.FishGridAdapterTableView = UIAdapterTableView.CreateAdapter(self, self.TableViewGridListNew, self.OnFishGridSelectChanged, false, false)
 	self.FishSearchEmpty:SetTipsContent(_G.LSTR(180101)) --180101 "未搜索到相关鱼类"
 	self.Binders = {
 		{"FishGridList", UIBinderUpdateBindableList.New(self, self.FishGridAdapterTableView)},
@@ -126,6 +129,8 @@ function FishGuidePanelView:OnDestroy()
 end
 
 function FishGuidePanelView:OnShow()
+	_G.FishNotesMgr:SendMsgGetUnlockFishList()
+	self.TextTitleName.CommInforBtn:SetHelpInfoID(11207)
 	self.TextSlash:SetText("/")
 	self.TextSlash1:SetText("/")
 	self.TextSlash2:SetText("/")
@@ -165,7 +170,7 @@ end
 
 function FishGuidePanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.FishNoteSkipLocation, self.OnSkipLocation)
-	self:RegisterGameEvent(EventID.FishNoteRefreshGuideList, self.OnSelectionChangedDropDown)
+	self:RegisterGameEvent(EventID.FishNoteRefreshGuideList, self.OnFishNoteRefreshGuideList)
 end
 
 function FishGuidePanelView:OnRegisterBinder()
@@ -173,8 +178,14 @@ function FishGuidePanelView:OnRegisterBinder()
 end
 
 --region 鱼列表刷新选中
+function FishGuidePanelView:OnFishNoteRefreshGuideList()
+	FishGuideVM:UpdateFishList()
+	self:SetSelected()
+end
+
 function FishGuidePanelView:OnSelectionChangedDropDown(Index)
 	FishGuideVM:UpdateFishList(Index)
+	FishGuideVM:ResetSelectedFishGrid()
 	self:SetSelected()
 end
 
@@ -190,7 +201,7 @@ function FishGuidePanelView:SetSelected(Index)
 	self.FishGridAdapterTableView:CancelSelected()
 	self.FishGridAdapterTableView:SetSelectedIndex(SelectedIndex)
 	if SelectedIndex > FishNotesDefine.GridColumn then
-		self.TableViewGridList:SetScrollOffset(SelectedIndex-FishNotesDefine.GridColumn -1)
+		self.TableViewGridListNew:SetScrollOffset(SelectedIndex-FishNotesDefine.GridColumn -1)
 	else
 		self.FishGridAdapterTableView:ScrollToIndex(SelectedIndex)
 	end

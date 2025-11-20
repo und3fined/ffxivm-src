@@ -33,6 +33,7 @@ local DepartOfLightVM = require("Game/Departure/VM/DepartOfLightVM")
 ---@field ImgBanner UFImage
 ---@field PanlBtnText UFCanvasPanel
 ---@field RichTextDetailed URichTextBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TableViewDot UTableView
 ---@field TableViewList UTableView
 ---@field TextBtnHint UFTextBlock
@@ -51,6 +52,7 @@ function DepartureBannerWinView:Ctor()
 	--self.ImgBanner = nil
 	--self.PanlBtnText = nil
 	--self.RichTextDetailed = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TableViewDot = nil
 	--self.TableViewList = nil
 	--self.TextBtnHint = nil
@@ -63,6 +65,7 @@ end
 function DepartureBannerWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnGoto)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -76,6 +79,7 @@ function DepartureBannerWinView:OnInit()
 				{"GoToBtnDesc", UIBinderSetText.New(self, self.TextBtnHint)},
 				{"GoToBtnDescVisible", UIBinderSetIsVisible.New(self, self.PanlBtnText)},
 				{"GoToBtnName", UIBinderSetText.New(self, self.BtnGoto.TextContent)},
+				{"IsCurActivityPreQuestFinished", UIBinderValueChangedCallback.New(self, nil, self.OnActivityUnlockChanged)},
 			}
 		},
 		{
@@ -151,6 +155,10 @@ end
 
 function DepartureBannerWinView:OnBtnCloseClicked()
 	self:Hide()
+end
+
+function DepartureBannerWinView:OnActivityUnlockChanged(IsUnlock)
+	self.BtnGoto:SetIsNormalState(not IsUnlock)
 end
 
 return DepartureBannerWinView

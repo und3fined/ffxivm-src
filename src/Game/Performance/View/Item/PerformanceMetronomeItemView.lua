@@ -163,6 +163,15 @@ function PerformanceMetronomeItemView:Play(Offset)
 				else
 					MusicPerformanceUtil.PlayMetroTickSound()
 				end
+
+				--文本背景特效与节拍器item背景特效
+				if self.VM.Prepare == 1 then
+					if CurBar < 0 then
+						self.ParentVM.IsPlayTempoTipBgEffect = true
+					elseif CurBar == 0 then
+						self.ParentVM.IsPlayMetronomeItemBgEffect = true
+					end
+				end
 			else
 				self.VM.ImgCircleBlueVisible = true
 				MusicPerformanceUtil.PlayMetroTickSound()
@@ -176,6 +185,11 @@ function PerformanceMetronomeItemView:Play(Offset)
 				--小节振铃关时，由于“仅有准备小节振铃”优先级最高，所以也要振铃
 				if self.VM.Effect == 1 or (self.VM.Effect == 0 and self.VM.EffectPrepareOnly == 1)then
 					MusicPerformanceUtil.PlayMetroAccSound()
+				end
+
+				--文本背景特效与节拍器item背景特效
+				if self.VM.Prepare == 1 then
+					self.ParentVM.IsPlayTempoTipBgEffect = true
 				end
 			else
 				self.VM.ImgCircleYellowVisible = false
@@ -212,12 +226,14 @@ function PerformanceMetronomeItemView:SetParentVM(VM)
 	self.ParentVM = VM
 end
 
+--更新节拍数值(比如1:1)
 function PerformanceMetronomeItemView:UpdateBeat(CurBar, BeatCount)
 	if self.ParentVM then
 		if CurBar >= 0 then
 			CurBar = CurBar + 1
 		end
 		self.ParentVM.TempoTip = string.format("%d:%d", CurBar, BeatCount)
+		self.ParentVM.TempoTipColor = CurBar < 0 and "#d1906dff" or "#6fb1e9ff"
 	end
 end
 

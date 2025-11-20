@@ -1,4 +1,5 @@
 local LuaClass = require("Core/LuaClass")
+local ProtoCS = require("Protocol/ProtoCS")
 local MiniGameBase = require("Game/GoldSaucerMiniGame/MiniGameBase")
 local MajorUtil = require("Utils/MajorUtil")
 local CrystalTowerDifficultyCfg = require("TableCfg/CrystalTowerDifficultyCfg") --  
@@ -9,6 +10,7 @@ local CrystalTowerParamCfg = require("TableCfg/CrystalTowerParamCfg")
 local CrystalTowerBlessCfg = require("TableCfg/CrystalTowerBlessCfg")
 local CrystalTowerRewardCfg = require("TableCfg/CrystalTowerRewardCfg")
 local CrystalTowerStrengthStageCfg = require("TableCfg/CrystalTowerStrengthStageCfg")
+local FairyBlessedTargetCfg = require("TableCfg/FairyBlessedTargetCfg")
 
 local GoldSaucerMiniGameDefine = require("Game/GoldSaucerMiniGame/GoldSaucerMiniGameDefine")
 local ScoreMgr = require("Game/Score/ScoreMgr")
@@ -27,12 +29,20 @@ local MiniGameStageType = GoldSaucerMiniGameDefine.MiniGameStageType
 local CrystalTowerInteractionCategory = ProtoRes.CrystalTowerInteractionCategory
 local Anim = MiniGameClientConfig[MiniGameType.CrystalTower].Anim
 local CrystalTowerParamType = ProtoRes.Game.CrystalTowerParamType
+local BLESSED_KIND = ProtoCS.Game.FairyBlessed.BLESSED_KIND
+local BigBlessSuccessIconPath = GoldSaucerMiniGameDefine.BigBlessSuccessIconPath
+local BigBlessFailIconPath = GoldSaucerMiniGameDefine.BigBlessFailIconPath
+local LittleBlessSuccessIconPath = GoldSaucerMiniGameDefine.LittleBlessSuccessIconPath
+local LittleBlessFailIconPath = GoldSaucerMiniGameDefine.LittleBlessFailIconPath
+local BlessSuccessItemBg = GoldSaucerMiniGameDefine.BlessSuccessItemBg
+local BlessFailItemBg = GoldSaucerMiniGameDefine.BlessFailItemBg
 local LSTR = _G.LSTR
 local UE = _G.UE
 local FLOG_ERROR = _G.FLOG_ERROR
 local EventID = _G.EventID
 local EventMgr = _G.EventMgr
 local FLOG_INFO = _G.FLOG_INFO
+local FLOG_WARNING = _G.FLOG_WARNING
 local TimerMgr = _G.TimerMgr
 local LastRoundTrack = 5 -- 最终交互物所在轨道index
 local UIViewID = require("Define/UIViewID")
@@ -45,7 +55,7 @@ local MiniGameCrystalTower = LuaClass(MiniGameBase)
 function MiniGameCrystalTower:Ctor()
     local Type = MiniGameType.CrystalTower
     self.DynAssetID = nil
-    self.MaxRound = 4 -- 最大四轮
+    self.MaxRound = 4
 	self.MiniGameType = Type
     self.Name = MiniGameClientConfig[Type].Name
     self.UIViewMainID = UIViewID.CrystalTowerStrikerMainPanel
@@ -104,6 +114,8 @@ function MiniGameCrystalTower:Ctor()
     self.CriticalText = ""
     self.bCriticalVisible = false
     self.RewardNumByInter = 0               -- 通过交互获得的金碟币
+    self.BlessInteractorNumGot = 0
+    self.bFirstRoundFalling = false -- 是否处于首轮的下落时间
 end
 
 function MiniGameCrystalTower:Reset()
@@ -156,13 +168,7 @@ function MiniGameCrystalTower:Reset()
     if DefineCfg then
         self.DefineCfg = DefineCfg
     end
-    self:InitMiniGame()
-
-    -- local AllProviders = self.AllProviders
-    -- for _, v in pairs(AllProviders) do
-    --     local Provider = v
-    --     Provider:Reset()
-    -- end
+ 
     self.AddScorePos = UE.FVector2D(0, 0)
     self.RoundIntervalTime = {}
     self.RoundIDList = {}
@@ -178,9 +184,12 @@ function MiniGameCrystalTower:Reset()
     self.CriticalText = ""
     self.bCriticalVisible = false
     self.RewardNumByInter = 0
+    self.BlessInteractorNumGot = 0
+    self:InitMiniGame()
 
-    local ViewModel = self:GetViewModel(self.MiniGameType)
-    ViewModel:UpdateAddScore()
+    self.bResultPanelShow = false
+
+    --self.bFirstRoundFalling = false -- 是否处于首轮的下落时间
 end
 
 
@@ -196,9 +205,9 @@ function MiniGameCrystalTower:InitMiniGame(Params)
     self.RemainSeconds = ResetTime
     self.InteractionRule = {
         BeginExcellentInteractY = 208,
-		BeginProfectInteractY = 215,
-		EndProfectInteractY = 330,
-        EndExcellentInteractY = 307,
+		BeginProfectInteractY = 210,
+		EndProfectInteractY = 335,
+        --EndExcellentInteractY = 307,
 	}
     self.SpecialInteractionRule = {
         BeginExcellentInteractY = 215,
@@ -206,6 +215,13 @@ function MiniGameCrystalTower:InitMiniGame(Params)
 		EndProfectInteractY = 330,
 		-- EndExcellentInteractY = 307,
     }
+    local ViewModel = self:GetViewModel(self.MiniGameType)
+    ViewModel:InitVM()
+    ViewModel:SetbInEndRound(false)
+
+    local ResultListData = self:ConstructInteractResultListData()
+    ViewModel:UpdateResultVMList(ResultListData)
+    ViewModel:UpdateAddScore()
 end
 
 -- function MiniGameCrystalTower:SetProviderPos(BeginPos)
@@ -217,11 +233,22 @@ function MiniGameCrystalTower:SetArriveEffectPool(ArriveEffectPool)
 end
 
 function MiniGameCrystalTower:RegisterInteractionFactory(Callback)
-    local AllProviders = self.AllProviders
+    local AllProviders = self:GetTheAllProviders()
     for _, v in pairs(AllProviders) do
         local Provider = v
         Provider:RegisterInteractionFactory(Callback)
     end
+end
+
+--- 封装控制获取Providers保证不会出现未创建的情况
+function MiniGameCrystalTower:GetTheAllProviders()
+    local AllProviders = self.AllProviders
+    if AllProviders and next(AllProviders) then
+        return AllProviders
+    end
+
+    self:CreateInteractionProvider()
+    return self.AllProviders
 end
 
 --- @type 创建4个交互物生成器
@@ -237,15 +264,49 @@ end
 
 function MiniGameCrystalTower:ResetProvider()
     local AllProviders = self.AllProviders
+    if not AllProviders or not next(AllProviders) then
+        FLOG_WARNING("MiniGameCrystalTower:ResetProvider AllProviders is empty")
+        return
+    end
     for _, v in pairs(AllProviders) do
         local Elem = v
         Elem:Reset()
     end
 end
 
+function MiniGameCrystalTower:UnlockFirstRoundFalling()
+    self.bFirstRoundFalling = false
+end
+
+function MiniGameCrystalTower:OnGameRun(_)
+    if not self.bFirstRoundFalling then
+        self:StartLaunchRoundFalling()
+        FLOG_INFO("MiniGameCrystalTower:OnGameRun LaunchFalling")
+        self.bFirstRoundFalling = true
+    end--]]
+end
+
+function MiniGameCrystalTower:StartLaunchRoundFalling()
+    self:SetIsBegin(true)
+	
+	local RoundIntervalTime = self:GetRoundIntervalTime()
+	if RoundIntervalTime == nil then
+		FLOG_ERROR("CrystalTowerStriker RoundIntervalTime Cfg is nil")
+		return
+	end
+	local CurRoundIndex = self:GetCurRoundIndex()
+	local LogIntervalTime = RoundIntervalTime[CurRoundIndex]
+	if not LogIntervalTime then
+		FLOG_ERROR("GoldSaucerCrystalTowerStrikerMainPanelView LogIntervalTimeError CurRoundIndex:%s RoundIntervalTime:%s", CurRoundIndex, RoundIntervalTime)
+	end
+	local IntervalTime = LogIntervalTime or 0
+    local TimerHandle = _G.TimerMgr:AddTimer(self, function() self:OnBeginFalling()  end, IntervalTime / 2)
+	self:AddTimerHandle(TimerHandle)
+end
+
 --- @type 开始下落
 function MiniGameCrystalTower:OnBeginFalling()
-    local AllProviders = self.AllProviders
+    local AllProviders = self:GetTheAllProviders()
     for _, v in pairs(AllProviders) do
         local Provider = v
         Provider:OnBeginFalling()
@@ -284,7 +345,18 @@ end
 
 --- @type 增加力量值
 function MiniGameCrystalTower:AddStrengthValue(Value, bShow)
-    self.StrengthValue = math.clamp(self.StrengthValue + Value, 0, 99999) 
+    local StrengthValue = math.clamp(self.StrengthValue + Value, 0, 99999)
+    self.StrengthValue = StrengthValue
+    if self:IsBless() then
+        local BlessKind = self.BlessKind
+        local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            local ChallengeTarget = BlessCfg.StrengthValue or 0
+            if StrengthValue >= ChallengeTarget then
+                self:SetIsBlessChallengeSuccess(true)
+            end
+        end
+    end
     if bShow then
         self.TextQuantityValue = math.clamp(self.TextQuantityValue + Value, 0, 99999)
     end
@@ -427,7 +499,7 @@ function MiniGameCrystalTower:AddRewardNum(Type, bSucInteract)
         if not InteractCfg then
             return
         end
-        self.RewardNumByInter = self.RewardNumByInter + InteractCfg.JDRewardNum
+        self.RewardNumByInter = self.RewardNumByInter + InteractCfg.RewardNum or 0
 	end
 end
 
@@ -455,8 +527,28 @@ function MiniGameCrystalTower:SetRewardGot(EndReward)
     end
 end
 
-function MiniGameCrystalTower:GetRewardGot()
+function MiniGameCrystalTower:GetMainPanelRewardGot()
+    if self:IsBless() then
+       if not self:IsBlessChallengeSuccess() then
+            return self.RewardNumByInter or 0
+       else
+            local PreviewReward = self.RewardNumByInter or 0
+            local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(self.BlessKind)
+            if BlessCfg then
+                PreviewReward = PreviewReward + BlessCfg.Reward or 0
+            end
+            return PreviewReward
+       end
+    end
     return self.RewardGot
+end
+
+function MiniGameCrystalTower:GetRewardGot()
+    if self:IsBless() and not self:IsBlessChallengeSuccess() then
+        return 0
+    else
+        return self.RewardGot
+    end
 end
 
 --- @type 获取交互获得的额外金碟币奖励
@@ -550,7 +642,7 @@ function MiniGameCrystalTower:OnInteract(PosY, Category, TrackIndex, ID)
     if Cfg == nil then
         return
     end
-    local DefineCfg = self.DefineCfg
+   
     local Score = Cfg.Score
     local bPlayArriveEffect = true
     local NeedAudio
@@ -568,10 +660,15 @@ function MiniGameCrystalTower:OnInteract(PosY, Category, TrackIndex, ID)
     if TrackIndex ~= LastRoundTrack then
         AudioUtil.LoadAndPlayUISound(NeedAudio)
     end
+    FLOG_INFO("[MiniGameCrystalTower] ItemPosY:%s", PosY)
     -- local Score = self:GetScoreByPosAndCate(PosY, Category)
     local ViewModel = self:GetViewModel(self.MiniGameType)
     local ItemValue
-    if Category <= CrystalTowerInteractionCategory.CT_CATEGORY_ERROR or Category == CrystalTowerInteractionCategory.CT_CATEGORY_STARLIGHT then
+    local bBlessInteractor = Category == CrystalTowerInteractionCategory.CT_CATEGORY_STARLIGHT
+    if Category <= CrystalTowerInteractionCategory.CT_CATEGORY_ERROR or bBlessInteractor then
+        if bBlessInteractor and Score > 0 then
+            self.BlessInteractorNumGot = self.BlessInteractorNumGot + 1
+        end
         self:AddStrengthValueAndCombos(Score)    
         ItemValue = self:ConstructSingleVMData(Score)
     else
@@ -686,15 +783,20 @@ end
 
 --- @type 缓存下一轮的交互物数据
 function MiniGameCrystalTower:InitNextRoundCfgs(Items)
-    local RoundID = self.RoundIDList[self.CurRoundIndex]
+    local RoundIDList = self.RoundIDList
+    if not RoundIDList then
+        return
+    end
+
+    local CurRoundIndex = self.CurRoundIndex or 1
+    local RoundID = RoundIDList[CurRoundIndex]
     local Cfg = CrystalTowerroundCfg:FindCfgByKey(RoundID)
     if Cfg == nil then
         return
     end
     self:InitInteractionNum(Items)
-    local CurRoundIndex = self.CurRoundIndex
-    local MaxRound = self.DefineCfg.MaxRound
-    local AllProviders = self.AllProviders
+    local MaxRound = #RoundIDList
+    local AllProviders = self:GetTheAllProviders()
     for i = 1, #Items do
         local SubItems = Items[i]
         local InteractionCfgs = {}
@@ -725,7 +827,7 @@ function MiniGameCrystalTower:CheckIsFinishRoundAndSend()
         self.InteractTimer = TimerMgr:AddTimer(self, function() 
             self:ResetProvider()
             _G.GoldSaucerMiniGameMgr:SendMsgCrystalTowerInteractionReq()
-        self:AddCurRoundIndex()
+            self:AddCurRoundIndex()
         end, IntervalTime, 0, 1)
         self:AddTimerHandle(self.InteractTimer)
     end
@@ -746,7 +848,9 @@ function MiniGameCrystalTower:SetRoundIntervalTimeAndRoundData(DifficultyLv)
             IntervalTime[i] = IntervalTime[i] / 1000    -- 毫秒变成秒
         end
         self.RoundIntervalTime = IntervalTime
-        self.RoundIDList = Cfg.RoundID
+        local RoundIDs = Cfg.RoundID or {}
+        self.RoundIDList = RoundIDs
+        self.MaxRound = #RoundIDs
     end
 end
 
@@ -775,26 +879,6 @@ function MiniGameCrystalTower:UpdateHammerVfx(bInit)
         self.VfxTriggerStage = TriggerStage
     end
 end
--- function MiniGameCrystalTower:LoadHummerVfxEffect(TriggerStage)
---     self:TryHideHammerVfx() -- 如果有的话先清除
---     local VfxPath = self.DefineCfg.VfxPath
---     local VfxParameter = _G.UE.FVfxParameter()
---     local Major = MajorUtil.GetMajor()
-    
---     VfxParameter.VfxRequireData.EffectPath = VfxPath.Hammer
---     -- VfxParameter.PlaySourceType=_G.UE.EVFXPlaySourceType.PlaySourceType_MiniGameCrystalTower
---     local AttachPointType_MainWeapon = _G.UE.EVFXAttachPointType.AttachPointType_MainWeapon--AttachPointType_Body
---     local MajorTransform = Major:FGetActorTransform()
---     local NeedTransform = _G.UE.FTransform()
- 
---     VfxParameter.OffsetTransform = NeedTransform 
---     VfxParameter.VfxRequireData.VfxTransform = MajorTransform
---     VfxParameter:SetCaster(Major, 0, AttachPointType_MainWeapon, 0)
---     EffectUtil.LoadVfx(VfxParameter)
-
---     -- self.HammerEffectID = EffectUtil.KickTrigger(VfxParameter, TriggerStage)
---     -- self.VfxTriggerStage = TriggerStage
--- end
 
 function MiniGameCrystalTower:PlayHummerVfxEffect(TriggerStage)
     self:TryHideHammerVfx() -- 如果有的话先清除
@@ -816,7 +900,7 @@ function MiniGameCrystalTower:PlayHummerVfxEffect(TriggerStage)
     --已经有了
     if self.HammerEffectID ~= nil and self.HammerEffectID > 0 then
         EffectUtil.SetWorldTransform(self.HammerEffectID, MajorTransform)
-        EffectUtil.KickTrigger(self.HammerEffectID, TriggerStage)
+        EffectUtil.KickTriggerByID(self.HammerEffectID, TriggerStage)
         self.VfxTriggerStage = TriggerStage
     else
         self.HammerEffectID = EffectUtil.KickTrigger(VfxParameter, TriggerStage)
@@ -1003,7 +1087,6 @@ end
 
 --- 是否结束游戏
 function MiniGameCrystalTower:OnIsGameRunEnd()
-
     if self.RoundEndState == MiniGameRoundEndState.Success or self.RoundEndState == MiniGameRoundEndState.FailChance then
 		return true
     end
@@ -1013,7 +1096,6 @@ function MiniGameCrystalTower:OnIsGameRunEnd()
 		return true
 	end
 
-  
 	return false
 end
 
@@ -1024,31 +1106,132 @@ end
 
 --- 构造成功列表数据
 function MiniGameCrystalTower:ConstructEndResultData(bNewPower, bNewContinueHit)
+    local bBless = self:IsBless()
+    local BlessSuccess = self:IsBlessChallengeSuccess()
+    local ResultListData = {}
+    
     local NeedAttactCount =  self:GetMaxComboNum()
     local bComboRecordVisible = bNewContinueHit
     local NeedPower =  self:GetStrengthValue()
     local bPowerRecordVisible = bNewPower
-    local ResultListData = {}
-    local Temp1, Temp2 = {}, {}
-    Temp1.VarName = LSTR(250004) -- 力量值（复用重击加美什）
-    Temp1.bIsNewRecord = bPowerRecordVisible
-    Temp1.bIsPerfectChallenge = bPowerRecordVisible
-    Temp1.Value = string.format("%sPz", NeedPower)
-    Temp2.VarName = LSTR(250005) -- 连击数（复用重击加美什）
-    Temp2.bIsNewRecord = bComboRecordVisible
-    Temp2.bIsPerfectChallenge = bComboRecordVisible
-    Temp2.Value = string.format(LSTR(260009), NeedAttactCount) -- %s次
-    table.insert(ResultListData, Temp1)
-    table.insert(ResultListData, Temp2)
+    if (bNewPower ~= nil and bNewContinueHit ~= nil) or (bBless and BlessSuccess) then
+        local Temp1, Temp2 = {}, {}
+        Temp1.VarName = LSTR(250004) -- 力量值（复用重击加美什）
+        Temp1.bIsNewRecord = bPowerRecordVisible
+        Temp1.bIsPerfectChallenge = bPowerRecordVisible
+        Temp1.Value = string.format("%sPz", NeedPower)
+        Temp2.VarName = LSTR(250005) -- 连击数（复用重击加美什）
+        Temp2.bIsNewRecord = bComboRecordVisible
+        Temp2.bIsPerfectChallenge = bComboRecordVisible
+        Temp2.Value = string.format(LSTR(260009), NeedAttactCount) -- %s次
+        table.insert(ResultListData, Temp1)
+        table.insert(ResultListData, Temp2)
+    end
+
+    -- 赐福模式条目
+    if bBless then
+    local BlessKind = self.BlessKind
+    local function GetTheBlessChallengeTarget()
+        local TargetCfg = FairyBlessedTargetCfg:FindCfgByKey(MiniGameType.Cuff)
+        if not TargetCfg then
+            return
+        end
+        if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+            return TargetCfg.BChallengeTarget
+        elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+            return TargetCfg.LChallengeTarget
+        end
+    end
+    if BlessSuccess then
+        local TitleIcon = ""
+        if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+            TitleIcon = BigBlessSuccessIconPath
+        elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+            TitleIcon = LittleBlessSuccessIconPath
+        end
+
+        local ChallengeRewardScoreNum = ""
+        local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            ChallengeRewardScoreNum = string.formatint(BlessCfg.Reward)
+        end
+        
+        local BlessInteractorRlt = {}
+        BlessInteractorRlt.bBless = true
+        BlessInteractorRlt.BlessTitle = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG and LSTR(1660008) or LSTR(1660009)
+        BlessInteractorRlt.BlessTitleIcon = TitleIcon
+        BlessInteractorRlt.BlessBg = BlessSuccessItemBg
+        BlessInteractorRlt.bShowNumOrCheckIcon = true
+        BlessInteractorRlt.GetRewardNumText = string.format("x%s", tostring(self:GetStarInteractorGotNum())) 
+        BlessInteractorRlt.ScoreGotNumText = string.formatint(self:GetInteractRewarNum())
+        BlessInteractorRlt.bPlayBlessSuccessAnim = true
+        BlessInteractorRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+        table.insert(ResultListData, BlessInteractorRlt)
+
+        local BlessChallengeRlt = {}
+        BlessChallengeRlt.bBless = true
+        BlessChallengeRlt.BlessTitle = GetTheBlessChallengeTarget()
+        BlessChallengeRlt.BlessTitleIcon = TitleIcon
+        BlessChallengeRlt.BlessBg = BlessSuccessItemBg
+        BlessChallengeRlt.bShowNumOrCheckIcon = false
+        BlessChallengeRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_Check.UI_GoldSaucerGame_Img_ResultList_Check'"
+        BlessChallengeRlt.ScoreGotNumText = ChallengeRewardScoreNum
+        BlessChallengeRlt.bPlayBlessSuccessAnim = true
+        BlessChallengeRlt.bBigBless = BlessKind == BLESSED_KIND.BLESSED_KIND_BIG
+        table.insert(ResultListData, BlessChallengeRlt)
+    else
+        -- 设定titleIcon
+        local TitleIcon = ""
+        if BlessKind == BLESSED_KIND.BLESSED_KIND_BIG then
+            TitleIcon = BigBlessFailIconPath
+        elseif BlessKind == BLESSED_KIND.BLESSED_KIND_LITTLE then
+            TitleIcon = LittleBlessFailIconPath
+        end
+        local BlessFailRlt = {}
+        BlessFailRlt.bBless = true
+        BlessFailRlt.BlessTitle = GetTheBlessChallengeTarget()
+        BlessFailRlt.BlessTitleIcon = TitleIcon
+        BlessFailRlt.BlessBg = BlessFailItemBg
+        BlessFailRlt.bShowNumOrCheckIcon = false
+        BlessFailRlt.CheckIconPath = "Texture2D'/Game/UI/Texture/GoldSaucerGame/UI_GoldSaucerGame_Img_ResultList_UnCheck.UI_GoldSaucerGame_Img_ResultList_UnCheck'"
+        BlessFailRlt.ScoreGotNumText = "0"
+        BlessFailRlt.bBigBless = false
+        table.insert(ResultListData, BlessFailRlt)
+    end
+end
+    
     self.ResultListData = ResultListData
 end
 
 function MiniGameCrystalTower:GetRestartTime()
-    local ParamsCfg =  CrystalTowerParamCfg:FindCfgByKey(CrystalTowerParamType.CrystalTowerParamTypeTime)
-    if ParamsCfg == nil then
-        return
+    local bBless = self:IsBless()
+    if not bBless then
+        local ParamsCfg =  CrystalTowerParamCfg:FindCfgByKey(CrystalTowerParamType.CrystalTowerParamTypeTime)
+        if ParamsCfg == nil then
+            return
+        end
+        return ParamsCfg.Value / 1000
+    else
+        local BlessKind = self.BlessKind
+        local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(BlessKind)
+        if BlessCfg then
+            return BlessCfg.OverrideTime
+        end
     end
-	return ParamsCfg.Value / 1000
+end
+
+--- 获取赐福时间提示开始关卡ID
+function MiniGameCrystalTower:GetBigBlessLvID()
+    local BlessCfg = CrystalTowerBlessCfg:FindCfgByKey(BLESSED_KIND.BLESSED_KIND_BIG)
+    if not BlessCfg then
+        return nil
+    end
+
+    return BlessCfg.BigBlessLvID
+end
+
+function MiniGameCrystalTower:GetStarInteractorGotNum()
+    return self.BlessInteractorNumGot
 end
 
 return MiniGameCrystalTower

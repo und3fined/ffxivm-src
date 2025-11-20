@@ -298,13 +298,16 @@ function GatheringLogAreaItemView:OnBtnGoToClicked()
     table.insert(GatherPointList,{GatherPointID = GatherPointID, IsShowMakers = IsShowMakers})
     --如此地图还有这个采集物的其他采集点添加在后面
     local GatherPlaceList = GatheringLogMgr:GetGatherPlaceByItemData(Item)
-    if GatherPlaceList ~= nil and #GatherPlaceList > 1 then        
+    if GatherPlaceList ~= nil and #GatherPlaceList > 1 then
         for _, value in pairs(GatherPlaceList) do
             if value.MapID == MapID and value.ID ~= GatherPointID then
                 table.insert(GatherPointList,{GatherPointID = value.ID, IsShowMakers = not value.bUnknownLoc})
             end
         end
-    end   
+    end
+    if _G.UIViewMgr:IsViewVisible(_G.UIViewID.WorldMapPanel) then
+        _G.UIViewMgr:HideView(_G.UIViewID.WorldMapPanel, true)
+    end
     WorldMapMgr:ShowWorldMapGather(MapID, GatherPointList)
 end
 

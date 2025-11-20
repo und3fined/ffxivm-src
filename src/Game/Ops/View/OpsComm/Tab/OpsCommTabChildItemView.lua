@@ -122,7 +122,13 @@ function OpsCommTabChildItemView:OnSelectChanged(IsSelected)
 
 	if IsSelected then
 		_G.OpsActivityMgr:RecordRedDotClicked(ViewModel:GetKey(), _G.TimeUtil.GetServerLogicTime())
-		self.RedDot:SetStyle(RedDotDefine.RedDotStyle.NormalStyle)
+		local FirstRedName = _G.OpsActivityMgr:GetRedDotName(ViewModel.Activity.ClassifyID, ViewModel.ActivityID, "First")
+		local FirstRedNode = _G.RedDotMgr:FindRedDotNodeByName(FirstRedName)
+		if FirstRedNode then --如果是强提醒
+			self.RedDot:SetStyle(RedDotDefine.RedDotStyle.SecondStyle)
+		else
+			self.RedDot:SetStyle(RedDotDefine.RedDotStyle.NormalStyle)
+		end
 	end
 	
 end

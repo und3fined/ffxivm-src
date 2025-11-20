@@ -14,6 +14,7 @@ local ActorUtil = require("Utils/ActorUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local SettingsTabRole = require("Game/Settings/SettingsTabRole")
 local ProtoRes = require ("Protocol/ProtoRes")
+local SettingsTabPicture = require("Game/Settings/SettingsTabPicture")
 local SummonMgr = LuaClass(MgrBase)
 
 function SummonMgr:OnInit()
@@ -35,6 +36,7 @@ function SummonMgr:OnInit()
     self.PendingCreateOnRide = {}
     self.QuerySummonRelatedBuff = {}
     self.SummonScale = SettingsTabRole.SummonScale
+    self.HiddenOtherSummon = SettingsTabPicture:GetOtherPlayerEffectSwitch() == 0
 end
 
 ---SummonMgr.CreateSummon @创建召唤兽
@@ -51,6 +53,11 @@ function SummonMgr:CreateSummon(BuffID, FollowID, GiverID)
 
     local SummonCfg = SummonCfgTable:FindCfgByKey(SummonResID)
     if nil == SummonCfg then return end
+
+    --屏蔽他人召唤兽
+    if not MajorUtil.IsMajor(FollowID) and self.HiddenOtherSummon and SummonCfg.IsHiddenWhenBorn == 1 then
+        return
+    end
 
     if self.SummonRecord[FollowID] == nil then
         self.SummonRecord[FollowID] = {}
@@ -108,7 +115,7 @@ function SummonMgr:CreateSummon(BuffID, FollowID, GiverID)
         --初始位置赋值失败，使用召唤表中的召唤兽初始化逻辑：半径、角度
         local RelOffset = _G.UE.FRotator(0, InitAngle, 0):RotateVector(_G.UE.FVector(InitRadius, 0, 0))
 		if nil ~= FollowActor then
-        	SummonLocation = FollowActor:FGetLocation(_G.UE.EXLocationType.ServerLoc) + 2 + FollowActor:FGetActorRotation():RotateVector(RelOffset)
+        	SummonLocation = FollowActor:FGetLocation(_G.UE.EXLocationType.ServerLoc) + _G.UE.FVector(2, 2, 2) + FollowActor:FGetActorRotation():RotateVector(RelOffset)
 		else
 			SummonLocation = _G.UE.FVector(0, 0, 0)
 		end
@@ -128,21 +135,30 @@ function SummonMgr:CreateSummon(BuffID, FollowID, GiverID)
             end
         end
     end
-     --理发屋屏蔽
-     local CurrPWorldType = _G.PWorldMgr:GetCurrPWorldType()
-     if CurrPWorldType == ProtoRes.pworld_type.PWORLD_CATEGORY_DEMO then
-         return
-     end
+    --理发屋屏蔽
+    local CurrPWorldType = _G.PWorldMgr:GetCurrPWorldType()
+    if CurrPWorldType == ProtoRes.pworld_type.PWORLD_CATEGORY_DEMO then
+        return
+    end
 
     local IsRide = false
     if FollowActor ~= nil and FollowActor:GetRideComponent() ~= nil then
         IsRide = FollowActor:GetRideComponent():IsInRide()
     end
+    IsRide = IsRide or _G.ChocoboRaceMgr:IsChocoboRacePWorld()
     if InheritBuffID ~= nil and InheritBuffID > 0 and Follow[InheritBuffID] ~= nil
     and ActorUtil.GetActorByEntityID(Follow[InheritBuffID].EntityID) ~= nil
     and not ActorUtil.IsDeadState(Follow[InheritBuffID].EntityID) then
         --加入队列，等待被继承的召唤兽死亡时调用创建函数
         self.PendingCreateQueue[Follow[InheritBuffID].EntityID] = { ["Function"] = Create, ["BuffID"] = BuffID }
+        local Buffcom = ActorUtil.GetActorBuffComponent(FollowID)
+        if Buffcom and Buffcom:IsExistBuffForBuffID(InheritBuffID) == false then
+            local OldSummonActor = ActorUtil.GetActorByEntityID(Follow[InheritBuffID].EntityID)
+            if OldSummonActor ~= nil and OldSummonActor.SetDeath then
+                OldSummonActor:SetDeath()
+                self.SummonRecord[FollowID][InheritBuffID] = nil
+            end
+        end
     elseif IsRide then
         self.PendingCreateOnRide[FollowID] =  { ["Function"] = Create, ["BuffID"] = BuffID }
     else
@@ -196,6 +212,7 @@ function SummonMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MountBack, self.OnGameEventMountBack)			-- 下坐骑
     self:RegisterGameEvent(EventID.MajorDead, self.OnGameEventMajorDead)
     self:RegisterGameEvent(EventID.OtherCharacterDead, self.OnGameEventCharacterDead)
+    self:RegisterGameEvent(EventID.SettingsOtherPlayerEffectChanged, self.OnGameEventOtherPlayerEffectChanged)
 end
 
 ---@param Params FEventParams
@@ -327,11 +344,22 @@ end
 function SummonMgr:OnGameEventSummonCreate(Params)
     local SummonActorID = Params.ULongParam1
     local SummonActor = ActorUtil.GetActorByEntityID(SummonActorID)
+    if SummonActor == nil then return end
+    -- 屏蔽召唤兽
+    if self.SummonMaster[SummonActorID] then
+        local FollowID = self.SummonMaster[SummonActorID].FollowID
+        if not MajorUtil.IsMajor(FollowID) and self.HiddenOtherSummon and SummonActor.SetActorVisibility then
+            SummonActor:SetActorVisibility(false, _G.UE.EHideReason.Common)
+        end
+    end
+
     if SummonActor ~= nil and self.PendingKillQueue[SummonActorID] ~= nil and self.PendingKillQueue[SummonActorID].bKill and SummonActor ~= nil and SummonActor.SetDeath ~= nil then
         if SummonActor ~= nil and self.SummonMaster[SummonActorID] then
             local FollowID = self.SummonMaster[SummonActorID].FollowID
+            local BuffID = self.SummonMaster[SummonActorID].BuffID
             SummonActor:SetFollowEntityID(FollowID)
             SummonActor:SetDeath()
+            self.SummonRecord[FollowID][BuffID] = nil
         end
         self.PendingKillQueue[SummonActorID] = nil
         return
@@ -342,6 +370,16 @@ function SummonMgr:OnGameEventSummonCreate(Params)
         local GiverID = self.SummonMaster[SummonActorID].GiverID
         local BuffID = self.SummonMaster[SummonActorID].BuffID
         local SummonResID = self.SummonMaster[SummonActorID].SummonResID
+        -- 判断当前buff是否还在
+        local Buffcom = ActorUtil.GetActorBuffComponent(FollowID)
+        if Buffcom and Buffcom:IsExistBuffForBuffID(BuffID) == false then
+            if SummonActor.SetDeath ~= nil then
+                SummonActor:SetFollowEntityID(FollowID)
+                SummonActor:SetDeath()
+                self.SummonRecord[FollowID][BuffID] = nil
+            end
+        end
+
         if SummonActor.SetFollowEntityID ~= nil or SummonActor.SetOwnerEntityID ~= nil or SummonActor.SetBuffID ~= nil then
             SummonActor:SetFollowEntityID(FollowID)
             SummonActor:SetOwnerEntityID(GiverID)
@@ -417,7 +455,10 @@ function SummonMgr:OnGameEventMountCall(Params)
                 local SummonActor = ActorUtil.GetActorByEntityID(SummonInfo.EntityID)
                 if SummonActor and SummonActor.SetDeath ~= nil then
                     SummonActor:SetDeath()
+                else
+                    self.PendingKillQueue[SummonInfo.EntityID] = { ["bKill"] = true }
                 end
+                self.SummonRecord[FollowID][BuffID].EntityID = nil
             end
         end
     end
@@ -429,18 +470,20 @@ function SummonMgr:OnGameEventMountBack(Params)
         local BuffList = self.SummonRecord[FollowID]
         local Buffcom = ActorUtil.GetActorBuffComponent(FollowID)
         if BuffList then
-            for BuffID,SummonInfo in pairs(BuffList) do
-                if SummonInfo.EntityID and  SummonInfo.EntityID > 0 then
-                    if Buffcom and Buffcom:IsExistBuffForBuffID(BuffID) then
+            for BuffID, SummonInfo in pairs(BuffList) do
+                if Buffcom and Buffcom:IsExistBuffForBuffID(BuffID) then
+                    if SummonInfo.EntityID == nil then
+                        self:CreateSummon(BuffID, FollowID, SummonInfo.GiverID)
+                    elseif SummonInfo.EntityID and  SummonInfo.EntityID > 0  then
                         --召唤兽不存在实体了或处在死亡状态
                         if ActorUtil.GetActorByEntityID(SummonInfo.EntityID) == nil or ActorUtil.IsDeadState(SummonInfo.EntityID) then
                             self:CreateSummon(BuffID,FollowID,SummonInfo.GiverID)
                         else
                             _G.FLOG_INFO("[SummonMgr] MountBack buffid = %s EntityID = %s Actor is not nil", tostring(BuffID), tostring(SummonInfo.EntityID))
                         end
-                    else
-                        BuffList[BuffID] = nil
                     end
+                else
+                    BuffList[BuffID] = nil
                 end
             end
         end
@@ -493,6 +536,24 @@ function SummonMgr:Clear(EntityID)
                 BuffList[BuffID] = nil
             end
             
+        end
+    end
+end
+
+function SummonMgr:OnGameEventOtherPlayerEffectChanged()
+   local IsHidden = SettingsTabPicture:GetOtherPlayerEffectSwitch() == 0
+    if IsHidden ~= self.HiddenOtherSummon then
+        self.HiddenOtherSummon = IsHidden
+        local SummonList = self.SummonRecord
+        for FollowID, FollowInfo in pairs(SummonList) do
+            if not MajorUtil.IsMajor(FollowID) then
+                for _,SummonInfo in pairs(FollowInfo) do
+                    local SummonActor = ActorUtil.GetActorByEntityID(SummonInfo.EntityID)
+                    if SummonActor ~= nil and SummonActor.SetActorVisibility then
+                        SummonActor:SetActorVisibility(not self.HiddenOtherSummon, _G.UE.EHideReason.Common)
+                    end
+                end
+            end 
         end
     end
 end

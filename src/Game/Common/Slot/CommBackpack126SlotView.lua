@@ -13,7 +13,8 @@ local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetColorAndOpacity = require("Binder/UIBinderSetColorAndOpacity")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
-
+local ItemDefine = require("Game/Item/ItemDefine")
+local ItemUtil = require("Utils/ItemUtil")
 ---@class CommBackpack126SlotView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn UFButton
@@ -185,12 +186,23 @@ function CommBackpack126SlotView:OnRegisterBinder()
         }
     end
 
+    local ResID = ViewModel.ResID or ViewModel.ItemID
+    ViewModel.ItemSlotType = ItemDefine.ItemSlotType.Item126Slot
+    if ResID then
+        ViewModel.ItemQualityIcon = ItemUtil.GetSlotColorIcon(ResID, ViewModel.ItemSlotType)
+    end
     self:RegisterBinders(ViewModel, self.Binders)
 end
 
 function CommBackpack126SlotView:OnClickButtonItem()
     if(self.ClickCallback ~= nil and self.CallbackView ~= nil) then
-        self.ClickCallback(self.CallbackView, self)
+        local Params = self.Params
+        if(Params) then
+            self.ClickCallback(self.CallbackView, self, self.Params.Index)
+        else
+            _G.FLOG_ERROR("错误 ， CommBackpack126SlotView:OnClickButtonItem 没有Params")
+        end
+
     else
         local Params = self.Params
         if(Params and Params.Adapter) then

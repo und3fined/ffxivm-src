@@ -87,7 +87,6 @@ function TeamRollTreasureBoxView:OnShow()
 	-- self:OnShowRollTipsIsShow(TeamRollItemVM.IsAllOperated)
 	if not RollMgr:HasAssignedReward() or UIViewMgr:IsViewVisible(UIViewID.TeamRollValuablesTips) then
 		UIUtil.SetIsVisible(self.PanelTips, false)
-		print("队伍分配  PanelTips 11  false")
 	end
 end
 
@@ -122,14 +121,11 @@ end
 function TeamRollTreasureBoxView:OnTeamRollItemViewShowStatus(IsOpen)
 	if not IsOpen and not RollMgr:HasAssignedReward() then
 		UIUtil.SetIsVisible(self.PanelTips, false)
-		print("队伍分配  PanelTips 222  false")
 	elseif IsOpen then
 		UIUtil.SetIsVisible(self.PanelTips, false)
-		print("队伍分配  PanelTips 333  false")
 	else
 		if not TeamRollItemVM.IsAllOperated and RollMgr.IsPopWindow then
 			UIUtil.SetIsVisible(self.PanelTips, true)
-			print("队伍分配  PanelTips  11 true")
 		end
 	end
 end
@@ -149,7 +145,6 @@ function TeamRollTreasureBoxView:OnPlayBoxEFFAnimation(Params)
 end
 
 function TeamRollTreasureBoxView:OnPlayPanelTipsAnimation(IsIn)
-	print("队伍分配  IsIn == ", IsIn)
 	if IsIn then
 		UIUtil.SetIsVisible(self.PanelTips, true)
 		self:PlayAnimation(self.AnimPanelTipsIn, 0, 1)

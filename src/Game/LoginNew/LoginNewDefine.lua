@@ -513,6 +513,9 @@ local LoginConnectAuthType = {
     kAuthINTL       = 4117,
 }
 
+-- 登录界面BGM音量
+local LoginNewBgmVolume = 0.65
+
 local LoginNewDefine = {
     ChannelIDs                  = ChannelIDs,
     Os                          = Os,
@@ -550,10 +553,13 @@ local LoginNewDefine = {
     FriendBtnBgDisable = "Texture2D'/Game/UI/Texture/LoginNew/UI_LoginNew_Btn_Go2.UI_LoginNew_Btn_Go2'",
 
     VersionErrCode = 120006, -- 客户端版本过低
+    BanUser = 1008, -- 封号
     ErrCodeAuthFailed = 212, -- 鉴权失败
 
     AccountCancellationCheckType = AccountCancellationCheckType,
     LoginConnectAuthType = LoginConnectAuthType,
+
+    LoginNewBgmVolume = LoginNewBgmVolume,
 }
 
 local function BuildServerUrl(WorldID, Path)
@@ -562,7 +568,8 @@ local function BuildServerUrl(WorldID, Path)
         return ServerDomainAuditing .. Path
     end
 
-    if UE.UCommonUtil.IsShipping() then
+    -- UE.UCommonUtil.IsShipping()
+    if _G.UE.UGCloudMgr.Get():IsPublish() then
         return ServerDomain .. Path
     else
         local Port = TestEnvPortMap[WorldID] or TestEnvPortMap[10]

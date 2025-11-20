@@ -28,6 +28,7 @@ local UIViewID = require("Define/UIViewID")
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommDropDownListNewView = LuaClass(UIView, true)
 local ListItemBatchNum = 15
+local TopOffset = 6
 
 function CommDropDownListNewView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
@@ -120,7 +121,7 @@ function CommDropDownListNewView:OnShow()
 	if self.IsUpward then
 		if WidgetAbsolute.Y - ViewWidgetHeight - WindowAbsolute.Y < 0 then
 			self.IsFlip = true
-			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, TargetWidgetSize.Y)
+			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, TargetWidgetSize.Y - TopOffset)
 		else
 			self.IsFlip = false
 			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, - WidgetHeight)
@@ -131,7 +132,7 @@ function CommDropDownListNewView:OnShow()
 			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, - WidgetHeight)
 		else
 			self.IsFlip = false
-			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, TargetWidgetSize.Y)
+			Offset = _G.UE.FVector2D(-TargetWidgetSize.X, TargetWidgetSize.Y - TopOffset)
 		end
 	end
 

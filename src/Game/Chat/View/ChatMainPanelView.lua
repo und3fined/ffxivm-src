@@ -271,6 +271,7 @@ function ChatMainPanelView:OnInit()
 		{ "HelpInfoID", 			UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedHelpInfoID) },
 		{ "IsWideMainWin", 			UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedIsWideMainWin) },
 		{ "DiffServerIconVisible", 	UIBinderSetIsVisible.New(self, self.SizeBoxServer) },
+		{ "MsgDataUpdateCount", 	UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedMsgDataUpdateCount) },	
 
 		{ "UpdateMsgTableViewListPos", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedUpateMsgTableViewListPos) },
 
@@ -326,6 +327,7 @@ function ChatMainPanelView:OnShow()
 	self.PrivateChannelIdx = PrivateSelIdx 
 
 	if PublicSelIdx then
+		self.TableAdapterChannelPublic:SetSelectedIndex(nil)
 		self.TableAdapterChannelPublic:SetSelectedIndex(PublicSelIdx)
 	end
 
@@ -357,11 +359,13 @@ function ChatMainPanelView:OnShow()
 	self.AdapterChatMsg:SetItemChangedCallback(self.OnChatMsgItemChanged)
 
 	_G.ObjectMgr:CollectGarbage(false)
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(true)
 end
 
 function ChatMainPanelView:OnHide()
 	self.IsHideCurShowView = false 
 	self.FilterSystemMsging = nil 
+	self.IsQueriedComprehensiveChannelPartRoleInfos = false
 
 	ChatVM.IsChatMainPanelVisible = false
 
@@ -394,6 +398,7 @@ function ChatMainPanelView:OnHide()
 
 	self:OnClickBtnMoreTipsMask()
 	ChatMgr:CheckAndSaveUnreadPrivateChatMsg()
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 function ChatMainPanelView:UpdateView(Params)
@@ -508,6 +513,50 @@ end
 
 function ChatMainPanelView:UpdatePrivateChatRoleInfos( )
 	ChatVM:UpdatePrivateChatRoleInfos()
+end
+
+--- 查询综合频道部分玩家最新角色信息
+function ChatMainPanelView:QueryComprehensiveChannelPartRoleInfos( )
+	if self.IsQueriedComprehensiveChannelPartRoleInfos then
+		return
+	end
+
+	local ChannelVM = ChatVM:FindChannelVM(ChatChannel.Comprehensive)
+	if nil == ChannelVM then
+		return
+	end
+
+	local MsgItemVMList = ChannelVM.BindableListMsg
+	if nil == MsgItemVMList then
+		return
+	end
+
+	self.IsQueriedComprehensiveChannelPartRoleInfos = true 
+
+	local MsgNum = 20
+	local RoleIDList = {}
+	local Items = MsgItemVMList:GetItems()
+
+	for i = #Items, 1, -1 do
+		if MsgNum <= 0 then
+			break
+		end
+
+		local Item = Items[i]
+		if Item then
+			local RoleID = Item.Sender 
+			if RoleID and RoleID > 0 and not table.contain(RoleIDList, RoleID) then
+				table.insert(RoleIDList, RoleID)
+			end
+		end
+
+		MsgNum = MsgNum - 1
+    end
+
+	if #RoleIDList > 0 then
+		_G.RoleInfoMgr:QueryRoleSimples(RoleIDList, function() 
+		end, nil, false)
+	end
 end
 
 function ChatMainPanelView:ResetPrivateNodes( )
@@ -732,6 +781,7 @@ function ChatMainPanelView:OnValueChangedMsgScroolToBottom(NewValue)
 end
 
 function ChatMainPanelView:OnValueChangedNewMsgTipsCount(NewValue)
+	self.AdapterChatMsg:RequestRefresh()
 	if NewValue > 0 then
 		if self.AdapterChatMsg:IsAtEndOfList() then
 			ChatVM:ClearNewMsgTips()
@@ -805,6 +855,7 @@ function ChatMainPanelView:OnValueChangedUpateMsgTableViewListPos(NewValue)
 		return
 	end
 
+	self.AdapterChatMsg:RequestRefresh()
 	if self.AdapterChatMsg:IsAtEndOfList() then
 		self.TableViewChatMsg:ScrollToBottom()
 	end
@@ -835,6 +886,11 @@ function ChatMainPanelView:OnValueChangedIsPublicChat(NewValue)
 	UIUtil.SetIsVisible(self.PrivateChannelPanel, IsPrivate)
 
 	self:UpdateMorePanelVisible()
+
+	if NewValue then
+		-- 查询综合频道部分玩家最新角色信息
+		self:QueryComprehensiveChannelPartRoleInfos()
+	end
 end
 
 function ChatMainPanelView:OnValueChangedCompSpeakChannelList()
@@ -978,7 +1034,7 @@ function ChatMainPanelView:OnEventMsgClickHyperLink( MsgData, ParamIndex )
 			if QuestID then
 				_G.QuestFaultTolerantMgr:ShowWorldMap(Map.MapID, Map.QuestID)
 			else
-				_G.WorldMapMgr:OpenMapFromChatHyperlink(Map.MapID, FVector2D(Map.X or 0, Map.Y or 0))
+				_G.WorldMapMgr:OpenMapFromChatHyperlink(Map.MapID, FVector2D(Map.X or 0, Map.Y or 0), Map)
 			end
 
 			---跳转后需要隐藏
@@ -1338,6 +1394,10 @@ function ChatMainPanelView:HideCurShowPanel()
 	if self.CurOpenViewID then
 		UIViewMgr:HideView(self.CurOpenViewID)
 	end
+end
+
+function ChatMainPanelView:OnValueChangedMsgDataUpdateCount()
+	self.AdapterChatMsg:RequestRefresh()
 end
 
 return ChatMainPanelView

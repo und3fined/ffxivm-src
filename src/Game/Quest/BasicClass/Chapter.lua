@@ -10,6 +10,8 @@ local QuestDefine = require("Game/Quest/QuestDefine")
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoRes = require("Protocol/ProtoRes")
 
+local EventID = require("Define/EventID")
+
 local QUEST_STATUS = ProtoCS.CS_QUEST_STATUS
 local QUEST_STATUS_NOT_STARTED = QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED
 local QUEST_STATUS_IN_PROGRESS = QUEST_STATUS.CS_QUEST_STATUS_IN_PROGRESS
@@ -105,6 +107,10 @@ function Chapter:UpdateStatus(NewStatus, CurrQuestID, IsTargetChanged)
     self.CurrQuestID = CurrQuestID
     self.Status = NewStatus
     if Func then Func(self) end
+
+    if StChangeParams.OldStatus == CHAPTER_STATUS.NOT_STARTED and NewStatus == CHAPTER_STATUS.IN_PROGRESS then
+        _G.EventMgr:SendEvent(EventID.QuestAccept, CurrQuestID)
+    end
 end
 
 -- ==================================================

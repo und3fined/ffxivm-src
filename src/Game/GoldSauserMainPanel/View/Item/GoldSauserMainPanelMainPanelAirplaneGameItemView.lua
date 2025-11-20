@@ -15,6 +15,7 @@ local GoldSauserMainPanelBaseItemView = require("Game/GoldSauserMainPanel/View/I
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
 local GoldSauserMainPanelMgr = require("Game/GoldSauserMainPanel/GoldSauserMainPanelMgr")
 local GoldSauserMainPanelMainVM = require("Game/GoldSauserMainPanel/VM/GoldSauserMainPanelMainVM")
+local GoldSaucerMinigameCfg = require("TableCfg/GoldSaucerMinigameCfg")
 --local GoldSaucerAirplaneGameCfg = require("TableCfg/GoldSaucerAirplaneGameCfg")
 --local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local AirplaneTailType = GoldSauserMainPanelDefine.AirplaneTailType
@@ -23,6 +24,7 @@ local AudioType = GoldSauserMainPanelDefine.AudioType
 local FVector2D = _G.UE.FVector2D
 local FLOG_INFO = _G.FLOG_INFO
 local UpdateTimeInterval = 0.5
+local QTERangeToleranceID = 26
 
 ---@class GoldSauserMainPanelMainPanelAirplaneGameItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -120,9 +122,13 @@ function GoldSauserMainPanelMainPanelAirplaneGameItemView:OnShow()
 end
 
 function GoldSauserMainPanelMainPanelAirplaneGameItemView:OnHide()
-	self:SetGameEnd(false, true)
-	UIUtil.SetIsVisible(self.PanelAirplane, false)
-	self.ItemVM:SetIsGameStart(false)
+	if self.ViewGameStart then
+		self:SetGameEnd(false, true)
+		local EntranceItemVM = self.ItemVM
+		if EntranceItemVM then
+			EntranceItemVM:SetIsGameStart(false)
+		end
+	end
 end
 
 function GoldSauserMainPanelMainPanelAirplaneGameItemView:OnRegisterUIEvent()
@@ -473,7 +479,26 @@ function GoldSauserMainPanelMainPanelAirplaneGameItemView:ClickToJudgeQTEResult(
 	FLOG_INFO("GoldSauserMainPanelMainPanelAirplaneGameItemView:ClickToJudgeQTEResult: CircleRadius:%s, MinRadius:%s, MaxRadius:%s", 
 		ScaleY, AirplaneCfg.QTERangeIn, AirplaneCfg.QTERangeOut)
 
-	if ScaleY >= AirplaneCfg.QTERangeIn and ScaleY <= AirplaneCfg.QTERangeOut then
+	
+	local function FindValInCfg()
+		local ParamCfg = GoldSaucerMinigameCfg:FindCfgByKey(QTERangeToleranceID)
+		if not ParamCfg then
+			return
+		end
+
+		local Values = ParamCfg.Value
+		if not Values or not next(Values) then
+			return
+		end
+
+		return Values[1]
+	end
+
+	local QTERangeTolerance = (FindValInCfg() or 0) / 100 or 0
+	local RangeJudgeIn = (AirplaneCfg.QTERangeIn or 0) - QTERangeTolerance
+	local RangeJudgeOut = (AirplaneCfg.QTERangeOut or 0) + QTERangeTolerance
+
+	if ScaleY >= RangeJudgeIn and ScaleY <= RangeJudgeOut then
 		if self:IsHaveNextRound() then
 			self:QTESuccessAnimShow(Round + 1, function()
 				self:EnterTheLevelNextRound()
@@ -571,7 +596,7 @@ function GoldSauserMainPanelMainPanelAirplaneGameItemView:OnAnimationFinished(An
 		if Anim == AnimLine and self.SuccessContinueFly then
 			self:SetTailImgVisibleByTailType(AirplaneTailType.Fire)
 			self:PlayAnimation(self.AnimSuccess, 0, 1, nil, 1, true)
-			GoldSauserMainPanelMainVM.MiniGameSuccess = true
+			--GoldSauserMainPanelMainVM.MiniGameSuccess = true
 			GoldSauserMainPanelMainVM.MiniGameAirplaneSuccess = true
 			self.SuccessContinueFly = false
 		end

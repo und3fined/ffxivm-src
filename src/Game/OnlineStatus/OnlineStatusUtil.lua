@@ -134,7 +134,7 @@ local function StatusCompareByPriority(A, B)
         return false
     end
 
-    return CfgA.Priority < CfgB.Priority
+    return (CfgA.Priority or 0) < (CfgB.Priority or 0)
 end
 
 ---根据配表中的状态优先级进行排序
@@ -234,6 +234,8 @@ function OnlineStatusUtil.GetChatNewbieChannelStatusIcon(Identity, StatusID, Onl
                 Icon = OnlineStatusUtil.GetStatusRes(ProtoOnlineStatusRes.OnlineStatusMakeMentor)
             elseif OnlineStatusUtil.CheckBit(Identity, ProtoOnlineStatusIdentify.OnlineStatusIdentifyRedFlowerMentor) then
                 Icon = OnlineStatusUtil.GetStatusRes(ProtoOnlineStatusRes.OnlineStatusRedFlowerMentor)
+            elseif OnlineStatusUtil.CheckBit(Identity, ProtoOnlineStatusIdentify.OnlineStatusIdentifyGoldSauserMentor) then
+                Icon = OnlineStatusUtil.GetStatusRes(ProtoOnlineStatusRes.OnlineStatusGoldSauserMentor)
             end
         end
         return Icon

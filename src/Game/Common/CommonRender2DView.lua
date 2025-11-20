@@ -8,20 +8,17 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local CommonUtil = require("Utils/CommonUtil")
+local CameraUtil = require("Game/Common/Camera/CameraUtil")
 local ObjectGCType = require("Define/ObjectGCType")
 local ActorUtil = require("Utils/ActorUtil")
 local CommonDefine = require("Define/CommonDefine")
 local MathUtil = require("Utils/MathUtil")
 local FMath = _G.UE.UKismetMathLibrary
---local RenderActorPath = "Class'/Game/UI/Render2D/Render2DLoginActor.Render2DLoginActor_C'"
---local SkeletalMeshPath = "SkeletalMesh'/Game/Assets/Character/Human/Skeleton/c0101/SK_c0101b9999.SK_c0101b9999'"
---local AnimationPath = "BlendSpace'/Game/Assets/Character/Human/Animation/run_idle.run_idle'"
 
-local LoginConfig = require("Define/LoginConfig")
-local UILevelMgr = require("Game/Common/Render2D/Level/UILevelMgr")
 local LightMgr = require("Game/Light/LightMgr")
 local AnimMgr = require("Game/Anim/AnimMgr")
 
+local EventID = _G.EventID
 local FLOG_ERROR = _G.FLOG_ERROR
 
 local RootLocationZ = 100000
@@ -110,7 +107,6 @@ function CommonRender2DView:OnInit()
     self.bEnableMove = false
     self.bEnableMoveImmediately = false
     self.AutoRotator = false
-    self.CenterOffsetY = 0
     self.RideSkelentonMesh = nil
     self.RideMeshComponent = nil
     self.bOnRide = false
@@ -119,8 +115,6 @@ function CommonRender2DView:OnInit()
 	self.CamControlParams = nil
 	self.SavedCamStatus = nil
 	self.SavedCharaStatus = nil
-	self.FOVInterpVelocity = nil
-	self.CamRotInterpVelocity = nil
 	self.bIsFullScreen = false
 
     self.DoActive = nil
@@ -135,8 +129,6 @@ function CommonRender2DView:OnInit()
     self.MoveLimiParams = nil
     self.RotateLimiParams = nil
     self.bCanRotate = true
-	self.CachedFOV = 0
-	self.bAutoInitSpringArm = true
 
 	self.DefaultSpringArmLength = SpringTargetArmLengthMax
 	self.DefaultSpringArmLocationZ = SpringTargetDefaultZ
@@ -150,13 +142,23 @@ function CommonRender2DView:OnInit()
     self.bIgnoreTodAffective = false
 
     self.BackgroundActor = nil
-    self.ShandowActor = nil
+    self.ShadowActor = nil
 	self.bCombatRestEnabled = false
 	self.bCameraSwitchedToRenderActor = false
 
 	self.CameraFocusEndCallback = nil
     self.ShadowActorPos = nil
     self.ShandowActorType = ActorUtil.ShadowType.Role
+	self.bEnableViewDistPostProcess = true
+
+	-- 相机
+	self.bAutoInitSpringArm = true
+	self.bAutoFOVAdapt = true
+	self.CachedFOV = 0
+	self.CachedFOVY = 0
+	self.CamRotInterpVelocity = nil
+	self.FOVInterpVelocity = nil
+    self.TargetPositionOffsetRange = 0.1 --目标位置的偏移值
 end
 
 --- 滚轮事件回调
@@ -190,9 +192,6 @@ function CommonRender2DView:OnShow()
     CommonRender2DView.ShowCount = CommonRender2DView.ShowCount + 1
     FLOG_INFO("CommonRender2DView:OnShow ShowCount:%d", CommonRender2DView.ShowCount)
 
-	-- 禁用关卡流送，避免主视角切换导致子关卡被卸载
-	UILevelMgr:SwitchLevelStreaming(false)
-
     if not self.bLogin then
         _G.BuoyMgr:ShowAllBuoys(false)
     end
@@ -200,8 +199,6 @@ function CommonRender2DView:OnShow()
 end
 
 function CommonRender2DView:OnHide()
-	-- 恢复关卡流送
-	UILevelMgr:SwitchLevelStreaming(true)
     CommonRender2DView.ShowCount = CommonRender2DView.ShowCount - 1
     FLOG_INFO("CommonRender2DView: OnHide:%d", CommonRender2DView.ShowCount)
 
@@ -265,7 +262,9 @@ function CommonRender2DView:OnActive()
         self:UpdateAllLights()
         self:ShowBackgroundActor(true)
         self:SetShadowActorVisibility(true)
-		if self.CachedFOV > 0 then
+		if self.CachedFOVY > 0 then
+			self:SetFOVY(self.CachedFOVY)
+		elseif self.CachedFOV > 0 then
 			self:SetCameraFOV(self.CachedFOV)
 		end
     end
@@ -275,8 +274,8 @@ end
 function CommonRender2DView:OnInactive()
     if self.DoActive ~= false and not self.bForceVisible then
         self:ShowRenderActor(false)
-        self:SetShadowActorVisibility(false)
         self:ShowBackgroundActor(false)
+        self:SetShadowActorVisibility(false)
     end
 end
 
@@ -284,9 +283,10 @@ function CommonRender2DView:OnRegisterUIEvent()
 end
 
 function CommonRender2DView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.Avatar_Update_Master, self.OnUpdateMaster)
-	self:RegisterGameEvent(_G.EventID.MajorProfSwitch, self.OnProfSwitch)
-	self:RegisterGameEvent(_G.EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
+	self:RegisterGameEvent(EventID.Avatar_Update_Master, self.OnUpdateMaster)
+	self:RegisterGameEvent(EventID.MajorProfSwitch, self.OnProfSwitch)
+	self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
+	self:RegisterGameEvent(EventID.SceneViewportResized, self.OnSceneViewportResized)
 end
 
 function CommonRender2DView:OnRegisterTimer()
@@ -374,6 +374,7 @@ function CommonRender2DView:CreateActor()
         FLOG_WARNING("CommonRender2DView:CreateActor RenderActor is nil")
         return false
     end
+    FLOG_INFO("[CommonRender2DView:CreateActor] ")
 
     self.ChildActorComponent = self.RenderActor:GetComponentByClass(_G.UE.UFMChildActorComponent)
     self.DirectionalLightComponent = self.RenderActor:GetComponentByClass(_G.UE.UDirectionalLightComponent)
@@ -404,7 +405,7 @@ function CommonRender2DView:CreateActor()
 
     local NewEntityID = _G.UE.UActorManager:Get():AllocClientEntityID(_G.UE.EActorType.UIActor, 0)
     self.ChildActor:UpdateEntityID(NewEntityID)
-
+	ActorUtil.RegisterFreeActor(NewEntityID, self.ChildActor)
     return true
 end
 
@@ -463,7 +464,7 @@ function CommonRender2DView:CreateRenderActor(RenderActorPath, CharacterClass, L
 
         self.ReCreateCallBack = ReCreateCallBack
 
-        local Rlt = self:CreateActor(bSample)
+        local Rlt = self:CreateActor()
         if not Rlt then
             return
         end
@@ -482,10 +483,12 @@ function CommonRender2DView:CreateRenderActor(RenderActorPath, CharacterClass, L
     local ObjectGCType = InObjectGCType ~= nil and InObjectGCType or ObjectGCType.NoCache 
 	local bSyncLoad = nil ~= Params and Params.bSyncLoad
 	if bSyncLoad then
+        FLOG_INFO("[CommonRender2DView:CreateRenderActor] LoadClassSync RenderActorPath: %s", RenderActorPath)
 		-- 默认异步加载，对时序有强需求的可以改用同步加载
 		_G.ObjectMgr:LoadClassSync(RenderActorPath, ObjectGCType)
 		CallBack1()
 	else
+        FLOG_INFO("[CommonRender2DView:CreateRenderActor] LoadClassAsync RenderActorPath: %s", RenderActorPath)
     	self.RenderActorAsyncHandleID = _G.ObjectMgr:LoadClassAsync(RenderActorPath, CallBack1, ObjectGCType)
 	end
 end
@@ -538,6 +541,9 @@ function CommonRender2DView:ReleaseActor()
         self:ChangeUIState(true)
     end
 
+	if CommonUtil.IsObjectValid(self.ChildActor) then
+		ActorUtil.UnRegisterFreeActor(self.ChildActor:GetActorEntityID())
+	end
     self.ChildActor = nil
     _G.ProfMgr:SetCurUIActor(nil)
     self.SkeletalMeshComponent = nil
@@ -615,11 +621,25 @@ function CommonRender2DView:OnAssembleAllEnd(Params)
         self.LastChildActor = ChildActor
     end
     --重新组装时(更换装备，切换坐骑等操作)需要重新指定Actor，和创建时传入一样
-    if self.ShandowActor and self.ShandowActor.SceneCaptureComponent2D and self.UIComplexCharacter then
+    if self.bCreateShandowActor and self.ShadowActor then
         local AllActor = _G.UE.TArray(_G.UE.AActor)
 		AllActor:Add(self.UIComplexCharacter)
-	    self.ShandowActor.SceneCaptureComponent2D.ShowOnlyActors= AllActor
+        _G.UIShadowMgr:UpdateActorList(AllActor)
     end
+end
+
+function CommonRender2DView:OnSceneViewportResized(Params)
+	if not self.bAutoFOVAdapt then
+		return
+	end
+	if self.CachedFOVY > 0 then
+		self:SetFOVY(self.CachedFOVY)
+		return
+	end
+end
+
+function CommonRender2DView:EnableAutoFOVAdaptation(bEnabled)
+	self.bAutoFOVAdapt = bEnabled
 end
 
 function CommonRender2DView:SetShadowActorPos(Pos)
@@ -635,17 +655,20 @@ function CommonRender2DView:CreateShandowActor()
         return
     end
 
+    if self.ShadowActor then
+        return
+    end
     -- WorldContextObject self -> FWORLD(), UE会对Object的Outer强引用, 执行self为Outer会导致View卸载不掉
-    self.ShandowActor = ActorUtil.CreateUIActorShandow(FWORLD(), self.UIComplexCharacter, self.ImageRole, self.ShadowActorPos, self.ShandowActorType)
+    self.ShadowActor = ActorUtil.CreateUIActorShandow(FWORLD(), self.UIComplexCharacter, self.ImageRole, self.ShadowActorPos, self.ShandowActorType)
+    self:SetShadowActorVisibility(true)
 end
 
 function CommonRender2DView:DestroyShandowActor()
     if not self.bCreateShandowActor then
         return
     end
-    if not self.ShandowActor then return end
-    _G.CommonUtil.DestroyActor(self.ShandowActor)
-    self.ShandowActor = nil
+    self.ShadowActor = nil
+    _G.UIShadowMgr:ReleaseShadowActor()
 end
 
 function CommonRender2DView:OnRenderActorEndPlay(Actor, EndPlayReason)
@@ -680,9 +703,14 @@ function CommonRender2DView:ShowBackgroundActor(bShow)
 end
 
 function CommonRender2DView:SetShadowActorVisibility(Visible)
-    local ShandowActor = self.ShandowActor
-    if ShandowActor and CommonUtil.IsObjectValid(ShandowActor) then
-        ShandowActor:SetActorHiddenInGame(not Visible)
+    local ShadowActor = self.ShadowActor
+    if ShadowActor and CommonUtil.IsObjectValid(ShadowActor) then
+        self.ShadowActor:SetActorHiddenInGame(not Visible)
+        if Visible then
+            local AllActor = _G.UE.TArray(_G.UE.AActor)
+	        AllActor:Add(self.UIComplexCharacter)
+            _G.UIShadowMgr:UpdateActorList(AllActor)
+        end
 	end
 end
 
@@ -765,9 +793,11 @@ end
 
 function CommonRender2DView:SetLightLookatHead(LightName)
     if self.RenderActor and self.UIComplexCharacter then
-        local TargetEIDTransform = _G.UE.FTransform()
-        self.UIComplexCharacter:GetEidTransform("EID_LOOK_AT", TargetEIDTransform)
-        self.RenderActor:SetLightLookatHead(LightName,  TargetEIDTransform:GetLocation())
+        if self.RenderActor.SetLightLookatHead then
+            local TargetEIDTransform = _G.UE.FTransform()
+            self.UIComplexCharacter:GetEidTransform("EID_LOOK_AT", TargetEIDTransform)
+            self.RenderActor:SetLightLookatHead(LightName,  TargetEIDTransform:GetLocation())
+        end
     end
 end
 
@@ -850,16 +880,7 @@ function CommonRender2DView:Tick(_, InDeltaTime)
             if self.DefaultFocusLoc ~= nil then
                 local CurViewDist = self:NormalizeTargetArmLength(self:GetSpringArmDistance() - self.ZoomScale * 60)
                 self:SetSpringArmDistance(CurViewDist, true)
-
-                --缩放时设置位置偏移，默认为0
-				self:SetSpringArmLocation(0, self.CamToTargetRadians * CurViewDist, self.DefaultFocusLoc.z + self:GetZoomZOffset(CurViewDist),
-					true, ZoomInterpVelocity)
-				-- 缩放时设置俯仰角偏移，默认为0
-				-- local Rotation = self:GetSpringArmRotation()
-				-- self:SetSpringArmRotation(self:GetZoomPitchOffset(CurViewDist), Rotation.Yaw, Rotation.Roll, true, ZoomInterpVelocity)
-
-				-- 缩放时设置FOV
-				self:SetFOVY(self:GetZoomFOV(CurViewDist), true, ZoomInterpVelocity)
+                self:OnViewDistanceChanged(CurViewDist)
                 self:SetCanZoom(false)
             end
         else
@@ -874,12 +895,14 @@ function CommonRender2DView:Tick(_, InDeltaTime)
         local CurFOV = self:GetFOV()
 		local InterpVelocity = self.FOVInterpVelocity or ZoomInterpVelocity
         local InterpFOV = FMath.FInterpTo(CurFOV, self.FOVTarget, InDeltaTime, InterpVelocity)
+		local CachedFOVY = self.CachedFOVY -- 记录缓存的FOVY
         if MathUtil.IsNearlyEqual(self.FOVTarget, InterpFOV, 0.1) then
             -- 插值结束
 			self:SetCameraFOV(self.FOVTarget, false)
 		else
 			self:SetCameraFOV(InterpFOV)
         end
+		self.CachedFOVY = CachedFOVY -- 恢复缓存的FOVY
         self:SwitchActorAutoRotator(false)
     end
     --SpringArm插值
@@ -934,7 +957,10 @@ function CommonRender2DView:Tick(_, InDeltaTime)
             self.SpringArmLocationTarget = nil
 			self.CamLocInterpVelocity = nil
         end
-        self:SetSpringArmLocation(InterpLocation.x, InterpLocation.y, InterpLocation.z)
+
+        if self.bEnableViewDistPostProcess then
+            self:SetSpringArmLocation(InterpLocation.x, InterpLocation.y, InterpLocation.z)
+        end
     end
 
     --Scale插值
@@ -1008,24 +1034,6 @@ function CommonRender2DView:Tick(_, InDeltaTime)
                 self.SkeletalMeshComponent:K2_AddLocalRotation(_G.UE.FRotator(0, AutoRotateVel / InDeltaTime, 0), false, _G.UE.FHitResult(), false)
             end
         end
-        --self.ChildActor:SetForceCharacterRotation(_G.UE.FRotator(0, 0.02/InDeltaTime, 0))
-        --self.UIComplexCharacter:SynRideAvatarTransform(_G.UE.FRotator(0, 0.01/InDeltaTime, 0))
-        -- local CurRotation = self.SkeletalMeshComponent:K2_GetComponentRotation()
-        -- local CurLocation = self.SkeletalMeshComponent:K2_GetComponentLocation()
-        -- CurLocation.Z = CurLocation.Z + 150.0
-        -- local Pos =  _G.UE.UKismetMathLibrary.Conv_RotatorToVector(CurRotation)*100.0 + CurLocation
-
-        -- local OutPos = _G.UE.FVector2D()
-        -- UIUtil.ProjectWorldLocationToScreen(Pos, OutPos)
-
-        -- local LocalPosition = _G.UE.FVector2D(0, 0)
-        -- --参数要传齐
-        -- _G.UE.UUIUtil.ScreenToWidgetLocal(self, OutPos, LocalPosition, false)
-        -- _G.UE.UKismetSystemLibrary.DrawDebugLine(FWORLD(), CurLocation, Pos, _G.UE.FLinearColor(1, 1, 1, 1), 0.06, 0.5)
-
-        -- --local FButtonSize = UIUtil.GetLocalSize(self.FButton_27)
-        -- --LocalPosition = LocalPosition - FButtonSize/2.0
-        -- self.FButton_27.Slot:SetPosition(LocalPosition)
     end
 
     --设置VignetteIntensity
@@ -1151,7 +1159,7 @@ end
 ---设置Character同步哪个EntityID
 ---@param EntityID EntityID
 function CommonRender2DView:SetUICharacterByEntityID(EntityID)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1177,7 +1185,7 @@ end
 function CommonRender2DView:UpdateAvatarByRoleSimple(Simple)
 	local MajorUtil = require("Utils/MajorUtil")
 
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1208,10 +1216,10 @@ function CommonRender2DView:SetShowHead(bShow)
     end
 end
 
-function CommonRender2DView:SetUIRideCharacter(MountID, ImechanID)
+function CommonRender2DView:SetUIRideCharacter(MountID, ImechanID, PatternID)
     if self.UIComplexCharacter == nil then return end
     self.UIComplexCharacter:SetUIMeshLoaded(true)
-    self.UIComplexCharacter:AddRideAvatar(MountID, ImechanID)
+    self.UIComplexCharacter:AddRideAvatar(MountID, ImechanID, PatternID)
     --注：第一次进面板时，此刻取到的其实是nullptr
     self.RideMeshComponent = self.UIComplexCharacter:GetRideMeshComponent()
     self.bOnUIRide = self.UIComplexCharacter:IsOnRide()
@@ -1258,7 +1266,6 @@ function CommonRender2DView:HidePlayer(bHidePlayer)
 end
 
 function CommonRender2DView:SetSpringArmCenterOffsetY(OffsetY, TargetArmLength)
-    self.CenterOffsetY = OffsetY
     --[sammrli] 计算偏移后相机和目标点的角度，角度*领边(springDistance)可以求出对边offsetY缩放后的值
 	local ArmLength = nil ~= TargetArmLength and TargetArmLength or self:GetSpringArmDistance()
     self.CamToTargetRadians = math.atan(OffsetY, ArmLength)
@@ -1296,7 +1303,7 @@ end
 ---SetModelLocation
 ---设置Character坐标
 function CommonRender2DView:SetModelLocation(InX, InY, InZ, bInterp)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
     if bInterp == true then
@@ -1327,7 +1334,8 @@ function CommonRender2DView:SetModelRotation(InPitch, InYaw, InRoll, bInterp)
 		if bInterp == false then
 			self.ModelRotationTarget = nil
 		end
-        if self.bOnUIRide == true and self.UIComplexCharacter and self.UIComplexCharacter:GetRideMeshComponent() ~= nil then
+        if self.bOnUIRide == true and _G.UE.UCommonUtil.IsObjectValid(self.UIComplexCharacter) and
+            _G.UE.UCommonUtil.IsObjectValid(self.UIComplexCharacter:GetRideMeshComponent()) then
             --坐骑专用旋转
             self.UIComplexCharacter:GetRideMeshComponent():K2_SetRelativeRotation(_G.UE.FRotator(InPitch, InYaw, InRoll), false, nil, false)
             self.SkeletalMeshComponent:K2_SetRelativeRotation(_G.UE.FRotator(0, 0, 0), false, nil, false)
@@ -1349,7 +1357,7 @@ end
 ---SetModelScale
 ---设置Character缩放
 function CommonRender2DView:SetModelScale(InScale, bInterp)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
     if bInterp == true then
@@ -1371,7 +1379,7 @@ end
 ---HoldOnWeapon
 ---设置Character武器激活状态
 function CommonRender2DView:HoldOnWeapon(bHoldOn)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1385,7 +1393,7 @@ end
 ---HideWeapon
 ---设置Character武器显示状态
 function CommonRender2DView:HideWeapon(bHide)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1439,7 +1447,7 @@ end
 ---HideHead
 ---设置Character头部防具显示状态
 function CommonRender2DView:HideHead(bHide)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1549,6 +1557,25 @@ function CommonRender2DView:SetSpringArmDistance(InDistance, bInterp)
 			-- end
 		end
     end
+end
+
+function CommonRender2DView:EnableViewDistPostProcess(bOn)
+	self.bEnableViewDistPostProcess = bOn
+end
+
+function CommonRender2DView:OnViewDistanceChanged(CurViewDist)
+	if not self.bEnableViewDistPostProcess then
+		return
+	end
+	--缩放时设置位置偏移，默认为0
+	self:SetSpringArmLocation(0, self.CamToTargetRadians * CurViewDist, self.DefaultFocusLoc.z + self:GetZoomZOffset(CurViewDist),
+	true, ZoomInterpVelocity)
+	-- 缩放时设置俯仰角偏移，默认为0
+	-- local Rotation = self:GetSpringArmRotation()
+	-- self:SetSpringArmRotation(self:GetZoomPitchOffset(CurViewDist), Rotation.Yaw, Rotation.Roll, true, ZoomInterpVelocity)
+
+	-- 缩放时设置FOV
+	self:SetFOVY(self:GetZoomFOV(CurViewDist), true, ZoomInterpVelocity)
 end
 
 ---设置相机Roll
@@ -1755,12 +1782,10 @@ function CommonRender2DView:SetFOVY(InFOVY, bInterp, InterpVelocity)
 	if nil == InFOVY or nil == self.RenderActor then
 		return
 	end
-
-    local AspectRatio = _G.UE.UCameraMgr.Get():GetAspectRatio()
-	local TanHalfFOVX = AspectRatio * math.tan(math.rad(InFOVY) * 0.5)
-	local FOVX = math.deg(2 * math.atan(TanHalfFOVX))
+	local FOVX = CameraUtil.FOVYToFOVX(InFOVY)
 	self:SetCameraFOV(FOVX, bInterp, InterpVelocity)
     self:SetCameraLockedFOV(FOVX)
+	self.CachedFOVY = InFOVY
 end
 
 function CommonRender2DView:SetCameraFOV(InFOV, bInterp, InterpVelocity)
@@ -1768,6 +1793,7 @@ function CommonRender2DView:SetCameraFOV(InFOV, bInterp, InterpVelocity)
         return
     end
     --FLOG_INFO("PrintCameraFocusView SetCameraFOV FOV=%s", tostring(InFOV))
+	self.CachedFOVY = 0
 
     local CameraMgr = _G.UE.UCameraMgr.Get()
 	if bInterp == true then
@@ -1899,7 +1925,7 @@ function CommonRender2DView:DoCameraFocusScreenLocation(bInterp)
 	local SocketWorldPosition = self.ChildActor:GetSocketLocationByName(self.FocusSocketName)
 	local NeedMoveVector = TargetPosition - SocketWorldPosition
 
-    if NeedMoveVector:SizeSquared() < 0.1 and self.SpringArmRotationTarget == nil then
+    if NeedMoveVector:SizeSquared() < self.TargetPositionOffsetRange and self.SpringArmRotationTarget == nil then
         self:EndCameraFocusScreenLocation()
     else
 		local TargetLocation = self:GetSpringArmLocation() - NeedMoveVector
@@ -1914,7 +1940,7 @@ end
 ---PreViewEquipment
 ---装备预览
 function CommonRender2DView:PreViewEquipment(EquipID, Part, ColorID)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -1929,7 +1955,7 @@ end
 
 ---区域染色
 function CommonRender2DView:StainPartForSection(AvatarPartType, SectionID, ColorID)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
     local UIComplexCharacter = self.ChildActor:Cast(_G.UE.AUIComplexCharacter)
@@ -1940,6 +1966,7 @@ function CommonRender2DView:StainPartForSection(AvatarPartType, SectionID, Color
 	if AvatarCom then
 		local Assembler = AvatarCom:GetAssembler()
 		if Assembler then
+            FLOG_INFO("[CommonRender2DView:StainPartForSection] AvatarPartType:%s, SectionID:%s, ColorID:%s", tostring(AvatarPartType), tostring(tonumber(SectionID) - 1), tostring(ColorID))
             AvatarCom:SetPreviewSectionStain(true)
             -- print(string.format("<janlog>  CommonRender2DView:StainPartForSection  UAvatarAssembler::GetModelPath == %s ", Assembler:GetModelPath(AvatarPartType)))
             -- print(string.format("<janlog>  CommonRender2DView:StainPartForSection  AvatarPartType ==  %s " , tostring(AvatarPartType)))
@@ -1952,7 +1979,7 @@ end
 
 
 function CommonRender2DView:ShowAvatarPart(AvatarPartType, Index, CurrentIndex)
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
     local UIComplexCharacter = self.ChildActor:Cast(_G.UE.AUIComplexCharacter)
@@ -1983,7 +2010,7 @@ end
 ---ResumeAvatar
 ---恢复到创建时的外观
 function CommonRender2DView:ResumeAvatar()
-    if (self.ChildActor == nil) then
+    if (self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor)) then
         return
     end
 
@@ -2200,7 +2227,7 @@ function CommonRender2DView:OnProfSwitch(Params)
 end
 
 function CommonRender2DView:GetUIComplexCharacter()
-	if self.ChildActor == nil then
+	if self.ChildActor == nil or not CommonUtil.IsObjectValid(self.ChildActor) then
         return nil
     end
 
@@ -2216,7 +2243,6 @@ function CommonRender2DView:DisableEnvironmentLights()
 	local CompsToDisable = {}
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.USkyLightComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UDirectionalLightComponent))
-	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UPlanarReflectionComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UChildActorComponent))
 	table.insert(CompsToDisable, self.RenderActor:GetComponentByClass(_G.UE.UPostProcessComponent))
 	for _, Comp in ipairs(CompsToDisable) do
@@ -2258,6 +2284,15 @@ end
 -- 是否开启旋转父组件，当前仅坐骑使用
 function CommonRender2DView:EnableRotateAttachParent(bEnabled)
 	self.bRotateAttachParent = bEnabled
+end
+
+-- 穿戴时尚配饰
+function CommonRender2DView:SetOrnamentCompData(Type, ID)
+	self.ChildActor:SetOrnamentCompData(Type, ID)
+end
+-- 卸下时尚配饰
+function CommonRender2DView:DeleteOrnamentData(Type)
+	self.ChildActor:DeleteOrnamentData(Type)
 end
 
 return CommonRender2DView

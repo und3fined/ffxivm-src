@@ -201,6 +201,7 @@ function CommDropDownListView:OnItemSelectChanged(Index, InItemData, ItemView, I
     end
 
     if nil ~= ItemData.IconPath then
+        self.IsLuaSetIcon = true
         UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, ItemData.IconPath)
         if ItemData.ImgIconColorbSameasText then
             self.ImgIcon:SetColorAndOpacity(ItemData.TitleTextContentColor)
@@ -208,6 +209,7 @@ function CommDropDownListView:OnItemSelectChanged(Index, InItemData, ItemView, I
         UIUtil.SetIsVisible(self.ImgIcon, true)
         UIUtil.SetIsVisible(self.SizeBox, true)
     else
+        self.IsLuaSetIcon = false
         UIUtil.SetIsVisible(self.SizeBox, false)
     end
 end
@@ -233,10 +235,12 @@ function CommDropDownListView:SetSelectedIndex(Index, InItemData, NoCallBack)
     end
     self.TextContent:SetText(ItemData.Title or ItemData.Name)
     if nil ~= ItemData.IconPath then
+        self.IsLuaSetIcon = true
         UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, ItemData.IconPath)
         UIUtil.SetIsVisible(self.ImgIcon, true)
         UIUtil.SetIsVisible(self.SizeBox, true)
     else
+        self.IsLuaSetIcon = false
         UIUtil.SetIsVisible(self.SizeBox, false)
     end
     if UIViewMgr:IsViewVisible(UIViewID.CommDropDownListNew) then

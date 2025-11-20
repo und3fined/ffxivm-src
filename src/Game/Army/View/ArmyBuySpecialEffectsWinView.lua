@@ -215,7 +215,7 @@ function ArmyBuySpecialEffectsWinView:UpdataCostNum()
         LinearColor = _G.UE.FLinearColor.FromHex(ArmyTextColor.YellowHex)
     else
 		self.Btnsure:SetIsDisabledState(true, true)
-		LinearColor = _G.UE.FLinearColor.FromHex("FF0000FF")
+		LinearColor = _G.UE.FLinearColor.FromHex(ArmyTextColor.NoEnoughRedHex)
     end
 	self.TextCurrency:SetColorAndOpacity(LinearColor)
 

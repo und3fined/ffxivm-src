@@ -8,9 +8,6 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIUtil = require("Utils/UIUtil")
-local MajorUtil = require("Utils/MajorUtil")
-local ItemUtil = require("Utils/ItemUtil")
-local ItemGetaccesstypeCfg = require("TableCfg/ItemGetaccesstypeCfg")
 
 ---@class GatheringLogTextItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -63,18 +60,7 @@ function GatheringLogTextItemView:OnHyperlinkClicked(Value)
 		return
 	end
 
-	local AccessList = ItemUtil.GetItemAccess(ItemID)
-	if AccessList == nil then
-		return
-	end
-
-	local MajorLevel = MajorUtil.GetMajorLevel()
-	local Cfg = ItemGetaccesstypeCfg:FindCfgByKey(AccessList[1])
-	if Cfg ~= nil and (Cfg.UnLockLevel == nil or MajorLevel == nil or Cfg.UnLockLevel <= MajorLevel) and ItemUtil.QueryIsUnLock(Cfg.FunType, Cfg.FunValue, ItemID) then
-		_G.ShopMgr:JumpToShopGoods(Cfg.FunValue, ItemID)
-	else
-		_G.MsgTipsUtil.ShowTipsByID(157034)
-	end
+	_G.GatheringLogMgr:OnHyperlinkClicked(ItemID)
 end
 
 function GatheringLogTextItemView:OnRegisterGameEvent()

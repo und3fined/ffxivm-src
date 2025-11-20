@@ -12,6 +12,7 @@ local CameraControlDataLoader = LuaClass()
 
 function CameraControlDataLoader:Ctor()
 	self.UserData = nil
+	self.CachedParams = {}
 end
 
 function CameraControlDataLoader:SetUserData(UserData)
@@ -40,25 +41,34 @@ function CameraControlDataLoader:GetCameraControlParams(SkeletonName, InFocusTyp
 		CameraControlParams.FocusEID = CharacreateCameraTypeCfg:FindValue(InFocusType, "EID")
 	end
 
-	CameraControlParams.DefaultViewDistance = RawFocusData.DefaultViewDistance
-	CameraControlParams.MinPitch = RawFocusData.MinPitch or CameraControlParams.MinPitch
-	CameraControlParams.MaxPitch = RawFocusData.MaxPitch or CameraControlParams.MaxPitch
-	local RawParamsNames = {"NearCameraParams", "FarCameraParams"}
-	local ControlParamsNames = {"MinViewDistParams", "MaxViewDistParams"}
+	self:TransformParamsData(RawFocusData, CameraControlParams)
 
-	for Index = 1, 2 do
-		local RawParams = RawFocusData[RawParamsNames[Index]]
-		local ControlParams = CameraControlParams[ControlParamsNames[Index]]
-		ControlParams.ViewDistance = RawParams.ViewDistance
-		ControlParams.FOV = RawParams.FOV
-		ControlParams.ZOffset = RawParams.ZOffset
-		ControlParams.PitchOffset = RawParams.PitchOffset
-	end
 	return CameraControlParams
 end
 
 function CameraControlDataLoader:GetFocusEID(InFocusType)
 	return CharacreateCameraTypeCfg:FindValue(InFocusType, "EID")
+end
+
+-- 将表格或者UserData数据转换为CameraControlParams
+function CameraControlDataLoader:TransformParamsData(RawFocusData, OutCameraControlParams)
+	if nil == RawFocusData or nil == OutCameraControlParams then
+		return
+	end
+	OutCameraControlParams.DefaultViewDistance = RawFocusData.DefaultViewDistance
+	OutCameraControlParams.MinPitch = RawFocusData.MinPitch or OutCameraControlParams.MinPitch
+	OutCameraControlParams.MaxPitch = RawFocusData.MaxPitch or OutCameraControlParams.MaxPitch
+	local RawParamsNames = {"NearCameraParams", "FarCameraParams"}
+	local ControlParamsNames = {"MinViewDistParams", "MaxViewDistParams"}
+
+	for Index = 1, 2 do
+		local RawParams = RawFocusData[RawParamsNames[Index]]
+		local ControlParams = OutCameraControlParams[ControlParamsNames[Index]]
+		ControlParams.ViewDistance = RawParams.ViewDistance
+		ControlParams.FOV = RawParams.FOV
+		ControlParams.ZOffset = RawParams.ZOffset
+		ControlParams.PitchOffset = RawParams.PitchOffset
+	end
 end
 
 return CameraControlDataLoader

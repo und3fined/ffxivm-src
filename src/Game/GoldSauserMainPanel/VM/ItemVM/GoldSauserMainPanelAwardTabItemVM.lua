@@ -6,7 +6,6 @@
 
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
-local GoldSaucerAwardTypeCfg = require("TableCfg/GoldSaucerAwardTypeCfg")
 
 ---@class GoldSauserMainPanelAwardTabItemVM : UIViewModel
 local GoldSauserMainPanelAwardTabItemVM = LuaClass(UIViewModel)
@@ -28,8 +27,8 @@ function GoldSauserMainPanelAwardTabItemVM:UpdateVM(Value)
     local AwardType = Value.AwardType
     self.AwardType = AwardType
     local TabChecked = Value.bChecked
-    self.IconSelected = GoldSaucerAwardTypeCfg:FindValue(AwardType, "AwardIconSelected")
-    self.Icon = GoldSaucerAwardTypeCfg:FindValue(AwardType, "AwardIcon")
+    self.IconSelected = Value.IconSelected
+    self.Icon = Value.Icon
     self.bChecked = TabChecked
 end
 

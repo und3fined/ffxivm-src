@@ -105,6 +105,10 @@ function FishIngholeFishListItemView:SetAnimProBar(Progress, OldProgress)
 		self:PlayAnimationTimeRange(self.AnimProBar, 1, 1.01, 1, nil, 1.0, false)
 		return
 	end
+	if (Progress + 0.01) >= 1 then
+		self:PlayAnimationTimeRange(self.AnimProBar, 0, 0.001, 1, nil, 1.0, false)
+		return
+	end
 	if OldProgress == nil or Progress > OldProgress then
 		OldProgress = Progress + 0.01
 	end

@@ -88,6 +88,7 @@ end
 function WeatherTimeBarItemView:SetTypeList(InTypeList)
 	self.TypeList = InTypeList
 	self.TypeIndex = 1
+	self:RefreshTimeTypeShow()
 end
 
 function WeatherTimeBarItemView:GetCurrTimeType()

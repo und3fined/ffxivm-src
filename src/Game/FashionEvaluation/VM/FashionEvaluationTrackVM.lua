@@ -74,6 +74,8 @@ function FashionEvaluationTrackVM:UpdateTrackAppearanceList(TrackAppearanceList)
     self.TrackAppearanceMap = {}
     if TrackAppearanceList == nil or next(TrackAppearanceList) == nil then
         self.IsTrackListEmpty = true
+        local RedDotName = self:GetRedDotName()
+        _G.RedDotMgr:DelRedDotByName(RedDotName)
         return
     end
 

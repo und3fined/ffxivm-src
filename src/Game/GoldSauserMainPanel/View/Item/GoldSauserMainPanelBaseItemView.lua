@@ -157,7 +157,14 @@ function GoldSauserMainPanelBaseItemView:OnEventAwardRedDotVisibleChanged(bVisib
 	if not RedDotWidget then
 		return
 	end
-	RedDotWidget:SetRedDotUIIsShow(bVisible)
+
+	local RedDotVisible = bVisible
+    local ItemVM = self.ItemVM
+	if ItemVM and ItemVM.GetIsEntranceLocked then
+		RedDotVisible = (not ItemVM:GetIsEntranceLocked()) and bVisible
+	end
+
+	RedDotWidget:SetRedDotUIIsShow(RedDotVisible)
 end
 
 function GoldSauserMainPanelBaseItemView:OnUpdateEntranceSpecialState(GameID)

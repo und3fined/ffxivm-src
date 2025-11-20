@@ -54,7 +54,7 @@ function FateStageInfoVM:UpdateVM(Value)
     self.EndTimeMS = TargetFate.EndTime
     self.bShowPanelFateArchive = true
     if FateMainCfg then
-        self.bShowPanelFateArchive = FateMainCfg.IsCelebrateFate == nil or FateMainCfg.IsCelebrateFate <= 0
+        self.bShowPanelFateArchive = FateMainCfg.bHideInArchive == nil or FateMainCfg.bHideInArchive <= 0
         local Level = FateMainCfg.Level or 0
         self.Level = string.format(LSTR(10031), Level)
         self.ProgressTitleText = FateMainCfg.ProgressTitle

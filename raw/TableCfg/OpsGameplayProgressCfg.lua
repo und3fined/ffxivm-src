@@ -9,7 +9,14 @@ local OpsGameplayProgressCfg = {
 	KeyName = "RegisterID",
     bEncrypted = false,
 	Localization = {
-        Config = {}
+        Config = {
+            {
+                Name = 'Desc',
+            },
+            {
+                Name = 'Title',
+            },
+		}
     },
     DefaultValues = nil,
 	LuaData = nil,

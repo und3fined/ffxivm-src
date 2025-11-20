@@ -56,12 +56,16 @@ local LSTR = _G.LSTR
 ---@field ImgFlagA2 UFImage
 ---@field ImgS UFImage
 ---@field ImgV UFImage
+---@field PanelBtn UFCanvasPanel
 ---@field PanelMidKDA UFCanvasPanel
 ---@field PanelMidRecord UFCanvasPanel
+---@field PanelRank UFCanvasPanel
 ---@field PanelVS UFCanvasPanel
 ---@field TableViewKDARecord1 UTableView
 ---@field TableViewKDARecord2 UTableView
 ---@field TableViewSlot UTableView
+---@field TableViewStarNew UTableView
+---@field TableViewStarOld UTableView
 ---@field TextA1 UFTextBlock
 ---@field TextA2 UFTextBlock
 ---@field TextCountdownTime UFTextBlock
@@ -79,9 +83,14 @@ local LSTR = _G.LSTR
 ---@field TextName2 UFTextBlock
 ---@field TextProgress1 UFTextBlock
 ---@field TextProgress2 UFTextBlock
+---@field TextRankNew UFTextBlock
+---@field TextRankOld UFTextBlock
+---@field TextRankTitle UFTextBlock
 ---@field TextResult UFTextBlock
 ---@field TextReward UFTextBlock
 ---@field TextRewardTips UFTextBlock
+---@field TextScoreNew UFTextBlock
+---@field TextScoreOld UFTextBlock
 ---@field TextSwitch UFTextBlock
 ---@field TextTime UFTextBlock
 ---@field TextTimeTitle UFTextBlock
@@ -126,12 +135,16 @@ function PVPColosseumRecordView:Ctor()
 	--self.ImgFlagA2 = nil
 	--self.ImgS = nil
 	--self.ImgV = nil
+	--self.PanelBtn = nil
 	--self.PanelMidKDA = nil
 	--self.PanelMidRecord = nil
+	--self.PanelRank = nil
 	--self.PanelVS = nil
 	--self.TableViewKDARecord1 = nil
 	--self.TableViewKDARecord2 = nil
 	--self.TableViewSlot = nil
+	--self.TableViewStarNew = nil
+	--self.TableViewStarOld = nil
 	--self.TextA1 = nil
 	--self.TextA2 = nil
 	--self.TextCountdownTime = nil
@@ -149,9 +162,14 @@ function PVPColosseumRecordView:Ctor()
 	--self.TextName2 = nil
 	--self.TextProgress1 = nil
 	--self.TextProgress2 = nil
+	--self.TextRankNew = nil
+	--self.TextRankOld = nil
+	--self.TextRankTitle = nil
 	--self.TextResult = nil
 	--self.TextReward = nil
 	--self.TextRewardTips = nil
+	--self.TextScoreNew = nil
+	--self.TextScoreOld = nil
 	--self.TextSwitch = nil
 	--self.TextTime = nil
 	--self.TextTimeTitle = nil
@@ -175,6 +193,8 @@ function PVPColosseumRecordView:OnInit()
 	self.LeftTimeAdapterCountDown = UIAdapterCountDown.CreateAdapter(self, self.TextCountdownTime, "mm:ss", nil, self.TimeOutCallback)
 	self.AdapterTableViewRecord1 = UIAdapterTableView.CreateAdapter(self, self.TableViewKDARecord1)
 	self.AdapterTableViewRecord2 = UIAdapterTableView.CreateAdapter(self, self.TableViewKDARecord2)
+	self.AdapterTableViewStarOld = UIAdapterTableView.CreateAdapter(self, self.TableViewStarOld)
+	self.AdapterTableViewStarNew = UIAdapterTableView.CreateAdapter(self, self.TableViewStarNew)
 	self.AdapterTableViewAward = UIAdapterTableView.CreateAdapter(self, self.TableViewSlot, self.OnSelectChangedAwardItem, true)
 
 	self.Binders =
@@ -200,6 +220,8 @@ function PVPColosseumRecordView:OnInit()
 		{ "LeftTeamRecordList", UIBinderUpdateBindableList.New(self, self.AdapterTableViewRecord1) },
 		{ "RightTeamRecordList", UIBinderUpdateBindableList.New(self, self.AdapterTableViewRecord2) },
 		{ "AwardList", UIBinderUpdateBindableList.New(self, self.AdapterTableViewAward) },
+
+		{ "IsRank", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedIsRank) },
 	}
 end
 
@@ -298,6 +320,24 @@ function PVPColosseumRecordView:OnValueChangedShowData(Value)
 	end
 end
 
+function PVPColosseumRecordView:OnValueChangedIsRank(Value)
+	if Value then
+		self.TextRankOld:SetText(PVPColosseumRecordVM.OldRankName)
+		self.TextRankNew:SetText(PVPColosseumRecordVM.NewRankName)
+		self.TextScoreOld:SetText(PVPColosseumRecordVM.OldRankScore)
+		self.TextScoreNew:SetText(PVPColosseumRecordVM.NewRankScore)
+		self.AdapterTableViewStarOld:UpdateAll(PVPColosseumRecordVM.OldStarList)
+		self.AdapterTableViewStarNew:UpdateAll(PVPColosseumRecordVM.NewStarList)
+
+		UIUtil.SetIsVisible(self.TableViewStarOld, PVPColosseumRecordVM.OldRankIsWinStar)
+		UIUtil.SetIsVisible(self.TextScoreOld, not PVPColosseumRecordVM.OldRankIsWinStar)
+		UIUtil.SetIsVisible(self.TableViewStarNew, PVPColosseumRecordVM.NewRankIsWinStar)
+		UIUtil.SetIsVisible(self.TextScoreNew, not PVPColosseumRecordVM.NewRankIsWinStar)
+	end
+
+	UIUtil.SetIsVisible(self.PanelRank, Value)
+end
+
 function PVPColosseumRecordView:InitText()
 	self.TextTimeTitle:SetText(LSTR(810003)) -- "战斗时间"
 
@@ -312,6 +352,8 @@ function PVPColosseumRecordView:InitText()
 	self.TextRewardTips:SetText(LSTR(810046)) -- "奖励取消"
 	self.BtnExit:SetText(LSTR(810010)) -- "退出"
 	self.BtnAgain:SetText(LSTR(810052)) -- 继续匹配
+
+	self.TextRankTitle:SetText(LSTR(810051)) -- "段位变化"
 end
 
 -- 初始化队伍红蓝方显示，左边固定是蓝方，右边固定是红方，我方队伍为蓝方

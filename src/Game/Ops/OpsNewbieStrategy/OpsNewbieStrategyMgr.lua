@@ -100,12 +100,14 @@ function OpsNewbieStrategyMgr:NodeJump(NodeID, PluralJumpParam)
         UIViewMgr:ShowView(UIViewID.OpsNewBieStrategyCommListWinView, Params)
     else
         if CfgData then
-            local IsCanJump = JumpUtil.IsCurJumpIDCanJump(tonumber(CfgData.JumpParam))
+            --[[local IsCanJump = JumpUtil.IsCurJumpIDCanJump(tonumber(CfgData.JumpParam))
             if IsCanJump then
                 OpsActivityMgr:Jump(CfgData.JumpType, CfgData.JumpParam)
             else
                 self:JumpUnlockSys(tonumber(CfgData.JumpParam))
-            end
+            end]]--
+
+            OpsActivityMgr:Jump(CfgData.JumpType, CfgData.JumpParam)
         end
     end
 end
@@ -454,6 +456,9 @@ end
 -----根据节点ID生成红点名/进阶节点需要特殊处理，统一挂在进阶主界面下
 function OpsNewbieStrategyMgr:GetRedDotNameByNodeID(NodeID)
     local NodeCfgData = ActivityNodeCfg:FindCfgByKey(NodeID)
+    if NodeCfgData == nil then
+        return
+    end
     local ActivityID = NodeCfgData.ActivityID
     ---进阶节点需要特殊处理，统一挂在进阶主界面下
     if ActivityID ~= OpsNewbieStrategyDefine.ActivityID.FirstChoiceActivityID and 
@@ -682,6 +687,38 @@ function OpsNewbieStrategyMgr:JumpUnlockSys(JumpID)
         end
     end
 end
+
+---跳转未解锁，并且不可接取情况的表现(要提示解锁条件)
+---@param JumpID 跳转ID
+function OpsNewbieStrategyMgr:JumpUnlockSysByNotCanAccessed(JumpID)
+    local ModuleID
+    local JumpData = JumpCfg:FindCfgByKey(JumpID) or {}
+    ModuleID = JumpData.ModuleID
+    ----只处理(系统解锁表)配置的
+    if ModuleID and ModuleID ~= 0 then
+        local SysUnlockData = _G.ModuleOpenMgr:GetCfgByModuleID(ModuleID) 
+        if SysUnlockData then
+            local UnlockName = SysUnlockData.SysNotice
+            --LSTR 提示
+            local TitleText = LSTR(920046)
+            --LSTR 解锁条件
+            local SubTitleText = LSTR(920047)
+            --LSTR 亲爱的冒险者，你尚未解锁“%s”
+            local ContentText = string.format(LSTR(920048), UnlockName)
+            local TaskID = SysUnlockData.PreTask[1]
+            local Params = {
+                Type = 2,
+                TitleText = TitleText,
+                SubTitleText = SubTitleText,
+                ContentText = ContentText,
+                TaskID = TaskID,
+                ForbiddenTips = JumpData.ForbiddenTips
+            }
+            UIViewMgr:ShowView(UIViewID.OpsNewbieStrategyHintWinView, Params)
+        end
+    end
+end
+
 
 --要返回当前类
 return OpsNewbieStrategyMgr

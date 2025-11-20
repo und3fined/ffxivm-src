@@ -23,6 +23,7 @@ local TipsUtil = require("Utils/TipsUtil")
 ---@class FishTime2ItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field ImgArrow UFImage
+---@field ImgLine UFImage
 ---@field TextTime UFTextBlock
 ---@field TextTime2 UFTextBlock
 ---@field TextWeather UFTextBlock
@@ -34,6 +35,7 @@ local FishTime2ItemView = LuaClass(UIView, true)
 function FishTime2ItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.ImgArrow = nil
+	--self.ImgLine = nil
 	--self.TextTime = nil
 	--self.TextTime2 = nil
 	--self.TextWeather = nil
@@ -57,6 +59,7 @@ function FishTime2ItemView:OnInit()
 		{ "bPreWeatherVisible", UIBinderSetIsVisible.New(self, self.WeatherBallISlot1) },
 		{ "bPreWeatherVisible", UIBinderSetIsVisible.New(self, self.ImgArrow) },
 		{ "bWeatherVisible", UIBinderSetIsVisible.New(self, self.WeatherBallISlot2) },
+		{ "bImgLineShow", UIBinderSetIsVisible.New(self, self.ImgLine) },
 
 		--{ "WeatherIcon", UIBinderSetBrushFromAssetPath.New(self, self.WeatherBallISlot1.IconWeather) },
 		--{ "PreWeatherIcon", UIBinderSetBrushFromAssetPath.New(self, self.WeatherBallISlot2.IconWeather) },

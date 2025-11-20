@@ -35,6 +35,8 @@ function MapMarkerVM:Reset()
 	self.IsActive = true
 	self.IsFollow = false
 	self.Alpha = 1
+	self.IsSelected = false -- 是否选中
+	self.TipsContent = "" -- 选中提示内容
 end
 
 function MapMarkerVM:IsEqualVM(Value)
@@ -58,6 +60,10 @@ end
 
 function MapMarkerVM:GetIconPath()
 	return self.IconPath
+end
+
+function MapMarkerVM:GetScale()
+	return self.Scale
 end
 
 function MapMarkerVM:GetMapMarker()
@@ -102,6 +108,14 @@ end
 
 function MapMarkerVM:UpdatePriority()
 	--self.PriorityOrder = self.MapMarker:GetPriority()
+end
+
+function MapMarkerVM:SetIsSelected(IsSelected)
+	self.IsSelected = IsSelected
+end
+
+function MapMarkerVM:SetTipsContent(Text)
+	self.TipsContent = Text
 end
 
 function MapMarkerVM:OnScaleChanged(Scale)

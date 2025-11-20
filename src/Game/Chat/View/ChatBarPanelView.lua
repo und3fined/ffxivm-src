@@ -18,7 +18,6 @@ local RichTextUtil = require("Utils/RichTextUtil")
 local ChatDefine = require("Game/Chat/ChatDefine")
 local CommonUtil = require("Utils/CommonUtil")
 local UIViewMgr = require("UI/UIViewMgr")
-local UIBinderSetActiveWidgetIndex = require("Binder/UIBinderSetActiveWidgetIndex")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local VoiceDefine = require("Game/Voice/VoiceDefine")
@@ -59,13 +58,18 @@ local GCloudVoiceCompleteCode = VoiceDefine.GCloudVoiceCompleteCode
 ---@field BtnVoice UFButton
 ---@field ComRedDotEmoj CommonRedDotView
 ---@field ContentPanel UFCanvasPanel
+---@field EFF_SoundColumnLight UFCanvasPanel
 ---@field FHorBox UFHorizontalBox
 ---@field InputBoxChat CommInputBoxView
 ---@field MI_DX_SoundColumn_Chat_1 UFImage
 ---@field MultiLineEditText UMultiLineEditableText
 ---@field PanelCancel UFCanvasPanel
+---@field PanelInput UFCanvasPanel
+---@field PanelKeyboardInit UFCanvasPanel
 ---@field PanelRecordText UFCanvasPanel
----@field SwitcherInput UFWidgetSwitcher
+---@field PanelRecordToText UFCanvasPanel
+---@field PanelRecording UFCanvasPanel
+---@field PanelVoice UFCanvasPanel
 ---@field TextKeyBoardInput UFTextBlock
 ---@field TextRecordToText UFTextBlock
 ---@field TextRecording UFTextBlock
@@ -91,13 +95,18 @@ function ChatBarPanelView:Ctor()
 	--self.BtnVoice = nil
 	--self.ComRedDotEmoj = nil
 	--self.ContentPanel = nil
+	--self.EFF_SoundColumnLight = nil
 	--self.FHorBox = nil
 	--self.InputBoxChat = nil
 	--self.MI_DX_SoundColumn_Chat_1 = nil
 	--self.MultiLineEditText = nil
 	--self.PanelCancel = nil
+	--self.PanelInput = nil
+	--self.PanelKeyboardInit = nil
 	--self.PanelRecordText = nil
-	--self.SwitcherInput = nil
+	--self.PanelRecordToText = nil
+	--self.PanelRecording = nil
+	--self.PanelVoice = nil
 	--self.TextKeyBoardInput = nil
 	--self.TextRecordToText = nil
 	--self.TextRecording = nil
@@ -118,7 +127,6 @@ function ChatBarPanelView:OnInit()
 
 	self.Binders = {
 		{ "ChatBarWidgetVisible", 	UIBinderSetIsVisible.New(self, self.ContentPanel) },
-		{ "CurBarWidgetIndex", 		UIBinderSetActiveWidgetIndex.New(self, self.SwitcherInput) },
 		{ "CurBarWidgetIndex", 		UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedCurBarWidgetIndex) },
 		{ "CurChannel", 			UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedCurChannel) },
 		{ "CurChannelID", 			UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedCurChannelID) },
@@ -246,10 +254,6 @@ end
 function ChatBarPanelView:OnClickedBtnSend()
 	self:OnClickedBtnClosePanelRecordText()
 
-	if not ChatVM:CheckSendTimeCD() then
-		return
-	end
-
 	local Channel, ChannelID = ChatVM:GetSendMsgChannelAndChannelID()
 	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID)
 	if nil == ChannelVM then
@@ -258,10 +262,22 @@ function ChatBarPanelView:OnClickedBtnSend()
 		return
 	end
 
+	-- 发送CD
+	if not ChatVM:CheckSendTimeCD(ChannelVM) then
+		return
+	end
+
 	local Text = self:GetChatText()
 	if string.len(Text) <= 0 then
 		-- 50038("发送内容不能为空")
 		MsgTipsUtil.ShowTips(LSTR(50038))
+		return
+	end
+
+	local MaxLen = ChatUtil.GetChatChannelMsgMaxLength(Channel)
+	if MaxLen < CommonUtil.GetStrLen(Text) then
+		-- 50192("发言字数超出上限，请重试（发言上限为%s字符）")
+		MsgTipsUtil.ShowTips(string.format(LSTR(50192), MaxLen))
 		return
 	end
 
@@ -273,8 +289,6 @@ function ChatBarPanelView:OnClickedBtnSend()
 	self.CurItemHyperlinkNum = 0
 
 	ChatMgr:SendChatMsgPushMessage(ChannelVM:GetChannel(), ChannelVM:GetChannelID(), RichText, 0, ParamList)
-
-	ChatVM:UpdateSendTimeCD(Channel, ChannelID)
 end
 
 function ChatBarPanelView:OnClickedBtnEmoj()
@@ -309,6 +323,12 @@ function ChatBarPanelView:OnClickedBtnRecordToText()
 end
 
 function ChatBarPanelView:OnClickedBtnVoice()
+	local Channel, ChannelID = ChatVM:GetSendMsgChannelAndChannelID()
+	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID)
+	if not ChannelVM or not ChatVM:CheckSendTimeCD(ChannelVM) then -- 发送CD
+		return
+	end
+
 	if self:StartRecord() then
 		self:SetRecordText("")
 		self:SetChatText("")
@@ -362,6 +382,8 @@ end
 function ChatBarPanelView:CheckMacros(Text)
 	if string.find(Text, ChatMacros.TeamRecruit) then -- 队伍招募超链接
 		self:AddTeamRecruitHref()
+	elseif string.find(Text, ChatMacros.FishShare) then -- 鱼类分享超链接
+		self:AddFishShareHref()
 	end
 end
 
@@ -392,10 +414,11 @@ function ChatBarPanelView:GenerateChatMsg(Text)
 			local Param = ChatMgr:EncodeChatParams(ChatParams)
 			local Params = { Type = ParamType, Direct = true, Param = Param }
 
-			if ParamType == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT then -- 队伍招募超链接
+			if ParamType == PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT -- 队伍招募超链接
+				or ParamType == PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH -- 鱼类分享超链接
+				then
 				ParamList = table.pack(Params)
 				return v.HrefText, ParamList
-
 			else
 				table.insert(ParamList, Params)
 			end
@@ -409,6 +432,12 @@ function ChatBarPanelView:OnValueChangedCurBarWidgetIndex(Index)
 	if self:IsRecording() then
 		self:StopRecord()
 	end
+
+	UIUtil.SetIsVisible(self.PanelKeyboardInit, Index == BarWidgetIndex.KeyboardInit)
+	UIUtil.SetIsVisible(self.PanelInput, Index == BarWidgetIndex.Input)
+	UIUtil.SetIsVisible(self.PanelRecordToText, Index == BarWidgetIndex.RecordToText)
+	UIUtil.SetIsVisible(self.PanelVoice, Index == BarWidgetIndex.Voice)
+	UIUtil.SetIsVisible(self.PanelRecording, Index == BarWidgetIndex.Recroding)
 	
 	local RecordVisible = Index == BarWidgetIndex.KeyboardInit or Index == BarWidgetIndex.Input
 	UIUtil.SetIsVisible(self.BtnRecord, RecordVisible, true)
@@ -423,10 +452,6 @@ end
 
 function ChatBarPanelView:OnValueChangedCurChannel( )
 	self:ResetCurBarWidgetIndex()
-
-	local MaxLen = ChatVM:GetCurInputMsgMaxLength()
-	self.InputBoxChat:SetMaxNum(MaxLen)
-
 	self:Clear()
 end
 
@@ -560,7 +585,7 @@ function ChatBarPanelView:OnEventHyperLinkSelectGoods( ItemVM )
 	self.InputBoxChat:SetCursorToEnd()
 end
 
-function ChatBarPanelView:OnEventHyperLinkAddLocation(MapID, Position)
+function ChatBarPanelView:OnEventHyperLinkAddLocation(MapID, Position, UIMapID)
 	if nil == MapID or nil == Position then
 		return
 	end
@@ -573,6 +598,7 @@ function ChatBarPanelView:OnEventHyperLinkAddLocation(MapID, Position)
 			MapID 	= MapID, 
 			X 		= Position.X or 0,
 			Y 		= Position.Y or 0,
+			UIMapID = UIMapID,
 		}
 	}
 
@@ -656,6 +682,16 @@ function ChatBarPanelView:OnEventHyperLinkSelectHistoryItem( HistoryItemVM )
 					UIViewMgr:HideView(UIViewID.ChatHyperlinkPanel, true)
 					return
 				end
+
+			elseif Type == PARAM_TYPE_DEFINE.PARAM_TYEP_DEFINE_FISH then -- 鱼类分享 
+				local Fish = SimpleHref.Fish
+				if Fish then
+					local Channel, ChannelID = ChatVM:GetSendMsgChannelAndChannelID()
+					ChatMgr:ShareFish(Channel, Fish.ID, Fish.Size, Fish.LocationType, Fish.Time, Fish.Ranking, ChannelID)
+
+					UIViewMgr:HideView(UIViewID.ChatHyperlinkPanel, true)
+					return
+				end
 			end
 		end
 	end
@@ -694,6 +730,15 @@ function ChatBarPanelView:AddTeamRecruitHref()
 	end
 
 	self:AddHref(ChatMacros.TeamRecruit, Href)
+end
+
+function ChatBarPanelView:AddFishShareHref()
+	local Href = _G.FishGuideVM:GenChatFishShareHref()
+	if Href == nil then
+		return
+	end
+
+	self:AddHref(ChatMacros.FishShare, Href)
 end
 
 -------------------------------------------------------------------------------------------------
@@ -977,6 +1022,13 @@ function ChatBarPanelView:OnGameEventUploadComplete(Params)
 		return
 	end
 
+	local Channel, ChannelID = Info.Channel, Info.ChannelID
+	local ChannelVM = ChatVM:FindChannelVM(Channel, ChannelID)
+	if not ChannelVM or not ChatVM:CheckSendTimeCD(ChannelVM) then -- 发送CD
+		self.WaitSendVoiceAndWordsInfo = nil
+		return
+	end
+
 	local VoiceHref = { }
 	VoiceHref.ID = Params.StringParam1 
 	VoiceHref.Length = voiceLength 
@@ -987,7 +1039,6 @@ function ChatBarPanelView:OnGameEventUploadComplete(Params)
 	ExtraParams.Direct 	= true
 	ExtraParams.Param 	= ChatMgr:EncodeChatParams({Voice = VoiceHref})
 
-	local Channel, ChannelID = Info.Channel, Info.ChannelID
 	ChatMgr:SendChatMsgPushMessage(Channel, ChannelID, Info.Content or "", 0, table.pack(ExtraParams))
 
 	self.WaitSendVoiceAndWordsInfo = nil

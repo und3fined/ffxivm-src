@@ -37,6 +37,11 @@ ProSkillDefine.SpectrumIDMap = {
 	PVP_2k = 32,
 	PVP_3k = 33,
 	PVP_4k = 34,
+	Manchinist_Heat = 35,
+	Manchinist_Electric = 36,
+	DarkKnight_Blood = 37,
+	DarkKnight_Art = 38,
+	DarkKnight_Darkness = 39
 }
 
 ProSkillDefine.SpectrumUIBP = {
@@ -50,6 +55,8 @@ ProSkillDefine.SpectrumUIBP = {
 	["Ninja"] = "Main/ProSkill/JobSkillNinja_UIBP",
 	["Warrior"] = "Main/ProSkill/JobSkillWarrior_UIBP",
 	["Summoner"] = "Main/ProSkill/JobSkillSummoner_UIBP",
+	["Manchinist"] = "Main/ProSkill/JobSkillMachinist_UIBP",
+	["DarkKnight"] = "Main/ProSkill/JobSkillDarkKnight_UIBP"
 }
 
 ProSkillDefine.UIViewIDPair = {
@@ -83,8 +90,19 @@ ProSkillDefine.UIViewIDPair = {
 	[ProSkillDefine.SpectrumIDMap.Summoner_Rabbit] = ProSkillDefine.SpectrumUIBP.Summoner,
 	[ProSkillDefine.SpectrumIDMap.Summoner] = ProSkillDefine.SpectrumUIBP.Summoner,
 	-- [ProSkillDefine.SpectrumIDMap.PVP] = ProSkillDefine.SpectrumUIBP.PALADIN,
+	[ProSkillDefine.SpectrumIDMap.Manchinist_Heat] = ProSkillDefine.SpectrumUIBP.Manchinist,
+	[ProSkillDefine.SpectrumIDMap.Manchinist_Electric] = ProSkillDefine.SpectrumUIBP.Manchinist,
+	[ProSkillDefine.SpectrumIDMap.DarkKnight_Blood] = ProSkillDefine.SpectrumUIBP.DarkKnight,
+	[ProSkillDefine.SpectrumIDMap.DarkKnight_Art] = ProSkillDefine.SpectrumUIBP.DarkKnight,
+	[ProSkillDefine.SpectrumIDMap.DarkKnight_Darkness] = ProSkillDefine.SpectrumUIBP.DarkKnight,
 }
 
 ProSkillDefine.UseSkillNotSummonTipsIDList = {106034, 106036}
+
+ProSkillDefine.SpectrumIDIgnoreList = {
+	ProSkillDefine.SpectrumIDMap.MONK_FIST,
+	ProSkillDefine.SpectrumIDMap.BLACKMAGE_SLOT,
+	ProSkillDefine.SpectrumIDMap.Summoner,
+}
 
 return ProSkillDefine

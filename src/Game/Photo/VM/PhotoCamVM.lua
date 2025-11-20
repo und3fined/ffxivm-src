@@ -11,6 +11,7 @@ local UITabSubCamera = PhotoDefine.UITabSub[PhotoDefine.UITabMain.Camera]
 local LSTR = _G.LSTR
 local PhotoVM
 
+
 function PhotoCamVM:Ctor()
     self.DOFDisOff = 0
     self.DOFRegion = 50
@@ -47,8 +48,8 @@ function PhotoCamVM:MakeCameraComp()
             ParamValue = 0,
             OnValueChanged = function(self)
                 local CurValue = PhotoDefine.CameraTurnplateUnitMax - self.Value
-                self.ParamValue = PhotoDefine.CameraUnit2ValueDOFMin + CurValue * 
-                                    PhotoDefine.CameraUnit2ValueDOFMax / PhotoDefine.CameraTurnplateUnitMax
+                self.ParamValue = PhotoDefine.CameraUnit2ValueDOFMin + CurValue *
+                    PhotoDefine.CameraUnit2ValueDOFMax / PhotoDefine.CameraTurnplateUnitMax
                 local DOF = (self.ParamValue / PhotoDefine.CameraUnit2ValueDOFMax) * PhotoDefine.CameraDOFMax
                 PhotoCameraUtil.SetDOFScale(DOF)
                 _G.PhotoMgr:CheckAndSwitchDOFTimer(DOF)
@@ -61,8 +62,8 @@ function PhotoCamVM:MakeCameraComp()
             OnValueChanged = function(self)
                 -- _G.FLOG_INFO('[Photo][PhotoCamVM][OnValueChanged-Rot] Value = ' .. tostring(self.Value))
                 local CurValue = PhotoDefine.CameraTurnplateUnitMax - self.Value
-                self.ParamValue = PhotoDefine.CameraUnit2ValueRotMin + CurValue * 
-                                    (PhotoDefine.CameraUnit2ValueRotMax - PhotoDefine.CameraUnit2ValueRotMin) / (PhotoDefine.CameraTurnplateUnitMax)
+                self.ParamValue = PhotoDefine.CameraUnit2ValueRotMin + CurValue *
+                    (PhotoDefine.CameraUnit2ValueRotMax - PhotoDefine.CameraUnit2ValueRotMin) / (PhotoDefine.CameraTurnplateUnitMax)
                 PhotoCameraUtil.SetRatateRoll(self.ParamValue)
             end,
         },
@@ -100,7 +101,6 @@ function PhotoCamVM:MakeCameraComp()
         return 0
     end
 
-    
 end
 
 function PhotoCamVM:OnInit()
@@ -230,7 +230,7 @@ function PhotoCamVM:SetOffXY(X, Y)
 end
 
 function PhotoCamVM:GetTLogData()
-    return 
+    return
     {
         FOV = self.CameraComp:GetParamValue(UITabSubCamera.FOV),
         DOF = self.CameraComp:GetParamValue(UITabSubCamera.DOF),
@@ -248,13 +248,17 @@ function PhotoCamVM:TemplateSave(InTemplate)
 
     local MajorRot = PhotoActorUtil.GetMajorRotator()
     local CamRot = PhotoCameraUtil.GetRatate()
-
     local RelaRat = {
         Yaw = CamRot.Yaw - MajorRot.Yaw - 180,
         Pitch = CamRot.Pitch - MajorRot.Pitch,
     }
-
-    PhotoTemplateUtil.SetCam(InTemplate, FOV, DOF, Rot, self.OffX, self.OffY, RelaRat)
+    -- local RelaRat = {
+    --     Yaw = CamRot.Yaw ,
+    --     Pitch = CamRot.Pitch,
+    -- }
+    local Cam = PhotoCameraUtil.GetCamCtr()
+    local CamDis = Cam:GetTargetArmLength()
+    PhotoTemplateUtil.SetCam(InTemplate, FOV, DOF, Rot, self.OffX, self.OffY, RelaRat, CamDis)
 end
 
 function PhotoCamVM:TemplateApply(InTemplate)
@@ -273,12 +277,18 @@ function PhotoCamVM:TemplateApply(InTemplate)
         --     Yaw = -20,
         --     Pitch = 0,
         -- }
+        if Info.CamDis then
+            local Cam = PhotoCameraUtil.GetCamCtr()
+            Cam:SetTargetArmLength(Info.CamDis)
+        end
 
         if RelaRot then
             local MajorRot = PhotoActorUtil.GetMajorRotator()
             local CamRot = PhotoCameraUtil.GetRatate()
             CamRot.Yaw = MajorRot.Yaw + RelaRot.Yaw + 180
             CamRot.Pitch = MajorRot.Pitch + RelaRot.Pitch
+            -- CamRot.Yaw = RelaRot.Yaw
+            -- CamRot.Pitch = RelaRot.Pitch
             PhotoCameraUtil.SetRatate(CamRot)
         end
     end

@@ -1,3 +1,11 @@
+--[[
+Author: pengxingran_ds pengxingran@dasheng.tv
+Date: 2025-04-28 14:29:42
+LastEditors: pengxingran_ds pengxingran@dasheng.tv
+LastEditTime: 2025-07-10 19:48:45
+FilePath: \Script\Game\Photo\View\Item\PhotoStateItemView.lua
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+--]]
 ---
 --- Author: Administrator
 --- DateTime: 2024-03-08 14:51
@@ -11,6 +19,7 @@ local UIUtil = require("Utils/UIUtil")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
+local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 
 ---@class PhotoStateItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -36,8 +45,10 @@ function PhotoStateItemView:OnRegisterSubView()
 end
 
 function PhotoStateItemView:OnInit()
-	self.Binders = 
+	self.Binders =
 	{
+		{ "ColorHex", 			UIBinderSetColorAndOpacityHex.New(self, self.ImgIcon) },
+		{ "ColorHex", 			UIBinderSetColorAndOpacityHex.New(self, self.TextName) },
 		{ "Name", 				UIBinderSetText.New(self, self.TextName) },
 		{ "Icon", 				UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon) },
 		{ "IsSelected", 		UIBinderSetIsVisible.New(self, self.ImgSelect) },
@@ -69,7 +80,6 @@ function PhotoStateItemView:OnRegisterBinder()
 	if nil == Params then
 		return
 	end
-	
 	local VM = Params.Data
 	if nil == VM then
 		return
@@ -78,18 +88,18 @@ function PhotoStateItemView:OnRegisterBinder()
 	self:RegisterBinders(self.ViewModel, self.Binders)
 end
 
-function PhotoStateItemView:OnSelectChanged(IsSelected)
-	local Params = self.Params
-	if nil == Params then
-		return
-	end
+-- function PhotoStateItemView:OnSelectChanged(IsSelected)
+-- 	local Params = self.Params
+-- 	if nil == Params then
+-- 		return
+-- 	end
 
-	local VM = Params.Data
-	if nil == VM then
-		return
-	end
+-- 	local VM = Params.Data
+-- 	if nil == VM then
+-- 		return
+-- 	end
 
-	VM.IsSelected = IsSelected
-end
+-- 	VM.IsSelected = IsSelected
+-- end
 
 return PhotoStateItemView

@@ -130,6 +130,7 @@ local MoveConfig = {
 	PlayerMinInputSpeed = 180;		--玩家输入的最小速度
 	PlayerCombatMinInputSpeed = 520;--战斗状态下玩家输入的最小速度
 	-- movepath
+	EnableResPathLog = 0; --是否开启路径点移动日志
 	MonsterStartPosOffset = 100.0;--怪物起始点和客户端当前位置允许的误差
 	EnableMonsterCumulativeError = true; --是否开启怪物累计误差
 	MonsterCheckIntervalTime = 200; --怪物位置检查间隔时间，单位毫秒
@@ -153,9 +154,7 @@ local MoveConfig = {
 	CombatLateralLookAtDist = 1000.0;		-- 处于战斗状态、侧面朝向目标时解除Look At的距离
 	CombatBackLookAtDist = 500.0;			-- 处于战斗状态、反面朝向目标时解除Look At的距离
 	bUseCombatLookAt = 1;					-- 是否开启战斗待机的Look At功能
-	LookAtSlowDownAngle = 60.0;				-- CVM 模式下Look At开启减速的角度
 	NormalLookAtInterpSpeed = 3.0;			-- 通常的Look At插值速度
-	SlowDownLookAtInterpSpeed = 2.0;		-- CVM 模式下减速后的Look At插值速度
 	NormalLookAtAngleRange = 90.0;			-- 通常的Look At左右角度范围
 	CombatLookAtAngleRange = 45.0;			-- 战斗状态中Look At左右角度范围
 	bInSkillLookAt = 0;                     -- 是否开启放技能过程中LookAt
@@ -262,6 +261,7 @@ local MoveConfig = {
 	AnimRunSpeed = 660.0; -- 跑步动作速度界限
 
 	SendMoveDashInterval = 1.0;
+	MoveDashMinSpeed = 10.0;
 
 	-- 摇杆盲区比例
 	JoystickBlindScale = 0.2;
@@ -273,11 +273,18 @@ local MoveConfig = {
 
 	SummonOffsetZ = 100; --召唤物高度偏差值
 
+	SummonPullbackCount = 60; --召唤物拉回等待时间
+
+	SummonDeathCheckTime = 10; --召唤物死亡检查时间
+
 	bServerRaycast = 1; -- 后台拉扯打射线
 
 	bLogCombatState = 1; --战斗状态日志
 
 	bSelfResIgnore = 1;  -- 客户端非控制状态保护，不响应stop包
+	
+	CheckInsideWallExpandRadius = 10.0;
+	CheckFlyOverlapShrinkHalfHeight = 2.0; -- 飞行检测卡墙时缩减胶囊体半高，防止前后台高度有微小误差
 }
 
 return MoveConfig

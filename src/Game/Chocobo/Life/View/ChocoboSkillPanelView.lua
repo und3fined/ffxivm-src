@@ -204,17 +204,19 @@ function ChocoboSkillPanelView:OnIsLockValueChanged(Value)
 end
 
 function ChocoboSkillPanelView:OnItemIDValueChanged(Value)
-    if UIUtil.IsVisible(self.PanelGetWay) then
-        local GetWayItems = ItemUtil.GetItemGetWayList(Value)
-        if GetWayItems ~= nil then
-            self.SkillGetWayAdapter:UpdateAll(GetWayItems)
-        end
+    if not self.ViewModel.IsLock then
+        return
+    end
+    
+    local GetWayItems = ItemUtil.GetItemGetWayList(Value)
+    if GetWayItems ~= nil then
+        self.SkillGetWayAdapter:UpdateAll(GetWayItems)
     end
 end
 
 function ChocoboSkillPanelView:OnSkillVMListEmpty(NewValue, OldValue)
     UIUtil.SetIsVisible(self.PanelRight, NewValue)
-    UIUtil.SetIsVisible(self.CommBackpackEmpty, not NewValue)
+    UIUtil.SetIsVisible(self.CommBackpackEmpty, not NewValue, false)
 end
 
 function ChocoboSkillPanelView:OnSkillItemSelectChange(Index, ItemData, ItemView, IsByClick)

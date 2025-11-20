@@ -102,7 +102,7 @@ function ReviveTipsBoxView:ShowReviveButton()
 end
 
 function ReviveTipsBoxView:OnHide()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
+
 end
 
 function ReviveTipsBoxView:UpdateReviveInfo()

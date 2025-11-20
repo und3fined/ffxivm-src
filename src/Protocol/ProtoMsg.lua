@@ -37,6 +37,7 @@ local ProtoMsg = {
 	[CS_CMD.CS_CMD_SCORE] = { req = "csproto.ScoreReq", res = "csproto.ScoreRsp" },
 	[CS_CMD.CS_CMD_BAG] = { req = "csproto.BagMsgReq", res = "csproto.BagMsgRsp" },
 	[CS_CMD.CS_CMD_QUEST] = { req = "csproto.QuestReq", res = "csproto.QuestRsp" },
+	[CS_CMD.CS_CMD_TOY] = { req = "csproto.role.toy.ToyReq", res = "csproto.role.toy.ToyRsp" },
 	[CS_CMD.CS_CMD_LOOT] = { req = "", res = "csproto.LootItemUpdateRsp" },
 	[CS_CMD.CS_CMD_LIFE_SKILL] = { req = "csproto.LifeSkillReq", res = "csproto.LifeSkillRsp" },
 	[CS_CMD.CS_CMD_EMOTION] = { req = "csproto.EmotionReq", res = "csproto.EmotionRsp" },
@@ -112,11 +113,12 @@ local ProtoMsg = {
 	[CS_CMD.CS_CMD_TOURING_BAND] = { req = "csproto.game.touringband.Req", res = "csproto.game.touringband.Rsp" },
 	[CS_CMD.CS_CMD_QUESTIONNAIRE] = { req = "csproto.game.questionnaire.Req", res = "csproto.game.questionnaire.Rsp" },
 	[CS_CMD.CS_CMD_ACTIVITY_SYSTEM] = { req = "csproto.game.activity.Req", res = "csproto.game.activity.Rsp" },
-	[CS_CMD.CS_CMD_MONSTORHUNT] = { req = "csproto.game.monstorhunt.CSMonstorHuntReq", res = "csproto.game.monstorhunt.CSMonstorHuntRsp" },
+	[CS_CMD.CS_CMD_MONSTERHUNT] = { req = "csproto.game.monsterhunt.CSMonsterHuntReq", res = "csproto.game.monsterhunt.CSMonsterHuntRsp" },
 	[CS_CMD.CS_CMD_TRIBE] = { req = "csproto.role.tribe.TribeReq", res = "csproto.role.tribe.TribeRsp" },
 	[CS_CMD.CS_CMD_ZeroSceneRank] = { req = "csproto.game.zeroscenerank.ZeroSceneRankReq", res = "csproto.game.zeroscenerank.ZeroSceneRankRsp" },
 	[CS_CMD.CS_CMD_DIRECT_UPGRADE] = { req = "csproto.role.directupgrade.Req", res = "csproto.role.directupgrade.Rsp" },
 	[CS_CMD.CS_CMD_LIGHT_JOURNEY] = { req = "csproto.role.lightjourney.LightJourneyReq", res = "csproto.role.lightjourney.LightJourneyRsp" },
+	[CS_CMD.CS_CMD_TIANSHU] = { req = "csproto.game.tianshu.TianshuReq", res = "csproto.game.tianshu.TianshuRsp" },
 	[CS_CMD.CS_CMD_WINDPULSE] = { req = "csproto.WindPulseReq", res = "csproto.WindPulseRsp" },
 	[CS_CMD.CS_CMD_ALONE_TREE] = { req = "csproto.AloneTreeReq", res = "csproto.AloneTreeRsp" },
 	[CS_CMD.CS_CMD_FOG] = { req = "csproto.ExploreFogReq", res = "csproto.ExploreFogRsp" },
@@ -154,6 +156,11 @@ local ProtoMsg = {
 	[CS_CMD.CS_CMD_BLINDBOX] = { req = "csproto.game.blindbox.BlindBoxReq", res = "csproto.game.blindbox.BlindBoxRsp" },
 	[CS_CMD.CS_CMD_AUTOFINDPATH] = { req = "navmesh.AutoFindPathReq", res = "navmesh.AutoFindPathRsp" },
 	[CS_CMD.CS_CMD_FOOT_MARK] = { req = "csproto.CsFootMarkMsgReq", res = "csproto.CsFootMarkMsgRsp" },
+	[CS_CMD.CS_CMD_HOUSE] = { req = "csproto.HouseReq", res = "csproto.HouseRsp" },
+	[CS_CMD.CS_CMD_FURNITURE_INTERACTION] = { req = "csproto.FurnitureInteractionReq", res = "csproto.FurnitureInteractionRsp" },
+	[CS_CMD.CS_CMD_HOUSE_ROOMMATE] = { req = "csproto.HouseRoommateReq", res = "csproto.HouseRoommateRsp" },
+	[CS_CMD.CS_CMD_LAND] = { req = "csproto.LandReq", res = "csproto.LandRsp" },
+	[CS_CMD.CS_CMD_SHARE] = { req = "csproto.role.share.ShareReq", res = "csproto.role.share.ShareRsp" },
 }
 
 return ProtoMsg

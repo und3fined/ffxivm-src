@@ -209,7 +209,7 @@ end
 function ChocoboOverviewPanelView:OnShow()
     self:InitConstInfo()
     UIUtil.SetIsVisible(self.ScreenBtn, false, false)
-    self.BtnNone:SetIsNormalState(true)
+    --self.BtnNone:SetIsNormalState(true)
     self.BtnMore:SetIsNormalState(true)
 
     local TabList = {}
@@ -372,6 +372,7 @@ function ChocoboOverviewPanelView:OnSelectEntryIDValueChanged(NewValue, OldValue
             ViewModel:ResetSkillVMList()
             ViewModel:ResetArmorVMList()
             self:UpdateColorTips()
+            self:UpdateCanFeeBtn()
         end
     end
 end
@@ -576,7 +577,7 @@ function ChocoboOverviewPanelView:OnActiveSkillVMAdapterChange(Index, ItemData, 
     if ItemData.SkillID == 0 then
         UIViewMgr:ShowView(UIViewID.ChocoboSkillSideWinView, { ChocoboID = ChocoboMainVM.CurSelectEntryID })
     else
-        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView)
+        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView, (self.ViewModel or {}).SkillLevel)
         if self.SkillTipsHandleID then
             UIUtil.SetIsVisible(self.ScreenBtn, true, true)
         end
@@ -588,7 +589,7 @@ function ChocoboOverviewPanelView:OnPassiveSkillVMAdapterChange(Index, ItemData,
     if ItemData.SkillID == 0 then
         UIViewMgr:ShowView(UIViewID.ChocoboSkillSideWinView, { ChocoboID = ChocoboMainVM.CurSelectEntryID })
     else
-        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView)
+        self.SkillTipsHandleID = ChocoboRaceUtil.ShowSkillTips(ItemData.SkillID, ItemView, (self.ViewModel or {}).SkillLevel)
         if self.SkillTipsHandleID then
             UIUtil.SetIsVisible(self.ScreenBtn, true, true)
         end
@@ -724,15 +725,16 @@ function ChocoboOverviewPanelView:OnValueChangedIsRacer(NewValue, OldValue)
         --self.BtnDefault:SetIsEnabled(false, false)
         --self.BtnRealease:SetIsEnabled(false, false)
         self.BtnDefault:SetIsDisabledState(true, false)
-        self.BtnRealease:SetIsDisabledState(true, false)
+        --self.BtnRealease:SetIsDisabledState(true, false)
     else
         -- LSTR string: 设为默认
         self.BtnDefault:SetButtonText(LSTR(420068))
         --self.BtnDefault:SetIsEnabled(true, true)
         --self.BtnRealease:SetIsEnabled(true, true)
         self.BtnDefault:SetIsNormalState(true)
-        self.BtnRealease:SetIsNormalState(true)
+        --self.BtnRealease:SetIsNormalState(true)
     end
+    self:UpdateCanFeeBtn()
 end
 
 function ChocoboOverviewPanelView:UpdateColorTips()
@@ -747,6 +749,33 @@ function ChocoboOverviewPanelView:UpdateColorTips()
         UIUtil.SetIsVisible(self.PanelColor, true)
         UIUtil.SetIsVisible(self.PanelStage, false)
     end
+end
+
+function ChocoboOverviewPanelView:UpdateCanFeeBtn()
+    if self.ViewModel == nil then
+        return
+    end
+
+    if self.ViewModel.IsRacer then
+        self.BtnRealease:SetIsDisabledState(true, false)
+        self.BtnNone:SetIsDisabledState(true, false)
+        return
+    else
+        if ChocoboMainVM.IsMating then
+            local ChildID = ChocoboMainVM:GetCurChildID()
+            local ChocoboData = ChocoboMgr:GetChocoboInfoByID(ChildID)
+            if ChocoboData and ChocoboData.Mating then
+                if self.ViewModel.ChocoboID == ChocoboData.Mating.Father or 
+                        self.ViewModel.ChocoboID == ChocoboData.Mating.Mother then
+                    self.BtnRealease:SetIsDisabledState(true, false)
+                    self.BtnNone:SetIsDisabledState(true, false)
+                    return
+                end
+            end
+        end
+    end
+    self.BtnNone:SetIsNormalState(true)
+    self.BtnRealease:SetIsNormalState(true)
 end
 
 return ChocoboOverviewPanelView

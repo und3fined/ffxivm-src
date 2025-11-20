@@ -23,6 +23,9 @@ function OpsActivityLeftandRightPanelVM:Ctor()
     self.bShowCommBtnGoto = false
     self.bShowTableViewSlot = false
     self.bShowImgline = false
+    self.bShowPanelReward = false
+    self.bShowCommBtnGoto2 = false
+    self.bShowVideo = false
     self.AwardVMList = UIBindableList.New(OpsActivityRewardItemVM)
 end
 
@@ -42,27 +45,25 @@ function OpsActivityLeftandRightPanelVM:Update(Params)
         else
             self.bShowSubTitle = false
         end
-
-        local NodeCfg = nil
-        local NodeList = Params:GetNodesByNodeType(ActivityNodeType.ActivityNodeTypeClientShow)
-        if NodeList and #NodeList > 0 then
-            local NodeID  = NodeList[1].Head.NodeID
-            NodeCfg = ActivityNodeCfg:FindCfgByKey(NodeID)
+        local ClientShowNodeCfg = nil
+        local LoginDayNodeCfg = nil
+        self.LoginDayNodeRewards = nil
+        self.LoginDayNodeID = nil
+        self.IsLoginDay = false
+        local LoginDayNodeList = Params:GetNodesByNodeType(ActivityNodeType.ActivityNodeTypeAccumulativeLoginDay)
+        local ClientShowNodeList = Params:GetNodesByNodeType(ActivityNodeType.ActivityNodeTypeClientShow)
+        if ClientShowNodeList and #ClientShowNodeList > 0 then
+            local NodeID  = ClientShowNodeList[1].Head.NodeID
+            ClientShowNodeCfg = ActivityNodeCfg:FindCfgByKey(NodeID)
         end
 
-        --[[
-        local ActivityNodesCfg = ActivityNodeCfg:FindAllCfg("ActivityID = " .. ActivityData.ActivityID)
-        if ActivityNodesCfg then
-            for _, v in ipairs(ActivityNodesCfg) do
-                if v.NodeType == ProtoRes.Game.ActivityNodeType.ActivityNodeTypeAccumulativeLoginDay then
-                    NodeCfg = v
-                    break
-                end
-            end
-        end]]--
+        if LoginDayNodeList ~= nil and #LoginDayNodeList > 0 then
+            local NodeID  = LoginDayNodeList[1].Head.NodeID
+            LoginDayNodeCfg = ActivityNodeCfg:FindCfgByKey(NodeID)
+        end
 
-        if NodeCfg ~= nil then
-            local AwardItemList = NodeCfg.Rewards
+        if ClientShowNodeCfg ~= nil then
+            local AwardItemList = ClientShowNodeCfg.Rewards
             for i = #AwardItemList, 1, -1 do
                 if AwardItemList[i].ItemID == 0 then
                     table.remove(AwardItemList, i)
@@ -70,25 +71,31 @@ function OpsActivityLeftandRightPanelVM:Update(Params)
                     AwardItemList[i].ItemSlotType = ItemDefine.ItemSlotType.Item96Slot
                 end
             end
-            self.BtnContent = NodeCfg.JumpButton
-            self.JumpType = NodeCfg.JumpType
-            self.JumpParam = NodeCfg.JumpParam
+            self.BtnContent = ClientShowNodeCfg.JumpButton
+            self.JumpType = ClientShowNodeCfg.JumpType
+            self.JumpParam = ClientShowNodeCfg.JumpParam
             if self.BtnContent and self.BtnContent ~= "" then
                 self.bShowCommBtnGoto = true
             else
                self.bShowCommBtnGoto = false
             end
-
-            if #AwardItemList > 0 then
-                self.bShowTableViewSlot = true
-                self.AwardVMList:UpdateByValues(AwardItemList)
-            else
-                self.bShowTableViewSlot = false
+            self:SetPanelState(Params, AwardItemList, ClientShowNodeCfg)
+        elseif LoginDayNodeCfg ~= nil then
+            local AwardItemList = LoginDayNodeCfg.Rewards
+            for i = #AwardItemList, 1, -1 do
+                if AwardItemList[i].ItemID == 0 then
+                    table.remove(AwardItemList, i)
+                else
+                    AwardItemList[i].ItemSlotType = ItemDefine.ItemSlotType.Item96Slot
+                end
             end
-            if self.bShowTableViewSlot and self.bShowTextIntroduction then
-                self.bShowImgline = true
-            else
-                self.bShowImgline = false
+            self.LoginDayNodeRewards = AwardItemList
+            self.bShowCommBtnGoto = true
+            self.IsLoginDay = true
+            self:SetPanelState(Params, AwardItemList, LoginDayNodeCfg)
+            if LoginDayNodeList ~= nil and #LoginDayNodeList > 0 then
+                self.RewardStatus  = LoginDayNodeList[1].Head.RewardStatus
+                self.LoginDayNodeID = LoginDayNodeList[1].Head.NodeID
             end
         else
             self.BtnContent = nil
@@ -96,8 +103,50 @@ function OpsActivityLeftandRightPanelVM:Update(Params)
             self.JumpParam = nil
             self.bShowTableViewSlot = false
             self.bShowCommBtnGoto = false
+            self.bShowCommBtnGoto2 = false
             self.bShowImgline = false
+            self.bShowPanelReward = false
+            self.bShowVideo = false
+            self.VideoPath = nil
         end
+    end
+end
+
+
+function OpsActivityLeftandRightPanelVM:SetPanelState(Params, AwardItemList, NodeCfg)
+    if #AwardItemList > 0 then
+        self.bShowTableViewSlot = true
+        self.AwardVMList:UpdateByValues(AwardItemList)
+    else
+        self.bShowTableViewSlot = false
+    end
+    if self.bShowTableViewSlot and self.bShowTextIntroduction then
+        self.bShowImgline = true
+    else
+        self.bShowImgline = false
+    end
+
+    if self.bShowTableViewSlot or self.bShowCommBtnGoto then
+        self.bShowPanelReward = true
+    else
+        self.bShowPanelReward = false
+    end
+
+    if Params.IsHorizontalCenterPanel then
+        if not self.bShowTableViewSlot and self.bShowCommBtnGoto then
+            self.bShowCommBtnGoto2 = true
+            self.bShowCommBtnGoto = false
+        else
+            self.bShowCommBtnGoto2 = false
+        end
+    end
+
+    if NodeCfg.StrParam and NodeCfg.StrParam ~= "" then
+        self.bShowVideo = true
+        self.VideoPath = NodeCfg.StrParam
+    else
+        self.bShowVideo = false
+        self.VideoPath = nil
     end
 end
 

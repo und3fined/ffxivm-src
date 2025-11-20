@@ -87,6 +87,10 @@ function SettingsTabBase:SetAutoSkipQuestSequence(Value, IsSave, IsLoginInit, Is
     end
 end
 
+local function IsInMultiPlayerPWorld()
+    return _G.PWorldMgr and _G.PWorldMgr:CurrIsInDungeon() and not _G.PWorldMgr:CurrIsInSingleDungeon()
+end
+
 function SettingsTabBase:GetCurServerDesc( )
     local ret = string.format(LSTR(110024), LoginNewVM:GetCurWorldName() or "")
     return ret
@@ -109,9 +113,6 @@ function SettingsTabBase:ReturnToLogin( )
     end
 
     local Tips = _G.LSTR(110002)
-    if _G.PWorldMgr and _G.PWorldMgr:CurrIsInDungeon() and not _G.PWorldMgr:CurrIsInSingleDungeon() then
-        Tips = LSTR(110035)
-    end
     if MajorUtil.IsMajorCombat() then
         local ExParams = { RightBtnCD = 20,
             -- ["LeftTime"] = 20,
@@ -122,7 +123,12 @@ function SettingsTabBase:ReturnToLogin( )
         
         MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, CancelCallBack, nil, nil, ExParams)
     else
-        MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, CancelCallBack, nil, nil, {CloseClickCB = CancelCallBack})
+        local Params = {CloseClickCB = CancelCallBack}
+        if IsInMultiPlayerPWorld() then
+            Params.RightBtnCD = 3
+            Tips = LSTR(110035)
+        end
+        MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, CancelCallBack, nil, nil, Params)
     end
 end
 
@@ -133,7 +139,7 @@ end
 
 function SettingsTabBase:ReturnToSelectRoleView( )
     if _G.PWorldVoteMgr and _G.PWorldVoteMgr:IsVoteEnterScenePending() then
-        MsgTipsUtil.ShowTipsByID(146073)
+        _G.MsgTipsUtil.ShowTipsByID(146073)
         return
     end
 
@@ -147,9 +153,6 @@ function SettingsTabBase:ReturnToSelectRoleView( )
     end
 
     local Tips = _G.LSTR(110003)
-    if _G.PWorldMgr and _G.PWorldMgr:CurrIsInDungeon() and not _G.PWorldMgr:CurrIsInSingleDungeon() then
-        Tips = LSTR(110035)
-    end
     if MajorUtil.IsMajorCombat() then
         local ExParams = { RightBtnCD = 20,
             -- ["LeftTime"] = 20,
@@ -160,7 +163,12 @@ function SettingsTabBase:ReturnToSelectRoleView( )
         
         MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, nil, nil, nil, ExParams)
     else
-        MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, nil, nil, nil, {CloseClickCB = CancelCallBack})
+        local Params = {CloseClickCB = CancelCallBack}
+        if IsInMultiPlayerPWorld() then
+            Params.RightBtnCD = 3
+            Tips = LSTR(110035)
+        end
+        MsgBoxUtil.ShowMsgBoxTwoOp(self, LSTR(110026), Tips, OkBtnCallback, nil, nil, nil, Params)
     end
 end
 
@@ -244,6 +252,13 @@ end
 --战斗开始倒计时
 function SettingsTabBase:SetTeamCountDown(Value, IsSave)
     _G.SignsMgr:SetIsEnableCountDown(Value == 1)
+end
+
+-- 准备倒计时
+function SettingsTabBase:SetTeamReadyConfirm(Value)
+    local TeamHelperMgr = require("Game/Team/Abs/TeamHelperMgr")
+    TeamHelperMgr:SetEnableTeamReady(Value == 1)
+    _G.EventMgr:SendEvent(EventID.TeamBtnStateChanged)
 end
 
 --SetSwitchTargetType

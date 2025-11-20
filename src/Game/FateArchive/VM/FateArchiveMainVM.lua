@@ -79,8 +79,11 @@ function FateArchiveMainVM:SelectEvent(ID)
     if FateInfo ~= nil or self.bForceShowAll then
         -- 初始化右边的面板
         local EventInfo = self.EventInfoTable[ID]
-        local LevelStr = string.format(LSTR(10031), EventInfo.Level)
-        self.FateName = string.format("%s %s", LevelStr, EventInfo.Name)
+        if (EventInfo) then
+            local LevelStr = string.format(LSTR(10031), EventInfo.Level)
+            self.FateName = string.format("%s %s", LevelStr, EventInfo.Name)
+        end
+
         local FateTextCfg = FateTextCfgTable:FindCfgByKey(ID)
         self.FateModelParamCfg = FateModelParamCfgTable:FindCfgByKey(ID)
 
@@ -185,8 +188,10 @@ function FateArchiveMainVM:SelectEvent(ID)
             -- 没有数据的话，报错，显示空界面
         else
             local EventInfo = self.EventInfoTable[ID]
-            local LevelStr = string.format(LSTR(10031), EventInfo.Level)
-            self.FateName = string.format("%s %s", LevelStr, LSTR(190115))
+            if (EventInfo) then
+                local LevelStr = string.format(LSTR(10031), EventInfo.Level)
+                self.FateName = string.format("%s %s", LevelStr, LSTR(190115))
+            end
 
             self.FateDescribe = LSTR(190125) .. LSTR(190115)
             self.bShowFateSpecial = true
@@ -196,7 +201,7 @@ function FateArchiveMainVM:SelectEvent(ID)
             self.FateCondition = self:GetFateConditionText(FateGeneratorCfg)
 
             self.FateSpecial = LSTR(190124)..LSTR(190115)
-            
+
             local Achievement = {
                 {Progress = -1, Target = -1},
                 {Progress = -1, Target = -1},
@@ -251,7 +256,7 @@ function FateArchiveMainVM:GetFateConditionText(Cfg)
             WeatherName = WeatherCfg.Name
         end
     end
-    
+
     if Cfg.PreFate ~= 0 then
         local ExistFateInfo = _G.FateMgr:GetFateInfo(Cfg.PreFate)
         if (FateTextCfg ~= nil and ExistFateInfo ~= nil ) then

@@ -10,8 +10,11 @@ local ConditionMgr = require("Game/Interactive/ConditionMgr")
 local ProtoRes = require("Protocol/ProtoRes")
 local QuestDefine = require("Game/Quest/QuestDefine")
 local CustomDialogOptionCfg = require("TableCfg/CustomDialogOptionCfg")
+local HousingFurnitureCfg = require("TableCfg/HousingFurnitureCfg")
+local HousingYardobjectCfg = require("TableCfg/HousingYardobjectCfg")
 local CHAPTER_STATUS = QuestDefine.CHAPTER_STATUS
 local QUEST_TYPE = ProtoRes.QUEST_TYPE
+local HouseFurnitureInteractionPrivilege = ProtoRes.HouseFurnitureInteractionPrivilege
 
 local EntranceEObj = LuaClass(EntranceBase)
 
@@ -23,6 +26,7 @@ function EntranceEObj:OnInit()
 	local Cfg = EObjCfg:FindCfgByKey(self.ResID)
     self.Cfg = Cfg
     self.DisplayName = Cfg.Name
+    self.ConditionID = 0
     --self.TargetName = Cfg.Name
 
     if not self.Distance or self.Distance <= 0 and self.EntityID then
@@ -52,6 +56,30 @@ function EntranceEObj:OnInit()
             self.IconPath = FisrtCfg.IconPath
             self.DisplayName = FisrtCfg.DisplayName
         end
+    end
+
+    -- 家具/庭具
+    if self.Cfg.EObjType == ProtoRes.ClientEObjType.ClientEObjTypeHousingOrnament then
+        local FurnitureID = 0
+        local FurnitureInfo = _G.HousingMgr:GetFurnitureInfoByEObyEntityID(self.EntityID)
+        if nil ~= FurnitureInfo then
+            FurnitureID = FurnitureInfo.Key
+        end
+        local FurnitureCfg = HousingFurnitureCfg:FindCfgByKey(FurnitureID)
+        if nil == FurnitureCfg then
+            local YardObjectCfg = HousingYardobjectCfg:FindCfgByKey(FurnitureID)
+            if YardObjectCfg then
+                self.ConditionID = YardObjectCfg.InteractionPrivilege
+            end
+        else
+            self.ConditionID = FurnitureCfg.InteractionPrivilege
+        end
+    end
+
+    -- 小游戏赐福模式
+    local BlessOverWriteIcon = _G.GoldSaucerBlessingMgr:GetTheBlessInteractiveIcon(self.ResID) -- 小游戏每个设施对应EObjResID是唯一的，故只有找到相关赐福信息才替换
+    if BlessOverWriteIcon then
+        self.IconPath = BlessOverWriteIcon
     end
 
     self.InteractiveQuestEntranceItems = {}
@@ -88,13 +116,26 @@ function EntranceEObj:OnClick()
     end
 end
 
-function EntranceEObj:CheckInterative(EnableCheckLog)
+function EntranceEObj:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     if not self:CheckEyeLineBlock() then
         return false
     end
 
     --如果是部队物件, 判断一下是否已加入部队
-    if self.Cfg.EObjType == ProtoRes.ClientEObjType.ClientEObjTypeGroup and not _G.ArmyMgr:IsInArmy() then
+    if nil ~= self.Cfg and self.Cfg.EObjType == ProtoRes.ClientEObjType.ClientEObjTypeGroup and not _G.ArmyMgr:IsInArmy() then
+        return false
+    end
+
+    -- local IsCanInteractive = _G.HouseInfoMgr:GetPrivilegeToInteract()
+    -- _G.FLOG_INFO("EntranceEObj:CheckInterative, ResID:%d, EntityID:%d, IsCanInteractive:%s", self.ResID, self.EntityID, tostring(IsCanInteractive))
+    if nil ~= self.Cfg and self.Cfg.EObjType == ProtoRes.ClientEObjType.ClientEObjTypeHousingOrnament and
+        self.ConditionID == HouseFurnitureInteractionPrivilege.HouseFurnitureInteractionPrivilege_Private and
+        not _G.HouseInfoMgr:GetPrivilegeToInteract() then
+        return false
+    end
+
+    if _G.InteractiveMgr:IsMajorInCarryState() and not _G.InteractiveMgr:IsEnableCarryInteractive(0, self.ResID) then
+        -- 如果主角处于搬运状态，且当前EObj未配置在搬运交互限制表中，则不允许交互
         return false
     end
 

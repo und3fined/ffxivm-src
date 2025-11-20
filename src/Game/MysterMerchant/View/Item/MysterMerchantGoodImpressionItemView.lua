@@ -63,7 +63,11 @@ function MysterMerchantGoodImpressionItemView:OnDestroy()
 end
 
 function MysterMerchantGoodImpressionItemView:OnShow()
-
+	local FriendlinessLevel = MysterMerchantVM.PrevFriendlinessLevel
+	local IsMaxLevel = MysterMerchantVM:IsMaxLevel(FriendlinessLevel)
+	if IsMaxLevel then
+		self:PlayAnimation(self.AnimLevelMax)
+	end
 end
 
 function MysterMerchantGoodImpressionItemView:OnHide()

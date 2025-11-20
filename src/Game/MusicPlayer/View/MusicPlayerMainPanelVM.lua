@@ -82,7 +82,7 @@ function MusicPlayerMainPanelVM:Ctor()
 	self.EditMusicInfo = {}
 	self.OpenBtnText = LSTR(1190003)
 	self.BtnSaveState = false
-	self.PercentScale = nil
+	self.PercentScale = UE.FVector2D(0, 1)
 	self.CurListIsNil = false --当前列表是否为空
 	self.PlayEffState = false
 	self.CurIndexEmptyState = false  --当前播放列表是否为空状态
@@ -273,6 +273,7 @@ function MusicPlayerMainPanelVM:UpdatePlayState(Type, IsClick)
 	local MusicFile = MusicPlayerCfg:FindCfgByKey(MusicID).MusicFile
 	local Time = MusicPlayerCfg:FindCfgByKey(MusicID).Time
 	local MusicName = MusicPlayerCfg:FindCfgByKey(MusicID).MusicName
+	self.CurPlayMusicFile = MusicFile
 	if Type == 1 then
 		local State = not MusicPlayerMgr.PlayerPlayState
 		self.CurPlayState =  State
@@ -308,14 +309,14 @@ function MusicPlayerMainPanelVM:UpdatePlayState(Type, IsClick)
 			MusicPlayerMgr:RecoverBGM()
 		end
 		
-		self:SetShowTips(State, false)
+		self:SetShowTips(State, false, IsByClick)
 	elseif Type == 2 then
 		self:UpdateTimeInfo(Time)
 		self:UpdateMusicName(MusicName)
 
 		MusicPlayerMgr.CurPlayTime = MusicPlayerMgr:GetMusicTime(MusicID)
 		MusicPlayerMgr.CurPlayerPlayingMusicID = MusicID
-		if self.CurPlayState == false then
+		if self.CurPlayState == false and not self.IsAutoPlay then
 			self:SetShowTips(true, false)
 		elseif self.CurPlayState and IsByClick then
 			self:SetShowTips(true, false)
@@ -372,13 +373,15 @@ function MusicPlayerMainPanelVM:PlayMusic(PlayType, IsClick)
 		self:UpdatePlayState(PlayType, IsClick)
 		if self.CurPlayState then
 			MusicPlayerMgr:PlayPlayerMusic(MusicID)
+			self:SetMusicSlideByPrecent(self.CurPlayMusicFile, MusicPlayerMgr.CurPercent)
 		else
 			MusicPlayerMgr:StopCurPlayerMusic()
 		end
+
 	elseif PlayType == 2 then
-		self:UpdatePlayState(PlayType, IsClick)
 		MusicPlayerMgr:StopCurPlayerMusic()
 		MusicPlayerMgr:PlayPlayerMusic(MusicID)
+		self:UpdatePlayState(PlayType, IsClick)
 	end
 
 	if MusicPlayerMgr.IsStopTips then
@@ -388,7 +391,7 @@ function MusicPlayerMainPanelVM:PlayMusic(PlayType, IsClick)
 	end
 
 	if self.IsAutoPlay then
-		self:SetShowTips(true, self.IsAutoPlay)
+		self:SetShowTips(true, self.IsAutoPlay, IsClick)
 		self.IsAutoPlay = false
 	end
 end
@@ -440,14 +443,12 @@ function MusicPlayerMainPanelVM:PlayMusicByPlayMode(IsLast, IsAuto)
 			end
 		end
 	elseif Mode == 3 then
-		local RandomMax = MusicInfoLen or 1
-		local Index = math.random(1, RandomMax)
-		if Index == MusicPlayerMgr.CurPlayIndex then 
-			local Add = math.random(1, RandomMax)
-			Index = Index + Add
-			if Index > MusicInfoLen then
-				Index = 1
-			end
+		local Index 
+		if MusicInfoLen and MusicInfoLen > 1 then
+			local RandomMax = MusicInfoLen
+			Index = math.random(1, RandomMax)
+		else
+			Index = 1
 		end
 		MusicPlayerMgr.CurPlayIndex = Index
 	end
@@ -478,7 +479,7 @@ function MusicPlayerMainPanelVM:SetTitle()
 end
 
 function MusicPlayerMainPanelVM:InitPlayModeInfo(PlayMode)
-	local MusicList = MusicPlayerMgr.AllPlayListInfo[MusicPlayerMgr.CurPlayListIndex].MusicID
+	local MusicList = MusicPlayerMgr.AllPlayListInfo and MusicPlayerMgr.AllPlayListInfo[MusicPlayerMgr.CurPlayListIndex] and MusicPlayerMgr.AllPlayListInfo[MusicPlayerMgr.CurPlayListIndex].MusicID
 	local Icon
 	if MusicList == nil or #MusicList == 0 then
 		Icon = CirculateBtnStateOffIcon[PlayMode]
@@ -527,19 +528,14 @@ function MusicPlayerMainPanelVM:SetPercent(Value)
 end
 
 function MusicPlayerMainPanelVM:SetTimeTextAndBar(RemainingTime, Percent)
-	self.Percent = 1
 	self.TimeText = LocalizationUtil.GetCountdownTimeForShortTime(math.floor(RemainingTime), "mm:ss")
 
-	if RemainingTime <= 0 then
+	if self.PercentScale.X <= 0 then
 		self.PercentScale = UE.FVector2D(1, 1)
-		return
-	else
-		self.PercentScale = UE.FVector2D(Percent, 1)
 	end
 end
 
 function MusicPlayerMainPanelVM:SetPercentScale(Value)
-	self.Percent = 1
 	self.PercentScale = UE.FVector2D(Value, 1)
 end
 
@@ -644,20 +640,36 @@ function MusicPlayerMainPanelVM:SetBtnSaveState(State)
 end
 
 
-function MusicPlayerMainPanelVM:SetShowTips(State, IsAuToPlay)
+function MusicPlayerMainPanelVM:SetShowTips(State, IsAuToPlay, IsClick)
 	if not MusicPlayerMgr.IsInHotel or not MusicPlayerMgr.CurPlayerPlayingMusicID then
 		return
 	end
 
-	local MusicName = self.MusicName
+	local IsByClick = IsClick or false
+	local MusicName = MusicPlayerMgr.AllAtlasList[MusicPlayerMgr.CurPlayerPlayingMusicID] and MusicPlayerMgr.AllAtlasList[MusicPlayerMgr.CurPlayerPlayingMusicID].MusicName
 
 	if State and not IsAuToPlay then
 		_G.MsgTipsUtil.ShowTipsByID(156012, nil, MusicName)--开始播放
-	elseif not State then
+	elseif not State and IsByClick then
 		_G.MsgTipsUtil.ShowTipsByID(156013, nil, MusicName)--停止了XX的播放
 	elseif State and IsAuToPlay then
 		_G.MsgTipsUtil.ShowTipsByID(MsgTipsID.MusicPlay, nil, MusicName)--播放了
 	end
+end
+
+function MusicPlayerMainPanelVM:SetMusicSlideByPrecent(MusicFile, Precent)
+	local NewPrecent = Precent or 0
+	local MajorEntityID = MajorUtil.GetMajorEntityID()
+	local MusicID = MusicPlayerMgr.CurPlayerPlayingMusicID
+	AudioUtil.SeekOnEventPercent(MusicFile, self.PlaySoundID, NewPrecent, MajorEntityID)
+	--改变播放进度后需要更新MGR计时器的时间
+	local TotalTime = MusicPlayerMgr:GetMusicTime(MusicID)
+	local CurTime = NewPrecent * TotalTime
+	local StartTime = _G.TimeUtil:GetServerTime()
+	--改变进度后 开始播放时间需要更新
+	MusicPlayerMgr.PlayerStartTime = StartTime - CurTime
+	self:SetTimeTextAndBar(CurTime, TotalTime)
+	MusicPlayerMgr.CurPlayTime = CurTime
 end
 
 function MusicPlayerMainPanelVM:Clear()

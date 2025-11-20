@@ -42,10 +42,15 @@ function MarketOnSaleWinVM:UpdateVM(Value)
 
     local ItemResID = nil
     local Num = 0
+    local Maker  = nil
+
     if Value.Stall ~= nil then
         ItemResID = Value.Stall.ResID
         Num = Value.Stall.TotalNum - Value.Stall.SoldNum
         self.TextQuantityColor = "828282"
+        if Value.Stall.Attr and Value.Stall.Attr.Maker then
+            Maker = Value.Stall.Attr.Maker
+        end
     elseif Value.Item ~= nil then
         ItemResID = Value.Item.ResID
         Num = Value.Item.Num
@@ -53,6 +58,10 @@ function MarketOnSaleWinVM:UpdateVM(Value)
             self.TextQuantityColor = "d5d5d5"
         else
             self.TextQuantityColor = "828282"
+        end
+
+        if Value.Item.Maker  then
+            Maker = Value.Item.Maker
         end
     end
 
@@ -70,6 +79,7 @@ function MarketOnSaleWinVM:UpdateVM(Value)
 	self.ItemDescriptionText = _G.MarketMgr:GetMarketItemDesc(Cfg)
     if self.SellItemMV then
         self.SellItemMV:UpdateVM(ItemResID, string.format(_G.LSTR(1010016), Num))
+        self.SellItemMV:SetItemMaker(Maker)
     end
 
     local GoodCfg = TradeMarketGoodsCfg:FindCfgByKey(ItemResID)

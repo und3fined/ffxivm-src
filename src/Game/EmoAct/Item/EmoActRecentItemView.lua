@@ -47,10 +47,6 @@ function EmoActRecentItemView:OnInit()
 	end
 end
 
-function EmoActRecentItemView:OnDestroy()
-
-end
-
 function EmoActRecentItemView:OnShow()
 	if self.TextSort and self.Params.Data and self.Params.Data.TextSort then
 		if self.Params.Data.TextSort == EmotionDefines.RecentFavorite.Recent then  			--显示最近使用
@@ -70,12 +66,7 @@ function EmoActRecentItemView:OnShow()
 end
 
 function EmoActRecentItemView:OnHide()
-end
-
-function EmoActRecentItemView:OnRegisterUIEvent()
-end
-
-function EmoActRecentItemView:OnRegisterGameEvent()
+	self.VM.RecentEmotionList:Clear()
 end
 
 function EmoActRecentItemView:OnRegisterBinder()

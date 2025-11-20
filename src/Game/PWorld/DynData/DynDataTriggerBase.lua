@@ -91,7 +91,13 @@ function DynDataTriggerBase:CreateTrigger(ShapeType)
 end
 
 function DynDataTriggerBase:IsExternalComponent(Actor, Component)
-    if Actor == nil or Component == nil then
+    if Actor == nil or (not _G.CommonUtil.IsObjectValid(Actor)) then
+        return false
+    end
+    if Component == nil then
+        return false
+    end
+    if Actor.K2_GetRootComponent == nil then
         return false
     end
     local RootComponent = Actor:K2_GetRootComponent()

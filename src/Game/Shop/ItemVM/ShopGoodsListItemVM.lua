@@ -97,7 +97,7 @@ function ShopGoodsListItemVM:UpdateGoodsState(List)
 		List.ItemInfo = Cfg
 	end
 	if Cfg == nil then
-		FLOG_ERROR("ShopGoodsListItemVM: Cfg = nil ID = %d ", List.ItemID)
+		FLOG_ERROR("ShopGoodsListItemVM: Cfg = nil")
 		return
 	end
 	
@@ -314,21 +314,22 @@ end
 --- 状态5 限购相关
 function ShopGoodsListItemVM:SetQuota(IsCanBuy, Info)
 	if Info.RestrictionType and Info.RestrictionType ~= 0 then
+		local CurrentLimit = CounterMgr:GetCounterLimit(Info.CounterInfo.CounterFirst.CounterID)
+		local Title = ShopDefine.LimitBuyType[Info.RestrictionType]
 		local CanBuyCount = Info.BoughtCount
 		if CanBuyCount > 0 and IsCanBuy then
 			self.QuotaVisible = true
-			local CurrentRestore = CounterMgr:GetCounterRestore(Info.CounterInfo.CounterFirst.CounterID)
-			local Title = ShopDefine.LimitBuyType[Info.RestrictionType]
-			self.QuotaNum = string.format("%s%d/%d", Title, CanBuyCount, CurrentRestore)
+			self.QuotaNum = string.format("%s%d/%d", Title, CanBuyCount, CurrentLimit)
 			self.MaskVisible = false
 		elseif CanBuyCount > 0 and not IsCanBuy then
-			self.QuotaNum = ""
+			self.QuotaVisible = true
+			self.QuotaNum = string.format("%s%d/%d", Title, CanBuyCount, CurrentLimit)
 			self.MaskVisible = true
 			self.TipsText = LSTR(1200056)
 			self.TextconditionText = ""
 		elseif CanBuyCount <= 0 and not IsCanBuy then
 			self.QuotaVisible = true
-			self.QuotaNum = ""
+			self.QuotaNum = string.format("%s%d/%d", Title, CanBuyCount, CurrentLimit)
 			self.MaskVisible = true
 			self.TipsText = LSTR(1200032)
 			self.TextconditionText = ""

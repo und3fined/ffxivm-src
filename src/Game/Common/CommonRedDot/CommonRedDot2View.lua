@@ -94,6 +94,20 @@ function CommonRedDot2View:OnShow()
 		self.ItemVM:UpdateNodeDataByName(self.RedDotName)
 		---将需要进行数据更新的红点的VM加入Mgr的VMMap
 		RedDotMgr:AddRedDotItemVM(self.ItemVM)
+		---列表边界红点处理
+		local ListKey = self.ItemVM:GetListKey()
+		if ListKey then
+			local Index = self.ItemVM:GetIndex()
+			if Index then
+				RedDotMgr:UpdateShowIndexByOnShow(ListKey, Index)
+			else
+				_G.FLOG_WARNING(string.format('CommonRedDot2View Index Is nil ListKey is %s', ListKey))
+			end
+			local IsVisible = self.ItemVM:GetIsVisible()
+			if IsVisible then
+				RedDotMgr:SetDirtyListKey(ListKey)
+			end
+		end
 	end
 end
 
@@ -167,6 +181,20 @@ function CommonRedDot2View:OnHide()
 	---从Mgr的VMMap中移除对应的ItemVM
 	if self.ItemVM then
 		RedDotMgr:RemoveRedDotItemVM(self.ItemVM)
+		---列表边界红点处理
+		local ListKey = self.ItemVM:GetListKey()
+		if ListKey then
+			local Index = self.ItemVM:GetIndex()
+			if Index then
+				RedDotMgr:UpdateShowIndexByOnHide(ListKey, Index)
+			else
+				_G.FLOG_WARNING(string.format('CommonRedDot2View Index Is nil ListKey is %s', ListKey))
+			end
+			local IsVisible = self.ItemVM:GetIsVisible()
+			if IsVisible then
+				RedDotMgr:SetDirtyListKey(ListKey)
+			end
+		end
 	end
 end
 
@@ -197,6 +225,16 @@ end
 function CommonRedDot2View:SetRedDotUIIsShow(IsShow)
 	if self.ItemVM then
 		self.ItemVM:SetIsVisible(IsShow)
+	end
+end
+
+---如果设置需要更新列表红点状态，IsUpdate设置为true
+function CommonRedDot2View:SetLisKey(ListKey, Index, IsUpdate)
+	if self.ItemVM then
+		self.ItemVM:SetListKey(ListKey, Index)
+		if ListKey and IsUpdate then
+			RedDotMgr:SetDirtyListKey(ListKey)
+		end
 	end
 end
 

@@ -102,22 +102,30 @@ function TeamRecruitItemView:OnInit()
 		{ "Message", 		UIBinderSetText.New(self, self.RichTextMsg) },
 		{ "MemberSimpleProfVMList", UIBinderUpdateBindableList.New(self, self.TableAdapterMemberProf) },
 		{ "ContentID",	UIBinderSetIsVisiblePred.NewByPred(TeamRecruitUtil.HasDifficultyConfig, self, self.SizeBoxState)},
-		{ "RoleID", UIBinderSetIsVisiblePred.NewByPred(MajorUtil.IsMajorByRoleID, self, self.ImgSelect)}
+		{ "RoleID", 		UIBinderValueChangedCallback.New(self, nil, self.OnRecruitRoleChanged) },
 	}
 
 	self.RoleBinders = {
 		{ "Name", 	UIBinderSetText.New(self, self.TextPlayerName) },
 		{ "CurWorldID", TeamRecruitUtil.NewCrossServerShowBinder(nil, self, self.IconCrossServer)},
 		{ "OnlineStatusIcon", UIBinderSetImageBrush.New(self, self.ImgOnlineStatus2)},
+		{ "HeadInfo", UIBinderValueChangedCallback.New(self, nil, self.OnHeadInfoChanged)},
 	}
 
+	self.SelBinder = UIBinderSetIsVisiblePred.NewByPred(function()
+		local RoleID = self:GetRecruitRoleID()
+		return _G.TeamRecruitMgr:IsRecruiting() and (MajorUtil.IsMajorByRoleID(RoleID) or _G.TeamMgr:IsTeamMemberByRoleID(RoleID))
+	end, self, self.ImgSelect)
 	self.RecruitBinders = {
 		{"IsRecruiting", UIBinderValueChangedCallback.New(self, nil, function()
 			self:UpdateJoinBtnInfo()
 		end)},
+		{"IsRecruiting", self.SelBinder},
 	}
 
-	UIUtil.SetIsVisible(self.ImgSelect, false)
+	self.TeamBinders = {
+		{"IsTeam", self.SelBinder},
+	}
 end
 
 function TeamRecruitItemView:OnRegisterUIEvent()
@@ -136,6 +144,9 @@ function TeamRecruitItemView:OnRegisterBinder()
 
 	local TeamRecruitVM = require("Game/TeamRecruit/VM/TeamRecruitVM")
 	self:RegisterBinders(TeamRecruitVM, self.RecruitBinders)
+
+	local TeamVM = require("Game/Team/VM/TeamVM")
+	self:RegisterBinders(TeamVM, self.TeamBinders)
 end
 
 function TeamRecruitItemView:OnRegisterGameEvent()
@@ -143,7 +154,6 @@ function TeamRecruitItemView:OnRegisterGameEvent()
 end
 
 function TeamRecruitItemView:OnShow()
-	self.PlayerHeadSlot:SetInfo(self:GetRecruitRoleID())
 	self:UpdateJoinBtnInfo()
 	self:UpdateRelationIcon()
 end
@@ -229,6 +239,14 @@ end
 
 function TeamRecruitItemView:GetRecruitRoleID()
 	return self.ViewModel and self.ViewModel.RoleID or nil
+end
+
+function TeamRecruitItemView:OnRecruitRoleChanged(RoleID)
+	self.PlayerHeadSlot:SetInfo(RoleID)
+end
+
+function TeamRecruitItemView:OnHeadInfoChanged()
+	self.PlayerHeadSlot:SetInfo(self:GetRecruitRoleID())
 end
 
 return TeamRecruitItemView

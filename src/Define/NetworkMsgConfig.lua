@@ -99,9 +99,6 @@ local MsgConfigs = {
 	},
 
 	[CS_CMD.CS_CMD_MOVE] = {
-		[ProtoCS.CS_SUBMSGID_MOVE.CS_SUB_CMD_MOVE_INFO_REQ] = {
-			SendMsg = { bResend = true },
-		},
 		[ProtoCS.CS_SUBMSGID_MOVE.CS_SUB_CMD_MOVE_RESET] = {
 			SendMsg = { bResend = true },
 		},
@@ -301,6 +298,9 @@ local MsgConfigs = {
 		[ProtoCS.Friend.Friends.CS_SUBMSGID_FRIENDS.CS_SUB_CMD_FRIENDS_PULL_SETTING] = {
 			SendMsg = { bResend = true },
 		},
+		[ProtoCS.Friend.Friends.CS_SUBMSGID_FRIENDS.CS_SUB_CMD_FRIENDS_SET_NICKNAME] = {
+			ErrorCode = { bErrorCode = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_WEATHER] = {
@@ -314,7 +314,9 @@ local MsgConfigs = {
 	},
 
 	[CS_CMD.CS_CMD_QUERY_EQUIP_GEM] = {
-
+		[0] = {
+			ReceiveMsg = { bWaitForRes = true },
+		}
 	},
 
 	[CS_CMD.CS_CMD_SUMMON_BEAST] = {
@@ -324,7 +326,7 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_PROF] = {
 		[ProtoCS.ProfSubMsg.ProfSubMsgSwitch] = {
 			ErrorCode = { bErrorCode = true },
-			ReceiveMsg = { bWaitForRes = true },
+			--ReceiveMsg = { bWaitForRes = true },
 		}
 	},
 
@@ -517,6 +519,9 @@ local MsgConfigs = {
 		},
 		[ProtoCS.GroupChat.LinkShells.CS_SUBMSGID_LINKSHELL.CS_SUB_CMD_LINKSHELL_SETMANAGE] = {
 			ErrorCode = { bErrorCode = true },
+		},
+		[ProtoCS.GroupChat.LinkShells.CS_SUBMSGID_LINKSHELL.CS_SUB_CMD_LINKSHELL_CREATE] = {
+			ReceiveMsg = { bWaitForRes = true },
 		}
 	},
 	[CS_CMD.CS_CMD_MOUNT] = {
@@ -600,15 +605,15 @@ local MsgConfigs = {
 			SendMsg = { bSendLimit = true, SendInterval = 300 },
 			ReceiveMsg = { bWaitForRes = true },
 		},
+		[ProtoCS.CS_PAY_CMD.CS_CMD_PAY_DISTRIBUTE_ORDER] = {
+			ReceiveMsg = { bWaitForRes = true },
+		},
 		[ProtoCS.CS_PAY_CMD.CS_CMD_PAY_QUERY_RECHARGE_AWARD] = {
 			SendMsg = { bResend = true },
 		},
 	},
 
 	[CS_CMD.CS_CMD_GUIDE] = {
-		[ProtoCS.GuideOptCmd.GuideOptCmd_Status] = {
-			SendMsg = { bResend = true },
-		},
 		[ProtoCS.GuideOptCmd.GuideOptCmd_Attestation] = {
 			ErrorCode = { bErrorCode = true },
 			ReceiveMsg = { bWaitForRes = true },
@@ -746,7 +751,16 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_PERFORM] = {
 		[ProtoCS.PerformCmd.EnsembleCmdAskConfirm] = {
 			ErrorCode = { bErrorCode = true },
-		}
+		},
+		[ProtoCS.PerformCmd.EnsembleCmdEnsemble] = {
+			ErrorCode = { bErrorCode = true },
+		},
+		[ProtoCS.PerformCmd.EnsembleCmdExit] = {
+			ErrorCode = { bErrorCode = true },
+		},
+		[ProtoCS.PerformCmd.EnsembleCmdConfirm] = {
+			ErrorCode = { bErrorCode = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_CHOCOBO] = {
@@ -1022,6 +1036,10 @@ local MsgConfigs = {
 		},
 		[ProtoCS.CS_FATE_CMD.CS_FATE_CMD_GET_STATS] = {
 			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
+		},
+		[ProtoCS.CS_FATE_CMD.CS_FATE_CMD_ENTER] = {
+			SendMsg = { bResend = true },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
 		}
 	},
 
@@ -1034,11 +1052,17 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_GOLD_SAUSER] = {
 		[ProtoCS.CS_GOLD_SAUSER_CMD.CS_GOLD_SAUSER_CMD_UPDATE] = {
 			SendMsg = { bResend = true },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
 		},
 		[ProtoCS.CS_GOLD_SAUSER_CMD.CS_GOLD_SAUSER_CMD_END] = {
 			SendMsg = { bResend = true },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
 		},
 		[ProtoCS.CS_GOLD_SAUSER_CMD.CS_GOLD_SAUSER_CMD_SIGNUP] = {
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
+		},
+		[ProtoCS.CS_GOLD_SAUSER_CMD.CS_GOLD_SAUSER_CMD_RESIGNUP] = {
+			SendMsg = { bResend = true },
 			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
 		},
 	},
@@ -1095,6 +1119,10 @@ local MsgConfigs = {
 		[ProtoCS.Game.MysteryMerchant.Cmd.BuyMerchantGoods] = {
 			ReceiveMsg = { bWaitForRes = true },
 		},
+		[ProtoCS.Game.MysteryMerchant.Cmd.TriggerMerchantTask] = {
+			SendMsg = { bResend = true },
+			ErrorCode = { bErrorCode = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_PvPColosseum] = {
@@ -1121,6 +1149,9 @@ local MsgConfigs = {
 		[ProtoCS.Game.TouringBand.Cmd.QueryCollection] = {
 			SendMsg = { bResend = true },
 		},
+		[ProtoCS.Game.TouringBand.Cmd.BandInteractFinish] = {
+			ReceiveMsg = { bWaitForRes = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_QUESTIONNAIRE] = {
@@ -1142,9 +1173,12 @@ local MsgConfigs = {
 		[ProtoCS.Game.Activity.Cmd.MultiReward] = {
 			ReceiveMsg = { bWaitForRes = true },
 		},
+		[ProtoCS.Game.Activity.Cmd.NodeOperate] = {
+			ReceiveMsg = { bWaitForRes = true },
+		},
 	},
 
-	[CS_CMD.CS_CMD_MONSTORHUNT] = {
+	[CS_CMD.CS_CMD_MONSTERHUNT] = {
 
 	},
 
@@ -1175,9 +1209,15 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_ALONE_TREE] = {
 		[ProtoCS.CS_ALONE_TREE_CMD.CS_ALONE_TREE_ENTER] = {
 			ErrorCode = { bErrorCode = true },
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
-		}
+			--SendMsg = { bSendLimit = true, SendInterval = 300 },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000, bReconnect = true},
+		},
+		[ProtoCS.CS_ALONE_TREE_CMD.CS_ALONE_TREE_SELECT_DIFFICULTY] = {
+			SendMsg = { bResend = true },
+		},
+		[ProtoCS.CS_ALONE_TREE_CMD.CS_ALONE_TREE_CUT] = {
+			SendMsg = { bResend = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_FOG] = {
@@ -1217,24 +1257,20 @@ local MsgConfigs = {
 		[ProtoCS.MusicOptCmd.MusicOptCmd_RedUpdate] = {
 			SendMsg = { bResend = true },
 		},
+		[ProtoCS.MusicOptCmd.MusicOptCmd_SavePlayList] = {
+			ReceiveMsg = { bWaitForRes = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_LEVE_QUEST] = {
-		[ProtoCS.LeveQuest.LeveQuestCmd.LeveQuestBatchSubmit] = {
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true },
-		},
 		[ProtoCS.LeveQuest.LeveQuestCmd.LeveQuestQuery] = {
 			SendMsg = { bResend = true },
 		},
-		[ProtoCS.LeveQuest.LeveQuestCmd.LeveQuestAcceptTaskList] = {
-			SendMsg = { bResend = true },
-		},
-		[ProtoCS.LeveQuest.LeveQuestCmd.LeveQuestBatchSubmit] = {
+		[ProtoCS.LeveQuest.LeveQuestCmd.LeveQuestSubmitTask] = {
+			SendMsg = { bSendLimit = true, SendInterval = 300 },
 			ReceiveMsg = { bWaitForRes = true },
 		},
 	},
-
 	[CS_CMD.CS_CMD_ENTOURAGE] = {
 
 	},
@@ -1242,8 +1278,11 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_BASKETBALL] = { -- 怪物投篮
 		[ProtoCS.CSMonsterBasketballCmd.CSMonsterBasketball_Enter] = {
 			ErrorCode = { bErrorCode = true },
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
+			--SendMsg = { bSendLimit = true, SendInterval = 300 },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000, bReconnect = true },
+		},
+		[ProtoCS.CSMonsterBasketballCmd.CSMonsterBasketball_Blessed] = {
+			ErrorCode = { bErrorCode = true },
 		}
 	},
 
@@ -1265,16 +1304,16 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_CRYSTAL_TOWER] = {    -- 强袭水晶塔
 		[ProtoCS.CrystalTowerCmd.CrystalTowerCmdEnter] = {
 			ErrorCode = { bErrorCode = true },
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
+			--SendMsg = { bSendLimit = true, SendInterval = 300 },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000, bReconnect = true },
 		}
 	},
 
 	[CS_CMD.CS_CMD_GILGAMESH] = { -- 重击加美什
 		[ProtoCS.CSGilgameshCmd.CSGilgameshCmdENTER] = {
 			ErrorCode = { bErrorCode = true },
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000 },
+			--SendMsg = { bSendLimit = true, SendInterval = 300 },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000, bReconnect = true },
 		}
 	},
 
@@ -1586,9 +1625,12 @@ local MsgConfigs = {
 	[CS_CMD.CS_CMD_CATCH_BALL] = {
 		[ProtoCS.CatchBallCmd.CatchBallStart] = {
 			ErrorCode = { bErrorCode = true },
-			SendMsg = { bSendLimit = true, SendInterval = 300 },
-			ReceiveMsg = { bWaitForRes = true },
-		}
+			--SendMsg = { bSendLimit = true, SendInterval = 300 },
+			ReceiveMsg = { bWaitForRes = true, WaitTime = 15000, bReconnect = true},
+		},
+		[ProtoCS.CatchBallCmd.CatchBallCatch] = {
+			SendMsg = { bResend = true },
+		},
 	},
 
 	[CS_CMD.CS_CMD_FOOT_PRINT] = {
@@ -1639,6 +1681,24 @@ local MsgConfigs = {
 		[ProtoCS.CS_FOOT_MARK_CMD.CS_FOOT_MARK_CMD_PULL] = {
 			SendMsg = { bResend = true },
 		},
+	},
+
+	[CS_CMD.CS_CMD_HOUSE] = {
+		[ProtoCS.CS_SUBMSGID_HOUSE.CS_SUBMSGID_HOUSE_PUT_FURNITURE] = {
+			ErrorCode = { bErrorCode = true },
+		},
+
+		[ProtoCS.CS_SUBMSGID_HOUSE.CS_SUBMSGID_HOUSE_MOVE_FURNITURE] = {
+			ErrorCode = { bErrorCode = true },
+		},
+
+		[ProtoCS.CS_SUBMSGID_HOUSE.CS_SUBMSGID_HOUSE_BACK_FURNITURE] = {
+			ErrorCode = { bErrorCode = true },
+		},
+	},
+
+	[CS_CMD.CS_CMD_FURNITURE_INTERACTION] = {
+
 	},
 }
 

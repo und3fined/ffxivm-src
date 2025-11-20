@@ -6,6 +6,9 @@ local ConditionMgr = require("Game/Interactive/ConditionMgr")
 local CutsceneConditionCfg = require("TableCfg/CutsceneConditionCfg")
 local StorySetting = require("Game/Story/StorySetting")
 local MajorUtil = require("Utils/MajorUtil")
+local MsgTipsUtil = require("Utils/MsgTipsUtil")
+
+local LSTR = _G.LSTR
 
 ---@class DynDataCutSceneSequence
 local DynDataCutSceneSequence = LuaClass(DynDataBase, true)
@@ -166,8 +169,18 @@ function DynDataCutSceneSequence:PlayCutSceneSequence()
     if self.AnimationCondition and self.AnimationCondition > 0 then
         local CutsceneConditionCfgItem = CutsceneConditionCfg:FindCfgByKey(self.AnimationCondition)
         if CutsceneConditionCfgItem then
-            if ConditionMgr:CheckConditionByID(CutsceneConditionCfgItem.ConditionID) then
-                self:AnimCondPlayCutScene(bInSingleDungeon, bSkipQuestSeq, CutsceneConditionCfgItem)
+            local SequenceList = {}
+            local IsMeetCondition = ConditionMgr:CheckConditionByID(CutsceneConditionCfgItem.ConditionID)
+            for _, Item in ipairs(CutsceneConditionCfgItem.CutSceneCond) do
+                local SequenceID = Item.SequenceID
+                if SequenceID and SequenceID ~= 0 then
+                    if IsMeetCondition or Item.IsMustPlay == 1 then
+                        table.insert(SequenceList, SequenceID)
+                    end
+                end
+            end
+            if next(SequenceList) then
+                self:AnimCondPlayCutScene(bInSingleDungeon, bSkipQuestSeq, SequenceList)
                 return
             end
         end
@@ -176,9 +189,9 @@ function DynDataCutSceneSequence:PlayCutSceneSequence()
     self:NormalPlayCutScene(bInSingleDungeon, bSkipQuestSeq)
 end
 
-function DynDataCutSceneSequence:AnimCondPlayCutScene(bInSingleDungeon, bSkipQuestSeq, CutsceneConditionCfgItem)
+function DynDataCutSceneSequence:AnimCondPlayCutScene(bInSingleDungeon, bSkipQuestSeq, SequenceList)
     local PWorldMgr = _G.PWorldMgr
-
+    local TotalCutSceneNum = #SequenceList
     local function OnSequenceStoped()
         if self.LcutType > 1 then
             _G.SeqDynParamsMgr:Reset()
@@ -191,11 +204,18 @@ function DynDataCutSceneSequence:AnimCondPlayCutScene(bInSingleDungeon, bSkipQue
     if bSkipQuestSeq then
         PWorldMgr:SendMovieEnd(self.ID, 1, 0)
         OnSequenceStoped()
+        -- 弹提示提醒玩家动画跳过
+        MsgTipsUtil.ShowTips(LSTR(597004)) --597004("任务剧情动画已经自动跳过，后续可前往旅馆旅行笔记处重温")
     else
         if bInSingleDungeon then
             _G.QuestMgr:SetInQuestSequence(true)
         end
-        _G.StoryMgr:PlayCutSceneSequenceByID(CutsceneConditionCfgItem.SequenceID, OnSequenceStoped)
+        local function OnFinishSingleCutScene(Index)
+            if Index >= TotalCutSceneNum then
+                OnSequenceStoped()
+            end
+        end
+        _G.TravelLogMgr:PlayCutSceneList(SequenceList, 1, OnFinishSingleCutScene)
     end
 end
 

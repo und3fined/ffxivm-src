@@ -19,11 +19,17 @@ local MonsterCfgTable = require("TableCfg/MonsterCfg")
 local ActorUtil = require("Utils/ActorUtil")
 local MapUtil = require("Game/Map/MapUtil")
 local MajorUtil = require("Utils/MajorUtil")
+local WardrobeUtil = require("Game/Wardrobe/WardrobeUtil")
+
 local FateAchievementCfgTable = require("TableCfg/FateAchievementCfg")
 local FateAchievementEventCfgTable = require("TableCfg/FateAchievementEventCfg")
 local BuffCfgTable = require("TableCfg/BuffCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local NpcCfgTable = require("TableCfg/NpcCfg")
+local EmotionCfg = require("TableCfg/EmotionCfg")
+local CompanionCfg = require ("TableCfg/CompanionCfg")
+local ItemCfg = require("TableCfg/ItemCfg")
+local EquipmentCfg = require("TableCfg/EquipmentCfg")
 --local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
 local PWorldMgr = _G.PWorldMgr
 local NpcDialogMgr = _G.NpcDialogMgr
@@ -333,6 +339,30 @@ function FieldTestSubPanelView:OnSelectChanged(Index, ItemData, ItemView, IsByCl
 					if self.ParentView then
 						self.ParentView.WeatherSelectedID = Index - 1
 					end
+				elseif ItemData.Type == DataTypeDefine.Band then
+					local EmotionFindCfg = EmotionCfg:FindCfgByKey(ItemData.EmotionID)
+					if EmotionFindCfg then
+						Text = Text .. string.format("动作ID: %d 名称: %s\n", ItemData.EmotionID, EmotionFindCfg.EmotionName)
+					end
+					local CompanionFindCfg = CompanionCfg:FindCfgByKey(ItemData.CompanionID)
+					if CompanionFindCfg then
+						Text = Text .. string.format("宠物ID: %d 名称: %s\n", ItemData.CompanionID, CompanionFindCfg.Name)
+					end
+					local AppearanceIDString = ""
+					local AppearanceNameString = ""
+					for _, AppearanceID in pairs(ItemData.AppearanceIDs) do
+						local Name = self:GetAppearanceName(AppearanceID)
+						if not string.isnilorempty(Name) then
+							AppearanceIDString = AppearanceIDString .. tostring(AppearanceID) .. " "
+							AppearanceNameString = AppearanceNameString .. Name .. " "
+						end
+					end
+					if not string.isnilorempty(AppearanceIDString) then
+						Text = Text .. string.format("时装ID:%s 名称:%s\n", AppearanceIDString, AppearanceNameString)
+					end
+				elseif ItemData.Type == DataTypeDefine.Merchant then
+					Text = Text..string.format("商人ID:%d\n", ItemData.MerchantData.MerchantID)
+					Text = Text..string.format("奇遇类型ID:%s\n", ItemData.MerchantData.InteractiveType)
 				elseif ItemData.Type ~= DataTypeDefine.Aether then
 					Text = Text..string.format("数量:%d\n\n", ItemData.Num)
 					if ItemData.Type == DataTypeDefine.Monster then
@@ -357,6 +387,20 @@ function FieldTestSubPanelView:OnSelectChanged(Index, ItemData, ItemView, IsByCl
 				self:RemoveFate()
 				--激活fate
 				_G.GMMgr:ReqGM1(string.format("entertain fate start %d", ItemData.ID))
+			elseif ItemData.Type == DataTypeDefine.Band then
+				local MapID = PWorldMgr:GetCurrMapResID()
+				local GM = string.format("entertain band gentouring %d %d", MapID, ItemData.ID)
+				_G.GMMgr:ReqGM(GM)
+			elseif ItemData.Type == DataTypeDefine.Merchant then
+				if Point then
+					_G.GMMgr:ReqGM(string.format("cell move pos %d %d %d", Point.X, Point.Y, Point.Z))
+				end
+				
+				if ItemData.MerchantData.MerchantType == ProtoRes.Game.MysteryMerchantType.MysteryMerchantTypeShared and
+					ItemData.MerchantData.IsTrigger then
+					local TriggerGM = string.format("entertain mystery jumprefresh %d %d", ItemData.MerchantData.MerchantID, ItemData.ID)
+					_G.GMMgr:ReqGM(TriggerGM)
+				end
 			else
                 -- 通过列表选中才把玩家传送过去
 				if IsByClick then
@@ -417,6 +461,35 @@ function FieldTestSubPanelView:RemoveFate()
 	if MinID > 0 then
 		_G.GMMgr:ReqGM1(string.format("entertain fate end %d", MinID))
 	end
+end
+
+function FieldTestSubPanelView:GetAppearanceName(ID)
+	local IsSpecial = WardrobeUtil.GetIsSpecial(ID)
+    local ECfg = EquipmentCfg:FindAllCfgByAppearanceID(ID)
+    if table.is_nil_empty(ECfg) then
+        return ""
+    end
+
+	local ItemIDList = {}
+	local AllNameString = ""
+	if IsSpecial then
+		table.insert(ItemIDList, WardrobeUtil.GetUnlockCostItemID(ID))
+	else
+		for _, Cfg in pairs(ECfg) do
+			if Cfg.EquipmentType == ProtoRes.EquipmentType.BODY_ARMOUR then
+				table.insert(ItemIDList, Cfg.ID)
+			end
+		end
+	end
+
+	for _, ItemID in pairs(ItemIDList) do
+		local Cfg = ItemCfg:FindCfgByKey(ItemID)
+		if Cfg then
+			AllNameString = AllNameString .. Cfg.ItemName .. " "
+		end
+	end
+
+    return AllNameString
 end
 
 function FieldTestSubPanelView:OnClickBackHandle()

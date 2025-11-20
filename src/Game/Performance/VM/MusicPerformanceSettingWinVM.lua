@@ -9,7 +9,8 @@ local MusicPerformanceSettingWinVM = LuaClass(UIViewModel)
 ---Ctor
 function MusicPerformanceSettingWinVM:Ctor()
 	self.KeyboardMode = 1
-	self.KeySize = 1
+	self.KeySize = 1 --按键大小(大、小)
+	self.MusicSheet = 1 --谱面形式(简谱、音名、唱名)
 	-- self.OtherMuted = false
 	self.Volume = 100
 	self.VolumeValue = "100"
@@ -27,6 +28,7 @@ end
 function MusicPerformanceSettingWinVM:SetSaved()
 	self.KeyboardMode = MusicPerformanceUtil.GetKeybordMode()
 	self.KeySize = MusicPerformanceUtil.GetKeySize()
+	self.MusicSheet = MusicPerformanceUtil.GetMusicSheet()
 	-- self.OtherMuted = MusicPerformanceUtil.IsOtherPerformanceMuted()
 	self.Volume = MusicPerformanceUtil.GetVolume()
 	self.Volume2 = MusicPerformanceUtil.GetVolumeOther()

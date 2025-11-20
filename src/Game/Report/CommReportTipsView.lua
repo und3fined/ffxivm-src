@@ -101,7 +101,7 @@ function CommReportTipsView:OnClickBtnReport()
 	if Params and Params.ClickCallback then
 		Params.ClickCallback()
 	end
-    self:Hide()
+	self:Hide()
 end
 
 return CommReportTipsView

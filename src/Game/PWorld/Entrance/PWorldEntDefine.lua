@@ -27,6 +27,7 @@ local Define = {
         DailyRandom = 3,
         FirstPass = 4,
         Weekly = 5,
+        PropDrop = 6,
     },
 
     SneceModeName = MakeLSTRDict({
@@ -45,6 +46,7 @@ local Define = {
         ChocoboMatchOverflow = MsgTipsID.PWorldMatchChocoboMatchOverflow,
         PoolTypePVPMutex = MsgTipsID.PWorldMatchPoolTypePVPMutex,
         PVPMatchOverflow = MsgTipsID.PWorldPVPMatchOverflow,
+        PVPMatchRankMutex = MsgTipsID.PWorldPVPMatchRankMutex,
     },
 
     JoinErrorCode = {

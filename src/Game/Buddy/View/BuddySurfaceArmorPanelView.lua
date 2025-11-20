@@ -39,6 +39,7 @@ local LSTR
 ---@class BuddySurfaceArmorPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field AmountSlider CommAmountSliderView
+---@field AmountSliderUseLemon CommAmountSliderView
 ---@field BtnArchive UFButton
 ---@field BtnBack CommBackBtnView
 ---@field BtnClose CommonCloseBtnView
@@ -52,14 +53,14 @@ local LSTR
 ---@field BtnWear CommBtnLView
 ---@field ButtonGoGet UFButton
 ---@field ChocoboAvatarItem_UIBP ChocoboAvatarItemView
+---@field CommBackpackEmpty CommBackpackEmptyView
 ---@field CommGesture_UIBP CommGestureView
 ---@field CommVerIconTabs CommVerIconTabsView
 ---@field CommonTitle CommonTitleView
 ---@field HorizontalAvatar UFHorizontalBox
 ---@field HorizontalColor2 UFHorizontalBox
+---@field HorizontalColorType UFHorizontalBox
 ---@field ImageRole UFImage
----@field ImgArrow01 UFImage
----@field ImgArrow02 UFImage
 ---@field ImgColor UFImage
 ---@field ImgColor01 UFImage
 ---@field ImgColor02 UFImage
@@ -78,12 +79,14 @@ local LSTR
 ---@field PanelArrow UFCanvasPanel
 ---@field PanelColorChange UFCanvasPanel
 ---@field PanelColorContent UFCanvasPanel
+---@field PanelEmpty UFCanvasPanel
 ---@field PanelGetway UFCanvasPanel
 ---@field PanelHasten UFCanvasPanel
 ---@field PanelItem UFCanvasPanel
 ---@field PanelItem02 UFCanvasPanel
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelRight UFCanvasPanel
----@field TableView01 UTableView
+---@field TableView01New UTableView
 ---@field TableView02 UTableView
 ---@field TableView03 UTableView
 ---@field TableViewColorList UTableView
@@ -94,7 +97,6 @@ local LSTR
 ---@field TextAdd01 UFTextBlock
 ---@field TextAdd02 UFTextBlock
 ---@field TextAdd03 UFTextBlock
----@field TextAmount UFTextBlock
 ---@field TextChocoboName UFTextBlock
 ---@field TextColorName UFTextBlock
 ---@field TextColorName02 UFTextBlock
@@ -112,6 +114,7 @@ local LSTR
 ---@field TextRecommend_1 UFTextBlock
 ---@field TextRest UFTextBlock
 ---@field TextTime UFTextBlock
+---@field TextUseLemon UFTextBlock
 ---@field ToggleBtnArmor UToggleButton
 ---@field ToggleBtnMount UToggleButton
 ---@field VerticalBtn UFVerticalBox
@@ -120,13 +123,19 @@ local LSTR
 ---@field AnimColorChangeArrowLoop UWidgetAnimation
 ---@field AnimColorChangeIn UWidgetAnimation
 ---@field AnimColorChangeOut UWidgetAnimation
+---@field AnimColorChangeTargetShow UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimTableViewColorListSelectionChanged UWidgetAnimation
+---@field AnimTableViewTabSelectionChanged UWidgetAnimation
+---@field AnimTableViewTabsSelectionChanged UWidgetAnimation
+---@field AnimUpdateName UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local BuddySurfaceArmorPanelView = LuaClass(UIView, true)
 
 function BuddySurfaceArmorPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.AmountSlider = nil
+	--self.AmountSliderUseLemon = nil
 	--self.BtnArchive = nil
 	--self.BtnBack = nil
 	--self.BtnClose = nil
@@ -140,14 +149,14 @@ function BuddySurfaceArmorPanelView:Ctor()
 	--self.BtnWear = nil
 	--self.ButtonGoGet = nil
 	--self.ChocoboAvatarItem_UIBP = nil
+	--self.CommBackpackEmpty = nil
 	--self.CommGesture_UIBP = nil
 	--self.CommVerIconTabs = nil
 	--self.CommonTitle = nil
 	--self.HorizontalAvatar = nil
 	--self.HorizontalColor2 = nil
+	--self.HorizontalColorType = nil
 	--self.ImageRole = nil
-	--self.ImgArrow01 = nil
-	--self.ImgArrow02 = nil
 	--self.ImgColor = nil
 	--self.ImgColor01 = nil
 	--self.ImgColor02 = nil
@@ -166,12 +175,14 @@ function BuddySurfaceArmorPanelView:Ctor()
 	--self.PanelArrow = nil
 	--self.PanelColorChange = nil
 	--self.PanelColorContent = nil
+	--self.PanelEmpty = nil
 	--self.PanelGetway = nil
 	--self.PanelHasten = nil
 	--self.PanelItem = nil
 	--self.PanelItem02 = nil
+	--self.PanelMask3 = nil
 	--self.PanelRight = nil
-	--self.TableView01 = nil
+	--self.TableView01New = nil
 	--self.TableView02 = nil
 	--self.TableView03 = nil
 	--self.TableViewColorList = nil
@@ -182,7 +193,6 @@ function BuddySurfaceArmorPanelView:Ctor()
 	--self.TextAdd01 = nil
 	--self.TextAdd02 = nil
 	--self.TextAdd03 = nil
-	--self.TextAmount = nil
 	--self.TextChocoboName = nil
 	--self.TextColorName = nil
 	--self.TextColorName02 = nil
@@ -200,6 +210,7 @@ function BuddySurfaceArmorPanelView:Ctor()
 	--self.TextRecommend_1 = nil
 	--self.TextRest = nil
 	--self.TextTime = nil
+	--self.TextUseLemon = nil
 	--self.ToggleBtnArmor = nil
 	--self.ToggleBtnMount = nil
 	--self.VerticalBtn = nil
@@ -208,13 +219,19 @@ function BuddySurfaceArmorPanelView:Ctor()
 	--self.AnimColorChangeArrowLoop = nil
 	--self.AnimColorChangeIn = nil
 	--self.AnimColorChangeOut = nil
+	--self.AnimColorChangeTargetShow = nil
 	--self.AnimIn = nil
+	--self.AnimTableViewColorListSelectionChanged = nil
+	--self.AnimTableViewTabSelectionChanged = nil
+	--self.AnimTableViewTabsSelectionChanged = nil
+	--self.AnimUpdateName = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
 function BuddySurfaceArmorPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.AmountSlider)
+	self:AddSubView(self.AmountSliderUseLemon)
 	self:AddSubView(self.BtnBack)
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.BtnHasten)
@@ -225,6 +242,7 @@ function BuddySurfaceArmorPanelView:OnRegisterSubView()
 	self:AddSubView(self.BtnUnLoad)
 	self:AddSubView(self.BtnWear)
 	self:AddSubView(self.ChocoboAvatarItem_UIBP)
+	self:AddSubView(self.CommBackpackEmpty)
 	self:AddSubView(self.CommGesture_UIBP)
 	self:AddSubView(self.CommVerIconTabs)
 	self:AddSubView(self.CommonTitle)
@@ -247,7 +265,7 @@ function BuddySurfaceArmorPanelView:OnInit()
 	self.SubViewMenuAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewTab)
 	self.SubViewMenuAdapter:SetOnClickedCallback(self.OnSubMenuItemClicked)
 
-	self.TableViewEquipmentAdapter = UIAdapterTableView.CreateAdapter(self, self.TableView01)
+	self.TableViewEquipmentAdapter = UIAdapterTableView.CreateAdapter(self, self.TableView01New)
 	self.TableViewEquipmentAdapter:SetOnClickedCallback(self.OnEquipmentItemClicked)
 
 	self.TableViewDyeItemAdapter = UIAdapterTableView.CreateAdapter(self, self.TableView02)
@@ -309,9 +327,6 @@ function BuddySurfaceArmorPanelView:OnInit()
 		{ "TargetColorInvalidVisible", UIBinderSetIsVisible.New(self, self.BtnInvalidTips) },
 
 		{ "NormalDyeItemList01Visible", UIBinderSetIsVisible.New(self, self.PanelColorContent) },
-		{ "NormalDyeUnselectedVisible", UIBinderSetIsVisible.New(self, self.AmountSlider) },
-		{ "NormalDyeUnselectedVisible", UIBinderSetIsVisible.New(self, self.TextAmount) },
-		{ "NormalDyeUnselectedVisible", UIBinderSetIsVisible.New(self, self.ImgLine01) },
 
 		{ "StainBtnVisible", UIBinderSetIsVisible.New(self, self.BtnStain) },
 		{ "StainBtnEnabled", UIBinderSetIsEnabled.New(self, self.BtnStain) },
@@ -337,7 +352,12 @@ function BuddySurfaceArmorPanelView:OnInit()
 		{ "DyeItemRText", UIBinderSetTextFormat.New(self, self.TextAdd01, "%d") },
 		{ "DyeItemGText", UIBinderSetTextFormat.New(self, self.TextAdd02, "%d") },
 		{ "DyeItemBText", UIBinderSetTextFormat.New(self, self.TextAdd03, "%d") },
-		{ "DyeItemAmountText", UIBinderSetTextFormat.New(self, self.TextAmount, "%d") },
+
+		{ "ColorDetailVisible", UIBinderSetIsVisible.New(self, self.HorizontalColorType) },
+		{ "UseLemonVisible", UIBinderSetIsVisible.New(self, self.TextUseLemon) },
+		{ "ColorDetailVisible", UIBinderSetIsVisible.New(self, self.AmountSlider) },
+		{ "ImgLine01Visible", UIBinderSetIsVisible.New(self, self.ImgLine01) },
+		{ "UseLemonVisible", UIBinderSetIsVisible.New(self, self.AmountSliderUseLemon) },
 
 		
 		{ "BtnStain02Visible", UIBinderSetIsVisible.New(self, self.BtnStain02) },
@@ -349,6 +369,9 @@ function BuddySurfaceArmorPanelView:OnInit()
 		
 		{ "IsShowChocoboName", UIBinderSetIsVisible.New(self, self.ChocoboAvatarItem_UIBP) },
 		{ "IsShowChocoboName", UIBinderSetIsVisible.New(self, self.TextChocoboName) },
+
+		{ "PanelEmptyVisible", UIBinderSetIsVisible.New(self, self.PanelEmpty) },
+
 		--{ "TitleText", UIBinderSetText.New(self, self.TextTitleName) },
 
 	}
@@ -405,7 +428,6 @@ function BuddySurfaceArmorPanelView:OnShow()
 
 	self.ViewModel.StainBtnEnabled = false
 
-	self:PlayAnimation(self.AnimColorChangeArrowLoop, 0, 0)
 	--_G.UE.FProfileTag.StaticEnd()
 	_G.LightMgr:EnableUIWeather(ChocoboDefine.BuddyLightID)
 end
@@ -479,7 +501,9 @@ function BuddySurfaceArmorPanelView:OnRegisterBinder()
 	self.TextRecommend:SetText(LSTR(1000018))
 	self.BtnHasten:SetText(LSTR(1000011))
 	self.TextRest:SetText(LSTR(1000060))
-	
+	self.CommBackpackEmpty:SetTipsContent(LSTR(1000068))
+	self.TextUseLemon:SetText(LSTR(1000072))
+
 	self:RegisterBinders(self.ViewModel, self.Binders)
 	
 	local ChocoboBinders = {
@@ -670,6 +694,14 @@ function BuddySurfaceArmorPanelView:OnSubMenuItemClicked(Index, ItemData, ItemVi
 	self.ViewModel:UpdateSubTabPage(Index)
 	self.TableViewEquipmentAdapter:ScrollToTop()
 	self:OnUpdateNormalDyeUI()
+	self.ViewModel.StainBtnEnabled = false
+
+	if self.ViewModel.TabPageIndex == BuddySurfaceVM.MenuType.Dye then
+		self:PlayAnimation(self.AnimTableViewColorListSelectionChanged)
+	else
+		self:PlayAnimation(self.AnimTableViewTabSelectionChanged)
+	end
+
 end
 
 function BuddySurfaceArmorPanelView:GetDefaultCameraOffset()
@@ -709,6 +741,8 @@ function BuddySurfaceArmorPanelView:OnEquipmentItemClicked(Index, ItemData, Item
 	end
 
 	self:UpdateBuddyModelByArmor(Head, Body, Feet)
+
+	self:PlayAnimation(self.AnimUpdateName)
 end
 
 function BuddySurfaceArmorPanelView:OnDyeItemClicked(Index, ItemData, ItemView)
@@ -728,9 +762,36 @@ function BuddySurfaceArmorPanelView:SetCurDyeItem(ResID)
 	end
 
 	local Num = BagMgr:GetItemNum(ResID)
-	self.AmountSlider:SetSliderValueMaxMin(Num, 0)
-	local Amount = self.ViewModel:GetNormalDyeItemNum(ResID)
-	self.AmountSlider:SetSliderValue(Amount)
+	if self.ViewModel.ColorDetailVisible == true then
+		self.AmountSlider:SetSliderValueMaxMin(Num, 0)
+		local Amount = self.ViewModel:GetNormalDyeItemNum(ResID)
+		self.AmountSlider:SetSliderValue(Amount)
+		UIUtil.SetIsVisible(self.AmountSliderUseLemon, false)
+		UIUtil.SetIsVisible(self.AmountSlider, true)
+	else
+		UIUtil.SetIsVisible(self.AmountSliderUseLemon, true)
+		UIUtil.SetIsVisible(self.AmountSlider, false)
+		if Num > 0 then
+			self.AmountSliderUseLemon:SetSliderValueMaxMin(1, 1)
+			self.AmountSliderUseLemon:SetSliderValue(1)
+			self:SelelctedUseLemon(1)
+		else
+			self.AmountSliderUseLemon:SetSliderValueMaxMin(0, 0)
+			self.AmountSliderUseLemon:SetSliderValue(0)
+			self:SelelctedUseLemon(0)
+		end
+	end
+
+end
+
+function BuddySurfaceArmorPanelView:SelelctedUseLemon(Value)
+	self.ViewModel:SetUseLemon(Value)
+	if self.CurColorID ~= self.ViewModel.DyeTargetColorID then
+		self.CurColorID = self.ViewModel.DyeTargetColorID
+		self:UpdateBuddyModelByColor(self.ViewModel.DyeTargetColorID)
+
+		self:PlayAnimation(self.AnimColorChangeTargetShow)
+	end
 end
 
 function BuddySurfaceArmorPanelView:OnDyeColorTypeClicked(Index, ItemData, ItemView)
@@ -747,6 +808,8 @@ function BuddySurfaceArmorPanelView:OnDyeColorClicked(Index, ItemData, ItemView)
 	self.ViewModel:SetDyeColorItem(ItemData.ColorID)
 
 	self:UpdateBuddyModelByColor(self.ViewModel.DyeTargetColorID)
+
+	self:PlayAnimation(self.AnimColorChangeTargetShow)
 end
 
 
@@ -755,6 +818,8 @@ function BuddySurfaceArmorPanelView:OnValueChangedAmountCountSlider(Value)
 	if self.CurColorID ~= self.ViewModel.DyeTargetColorID then
 		self.CurColorID = self.ViewModel.DyeTargetColorID
 		self:UpdateBuddyModelByColor(self.ViewModel.DyeTargetColorID)
+
+		self:PlayAnimation(self.AnimColorChangeTargetShow)
 	end
 end
 

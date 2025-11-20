@@ -76,9 +76,15 @@ function SkillMountBtnView:OnClick()
 		local MajorController = MajorUtil.GetMajorController()
 		if MajorController ~= nil then
 			MajorController:JumpEnd()
+			FLOG_INFO("SkillMountBtnView:OnClick MajorController:JumpEnd")
+		else
+			FLOG_WARNING("SkillMountBtnView:OnClick MajorController == nil")
 		end
     else
-		if MajorUtil.IsMajorInsideWall() then return end
+		if MajorUtil.IsMajorInsideWall() then
+			MsgTipsUtil.ShowTips(LSTR(1090076))
+			return
+		end
 
 		-- 死亡状态下不支持交互操作
 		if MajorUtil.IsMajorDead() == true then
@@ -93,6 +99,7 @@ function SkillMountBtnView:OnClick()
 				MsgTipsUtil.ShowTips(LSTR(1090052))
 			end
 		else
+			FLOG_INFO("SkillMountBtnView:OnClick MountMgr:SendMountCall")
 			_G.MountMgr:SendMountCall()
 		end
 

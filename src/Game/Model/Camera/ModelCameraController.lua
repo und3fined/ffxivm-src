@@ -85,8 +85,6 @@ function ModelCameraController:Switch(bEnable)
     if bEnable then
         local CameraMgr = UE.UCameraMgr.Get()
         if CameraMgr ~= nil then
-            -- 禁用关卡流送，避免主视角切换导致子关卡被卸载
-            UILevelMgr:SwitchLevelStreaming(false)
             if self.CameraActor then
                 CameraMgr:SwitchCamera(self.CameraActor, 0)
             end
@@ -95,8 +93,6 @@ function ModelCameraController:Switch(bEnable)
         local CameraMgr = UE.UCameraMgr.Get()
         if CameraMgr ~= nil then
             CameraMgr:ResumeCamera(0, true, self.CameraActor)
-			-- 恢复关卡流送
-			UILevelMgr:SwitchLevelStreaming(true)
         end
     end
 end

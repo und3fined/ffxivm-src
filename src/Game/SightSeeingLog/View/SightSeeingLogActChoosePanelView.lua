@@ -98,9 +98,9 @@ function SightSeeingLogActChoosePanelView.OnBtnCloseClicked(View)
 	if not View then
 		return
 	end
-
-	_G.InteractiveMgr:ShowMainPanel()
 	View:Hide()
+	_G.InteractiveMgr:SetShowMainPanelEnabled(true)
+	_G.InteractiveMgr:ShowMainPanel()
 end
 
 function SightSeeingLogActChoosePanelView:OnLeftEmotionSelected(_, ItemData, _, _)

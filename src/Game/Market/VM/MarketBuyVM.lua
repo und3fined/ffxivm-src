@@ -44,8 +44,8 @@ function MarketBuyVM:UpdateSubTab(SubTypeList)
         return
     end
 
-    self.DropDown1Index = 1
-    self.DropDown2Index = 1
+    self.DropDown1Index = nil
+    self.DropDown2Index = nil
     self.SubTabVMList:UpdateByValues(SubTypeList)
 
     MarketMainVM.ImgBgLineVisible = self.SubTabVMList:Length() > 0

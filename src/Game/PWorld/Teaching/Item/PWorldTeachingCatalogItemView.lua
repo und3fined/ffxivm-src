@@ -87,7 +87,7 @@ function PWorldTeachingCatalogItemView:OnRegisterBinder()
 		{ "ShowSelected", UIBinderSetVisibility.New(self, self.PanelTag) },
 		{ "TextTag", UIBinderSetText.New(self, self.TextTag) },
 	}
-	
+
 	self:RegisterBinders(self.ViewModel, Binders)
 end
 
@@ -112,7 +112,7 @@ function PWorldTeachingCatalogItemView:StartTeaching()
 		return
 	end
 
-	if TeachingMgr:IsEnableTeaching(true) then
+	if TeachingMgr:IsEnableTeaching(true, self.ViewModel.NeedAdvancedProf) then
 		local function Callback()
 			TeachingMgr:StartTeaching(self.ViewModel.InteractiveID)
 		end

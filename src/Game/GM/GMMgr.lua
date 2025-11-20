@@ -32,7 +32,6 @@ local EventID = _G.EventID
 local UIViewMgr = _G.UIViewMgr
 local FLOG_WARNING = _G.FLOG_WARNING
 local FLOG_ERROR = _G.FLOG_ERROR
-local LSTR = _G.LSTR
 local SettingsTabBase = require("Game/Settings/SettingsTabBase")
 
 ---@class GMMgr : MgrBase
@@ -71,29 +70,29 @@ function GMMgr:InitInfo()
 
     --一些自定义枚举
     self.GMEnum = {
-        [1] = LSTR("按钮"),
-        [2] = LSTR("进度条"),
-        [3] = LSTR("开关"),
-        [4] = LSTR("客户端"),
-        [5] = LSTR("通用"),
-        [6] = LSTR("首页"),
-        [7] = LSTR("全部"),
-        [8] = LSTR("角色技能"),
-        [9] = LSTR("创建"),
-        [10] = LSTR("测试"),
-        [11] = LSTR("天气"),
-        [12] = LSTR("玩法"),
+        [1] = "按钮",
+        [2] = "进度条",
+        [3] = "开关",
+        [4] = "客户端",
+        [5] = "通用",
+        [6] = "首页",
+        [7] = "全部",
+        [8] = "角色技能",
+        [9] = "创建",
+        [10] = "测试",
+        [11] = "天气",
+        [12] = "玩法",
         --[[ [13] = "模型交互", ]]
-        [14] = LSTR("自动化测试"),
-        [15] = LSTR("控制台"),
-        [16] = LSTR("面板"),
-        [17] = LSTR("关卡"),
-        [18] = LSTR("角色"),
-        [19] = LSTR("系统"),
-        [20] = LSTR("叙事"),
-        [21] = LSTR("任务"),
-        [22] = LSTR("特效"),
-        [23] = LSTR("寻路"),
+        [14] = "自动化测试",
+        [15] = "控制台",
+        [16] = "面板",
+        [17] = "关卡",
+        [18] = "角色",
+        [19] = "系统",
+        [20] = "叙事",
+        [21] = "任务",
+        [22] = "特效",
+        [23] = "寻路",
     }
 end
 
@@ -383,11 +382,12 @@ function GMMgr:DoClientInput(cmd)
     elseif "PlayDialogueSequence" == Name then
         local SequenceID = Param1 and Param1 or nil
         if (SequenceID ~= nil) then
+            local StoryMgr = _G.StoryMgr
             local function SequenceFinishedCallback(_)
+                StoryMgr:ResetSkipGroup()
                 print("GM: OnSequenceFinished")
             end
 
-            local StoryMgr = _G.StoryMgr
             StoryMgr.CameraResetSpeed = tonumber(splitList[4] or "5")
             if tonumber(SequenceID) ~= nil then
                 StoryMgr.bGMLoadSubLevel = true
@@ -425,12 +425,34 @@ function GMMgr:DoClientInput(cmd)
             if (TimeInFrameStr) then
                 OtherParams.StartFrameNumber = tonumber(TimeInFrameStr)
             end
+
+            function IsPathValid(SeqPathTemp)
+                -- 统计引号数量
+                local DoubleCount = select(2, string.gsub(SeqPathTemp, '"', ''))
+                local SingleCount = select(2, string.gsub(SeqPathTemp, "'", ''))
+
+                -- 检查双引号是否成对
+                if DoubleCount % 2 ~= 0 then
+                    return false, "双引号不成对"
+                end
+
+                -- 检查单引号是否成对
+                if SingleCount % 2 ~= 0 then
+                    return false, "单引号不成对"
+                end
+
+                return true
+            end
             
-            _G.StoryMgr:PlaySequenceByPath(SequencePath, SequenceFinishedCallback, nil, nil, nil, OtherParams)
-            
+            local IsValid, ErrMsg = IsPathValid(SequencePath)
+            if (IsValid) then
+                _G.StoryMgr:PlaySequenceByPath(SequencePath, SequenceFinishedCallback, nil, nil, nil, OtherParams)
+            else
+                _G.MsgTipsUtil.ShowTips("sequence路径非法: " .. ErrMsg)
+            end
+
             _G.UIViewMgr:HideView(_G.UIViewID.GMMain)
         end
-        
 
     elseif "HideAvatarWeapon" == Name then
         local ActorResID = Param1 and Param1 or nil
@@ -474,7 +496,6 @@ function GMMgr:DoClientInput(cmd)
     elseif "powersave" == Name then
         local EnterTime = tonumber(Param1 or 20)
         _G.PowerSavingMgr:SetEnable(EnterTime)
-
     elseif "sharedgroup" == Name then
         local InstanceID = Param1 and Param1 or nil
         local ModelState = Param2 and Param2 or nil
@@ -878,11 +899,6 @@ function GMMgr:DoClientInput(cmd)
         local bLoop = tonumber(splitList[4])
         local FirstDelay = tonumber(splitList[5])
         _G.UE.UActorManager:Get():TestClearTime(InRate, bLoop == 1, FirstDelay)
-    elseif "SwitchCVM" == Name then
-        local bSwitch = tonumber(Param1)
-        local Major = MajorUtil.GetMajor()
-        local CamCtrComp = Major:GetCameraControllComponent()
-        CamCtrComp.bCVMOpen = bSwitch
     elseif "skillblock" == Name then
         local IsOpen = tonumber(Param1)
         if IsOpen == 1 then
@@ -1409,17 +1425,17 @@ function GMMgr:DoClientInput(cmd)
 	elseif "ChangeMaxVisionCacheCount" == Name then
         _G.UE.UVisionMgr.Get():OverrideChannelMaxCacheCount(tonumber(Param1), tonumber(Param2))
 		-- _G.VisionMeshMgr:ChangeMaxCacheCount(tonumber(Param1), tonumber(Param2))
-    elseif LSTR("SetShadowBias") ==  Name then
+    elseif "SetShadowBias" ==  Name then
         _G.UE.UTestMgr:Get():GMSetShadowBias(Param1);
-    elseif LSTR("SetShadowSlopeBias") ==  Name then
+    elseif "SetShadowSlopeBias" ==  Name then
         _G.UE.UTestMgr:Get():GMSetShadowSlopeBias(Param1);
-    elseif LSTR("PreviewMeshToSocket") ==  Name then
+    elseif "PreviewMeshToSocket" ==  Name then
         _G.UE.UTestMgr:Get():GMPreviewMeshToSocket(Param1,Param2,Param3);
-    elseif LSTR("ActiveOrnamentByID") ==  Name then
+    elseif "ActiveOrnamentByID" ==  Name then
         _G.UE.UTestMgr:Get():GMActiveOrnamentByID(Param1,Param2);
-    elseif LSTR("SetMobileMobileExtraShadowBias") == Name then
+    elseif "SetMobileMobileExtraShadowBias" == Name then
         _G.UE.UTestMgr:Get():GMSetMobileMobileExtraShadowBias(Param1);
-    elseif LSTR("SetMobileMobileExtraShadowSlopeBias") == Name then
+    elseif "SetMobileMobileExtraShadowSlopeBias" == Name then
         _G.UE.UTestMgr:Get():GMSetMobileMobileExtraShadowSlopeBias(Param1);
     elseif "uploadlog" == Name then
         _G.LevelRecordMgr:UpLoadLog(tonumber(Param1))
@@ -1528,7 +1544,7 @@ function GMMgr:DoClientInput(cmd)
         end
     elseif "FishFastGM" == Name then
         -- 快速钓鱼GM指令
-        local FishAreaID = _G.FishMgr:GetFishAreaID()
+        local FishAreaID = _G.FishMgr:GetFishAreaID() or 0
         local BaitID = tonumber(Param1) or 0
         -- 没有参数则为默认的抛竿和提竿技能
         local DropSkillID = tonumber(Param2) or 30301
@@ -1562,6 +1578,9 @@ function GMMgr:DoClientInput(cmd)
     elseif "LogVfxInfo" == Name then
         local bStartLogVfxInfo = (Param1 ~= "0")
         _G.UE.UTestMgr:Get():GMLogVfxInfo(bStartLogVfxInfo)
+    elseif "SetHandleGameMode" == Name then
+        local bHandleGameMode = (Param1 ~= "0")
+        _G.SettingsHandleMgr:GMSwitchGameMode(bHandleGameMode)
     elseif "SidePopup" == Name then
         local Type = tonumber(Param2) or 0
         if Type == 0 then
@@ -1569,13 +1588,70 @@ function GMMgr:DoClientInput(cmd)
         else
             _G.SidePopUpMgr:Pause(Type,"Pause" == Param1)
         end
+    elseif "OpsVersionCheck" == Name then
+        _G.OpsActivityMgr.IgnoreCheckVersion = "Close" == Param1
     elseif "SysChatMsgBattleLimit" == Name then
         local SysChatMsgBattleLimit = tonumber(Param1) or 3
         _G.SkillLogicMgr:SetSysChatMsgBattleLimit(SysChatMsgBattleLimit)
+    elseif "GMSetFallingDownAccel" == Name then
+        local FallingDownAccel = tonumber(Param1)
+        local SelectedTarget = _G.SelectTargetMgr:GetCurrSelectedTarget()
+        if SelectedTarget == nil then
+            SelectedTarget = MajorUtil.GetMajor()
+        end
+        _G.UE.UTestMgr:Get():GMSetFallingDownAccel(SelectedTarget,FallingDownAccel)
     elseif "AddSysChatMsgBattle" == Name then
         local AttackNum = tonumber(Param1) or 0
         local BuffNum = tonumber(Param2) or 0
         _G.SkillLogicMgr:AddSysChatMsgBattleDebug(AttackNum, BuffNum)
+	elseif "StartDither" == Name then
+		MajorUtil.GetMajor():GetAvatarComponent():StartPartDither(0, tonumber(Param1), _G.UE.EDitherReason.Common)
+	elseif "EndDither" == Name then
+		MajorUtil.GetMajor():GetAvatarComponent():EndPartDither(0, _G.UE.EDitherReason.Common)
+    elseif "debugAllowRide" == Name then
+        local bValue = (Param1 ~= "0")
+        _G.MountMgr:SetAllowRide(bValue, _G.MountMgr.AllowRideReason.Debug)
+    elseif "ShowTBTimelineID" == Name then
+        local BandID = tonumber(Param1)
+        local Ret = _G.TouringBandMgr:GetCurMapTimelineID(BandID)
+        _G.GMMgr.GMHistoryRecord = _G.GMMgr.GMHistoryRecord .. "\n" .. _G.table_to_string(Ret)
+    elseif "ShowBandConditions" == Name then
+        local BandID = tonumber(Param1)
+        local Ret = _G.TouringBandMgr:ShowBandConditions(BandID)
+        _G.GMMgr.GMHistoryRecord = _G.GMMgr.GMHistoryRecord .. "\n" .. Ret
+	elseif "JumpToStoreGoods" == Name then
+		_G.StoreMgr:JumpToGoods(nil, tonumber(Param1))
+	elseif "TestModifyPitch" == Name then
+		_G.LuaCameraMgr:TestModifyMajorCameraPitch(tonumber(Param1) == 1)
+    elseif "PlaySound" == Name then
+        local SoundPath = Param1
+        local PlayTimes = tonumber(Param2)
+        local EntityID = MajorUtil.GetMajorEntityID()
+        if Param3 then
+            EntityID = tonumber(Param3)
+        end
+        local AudioUtil = require("Utils/AudioUtil")
+        for i = 1, PlayTimes do
+            AudioUtil.LoadAndPlaySoundEvent(EntityID, SoundPath)
+        end
+    elseif "OpenGreetingCardWinView" == Name then
+        _G.GreetingCardWinVM:OpenChoosingFriendsPanel()
+    elseif "CarryEnter" == splitList[2] then
+        -- client CarryEnter 24
+        local Major = MajorUtil.GetMajor()
+        local CarryID = tonumber(splitList[3])
+        Major:EnterCarryState(CarryID)
+    elseif "CarryStop" == splitList[2] then
+        -- client CarryStop
+        local Major = MajorUtil.GetMajor()
+        Major:ExitCarryState()
+    elseif "OpenCharacterEditorPanel" == splitList[2] then
+        _G.UIViewMgr:ShowView(_G.UIViewID.GMCharacterEditorPanel)
+        UIViewMgr:HideView(_G.UIViewID.GMMain)
+    elseif "showopenkey" == splitList[2] then
+        local CurOpenKey = _G.LoginMgr:GetOpenKey()
+        local Text = string.format("%s = %s", "cur openkey" , CurOpenKey)
+        _G.GMMgr.GMHistoryRecord = _G.GMMgr.GMHistoryRecord .. "\n" .. Text
     end
 end
 

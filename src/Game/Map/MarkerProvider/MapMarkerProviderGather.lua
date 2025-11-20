@@ -33,7 +33,7 @@ function MapMarkerProviderGather:OnGetMarkers(UIMapID, MapID)
 end
 
 function MapMarkerProviderGather:CreateGatherMarkers()
-	-- 客户端小地图视野内的采集点
+	-- 小地图范围内的采集点（由客户端视野管理）
 	local GatherPoints = _G.GatherMgr:GetAllGatherPoints()
 	if nil == GatherPoints then
 		return
@@ -49,7 +49,7 @@ function MapMarkerProviderGather:CreateGatherMarkers()
 		end
 	end
 
-	-- 最近采集点，可能超出客户端小地图视野，先判断该点是否已经创建过标记，如果没有创建过则需要创建显示
+	-- 最近采集点，可能超出小地图范围，先判断该点是否已经创建过标记，如果没有创建过则需要创建显示
 	local GatherPointInfo = _G.GatherMgr:GetNearestGatherPointInfo()
 	if GatherPointInfo and GatherPointInfo.ListID then
 		local HasCreateMarker = false
@@ -84,8 +84,9 @@ function MapMarkerProviderGather:OnCreateMarker(Params)
 	Marker:SetAreaMapPos(X, Y)
 
 	Marker:SetIsTracking(self:CheckIsTracking(ListID))
-	-- 限时采集点使用追踪一样表现
+
 	if Params.IsTimeLimit then
+		-- 限时采集点，和技能追踪的最近采集点一样表现
 		Marker:SetIsTracking(true)
 	end
 

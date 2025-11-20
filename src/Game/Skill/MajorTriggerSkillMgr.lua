@@ -216,7 +216,7 @@ function MajorTriggerSkillMgr:NetMsgCombatUpdatePerdueSkill(Index, PerdueSkill)
     TriggerData.ExpireTime = PerdueSkill.ExpireTime
     TriggerData.LastCount = PerdueSkill.LastCount or 0
     TriggerData.IsTrigger = true
-    TriggerData.IsShow = self:GetSkillStatusBySpectrum(SkillID)
+    TriggerData.IsShow = self:GetSkillStatusBySpectrum(SkillID) and self:IsShowByLastCount(TriggerData.SkillID, TriggerData.LastCount)
 
     if not self:TriggerSkillBuffCondition(Index, SkillID) then
         self:TriggerSkillServerTimeCondition(Index, SkillID)
@@ -389,7 +389,12 @@ function MajorTriggerSkillMgr:OnSkillMainPanelShow(Params)
     end
 end
 
-function MajorTriggerSkillMgr:ReqTriggerSkillList()
+function MajorTriggerSkillMgr:ReqTriggerSkillList(bResetTrigger)
+
+    if bResetTrigger then
+        self:HideAllTriggerSkill(true)
+    end
+
     local MsgID = ProtoCS.CS_CMD.CS_CMD_COMBAT
 	local SubMsgID = ProtoCS.CS_COMBAT_CMD.CS_COMBAT_CMD_SYNC_PERDUE_SKILL
 	local MsgBody = {}
@@ -407,6 +412,12 @@ function MajorTriggerSkillMgr:UpdateIsForbidPerdueSkill(IsForbidPerdueSkill, bUp
             _G.EventMgr:SendEvent(EventID.TriggerSkillUpdate, Index)
         end
     end
+end
+
+-- 根据UpdatePredueSkill中的LastCount判定触发技是否显示
+function MajorTriggerSkillMgr:IsShowByLastCount(SkillID, LastCount)
+    local SkillUseCount = SkillMainCfg:FindValue(SkillID, "SkillUseCount") or 0
+    return LastCount ~= 0 or (LastCount == 0 and SkillUseCount == 0)
 end
 
 return MajorTriggerSkillMgr

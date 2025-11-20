@@ -23,6 +23,7 @@ local LSTR = _G.LSTR
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Bg Comm2FrameLView
 ---@field BtnRemove CommBtnLView
+---@field CommWinSlotQuality CommWinSlotQualityView
 ---@field EmptyTips CommBackpackEmptyView
 ---@field HorizontalPrice UFHorizontalBox
 ---@field MarketPurchaseWindowItem_UIBP MarketPurchaseWindowItemView
@@ -34,7 +35,7 @@ local LSTR = _G.LSTR
 ---@field TextAmount1 UFTextBlock
 ---@field TextItemDescription URichTextBox
 ---@field TextItemName UFTextBlock
----@field TextItemType UFTextBlock
+---@field TextItemType URichTextBox
 ---@field TextMarketPrice UFTextBlock
 ---@field TextQuantity UFTextBlock
 ---@field TextUP UFTextBlock
@@ -46,6 +47,7 @@ function MarketRemoveWinView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Bg = nil
 	--self.BtnRemove = nil
+	--self.CommWinSlotQuality = nil
 	--self.EmptyTips = nil
 	--self.HorizontalPrice = nil
 	--self.MarketPurchaseWindowItem_UIBP = nil
@@ -69,6 +71,7 @@ function MarketRemoveWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.Bg)
 	self:AddSubView(self.BtnRemove)
+	self:AddSubView(self.CommWinSlotQuality)
 	self:AddSubView(self.EmptyTips)
 	self:AddSubView(self.MarketPurchaseWindowItem_UIBP)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
@@ -107,6 +110,8 @@ function MarketRemoveWinView:OnShow()
 	end
 	local ResID = Stall.ResID
 	MarketMgr:SendReferencePriceMessage(ResID)
+
+	self.CommWinSlotQuality:UpdateUIByItem(ResID)
 	
 end
 

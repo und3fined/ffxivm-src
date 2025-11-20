@@ -7,17 +7,18 @@
 
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
-local GoldSauserMainPanelBaseItemView = require("Game/GoldSauserMainPanel/View/Item/GoldSauserMainPanelBaseItemView")
-local GoldSauserMainPanelMainVM = require("Game/GoldSauserMainPanel/VM/GoldSauserMainPanelMainVM")
-local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local ProtoCS =  require("Protocol/ProtoCS")
-local MiniGameType = ProtoCS.MiniGameType
+local GoldSauserMainPanelBaseItemView = require("Game/GoldSauserMainPanel/View/Item/GoldSauserMainPanelBaseItemView")
+local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
+
 local UIViewMgr = require("UI/UIViewMgr")
 local UIViewID = _G.UIViewID
 local GoldSaucerMinigameCfg = require("TableCfg/GoldSaucerMinigameCfg")
 local GoldSauserMainPanelDefine = require("Game/GoldSauserMainPanel/GoldSauserMainPanelDefine")
+local GoldSauserMainPanelMgr = require("Game/GoldSauserMainPanel/GoldSauserMainPanelMgr")
+local GoldSauserMainPanelMainVM = require("Game/GoldSauserMainPanel/VM/GoldSauserMainPanelMainVM")
 local BodyGuardSquareAnimState = GoldSauserMainPanelDefine.BodyGuardSquareAnimState
-
+local MiniGameType = ProtoCS.MiniGameType
 local FLOG_ERROR = _G.FLOG_ERROR
 local LSTR = _G.LSTR
 
@@ -32,41 +33,9 @@ local BambooBatchCfg =
 ---@class GoldSauserMainPanelEventSquareItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnEventSquare UFButton
----@field FImageGrain1 UFImage
----@field FImageGrain101 UFImage
----@field FImageGrain102 UFImage
----@field FImageGrain103 UFImage
----@field FImageGrain2 UFImage
----@field FImageGrain31 UFImage
----@field FImageGrain32 UFImage
----@field FImageGrain4 UFImage
----@field FImageGrain51 UFImage
----@field FImageGrain52 UFImage
----@field FImageGrain61 UFImage
----@field FImageGrain62 UFImage
----@field FImageGrain63 UFImage
----@field FImageGrain71 UFImage
----@field FImageGrain72 UFImage
----@field FImageGrain73 UFImage
----@field FImageGrain81 UFImage
----@field FImageGrain82 UFImage
----@field FImageGrain83 UFImage
----@field FImageGrain91 UFImage
----@field FImageGrain92 UFImage
----@field FImageGrain93 UFImage
 ---@field ImgEventSquareNormal UFImage
 ---@field ImgEventSquareTobeViewed UFImage
 ---@field PanelBamboo UFCanvasPanel
----@field PanelBamboo_1 UFCanvasPanel
----@field PanelBamboo_10 UFCanvasPanel
----@field PanelBamboo_2 UFCanvasPanel
----@field PanelBamboo_3 UFCanvasPanel
----@field PanelBamboo_4 UFCanvasPanel
----@field PanelBamboo_5 UFCanvasPanel
----@field PanelBamboo_6 UFCanvasPanel
----@field PanelBamboo_7 UFCanvasPanel
----@field PanelBamboo_8 UFCanvasPanel
----@field PanelBamboo_9 UFCanvasPanel
 ---@field PanelBodyguard UFCanvasPanel
 ---@field PanelCactus UFCanvasPanel
 ---@field PanelEventSquareNormal UFCanvasPanel
@@ -75,6 +44,8 @@ local BambooBatchCfg =
 ---@field PanelTobeViewed UFCanvasPanel
 ---@field RedDot CommonRedDotView
 ---@field TextName UFTextBlock
+---@field AnimBodyguardIn UWidgetAnimation
+---@field AnimBodyguardOut UWidgetAnimation
 ---@field AnimClick UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
 ---@field AnimLoop UWidgetAnimation
@@ -84,41 +55,9 @@ local GoldSauserMainPanelEventSquareItemView = LuaClass(GoldSauserMainPanelBaseI
 function GoldSauserMainPanelEventSquareItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnEventSquare = nil
-	--self.FImageGrain1 = nil
-	--self.FImageGrain101 = nil
-	--self.FImageGrain102 = nil
-	--self.FImageGrain103 = nil
-	--self.FImageGrain2 = nil
-	--self.FImageGrain31 = nil
-	--self.FImageGrain32 = nil
-	--self.FImageGrain4 = nil
-	--self.FImageGrain51 = nil
-	--self.FImageGrain52 = nil
-	--self.FImageGrain61 = nil
-	--self.FImageGrain62 = nil
-	--self.FImageGrain63 = nil
-	--self.FImageGrain71 = nil
-	--self.FImageGrain72 = nil
-	--self.FImageGrain73 = nil
-	--self.FImageGrain81 = nil
-	--self.FImageGrain82 = nil
-	--self.FImageGrain83 = nil
-	--self.FImageGrain91 = nil
-	--self.FImageGrain92 = nil
-	--self.FImageGrain93 = nil
 	--self.ImgEventSquareNormal = nil
 	--self.ImgEventSquareTobeViewed = nil
 	--self.PanelBamboo = nil
-	--self.PanelBamboo_1 = nil
-	--self.PanelBamboo_10 = nil
-	--self.PanelBamboo_2 = nil
-	--self.PanelBamboo_3 = nil
-	--self.PanelBamboo_4 = nil
-	--self.PanelBamboo_5 = nil
-	--self.PanelBamboo_6 = nil
-	--self.PanelBamboo_7 = nil
-	--self.PanelBamboo_8 = nil
-	--self.PanelBamboo_9 = nil
 	--self.PanelBodyguard = nil
 	--self.PanelCactus = nil
 	--self.PanelEventSquareNormal = nil
@@ -127,6 +66,8 @@ function GoldSauserMainPanelEventSquareItemView:Ctor()
 	--self.PanelTobeViewed = nil
 	--self.RedDot = nil
 	--self.TextName = nil
+	--self.AnimBodyguardIn = nil
+	--self.AnimBodyguardOut = nil
 	--self.AnimClick = nil
 	--self.AnimIn = nil
 	--self.AnimLoop = nil
@@ -148,12 +89,6 @@ function GoldSauserMainPanelEventSquareItemView:OnInit()
 		{ "IsGameStart", UIBinderValueChangedCallback.New(self, nil, self.OnIsGameStartChanged)},
 	}
 
-	--- 保镖小游戏的Binder
-	self.BindersBodyGuard = {
-		{ "SquareAnimState", UIBinderValueChangedCallback.New(self, nil, self.OnBodyGuardAnimStateChange)},
-		{ "RandomBambooWithSignIndex", UIBinderValueChangedCallback.New(self, nil, self.OnBambooPanelShownChange)},
-	}
-
 	self.GameTypeRunning = MiniGameType.MiniGameTypeNone -- 广场当前进行中的游戏
 	self:InitConstStringInfo()
 end
@@ -163,7 +98,7 @@ function GoldSauserMainPanelEventSquareItemView:OnDestroy()
 end
 
 function GoldSauserMainPanelEventSquareItemView:OnShow()
-	self:ClearSquareItemGamePanel()
+	
 end
 
 function GoldSauserMainPanelEventSquareItemView:OnHide()
@@ -171,59 +106,61 @@ function GoldSauserMainPanelEventSquareItemView:OnHide()
 end
 
 function GoldSauserMainPanelEventSquareItemView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.BtnEventSquare, self.OnEventSquareBtnClicked)
+	UIUtil.AddOnClickedEvent(self, self.BtnEventSquare, self.OnBtnClicked)
 end
 
 function GoldSauserMainPanelEventSquareItemView:OnRegisterGameEvent()
 
 end
 
-function GoldSauserMainPanelEventSquareItemView:OnIsGameStartChanged(IsGameStart)
+function GoldSauserMainPanelEventSquareItemView:OnIsGameStartChanged(IsGameStart, OldValue)
+	local EntranceItemVM = self.ItemVM
+	if not EntranceItemVM then
+		return
+	end
+
+	local RunningGameType = EntranceItemVM.MiniGameType
+	if not RunningGameType or RunningGameType == MiniGameType.MiniGameTypeNone then
+		FLOG_ERROR("GoldSauserMainPanelEventSquareItemView:OnIsGameStartChanged EntranceItemVM MiniGameType is invalid")
+		return
+	end
 	if IsGameStart then
-		self:StartNewGame(GoldSauserMainPanelMainVM.MiniGameType)
+		self:StartNewGame(RunningGameType, OldValue == nil)
 	else
 		self:EndRunningGame()
 	end
 end
 
-function GoldSauserMainPanelEventSquareItemView:OnEventSquareBtnClicked()
-	if self.ItemVM:GetIsGameStart() then
-		GoldSauserMainPanelMainVM:SetIsEventSquareCenter(true)
-		if GoldSauserMainPanelMainVM.MiniGameType == MiniGameType.MiniGameTypeTyphon then
-			local GoldSauserMainPanelTyphonGameItemVM = GoldSauserMainPanelMainVM:GetGoldSauserMainPanelTyphonGameItemVM()
+--- 小游戏启动统一UI监听事件
+function GoldSauserMainPanelEventSquareItemView:OnMiniGameBtnClicked()
+	local RunningGameType = self.GameTypeRunning
+	if RunningGameType and RunningGameType ~= MiniGameType.MiniGameTypeNone then
+		if RunningGameType == MiniGameType.MiniGameTypeTyphon then
+			--[[local GoldSauserMainPanelTyphonGameItemVM = GoldSauserMainPanelMainVM:GetGoldSauserMainPanelTyphonGameItemVM()
 			local Info = {}
 			Info.MiniGameType = MiniGameType.MiniGameTypeTyphon
 			Info.MiniGameTime = GoldSaucerMinigameCfg:FindCfgByKey(GoldSauserMainPanelDefine.MiniGameEnum.TyphonEndTime).Value[1] /1000
 			GoldSauserMainPanelTyphonGameItemVM:SetInfo(Info)
-			UIViewMgr:ShowView(UIViewID.GoldSauserMainPanelTyphonGameItem)
-		elseif  GoldSauserMainPanelMainVM.MiniGameType == MiniGameType.MiniGameTypeBodyGuard then
+			UIViewMgr:ShowView(UIViewID.GoldSauserMainPanelTyphonGameItem)--]]
+		elseif RunningGameType == MiniGameType.MiniGameTypeBodyGuard then
 			self:EnterRunningGame()
 		end
-	else
-		self:OnBtnClicked()
 	end
 end
 
 function GoldSauserMainPanelEventSquareItemView:SetGameEnd()
-	self.ItemVM:SetIsGameStart(false)
-	---计时器销毁
-	self:SwitchBodyGuardAutoEndTimer(false)
+	local EntranceItemVM = self.ItemVM
+	if not EntranceItemVM then
+		return
+	end
+	EntranceItemVM:SetIsGameStart(false)
 end
-
-
 
 --- 广场流程&游戏切换 ---
 
-function GoldSauserMainPanelEventSquareItemView:ClearSquareItemGamePanel()
-	UIUtil.SetIsVisible(self.PanelBodyguard, false)
-	UIUtil.SetIsVisible(self.PanelEventTyphon, false)
-	UIUtil.SetIsVisible(self.PanelBamboo, false)
-	UIUtil.SetIsVisible(self.PanelCactus, false)
-end
-
 --- 触发开始新的游戏
 ---@param GameType MiniGameType@游戏类型
-function GoldSauserMainPanelEventSquareItemView:StartNewGame(GameType)
+function GoldSauserMainPanelEventSquareItemView:StartNewGame(GameType, bEnterPanel)
 	local RunningGameType = self.GameTypeRunning
 	if RunningGameType and RunningGameType ~= MiniGameType.MiniGameTypeNone then
 		FLOG_ERROR("GoldSauserMainPanelEventSquareItemView:StartNewGame Have Game Running")
@@ -232,7 +169,7 @@ function GoldSauserMainPanelEventSquareItemView:StartNewGame(GameType)
 	
 	if GameType == MiniGameType.MiniGameTypeTyphon then
 	elseif GameType == MiniGameType.MiniGameTypeBodyGuard then
-		self:BodyGuardStart()
+		self:BodyGuardStart(bEnterPanel)
 	end
 	self.GameTypeRunning = GameType
 end
@@ -251,6 +188,8 @@ function GoldSauserMainPanelEventSquareItemView:EndRunningGame()
 		self:BodyGuardEnd()
 	end
 	self.GameTypeRunning = MiniGameType.MiniGameTypeNone
+	GoldSauserMainPanelMgr:SetIsInPanelMiniGame(false)
+	--self:SwitchBodyGuardAutoEndTimer(false)
 end
 
 --- 结束当前进行中的游戏
@@ -292,70 +231,54 @@ function GoldSauserMainPanelEventSquareItemView:SwitchBodyGuardAutoEndTimer(bSta
 	end
 end
 
-function GoldSauserMainPanelEventSquareItemView:HideTheBambooWithSign()
-	for index, _ in ipairs(GoldSauserMainPanelDefine.BambooStyleList) do
-		local Panel = string.format("PanelBamboo_%s", tostring(index))
-		UIUtil.SetIsVisible(self[Panel], false)
+function GoldSauserMainPanelEventSquareItemView:BodyGuardStart(bEnterPanel)
+    local function ShowBodyGuardEntrance()
+		UIUtil.SetIsVisible(self.PanelBodyguard, true) 
+		UIUtil.SetIsVisible(self.PanelBamboo, true)
+		self:PlayAnimation(self.AnimBodyguardIn)
 	end
-end
 
-function GoldSauserMainPanelEventSquareItemView:BodyGuardStart()
-	UIUtil.SetIsVisible(self.PanelBodyguard, true) 
-	UIUtil.SetIsVisible(self.PanelBamboo, true)
-	self:HideTheBambooWithSign()
-	self:SwitchBodyGuardAutoEndTimer(true) -- 初始驻留计时器
+	if bEnterPanel then
+		self:RegisterTimer(function()
+			ShowBodyGuardEntrance()
+		end, 0.4)
+	else
+		ShowBodyGuardEntrance()
+	end
+	
+	--self:SwitchBodyGuardAutoEndTimer(true) -- 初始驻留计时器
 end
 
 function GoldSauserMainPanelEventSquareItemView:BodyGuardEnd()
-	UIUtil.SetIsVisible(self.PanelBodyguard, false)
-	UIUtil.SetIsVisible(self.PanelBamboo, false)
-	local GoldSauserMainPanelBodyguardGameItemVM = GoldSauserMainPanelMainVM:GetGoldSauserMainPanelBodyguardGameItemVM()
-	local BindersBodyGuard = self.BindersBodyGuard
-	if GoldSauserMainPanelBodyguardGameItemVM and BindersBodyGuard then
-		self:UnRegisterBinders(GoldSauserMainPanelBodyguardGameItemVM, BindersBodyGuard)
+	local OutAnim = self.AnimBodyguardOut
+	if not OutAnim then
+		return
 	end
+    self:PlayAnimation(OutAnim)
+	local AnimEndTime = OutAnim:GetEndTime() or 0
+
+	self:RegisterTimer(function()
+		UIUtil.SetIsVisible(self.PanelBodyguard, false)
+	    UIUtil.SetIsVisible(self.PanelBamboo, false)
+	end, AnimEndTime)
+
 end
 
 function GoldSauserMainPanelEventSquareItemView:BodyGuardEnter()
+	local EntranceItemVM = self.ItemVM
+	if not EntranceItemVM then
+		return
+	end
 	local GoldSauserMainPanelBodyguardGameItemVM = GoldSauserMainPanelMainVM:GetGoldSauserMainPanelBodyguardGameItemVM()
 	local Info = {}
 	Info.MiniGameType = MiniGameType.MiniGameTypeBodyGuard
 	Info.MiniGameTime = GoldSaucerMinigameCfg:FindCfgByKey(GoldSauserMainPanelDefine.MiniGameEnum.BodyGuardEndTime).Value[1] /1000
+	Info.Level = EntranceItemVM:GetCurLevel()
+	Info.EntranceItemVM = EntranceItemVM	
 	GoldSauserMainPanelBodyguardGameItemVM:SetInfo(Info)
-	local function GameEnd()
-		self:SetGameEnd()
-	end
-	UIViewMgr:ShowView(UIViewID.GoldSauserMainPanelBodyguardGameItem, {ParentGameEnd = GameEnd})
-	self:SwitchBodyGuardAutoEndTimer(false) -- 点击进入小游戏，关闭自然驻留计数器
-	local BindersBodyGuard = self.BindersBodyGuard
-	if GoldSauserMainPanelBodyguardGameItemVM and BindersBodyGuard then
-		self:RegisterBinders(GoldSauserMainPanelBodyguardGameItemVM, BindersBodyGuard)
-	end
-end
-
-function GoldSauserMainPanelEventSquareItemView:OnBodyGuardAnimStateChange(AnimState)
-	if AnimState == BodyGuardSquareAnimState.Idle then
-		-- TODO 播放待机动画
-	elseif AnimState == BodyGuardSquareAnimState.Act then
-	elseif AnimState == BodyGuardSquareAnimState.ActSuccess then
-	elseif AnimState == BodyGuardSquareAnimState.ActFail then
-		
-	end
-end
-
---- 界面砍伐竹子面板显隐控制
-function GoldSauserMainPanelEventSquareItemView:OnBambooPanelShownChange(BambooIndex, BambooIndexToHide)
-	if BambooIndexToHide then
-		local Panel = string.format("PanelBamboo_%s", tostring(BambooIndexToHide))
-		FLOG_INFO("OnBambooPanelShownChange: HideTheBambooPanel %s", Panel)
-		UIUtil.SetIsVisible(self[Panel], false)
-	end
-
-	if BambooIndex then
-		local Panel = string.format("PanelBamboo_%s", tostring(BambooIndex))
-		FLOG_INFO("OnBambooPanelShownChange: ShowTheBambooPanel %s", Panel)
-		UIUtil.SetIsVisible(self[Panel], true)
-	end
+	UIViewMgr:ShowView(UIViewID.GoldSauserMainPanelBodyguardGameItem, {Data = GoldSauserMainPanelBodyguardGameItemVM, EntranceItemVM = EntranceItemVM})
+	--self:SwitchBodyGuardAutoEndTimer(false) -- 点击进入小游戏，关闭自然驻留计数器
+	GoldSauserMainPanelMgr:SetIsInPanelMiniGame(true)
 end
 --- 保镖小游戏 MiniGameTypeBodyGuard end ---
 

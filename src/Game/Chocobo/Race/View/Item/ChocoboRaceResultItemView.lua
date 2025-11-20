@@ -39,12 +39,6 @@ end
 
 function ChocoboRaceResultItemView:OnInit()
     ChocoboRaceMainVM = _G.ChocoboRaceMainVM
-
-    self.RaceResultRankListIconPath = {
-        [1] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_1),
-        [2] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_2),
-        [3] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_3),
-    }
 end
 
 function ChocoboRaceResultItemView:OnRegisterSubView()
@@ -66,49 +60,44 @@ function ChocoboRaceResultItemView:OnRegisterBinder()
     local ViewModel = Data
     self.VM = ViewModel
     
-     self.ChocoboBinders = {
+     local ChocoboBinders = {
         { "Name", UIBinderSetText.New(self, self.TextName) },
         { "IsMajor", UIBinderSetIsVisible.New(self, self.ImgArrow) },
         { "IsOver", UIBinderSetIsVisible.New(self, self.TextTime) },
         { "ArrivedTimeText", UIBinderSetText.New(self, self.TextTime) },
         { "ResultRankBg", UIBinderSetBrushFromAssetPath.New(self, self.ImgBG) },
+        { "IsOver", UIBinderValueChangedCallback.New(self, nil, self.OnIsOver) },
     }
     
-    local PanelBinders =
-    {
-        { "Rank", UIBinderValueChangedCallback.New(self, nil, self.OnRankChange) },
-        { "Index", UIBinderValueChangedCallback.New(self, nil, self.IndexChange) },
-    }
-    self:RegisterBinders(ViewModel, PanelBinders)
+    self:RegisterBinders(ViewModel, ChocoboBinders)
 end
 
-function ChocoboRaceResultItemView:IndexChange(NewValue, OldValue)
-    if nil ~= OldValue then
-        local ViewModel = ChocoboRaceMainVM:FindChocoboRaceVM(OldValue)
-        if nil ~= ViewModel then
-            self:UnRegisterBinders(ViewModel, self.ChocoboBinders)
-        end
+function ChocoboRaceResultItemView:OnIsOver(NewValue, OldValue)
+    if self.VM == nil then
+        return 
     end
+    
+    if NewValue then
+        local RaceResultRankListIconPath = {
+            [1] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_1),
+            [2] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_2),
+            [3] = ChocoboUiIconCfg:FindPathByKey(ProtoRes.CHOCOBO_UI_ICON_TYPE.RESULT_RANK_LIST_ICON_3),
+        }
 
-    if nil ~= NewValue then
-        local ViewModel = ChocoboRaceMainVM:FindChocoboRaceVM(NewValue)
-        if nil ~= ViewModel then
-            self.ViewModel = ViewModel
-            self:RegisterBinders(ViewModel, self.ChocoboBinders)
+        local IconPath = RaceResultRankListIconPath[self.VM.Rank]
+        if IconPath == nil then
+            self.TextNumber:SetText(tostring(self.VM.Rank))
+            UIUtil.SetIsVisible(self.ImgIcon, false)
+            UIUtil.SetIsVisible(self.TextNumber, true)
+        else
+            UIUtil.SetIsVisible(self.ImgIcon, true)
+            UIUtil.SetIsVisible(self.TextNumber, false)
+            UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, IconPath)
         end
-    end
-end
-
-function ChocoboRaceResultItemView:OnRankChange(NewValue, OldValue)
-    self.TextNumber:SetText(tostring(NewValue))
-    local IconPath = self.RaceResultRankListIconPath[NewValue]
-    if IconPath == nil then
+    else
         UIUtil.SetIsVisible(self.ImgIcon, false)
         UIUtil.SetIsVisible(self.TextNumber, true)
-    else
-        UIUtil.SetIsVisible(self.ImgIcon, true)
-        UIUtil.SetIsVisible(self.TextNumber, false)
-        UIUtil.ImageSetBrushFromAssetPath(self.ImgIcon, IconPath)
+        self.TextNumber:SetText(_G.LSTR(430025))
     end
 end
 

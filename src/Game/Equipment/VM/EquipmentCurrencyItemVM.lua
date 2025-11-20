@@ -33,11 +33,8 @@ function EquipmentCurrencyItemVM:Ctor()
 	self.IsShowTextLevel = false
 	self.IsDuringConvertimeCD = false		--- 是否正在倒计时
     self.WeekUpperVisible = false      ---是否显示周获取上限
-
+	self.WeekUpperNum = 0	--- 周上限
     self.TextNumUpperLimit = ""    -- 数量显示的上限部分
-	self.WeekUpperNum = 0
-	self.WeekUpperFloatNum = 0
-	self.WeekUpperFixedNum = 0
 end
 
 function EquipmentCurrencyItemVM:UpdateItemNum(ItemNum)
@@ -80,7 +77,7 @@ function EquipmentCurrencyItemVM:UpdateVM(Value)
 	if ScoreID == ProtoRes.SCORE_TYPE.SCORE_TYPE_STAMPS or ScoreID == ProtoRes.SCORE_TYPE.SCORE_TYPE_GOLD_CODE then
 		self.BtnShopIsVisible = true
 	else
-		self.BtnShopIsVisible = Cfg.ShopID ~= 0
+		self.BtnShopIsVisible = Cfg.ShopID ~= 0 and not self.IsLock
 	end
 	self.QualityIcon = ""
 	self.TargetImgQuanlity = ""
@@ -132,22 +129,27 @@ function EquipmentCurrencyItemVM:UpdateVM(Value)
 		self.TargetImgQuanlity = ItemDefine.ItemIconColorType[TempTargetItemCfg.ItemColor]
 	end
 	
-    self.WeekUpperVisible = false
-    local WeekUpperCfg = self.ScoreTableCfg.WeekUpper
-    if nil ~= WeekUpperCfg then
-        self.WeekUpperFloatNum = WeekUpperCfg.Float or 0
-        self.WeekUpperFixedNum = WeekUpperCfg.Fixed or 0
+    -- self.WeekUpperVisible = false
+    -- local WeekUpperCfg = self.ScoreTableCfg.WeekUpper
+    -- if nil ~= WeekUpperCfg then
+        -- self.WeekUpperFloatNum = WeekUpperCfg.Float or 0
+        -- self.WeekUpperFixedNum = WeekUpperCfg.Fixed or 0
         --- 目前的判断条件只有一个
-        if (_G.BattlePassMgr:GetBattlePassGrade() == WeekUpperCfg.CondValues[1]) then
-            self.WeekUpperNum = self.WeekUpperFloatNum
-        else
-            self.WeekUpperNum = self.WeekUpperFixedNum
-        end
+        -- if (_G.BattlePassMgr:GetBattlePassGrade() == WeekUpperCfg.CondValues[1]) then
+        --     self.WeekUpperNum = self.WeekUpperFloatNum
+        -- else
+        --     self.WeekUpperNum = self.WeekUpperFixedNum
+        -- end
 		---  									每周上限： 
-        self.WeekUpperText = string.format(LSTR(490008), 0, self.WeekUpperNum)
-        -- 依据是否有相关配置显示周上限提示
-        self.WeekUpperVisible = self.WeekUpperFloatNum ~= 0 or self.WeekUpperFixedNum ~= 0 or #(WeekUpperCfg.CondValues or {}) > 0 
-    end
+        -- self.WeekUpperText = string.format(LSTR(490008), 0, self.WeekUpperNum)
+        -- -- 依据是否有相关配置显示周上限提示
+        -- self.WeekUpperVisible = self.WeekUpperFloatNum ~= 0 or self.WeekUpperFixedNum ~= 0 or #(WeekUpperCfg.CondValues or {}) > 0 
+	-- end
+
+	self.WeekUpperNum = _G.ScoreMgr:GetScoreWeekUpperValue(ScoreID)
+	self.WeekUpperVisible = self.WeekUpperNum ~= 0
+    self.WeekUpperText = string.format(LSTR(490008), _G.ScoreMgr:GetScoreWeekValueByID(ScoreID), self.WeekUpperNum)
+	
     ---根据战令等级设置Icon
     if _G.BattlePassMgr:GetBattlePassGrade() == 3 then
         self.IconBPIconPath = "Texture2D'/Game/UI/Texture/Equipment/UI_Equipment_Icon_BP1.UI_Equipment_Icon_BP1"
@@ -206,7 +208,7 @@ end
 
 ---@param WeekUpperVisible boolean 是否显示周获取上限提示
 ---@param HasGetNum number 本周已经获取的数量
-function EquipmentCurrencyItemVM:UpdateWeekUpperInfo(HasGetNum)
-    self.WeekUpperText = string.format(LSTR(490008), HasGetNum, self.WeekUpperNum)
-end
+-- function EquipmentCurrencyItemVM:UpdateWeekUpperInfo(HasGetNum)
+--     self.WeekUpperText = string.format(LSTR(490008), HasGetNum, self.WeekUpperNum)
+-- end
 return EquipmentCurrencyItemVM

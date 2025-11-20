@@ -1,19 +1,14 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 
-local PhotoRoleStatVM = LuaClass(UIViewModel)
-local PhotoActorUtil = require("Game/Photo/Util/PhotoActorUtil")
-
-local PhotoDefine = require("Game/Photo/PhotoDefine")
-
 local UIBindableList = require("UI/UIBindableList")
 local PhotoRoleStatCfg = require("TableCfg/PhotoRoleStatCfg")
 local PhotoRoleStatItemVM = require("Game/Photo/ItemVM/PhotoRoleStatItemVM")
+local PhotoTemplateUtil = require("Game/Photo/Util/PhotoTemplateUtil")
 
--- local ItemVM = require("Game/Item/ItemVM")
-
-local LSTR = _G.LSTR
-
+local PhotoRoleStatVM = LuaClass(UIViewModel)
+local PhotoMgr
+local PhotoEmojiVM
 
 function PhotoRoleStatVM:Ctor()
     self.StatList = UIBindableList.New(PhotoRoleStatItemVM)
@@ -23,12 +18,11 @@ function PhotoRoleStatVM:Ctor()
 end
 
 function PhotoRoleStatVM:OnInit()
+    PhotoMgr = _G.PhotoMgr
+    PhotoEmojiVM = _G.PhotoEmojiVM
 end
 
 function PhotoRoleStatVM:OnBegin()
-    -- PWorldQuestMgr = _G.PWorldQuestMgr
-    -- PWorldMgr = _G.PWorldMgr
-    -- PWorldTeamMgr = _G.PWorldTeamMgr
 end
 
 function PhotoRoleStatVM:OnEnd()
@@ -47,8 +41,8 @@ function PhotoRoleStatVM:UpdFilterList()
     local AllCfg = PhotoRoleStatCfg:FindAllCfg()
     for _, Cfg in pairs(AllCfg or {}) do
         -- if not Cfg.Hide then
-            -- @todo config move field can't read on branch  
-            table.insert(self.ListData, {ID = Cfg.ID, Move = Cfg.ID == 1 or Cfg.ID == 2 or Cfg.ID == 4})
+            -- @todo config move field can't read on branch
+            table.insert(self.ListData, {ID = Cfg.ID, NotMove = (Cfg.Move == 1)})
         -- end
     end
 
@@ -62,21 +56,56 @@ function PhotoRoleStatVM:TryRptStat()
 end
 
 function PhotoRoleStatVM:SetStatIdx(Idx, ID)
+    local bNotMove = self.ListData[Idx] and self.ListData[Idx].NotMove == true or false
     self.StatIdx = Idx
-    local bMove = (self.ListData[Idx] or {}).Move
-    -- if bMove then
-    --     _G.PhotoActionVM:ResetRoleActAni()
-    --     _G.PhotoEmojiVM:ResetRoleActAni()
-    -- end
-
-    self.UniMove = bMove
-
+    self.UniMove = ID and bNotMove
+    self.CurID = ID
     if ID then
-        self.CurID = ID
-	    _G.PhotoMgr:SeltRoleEff(ID)
+	    PhotoMgr:SeltRoleEff(ID)
     else
-        self.CurID = nil
-        _G.PhotoMgr:CheckAndClearRoleEff(true)
+        PhotoMgr:CheckAndClearRoleEff(true)
+    end
+    PhotoMgr:DirectPauseSeltAnim(bNotMove)
+    self:UpdateCurIdx()
+end
+
+function PhotoRoleStatVM:GetIsBanAnim()
+    return self.CurID and (self.UniMove == true)
+end
+
+function PhotoRoleStatVM:UpdateCurIdx()
+    for i = 1, self.StatList:Length() do
+        local ItemVM = self.StatList:Get(i)
+        if ItemVM then
+            ItemVM:SetIsSelected(ItemVM.ID == self.CurID)
+        end
+	end
+end
+
+-------------------------------------------------------------------------------------------------------
+---@region template setting
+
+function PhotoRoleStatVM:TemplateSave(InTemplate)
+    PhotoTemplateUtil.SetRoleStat(InTemplate, self.CurID)
+end
+
+function PhotoRoleStatVM:TemplateApply(InTemplate)
+    local Info = PhotoTemplateUtil.GetRoleStat(InTemplate)
+    local Idx
+    if Info then
+        local CurID = Info.StatID
+        for K, Item in pairs(self.ListData or {}) do
+            if Item.ID == CurID then
+                Idx = K
+                break
+            end
+        end
+
+        if Idx then
+            PhotoRoleStatVM:SetStatIdx(Idx, CurID)
+        else
+            PhotoRoleStatVM:SetStatIdx(nil, nil)
+        end
     end
 end
 

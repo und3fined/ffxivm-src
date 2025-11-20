@@ -31,9 +31,9 @@ function MapMarkerMajor:GetBPType()
 	return MapMarkerBPType.Major
 end
 
----@param AreaUIMapID 主角所在地图的三级地图UIMapID
-function MapMarkerMajor:InitMarker(AreaUIMapID)
-	local Cfg = MapUICfg:FindCfgByKey(AreaUIMapID)
+---@param MajorUIMapID 主角所在地图的三级地图UIMapID
+function MapMarkerMajor:InitMarker(MajorUIMapID)
+	local Cfg = MapUICfg:FindCfgByKey(MajorUIMapID)
 	if nil == Cfg then
 		return
 	end

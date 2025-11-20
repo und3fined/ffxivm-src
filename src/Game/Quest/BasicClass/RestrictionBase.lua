@@ -16,6 +16,17 @@ local RestrictionBase = LuaClass()
 function RestrictionBase:Ctor(CtorParams, _)
     self.QuestID = CtorParams.QuestID
     self.LogicID = CtorParams.LogicID
+
+    local IsRestrictAllTarget = true
+    local AffectedTargets = CtorParams.AffectedTargets or {}
+    for _, Target in pairs(AffectedTargets) do
+        if Target ~= 0 then
+            IsRestrictAllTarget = false
+            break
+        end
+    end
+    self.IsRestrictAllTarget = IsRestrictAllTarget
+    self.AffectedTargets = AffectedTargets
     
     self.RestrictedDialogType = nil
 

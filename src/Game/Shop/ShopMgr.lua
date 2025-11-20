@@ -116,6 +116,7 @@ function ShopMgr:OnInit()
 	self.GoodsCounterRedList = {}
 	self.GoodsShowCondRedList = {}
 	self.GoodsPurchaseCondRedList = {}
+	self.CurPriceList = nil  --当前打开商店的货币List
 	self.IsJumpAgain = false
 end
 
@@ -154,7 +155,7 @@ function ShopMgr:OnBegin()
 	FLOG_WARNING = _G.FLOG_WARNING
 	self:InitMallInfo()
 	self:InitAllGoodsInfo()
-	--self:InitAllGoodsItemInfo()
+	--self:InitAllGoodsItemInfo() 
 	local RecordStr = _G.UE.USaveMgr.GetString(SaveKey.ShopRecordRedDot, "", true)
 	local RecordList = self:SetSaveString(RecordStr)
 	self.RecordRemoveRedDotList = RecordList or {} --记录已添加过的红点
@@ -361,14 +362,12 @@ function ShopMgr:UpdateArmyShop(Lv)
 	local ArmyBuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_COND_ARMY_LV] or {}
 	if ArmyShowList[Lv] then
 		for _, GoodsInfo in pairs(ArmyShowList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if ArmyBuyList[Lv] then
 		for _, GoodsInfo in pairs(ArmyBuyList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -390,15 +389,13 @@ function ShopMgr:DealUseLvRedDot(MajorLevel)
 	local BuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_COND_UseLv] or {}
 	if ShowList[MajorLevel] then
 		for _, GoodsInfo in pairs(ShowList[MajorLevel]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 
 	if BuyList[MajorLevel] then
 		for _, GoodsInfo in pairs(BuyList[MajorLevel]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 
@@ -410,8 +407,7 @@ function ShopMgr:DealUseLvRedDot(MajorLevel)
 		if ProfLv > 0 then
 			for _, Info in pairs(GoodsList) do
 				if ProfLv >= Info.NeedLv then
-					self:AddGoodsRedDot(Info.GoodsInfo.ID)
-					self:AddTabRedDot(Info.GoodsInfo.FirstType)
+					self:AddGoodsRedDot(Info.GoodsInfo.ID, Info.GoodsInfo.FirstType)
 				end
 			end
 		end
@@ -422,8 +418,7 @@ function ShopMgr:DealUseLvRedDot(MajorLevel)
 		if ProfLv > 0 then
 			for _, Info in pairs(GoodsList) do
 				if ProfLv >= Info.NeedLv then
-					self:AddGoodsRedDot(Info.GoodsInfo.ID)
-					self:AddTabRedDot(Info.GoodsInfo.FirstType)
+					self:AddGoodsRedDot(Info.GoodsInfo.ID, Info.GoodsInfo.FirstType)
 				end
 			end
 		end
@@ -442,8 +437,7 @@ function ShopMgr:DealComBatMaxLvRedDot(MajorLevel, ProfList)
 					local CurLv = v.Level
 					local NeedLv = MajorLevel
 					if CurLv >= NeedLv then
-						self:AddGoodsRedDot(GoodsInfo.ID)
-						self:AddTabRedDot(GoodsInfo.FirstType)
+						self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 					end
 				end
 			end
@@ -460,8 +454,7 @@ function ShopMgr:DealComBatMaxLvRedDot(MajorLevel, ProfList)
 					local CurLv = v.Level
 					local NeedLv = MajorLevel
 					if CurLv >= NeedLv then
-						self:AddGoodsRedDot(GoodsInfo.ID)
-						self:AddTabRedDot(GoodsInfo.FirstType)
+						self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 					end
 				end
 			end
@@ -481,8 +474,7 @@ function ShopMgr:DealManuMaxLvRedDot(MajorLevel, ProfList)
 					local CurLv = v.Level
 					local NeedLv = MajorLevel
 					if CurLv >= NeedLv then
-						self:AddGoodsRedDot(GoodsInfo.ID)
-						self:AddTabRedDot(GoodsInfo.FirstType)
+						self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 					end
 				end
 			end
@@ -499,8 +491,7 @@ function ShopMgr:DealManuMaxLvRedDot(MajorLevel, ProfList)
 					local CurLv = v.Level
 					local NeedLv = MajorLevel
 					if CurLv >= NeedLv then
-						self:AddGoodsRedDot(GoodsInfo.ID)
-						self:AddTabRedDot(GoodsInfo.FirstType)
+						self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 					end
 				end
 			end
@@ -518,27 +509,23 @@ function ShopMgr:DealProfRedDot()
 	local MajorClass = RoleInitCfg:FindProfClass(ProfID)
 	if JobTyepShowList[MajorClass] then
 		for _, GoodsInfo in pairs(JobTyepShowList[MajorClass]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if JobTyepBuyList[MajorClass] then
 		for _, GoodsInfo in pairs(JobTyepBuyList[MajorClass]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 
 	if JobShowList[ProfID] then
 		for _, GoodsInfo in pairs(JobTyepShowList[ProfID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if JobBuyList[ProfID] then
 		for _, GoodsInfo in pairs(JobTyepBuyList[ProfID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -550,15 +537,13 @@ function ShopMgr:DealFantasiRedDot(Data)
 		local CurGender = Data.NewSimple.Gender
 		if SexShowList[CurGender] then
 			for _, GoodsInfo in pairs(SexShowList[CurGender]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 
 		if SexBuyList[CurGender] then
 			for _, GoodsInfo in pairs(SexBuyList[CurGender]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 	end
@@ -569,15 +554,13 @@ function ShopMgr:DealFantasiRedDot(Data)
 		local CurRace = Data.NewSimple.Race
 		if RaceShowList[CurRace] then
 			for _, GoodsInfo in pairs(RaceShowList[CurRace]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 
 		if RaceBuyList[CurRace] then
 			for _, GoodsInfo in pairs(RaceBuyList[CurRace]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 	end
@@ -588,14 +571,12 @@ function ShopMgr:DealAchievementRedDot(ID)
 	local AchievementBuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_COND_ACHIEVEMENT] or {}
 	if AchievementShowList[ID] then
 		for _, GoodsInfo in pairs(AchievementShowList[ID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if AchievementBuyList[ID] then
 		for _, GoodsInfo in pairs(AchievementBuyList[ID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -606,14 +587,12 @@ function ShopMgr:DealBattlePassRedDot(Data)
 	local BPBuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_BATTLEPASS_LV] or {}
 	if BPShowList[Lv] then
 		for _, GoodsInfo in pairs(BPShowList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if BPBuyList[Lv] then
 		for _, GoodsInfo in pairs(BPBuyList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -623,14 +602,12 @@ function ShopMgr:DealCompanyRankRedDot(Lv)
 	local CompanyRankBuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_GRANDCOMPANY_LV] or {}
 	if CompanyRankShowList[Lv] then
 		for _, GoodsInfo in pairs(CompanyRankShowList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if CompanyRankBuyList[Lv] then
 		for _, GoodsInfo in pairs(CompanyRankBuyList[Lv]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -640,14 +617,12 @@ function ShopMgr:DealCompanyIDRedDot(ID)
 	local CompanyIDBuyList = self.GoodsPurchaseCondRedList[GoodsShowConditionType.GOODS_SHOW_GRANDCOMPANY_ID] or {}
 	if CompanyIDShowList[ID] then
 		for _, GoodsInfo in pairs(CompanyIDShowList[ID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 	if CompanyIDBuyList[ID] then
 		for _, GoodsInfo in pairs(CompanyIDBuyList[ID]) do
-			self:AddGoodsRedDot(GoodsInfo.ID)
-			self:AddTabRedDot(GoodsInfo.FirstType)
+			self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 		end
 	end
 end
@@ -661,14 +636,12 @@ function ShopMgr:DealFinisiTaskRedDot(Data)
 
 		if FinisiTaskShowList[FinishiTaskID] then
 			for _, GoodsInfo in pairs(FinisiTaskShowList[FinishiTaskID]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 		if FinisiTaskBuyList[FinishiTaskID] then
 			for _, GoodsInfo in pairs(FinisiTaskBuyList[FinishiTaskID]) do
-				self:AddGoodsRedDot(GoodsInfo.ID)
-				self:AddTabRedDot(GoodsInfo.FirstType)
+				self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType)
 			end
 		end
 	end
@@ -685,8 +658,7 @@ function ShopMgr:DealCounterUpdateRedDot(Params)
 					if GoodsInfo.GoodsCounterFirst == CounterID or GoodsInfo.GoodsCounterSecond == CounterID then
 						local CurrentRestore = CounterMgr:GetCounterRestore(CounterID)
 						if Value >= CurrentRestore then
-							self:AddGoodsRedDot(GoodsInfo.ID, true)
-							self:AddTabRedDot(GoodsInfo.FirstType)
+							self:AddGoodsRedDot(GoodsInfo.ID, GoodsInfo.FirstType, true)
 						end
 					end
 				end
@@ -696,15 +668,15 @@ function ShopMgr:DealCounterUpdateRedDot(Params)
 
 end
 
-
-function ShopMgr:AddGoodsRedDot(GoodsID, IsNoRecord)
+function ShopMgr:AddGoodsRedDot(GoodsID, FirstType, IsNoRecord)
 	local RecordState = IsNoRecord or false
-	if not table.contain(self.RedDotList, GoodsID) and not table.contain(self.RecordRemoveRedDotList, GoodsID) then
+	if not table.contain(self.RedDotList, GoodsID) and not self.RecordRemoveRedDotList[GoodsID] then
 		local RedDotName = self.RedDotName .. "/" .. tostring(GoodsID)
 		_G.RedDotMgr:AddRedDotByName(RedDotName, 1)
 		table.insert(self.RedDotList, GoodsID)
+		self:AddTabRedDot(FirstType)
 		if not RecordState then
-			table.insert(self.RecordRemoveRedDotList, GoodsID)
+			self.RecordRemoveRedDotList[GoodsID] = 1
 		end
 	end
 end
@@ -748,7 +720,8 @@ function ShopMgr:RemoveRecordRedDot(GoodsID, FirstType)
 		--table.remove_item(self.TabRedDotList, FirstType)
 		local RedDotName = self.RedDotName .. "/" .. tostring(GoodsID)
 		_G.RedDotMgr:DelRedDotByName(RedDotName)
-		table.remove_item(self.RecordRemoveRedDotList, GoodsID)
+		self.RecordRemoveRedDotList[GoodsID] = nil
+		--table.remove_item(self.RecordRemoveRedDotList, GoodsID)
 	end
 end
 
@@ -813,6 +786,18 @@ function ShopMgr:SendMsgMallInfoReq(MallId, Type, IsJump)
 	--FLOG_ERROR("ShopMgr:SendMsgMallInfoReq Time:%s", TimeUtil.GetLocalTime())
 end
 
+function ShopMgr:SendMysteryShopInfoReq()
+	local MsgID = CS_CMD.CS_CMD_MALL_AND_STORE
+	local SubMsgID = SUB_MSG_ID.CS_MALL_AND_STORE_CMD_STORE_QUERY
+	local MsgBody = {
+        Cmd = SubMsgID,
+		StoreQuery = { MallID = 5002 },
+    }
+
+	GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+end
+
+
 --- 购买具体id的特定数量商品
 ---@param GoodsId number@商品id
 ---@param Count number@购买数量
@@ -863,8 +848,12 @@ function ShopMgr:OnNetMsgMallInfo(MsgBody)
 
 	-- local co = coroutine.create(self.UpdateSpecificMallInfo)
 	-- _G.SlicingMgr:EnqueueCoroutine(co, self, MsgBody)
+	if MsgBody.StoreQuery.MallID == 5002 then
+		EventMgr:SendEvent(EventID.UpdateOpsMysteryShop, MsgBody)
+	else
+		self:UpdateSpecificMallInfo(MsgBody)
+	end
 
-	self:UpdateSpecificMallInfo(MsgBody)
 end
 
 --- 购买商品后更新商店信息
@@ -874,6 +863,7 @@ function ShopMgr:OnNetMsgMallInfoAfterBuy(MsgBody)
 	end
 
 	local MallInfo = MsgBody.StorePurchase
+	EventMgr:SendEvent(EventID.UpdateOpsMysteryShopGoods, MallInfo)
 	self:OnShowCommRewardFunc({[1] = MallInfo.Good})
 end
 
@@ -893,12 +883,13 @@ function ShopMgr:OnShowCommRewardFunc(PurchasedIDList)
 	local MallInfoList = {}
 	local ItemList = {}
 	local SocreState = true
+	local ForceRefresh = false
 	for i = 1, #PurchasedIDList do
 		local MallInfo = PurchasedIDList[i]
 		local GoodID = MallInfo.GoodID
 		local GoodsInfo
 		GoodsInfo = self:GetGoodsInfo(self.CurOpenMallId, GoodID)
-		if not GoodsInfo then
+		if GoodsInfo == nil then
 			FLOG_ERROR("OnShowCommRewardFunc not GoodsInfo GoodsID = %d", GoodID)
 			return
 		end
@@ -924,8 +915,12 @@ function ShopMgr:OnShowCommRewardFunc(PurchasedIDList)
 			SocreState = false
 		end
 
+		local TempMallMainTypeCfg = MallMainTypeCfg:FindCfgByKey(GoodsInfo.FirstType)
+		if TempMallMainTypeCfg ~= nil and not ForceRefresh then
+			ForceRefresh = TempMallMainTypeCfg.CounterID ~= 0
+		end
 		--有限购类的才刷新界面商品信息
-		if GoodsInfo.GoodsCounterFirst and GoodsInfo.GoodsCounterFirst ~= 0 then
+		if (GoodsInfo.GoodsCounterFirst and GoodsInfo.GoodsCounterFirst ~= 0) then
 			table.insert(MallInfoList, MallInfo)
 		end
 	end
@@ -938,6 +933,10 @@ function ShopMgr:OnShowCommRewardFunc(PurchasedIDList)
 		for _, MallInfo in ipairs(MallInfoList) do
 			self:UpdateGoodsInfoAfterBuy(MallInfo)
 		end
+	end
+
+	if ForceRefresh then
+		EventMgr:SendEvent(EventID.UpdateMallGoodsListMsg, false)
 	end
 
 	--如果交换商店全是item类型不会触发SocreMgr的更新通知 所以手动更新一下
@@ -1074,7 +1073,7 @@ function ShopMgr:IsCanShow(Goods)
 		FLOG_ERROR("ShopMgr:IsCanShow RoleDetail = nil")
 	end
 
-	local ProfList = RoleDetail.Prof and RoleDetail.Prof.ProfList or {}
+	local ProfList = RoleDetail and RoleDetail.Prof and RoleDetail.Prof.ProfList or {}
 	for _, value in pairs(ProfList) do
 		if value.ProfID == ProfID then
 			CurrentProfInfo = value
@@ -1239,14 +1238,6 @@ end
 --判断商品上下架版本号是否符合当前版本号
 function ShopMgr:IsOnVersion(FirstVersion, SecondVersion)
 	--商品是否在当前版本内
-	if not FirstVersion or not SecondVersion then
-		return false
-	end
-
-	if type(FirstVersion) ~= "string" or type(SecondVersion) ~= "string" then
-        return false
-    end
-	
 	local CurVersion = self.CurShopVersion
 	local OnVersion = string.split(FirstVersion, ".")
 	local OffVersion = string.split(SecondVersion, ".")
@@ -1779,7 +1770,7 @@ function ShopMgr.SortShopGoodsPredicate(Left, Right)
 	local LTaskSate = Left.TaskState or false
 	local RTaskSate = Right.TaskState or false
 	if LTaskSate ~= RTaskSate then
-		return LTaskSate and (not RTaskSate)
+		return LTaskSate 
 	end
 	local LeftItemCfg = ItemCfg:FindCfgByKey(Left.ItemID)
 	local RightItemCfg = ItemCfg:FindCfgByKey(Right.ItemID)
@@ -1794,36 +1785,33 @@ function ShopMgr.SortShopGoodsPredicate(Left, Right)
 	--- 类型7
 	local LbUes = Left.bUse or false
 	local RbUes = Right.bUse or false
-	if Left.IsEquipment or Right.IsEquipment then
+	if (Left.IsEquipment and LbUes) or (Right.IsEquipment and RbUes) then
 		local LIsUp = Left.IsUp
 		local RIsUp = Right.IsUp
-		if LIsUp ~= RIsUp and LbUes or RbUes then
-			return LIsUp and (not RIsUp)
+		if LIsUp ~= RIsUp then
+			return LIsUp
 		end
 	end
 
 	local LbBuy = Left.bBuy or false
 	local RbBuy = Right.bBuy or false
 	if LbBuy ~= RbBuy then
-		return LbBuy and (not RbBuy)
+		return LbBuy
 	elseif LbBuy == RbBuy then
 		local LbSoldOut = Left.IsSoldOut or false
 		local RbSoldOut = Right.IsSoldOut or false
 		if LbSoldOut ~= RbSoldOut then
-			return LbSoldOut and (not RbSoldOut)
+			return LbSoldOut
 		else
 			if LbUes ~= RbUes then
-				return LbUes and (not RbUes)
-			else
-				local LShopItemId = Left.GoodsId or 0
-				local RShopItemId = Right.GoodsId or 0
-				return LShopItemId < RShopItemId
+				return LbUes
 			end
 		end
 	end
-
 	
-	--return LShopItemId < RShopItemId
+	local LDisplayID = Left.DisplayID or 0
+	local RDisplayID = Right.DisplayID or 0
+	return LDisplayID < RDisplayID
 end
 
 --- 根据返回消息更新前台商店信息
@@ -1833,7 +1821,6 @@ function ShopMgr:UpdateSpecificMallInfo(MsgBody)
 	local MallId = MsgBody.StoreQuery.MallID
 	local ServerGoods = MsgBody.StoreQuery.Goods
 	local ServerGoodsConds = MsgBody.StoreQuery.Conds
-	self.CurOpenMallId = MallId
 	local AllMallInfos = self.CurQueryShopGoodsList
 	if AllMallInfos == nil then
 		return
@@ -1909,6 +1896,11 @@ function ShopMgr:UpdateSpecificMallInfo(MsgBody)
 		for k, v in pairs(MallGoodsInfos) do
 			for _, j in pairs(ServerGoodsConds) do
 				if v.GoodsId == j.GoodID then
+					--统计项相关红点这里添加
+					if j.Purchase then
+						self:AddGoodsRedDot(v.GoodsId, v.FirstType)
+					end
+
 					if not j.Show then
 						MallGoodsInfos[k] = nil
 					elseif not j.Purchase then
@@ -1988,18 +1980,18 @@ function ShopMgr:GetGoodsBoughtCountAndIsSoldOut(List)
 		local FirstSumLimit = CounterMgr:GetCounterLimit(CounterFirstID)
 		local CounterSecondNum = CounterMgr:GetCounterCurrValue(CounterSecondID)--GoodsInfo.CounterSecond.CounterNum
 		local SecondSumLimit = CounterMgr:GetCounterLimit(CounterSecondID)
-		--[[
-			x/y
-			y固定为计数器1周期回复值
-			计数器2为空  then
-			 x=计数器1的周期回复值-后台返回的计数器1的CounterNum
-				else
-					x = 读表计数器2.limit - 计数器2后台返回的CounterNum
-		]]
+
+		--单限购区分是否永久计数器 非永久计数器用Restore计算 永久计数器用SumLimit计算
 		if CounterFirstID ~= 0 and CounterSecondID == 0 then  --单限购
-			local CanBuy = math.max(0, CurrentRestore - CounterFirstNum)
-			BoughtCount = math.min(CanBuy, FirstSumLimit)
+			if RestrictionType ~= ProtoRes.COUNTER_TYPE.COUNTER_TYPE_FOREVER then
+				local CanBuy = math.max(0, CurrentRestore - CounterFirstNum)
+				BoughtCount = math.min(CanBuy, FirstSumLimit)
+			else
+				local CanBuy = math.max(0, FirstSumLimit - CounterFirstNum)
+				BoughtCount = math.min(CanBuy, FirstSumLimit)
+			end
 		elseif CounterFirstID ~= 0 and CounterSecondID ~= 0 then --双限购
+			--双限购第一个计数器不会是永久计数器 所以用Restore计算
 			local CanBuy = math.max(0, CurrentRestore - CounterFirstNum)
 			local Surplus = SecondSumLimit - CounterSecondNum
 			BoughtCount = math.min(CanBuy, Surplus)
@@ -2182,6 +2174,7 @@ end
 ---@param Type number@打开类型 1 从商会打开商店  2 从Npc打开商店
 function ShopMgr:OpenShop(ShopId, FirstType, IsJump, Type)
 	if FirstType == nil then
+		self.IsDefaulFirstType = true
 		FirstType = ShopId * 100 + 1
 	end
 	local NewFirstType = FirstType or 1
@@ -2208,10 +2201,15 @@ function ShopMgr:OpenShop(ShopId, FirstType, IsJump, Type)
 		return
 	end
 
+	self.CurOpenMallId = ShopId
 	local OpenTyep = Type or 1
 	self.CurOpenMallCounterID = TabTypeInfo.CounterID
-	self.JumpToShop = false
-	ShopMgr.ShopMainTypeIndex = NewFirstType
+	if self.IsDefaulFirstType then
+		self.ShopMainTypeIndex = ShopMgr.LashChosedIndexList[ShopMgr.CurOpenMallId] or 1
+	else
+		self.ShopMainTypeIndex = NewFirstType
+	end
+	self.JumpToShop = true
 	local Data = {}
 	Data.ShopId = ShopId
 	Data.MainTypeIndex = NewFirstType
@@ -2280,6 +2278,8 @@ function ShopMgr:JumpToShopGoods(ShopId, ItemResID, OpenType, TransferData, Firs
 	if ShopMainViewVisible then
 		self.IsJumpAgain = true
 	end
+
+	self.CurOpenMallId = ShopId
 
 	local BuyViewVisible = UIViewMgr:IsViewVisible(UIViewID.ShopBuyPropsWinView)
 	if BuyViewVisible then
@@ -2360,6 +2360,37 @@ function ShopMgr:ShopIsUnLock(ShopID, OpenType)
 			if IsOpen then
 				return true
 			end
+		end
+	end
+
+	return false
+end
+
+---商店是否可以显示
+--@param ShopID number@商店ID
+function ShopMgr:CanShowByCondition(ShopID)
+	local Cfg = self.AllShopInfo[ShopID]
+	if not Cfg then
+		FLOG_ERROR("ShopID is nil")
+		return false
+	end
+
+	--商品是否在当前版本内
+	local CurVersion = self.CurShopVersion
+	local OnVersion = string.split(Cfg.OnVersion, ".")
+	local IsOpen = false
+	if string.isnilorempty(OnVersion) then
+		IsOpen = self:CompareOnVersion(CurVersion, OnVersion)
+	else
+		IsOpen = true
+	end
+
+	if Cfg.ShopType and Cfg.ShopType == MallTypeInfo.MALL_TYPE_GrandCompany then
+		local GrandCompanyInfo = _G.CompanySealMgr:GetCompanySealInfo()
+		local GrandCompanyID = GrandCompanyInfo.GrandCompanyID
+		local CurShopCompanyID = _G.CompanySealMgr:GetGrandCompanyIDByScoreID(tonumber(Cfg.ScoreID))
+		if GrandCompanyID ~= 0 and IsOpen and CurShopCompanyID == GrandCompanyID then
+			return true
 		end
 	end
 
@@ -3354,7 +3385,7 @@ function ShopMgr:SetCondByID(ShopInfo, ScreenerID, List, GoodList, ShopIsnil, Fl
 	end
 
 	if Fliter1Index then
-		self.AfterFistFilterList = SearchCond
+		self.AfterFistFilterList[ShopID] = SearchCond
 		return SearchCond
 	end
 
@@ -3756,6 +3787,9 @@ function ShopMgr:GetProfLimitListByClassLimit(ClassLimit)
 end
 
 function ShopMgr:CheckEquipIconUpState(ItemCfg, EquipList)
+	if ItemCfg == nil then
+		return false
+	end
     --- 副手武器只有骑士剑术师判断
 	if ItemCfg.Classify == ProtoRes.ITEM_CLASSIFY_TYPE.ITEM_CLASSIFY_EQUIP_DEPUTY_HAND then
 		if MajorUtil.GetMajorProfID() == ProtoCommon.prof_type.PROF_TYPE_PALADIN or MajorUtil.GetMajorProfID() == ProtoCommon.prof_type.PROF_TYPE_GLADIATOR then
@@ -3778,19 +3812,33 @@ function ShopMgr:GetTextColor_Nomal()
 	return TipsColor_Nomal
 end
 
---- 获取下周一的时间戳
-function ShopMgr:GetNextMonday_ZeroMS()
-	local timestamp = _G.TimeUtil.GetServerLogicTime() -- 默认当前时间
-	local currentWday = tonumber(os.date("%w", timestamp))
-	currentWday = currentWday == 0 and 7 or currentWday
+--- 获取下周一凌晨五点的时间戳
+function ShopMgr:GetNextMonday_FiveMS()
+	local timestamp = _G.TimeUtil.GetServerLogicTime()
+	local currentTime = os.date("*t", timestamp)
 
-	local daysToAdd = (8 - currentWday) % 7
-	if daysToAdd == 0 then daysToAdd = 7 end
+	--- 如果今天是周一且还没到5点，直接返回今天5点的时间戳
+	if currentTime.wday == 2 and currentTime.hour < 5 then
+		currentTime.hour, currentTime.min, currentTime.sec = 5, 0, 0
+		return os.time(currentTime)
+	end
 
-	local nextMonday = os.date("*t", timestamp + daysToAdd * 86400)
-	nextMonday.hour, nextMonday.min, nextMonday.sec = 0, 0, 0
+	--- 计算到下周一需要增加的天数
+	local daysToAdd
+	if currentTime.wday == 1 then			--- 周日
+		daysToAdd = 1
+	elseif currentTime.wday == 2 then		--- 周一(已过5点)
+		daysToAdd = 7
+	else									--- 周二到周六(wday=3到7)
+		daysToAdd = 9 - currentTime.wday	--- 9是固定值：2(周一的wday)+7天
+	end
 
-	return os.time(nextMonday) - timestamp
+	--- 计算下周一凌晨5点的时间戳
+	local nextMondayTime = os.date("*t", timestamp + daysToAdd * 86400)
+	nextMondayTime.hour, nextMondayTime.min, nextMondayTime.sec = 5, 0, 0
+
+
+    return os.time(nextMondayTime)
 end
 
 --- 数据上报
@@ -3805,6 +3853,10 @@ end
 function ShopMgr:GetJumpType()
 	--如果指定了TabIndex ShopMgr.ShopMainTypeIndex直接等于Index 如果是一级分类ID 则进行查找匹配
 	local Index = self.ShopMainTypeIndex
+	if self.IsDefaulFirstType then
+		return Index
+	end
+
 	local TabInfoList = self:GetTabListByShopID(self.CurOpenMallId)
 	for i = 1, #TabInfoList do 
 		if TabInfoList[i].FirstType == ShopMgr.ShopMainTypeIndex then
@@ -3819,6 +3871,7 @@ function ShopMgr:GetJumpType()
 			return Index
 		end
 	end
+
 	for index, value in ipairs(TabInfoList) do
 		ShopMgr.ShopMainTypeIndex = value.FirstType
 		return index

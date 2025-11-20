@@ -194,6 +194,9 @@ function PWorldMainlinePanelView:OnShow()
 
 	local AudioUtil = require("Utils/AudioUtil")
 	AudioUtil.LoadAndPlayUISound("AkAudioEvent'/Game/WwiseAudio/Events/UI/UI_INGAME/Play_UI_copy_enter.Play_UI_copy_enter'")
+
+	-- log
+	_G.FLOG_INFO("PWorldMainlinePanelView:OnShow with target id: %s", self.Params and self.Params.FromTargetID or "nil")
 end
 
 function PWorldMainlinePanelView:OnHide()

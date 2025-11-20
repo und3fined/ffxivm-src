@@ -72,6 +72,12 @@ local M = {
         [ClientSceneMode.SceneModeChocoboRoom] = "/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Icon_Style_FJDJ_png.UI_PWorld_Icon_Style_FJDJ_png",
     },
 
+    SceneModeIconBG = {
+        [SceneMode.SceneModeChallenge] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Img_TaskSetUp_Purple_png.UI_PWorld_Img_TaskSetUp_Purple_png'",
+        [SceneMode.SceneModeUnlimited] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Img_TaskSetUp_Blue_png.UI_PWorld_Img_TaskSetUp_Blue_png'",
+        [SceneMode.SceneModeNormal] = "PaperSprite'/Game/UI/Atlas/PWorld/Frames/UI_PWorld_Img_TaskSetUp_Green_png.UI_PWorld_Img_TaskSetUp_Green_png'",
+    },
+
     SceneModeNameDef = MakeLSTRDict({
         [MakeLSTRAttrKey(SceneMode.SceneModeNormal)] = 1320071,
         [MakeLSTRAttrKey(SceneMode.SceneModeChallenge)] = 1320072,

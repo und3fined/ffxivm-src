@@ -45,15 +45,16 @@ local RotationX = -6 --Yaw值偏移角度，偏移数据以图鉴为基准，而
 ---@field BtnShowCancel UFButton
 ---@field BtnSwitch UFButton
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonTitle CommonTitleView
 ---@field CompanionRenderer CompanionRender2DView
 ---@field HorizontalType UHorizontalBox
 ---@field PanelInteract UFCanvasPanel
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelOwnInfo UFCanvasPanel
 ---@field TextCompanionExpository UFTextBlock
 ---@field TextCompanionName UFTextBlock
 ---@field TextMoveType UFTextBlock
 ---@field TextMoveTypeTitle UFTextBlock
----@field TextTitle UFTextBlock
 ---@field ToggleButtonAttack UToggleButton
 ---@field ToggleButtonMove UToggleButton
 ---@field ToggleButtonShow UToggleButton
@@ -74,15 +75,16 @@ function PreviewCompanionView:Ctor()
 	--self.BtnShowCancel = nil
 	--self.BtnSwitch = nil
 	--self.CloseBtn = nil
+	--self.CommonTitle = nil
 	--self.CompanionRenderer = nil
 	--self.HorizontalType = nil
 	--self.PanelInteract = nil
+	--self.PanelMask3 = nil
 	--self.PanelOwnInfo = nil
 	--self.TextCompanionExpository = nil
 	--self.TextCompanionName = nil
 	--self.TextMoveType = nil
 	--self.TextMoveTypeTitle = nil
-	--self.TextTitle = nil
 	--self.ToggleButtonAttack = nil
 	--self.ToggleButtonMove = nil
 	--self.ToggleButtonShow = nil
@@ -102,6 +104,7 @@ end
 function PreviewCompanionView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CloseBtn)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.CompanionRenderer)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -225,11 +228,13 @@ function PreviewCompanionView:UpdateInteractList(CompanionID)
 	self.InteractTimelineList = {}
 	self.InteractTimelineIndex = 0
 	local Cfg = CompanionMgr:GetCompanionExternalCfg(CompanionID)
-	if Cfg.InactiveIdle1 > 0 then
-		table.insert(self.InteractTimelineList, Interact1TimelineLabel)
-	end
-	if Cfg.InactiveIdle2 > 0 then
-		table.insert(self.InteractTimelineList, Interact2TimelineLabel)
+	if Cfg then
+		if Cfg.InactiveIdle1 > 0 then
+			table.insert(self.InteractTimelineList, Interact1TimelineLabel)
+		end
+		if Cfg.InactiveIdle2 > 0 then
+			table.insert(self.InteractTimelineList, Interact2TimelineLabel)
+		end
 	end
 
     -- 检查是否解锁了特殊的表演动作
@@ -352,7 +357,7 @@ function PreviewCompanionView:OnCompanionMoveTypeChanged(NewValue, OldValue)
 end
 
 function PreviewCompanionView:InitPanelStaticText()
-	self.TextTitle:SetText(LSTR(120032))
+	self.CommonTitle:SetTextTitleName(LSTR(120032))
 	self.TextMoveTypeTitle:SetText(LSTR(120027))
 end
 

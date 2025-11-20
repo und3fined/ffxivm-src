@@ -17,6 +17,7 @@ local ProtoCS = require("Protocol/ProtoCS")
 ---@field ActivityTimeItem OpsActivityTimeItemView
 ---@field BtnCheck UFButton
 ---@field BtnReceive CommBtnSView
+---@field BtnVideo UFButton
 ---@field Comm126Slot CommBackpack126SlotView
 ---@field ImgPoster UFImage
 ---@field PanelContent1 UFCanvasPanel
@@ -38,6 +39,8 @@ local ProtoCS = require("Protocol/ProtoCS")
 ---@field TextPoster UFTextBlock
 ---@field TextTask UFTextBlock
 ---@field TextTitle UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local OpsVersionNoticeMainPanelView = LuaClass(UIView, true)
 
@@ -46,6 +49,7 @@ function OpsVersionNoticeMainPanelView:Ctor()
 	--self.ActivityTimeItem = nil
 	--self.BtnCheck = nil
 	--self.BtnReceive = nil
+	--self.BtnVideo = nil
 	--self.Comm126Slot = nil
 	--self.ImgPoster = nil
 	--self.PanelContent1 = nil
@@ -67,6 +71,8 @@ function OpsVersionNoticeMainPanelView:Ctor()
 	--self.TextPoster = nil
 	--self.TextTask = nil
 	--self.TextTitle = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -118,6 +124,7 @@ function OpsVersionNoticeMainPanelView:OnInit()
 		{"Panel4TextPoster2", UIBinderSetText.New(self, self.PosterS02.TextPoster)},
 		{"Panel4TextPoster3", UIBinderSetText.New(self, self.PosterS03.TextPoster)},
 		{"Panel4TextPoster4", UIBinderSetText.New(self, self.PosterS04.TextPoster)},
+		{"bShowVideo", UIBinderSetIsVisible.New(self, self.BtnVideo)},
     }
 end
 
@@ -150,7 +157,7 @@ function OpsVersionNoticeMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self,  self.BtnCheck, self.OnBtnCheckClick)
 	UIUtil.AddOnClickedEvent(self,  self.BtnReceive, self.OnBtnReceiveClick)
 	UIUtil.AddOnClickedEvent(self,  self.Comm126Slot.Btn, self.OnClickRewardSlot)
-
+	UIUtil.AddOnClickedEvent(self,  self.BtnVideo, self.OnVideoPlayClick)
 end
 
 function OpsVersionNoticeMainPanelView:OnRegisterGameEvent()
@@ -167,6 +174,13 @@ function OpsVersionNoticeMainPanelView:OnBtnCheckClick()
 	if self.ViewModel then
 		_G.PreviewMgr:OpenPreviewView(self.ViewModel.RewardItemID)
 	end
+end
+
+function OpsVersionNoticeMainPanelView:OnVideoPlayClick()
+	if self.ViewModel.VideoPath == nil then
+		return
+	end
+	_G.UIViewMgr:ShowView(_G.UIViewID.CommonVideoPlayerView, {VideoPath = self.ViewModel.VideoPath})
 end
 
 function OpsVersionNoticeMainPanelView:OnBtnReceiveClick()

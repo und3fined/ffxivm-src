@@ -50,14 +50,10 @@ function PWorldMatchVM:UpdateVM()
 
         self.MatchItemVMs:UpdateByValues(Data)
         self:UpdTitle()
-    elseif PWorldMatchMgr:GetCrystallineItemCnt() > 0 or PWorldMatchMgr:GetFrontlineItemCnt() > 0 then
-        self.MatchCnt = PWorldMatchMgr:GetCrystallineItemCnt() + PWorldMatchMgr:GetFrontlineItemCnt()
+    elseif PWorldMatchMgr:GetPVPItemCnt() > 0 then
+        self.MatchCnt = PWorldMatchMgr:GetPVPItemCnt()
         self.MatchMaxCnt = PWorldEntDefine.PVPMatchMaxCnt
-        local Items = {}
-        local CrystallineMatchItems = PWorldMatchMgr:GetCrystallineItems()
-        local FrontlineMatchItems = PWorldMatchMgr:GetFrontlineItems()
-        Items = table.merge_table(Items, CrystallineMatchItems)
-        Items = table.merge_table(Items, FrontlineMatchItems)
+        local Items = PWorldMatchMgr:GetPVPItems()
         local Data = {}
         for Idx = 1, self.MatchMaxCnt do
             if Items[Idx] then

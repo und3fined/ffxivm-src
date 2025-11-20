@@ -170,7 +170,7 @@ function CardsBoardSlotItemView:OnRegisterUIEvent()
 end
 
 function CardsBoardSlotItemView:OnRegisterGameEvent()
-
+    self:RegisterGameEvent(_G.EventID.PlayMagicCardTutorial, self.OnPlayMagicCardTutorial)
 end
 
 function CardsBoardSlotItemView:OnRegisterBinder()
@@ -182,6 +182,24 @@ function CardsBoardSlotItemView:OnRegisterBinder()
     end
     self:RegisterBinders(self.ViewModel, self.Binders)
     self:RegisterBinder(self.ViewModel.SingleCardVM, self.BindersForSingleCard)
+end
+
+function CardsBoardSlotItemView:OnPlayMagicCardTutorial(TutorialID, Round)
+    if Round == nil then
+        return
+    end
+
+    local ItemData = self.ViewModel
+    if not ItemData then
+        return
+    end
+    local CurIndex = ItemData:GetIndex()
+    if TutorialID == LocalDef.TutorialID_PlayerTurn then
+        local MoveData = LocalDef.TutorialMoveDatas[Round]
+        if MoveData and MoveData.Card and MoveData.Card.BoardLoc + 1 ~= CurIndex then
+            self:SetVisible(true, false)
+        end
+    end
 end
 
 return CardsBoardSlotItemView

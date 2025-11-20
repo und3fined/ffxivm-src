@@ -68,6 +68,7 @@ function TeamRecruitObjectFilteringView:OnShow()
 		else
 			self.TableAdapterContent:CancelSelected()
 		end
+		self:SetContentID(CID)
 	end
 
 	self.Comm2FrameM_UIBP:SetTitleText(_G.LSTR(1310100))

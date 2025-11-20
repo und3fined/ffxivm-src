@@ -107,11 +107,10 @@ function SecondJoyStickView:InitGeometryData()
 	end
 	self.FImg_Touch:SetRenderOpacity(1)
 	local Geometry = self:GetCachedGeometry()
-	local _, BasePos = _G.UE.USlateBlueprintLibrary.LocalToViewport(self, Geometry, _G.UE.FVector2D(0,0))
 	self.RenderTransformScale = self.RenderTransform.Scale
-	local BaseSize = UIUtil.CanvasSlotGetSize(self.SecondJoyStick) * self.RenderTransformScale
-	
-	self.WidgetCenter = BaseSize * 0.5 + BasePos
+	local BaseSize = UIUtil.CanvasSlotGetSize(self.SecondJoyStick)
+	local _, BasePos = _G.UE.USlateBlueprintLibrary.LocalToViewport(self, Geometry, BaseSize * 0.5)
+	self.WidgetCenter = BasePos
 	self.RadiusXY = BaseSize * 0.5
 	self.RadiusSquared = self.RadiusXY.X * self.RadiusXY.X--假设X==Y，用于拖拽最大值，拖拽超出该范围后视为最大距离
 end
@@ -367,7 +366,10 @@ function SecondJoyStickView:OnJoyStickMove(MousePosition)
 	end
 	local SelfGeometry = _G.UE.UWidgetLayoutLibrary.GetViewportWidgetGeometry(self)
 	local CurMousePosition = _G.UE.USlateBlueprintLibrary.AbsoluteToLocal(SelfGeometry, MousePosition)
-
+	_, CurMousePosition =_G.UE.USlateBlueprintLibrary.LocalToViewport(self, SelfGeometry, CurMousePosition)
+	if nil == self.WidgetCenter then
+		return
+	end
 	local DistSquared = _G.UE.FVector2D.DistSquared(CurMousePosition, self.WidgetCenter)
 	local Percent = 1	--拖拽距离百分比，1为最大距离
 	if DistSquared < self.RadiusSquared then
@@ -383,9 +385,9 @@ function SecondJoyStickView:OnJoyStickMove(MousePosition)
 
 	--指示器不超过外层圈范围
 	if Percent < 1 then
-		UIUtil.CanvasSlotSetPosition(self.ValidImageTouch, (CurMousePosition - self.WidgetCenter) / self.RenderTransformScale)
+		UIUtil.CanvasSlotSetPosition(self.ValidImageTouch, (CurMousePosition - self.WidgetCenter))
 	else
-		UIUtil.CanvasSlotSetPosition(self.ValidImageTouch, self.RadiusXY * LocalDir / self.RenderTransformScale)
+		UIUtil.CanvasSlotSetPosition(self.ValidImageTouch, self.RadiusXY * LocalDir)
 	end
 
 	local Major = MajorUtil.GetMajor()
@@ -414,6 +416,13 @@ function SecondJoyStickView:OnJoyStickMove(MousePosition)
 	EffectUtil.SetSkillDecalState(self.WarningID, self.DecalState and not self.CancelState)
 	EffectUtil.SetSkillDecalLocation(self.WarningID, self.AbsolutePosition)
 	EffectUtil.SetSkillDecalRotation(self.WarningID, Rotation)
+end
+
+function SecondJoyStickView:CancelPressStatus()
+	local Parent = rawget(self, "ParentView")
+	if Parent and Parent["CancelPressStatus"] then
+		Parent:CancelPressStatus()
+	end
 end
 
 return SecondJoyStickView

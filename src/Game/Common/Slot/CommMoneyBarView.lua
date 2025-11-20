@@ -14,6 +14,7 @@ local UIUtil = require("Utils/UIUtil")
 ---@field Money1 CommMoneySlotView
 ---@field Money2 CommMoneySlotView
 ---@field Money3 CommMoneySlotView
+---@field Money4 CommMoneySlotView
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CommMoneyBarView = LuaClass(UIView, true)
 
@@ -23,6 +24,7 @@ function CommMoneyBarView:Ctor()
 	--self.Money1 = nil
 	--self.Money2 = nil
 	--self.Money3 = nil
+	--self.Money4 = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -31,6 +33,7 @@ function CommMoneyBarView:OnRegisterSubView()
 	self:AddSubView(self.Money1)
 	self:AddSubView(self.Money2)
 	self:AddSubView(self.Money3)
+	self:AddSubView(self.Money4)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

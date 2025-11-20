@@ -44,8 +44,9 @@ function CrystalTowerInteractResultItemVM:UpdateVM(Value)
     self.bProfectVisible = Value.bProfectVisible
     self.bMultipleVisible = Value.bMultipleVisible
     self.ComboNum = Value.ComboNum
+    FLOG_INFO("CrystalTowerInteractResultItemVM:UpdateVM %s", self.CallBackIndex)
     self.CallBackIndex = self.CallBackIndex + 1
-
+    FLOG_INFO("after CrystalTowerInteractResultItemVM:UpdateVM %s", self.CallBackIndex)
     if self.ResetTimer ~= nil then
         TimerMgr:CancelTimer(self.ResetTimer)
     end
@@ -59,10 +60,6 @@ function CrystalTowerInteractResultItemVM:ResetVM()
     self.bProfectVisible = false
     self.bMultipleVisible = false
     self.ComboNum = 0
-end
-
-function CrystalTowerInteractResultItemVM:IsEqualVM(Value)
-    return true
 end
 
 return CrystalTowerInteractResultItemVM

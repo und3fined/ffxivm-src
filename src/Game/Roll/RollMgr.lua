@@ -59,7 +59,9 @@ local SortAwardList = function(a,b)
 	if a.ExpireTime ~= b.ExpireTime then
 		return a.ExpireTime < b.ExpireTime
 	else
-		return a.ID < b.ID
+		local IDa = a.ID or 0
+        local IDb = b.ID or 0
+        return IDa < IDb
 	end
 end
 
@@ -98,6 +100,8 @@ function RollMgr:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.TeamRollAllRandom, self.OnAllAwardDemand)
 	self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnClearDataByEvent)				-- 退出副本通知隐藏Roll界面
 	self:RegisterGameEvent(EventID.RoleLoginRes, self.OnClearDataByEvent)
+	-- self:RegisterGameEvent(EventID.PWorldExit, self.OnClearDataByEvent)
+	
 	--- 寻宝用  退队请数据
 	self:RegisterGameEvent(EventID.TeamInTeamChanged, self.OnGameEventTeamInTeamChanged)
 	
@@ -122,6 +126,7 @@ function RollMgr:OnNetMsgRollQuery(MsgBody)
 
 	self.IsQuery = true
 	self.IsTreasureHuntRoll = false
+	local NeedShowBox = false
 	for i = 1,#Treasures do
 		local Value = Treasures[i]
 		if Value ~= nil then 
@@ -129,23 +134,29 @@ function RollMgr:OnNetMsgRollQuery(MsgBody)
 				self.IsTreasureHuntRoll = true
 				break
 			end
+			--- 队伍人数大于1才显示宝箱按钮
+			if #Value.RoleList > 1 then
+				NeedShowBox = true
+			end
 		end
 	end
 
-	self:OnTreasureAssign(true)
+	if NeedShowBox then
+		self:OnTreasureAssign(true)
+	end
 
-	table.sort(Treasures, function(a,b) 
-		local aIsEmpty = table.is_nil_empty(a.AwardList)
-		local bIsEmpty = table.is_nil_empty(b.AwardList)
+	-- table.sort(Treasures, function(a,b) 
+	-- 	local aIsEmpty = table.is_nil_empty(a.AwardList)
+	-- 	local bIsEmpty = table.is_nil_empty(b.AwardList)
 	
-		if aIsEmpty then
-			return false	-- 如果a是空的 永远排在后面
-		elseif bIsEmpty then
-			return true		-- 如果b是空的但a不是 a排前面
-		else
-			return a.AwardList[1].ExpireTime > b.AwardList[1].ExpireTime
-		end
-	end)
+	-- 	if aIsEmpty then
+	-- 		return false	-- 如果a是空的 永远排在后面
+	-- 	elseif bIsEmpty then
+	-- 		return true		-- 如果b是空的但a不是 a排前面
+	-- 	else
+	-- 		return a.AwardList[1].ExpireTime > b.AwardList[1].ExpireTime
+	-- 	end
+	-- end)
 	for _, value in ipairs(Treasures) do
 		-- local value = Treasures[i]
 		local AwardList = value.AwardList
@@ -419,7 +430,8 @@ function RollMgr:UpdateRollList(TempRollList, RollList, Key)
 	if RollList.Result ~= 0 then
 		local ResultIsNew = true
 		for _, value in ipairs(TempRollList) do
-			if value.RoleID == RollList.RoleID and value.ID == RollList.ID then
+			--- 后台有可能同一个人的点数下发两次，这里拦截一下，没有点数的时候才赋值
+			if value.RoleID == RollList.RoleID and value.ID == RollList.ID and value.Result == nil then
 				value.Result = RollList.Result
 				ResultIsNew = false
 				break
@@ -654,7 +666,10 @@ function RollMgr:StartTeamRollTimer(TeamID)
 	TeamRollItemVM.AwardExpireTime = 0
 	-- TeamRollItemVM.IsStartRollTimer = true
 	for i = 1,  TeamRollItemVM.AwardList:Length() do
-		TeamRollItemVM.AwardList:Get(i).IsStartRollTimer = true
+		local TempItem = TeamRollItemVM.AwardList:Get(i)
+		if TempItem ~= nil then
+			TempItem.IsStartRollTimer = true
+		end
 	end
 end
 
@@ -662,7 +677,7 @@ end
 function RollMgr:OnTimerTeamRollResult(Params)
 	local TeamID = Params.TeamID
 	local Key = tostring(TeamID)
-	if TeamRollItemVM.AwardExpireTime == 0 and self.AwardMap[self.CurrentAwardKey] ~= nil then
+	if TeamRollItemVM.AwardExpireTime == 0 then
 		TeamRollItemVM.AwardExpireTime = self.AwardMap[self.CurrentAwardKey].ExpireTime
 	end
 	EventMgr:SendEvent(EventID.TeamRollItemUpdateTick)
@@ -864,15 +879,8 @@ function RollMgr:OnGameEventPWorldMapEnter(Params)
 end
 
 --- 切图清数据
-function RollMgr:OnClearDataByEvent()
-	FLOG_INFO("TeamRoll  OnClearDataByEvent")
-	local TempPworldCfg = PworldCfg:FindCfgByKey(_G.PWorldMgr:GetCurrPWorldResID())
-	if TempPworldCfg == nil then
-		return
-	end
-	--- 收到退出副本事件时判断下是否还在副本内，特殊情况(队长退队再解散)会触发退本事件
-	if TempPworldCfg.Type == ProtoRes.pworld_type.PWORLD_CATEGORY_DUNGEON then
-		FLOG_INFO("RollMgr:OnClearDataByEvent  TempPworldCfg.Type is PWORLD_CATEGORY_DUNGEON")
+function RollMgr:OnClearDataByEvent(Params)
+	if Params == nil or not Params.bChangeMap then
 		return
 	end
 	UIViewMgr:HideView(UIViewID.TeamRollPanel)
@@ -888,6 +896,16 @@ end
 
 function RollMgr:OnGameEventTeamInTeamChanged(IsInTeam)
 	--- 退出队伍清除数据
+	FLOG_INFO("TeamRoll  OnGameEventTeamInTeamChanged")
+	local TempPworldCfg = PworldCfg:FindCfgByKey(_G.PWorldMgr:GetCurrPWorldResID())
+	if TempPworldCfg == nil then
+		return
+	end
+	--- 收到退出队伍事件时判断下是否还在副本内，特殊情况(队长退队再解散)会触发退队事件
+	if TempPworldCfg.Type == ProtoRes.pworld_type.PWORLD_CATEGORY_DUNGEON then
+		FLOG_INFO("RollMgr:OnClearDataByEvent  TempPworldCfg.Type is PWORLD_CATEGORY_DUNGEON")
+		return
+	end
 	if not IsInTeam then
 		self:OnClearDataByEvent()
 	end

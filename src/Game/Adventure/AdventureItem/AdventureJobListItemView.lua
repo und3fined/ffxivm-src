@@ -10,17 +10,12 @@ local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetImageBrush = require("Binder/UIBinderSetImageBrush")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
-local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
-local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
-local UIBinderSetRenderOpacity = require("Binder/UIBinderSetRenderOpacity")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 local AdventureCareerMgr = require("Game/Adventure/AdventureCareerMgr")
-local QuestMgr = require("Game/Quest/QuestMgr")
 local ProtoCS = require("Protocol/ProtoCS")
 local QUEST_STATUS =  ProtoCS.CS_QUEST_STATUS
-local MapUtil = require("Game/Map/MapUtil")
-local MajorUtil = require("Utils/MajorUtil")
+
 ---@class AdventureJobListItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field AdventureJobState AdventureJobStateItemView
@@ -99,7 +94,7 @@ function AdventureJobListItemView:RefreshBtnStatus()
 	if Status == QUEST_STATUS.CS_QUEST_STATUS_NOT_STARTED  then
 		if VM.Activate then
 			self.BtnGo:SetIsNormalState(true)
-			self.BtnGo:SetText(LSTR(520010))
+			self.BtnGo:SetText(LSTR(520008))
 		else
 			self.BtnGo:SetIsDisabledState(true, false)
 			self.BtnGo:SetText(LSTR(520035))

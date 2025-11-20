@@ -16,12 +16,18 @@ local CombatPanelBuffCfg = {
         Config = {}
     },
     DefaultValues = {
-        BuffID = 8700,
+        BuffID = 1250,
         DefaultCombatState = 2,
         _Icon = '["","",""]',
+        bForbidGenAttack = 0,
     },
 	LuaData = {
         {
+            DefaultCombatState = 1,
+            bForbidGenAttack = 1,
+        },
+        {
+            BuffID = 8700,
         },
         {
             BuffID = 8701,

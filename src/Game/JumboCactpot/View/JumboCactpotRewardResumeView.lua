@@ -19,6 +19,7 @@ local AudioUtil = require("Utils/AudioUtil")
 ---@field BtnLeft UFButton
 ---@field BtnRight UFButton
 ---@field PopUpBG CommonPopUpBGView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TableViewMiddle UTableView
 ---@field TableViewdian UTableView
 ---@field TextTitle UFTextBlock
@@ -33,6 +34,7 @@ function JumboCactpotRewardResumeView:Ctor()
 	--self.BtnLeft = nil
 	--self.BtnRight = nil
 	--self.PopUpBG = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TableViewMiddle = nil
 	--self.TableViewdian = nil
 	--self.TextTitle = nil
@@ -44,6 +46,7 @@ end
 function JumboCactpotRewardResumeView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

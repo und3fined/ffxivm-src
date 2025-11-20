@@ -17,6 +17,7 @@ local UIAdapterCountDown = require("UI/Adapter/UIAdapterCountDown")
 local UIBinderUpdateCountDown = require("Binder/UIBinderUpdateCountDown")
 local LocalizationUtil = require("Utils/LocalizationUtil")
 local AudioUtil = require("Utils/AudioUtil")
+local MarketDefine = require("Game/Market/MarketDefine")
 local LSTR = _G.LSTR
 ---@class MarketStallItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -94,7 +95,7 @@ function MarketStallItemView:OnInit()
 		{ "SellAmountText", UIBinderSetText.New(self, self.TextSellAmount) },
 		{ "NameText", UIBinderSetText.New(self, self.TextName) },
 		{ "RetrieveVisible", UIBinderSetIsVisible.New(self, self.HorizontalRetrieve) },
-		{ "MoneyValue", UIBinderSetItemNumFormat.New(self, self.TextAmount) },
+		{ "MoneyValue", UIBinderSetText.New(self, self.TextAmount) },
 		{ "RelistingText", UIBinderSetText.New(self, self.TextRelisting) },
 
 		{ "HasGetVisible", UIBinderSetIsVisible.New(self, self.EffectDecoFocus) },
@@ -104,7 +105,7 @@ function MarketStallItemView:OnInit()
 		{ "TimePanelVisible", UIBinderSetIsVisible.New(self, self.PanelTime) },
 		{ "ShowTimeText", UIBinderUpdateCountDown.New(self, self.AdapterCountDownTime, 1, true, true) },
 
-		{ "RedDotID", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedRedDotID) },
+	
 	}
 end
 
@@ -118,6 +119,8 @@ function MarketStallItemView:OnShow()
 
 	local ViewModel = Params.Data
 	if nil == ViewModel then return end
+
+	self.CommonRedDot_UIBP:SetRedDotNameByString(_G.RedDotMgr:GetRedDotNameByID(MarketDefine.MarketRedDotID.Stall).. '/' .. tostring(ViewModel.SellID))
 
 	if ViewModel.PlayUnlockAni then
 		self:PlayAnimMonthCardUnlock()
@@ -166,9 +169,6 @@ function MarketStallItemView:TimeUpdateCallback(LeftTime)
 	return LocalizationUtil.GetCountdownTimeForSimpleTime(LeftTime, "")
 end
 
-function MarketStallItemView:OnValueChangedRedDotID(ID)
-	self.CommonRedDot_UIBP:SetRedDotIDByID(ID)
-end
 
 function MarketStallItemView:OnClickButtonItem()
 	local Params = self.Params

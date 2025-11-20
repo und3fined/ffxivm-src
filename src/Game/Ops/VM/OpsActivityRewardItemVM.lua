@@ -28,6 +28,12 @@ function OpsActivityRewardItemVM:UpdateVM(Params)
         end
         self.Icon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(Params.DropID))
         self.Num = _G.ScoreMgr.FormatScore(Params.DropNum)
+        if Params.NumVisible ~= nil then
+            self.NumVisible = Params.NumVisible
+        end
+        if Params.IsReward ~= nil then
+            self.IsReward = Params.IsReward
+        end
         self.IconReceivedVisible = Params.IconReceivedVisible
         self.IsMask = Params.IconReceivedVisible
         self.LotteryProbability = Params.LotteryProbability
@@ -37,6 +43,12 @@ function OpsActivityRewardItemVM:UpdateVM(Params)
         self.ItemID = Params.ItemID
         self.Icon = UIUtil.GetIconPath(ItemUtil.GetItemIcon(Params.ItemID))
         self.Num = _G.ScoreMgr.FormatScore(Params.Num)
+        if Params.NumVisible ~= nil then
+            self.NumVisible = Params.NumVisible
+        end
+        if Params.IsReward ~= nil then
+            self.IsReward = Params.IsReward
+        end
         self.Day = Params.Day
         self.TextDay = Params.TextDay
         self.ImgBG = Params.ImgBG
@@ -52,6 +64,12 @@ function OpsActivityRewardItemVM:UpdateVM(Params)
             self.ItemQualityIcon = ItemUtil.GetSlotColorIcon(Params.ItemID, ItemDefine.ItemSlotType.Item96Slot)
         end
         self.Num = _G.ScoreMgr.FormatScore(Params.Num)
+        if Params.NumVisible ~= nil then
+            self.NumVisible = Params.NumVisible
+        end
+        if Params.IsReward ~= nil then
+            self.IsReward = Params.IsReward
+        end
         if Params.RewardStatus == ProtoCS.Game.Activity.RewardStatus.RewardStatusDone then
             self.IconReceivedVisible = true
             self.IsMask = true

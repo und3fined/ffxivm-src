@@ -94,6 +94,14 @@ function EquipmentSwitchWinView:UpdateTableList(Type)
 		self.ViewModel.Title = LSTR(1050030)
 		local EquipmentTable = _G.EquipmentMgr:GetCanImproveEquipment()
 		if EquipmentTable and next(EquipmentTable) then
+			table.sort(EquipmentTable, function(a, b)
+				--品级相同按照部位排
+				if a.ItemLevel == b.ItemLevel then
+					return a.Part < b.Part
+				else
+					return a.ItemLevel > b.ItemLevel
+				end
+			end)
 			for key, value in pairs(EquipmentTable) do
 				local Data = {
 					ItemID = value.ResID,
@@ -106,14 +114,6 @@ function EquipmentSwitchWinView:UpdateTableList(Type)
 				end
 				table.insert(TableList, Data)
 			end
-			table.sort(TableList, function(a, b)
-				--品级相同按照部位排
-				if a.ItemLevel == b.ItemLevel then
-					return a.Part < b.Part
-				else
-					return a.ItemLevel > b.ItemLevel
-				end
-			end)
 		end
 	end
 	

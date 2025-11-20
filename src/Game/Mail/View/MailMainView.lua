@@ -18,9 +18,9 @@ local AudioUtil = require("Utils/AudioUtil")
 local AnimationUtil = require("Utils/AnimationUtil")
 local StoreDefine = require("Game/Store/StoreDefine")
 local StoreUtil = require("Game/Store/StoreUtil")
-local QuestDefine = require("Game/Quest/QuestDefine")
-local QuestHelper = require("Game/Quest/QuestHelper")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local QuestHelper = require("Game/Quest/QuestHelper")
+local QuestDefine = require("Game/Quest/QuestDefine")
 
 local CHAPTER_STATUS =  QuestDefine.CHAPTER_STATUS
 local MailType = MailDefine.MailType
@@ -177,7 +177,6 @@ function MailMainView:OnRegisterSubView()
 	self:AddSubView(self.CommonBkg02)
 	self:AddSubView(self.CommonBkgMask)
 	self:AddSubView(self.CommonModelToImage)
-	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.GiftPage)
 	self:AddSubView(self.ModelAdjustUI_106)
 	self:AddSubView(self.VerIconTabs)
@@ -202,14 +201,16 @@ function MailMainView:OnInit()
 	self.MainPanelResidentAnimMontage = nil
 	self.BtnClose:SetCallback(self, self.ActiveClose)
 
-	for _, Value in pairs({MailType.System, MailType.Gift}) do
-		local CurrentMailType = Value
-		local RedDotData = nil
-		local TypeRedDotName = _G.MailMgr:GetRedDotName(CurrentMailType)
-		if TypeRedDotName ~= "" then
-			RedDotData = { RedDotName = TypeRedDotName, IsStrongReminder = true }
+	for _, Value in pairs({ MailType.System, MailType.Gift }) do
+		if MailTypeInfo[Value].IsVisible then
+			local CurrentMailType = Value
+			local RedDotData = nil
+			local TypeRedDotName = _G.MailMgr:GetRedDotName(CurrentMailType)
+			if TypeRedDotName ~= "" then
+				RedDotData = { RedDotName = TypeRedDotName, IsStrongReminder = true }
+			end
+			table.insert( self.ShowMailTypeIconList, { IconPath = MailTypeInfo[CurrentMailType].IconPath, SelectIcon = MailTypeInfo[CurrentMailType].IconPath, MailType = CurrentMailType, RedDotData = RedDotData } )
 		end
-		table.insert( self.ShowMailTypeIconList, { IconPath = MailTypeInfo[CurrentMailType].IconPath, SelectIcon = MailTypeInfo[CurrentMailType].IconPath, MailType = CurrentMailType, RedDotData = RedDotData } )
 	end
 
 	self.AdapterTableViewMailList = UIAdapterTableView.CreateAdapter(self, self.TableViewMailList, self.OnSelectChangedTableViewMailList, true)
@@ -325,9 +326,7 @@ function MailMainView:OnHide()
 	self:LoadUIWeather(false)
 	MailMgr:GetSeverStoreMail()
 	MailMgr:GetNewEmails()
-
 	if MailMgr.CreatedNPCEntityID ~= nil then
-		_G.UE.UActorManager.Get():RemoveClientActor(MailMgr.CreatedNPCEntityID)
 		MailMgr:ClearCreatedNPCEntityID()
 	end
 end
@@ -528,7 +527,7 @@ function MailMainView:LoadUIWeather(Init)
 	end
 	
 	if Init then 
-		LightMgr:EnableUIWeather(13)  --id 在天气表里
+		LightMgr:EnableUIWeather(13)
 	else
 		LightMgr:DisableUIWeather()
 	end

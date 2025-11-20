@@ -17,6 +17,7 @@ local AnimDefines = require("Game/Anim/AnimDefines")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ActorUtil = require("Utils/ActorUtil")
 local ActiontimelinePathCfg = require("TableCfg/ActiontimelinePathCfg")
+local SingstateCfg = require("TableCfg/SingstateCfg")
 
 local FLOG_ERROR = _G.FLOG_ERROR
 
@@ -104,6 +105,34 @@ function AnimMgr:OnInteractiveStatChanged(Params)
 	local PrevStatBits = Params.ULongParam3
 	local CurSpellID = Params.IntParam1
 	local PrevSpellID = Params.IntParam2
+
+	local bPickUpState = false
+	local StateCmp = ActorUtil.GetActorStateComponent(EntityID)
+	if StateCmp and StateCmp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_PICKUP) then
+		bPickUpState = true
+	end
+
+	--读条开始
+	if CurStatBits == ProtoCommon.INTERACT_TYPE.INTERACT_TYPE_GENERAL and bPickUpState then
+		if CurSpellID > 0 then
+			local SingstateDesc = SingstateCfg:FindCfgByKey(CurSpellID)
+			if SingstateDesc then
+				if StateCmp then
+					StateCmp:UpdateInteractData(PrevSpellID, PrevStatBits)
+				end
+	
+				FLOG_INFO("AnimMgr:OnInteractiveStatChanged useitem sing begin CurSpellID:%d, PrevSpellID:%d, PrevStatBits:%d", CurSpellID, PrevSpellID, PrevStatBits)
+				return 
+			end
+		else
+			if StateCmp then
+				StateCmp:UpdateInteractData(PrevSpellID, PrevStatBits)
+			end
+
+			FLOG_INFO("AnimMgr:OnInteractiveStatChanged useitem sing over PrevSpellID:%d, PrevStatBits:%d", PrevSpellID, PrevStatBits)
+			return 
+		end
+	end
 
 	local CachedCrafterStateMap = self.CachedCrafterStateMap
 	local CachedGatherStateMap = self.CachedGatherStateMap

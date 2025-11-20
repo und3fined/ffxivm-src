@@ -12,6 +12,7 @@ local UIUtil = require("Utils/UIUtil")
 
 local ItemCfg = require("TableCfg/ItemCfg")
 local FishNotesDefine = require("Game/FishNotes/FishNotesDefine")
+local ItemDefine = require("Game/Item/ItemDefine")
 
 ---@class FishNotesGridVM: UIViewModel
 ---@field Icon string 鱼图标
@@ -20,10 +21,14 @@ local FishNotesGridVM = LuaClass(UIViewModel)
 
 function FishNotesGridVM:Ctor()
     self.Icon = ""
+    self.ItemQualityIcon = nil
     self.IsSelect = false
     self.NumVisible = false
     self.ItemID = 0
     self.ItemData = nil
+    self.bUnLockState = false
+    self.InchIcon = ""
+    self.bSizeKing = false
 end
 
 function FishNotesGridVM:IsEqualVM(Value)
@@ -37,12 +42,26 @@ function FishNotesGridVM:UpdateVM(Value)
     self.ID = Value.ID
     self.CanPrint = Value.CanPrint
     self.bUnLockState = _G.FishNotesMgr:CheckFishbUnLock(Value.ID)
+    if self.bUnLockState then
+        local SaveData = _G.FishNotesMgr:GetUnlockFishData(Value.ID)
+        self.InchIcon = _G.FishGuideVM:GetInchIconPath(Value.Size, SaveData.Size)
+        self.bSizeKing = SaveData.HistoryPercent == 1
+    else
+        self.bSizeKing = false
+    end
 
     local ItemData = ItemCfg:FindCfgByKey(Value.ItemID)
     if ItemData then
         self.ItemDataIconID = ItemData.IconID
         self.ItemData = ItemData
         self:UpdateUnKnowState(self.bUnLockState)
+
+        local IsHQ = (1 == ItemData.IsHQ)
+        if IsHQ then
+            self.ItemQualityIcon = ItemDefine.HQLightSlotColotType[ItemData.ItemColor]
+        else
+            self.ItemQualityIcon = ItemDefine.LightSlotColotType[ItemData.ItemColor]
+        end
     end
     self.IsSelect = false
 

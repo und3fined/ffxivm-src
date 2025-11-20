@@ -30,6 +30,8 @@ function FriendEntryVM:Ctor()
     self.PlayStyleIDs = nil 
     self.LoginTime = 0
     self.LogoutTime = 0
+    self.Nickname = nil
+    self.TureName = ""
     
     self.IsOnline = false 
     self.OnlineStatusIcon = "" -- 在线状态
@@ -47,11 +49,12 @@ end
 function FriendEntryVM:UpdateVM(Value)
     self.GroupID = Value.GroupID
     self.RoleID = Value.RoleID
-    self.Remark = Value.Remark
     self.Time = Value.Time
     self.IsFriend = Value.IsFriend
     self.IsFriendBeforeBlack = Value.IsFriendBeforeBlack
     self.IsSortPriority = false 
+
+    self:UpdateNickname(Value.Nickname)
 
     RoleInfoMgr:QueryRoleSimple(self.RoleID, function(_, RoleVM)
         self:UpdateRoleInfo(RoleVM)
@@ -63,7 +66,17 @@ end
 function FriendEntryVM:UpdateRoleInfo(Value)
     self.RoleID = Value.RoleID
     self.MapResName = Value.MapResName
-    self.Name = Value.Name
+    local CurNickName = _G.FriendMgr:GetFriendNickname(Value.RoleID)
+
+    --有昵称优先显示昵称
+    if CurNickName and CurNickName ~= "" then
+        self.Name = CurNickName
+        self.TureName = Value.Name
+    else
+        self.Name = Value.Name
+        self.TureName = Value.Name
+    end
+   
     self.ProfID = Value.Prof 
     self.LoginTime = Value.LoginTime
 
@@ -137,8 +150,7 @@ function FriendEntryVM:UpdateByConsortInfo(Value)
         self.ReqTime = Value.Time
     end
 
-    self.Remark = Value.Remark
-
+    self:UpdateRemark(Value.Remark)
     self:UpdateByRoleID(Value.RoleID)
 end
 
@@ -148,6 +160,12 @@ end
 
 function FriendEntryVM:UpdateRemark(NewRemark)
     self.Remark = NewRemark
+end
+
+function FriendEntryVM:UpdateNickname(NewNickname)
+    self.Nickname = NewNickname
+    --更新昵称后当前显示名字也更新为昵称
+    self.Name = NewNickname
 end
 
 function FriendEntryVM:SetSortPriority(b)

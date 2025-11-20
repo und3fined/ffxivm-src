@@ -73,6 +73,9 @@ local EditTabs = {
 local ScaleIconPath = "PaperSprite'/Game/UI/Atlas/PersonPortrait/Frames/UI_PersonPortrait_Icon_Scale_png.UI_PersonPortrait_Icon_Scale_png'"
 local RotateIconPath = "PaperSprite'/Game/UI/Atlas/PersonPortrait/Frames/UI_PersonPortrait_Icon_Rotate_png.UI_PersonPortrait_Icon_Rotate_png'"
 
+---GM 是否打印镜头移动位置
+local IsShowMovePos = false
+
 local PersonPortraitHeadDefine = {
     PortraitSize                = PortraitSize,
     MinDistance                 = MinDistance, 
@@ -96,6 +99,7 @@ local PersonPortraitHeadDefine = {
 
     TFrame = TFrame,
     THead = THead,
+    IsShowMovePos = IsShowMovePos,
 }
 
 return PersonPortraitHeadDefine

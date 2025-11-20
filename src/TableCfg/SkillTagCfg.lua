@@ -3,7 +3,9 @@
 local CfgBase = require("TableCfg/CfgBase")
 
 local CS = {
-    _1_1 = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_12.UI_Skill_Tag_Img_12\'',
+    _1_1 = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_03.UI_Skill_Tag_Img_03\'',
+    _1_2 = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_08.UI_Skill_Tag_Img_08\'',
+    _1_3 = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_12.UI_Skill_Tag_Img_12\'',
 }
 
 ---@class SkillTagCfg : CfgBase
@@ -31,6 +33,7 @@ local SkillTagCfg = {
             TagType = 3,
         },
         {
+            BgImgPath = CS._1_1,
             TagType = 4,
         },
         {
@@ -60,6 +63,7 @@ local SkillTagCfg = {
             TagType = 12,
         },
         {
+            BgImgPath = CS._1_2,
             TagType = 13,
         },
         {
@@ -69,7 +73,7 @@ local SkillTagCfg = {
             TagType = 15,
         },
         {
-            BgImgPath = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_03.UI_Skill_Tag_Img_03\'',
+            BgImgPath = CS._1_1,
             TagType = 16,
         },
         {
@@ -98,7 +102,7 @@ local SkillTagCfg = {
             TagType = 23,
         },
         {
-            BgImgPath = 'Texture2D\'/Game/UI/Texture/Skill/UI_Skill_Tag_Img_08.UI_Skill_Tag_Img_08\'',
+            BgImgPath = CS._1_2,
             TagType = 24,
         },
         {
@@ -106,11 +110,11 @@ local SkillTagCfg = {
             TagType = 25,
         },
         {
-            BgImgPath = CS._1_1,
+            BgImgPath = CS._1_3,
             TagType = 26,
         },
         {
-            BgImgPath = CS._1_1,
+            BgImgPath = CS._1_3,
             TagType = 27,
         },
         {

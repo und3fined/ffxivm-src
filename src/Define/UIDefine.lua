@@ -26,6 +26,13 @@ local CommUIStyleType = {
 	Light = 1, -- 浅色系
 }
 
+local NameOfBtnType = {
+	Btn0 = 0,	-- 无Btn
+	Btn1 = 1,	-- 1Btn
+	Btn2 = 2,	-- 2Btn
+	Btn3 = 3,	-- 3Btn
+}
+
 --界面关闭时是否强制GC 测试内存释放用
 local bForceGC = false
 
@@ -34,6 +41,7 @@ local UIDefine = {
 	SearchBtnColorType = SearchBtnColorType,
 	CommUIStyleType = CommUIStyleType,
 	bForceGC = bForceGC,
+	NameOfBtnType = NameOfBtnType,
 }
 
 return UIDefine

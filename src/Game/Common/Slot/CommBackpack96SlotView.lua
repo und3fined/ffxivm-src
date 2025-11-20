@@ -14,7 +14,8 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 local UIBinderSetColorAndOpacity = require("Binder/UIBinderSetColorAndOpacity")
 local UIBinderSetTextFormat = require("Binder/UIBinderSetTextFormat")
 local UIBinderSetItemNumFormat = require("Binder/UIBinderSetItemNumFormat")
-
+local ItemDefine = require("Game/Item/ItemDefine")
+local ItemUtil = require("Utils/ItemUtil")
 ---@class CommBackpack96SlotView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Btn UFButton
@@ -199,7 +200,11 @@ function CommBackpack96SlotView:OnRegisterBinder()
 
         }
     end
-
+    local ResID = ViewModel.ResID or ViewModel.ItemID
+    ViewModel.ItemSlotType = ItemDefine.ItemSlotType.Item96Slot
+    if ResID then
+        ViewModel.ItemQualityIcon = ItemUtil.GetSlotColorIcon(ResID, ViewModel.ItemSlotType)
+    end
     self:RegisterBinders(ViewModel, self.Binders)
 end
 

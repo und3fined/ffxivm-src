@@ -16,7 +16,7 @@ function BagExpandWinVM:Ctor()
     self.BagSlotVM = BagSlotVM.New()
 
     self.ItemNumberText = nil
-    self.NameText = nil
+
     self.ConsumeScoreVisible = nil
 	self.CostScoreText = nil
     self.CostScoreColor = nil
@@ -26,9 +26,10 @@ function BagExpandWinVM:Ctor()
 
     self.CurrentNum = nil
 	self.EnlargeNum = nil
-    self.ScoreTipsText = nil
-	self.ScoreInfoVisible = nil
+
     self.CostPropsVisible = nil
+
+    self.TipsDecText = nil
 end
 
 function BagExpandWinVM:UpdateVM(EnlargeID)
@@ -54,26 +55,30 @@ function BagExpandWinVM:UpdateVM(EnlargeID)
         if ItemID == 0 then
             -- 积分
             self.ConsumeScoreVisible = true
-            self.ExpandBtnEnable = true
-            self.CostScoreColor = ScoreNum > ScoreMgr:GetScoreValueByID(ScoreID) and "dc5868" or "838382"
+            local NotEnough = ScoreNum > ScoreMgr:GetScoreValueByID(ScoreID)
+            self.ExpandBtnEnable = not NotEnough
+            self.CostScoreColor = NotEnough and "dc5868" or "838382"
 
         else
             -- 道具
             local Item = ItemUtil.CreateItem(ItemID, 0)
             self.BagSlotVM:UpdateVM(Item, {IsShowNum = false})
-            self.NameText = ItemUtil.GetItemName(ItemID)
 
             if HasNum < NeedNum then
                 self.ItemNumberText = string.format("%s/%d", 
-                    RichTextUtil.GetText(tostring(HasNum), "dc5868", 0, nil), 
+                    RichTextUtil.GetText(tostring(HasNum), "dc5868"), 
                     NeedNum)
                 self.CostScoreColor = (NeedNum - HasNum) * ScoreNum > ScoreMgr:GetScoreValueByID(ScoreID) and "dc5868" or "838382"
                 self.ConsumeScoreVisible = true
-                self.ExpandBtnEnable = false
+                local NeedCost = self.CostScoreText
+	            local ScoreID = self.ScoreID
+                self.TipsDecText = string.format(LSTR(990156), NeedCost)
+                self.ExpandBtnEnable = NeedCost <= ScoreMgr:GetScoreValueByID(ScoreID)
             else
                 self.ItemNumberText = string.format("%s/%d", 
-                    RichTextUtil.GetText(tostring(HasNum), "d5d5d5", 0, nil), 
+                    RichTextUtil.GetText(tostring(HasNum), "d5d5d5"), 
                     NeedNum)
+                self.TipsDecText = string.format(LSTR(990155), ItemUtil.GetItemName(ItemID))
                 self.ConsumeScoreVisible = false
                 self.ExpandBtnEnable = true
             end
@@ -82,23 +87,6 @@ function BagExpandWinVM:UpdateVM(EnlargeID)
 	end
 end
 
-function BagExpandWinVM:CheckConsumeScore(IsConsume)
-    if IsConsume then
-        self.ScoreTipsText = LSTR(990050)
-        self.ScoreInfoVisible = true
-        local NeedCost = self.CostScoreText
-	    local ScoreID = self.ScoreID
-        self.ExpandBtnEnable = NeedCost <= ScoreMgr:GetScoreValueByID(ScoreID)
-    else
-        self.ScoreTipsText = LSTR(990051)
-        self.ScoreInfoVisible = false
-        self.ExpandBtnEnable = false
-    end
-
-    if not self.CostPropsVisible then
-        self.ExpandBtnEnable = true
-    end
-end
 
 --要返回当前类
 return BagExpandWinVM

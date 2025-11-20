@@ -42,6 +42,7 @@ local SimpleViewSource = PersonInfoDefine.SimpleViewSource
 ---@field ButtonVoiceBg UFButton
 ---@field ChatPanel UFCanvasPanel
 ---@field FImgGif UFImage
+---@field FishShareItem ChatMsgFishItemView
 ---@field GifNode USizeBox
 ---@field ImageRank UFImage
 ---@field ImageStatus UFImage
@@ -50,7 +51,7 @@ local SimpleViewSource = PersonInfoDefine.SimpleViewSource
 ---@field MsgTips UFCanvasPanel
 ---@field PanelChannel UFCanvasPanel
 ---@field PanelTime UFCanvasPanel
----@field PlayerHeadSlot CommPlayerHeadSlotView
+---@field PlayerHeadSlot CommHeadView
 ---@field RichTextMsg URichTextBox
 ---@field RichTextMsgTips URichTextBox
 ---@field RichTextName URichTextBox
@@ -78,6 +79,7 @@ function ChatMsgPlayerItemView:Ctor()
 	--self.ButtonVoiceBg = nil
 	--self.ChatPanel = nil
 	--self.FImgGif = nil
+	--self.FishShareItem = nil
 	--self.GifNode = nil
 	--self.ImageRank = nil
 	--self.ImageStatus = nil
@@ -107,6 +109,7 @@ end
 
 function ChatMsgPlayerItemView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.FishShareItem)
 	self:AddSubView(self.PlayerHeadSlot)
 	self:AddSubView(self.TaskShareItem)
 	self:AddSubView(self.TeamRecruitItem)
@@ -121,6 +124,7 @@ function ChatMsgPlayerItemView:OnInit()
 		{ "Content", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedContent) },
 		{ "Extend",  UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedExtend) },
 		{ "MsgType", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedMsgType) },
+		{ "Name", 		UIBinderSetText.New(self, self.RichTextName) },
 	}
 
 	self.BindersChatVM = {
@@ -128,7 +132,6 @@ function ChatMsgPlayerItemView:OnInit()
 	}
 
 	self.BindersRoleVM = {
-		{ "Name", 		UIBinderSetText.New(self, self.RichTextName) },
 		{ "HeadInfo", 	UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedHeadInfo) },
 		{ "HeadFrameID", UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedHeadFrameID) },
 	}
@@ -164,6 +167,8 @@ function ChatMsgPlayerItemView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.GVoiceRecordPlayStart, self.OnEventPlayRecordStart) 	-- 开始播放录音
 	self:RegisterGameEvent(EventID.GVoiceRecordPlayDone, self.OnEventPlayRecordDone) 	-- 录音播放完成
 	self:RegisterGameEvent(EventID.GVoiceSpeechFileToTextComplete, self.OnGameEventVoiceFileTranslateComplete) -- 语音转文字完成
+	self:RegisterGameEvent(EventID.FriendSetNicknameSuc, self.OnEventFriendSetNicknameSuc) -- 设置好友昵称成功
+	self:RegisterGameEvent(EventID.FriendRemoved, self.OnGameEventFriendRemoved)
 end
 
 function ChatMsgPlayerItemView:OnRegisterBinder()
@@ -180,7 +185,7 @@ function ChatMsgPlayerItemView:OnRegisterBinder()
 	self:RegisterBinders(ViewModel, self.BindersParamVM)
 	self:RegisterBinders(ChatVM, self.BindersChatVM)
 
-	local RoleID = Params.Data.Sender
+	local RoleID = self:GetSenderID()
 	self.RoleID = RoleID
 
 	if RoleID then
@@ -191,6 +196,12 @@ function ChatMsgPlayerItemView:OnRegisterBinder()
 	if RoleVM then
 		self:RegisterBinders(RoleVM, self.BindersRoleVM)
 	end
+
+	local Name = _G.FriendMgr:GetFriendNickname(RoleID)
+	if Name == nil or Name == "" then
+		Name = RoleVM and RoleVM.Name or ""
+	end
+	ViewModel:SetName(Name)
 end
 
 function ChatMsgPlayerItemView:OnValueChangedContent( Content )
@@ -315,6 +326,7 @@ function ChatMsgPlayerItemView:OnValueChangedMsgType( MsgType )
 	local IsVoice 		= nil
 	local IsGif 		= nil
 	local IsTeamRecruit = nil
+	local IsFishShare 	= nil
 
 	if MsgType == ChatMsgType.Msg then -- 普通消息 
 		IsMsg = true
@@ -351,8 +363,11 @@ function ChatMsgPlayerItemView:OnValueChangedMsgType( MsgType )
 
 	elseif MsgType == ChatMsgType.TeamRecruit then -- 队伍招募
 		IsTeamRecruit = true
-
 		self.TeamRecruitItem:RefreshUI(ViewModel.TeamRecruitMsg, ViewModel.IsMajor)
+
+	elseif MsgType == ChatMsgType.FishShare then -- 鱼类分享 
+		IsFishShare = true
+		self.FishShareItem:RefreshUI(ViewModel.FishMsg, ViewModel.IsMajor)
 
 	elseif MsgType == ChatMsgType.Location then -- 位置分享 
 		IsMsg = true
@@ -363,6 +378,7 @@ function ChatMsgPlayerItemView:OnValueChangedMsgType( MsgType )
 	UIUtil.SetIsVisible(self.VoiceNode, 		IsVoice)
 	UIUtil.SetIsVisible(self.GifNode, 			IsGif)
 	UIUtil.SetIsVisible(self.TeamRecruitItem, 	IsTeamRecruit)
+	UIUtil.SetIsVisible(self.FishShareItem, 	IsFishShare)
 end
 
 function ChatMsgPlayerItemView:UpdateColor()
@@ -431,6 +447,27 @@ end
 
 function ChatMsgPlayerItemView:OnEventUpdateColor()
 	self:UpdateColor()
+end
+
+-- 好友昵称设置成功事件回调
+function ChatMsgPlayerItemView:OnEventFriendSetNicknameSuc(RoleID, Nickname)
+	-- 重新设置昵称
+	if self:GetSenderID() == RoleID and Nickname and Nickname ~= "" then
+		self.ViewModel:SetName(Nickname)
+	end
+end
+
+-- 好友被移除事件回调
+function ChatMsgPlayerItemView:OnGameEventFriendRemoved(RoleIDs)
+	-- 如果当前消息发送者被移除为好友，更新昵称显示
+	if table.find_item(RoleIDs, self:GetSenderID())then
+		local ViewModel = self.ViewModel
+		if ViewModel then
+			local RoleVM = _G.RoleInfoMgr:FindRoleVM(self:GetSenderID(), true)
+			local Name = RoleVM and RoleVM.Name or ""
+			ViewModel:SetName(Name)
+		end
+	end
 end
 
 --- 开始播放录音
@@ -543,6 +580,12 @@ function ChatMsgPlayerItemView:UpdateClicked()
 	end
 
 	ChatVM:SetCurClickedMsgItem(self)
+end
+
+function ChatMsgPlayerItemView:GetSenderID()
+	if self.Params and self.Params.Data then
+		return self.Params.Data.Sender
+	end
 end
 
 return ChatMsgPlayerItemView

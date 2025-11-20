@@ -148,10 +148,10 @@ function MainQuestTargetItemView:OnCountChanged(_)
 		end
 	end
 
-	local TargetDesc = ColorUtil.ParseItemNameSceneStyle(TargetVM.Desc)
-	self.RichTextTitle:SetText(string.format("%s%s%s", SpecialRuleSymbol, TargetDesc, CountText))
-
 	local bFinished = (TargetVM.Status == TARGET_STATUS.CS_QUEST_NODE_STATUS_FINISHED)
+
+	local TargetDesc = bFinished and ColorUtil.ParseItemNameSceneStyleTranslucent(TargetVM.Desc) or ColorUtil.ParseItemNameSceneStyle(TargetVM.Desc)
+	self.RichTextTitle:SetText(string.format("%s%s%s", SpecialRuleSymbol, TargetDesc, CountText))
 
 	self.IconToggleButton:SetChecked(bFinished, false)
 	UIUtil.SetOpacity(self.RichTextTitle, bFinished and 0.5 or 1)

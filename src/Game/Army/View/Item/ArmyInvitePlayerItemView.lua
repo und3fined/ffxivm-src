@@ -19,6 +19,9 @@ local InviteSignSideDefine = require("Game/Common/InviteSignSideWin/InviteSignSi
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
 local LocalizationUtil = require("Utils/LocalizationUtil")
 local TimeUtil = require("Utils/TimeUtil")
+local ProtoCS = require("Protocol/ProtoCS")
+local ArmyDefine = require("Game/Army/ArmyDefine")
+
 
 local InviteItemBgEnum = TeamDefine.InviteItemBgEnum
 
@@ -67,7 +70,8 @@ function ArmyInvitePlayerItemView:OnInit()
 	---绑定itemvm
 	self.ItemVMBinders = {
 		{ "ProfID", 			UIBinderValueChangedCallback.New(self, nil, self.OnProfIDChanged) },
-		{ "FilterKeyword", UIBinderValueChangedCallback.New(self, nil, self.OnFilterKeywordChanged) },
+		--{ "FilterKeyword", UIBinderValueChangedCallback.New(self, nil, self.OnFilterKeywordChanged) },--策划确认不需要变色
+		{ "Name", UIBinderSetText.New(self, self.TextPlayerName) },
 		{ "BtnIcon", UIBinderSetBrushFromAssetPath.New(self, self.InviteIcon) },
 	}
 
@@ -206,6 +210,20 @@ end
 function ArmyInvitePlayerItemView:ArmyInvite()
 	if self.ViewModel then
 		local RoleID = self.ViewModel.RoleID
+		---如果招募关闭，拦截提示
+		local RecruitStatus = _G.ArmyMgr:GetRecruitInfo()
+		if RecruitStatus ~= ProtoCS.GroupRecruitStatus.GROUP_RECRUIT_STATUS_Open then
+			_G.MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.InvitedNoByRecruitStatus)
+			return
+		end
+		---如果不是一个原始服务器服务器拦截
+		local MajorRoleVM = MajorUtil.GetMajorRoleVM()
+		if MajorRoleVM then
+			if self:GetWorldID() ~= MajorRoleVM.WorldID then
+				_G.MsgTipsUtil.ShowTipsByID(ArmyDefine.ArmyTipsID.InvitedNoByWorld)
+				return
+			end
+		end
 		if RoleID then
 			_G.ArmyMgr:CheckAndSendGroupInvite(RoleID)
 		end
@@ -219,6 +237,12 @@ end
 function ArmyInvitePlayerItemView:GetOnlineStatus()
 	local VM = _G.RoleInfoMgr:FindRoleVM(self:GetRoleID(), true)
 	return VM and VM.OnlineStatus or 0
+end
+
+---获取原始服务器
+function ArmyInvitePlayerItemView:GetWorldID()
+	local VM = _G.RoleInfoMgr:FindRoleVM(self:GetRoleID(), true)
+	return VM and VM.WorldID or 0
 end
 
 function ArmyInvitePlayerItemView:UpdateTextLocation()

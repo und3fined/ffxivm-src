@@ -16,6 +16,12 @@ local FantasyCardRuleCfg = {
             {
                 Name = 'RuleDesc',
             },
+            {
+                Name = 'PictureTitles',
+            },
+            {
+                Name = 'DetailedDesc',
+            },
 		}
     },
     DefaultValues = nil,

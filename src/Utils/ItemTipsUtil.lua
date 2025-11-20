@@ -78,6 +78,29 @@ function ItemTipsUtil.ShowTipsByItem(Item, ItemView, Offset, HideCallback, Custo
 	UIViewMgr:ShowView(ViewID, Params)
 end
 
+function ItemTipsUtil.ShowItemFrameBtnByResID(ResID, ItemView, Offset, HideCallback, CustomBottomMargin, BtnInfoArray)
+	local Item = ItemUtil.CreateItem(ResID, 0)
+	ItemTipsUtil.ShowItemFrameBtnByItem(Item, ItemView, Offset, HideCallback, CustomBottomMargin, BtnInfoArray)
+end
+
+
+---@param Item common.Item
+---@param ItemView UWidget
+---@param Source number @ItemSource
+---@param Index number
+---@param Offset table @{X = 0, Y = 0}
+---@param HideCallback function
+---@param BtnInfoArray  物品按钮信息列表 @{{BtnText = "xxx", ClickedCallBack = OnClickedBtn1, ListenView = View}}
+function ItemTipsUtil.ShowItemFrameBtnByItem(Item, ItemView, Offset, HideCallback, CustomBottomMargin, BtnInfoArray)
+	if nil == Item then
+		return
+	end
+	
+	local ViewID = UIViewID.ItemBtnTips
+	local Params = { ItemData = Item, ItemView = ItemView, Offset = Offset, HideCallback = HideCallback, CustomBottomMargin = CustomBottomMargin, BtnInfoArray = BtnInfoArray}
+	UIViewMgr:ShowView(ViewID, Params)
+end
+
 function ItemTipsUtil.CurrencyTips(ScoreID, IsTopBar, ItemView, Offset, HideCallback, IsHidePanelOwn)
 	local ViewID = UIViewID.CurrencyTips
 	local Params = { ItemData = ScoreID, IsTopBar = IsTopBar,ItemView = ItemView, Offset = Offset, HideCallback = HideCallback, IsHidePanelOwn = IsHidePanelOwn}
@@ -145,7 +168,7 @@ function ItemTipsUtil.AdjustTopBarTipsPosition(InTipsWidget, InTargetWidget, InO
 end
 
 
-function ItemTipsUtil.AdjustTipsPosition(InTipsWidget, InTargetWidget, InOffset, CustomBottomMargin)
+function ItemTipsUtil.AdjustTipsPosition(InTipsWidget, InTargetWidget, InOffset, CustomBottomMargin, InbAlwaysRight)
 	if nil == InTipsWidget then
 		return
 	end
@@ -164,26 +187,33 @@ function ItemTipsUtil.AdjustTipsPosition(InTipsWidget, InTargetWidget, InOffset,
 	local WidgetPixelPosition = UIUtil.AbsoluteToViewport(TargetAbsolutePos)
 	WidgetPixelPosition.X = WidgetPixelPosition.X * ScreenSize.X / ViewportSize.X
 	WidgetPixelPosition.Y = WidgetPixelPosition.Y * ScreenSize.Y / ViewportSize.Y
-	
-	
+
 	local Position = _G.UE.FVector2D(0, 0)
 	local Alignment = FVector2D(0, 0)
 	local Margin = 10
-	
-	if WidgetPixelPosition.X + TargetWidgetSize.X / 2 <= ScreenSize.X / 2 then
+
+	if (InbAlwaysRight) then
+		-- 如果总是在右边
 		Position.X = WidgetPixelPosition.X + TargetWidgetSize.X + Margin
 		if nil ~= InOffset and nil ~= InOffset.X then
 			Position.X = Position.X + InOffset.X
 		end
 	else
-		Position.X = WidgetPixelPosition.X - Margin
-		Alignment.X = 1
+		if WidgetPixelPosition.X + TargetWidgetSize.X / 2 <= ScreenSize.X / 2 then
+			Position.X = WidgetPixelPosition.X + TargetWidgetSize.X + Margin
+			if nil ~= InOffset and nil ~= InOffset.X then
+				Position.X = Position.X + InOffset.X
+			end
+		else
+			Position.X = WidgetPixelPosition.X - Margin
+			Alignment.X = 1
 
-		if nil ~= InOffset and nil ~= InOffset.X then
-			Position.X = Position.X - InOffset.X
+			if nil ~= InOffset and nil ~= InOffset.X then
+				Position.X = Position.X - InOffset.X
+			end
 		end
 	end
-	
+
 	Position.Y = WidgetPixelPosition.Y - Margin
 
 	if nil ~= InOffset and nil ~= InOffset.Y then
@@ -276,9 +306,9 @@ function ItemTipsUtil.AdjustSecondaryTipsPosition(SecondaryTipsWidget, ForbidRan
 	local Alignment = FVector2D(0, 0)
 
 	if TipsWidgetPosition.X + TipsWidgetSize.X + SecondaryTipWidgetSize.X <= ScreenSize.X then
-		Position.X = TipsWidgetPosition.X + TipsWidgetSize.X + Margin
+		Position.X = TipsWidgetPosition.X + Margin + TipsWidgetSize.X + Margin
 	else
-		Position.X = TipsWidgetPosition.X - Margin
+		Position.X = TipsWidgetPosition.X - Margin - Margin
 		Alignment.X = 1
 	end
 
@@ -365,7 +395,7 @@ function ItemTipsUtil.OnClickedToGetBtn(Params)
 	else
 		local Offset = Params.Offset or _G.UE.FVector2D(0,0)
 		local Alignment = Params.Alignment or _G.UE.FVector2D(0,0)
-		TipsUtil.ShowGetWayTips(Params.ViewModel,  Params.ForbidRangeWidget, Params.InTagetView, Offset, Alignment, Params.HidePopUpBG, Params.ClickedParams, Params.ParentViewID, Params.AdjustTips)
+		TipsUtil.ShowGetWayTips(Params.ViewModel,  Params.ForbidRangeWidget, Params.InTagetView, Offset, Alignment, Params.HidePopUpBG, Params.ClickedParams, Params.ParentViewID, Params.AdjustTips, Params.Extras)
 	end
 
 end

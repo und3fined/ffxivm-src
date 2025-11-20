@@ -57,9 +57,11 @@ function StoreNewBlindBoxDescriptionView:OnShow()
 	self.TextAward:SetText(LSTR(950082))		--- 奖励一览
 	self.TextAwardDescribe:SetText(LSTR(950083))--- 下次购买盲盒的奖励获取概率
 	
-	local TempCfgData = _G.StoreMainVM.SkipTempData
-	self.Comm2FrameM_UIBP:SetTitleText(TempCfgData.Name)
-	self.RichTextDescribe:SetText(TempCfgData.Note)
+	local TempCfgData = _G.StoreMysteryBoxVM.CurBoxCfgData
+	if TempCfgData ~= nil then
+		self.Comm2FrameM_UIBP:SetTitleText(TempCfgData.Name)
+		self.RichTextDescribe:SetText(TempCfgData.Note)
+	end
 end
 
 function StoreNewBlindBoxDescriptionView:OnHide()
@@ -75,7 +77,7 @@ function StoreNewBlindBoxDescriptionView:OnRegisterGameEvent()
 end
 
 function StoreNewBlindBoxDescriptionView:OnRegisterBinder()
-	self:RegisterBinders(_G.StoreMainVM, self.Binders)
+	self:RegisterBinders(_G.StoreMysteryBoxVM, self.Binders)
 end
 
 return StoreNewBlindBoxDescriptionView

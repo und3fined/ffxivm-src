@@ -37,6 +37,7 @@ local EventMgr = _G.EventMgr
 local MountMgr = _G.MountMgr
 local EquipmentMgr = _G.EquipmentMgr
 local ModuleType = ProtoRes.module_type
+local LightMgr = nil
 
 ---@class MountArchiveNewPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -57,15 +58,18 @@ local ModuleType = ProtoRes.module_type
 ---@field HorizontalPeople UHorizontalBox
 ---@field ImgHide UFImage
 ---@field ImgMountType UFImage
+---@field InforBtn CommInforBtnView
 ---@field NewSearchBtn CommSearchBtnView
 ---@field PanelBtnBar UFVerticalBox
----@field PanelCustomMade UFCanvasPanel
+---@field PanelCustomMade UFVerticalBox
 ---@field PanelFilter UFCanvasPanel
 ---@field PanelInforBar UFCanvasPanel
+---@field PanelInteract UFCanvasPanel
 ---@field PanelLeftEmpty UFCanvasPanel
 ---@field PanelMountDescribe UFCanvasPanel
 ---@field PanelNone UFCanvasPanel
 ---@field PanelSingleBox UFCanvasPanel
+---@field PanelSpeedInfo UFCanvasPanel
 ---@field RedDot CommonRedDotView
 ---@field RichTextNone URichTextBox
 ---@field SearchBar CommSearchBarView
@@ -85,6 +89,8 @@ local ModuleType = ProtoRes.module_type
 ---@field TextNumber UFTextBlock
 ---@field TextRide UFTextBlock
 ---@field TextRideNumber UFTextBlock
+---@field TextSpeed02 UFTextBlock
+---@field TextSpeedInfo UFTextBlock
 ---@field ToggleBtnBGM UToggleButton
 ---@field ToggleBtnMount UToggleButton
 ---@field AnimChangeSlot UWidgetAnimation
@@ -112,15 +118,18 @@ function MountArchiveNewPanelView:Ctor()
 	--self.HorizontalPeople = nil
 	--self.ImgHide = nil
 	--self.ImgMountType = nil
+	--self.InforBtn = nil
 	--self.NewSearchBtn = nil
 	--self.PanelBtnBar = nil
 	--self.PanelCustomMade = nil
 	--self.PanelFilter = nil
 	--self.PanelInforBar = nil
+	--self.PanelInteract = nil
 	--self.PanelLeftEmpty = nil
 	--self.PanelMountDescribe = nil
 	--self.PanelNone = nil
 	--self.PanelSingleBox = nil
+	--self.PanelSpeedInfo = nil
 	--self.RedDot = nil
 	--self.RichTextNone = nil
 	--self.SearchBar = nil
@@ -140,6 +149,8 @@ function MountArchiveNewPanelView:Ctor()
 	--self.TextNumber = nil
 	--self.TextRide = nil
 	--self.TextRideNumber = nil
+	--self.TextSpeed02 = nil
+	--self.TextSpeedInfo = nil
 	--self.ToggleBtnBGM = nil
 	--self.ToggleBtnMount = nil
 	--self.AnimChangeSlot = nil
@@ -156,6 +167,7 @@ function MountArchiveNewPanelView:OnRegisterSubView()
 	self:AddSubView(self.DescribeTips)
 	self:AddSubView(self.DropDownListGetWay)
 	self:AddSubView(self.GetWayTips)
+	self:AddSubView(self.InforBtn)
 	self:AddSubView(self.NewSearchBtn)
 	self:AddSubView(self.RedDot)
 	self:AddSubView(self.SearchBar)
@@ -175,7 +187,7 @@ function MountArchiveNewPanelView:OnInit()
 	self.SearchBar:SetCallback(self, self.ChangeCallback, self.OnSearchInputFinish);
 
 	self.Common_Render2D_UIBP:SetClick(self, self.OnSingleClick, self.OnDoubleClick)
-
+	LightMgr = _G.LightMgr
 end
 
 function MountArchiveNewPanelView:OnDestroy()
@@ -196,10 +208,11 @@ function MountArchiveNewPanelView:OnShow()
 	local IsChecked = self.ViewModel.IsShowBGM
 	self.ToggleBtnBGM:SetCheckedState(IsChecked and _G.UE.EToggleButtonState.Checked or _G.UE.EToggleButtonState.UnChecked, false)
 	MountMgr:StopMountBGM()
-	_G.LightMgr:EnableUIWeather(10)
+	LightMgr:EnableUIWeather(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_MOUNT)
 	self.SearchBar:SetHintText(LSTR(1090027))
 	local bShow = _G.LoginMgr:CheckModuleSwitchOn(ModuleType.MODULE_MOUNT_PREVIEW, true)
 	UIUtil.SetIsVisible(self.FSafeZone, bShow)
+	self:SpeedInfo()
 	self:InitText()
 	
 	self.ViewModel:UpdateFilterItemList()
@@ -213,16 +226,22 @@ function MountArchiveNewPanelView:OnShow()
 
 	if self.HorizontalID then
 		UIUtil.SetIsVisible(self.HorizontalID, false, false)
-		if self.HorizontalPeople then
+		-- if self.HorizontalPeople then
 			--需求将坐骑的编号内容删除，乘坐人数等信息依次往上排
-			self.HorizontalPeople:SetRenderTranslation(_G.UE.FVector2D(0,-40))
-		end
+			-- self.HorizontalPeople:SetRenderTranslation(_G.UE.FVector2D(0,-30))
+		-- end
 	end
 	_G.HUDMgr:SetIsDrawHUD(false)
 end
 
 function MountArchiveNewPanelView:InitText()
-	self.TextGet:SetText(LSTR(1090029))
+	if self.TextGet then
+		local FLinearColor = _G.UE.FLinearColor
+		local Color = "9C9788FF"
+		self.TextGet:SetColorAndOpacity(FLinearColor.FromHex(Color))
+		self.TextGet:SetText(LSTR(1090029))	--"未拥有"
+	end
+	
 	self.RichTextNone:SetText(LSTR(1090030))
 	self.TextCustomMade:SetText(LSTR(1090031))
 	-- self.TextHowtogetit:SetText(LSTR(1090032))
@@ -232,6 +251,12 @@ function MountArchiveNewPanelView:InitText()
 	self.TextRide:SetText(LSTR(1090036))
 	if self.CommonTitle then
 		self.CommonTitle.TextTitleName:SetText(LSTR(1090026))
+	end
+	if self.TextSpeedInfo then
+		self.TextSpeedInfo:SetText(LSTR(1090081))
+	end
+	if self.TextSpeed02 then
+		self.TextSpeed02:SetText(LSTR(1090082))
 	end
 end
 
@@ -247,7 +272,7 @@ function MountArchiveNewPanelView:OnHide()
 		self.PlayingID = nil
 	end
 	_G.MountMgr:SetAssembleID(0)
-	_G.LightMgr:DisableUIWeather(true)
+	LightMgr:DisableUIWeather(true)
 	self.SearchBar:SetText("")
 	--MountVM:ClearNew()
 	self:OnSkillTipsBGClick()
@@ -267,6 +292,7 @@ function MountArchiveNewPanelView:OnActive()
 	end
 	if MountVM.MountMap[MountID] ~= nil then
 		self:SetCustomMade(MountID, MountVM.MountMap[MountID].Facade)
+		self:LoadingActionItem(MountID)
 	end
 end
 
@@ -290,6 +316,7 @@ function MountArchiveNewPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
 	self:RegisterGameEvent(EventID.MountRefreshList, self.OnMountListChange)
 	self:RegisterGameEvent(EventID.MountFilterUpdate, self.OnMountFilterUpdate)
+	-- self:RegisterGameEvent(EventID.HideUI, self.OnGameEventHideUI)
 end
 
 function MountArchiveNewPanelView:OnRegisterBinder()
@@ -339,6 +366,7 @@ function MountArchiveNewPanelView:OnRegisterBinder()
 		{ "IsShowPlayer", UIBinderSetIsChecked.New(self, self.ToggleBtnMount, true) },
 		{ "ProportionText", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle) },
 		{ "IsCustomMadeRedDotVisible", UIBinderValueChangedCallback.New(self, nil, self.OnSetCustomMadeRedDot)},
+		{ "IsPanelSpeedInfo", UIBinderSetIsVisible.New(self, self.PanelSpeedInfo) },
 	}
 	self:RegisterBinders(self.ViewModel, Binders)
 
@@ -395,17 +423,6 @@ function MountArchiveNewPanelView:OnMountTableViewSelectChange(Index, ItemData, 
 	if Mount == nil then
 		return
 	end
-    -- if self.Common_Render2D_UIBP then
-	-- 	local UICharacter = self.Common_Render2D_UIBP:GetCharacter()
-	-- 	local RideComp = UICharacter and UICharacter:GetRideComponent() or nil
-	-- 	if RideComp then
-	-- 		local IsAssembling = RideComp:IsAssembling()
-	-- 		if IsAssembling == true then
-	-- 			print("[MountArchive]快速重复切换 IsAssembling =",IsAssembling)
-	-- 			return
-	-- 		end
-	-- 	end
-	-- end
 
 	if self.ViewModel.SelectedMountID ~= Mount.ResID then	--相同坐骑不更新信息
 		self.ViewModel.RequestQueue[#self.ViewModel.RequestQueue + 1] = MountID
@@ -414,7 +431,6 @@ function MountArchiveNewPanelView:OnMountTableViewSelectChange(Index, ItemData, 
 		end
 	end
 
-	-- self:ResettModelSpringArm()
 	DataReportUtil.ReportMountInterSystemFlowData(3, 2, Mount.ResID)
 	self.ViewModel.SelectedMountID = Mount.ResID
 	self.ViewModel:UpdateShowText(Mount)	-- 更新界面文本显示
@@ -427,7 +443,7 @@ function MountArchiveNewPanelView:OnMountTableViewSelectChange(Index, ItemData, 
 	SlotVM:UpdateArchiveData(Mount)
 	-- 更新留言板图鉴数据事件
 	if self.ViewModel.IsShowCommonBoard == true then
-		if SlotVM.IsMountNotOwn == true or SlotVM.IsMountStory == true then
+		if SlotVM.IsMountNotOwn == true or SlotVM.IsMountStory == 1 then
 			self:OnCloseBoard(self.ViewModel)
 		else
 			EventMgr:SendEvent(EventID.BoardObjectChange, self.ViewModel.SelectedMountID)
@@ -493,15 +509,22 @@ function MountArchiveNewPanelView:OnSelectionChangedDropDownList(Index, ItemData
 	self:OnMountListChange()
 end
 
--- 空白处关掉技能弹窗
+-- -- 空白处关掉技能弹窗和按钮选中态
 function MountArchiveNewPanelView:OnSkillTipsBGClick()
 	SkillTipsMgr.CurrentTipsType = 4
 	if SkillTipsMgr:HideMountSkillTips() then
 		self.ViewModel.IsShowSkillTips = false
 		self.ViewModel.SkillTagList = nil
-		_G.EventMgr:SendEvent(_G.EventID.ActionSelectChanged, { ID = 0 } )
+		EventMgr:SendEvent(EventID.ActionSelectChanged, { ID = 0 } )
 	end
 end
+
+-- function MountArchiveNewPanelView:OnGameEventHideUI(Params)
+-- 	local ViewID = Params
+-- 	if ViewID and ViewID == UIViewID.CommSkillTipsView then
+-- 		EventMgr:SendEvent(EventID.ActionSelectChanged, { ID = 0 } )
+-- 	end
+-- end
 
 -- 搜索输入框变化
 function MountArchiveNewPanelView:ChangeCallback(Text, Length)
@@ -529,6 +552,13 @@ function MountArchiveNewPanelView:OnSingleBoxClick(IsChecked)
 	self.ViewModel:SetShowMounts()
 	-- self.MountTableGridView:SetSelectedIndex(self.ViewModel.SelectedMountIndex)
 	-- self.ViewModel:UpdateMountList()
+
+	local FLinearColor = _G.UE.FLinearColor
+	local Color = "9C9788FF"
+	if IsChecked then
+		Color = "ffffff"
+	end
+	self.TextGet:SetColorAndOpacity(FLinearColor.FromHex(Color))
 end
 
 -- 列表更新
@@ -558,8 +588,12 @@ function MountArchiveNewPanelView:OnShowGetWay()
 	if UIViewMgr:IsViewVisible(UIViewID.CommGetWayTipsView) then
 		UIViewMgr:HideView(UIViewID.CommGetWayTipsView)
 	else
+		local UE = _G.UE
 		local BtnSize = UIUtil.CanvasSlotGetSize(self.BtnGo)
-		TipsUtil.ShowGetWayTips(self.ViewModel, nil, self.BtnGo, _G.UE.FVector2D(BtnSize.X, -15), _G.UE.FVector2D(1, 1), false)
+		--UE.FVector2D(BtnSize.X, -15)
+		TipsUtil.ShowGetWayTips(self.ViewModel, nil, self.BtnGo, UE.FVector2D(0,-15), UE.FVector2D(1, 1), false)
+
+		-- TLOG
 		DataReportUtil.ReportMountInterSystemFlowData(5, 1, self.ViewModel.SelectedMountID)
 	end
 end
@@ -655,7 +689,7 @@ function MountArchiveNewPanelView:OnShowPlayer()
 	local SlotVM = self.ViewModel.ListSlotVM[self.ViewModel.SelectedMountIndex]
 	if SlotVM then
 		local MountID = SlotVM.ResID
-		local Cfg = RideCfg:FindCfgByKey(MountID)
+		local Cfg = _G.MountMgr:GetRideCfg(MountID)
 		if Cfg and Cfg.HideParts == 1 then
 			local RideComponent = self.Common_Render2D_UIBP.UIComplexCharacter:GetRideComponent()
 			if RideComponent then
@@ -699,7 +733,12 @@ end
 -- 初始化三维展示模型
 function MountArchiveNewPanelView:ShowPlayerMountActor()
 	self.CameraFocusCfgMap = CameraFocusCfgMap.New()
-	self.ViewModel.AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachType()
+	if nil == MajorUtil then
+		MajorUtil = require("Utils/MajorUtil")
+	end
+	if MajorUtil.GetMajorAvatarComponent() and self.ViewModel then
+		self.ViewModel.AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachType()
+	end
 	self.Common_Render2D_UIBP.bAutoInitSpringArm = false -- 如果不忽视，OnAssembleAllEnd时，会把摄像机位置弄错(位置：CommonRender2DView:InitSpringArmEndPos())
 	--根据种族取对应的RenderActor
 	local RenderActorPathForRace = "Class'/Game/UI/Render2D/Mount/Bp_Reder2DForMount.Bp_Reder2DForMount_C'"
@@ -750,6 +789,22 @@ function MountArchiveNewPanelView:SetModelSpringArmToDefault(bInterp)
 	self:ResettModelSpringArm()
 	self:ClearPreView()
 	self.ViewModel.bIsHoldWeapon = false
+
+	local StoreDefine = require("Game/Store/StoreDefine")
+	local MountViewDistance = StoreDefine.StoreRender2DConfig.MountViewDistance + 100
+	local ViewportPos = self:GetViewportPosOfModel()
+	local FOV = self.Common_Render2D_UIBP.FOVTarget or self.Common_Render2D_UIBP:GetFOV()
+	local OffsetY = CameraUtil.GetCameraOffsetY(ViewportPos.X, FOV,
+		MountViewDistance + StoreDefine.StoreRender2DConfig.MountSpringArmLocation.X)
+	self.Common_Render2D_UIBP:SetSpringArmLocation(StoreDefine.StoreRender2DConfig.MountSpringArmLocation.X, - OffsetY,
+	StoreDefine.StoreRender2DConfig.MountSpringArmLocation.Z - 10, true)
+end
+
+--story=124256451 【坐骑】【坐骑图鉴】坐骑图鉴中模型需要居中优化
+function MountArchiveNewPanelView:GetViewportPosOfModel()
+	local WidgetHalfSize = UIUtil.GetWidgetSize(self.PanelInteract) * 0.5
+	local _, ViewportTopLeft = UIUtil.AbsoluteToViewport(UIUtil.GetWidgetAbsoluteTopLeft(self.PanelInteract))
+	return ViewportTopLeft + WidgetHalfSize
 end
 
 function MountArchiveNewPanelView:ResettModelSpringArm()
@@ -802,9 +857,6 @@ function MountArchiveNewPanelView:OnAssembleAllEnd(Params)
 			return
 		end
 
-		-- print("===== 拼装完成 所选图鉴发生变化时 选中的ID", self.ViewModel.SelectedMountID)
-		-- print("===== 拼装完成 坐骑组件当前的ID", RideComp.RideResID)
-
 		if not self.ViewModel.ListSlotVM or not next(self.ViewModel.ListSlotVM) then return end
 		local SlotVM = self.ViewModel.ListSlotVM[self.ViewModel.SelectedMountIndex]
 		if SlotVM == nil then
@@ -820,13 +872,12 @@ function MountArchiveNewPanelView:OnAssembleAllEnd(Params)
 			_G.MountMgr.AssembleID = 0
 		end
 
-		-- print("===== 拼装完成 SlotVM中当前数据ID", MountID)
 		self.IsMountLoading = false
 		self:ProcessNextRequest()
 
 		-- 设置缩放
 		self:SetMountModelScale(self.ViewModel.SelectedMountID)
-		--处理贴图加载
+		-- 处理贴图加载
 		local UIComplexCharacter = self.Common_Render2D_UIBP.UIComplexCharacter
 		if UIComplexCharacter then
 			UIComplexCharacter:GetAvatarComponent():WaitForTextureMips()
@@ -853,6 +904,25 @@ function MountArchiveNewPanelView:OnAssembleAllEnd(Params)
 			RideComponent:HideRod()
 		end
 
+		self:TurnOffAmbientLight()
+	end
+end
+
+-- 处理部分坐骑灯光过亮问题
+function MountArchiveNewPanelView:TurnOffAmbientLight()
+	local MountData = self.ViewModel.AllMountMp[self.ViewModel.SelectedMountID]
+	if MountData == nil then return end 
+	if MountData.DisableLights == nil or MountData.DisableLights == 0 then
+		LightMgr:EnableUIWeather(ProtoRes.SYSTEM_LIGHT_ID.SYSTEM_LIGHT_ID_MOUNT)
+		
+	else
+		--关闭灯光（仙人刺坐骑）
+		LightMgr:DisableUIWeather(true)
+		
+		if self.Common_Render2D_UIBP ~= nil and self.Common_Render2D_UIBP.RideMeshComponent then
+			local MeshComp = self.Common_Render2D_UIBP.RideMeshComponent
+			MeshComp:SetScalarParameterValueOnMaterials("EmissiveIntensity", MountData.DisableLights)
+		end
 	end
 end
 
@@ -874,24 +944,37 @@ end
 
 ----------------------------------- Model Loading End---------------------------------------
 
-function MountArchiveNewPanelView:LoadingActionItem()
+function MountArchiveNewPanelView:LoadingActionItem(MountID)
 	if not self.ViewModel.IsSelectedOwned then
 		self.ViewModel.bShowActionBtn = false
 		return
 	end
-	local SlotVM = self.ViewModel.ListSlotVM[self.ViewModel.SelectedMountIndex]
-	if not SlotVM then return end
-	local MountID = SlotVM.ResID
-	local Cfg = RideCfg:FindCfgByKey(MountID)
-	if Cfg == nil or nil == Cfg.PlayAction then return end
-	if nil == Cfg.PlayAction[1] then
-		self.ViewModel.bShowActionBtn = false
-		return
+	if MountID == nil then
+		MountID = self.ViewModel.SelectedMountID
+	end
+	local IsCustom = MountMgr:IsCustomMadeEnabled(MountID)
+	local ActionList = {}
+	if IsCustom then
+		--若装备了皮肤
+		if MountVM.MountMap[MountID] then
+			local CustomID = MountVM.MountMap[MountID].Facade
+        	ActionList = MountCustomMadeVM:GetActionList(CustomID)
+		end
+	end
+
+	if nil == ActionList or #ActionList == 0 then
+		local Cfg = MountMgr:GetRideCfg(MountID)
+		if Cfg == nil or nil == Cfg.PlayAction then return end
+		if nil == Cfg.PlayAction[1] then
+			self.ViewModel.bShowActionBtn = false
+			return
+		end
+		ActionList = Cfg.PlayAction
 	end
 	self.ViewModel.bShowActionBtn = true
-	
+
 	local SkillList = {}
-	for k, v in pairs(Cfg.PlayAction) do
+	for _, v in pairs(ActionList) do
 		if nil ~= v and 0 ~= v then
 			local Cfg = RideSkillCfg:FindCfgByKey(v)
 			if nil ~= Cfg then
@@ -946,6 +1029,25 @@ end
 
 function MountArchiveNewPanelView:OnBackClick()
 	UIViewMgr:HideView(self.ViewID)
+end
+
+function MountArchiveNewPanelView:SpeedInfo()
+	if self.InforBtn then
+		self.InforBtn.HelpInfoID = -1
+		self.InforBtn:SetRenderTranslation(_G.UE.FVector2D(-20, 0))
+		self.InforBtn:SetCallback(self, function()
+			local Content = self.ViewModel:GetPanelSpeedInfoText()
+			local ViewID = UIViewID.CommHelpInfoTipsView
+			local Params = {}
+			local BtnSize =  UIUtil.GetWidgetSize(self.InforBtn)
+			Params.Data = table.is_nil_empty(Content) and {{Title = "", Content = {Content}}} or Content
+			Params.Offset = _G.UE.FVector2D(-20, BtnSize.Y - 10)
+			Params.Alignment = _G.UE.FVector2D(1, 0)
+			Params.InTargetWidget = self.InforBtn
+			Params.HidePopUpBG = false
+			_G.UIViewMgr:ShowView(ViewID, Params)
+		end)
+	end
 end
 
 return MountArchiveNewPanelView

@@ -128,8 +128,15 @@ function ReviveMgr:OnNetMsgColosseumTeam(InMsgData)
         if (PlayerInfo.role_id == MajorRoleID) then
             local ReviveTimeStamp = PlayerInfo.respawn_time
             local CurTime = TimeUtil.GetServerLogicTimeMS()
-            if (ReviveTimeStamp ~= nil and ReviveTimeStamp > 0 and CurTime < ReviveTimeStamp) then
-                UIViewMgr:ShowView(UIViewID.InfoPVPReviveTimeTips, ReviveTimeStamp)
+            local bFinishPanelVisible = UIViewMgr:IsViewVisible(UIViewID.PVPColosseumRecord)
+            if (not bFinishPanelVisible) then
+                if (ReviveTimeStamp ~= nil and ReviveTimeStamp > 0 and CurTime < ReviveTimeStamp) then
+                    local Params = {}
+                    Params.ReviveTimeStamp = ReviveTimeStamp
+                    UIViewMgr:ShowView(UIViewID.InfoPVPReviveTimeTips, Params)
+                end
+            else
+                _G.FLOG_INFO("因为已经结算，不显示PVP复活倒计时界面")
             end
             
             break
@@ -155,6 +162,7 @@ function ReviveMgr:SendRevive(bIsAccepted)
         Confirm = ReviveConfirm
     }
 
+    self.bReviveReady = false
     _G.GameNetworkMgr:SendMsg(ProtoCS.CS_CMD.CS_CMD_REVIVE, SubMsgID, MsgBody)
 
     --死亡复活重置相机到死亡时刻的参数
@@ -220,8 +228,10 @@ function ReviveMgr:OnReviveInfoHandle()
     end
 
     if Cfg.ReviveType == ProtoCommon.ReviveType.REVIVE_TYPE_NONE then
-        if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
-            _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Death)
+        if (_G.SidebarMgr) then
+            if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
+                _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Death)
+            end
         end
 
         self:HideReviveMsgBox()
@@ -369,10 +379,12 @@ function ReviveMgr:OnClickKeepBtn()
         return
     end
 
-    if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
-        _G.SidebarMgr:TryOpenSidebarMainWin()
-    else
-        _G.SidebarMgr:AddSidebarItem(SidebarDefine.SidebarType.Death)
+    if (_G.SidebarMgr) then
+        if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
+            _G.SidebarMgr:TryOpenSidebarMainWin()
+        else
+            _G.SidebarMgr:AddSidebarItem(SidebarDefine.SidebarType.Death)
+        end
     end
 
     _G.UIViewMgr:HideView(_G.UIViewID.CommonMsgBox) -- 这里有风险，因为是通用的消息UIBP，万一有其他的会不会给顶掉了？
@@ -380,7 +392,9 @@ end
 
 function ReviveMgr:OnClickReviveBtn()
     self:RemoveReviveSidebarInfo()
-    _G.SidebarMgr:TryOpenSidebarMainWin()
+    if (_G.SidebarMgr) then
+        _G.SidebarMgr:TryOpenSidebarMainWin()
+    end
     
     local MsgID = ProtoCS.CS_CMD.CS_CMD_REVIVE
     local SubMsgID = ProtoCS.CS_REVIVE_CMD.CS_REVIVE_CMD_CONFIRM
@@ -402,6 +416,8 @@ function ReviveMgr:ResetReviveInfo()
     self:HideReviveMsgBox()
     self.IsReviving = false
     self.ReviveRescueRoleName = nil
+    self.bReviveReady = false
+    self.bShowCommonFadePanel = false
 end
 
 function ReviveMgr:OnReviveRespCommon(EntityID)
@@ -443,18 +459,22 @@ function ReviveMgr:OnGameEventPWorldMapEnter(Params)
     if bReconnect then
         if (MajorUtil.IsMajorDead()) then
             self:SendGetReviveInfo()
-        else
-            self:RemoveReviveSidebarInfo()
         end
+    end
+
+    if (not MajorUtil.IsMajorDead()) then
+        self:RemoveReviveSidebarInfo()
     end
 end
 
 function ReviveMgr:RemoveReviveSidebarInfo()
-    if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
-        _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Death)
-    end
-    if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Revive) ~= nil then
-        _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Revive)
+    if (_G.SidebarMgr) then
+        if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Death) ~= nil then
+            _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Death)
+        end
+        if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Revive) ~= nil then
+            _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Revive)
+        end
     end
 end
 
@@ -523,6 +543,10 @@ end
 
 function ReviveMgr:OnReviveRespConfirm(MsgBody)
     local ConfirmData = MsgBody.Confirm
+    if (ConfirmData == nil) then
+        _G.FLOG_ERROR("ReviveMgr:OnReviveRespConfirm 错误，ConfirmData为空，请检查")
+        return
+    end
     local Type = ConfirmData.Type
     if (Type == ProtoCommon.ReviveChannelType.REVIVE_CHANNEL_DEFAULT) then
         self:OnReviveRespCommon()
@@ -541,10 +565,12 @@ function ReviveMgr:OnReviveRespTrans(MsgBody)
     local EntityID = Trans.EntityID
     local RuleID = Trans.RuleID
     local Cfg = ReviveCfg:FindCfg("ID = " .. RuleID)
+    
     if Cfg == nil then
         FLOG_WARNING("OnReviveRespTrans Cfg is nil " .. tostring(RuleID))
         return
     end
+
     -- 为1时表示被技能复活 播放的特效会不同
     --print("Trans RuleID" .. RuleID .. "TransToRescuer = " .. Cfg.TransToRescuer)
     if Cfg.TransToRescuer == 1 then
@@ -555,23 +581,34 @@ function ReviveMgr:OnReviveRespTrans(MsgBody)
 
     --被复活的是自己才黑屏
     if (EntityID == MajorUtil.GetMajorEntityID()) then
+        if (not MajorUtil.IsMajorDead()) then
+            _G.FLOG_ERROR("玩家不是死亡状态，但是收到了 OnReviveRespTrans 消息 ，将不播放复活效果")
+            return
+        end
+
         local function ShowFadeView()
             self:RemoveReviveSidebarInfo()
 
             --解决：先发送的死亡传送复活，在这0.5s的delay内播放了ncut，导致显示异常
             if (not _G.StoryMgr:SequenceIsPlaying()) then
-                local Params = {}
-                Params.FadeColorType = 2
-                Params.Duration = 1.5
-                Params.HideMajor = true
-                _G.UIViewMgr:ShowView(_G.UIViewID.CommonFadePanel, Params)
-                _G.UIViewMgr:HideAllUIExceptRevive()
+                if (not self.bReviveReady) then
+                    self.bShowCommonFadePanel = true
+
+                    local Params = {}
+                    Params.FadeColorType = 3
+                    Params.Duration = 1.5
+                    Params.HideMajor = true
+                    Params.DelayHide = 3 -- 延迟消失，保底处理
+
+                    _G.UIViewMgr:ShowView(_G.UIViewID.CommonFadePanel, Params)
+                    _G.UIViewMgr:HideAllUIExceptRevive()
+                end
             end
         end
 
         self.IsReviving = true
         --ncut播放过程中 收到了复活协议，不做fade表现处理
-        if (not _G.StoryMgr:SequenceIsPlaying()) then
+        if (not _G.StoryMgr:SequenceIsPlaying()) and Cfg.IsShowBlack == 1 then
             self:RegisterTimer(ShowFadeView, 0.5)
         else
             self:RemoveReviveSidebarInfo()
@@ -590,8 +627,14 @@ function ReviveMgr:OnReviveRespReady(MsgBody)
         return
     end
 
+    self.bReviveReady = true
+
+    if (self.bShowCommonFadePanel) then
+        _G.FLOG_INFO("复活相关：发送关闭黑幕消息")
+        _G.EventMgr:SendEvent(EventID.CommonFadePanelFadeOut)
+    end
+
     -- 为1时表示被技能复活 被技能复活时不播特效
-    --print("Ready RuleID" .. RuleID .. " TransToRescuer = " .. Cfg.TransToRescuer)
     if Cfg.TransToRescuer ~= 1 then
         _G.SkillSingEffectMgr:PlaySingEffect(EntityID, 19998)
     end
@@ -652,9 +695,12 @@ function ReviveMgr:OnGameEventSidebarItemTimeOut(Type, TransData)
         return
     end
 
-    if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Revive) ~= nil then
-        _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Revive)
+    if (_G.SidebarMgr) then
+        if _G.SidebarMgr:GetSidebarItemVM(SidebarDefine.SidebarType.Revive) ~= nil then
+            _G.SidebarMgr:RemoveSidebarItem(SidebarDefine.SidebarType.Revive)
+        end
     end
+
     self:SendRevive(false)
 end
 

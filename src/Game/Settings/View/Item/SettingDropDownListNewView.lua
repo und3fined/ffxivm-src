@@ -195,7 +195,7 @@ function SettingDropDownListNewView:SetSelectedIndex(Index, InItemData, NoCallBa
     if self.SelectedIndex ~= Index then
         self.SelectedIndex = Index
 
-        if not NoCallBack then
+        if not NoCallBack and self.OnSelectionChanged then
             self.OnSelectionChanged:OnTriggered(Index, ItemData)
         end
     end

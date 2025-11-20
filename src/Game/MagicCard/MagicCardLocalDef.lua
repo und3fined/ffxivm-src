@@ -5,6 +5,13 @@
 ---
 local LSTR = _G.LSTR
 ---@class MagicCardLocalDef
+-- 自定义引导ID
+local TutorialID_Ready = 0 -- 准备确认（准备界面）
+local TutorialID_CardInstruction = 1 -- 开局（介绍卡牌）
+local TutorialID_NPCPutCard = 2 -- NPC首次出牌（玩法机制介绍：无翻牌）
+local TutorialID_PlayerTurn = 3 -- 玩家出牌回合（出牌引导）
+local TutorialID_Result = 4 -- 结算环节（胜负判定规则介绍）
+
 local MagicCardLocalDef = {
     TextColor = {
         Red = "D85372FF",
@@ -154,6 +161,96 @@ local MagicCardLocalDef = {
         EmotionLose = 4 -- 失败动作
     },
 
+    --------------------- 新手引导相关数据 ----------------------------------------
+    --玩家手牌，后手
+    TutorialInitCardsDataPlayer = {
+        [1] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+        [2] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = -1, CardID = 61400003, Group = 1, OnHandLoc = 1},
+        [3] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+        [4] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = -1, CardID = 61400007, Group = 0, OnHandLoc = 3},
+        [5] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+    },
+
+    --NPC手牌，先手
+    TutorialInitCardsDataNPC = {
+        [1] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = -1, CardID = 61400013, Group = 0,  OnHandLoc = 0},
+        [2] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0, OnHandLoc = 0},
+        [3] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+        [4] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = -1, CardID = 61400007, Group = 0, OnHandLoc = 3},
+        [5] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+    },
+
+    -- 牌桌初始数据
+    TutorialInitCardsDataBoard ={
+        [1] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 0, CardID = 61400001, Group = 1,  OnHandLoc = -1},
+        [2] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 1, CardID = 61400010, Group = 1,  OnHandLoc = -1},
+        [3] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 2, CardID = 61400004, Group = 1, OnHandLoc = -1},
+        [4] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 3, CardID = 61400006, Group = 0, OnHandLoc = -1},
+        [5] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 4, CardID = 61400002, Group = 1,  OnHandLoc = -1},
+        [6] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0,  OnHandLoc = 0},
+        [7] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = true, BoardLoc = 6, CardID = 61400005, Group = 0,  OnHandLoc = -1},
+        [8] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0, OnHandLoc = 0},
+        [9] = {Change = 0, ScoreChange = 0, FlipType = 0, IsExposed = false, BoardLoc = 0, CardID = 0, Group = 0, OnHandLoc = 0},
+    },
+
+    -- 出牌数据（Key:回合）
+    TutorialMoveDatas = {
+        [7] = {Round = 1, CardGameID = 0, RuleEffects = {}, PlaceCard = 0, FollowUps = {}, IsFinished = false, 
+                Card = {CardID = 61400013, Group = 0, Change = 0, ScoreChange = 0, OnHandLoc = -1, FlipType = 0, IsExposed = true, BoardLoc = 5},
+                -- RuleEffects = {
+                --     {Rule = 0, Cards = {{ScoreChange = 0, OnHandLoc = -1, Change = 0, IsExposed = true, BoardLoc = 2, FlipType = 2, CardID = 61400010, Group = 0}}}
+                -- }
+            },
+        [8] = {Round = 1, CardGameID = 0, RuleEffects = {}, PlaceCard = 3, FollowUps = {}, IsFinished = false,
+                Card = {CardID = 61400007, Group = 1, Change = 0, ScoreChange = 0, OnHandLoc = -1, FlipType = 0, IsExposed = true, BoardLoc = 8},
+                RuleEffects = {
+                    {Rule = 0, Cards = {{ScoreChange = 0, OnHandLoc = -1, Change = 0, IsExposed = true, BoardLoc = 5, FlipType = 2, CardID = 61400013, Group = 1}}}
+                }
+            },
+        [9] = {Round = 1, CardGameID = 0, RuleEffects = {}, PlaceCard = 3, FollowUps = {}, IsFinished = true,
+                Card = {CardID = 61400007, Group = 0, Change = 0, ScoreChange = 0, OnHandLoc = -1, FlipType = 0, IsExposed = true, BoardLoc = 7}},
+    },
+
+    -- 模拟结算数据
+    TutorialFinishedData = {
+        CardGameID = 0,
+        Record = 0,
+        ShouldRestart = false,
+        AwardCardsResID = {},
+        FirstSeenCards = {},
+        AwardCoinsCount = 0,
+        -- BATTLE_RESULT_WIN = 0;   // 胜
+        -- BATTLE_RESULT_FAIL = 1;  // 负
+        -- BATTLE_RESULT_TIE = 2;   // 平局
+        Result = 0, 
+    },
+
+    -- 自定义引导ID
+    TutorialID_Ready = TutorialID_Ready, -- 准备确认（准备界面）
+    TutorialID_CardInstruction = TutorialID_CardInstruction, --介绍卡牌
+    TutorialID_NPCPutCard = TutorialID_NPCPutCard, -- NPC首次出牌（玩法机制介绍：无翻牌）
+    TutorialID_PlayerTurn = TutorialID_PlayerTurn, -- 玩家出牌回合（出牌引导）
+    TutorialID_Result = TutorialID_Result, -- 结算环节（胜负判定规则介绍）
+
+    -- 引导蓝图
+    TutorialWidgetRef = {
+        [TutorialID_Ready] = {BPName = "Cards/CardsReadinessPanel_UIBP", WidgetPath = "BtnSure/Button", IsEndNode = true, Tips = LSTR(1130096)}, -- 1130096("准备按钮") -- IsEndNode 是否当前环节最后一个引导节点
+        [TutorialID_CardInstruction] = {BPName = nil, WidgetPath = nil, IsEndNode = true, Tips = LSTR(1130097)}, -- 1130097("卡牌介绍") -- IsEndNode 是否当前出牌环节最后一个引导节点
+        [TutorialID_NPCPutCard] = {BPName = nil, WidgetPath = nil, IsEndNode = true, Tips = LSTR(1130100)}, -- 1130100("不翻牌规则")
+        [TutorialID_PlayerTurn] = {BPName = "Cards/CardsMainPanel_UIBP", WidgetPath = "SelfCard04", IsEndNode = true, Tips = LSTR(1130098)}, --1130098("玩家出牌指引")
+        [TutorialID_Result] = {BPName = nil, WidgetPath = nil, IsEndNode = true, Tips = LSTR(1130101)}, -- 1130101("结算比分")
+    },
+
+    -- 卡牌数字方位
+    EnumCardNumberDir = {
+        Up = 1,
+        Down = 2,
+        Left = 3,
+        Right = 4,
+    },
+
+    --------------------- 新手引导相关数据 End----------------------------------------
+
     ScaleForDragVisualEdit = 1.2,
     MaxScoreInGame = 10, -- 游戏中最多的分数
     CardNumToShowPerPage = 21,
@@ -166,6 +263,7 @@ local MagicCardLocalDef = {
     DefualtSalutEmoID = 5, -- 默认的敬礼EMOID
     DefaultPlayerScore = 5, -- 对局时刚开始的分数
     CombatTipsID = 109015, -- 战斗状态中，无法开启对局
+    TutorialNPCID = 1011060, -- 新手引导NPCID
 }
 
 return MagicCardLocalDef

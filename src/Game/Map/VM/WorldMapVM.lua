@@ -1,7 +1,7 @@
 --
 -- Author: anypkvcai
 -- Date: 2022-12-13 15:15
--- Description:
+-- Description: 大地图
 --
 
 local LuaClass = require("Core/LuaClass")
@@ -32,6 +32,8 @@ local MapTabListItemFlyIconPath = AetherCurrentDefine.MapTabListItemFlyIconPath
 local LSTR
 local UIViewMgr
 local USaveMgr
+local WorldMapMgr ---@type WorldMapMgr
+local MapMgr ---@type MapMgr
 
 
 ---@class WorldMapVM : UIViewModel
@@ -41,59 +43,67 @@ function WorldMapVM:Ctor()
 	--self.MapBackground = ""
 	self.MapPath = ""
 	self.MaskPath = ""
-	self.MapTitle = ""
-	self.MapName = ""
+	self.WorldMapName = "" -- 一级地图名称
+	self.MapTitle = "" -- 二级地图名称
+	self.MapName = "" -- 三级地图名称或副本地图名称
 	self.BgPath = ""
-	self.MapScale = 1
-	self.MapScaleByGesture = false
+	self.MapScale = 1 -- 大地图缩放比例
+	self.MapScaleByGesture = false -- 是否通过手势缩放
 	self.DiscoveryFlag = 0
 	self.DiscoveryOn = 0
 	self.IsMaskVisible = false
 	self.IsFogAllActivate = true
-	self.PlacedMarkerIconPath = ""
-	self.PlacedMarkerVisible = false
 
+	self.PlacedMarkerIconPath = "" -- 手动标记点图标路径
+	self.PlacedMarkerVisible = false -- 手动标记点显示
+	self.SelectedMarker = nil -- 选定的手动标记
+	self.WorldMapContentAllowClick = true -- 是否可以点击地图
+
+	-- 功能按钮的显示 --
 	self.BtnTransmitVisible = true
 	self.BtnSetVisible = true
 	self.BtnWeatherVisible = true
 	self.BtnAetherCurrentVisible = true
 	self.BtnMountSpeedVisible = true
+	self.BtnHouseListVisible = false
 	self.BtnTreasureHuntVisible = false
 	self.BtnTaskListVisible = false --cbt2隐藏按钮,功能需要调整
 
-	self.WorldMapContentAllowClick = true -- 是否可以点击地图
-	self.MapSendMarkWinMarkPanelVisible = false
-	self.MapSendMarkWinLoctionPanelVisible = false
-
-	self.SecondaryMapList = UIBindableList.New(WorldMapListItemVM)
-	self.ThreeLevelMapList = UIBindableList.New(WorldMapListItemVM)
-	self.FloorMapList = UIBindableList.New(WorldMapListItemVM)
+	self.SecondaryMapVMList = UIBindableList.New(WorldMapListItemVM) -- 二级地图下拉列表 Region
+	self.ThreeLevelMapVMList = UIBindableList.New(WorldMapListItemVM) -- 三级地图下拉列表 Area
+	self.FloorMapVMList = UIBindableList.New(WorldMapListItemVM) -- 楼层地图列表 Floor
 
 	self.WorldMapFrameVisible = false -- 一级地图额外要显示的内容
-	self.WorldTitlePanelVisible = false -- 副本内外的地图功能区分显示
-	self.ThreeLevelPanelVisible = false
-	self.SecondaryPanelVisible = false
-	self.ThreeLevelMapListVisible = false
-	self.SecondaryMapListVisible = false
-	self.FloorMapListVisible = false
+	self.WorldTitlePanelVisible = false -- 副本内和副本外的地图标题区分显示
+	self.ThreeLevelPanelVisible = false -- 三级地图节点显隐，目前改由标题栏缩放动效控制
+	self.SecondaryPanelVisible = false -- 二级地图节点显隐，目前改由标题栏缩放动效控制
+	self.ThreeLevelMapListVisible = false -- 三级地图下拉列表显隐
+	self.SecondaryMapListVisible = false -- 二级地图下拉列表显隐
+	self.FloorMapListVisible = false -- 楼层地图列表显隐
 
-	self.WeatherTimePanelVisible = true
+	self.WeatherTimePanelVisible = true -- 天气时间面板显示
+	self.MapSendMarkWinMarkPanelVisible = false -- 发送标记视图显示
+	self.MapSendMarkWinLoctionPanelVisible = false -- 发送位置视图显示
 
-	self.SelectedMarker = nil
-	self.MapSetMarkPanelVisible = false -- 地图标记界面
-	self.MapSettingPanelVisible = false -- 地图设置界面
-	self.WorldMapTransferPanelVisible = false
-	self.WorldMapTaskListPanelVisible = false
-	self.WorldMapTaskDetailPanelVisible = false
+	self.MapSetMarkPanelVisible = false -- 地图标记界面显示
+	self.MapSettingPanelVisible = false -- 地图设置界面显示
+	self.WorldMapTransferPanelVisible = false -- 地图传送列表界面显示
+	self.WorldMapTaskListPanelVisible = false -- 地图任务列表界面显示
+	self.WorldMapTaskDetailPanelVisible = false -- 地图任务详情界面显示
 
 	self.MapAutoPathMoving = false -- 当前是否自动寻路中
 
 	self.TaskListVM = NewMapTaskListPanelVM.New()
 
-	self.RegionID = 0 -- 地域ID
-	self.RegionName = "" -- 地域名称
-	self.AreaList = UIBindableList.New(WorldMapTransferAreaVM) -- 当前地域ID的地区列表
+	--region 地图传送列表
+	self.RegionID = 0 -- 当前查看地域ID
+	self.RegionName = "" -- 当前查看地域名称
+	self.AreaVMList = UIBindableList.New(WorldMapTransferAreaVM) -- 当前查看地域ID的地区列表
 	self.FavorRegionID = 100 -- 收藏分类的RegionID
+	self.OtherRegionID = 9 -- 其他分类的RegionID，和配表里保持一致
+	self.HouseAreaID = -100 -- 房屋住宅区地区ID
+	self.TransferHouseList = {} -- 传送房屋列表
+	--endregion
 
 	self.ClickWorldMapTipsContent = false -- 是否点击大地图tips界面的内容区域，没有点击时tips界面判断可以穿透
 
@@ -101,7 +111,21 @@ function WorldMapVM:Ctor()
 
 	self.MapOpenSource = 0 -- 打开地图来源
 
-	self.DransDoorHighlightMapList = nil -- 传送门标记高亮地图列表
+	self.DransDoorHighlightMapList = nil -- 记录传送门标记高亮地图列表
+
+	self.WorldMapPanelVisible = true -- 显示默认大地图
+    self.HouseMapPanelVisible = false -- 显示房屋地图
+
+	--region 房屋地图
+	self.HouseMapName = "" -- 住宅区名称
+	self.HouseStreetName = "" -- 住宅区街区
+	self.HouseAreaName = "" -- 住宅区初始区/扩建区
+
+	self.HouseStreetVMList = UIBindableList.New(WorldMapListItemVM) -- Street二级下拉列表
+	self.HouseAreaVMList = UIBindableList.New(WorldMapListItemVM) -- Area三级下拉列表
+	self.HouseStreetListVisible = false -- Street二级下拉列表显隐
+	self.HouseAreaListVisible = false -- Area三级下拉列表显隐
+	--endregion
 end
 
 function WorldMapVM:OnInit()
@@ -112,6 +136,8 @@ function WorldMapVM:OnBegin()
 	LSTR = _G.LSTR
 	UIViewMgr = _G.UIViewMgr
 	USaveMgr = _G.UE.USaveMgr
+	WorldMapMgr = _G.WorldMapMgr
+	MapMgr = _G.MapMgr
 
 	self.WorldMapName = MapUtil.GetMapName(MapUtil.GetWorldUIMapID())
 
@@ -191,8 +217,8 @@ function WorldMapVM:SetThreeLevelMapListVisible(IsVisible)
 	self.ThreeLevelMapListVisible = IsVisible
 
 	if IsVisible then
-		local UIMapID = _G.WorldMapMgr:GetUIMapID()
-		local VmList = self.ThreeLevelMapList:GetItems() or {}
+		local UIMapID = WorldMapMgr:GetUIMapID()
+		local VmList = self.ThreeLevelMapVMList:GetItems() or {}
 		for i = 1, #VmList do
 			if MapUtil.GetMapNameUI(VmList[i].ID) == MapUtil.GetMapNameUI(UIMapID) then
 				VmList[i]:SetIsSelect(true)
@@ -207,8 +233,8 @@ function WorldMapVM:SetSecondaryMapListVisible(IsVisible)
 	self.SecondaryMapListVisible = IsVisible
 
 	if IsVisible then
-		local UIMapID = _G.WorldMapMgr:GetUIMapID()
-		local VmList = self.SecondaryMapList:GetItems() or {}
+		local UIMapID = WorldMapMgr:GetUIMapID()
+		local VmList = self.SecondaryMapVMList:GetItems() or {}
 		for i = 1, #VmList do
 			-- 当前查看的二级地图，对应的二级地图要选中
 			-- 当前查看的三级地图，该地图对应的二级地图也要选中
@@ -227,7 +253,7 @@ function WorldMapVM:SetFloorMapListVisible(IsVisible)
 end
 
 function WorldMapVM:SetSecondaryMapList(MapList)
-	local SecondaryMapListData = {}
+	local SecondaryMapList = {}
 	for i = 1, #MapList do
 		local MapItem = MapList[i]
 		local UIMapID = MapItem.ID
@@ -237,12 +263,12 @@ function WorldMapVM:SetSecondaryMapList(MapList)
 		MapInfo.Name = MapUtil.GetPlaceName(tonumber(MapItem.NameUI))
 		MapInfo.IsLocation = MapUtil.MajorInHere(UIMapID)
 		MapInfo.IsUnlock = MapUtil.CheckMapIsUnLock(UIMapID)
-		MapInfo.IsSelect = MapUtil.GetMapNameUI(UIMapID) == MapUtil.GetMapNameUI(_G.WorldMapMgr:GetUIMapID())
+		MapInfo.IsSelect = MapUtil.GetMapNameUI(UIMapID) == MapUtil.GetMapNameUI(WorldMapMgr:GetUIMapID())
 
-		table.insert(SecondaryMapListData, MapInfo)
+		table.insert(SecondaryMapList, MapInfo)
 	end
 
-	self.SecondaryMapList:UpdateByValues(SecondaryMapListData)
+	self.SecondaryMapVMList:UpdateByValues(SecondaryMapList)
 end
 
 function WorldMapVM:SetThreeLevelMapList(MapList)
@@ -256,7 +282,7 @@ function WorldMapVM:SetThreeLevelMapList(MapList)
 		MapInfo.Name = MapUtil.GetPlaceName(tonumber(MapItem.NameUI))
 		MapInfo.IsLocation = MapUtil.MajorInHere(UIMapID)
 		MapInfo.IsUnlock = MapUtil.CheckMapIsUnLock(UIMapID)
-		MapInfo.IsSelect = MapUtil.GetMapNameUI(UIMapID) == MapUtil.GetMapNameUI(_G.WorldMapMgr:GetUIMapID())
+		MapInfo.IsSelect = MapUtil.GetMapNameUI(UIMapID) == MapUtil.GetMapNameUI(WorldMapMgr:GetUIMapID())
 
 		local bHaveFlyRight, IconFlyAdmitted = self:MakeTheThreeTabMapFlyData(UIMapID)
 		MapInfo.bHaveFlyRight = bHaveFlyRight
@@ -265,7 +291,7 @@ function WorldMapVM:SetThreeLevelMapList(MapList)
 		table.insert(ThreeLevelMapList, MapInfo)
 	end
 
-	self.ThreeLevelMapList:UpdateByValues(ThreeLevelMapList)
+	self.ThreeLevelMapVMList:UpdateByValues(ThreeLevelMapList)
 end
 
 function WorldMapVM:SetFloorMapList(MapList)
@@ -276,9 +302,13 @@ function WorldMapVM:SetFloorMapList(MapList)
 
 		local MapInfo = {}
 		MapInfo.ID = UIMapID
-		MapInfo.Name = MapUtil.GetPlaceName(MapItem.FloorNameUI)
+		MapInfo.Name = MapUtil.GetPlaceName(MapItem.FloorNameUI) -- 楼层名
+		if MapUtil.IsHouseUIMap(UIMapID) then
+			-- 如果是房屋地图，要求显示房屋住宅区街区ID
+			MapInfo.Name = string.format(LSTR(700054), WorldMapMgr:GetStreetID()) .. MapInfo.Name
+		end
 		MapInfo.IsUnlock = MapUtil.CheckMapIsUnLock(UIMapID)
-		MapInfo.IsSelect = (UIMapID == _G.WorldMapMgr:GetUIMapID())
+		MapInfo.IsSelect = (UIMapID == WorldMapMgr:GetUIMapID())
 
 		MapInfo.IconPath = self:GetMapListItemIconPath(UIMapID)
 		MapInfo.IconVisible = (MapInfo.IconPath ~= nil)
@@ -286,27 +316,202 @@ function WorldMapVM:SetFloorMapList(MapList)
 		table.insert(FloorMapList, MapInfo)
 	end
 
-	self.FloorMapList:UpdateByValues(FloorMapList)
+	self.FloorMapVMList:UpdateByValues(FloorMapList)
 end
 
--- 切换到一级地图
+
+---显示默认大地图
+function WorldMapVM:ShowWorldMapPanel()
+	self.WorldMapPanelVisible = true
+	self.HouseMapPanelVisible = false
+end
+
+---显示独立房屋地图。通过房屋土地购买打开，和默认大地图显示内容有差异
+function WorldMapVM:ShowHouseMapPanel()
+	self.WorldMapPanelVisible = false
+	self.HouseMapPanelVisible = true
+	self.WorldMapFrameVisible = false
+end
+
+
+--region 房屋地图
+
+---切换房屋UI地图
+function WorldMapVM:ChangeToHouseAreaMap()
+	local MapID = WorldMapMgr:GetMapID()
+
+	local MapTableCfg = _G.PWorldMgr:GetMapTableCfg(MapID)
+	if MapTableCfg then
+		self.HouseMapName = MapTableCfg.DisplayName
+	end
+
+	self:SetHouseStreetList(MapID)
+	local StreetID = WorldMapMgr:GetStreetID()
+	self.HouseStreetName = string.format(LSTR(700054), StreetID) -- "第%d区"
+
+	local UIMapID = WorldMapMgr:GetUIMapID()
+	self:SetHouseAreaList(UIMapID)
+	self.HouseAreaName = MapUtil.GetMapFloorName(UIMapID)
+
+	self:HideTempPanel()
+
+	self:QueryMapDataAfterChangeMap()
+end
+
+---Street二级下拉列表，住宅区街区列表
+function WorldMapVM:SetHouseStreetList(AreaMapID)
+	local HouseRegionID = MapUtil.GetHouseRegionID(AreaMapID)
+	local HouseStreetCount = _G.HouseLandMgr:GetReleaseLand(HouseRegionID)
+
+	local StreetList = {}
+	for i = 1, HouseStreetCount do
+		local StreetID = i
+
+		local MapInfo = {}
+		MapInfo.ID = StreetID
+		MapInfo.Name = string.format(LSTR(700054), StreetID) -- "第%d区"
+		MapInfo.IsUnlock = true
+		MapInfo.IsSelect = (StreetID == WorldMapMgr:GetStreetID())
+
+		table.insert(StreetList, MapInfo)
+	end
+
+	self.HouseStreetVMList:UpdateByValues(StreetList)
+end
+
+---Area三级下拉列表，住宅区分层地图列表
+function WorldMapVM:SetHouseAreaList(AreaUIMapID)
+	local AreaFloorMapList = MapUtil.GetAreaFloorMapList(AreaUIMapID)
+
+	local FloorMapList = {}
+	for i = 1, #AreaFloorMapList do
+		local MapItem = AreaFloorMapList[i]
+		local UIMapID = MapItem.ID
+
+		local MapInfo = {}
+		MapInfo.ID = UIMapID
+		MapInfo.Name = MapUtil.GetPlaceName(MapItem.FloorNameUI)
+		MapInfo.IsUnlock = MapUtil.CheckMapIsUnLock(UIMapID)
+		MapInfo.IsSelect = (UIMapID == WorldMapMgr:GetUIMapID())
+
+		table.insert(FloorMapList, MapInfo)
+	end
+
+	self.HouseAreaVMList:UpdateByValues(FloorMapList)
+end
+
+function WorldMapVM:SetHouseStreetListVisible(IsVisible)
+	if IsVisible == nil then
+		IsVisible = not self.HouseStreetListVisible
+	end
+	self.HouseStreetListVisible = IsVisible
+
+	if IsVisible then
+		self:SetHouseAreaListVisible(false)
+	end
+end
+
+function WorldMapVM:SetHouseAreaListVisible(IsVisible)
+	if IsVisible == nil then
+		IsVisible = not self.HouseAreaListVisible
+	end
+	self.HouseAreaListVisible = IsVisible
+
+	if IsVisible then
+		self:SetHouseStreetListVisible(false)
+	end
+end
+
+---查看对应住宅区的土地列表
+function WorldMapVM:SetHouseLandListPanelVisible(IsVisible)
+	if IsVisible then
+		self:HideTempPanel()
+
+		local HouseMapID = WorldMapMgr:GetMapID()
+		local HouseRegionID = MapUtil.GetHouseRegionID(HouseMapID)
+		_G.HouseLandMgr:OpenLandListWin(HouseRegionID, WorldMapMgr:GetStreetID())
+	end
+end
+
+---查看对应住宅区的房屋列表
+---@param HouseMapID number 住宅区MapID
+function WorldMapVM:OpenMapHouseListPanel(HouseMapID)
+	self:HideTempPanel()
+
+	local HouseRegionID = MapUtil.GetHouseRegionID(HouseMapID)
+	_G.HouseLandMgr:OpenMapHouseListPanel(HouseRegionID)
+end
+
+---当前地图所在区域地图（Region地图）是否有住宅区
+---@return boolean, number
+function WorldMapVM:IsHouseRegionMap()
+	if MapUtil.IsAreaMap(WorldMapMgr:GetUIMapID()) then
+		local CurrRegionUIMapID = WorldMapMgr:GetUpperUIMapID()
+
+		local EstateInfo = _G.HouseLandMianPanelVM:GetEstateCfg()
+		for _, EstateInfoCfgData in pairs(EstateInfo) do
+			local MapID = EstateInfoCfgData.MapID
+			local UIMapID = MapUtil.GetUIMapID(MapID)
+			local RegionUIMapID = MapUtil.GetUpperUIMapID(UIMapID)
+			if RegionUIMapID == CurrRegionUIMapID then
+				return true, MapID
+			end
+		end
+	end
+
+	return false, 0
+end
+
+---打开对应住宅区的房屋列表界面
+function WorldMapVM:OpenMapHouseListByRegion()
+	local Result, HouseMapID = self:IsHouseRegionMap()
+	if Result then
+		self:OpenMapHouseListPanel(HouseMapID)
+	end
+end
+
+---是否可以切换到房屋UI地图
+---@return boolean
+function WorldMapVM:CanChangeToHouseUIMap(AreaUIMapID)
+	local AreaMapID = MapUtil.GetMapID(AreaUIMapID)
+	local MajorMapID = MapMgr:GetMapID()
+	-- 主角是否在当前正在点击的房屋地图中
+	if AreaMapID == MajorMapID then
+		return true
+	end
+
+	return false
+end
+
+function WorldMapVM:GetTransferHouseList()
+	return self.TransferHouseList
+end
+
+--endregion
+
+
+---切换到一级地图
 function WorldMapVM:ChangeToWorldMap()
 	self.WorldMapFrameVisible = true
 	self.ThreeLevelPanelVisible = false
 	self.SecondaryPanelVisible = false
 	self.FloorMapListVisible = false
 
+	self.BtnHouseListVisible = false
+
 	self:HideSidePanel()
 end
 
--- 切换到二级地图
+---切换到二级地图
 function WorldMapVM:ChangeToRegionMap(UIMapID)
 	self.WorldMapFrameVisible = false
 	self.ThreeLevelPanelVisible = false
-	self.ThreeLevelMapListVisible = false
 	self.SecondaryPanelVisible = true
+	self.ThreeLevelMapListVisible = false
 	self.SecondaryMapListVisible = false
 	self.FloorMapListVisible = false
+
+	self.BtnHouseListVisible = false
 
 	self.MapTitle = MapUtil.GetMapName(UIMapID)
 	self.MapName = ""
@@ -314,7 +519,7 @@ function WorldMapVM:ChangeToRegionMap(UIMapID)
 	self:HideSidePanel()
 end
 
--- 切换到三级地图
+---切换到三级地图
 function WorldMapVM:ChangeToAreaMap(UIMapID)
 	self.WorldMapFrameVisible = false
 
@@ -335,6 +540,7 @@ function WorldMapVM:ChangeToAreaMap(UIMapID)
 		self.BtnTreasureHuntVisible = false
 		--self.BtnTaskListVisible = false
 		self.BtnMountSpeedVisible = false
+		self.BtnHouseListVisible = false
 
 	else
 		self.WorldTitlePanelVisible = true
@@ -350,6 +556,7 @@ function WorldMapVM:ChangeToAreaMap(UIMapID)
 		self.BtnTreasureHuntVisible = false
 		--self.BtnTaskListVisible = true
 		self.BtnMountSpeedVisible = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDMount)
+		self.BtnHouseListVisible = false -- 2.2版本暂时屏蔽 self:IsHouseRegionMap() -- 是否显示地图房屋列表按钮（住宅区按钮）
 	end
 
 	self.MapTitle = MapUtil.GetMapName(MapUtil.GetUpperUIMapID(UIMapID))
@@ -368,12 +575,21 @@ function WorldMapVM:ChangeToAreaMap(UIMapID)
 	self:QueryMapDataAfterChangeMap()
 end
 
----切换UI地图后按需查询当前UI地图某些玩法数据
+-- 切换UI地图后按需查询当前UI地图某些玩法数据，以便查看地图标记状态
 function WorldMapVM:QueryMapDataAfterChangeMap()
-	local MapID = _G.WorldMapMgr:GetMapID()
+	local MapID = WorldMapMgr:GetMapID()
+	local UIMapID = WorldMapMgr:GetUIMapID()
 
-	-- 当前所在地图一般不用重复查询
-	if MapID == _G.MapMgr:GetMapID() then
+	if MapUtil.IsHouseUIMap(UIMapID) then
+		-- 查询房屋土地数据
+		local HouseRegionID = MapUtil.GetHouseRegionID(MapID)
+		local HouseAreaID = MapUtil.GetHouseAreaID(MapID, UIMapID)
+		_G.HouseLandMgr:SetCurOpenMapData(HouseRegionID, WorldMapMgr:GetStreetID(), HouseAreaID)
+		return
+	end
+
+	-- 当前所在地图玩法数据一般已经有了，不用重复查询
+	if MapID == MapMgr:GetMapID() then
 		return
 	end
 
@@ -403,7 +619,6 @@ function WorldMapVM:ShowSendLoctionView()
 	UIViewMgr:ShowView(UIViewID.WorldMapSendMarkWin, Params)
 	self.MapSendMarkWinLoctionPanelVisible = true
 
-	self:SetPlacedMarkerIconPath("PaperSprite'/Game/UI/Atlas/NewMap/Frames/UI_Map_Icon_MarkLoction_png.UI_Map_Icon_MarkLoction_png'")
 	self.WeatherTimePanelVisible = false
 	self.BtnTransmitVisible = false
 	self.BtnSetVisible = false
@@ -454,6 +669,8 @@ end
 function WorldMapVM:HideTempPanel()
 	self.ThreeLevelMapListVisible = false
 	self.SecondaryMapListVisible = false
+	self.HouseAreaListVisible = false
+	self.HouseStreetListVisible = false
 end
 
 ---关闭地图相关的界面
@@ -480,6 +697,12 @@ function WorldMapVM:HideRelatedTipsPanel()
 	end
 	if UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsTransfer) then
 		UIViewMgr:HideView(UIViewID.WorldMapMarkerTipsTransfer)
+	end
+	if UIViewMgr:IsViewVisible(UIViewID.WorldMapMarkerTipsHouse) then
+		UIViewMgr:HideView(UIViewID.WorldMapMarkerTipsHouse)
+	end
+	if UIViewMgr:IsViewVisible(UIViewID.WorldMapGoldSaucerMarkerTips) then
+		UIViewMgr:HideView(UIViewID.WorldMapGoldSaucerMarkerTips)
 	end
 end
 
@@ -519,7 +742,7 @@ function WorldMapVM:SetMapSettingPanelVisible(IsVisible)
 		self:SetWorldMapContentAllowClick(false)
 		self:HideTempPanel()
 
-		CommSideBarUtil.ShowSideBarByType(SideBarDefine.PanelType.MapSetting, SideBarDefine.MapSettingTabType.Basic)
+		CommSideBarUtil.ShowMapSettingSideBarByType(SideBarDefine.MapSettingTabType.Basic)
 		self.MapSettingPanelVisible = true
 	else
 		if UIViewMgr:IsViewVisible(UIViewID.CommEasytoUseView) then
@@ -667,13 +890,14 @@ end
 --endregion
 
 
----组织3级Tab地图的飞行相关数据
----@param UIMapID number@地图UI数据
+---组织三级地图的飞行相关数据
+---@param UIMapID number
 function WorldMapVM:MakeTheThreeTabMapFlyData(UIMapID)
 	local ItemMapID = MapUtil.GetMapID(UIMapID)
 	if not ItemMapID then
 		return
 	end
+
 	local bHaveFlyRight = MapUtil.IsMapHaveFlyRight(ItemMapID)
 	local IconFlyAdmitted
 	if bHaveFlyRight then
@@ -683,8 +907,9 @@ function WorldMapVM:MakeTheThreeTabMapFlyData(UIMapID)
 	return bHaveFlyRight, IconFlyAdmitted
 end
 
----获取三级地图中分层地图的显示图标
----图标按优先顺序显示：任务追踪目标所在层，自主追踪点所在层，主角位置所在层，默认图标
+---获取三级地图中楼层地图的显示图标
+---图标按优先顺序显示：任务追踪目标所在层，地图追踪点所在层，主角位置所在层，默认图标
+---@param UIMapID number
 function WorldMapVM:GetMapListItemIconPath(UIMapID)
 	local ItemMapID = MapUtil.GetMapID(UIMapID)
 	if not ItemMapID then
@@ -714,7 +939,7 @@ function WorldMapVM:GetMapListItemIconPath(UIMapID)
 		return MapDefine.MapListItemIconPath.MapFollow
 	end
 
-	local bIsLocation = (UIMapID == _G.MapMgr:GetUIMapID())
+	local bIsLocation = (UIMapID == MapMgr:GetUIMapID())
 	if bIsLocation then
 		return MapDefine.MapListItemIconPath.MajorLocation
 	end
@@ -723,11 +948,15 @@ function WorldMapVM:GetMapListItemIconPath(UIMapID)
 end
 
 
+--region 地图传送列表
+
+---初始化地域ID到地区ID列表、地区ID到地图ID列表的两个table
 function WorldMapVM:InitRegionAreaMapTable()
 	self.Region2AreaTable, self.Area2MapTable = MapUtil.GetRegionAndAreaTable()
 end
 
----获取地域列表
+---获取地图传送列表地域列表
+---@return table
 function WorldMapVM:GetRegionTabList()
 	local ItemTabs = {}
 
@@ -738,10 +967,10 @@ function WorldMapVM:GetRegionTabList()
 		end
 	end
 
-	-- 收藏分类
+	-- 额外增加收藏分类。不配置到地域表MapRegionIconCfg，是因为地域表用的地方很多
 	local FavorRegion =
 	{
-		IconPath = "Texture2D'/Game/Assets/Icon/Region/UI_Icon_Tab_Collect.UI_Icon_Tab_Collect'",
+		IconPath = "Texture2D'/Game/UI/Texture/Icon/Tab/UI_Icon_Tab_Region_025.UI_Icon_Tab_Region_025'",
 		Name = LSTR(700017), -- "收藏"
 		IsLock = false,
 		RegionID = self.FavorRegionID,
@@ -751,7 +980,7 @@ function WorldMapVM:GetRegionTabList()
 	return ItemTabs
 end
 
----获取给定地域ID的地区列表
+---更新给定地域ID的地区列表
 ---@param RegionID number 地域ID
 function WorldMapVM:UpdateAreaList(RegionID)
 	self.RegionID = RegionID
@@ -764,9 +993,19 @@ function WorldMapVM:UpdateAreaList(RegionID)
 
 		local TempList = self.Region2AreaTable[RegionID]
 		for _, AreaInfo in pairs(TempList) do
-			local MapList = self.Area2MapTable[AreaInfo.ID]
+			local AreaID = AreaInfo.ID
+			local MapList = self.Area2MapTable[AreaID]
 			if MapList and #MapList > 0 then
-				table.insert(AreaList, {ID = AreaInfo.ID, Name = AreaInfo.Name, RegionID = RegionID })
+				table.insert(AreaList, {ID = AreaID, Name = AreaInfo.Name, RegionID = RegionID })
+			end
+		end
+
+		if RegionID == self.OtherRegionID then
+			local TransferHouseList = self:GetTransferHouseList()
+			if TransferHouseList and #TransferHouseList > 0 then
+				-- “其他”分类里增加“冒险者住宅区”地区
+				local AreaID = self.HouseAreaID
+				table.insert(AreaList, {ID = AreaID, Name = LSTR(700055), RegionID = RegionID })
 			end
 		end
 
@@ -800,8 +1039,10 @@ function WorldMapVM:UpdateAreaList(RegionID)
 		return Left.ID < Right.ID
 	end)
 
-	self.AreaList:UpdateByValues(AreaList)
+	self.AreaVMList:UpdateByValues(AreaList)
 end
+
+--endregion
 
 
 function WorldMapVM:CanPlayDransDoorHighlight(UIMapID)

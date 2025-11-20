@@ -11,12 +11,14 @@ local UIUtil = require("Utils/UIUtil")
 ---@class GoldSaucerGameCuffScoreItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field FTextBlock_44 UFTextBlock
+---@field AnimScore UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local GoldSaucerGameCuffScoreItemView = LuaClass(UIView, true)
 
 function GoldSaucerGameCuffScoreItemView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.FTextBlock_44 = nil
+	--self.AnimScore = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 

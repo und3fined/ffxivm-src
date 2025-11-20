@@ -56,8 +56,13 @@ local ChocoboTransportDefine =
     CHECK_BLOCK_SECOND = 3,  --判定为被阻挡时间
     DEFAULT_ACCELERATION_SKILL_ID = 60028, --默认加速技能ID
     QUEST_TRANSFER_OFFSET_X = -60, 	-- 任务运输需要偏移
-
-    TargetChocoboFeeNeverMindTipSelect = 0, --陆行鸟运输Qte本次登录不再提示
+    
+    TargetChocoboFeeNeverMindTipSelect = 0,
+    TargetChocoboFeeNeverMindTipSelectType = {
+        NONE = 0,     -- 未选择
+        CONFIRM = 1,  -- 不再提示且确认
+        CANCEL = 2    -- 不再提示且取消
+    }
 }
 
 function ChocoboTransportDefine:LoadCfg()

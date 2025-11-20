@@ -31,6 +31,9 @@ local WilderExploreMainCfg = {
             {
                 Name = 'BookNoText',
             },
+            {
+                Name = 'FuncName',
+            },
 		}
     },
     DefaultValues = nil,

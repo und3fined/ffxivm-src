@@ -88,11 +88,18 @@ function SkillDetailsVM:UpdateVM(Params)
         if ProfFlags.bMakeProf and Params.CurrentLabel == LocalStrID.Active then
             bShowAttrList = true
             rawset(self, "AttrListType", SkillTipsType.Crafter)
-        elseif not Params.bPassiveSkill and Params.ProfFlags.bCombatProf then
+        elseif not Params.bPassiveSkill and ProfFlags.bCombatProf then
             bShowAttrList = true
             rawset(self, "AttrListType", SkillTipsType.Combat)
+        elseif not Params.bPassiveSkill and ProfFlags.bProductionProf then
+            bShowAttrList = true
+            rawset(self, "AttrListType", SkillTipsType.Gather)
         end
         self.bShowAttrList = bShowAttrList
+
+        self.SkillName = ""
+        self.SkillIcon = ""
+        self.Desc = ""
 
         local co = coroutine.create(self.SetSkillID)
         _G.UIAsyncTaskMgr:RegisterTask(co, self, Params.SkillID)
@@ -167,9 +174,9 @@ function SkillDetailsVM:SetSeriesList(Params)
 end
 
 function SkillDetailsVM:SetSeriesListAsync(Params)
-    local SkillID = Params.SkillID
-    local Index = Params.Index
-    local EntityID = Params.EntityID
+    local SkillID = Params.SkillID or 0
+    local Index = Params.Index or -1
+    local EntityID = Params.EntityID or 0
     local bPassive = Params.bPassiveSkill
 	local SeriesList = {}
 	if SkillID > 0 and Index >= 0 and EntityID > 0 then

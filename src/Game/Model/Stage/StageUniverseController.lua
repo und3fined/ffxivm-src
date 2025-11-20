@@ -128,7 +128,6 @@ function StageUniverseController:DisableEnvironmentLights()
     local CompsToDisable = {}
     table.insert(CompsToDisable, self.RenderStage:GetComponentByClass(_G.UE.USkyLightComponent))
     table.insert(CompsToDisable, self.RenderStage:GetComponentByClass(_G.UE.UDirectionalLightComponent))
-    table.insert(CompsToDisable, self.RenderStage:GetComponentByClass(_G.UE.UPlanarReflectionComponent))
     table.insert(CompsToDisable, self.RenderStage:GetComponentByClass(_G.UE.UChildActorComponent))
     table.insert(CompsToDisable, self.RenderStage:GetComponentByClass(_G.UE.UPostProcessComponent))
     for _, Comp in ipairs(CompsToDisable) do

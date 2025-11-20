@@ -9,6 +9,8 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local MajorUtil = require("Utils/MajorUtil")
 local PersonInfoDefine = require("Game/PersonInfo/PersonInfoDefine")
+local GlobalCfg = require("TableCfg/GlobalCfg")
+local ProtoRes = require("Protocol/ProtoRes")
 
 ---@class NewBagChangeNameWinView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -63,7 +65,6 @@ end
 
 function NewBagChangeNameWinView:OnInit()
 	self.CommInputBox:SetCallback(self, self.OnInputBoxTextChanged, self.OnTextCommitted)
-	
 end
 
 function NewBagChangeNameWinView:OnRegisterBinder()
@@ -126,6 +127,15 @@ function NewBagChangeNameWinView:OnShow()
 	end
 
 	self:SetItemIcon()
+	local Cfg = GlobalCfg:FindCfgByKey(ProtoRes.global_cfg_id.GlobalCfgNewbieSceneID)
+	local MaxNum
+	if Cfg and Cfg.Value[2] then
+		MaxNum = Cfg.Value[2]
+	else
+		MaxNum = 14
+	end
+
+	self.CommInputBox:SetMaxNum(MaxNum)
 end       
 
 function NewBagChangeNameWinView:InitUIData()

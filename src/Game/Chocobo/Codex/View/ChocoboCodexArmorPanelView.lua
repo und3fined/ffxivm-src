@@ -12,6 +12,7 @@ local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local RichTextUtil = require("Utils/RichTextUtil")
 local TipsUtil = require("Utils/TipsUtil")
 local HelpInfoUtil = require("Utils/HelpInfoUtil")
+local CommonUtil = require("Utils/CommonUtil")
 
 local MajorUtil = require("Utils/MajorUtil")
 local ProtoCS = require("Protocol/ProtoCS")
@@ -51,6 +52,7 @@ local LSTR = nil
 ---@field BtnReward UFButton
 ---@field BtnToGet UFButton
 ---@field CommGesture_UIBP CommGestureView
+---@field CommonTitle CommonTitleView
 ---@field EFF_Reward UFCanvasPanel
 ---@field EFF_RewardFull UFCanvasPanel
 ---@field Empty CommBackpackEmptyView
@@ -61,6 +63,7 @@ local LSTR = nil
 ---@field ImgChestIcon UImage
 ---@field LegGetWay UTableView
 ---@field PanelGetWayTips UFCanvasPanel
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelRight UFCanvasPanel
 ---@field RadialProcess URadialImage
 ---@field RichTextID URichTextBox
@@ -74,8 +77,6 @@ local LSTR = nil
 ---@field TextLeg UFTextBlock
 ---@field TextName UFTextBlock
 ---@field TextProcess UFTextBlock
----@field TextTitle UFTextBlock
----@field TextTitle02 UFTextBlock
 ---@field TextToGet UFTextBlock
 ---@field ToggleBtnRide UToggleButton
 ---@field ToggleBtnRole UToggleButton
@@ -99,6 +100,7 @@ function ChocoboCodexArmorPanelView:Ctor()
 	--self.BtnReward = nil
 	--self.BtnToGet = nil
 	--self.CommGesture_UIBP = nil
+	--self.CommonTitle = nil
 	--self.EFF_Reward = nil
 	--self.EFF_RewardFull = nil
 	--self.Empty = nil
@@ -109,6 +111,7 @@ function ChocoboCodexArmorPanelView:Ctor()
 	--self.ImgChestIcon = nil
 	--self.LegGetWay = nil
 	--self.PanelGetWayTips = nil
+	--self.PanelMask3 = nil
 	--self.PanelRight = nil
 	--self.RadialProcess = nil
 	--self.RichTextID = nil
@@ -122,8 +125,6 @@ function ChocoboCodexArmorPanelView:Ctor()
 	--self.TextLeg = nil
 	--self.TextName = nil
 	--self.TextProcess = nil
-	--self.TextTitle = nil
-	--self.TextTitle02 = nil
 	--self.TextToGet = nil
 	--self.ToggleBtnRide = nil
 	--self.ToggleBtnRole = nil
@@ -140,6 +141,7 @@ function ChocoboCodexArmorPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommGesture_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Empty)
 	self:AddSubView(self.EmptyArmors)
 	self:AddSubView(self.SearchBar)
@@ -175,7 +177,7 @@ function ChocoboCodexArmorPanelView:OnInit()
 
 		{"RadialProcess", UIBinderSetPercent.New(self, self.RadialProcess) },
 		{"TextProcess", UIBinderSetText.New(self, self.TextProcess)},
-		{"TextProcess", UIBinderSetText.New(self, self.TextTitle02)},
+		{"TextProcess", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)},
 		{"ArmorList", UIBinderUpdateBindableList.New(self, self.ArmorsTableView) },
 		{"EmptyVisible", UIBinderSetIsVisible.New(self, self.Empty,false,true) },
 		{"EmptyArmorsVisible", UIBinderSetIsVisible.New(self, self.EmptyArmors,false,true) },
@@ -184,6 +186,7 @@ function ChocoboCodexArmorPanelView:OnInit()
 		{"PanelRightVisible", UIBinderSetIsVisible.New(self, self.PanelRight,false,false) },
 		{"GestureVisible", UIBinderSetIsVisible.New(self, self.CommGesture_UIBP,false,true) },
 		{"BtnsVisible", UIBinderSetIsVisible.New(self, self.VerticalBtns,false,true) },
+		{"BtnsVisible", UIBinderSetIsVisible.New(self, self.BtnToGet,false,true) },
         {"ChocoboNameVisible", UIBinderSetIsVisible.New(self, self.HorizontalName,false,true) },
 
 		{"ToggleSwitchChecked", UIBinderSetCheckedState.New(self, self.ToggleBtnSwitch)},
@@ -197,10 +200,9 @@ function ChocoboCodexArmorPanelView:OnDestroy()
 end
 
 function ChocoboCodexArmorPanelView:OnShow()
-    self.TextTitle:SetText(LSTR(670001))
     self.TextBody:SetText(LSTR(670004))
 	self.TextHead:SetText(LSTR(670003))
-	self.TextLeg:SetText(LSTR(670005))	
+	self.TextLeg:SetText(LSTR(670005))
     self.TextGetWay:SetText(LSTR(670002))	
 	self.TextToGet:SetText(LSTR(670006))
 	self.EmptyArmors:SetTipsContent(LSTR(670008))
@@ -209,11 +211,13 @@ function ChocoboCodexArmorPanelView:OnShow()
 	self.SearchBar:SetHintText(LSTR(670007))
 	self.Empty:SetTipsContent(LSTR(670019))
 	self.Empty:ShowPanelBtn(false)
+	
+	self.CommonTitle:SetTextTitleName(LSTR(670001))
 
+	BuddyMgr:ReqUsedColor()
+	BuddyMgr:ReqUsedArmor()
 	local _IsModuelOpen = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDBuddy)
 	if _IsModuelOpen then
-		BuddyMgr:ReqUsedColor()
-		BuddyMgr:ReqUsedArmor()
 		UIUtil.SetIsVisible(self.BtnAppearance, true, true)
 	else
 		UIUtil.SetIsVisible(self.BtnAppearance, false, false)
@@ -544,14 +548,13 @@ function ChocoboCodexArmorPanelView:ShowChocoboModelActor()
 		ChocoboShowModelMgr:ResetChocoboModelScale()
 		ChocoboShowModelMgr:SetModelDefaultPos()
 		ChocoboShowModelMgr:UpdateUIChocoboModel(function(InView)
-			if not InView or not InView.ShowChocoboModel then
+			if not CommonUtil.IsObjectValid(InView) or not InView.ShowChocoboModel then
 				return
 			end
 			InView:ShowChocoboModel()
 		end)
 		ChocoboShowModelMgr:EnableRotator(true)
 		ChocoboShowModelMgr:BindCommGesture(View.CommGesture_UIBP)
-		self:ShowChocoboModel()
 	end
 	
 	ChocoboShowModelMgr:SetUIType(ProtoRes.CHOCOBO_MODE_SHOW_UI_TYPE.CHOCOBO_MODE_SHOW_UITYPE_CODEX)

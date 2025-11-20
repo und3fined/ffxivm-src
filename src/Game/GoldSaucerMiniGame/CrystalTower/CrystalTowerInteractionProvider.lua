@@ -33,8 +33,10 @@ function CrystalTowerInteractionProvider:OnBeginFalling()
                 if Interaction ~= nil then
                     Interaction:SetbShow(true)
                     UIUtil.CanvasSlotSetPosition(Interaction, InitPos)
-                    local VM = Interaction:GetViewModel()
-                    VM:UpdateVM(Cfg)
+                    local VM = Interaction:GetViewModel() -- 在界面Item添加了判断UEObject是否存在的逻辑，可能会为空
+                    if VM then
+                        VM:UpdateVM(Cfg)
+                    end
                     Interaction:UpdateTrackIndex(self.TrackIndex) -- 在哪个赛道
                     Interaction:SetShootProvider(self)
                     Interaction:Falling(Cfg.Category) 
@@ -51,6 +53,8 @@ function CrystalTowerInteractionProvider:GetInteraction()
     local Callback = self.InteractionFactory
     if Callback then
         return Callback()
+    else
+        FLOG_ERROR("CrystalTowerInteractionProvider InteractionFactory = nil ")
     end
 end
 

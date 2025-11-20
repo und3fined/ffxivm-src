@@ -57,6 +57,7 @@ function ChocoboRaceGMTargetInfoView:OnInit()
 
     if nil ~= Register then
         Register:Register(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceDebugInfo, self, self.OnNetMsgRaceDebugInfo)
+        Register:Register(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceAilog, self, self.OnNetMsgRaceAILog)
     end
     
     self.SkillName = {}
@@ -64,13 +65,13 @@ function ChocoboRaceGMTargetInfoView:OnInit()
     for _, Value in pairs(AllSkillCfg) do
         self.SkillName[Value.ID] = Value.Name
     end
-
-    self.BuffName = {
+    
+    self.StateName = {
         [0] = "无效果",
         [1] = "冲刺速度",
         [2] = "体力减少无效",
         [3] = "体力之药",
-        [4] = "英雄药",
+        [4] = "英雄药",            
         [5] = "陆行鸟反射",
         [6] = "加重",
         [7] = "失控",
@@ -112,10 +113,66 @@ function ChocoboRaceGMTargetInfoView:OnInit()
         [43] = "陆行鸟闪电",
         [44] = "魅惑之羽",
         [45] = "禁言",
+    }
+
+    self.BuffName = {
+        [0] = "无效果",
+        [1] = "亢奋",         -- RaceEffectExcited
+        [2] = "振翅",         -- RaceEffectWing
+        [3] = "治疗",         -- RaceEffectHealth
+        [4] = "康复",         -- RaceEffectWell
+        [5] = "活力",         -- RaceEffectActive
+        [6] = "镇静",         -- RaceEffectCalm
+        [7] = "反射",         -- RaceEffectReflex
+        [8] = "偷取",         -- RaceEffectSteal
+        [9] = "沉默",         -- RaceEffectSilence
+        [10] = "震荡",        -- RaceEffectShock
+        [11] = "吸收",        -- RaceEffectAbsorb
+        [12] = "变换",        -- RaceEffectChange
+        [13] = "模仿",        -- RaceEffectImpersonator
+        [14] = "鸟羽",        -- RaceEffectWingField
+        [15] = "超冲",        -- RaceEffectDash
+        [16] = "吸能",        -- RaceEffectStealStamina
+        [17] = "护罩",        -- RaceEffectGuard
+        [18] = "加重",        -- RaceEffectHeavy
+        [19] = "失控",        -- RaceEffectOutControl
+        [20] = "恢复",        -- RaceEffectRecovery
+        [21] = "经验",        -- RaceEffectExp
+        [22] = "起冲",        -- RaceEffectBeginSprint
+        [23] = "重生",        -- RaceEffectReborn
+        [24] = "弱化",        -- RaceEffectWeaker
+        [25] = "免疫",        -- RaceEffectImmunity
+        [26] = "锁定",        -- RaceEffectLock
+        [27] = "跑鞋",        -- RaceEffectSprint
+        [28] = "以太",        -- RaceEffectHot
+        [29] = "酒水",        -- RaceEffectWine
+        [30] = "重力",        -- RaceEffectGravity
+        [31] = "荆棘",        -- RaceEffectFireField
+        [32] = "英雄",        -- RaceEffectInvincible
+        [33] = "陨石",        -- RaceEffectStone
+        [34] = "互换",        -- RaceEffectExchange
+        [35] = "蜘蛛",        -- RaceEffectSpider
+        [36] = "绊脚",        -- RaceEffectBlock
+        [37] = "减速",        -- RaceEffectDeceleration
+        [38] = "迷瘴",        -- RaceEffectMist
+        [39] = "闪电",        -- RaceEffectLightning
+        [40] = "魅惑",        -- RaceEffectCharm
+        [41] = "失明",        -- RaceEffectBlind
+        [42] = "减速网",      -- RaceEffectDecelerationWang
+        [43] = "沉默结界",    -- RaceEffectMuteWang
+        [44] = "充沛",        -- RaceEffectEnergyEnough
+        [45] = "坚韧",        -- RaceEffectTough
+        [46] = "震荡结界",    -- RaceEffectShockWang
+        [47] = "超能冲刺",    -- RaceEffectSuperDash
+        [48] = "失控耐性",    -- RaceEffectOutControlTolerance
+        [49] = "加重耐性",     -- RaceEffectHeavyTolerance
         [100] = "加速状态",
         [101] = "疲惫状态",
-        [100] = "免疫效果100%",
-        [100] = "无敌状态",
+        [103] = "無敵狀態",
+        [104] = "踏板加速狀態",
+        [105] = "禁言",
+        [106] = "动摇",
+        [107] = "虚弱",
     }
     
     self.GimmickNames = {
@@ -148,7 +205,9 @@ function ChocoboRaceGMTargetInfoView:OnShow()
     self.TextBlock:SetText("清空")
     self.TextBlock_1:SetText("开始")
     self.Content:SetText(_G.LSTR(1440024))
-    
+
+    self.MaxRacerNum = _G.ChocoboRaceMgr:GetRacerNum()
+    self.GameBegin = self.MaxRacerNum > 0
     UIUtil.SetRenderOpacity(self.ImageMask, 0.5)
 end
 
@@ -162,8 +221,13 @@ function ChocoboRaceGMTargetInfoView:OnRegisterUIEvent()
 end
 
 function ChocoboRaceGMTargetInfoView:OnListenSelectedTargetClick()
+    if not self.GameBegin then return end
+    local Max = self.MaxRacerNum or 8
+
+    self.ServerBuffCache = nil
+    self.BuffCache = nil
     self.SelectedIndex = self.SelectedIndex + 1
-    if self.SelectedIndex >= 8 then
+    if self.SelectedIndex >= Max then
         self.SelectedIndex = -1
     end
 end
@@ -177,6 +241,8 @@ function ChocoboRaceGMTargetInfoView:OnClearListenClick()
     self.SkillHistory = { maxSize = 20, data = {} }
     self.BuffRecords = { maxSize = 20, data = {} }
     self.GimmickLogs = { maxSize = 20, data = {} }
+    self.ServerBuffCache = nil
+    self.BuffCache = nil
     self.Content:SetText("已清空")
 end
 
@@ -185,11 +251,21 @@ function ChocoboRaceGMTargetInfoView:OnRegisterTimer()
 end
 
 function ChocoboRaceGMTargetInfoView:OnTimer()
+    if not _G.ChocoboRaceMgr:IsChocoboRacePWorld() then
+        return
+    end
+    
     self:SendReq(self.SelectedIndex)
+
+    self.TimerCounter = (self.TimerCounter or 0) + 1
+    if self.TimerCounter >= 5 then
+        self:SendAILogReq(self.SelectedIndex)
+        self.TimerCounter = 0
+    end
 end
 
 function ChocoboRaceGMTargetInfoView:SendReq(Index)
-    if self.IsPaused then return end
+    if not self.GameBegin or self.IsPaused then return end
     
     local Params = {}
     Params.Cmd = SUB_MSG_ID.ChocoboRaceDebugInfo
@@ -198,6 +274,18 @@ function ChocoboRaceGMTargetInfoView:SendReq(Index)
     Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
     _G.GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceDebugInfo, Params)
 end
+
+function ChocoboRaceGMTargetInfoView:SendAILogReq(Index)
+    if not self.GameBegin or self.IsPaused then return end
+    
+    local Params = {}
+    Params.Cmd = SUB_MSG_ID.ChocoboRaceAilog
+    Params.debugdata = {}
+    Params.debugdata.Index = Index
+    Params.RaceID = _G.PWorldMgr:GetCurrPWorldInstID()
+    _G.GameNetworkMgr:SendMsg(CS_CMD_CHOCOBO_RACE, SUB_MSG_ID.ChocoboRaceAilog, Params)
+end
+
 
 local function SetColorFormat(Text, Color)
     return string.format("<span color=\"%s\" size=\"20\">%s</>", Color, Text)
@@ -224,14 +312,24 @@ function ChocoboRaceGMTargetInfoView:OnNetMsgRaceDebugInfo(MsgBody)
     self:UpdateGimmickCache(jsonData.gimmickDebug)
 
     -- 构建显示内容
-    local ContentText = SetColorFormat("【当前监听对象编号：" .. self.SelectedIndex + 1 ..  "】", COLOR_GIMMICK).."\n\n"
+    local ContentText = "【当前监听对象编号：" .. SetColorFormat(tostring(self.SelectedIndex + 1), "#00FF00")..  "】\n\n"
     ContentText = ContentText .. self:BuildRacerSection(jsonData.racers)
     ContentText = ContentText .. self:BuildBuffState(jsonData.buffDebug)
-    ContentText = ContentText .. self:BuildSkillSection()
     ContentText = ContentText .. self:BuildBuffSection()
+    ContentText = ContentText .. self:BuildSkillSection()
     ContentText = ContentText .. self:BuildGimmickSection()
 
     self.Content:SetText(ContentText)
+end
+
+function ChocoboRaceGMTargetInfoView:OnNetMsgRaceAILog(MsgBody)
+    if nil == MsgBody or not MsgBody.ailogdata then return end
+    
+    local DataList = MsgBody.ailogdata.logdata
+    for __, Data in pairs(DataList) do
+        local JsonData = Json.decode(Data or "{}") or {}
+        _G.FLOG_INFO( "OnNetMsgRaceAILog: " .. _G.table_to_string_block(JsonData))
+    end
 end
 
 --[[ 缓存管理方法 ]]--
@@ -263,96 +361,183 @@ function ChocoboRaceGMTargetInfoView:UpdateGimmickCache(gimmickList)
 end
 
 function ChocoboRaceGMTargetInfoView:BuildBuffState(buffList)
-    self.BuffActiveRecords = self.BuffActiveRecords or {}  -- 当前激活BUFF
-    self.BuffHistoryCache = self.BuffHistoryCache or {     -- 历史观察记录
-        maxHistory = 10,          -- 最大保留历史记录数
-        keepDuration = 5000,      -- 历史记录保留时间（毫秒）
-        data = {}
+    _G.FLOG_INFO( "BuildBuffState: " .. table.tostring(buffList))
+    self.ServerBuffCache = self.ServerBuffCache or  {
+        maxRecords = 5,    -- 最大缓存记录数
+        records = {}       -- 存储格式：{buffid, name, status, remain, source}
     }
 
-    local section = SetColorFormat("【编号" .. self.SelectedIndex + 1 .. "BUFF状态】", COLOR_TITLE).."\n"
+    self.BuffCache = self.BuffCache or {
+        maxSize = 5,  -- 最大缓存数量
+        active = {},   -- 当前生效中的BUFF {id, name}
+        history = {}   -- 已结束的BUFF {id, name}
+    }
+
+    local section = "\n"..SetColorFormat("【客户端状态】", COLOR_TITLE).."\n"
+    self:UpdateClientState()
+    section = section .. self:BuildClientStateDisplay()
+
+    section = section .. "\n\n"..SetColorFormat("【服务器BUFF】", COLOR_TITLE).."\n"
+    self:ProcessServerBuffs(buffList)
+    section = section .. self:BuildServerBuffDisplay()
+    
+    return section
+end
+
+function ChocoboRaceGMTargetInfoView:UpdateClientState()
     local racer = _G.ChocoboRaceMgr:GetRacerByIndex(self.SelectedIndex + 1)
-    if not racer then return section end
+    if not racer then return end
 
     local buffFlags = racer:GetBuffFlags()
-    local currentTime = TimeUtil.GetServerLogicTimeMS()
 
-    self:UpdateBuffRecords(buffFlags, currentTime)
-    self:CleanHistoryRecords(currentTime)
-
-    -- 构建显示内容（当前激活 + 近期历史）
-    section = section .. self:BuildActiveBuffSection(currentTime)
-    section = section .. self:BuildHistoryBuffSection(currentTime)
-
-    return section
-end
-
-function ChocoboRaceGMTargetInfoView:UpdateBuffRecords(buffFlags, currentTime)
-    for buffid, flag in pairs(buffFlags) do
+    -- 阶段1：更新激活状态
+    for stateid, flag in pairs(buffFlags) do
         if flag then
-            if not self.BuffActiveRecords[buffid] then
-                self.BuffActiveRecords[buffid] = {
-                    startTime = currentTime,
-                    lastUpdate = currentTime,
-                    duration = 0
+            -- 新增或更新激活状态
+            if not self.BuffCache.active[stateid] then
+                self.BuffCache.active[stateid] = {
+                    id = stateid,
+                    name = self:GetStateName(stateid),
+                    startTime = racer:GetBuffTimeDataByID(stateid).StartTime or 0
                 }
             end
-            self.BuffActiveRecords[buffid].duration = currentTime - self.BuffActiveRecords[buffid].startTime
-            self.BuffActiveRecords[buffid].lastUpdate = currentTime
         else
-            if self.BuffActiveRecords[buffid] then
-                table.insert(self.BuffHistoryCache.data, 1, {
-                    buffid = buffid,
-                    startTime = self.BuffActiveRecords[buffid].startTime,
-                    endTime = currentTime,
-                    duration = currentTime - self.BuffActiveRecords[buffid].startTime
+            -- 移出激活状态到历史记录
+            if self.BuffCache.active[stateid] then
+                table.insert(self.BuffCache.history, 1, {
+                    id = stateid,
+                    name = self.BuffCache.active[stateid].name,
+                    duration = (racer:GetBuffTimeDataByID(stateid).EndTime or 0) - (racer:GetBuffTimeDataByID(stateid).StartTime or 0)
                 })
-                self.BuffActiveRecords[buffid] = nil
+                self.BuffCache.active[stateid] = nil
             end
         end
     end
+
+    -- 阶段2：清理历史记录
+    while #self.BuffCache.history > self.BuffCache.maxSize do
+        table.remove(self.BuffCache.history)
+    end
 end
 
-function ChocoboRaceGMTargetInfoView:CleanHistoryRecords(currentTime)
-    while #self.BuffHistoryCache.data > self.BuffHistoryCache.maxHistory do
-        table.remove(self.BuffHistoryCache.data)
+function ChocoboRaceGMTargetInfoView:BuildClientStateDisplay()
+    local currentTime = TimeUtil.GetServerLogicTimeMS()
+    local section = ""
+    local formatStr = "%s | %s | %s | %s"
+    local header = SetColorFormat(string.format(formatStr, "ID", "名称", "持续时间", "状态"), "#AAAAAA")
+
+    -- 表头
+    section = section .. header .. "\n"
+
+    -- 合并激活和最近的历史记录
+    local displayList = {}
+
+    -- 添加激活状态（按持续时间排序）
+    for _, buff in pairs(self.BuffCache.active) do
+        table.insert(displayList, {
+            type = "active",
+            data = buff,
+            duration = currentTime - buff.startTime
+        })
     end
 
-    for i = #self.BuffHistoryCache.data, 1, -1 do
-        local record = self.BuffHistoryCache.data[i]
-        if currentTime - record.endTime > self.BuffHistoryCache.keepDuration then
-            table.remove(self.BuffHistoryCache.data, i)
+    -- 添加历史记录（最多补足到最大数量）
+    for i = 1, math.min(#self.BuffCache.history, self.BuffCache.maxSize) do
+        table.insert(displayList, {
+            type = "history",
+            data = self.BuffCache.history[i],
+            duration = self.BuffCache.history[i].duration
+        })
+    end
+
+    -- 显示处理（最多显示5条）
+    for i = 1, 5 do
+        local item = displayList[i]
+        if item then
+            local stateText, stateColor, durationText
+            if item.type == "active" then
+                stateText = "持续中"
+                stateColor = "#00FF00"
+                durationText = self:FormatDuration(item.duration)
+            else
+                stateText = "已结束"
+                stateColor = "#FF0000"
+                durationText = self:FormatDuration(item.duration)
+            end
+
+            section = section .. string.format(formatStr.."\n",
+                    SetColorFormat(string.format("[%d]", item.data.id), "#00BFFF"),
+                    SetColorFormat(item.data.name, "#FFFFFF"),
+                    SetColorFormat(durationText, "#00FF00"),
+                    SetColorFormat(stateText, "#FFFFFF")
+            )
+        else
+            -- 补充空行
+            section = section .. SetColorFormat(
+                    string.format(formatStr, " -", " -", " -", " -"),
+                    "#AAAAAA"
+            ).."\n"
         end
-    end
-end
-
-function ChocoboRaceGMTargetInfoView:BuildActiveBuffSection(currentTime)
-    local COLOR_ACTIVE = "#00FF00"
-    local section = "\n"..SetColorFormat("=== 当前生效 ===", "#FFD700").."\n"
-    section = section .. SetColorFormat(string.format("%-6s%-20s%-12s", "ID", "名称", "持续时间"), "#AAAAAA").."\n"
-
-    for buffid, record in pairs(self.BuffActiveRecords) do
-        local durationText = self:FormatDuration(record.duration)
-        section = section..string.format("%s %s\n",
-                SetColorFormat(string.format("[%-4d] %-20s", buffid, self:GetBuffName(buffid)), COLOR_BUFF),
-                SetColorFormat(durationText, COLOR_ACTIVE)
-        )
     end
 
     return section
 end
 
-function ChocoboRaceGMTargetInfoView:BuildHistoryBuffSection(currentTime)
-    local COLOR_HISTORY = "#FF69B4"
-    local section = "\n"..SetColorFormat("=== 近期结束 ===", "#FFD700").."\n"
-    section = section .. SetColorFormat(string.format("%-6s%-20s%-12s", "ID", "名称", "总持续时间"), "#AAAAAA").."\n"
+-- BUFF数据处理方法
+function ChocoboRaceGMTargetInfoView:ProcessServerBuffs(buffList)
+    if not buffList then return end
 
-    for _, record in ipairs(self.BuffHistoryCache.data) do
-        local durationText = self:FormatDuration(record.duration)
-        section = section..string.format("%s %s\n",
-                SetColorFormat(string.format("[%-4d] %-20s", record.buffid, self:GetBuffName(record.buffid)), COLOR_BUFF),
-                SetColorFormat(durationText, COLOR_HISTORY)
-        )
+    -- 插入新数据到缓存头部
+    for _, buff in ipairs(buffList) do
+        -- 计算剩余时间（单位：MS）
+        local remain = buff.lasttime
+
+        -- 确定状态
+        local status
+        if buff.buffend == 1 then
+            status = "已结束"
+        else
+            status = remain > 0 and "触发" or "持续中"
+        end
+
+        -- 插入到缓存头部
+        table.insert(self.ServerBuffCache.records, 1, {
+            id = buff.buffid,
+            name = self:GetBuffName(buff.buffid),  -- 假设有获取名称的方法
+            status = status,
+            remain = self:FormatDuration(remain),
+            source = buff.fromindex + 1
+        })
+    end
+
+    -- 清理旧数据（保留最新5条）
+    while #self.ServerBuffCache.records > self.ServerBuffCache.maxRecords do
+        table.remove(self.ServerBuffCache.records)
+    end
+end
+
+-- 数据显示方法
+function ChocoboRaceGMTargetInfoView:BuildServerBuffDisplay()
+    local section = ""
+
+    -- 表头
+    section = section .. SetColorFormat("ID | 名称 | 持续时间 | 状态 | 来源", "#AAAAAA").."\n"
+
+    -- 数据行（始终显示5行）
+    for i = 1, 5 do
+        local record = self.ServerBuffCache.records[i]
+        if record then
+            section = section .. string.format("%s | %s | %s | %s | %s\n",
+                    SetColorFormat(string.format("[%d]", record.id), "#00BFFF"),
+                    SetColorFormat(record.name, "#FFFFFF"),
+                    SetColorFormat(record.remain, "#00FF00"),
+                    SetColorFormat(record.status, "#FFFFFF"),
+                    SetColorFormat(string.format("%d号", record.source), "#00BFFF")
+            )
+        else
+            -- 补充空行
+            section = section .. SetColorFormat("-  |  -  |  -  |  -  |  -", "#AAAAAA").."\n"
+        end
     end
 
     return section
@@ -440,7 +625,7 @@ function ChocoboRaceGMTargetInfoView:BuildRacerSection(racers)
             aidInfo,
             positionInfo,
             treasureInfo,
-            "\n--------------------------------\n\n"
+            "\n--------------------------------\n"
         })
     end
 
@@ -470,7 +655,7 @@ function ChocoboRaceGMTargetInfoView:BuildSkillSection()
 end
 
 function ChocoboRaceGMTargetInfoView:BuildBuffSection()
-    local section = "\n"..SetColorFormat("【BUFF详细监控】", COLOR_TITLE).."\n"
+    local section = "\n"..SetColorFormat("【BUFF日志】", COLOR_TITLE).."\n"
 
     if not self.BuffRecords or #(self.BuffRecords.data or {}) == 0 then
         return section.."无BUFF\n"
@@ -481,12 +666,19 @@ function ChocoboRaceGMTargetInfoView:BuildBuffSection()
 
         section = section.."\n"..SetColorFormat(string.format("[%d] %s",
                 buff.buffid or 0,
-                self:GetBuffName(buff.buffid) or "未知BUFF"), COLOR_BUFF).."\n"
+                self:GetBuffName(buff.buffid) or "未知BUFF"), "#00FF00").."\n"
 
+        --{1={buffid=10,toindex=7,fromroleid=0,time=2025-06-19T18:38:13.944762857+08:00,toroleid=9693168007654421,fromindex=4,lasttime=1200,buffend=1}}
         section = section..table.concat({
-            string.format("触发者: 编号%d(RoleID:%d)", buff.fromindex  + 1 or 0, buff.fromroleid or 0),
-            string.format("目标: 编号%d(RoleID:%d)", buff.toindex + 1 or 0, buff.toroleid or 0),
-            SetColorFormat(buff.time or "未知时间", COLOR_TIME),
+            string.format("触发者: 编号%d(RoleID:%d)",
+                    (buff.fromindex and buff.fromindex + 1) or 0,
+                    buff.fromroleid or 0),
+            string.format("目标: 编号%d(RoleID:%d)",
+                    (buff.toindex and buff.toindex + 1) or 0,
+                    buff.toroleid or 0),
+            SetColorFormat(string.format("持续时间: %s", tostring(buff.lasttime) or "未知"), "#00FF00"),
+            string.format("BUFF状态: %s", tostring(buff.buffend) or "未知"),
+            string.format("触发时间: %s", tostring(buff.time)  or "未知"),
             "\n"
         }, "\t")
     end
@@ -522,6 +714,10 @@ end
 
 function ChocoboRaceGMTargetInfoView:GetBuffName(BuffId)
     return self.BuffName[BuffId] or ("未知Buff("..tostring(BuffId)..")")
+end
+
+function ChocoboRaceGMTargetInfoView:GetStateName(StateId)
+    return self.StateName[StateId] or ("未知State("..tostring(StateId)..")")
 end
 
 function ChocoboRaceGMTargetInfoView:GetGimmickType(TypeCode)

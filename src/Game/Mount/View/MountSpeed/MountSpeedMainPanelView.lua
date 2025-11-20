@@ -15,6 +15,7 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local MountSpeedPanelVM = require("Game/Mount/VM/MountSpeedPanelVM")
 local UIBinderSetActiveWidgetIndex = require("Binder/UIBinderSetActiveWidgetIndex")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
+local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 
 local MountMgr = _G.MountMgr
@@ -24,17 +25,28 @@ local LSTR = _G.LSTR
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnClose CommonCloseBtnView
 ---@field CommTab CommVerIconTabsView
+---@field CommonBkg02 CommonBkg02View
+---@field CommonBkgMask CommonBkgMaskView
 ---@field CommonTitle CommonTitleView
 ---@field ImgBG UFImage
 ---@field ImgMount UFImage
+---@field ImgMount2 UFImage
+---@field PanelGear4 UFCanvasPanel
+---@field PanelGearInfo2 UFCanvasPanel
+---@field PanelGearInfo3 UFCanvasPanel
 ---@field SwitcherIcon1 UFWidgetSwitcher
 ---@field SwitcherIcon2 UFWidgetSwitcher
+---@field SwitcherIcon3 UFWidgetSwitcher
 ---@field TableViewInfo UTableView
 ---@field TableView_20 UTableView
+---@field Text2Gear1 UFTextBlock
+---@field Text2Gear2 UFTextBlock
+---@field Text2Gear3 UFTextBlock
 ---@field TextCity UFTextBlock
 ---@field TextGear1 UFTextBlock
 ---@field TextGear2 UFTextBlock
 ---@field TextGear3 UFTextBlock
+---@field TextGear4 UFTextBlock
 ---@field TextMainCity UFTextBlock
 ---@field TextSpeed UFTextBlock
 ---@field AnimIn UWidgetAnimation
@@ -43,6 +55,8 @@ local LSTR = _G.LSTR
 ---@field AnimMountSpeedLevel1Loop UWidgetAnimation
 ---@field AnimMountSpeedLevel2 UWidgetAnimation
 ---@field AnimMountSpeedLevel2Loop UWidgetAnimation
+---@field AnimMountSpeedLevel3 UWidgetAnimation
+---@field AnimMountSpeedLevel3Loop UWidgetAnimation
 ---@field AnimTableView_20SelectionChanged UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MountSpeedMainPanelView = LuaClass(UIView, true)
@@ -51,17 +65,28 @@ function MountSpeedMainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnClose = nil
 	--self.CommTab = nil
+	--self.CommonBkg02 = nil
+	--self.CommonBkgMask = nil
 	--self.CommonTitle = nil
 	--self.ImgBG = nil
 	--self.ImgMount = nil
+	--self.ImgMount2 = nil
+	--self.PanelGear4 = nil
+	--self.PanelGearInfo2 = nil
+	--self.PanelGearInfo3 = nil
 	--self.SwitcherIcon1 = nil
 	--self.SwitcherIcon2 = nil
+	--self.SwitcherIcon3 = nil
 	--self.TableViewInfo = nil
 	--self.TableView_20 = nil
+	--self.Text2Gear1 = nil
+	--self.Text2Gear2 = nil
+	--self.Text2Gear3 = nil
 	--self.TextCity = nil
 	--self.TextGear1 = nil
 	--self.TextGear2 = nil
 	--self.TextGear3 = nil
+	--self.TextGear4 = nil
 	--self.TextMainCity = nil
 	--self.TextSpeed = nil
 	--self.AnimIn = nil
@@ -70,6 +95,8 @@ function MountSpeedMainPanelView:Ctor()
 	--self.AnimMountSpeedLevel1Loop = nil
 	--self.AnimMountSpeedLevel2 = nil
 	--self.AnimMountSpeedLevel2Loop = nil
+	--self.AnimMountSpeedLevel3 = nil
+	--self.AnimMountSpeedLevel3Loop = nil
 	--self.AnimTableView_20SelectionChanged = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 	self.CurSelectRegionID = 0
@@ -81,6 +108,8 @@ function MountSpeedMainPanelView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.BtnClose)
 	self:AddSubView(self.CommTab)
+	self:AddSubView(self.CommonBkg02)
+	self:AddSubView(self.CommonBkgMask)
 	self:AddSubView(self.CommonTitle)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -104,7 +133,22 @@ function MountSpeedMainPanelView:OnShow()
 	self.TextGear1:SetText(LSTR(200004))
 	self.TextGear2:SetText(LSTR(200005))
 	self.TextGear3:SetText(LSTR(200006))
+	self.TextGear4:SetText(LSTR(200017))
+	self.Text2Gear1:SetText(LSTR(200004))
+	self.Text2Gear2:SetText(LSTR(200005))
+	self.Text2Gear3:SetText(LSTR(200006))
 	MountMgr:SendMountListQuery()
+	self:SelectedMapItem()
+	local Params = self.Params 
+    if Params and Params.RegionID ~= nil then
+		local RegionID = Params.RegionID
+		local MapID = Params.MapID
+		if RegionID > 0 then
+			self:CreateRegionList(RegionID)
+			self:SelectedMapItemByMapID(RegionID, MapID)
+			return
+		end
+    end
 	self:SelectedMapItem()
 end
 
@@ -128,7 +172,12 @@ function MountSpeedMainPanelView:OnRegisterBinder()
 		{ "QuestInfoList", UIBinderUpdateBindableList.New(self, self.AdapterTableViewInfoList) },
 		{ "SpeedLevelOne", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon1) },
 		{ "SpeedLevelTwo", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon2) },
-		{ "ImgBG", UIBinderSetBrushFromAssetPath.New(self, self.ImgBg)}
+		{ "SpeedLevelThere", UIBinderSetActiveWidgetIndex.New(self, self.SwitcherIcon3) },
+		{ "SpeedLevelThereVisible", UIBinderSetIsVisible.New(self, self.SwitcherIcon3) },
+		{ "ImgBG", UIBinderSetBrushFromAssetPath.New(self, self.ImgBg)},
+		{ "PanelGear4", UIBinderSetIsVisible.New(self, self.PanelGear4)},
+		{ "PanelGearInfo2Visible", UIBinderSetIsVisible.New(self, self.PanelGearInfo2) },
+		{ "PanelGearInfo3Visible", UIBinderSetIsVisible.New(self, self.PanelGearInfo3) },
 	}
 	self:RegisterBinders(self.ViewModel, Binders)
 end
@@ -245,7 +294,10 @@ function MountSpeedMainPanelView:SetAnimation()
 	elseif self.CurMapSpeedLevel == 2 then
 		self:PlayAnimation(self.AnimMountSpeedLevel2)
 		self:PlayAnimation(self.AnimMountSpeedLevel2Loop, 0, 0)
-	end	-- body
+	elseif self.CurMapSpeedLevel == 3 then
+		self:PlayAnimation(self.AnimMountSpeedLevel3)
+		self:PlayAnimation(self.AnimMountSpeedLevel3Loop, 0, 0)
+	end	
 end
 
 return MountSpeedMainPanelView

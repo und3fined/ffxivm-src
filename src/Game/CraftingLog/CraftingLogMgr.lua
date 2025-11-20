@@ -25,9 +25,7 @@ local EquipmentMgr = require("Game/Equipment/EquipmentMgr")
 local MsgTipsID = require("Define/MsgTipsID")
 local EventID = require("Define/EventID")
 local CraftingLogDefine = require("Game/CraftingLog/CraftingLogDefine")
-local SysnoticeCfg = require("TableCfg/SysnoticeCfg")
 local ScoreCfg = require("TableCfg/ScoreCfg")
-local LevelExpCfg = require("TableCfg/LevelExpCfg")
 local RichTextUtil = require("Utils/RichTextUtil")
 local UIViewID = require("Define/UIViewID")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
@@ -35,7 +33,6 @@ local ProfUtil = require("Game/Profession/ProfUtil")
 local SaveKey = require("Define/SaveKey")
 local TutorialDefine = require("Game/Tutorial/TutorialDefine")
 local SaveMgr = _G.UE.USaveMgr
-local LOOT_TYPE = ProtoCS.LOOT_TYPE
 local FilterALLType = CraftingLogDefine.FilterALLType
 local UnEnoughType = CraftingLogDefine.UnEnoughType
 local CraftingLogState = CraftingLogDefine.CraftingLogState
@@ -189,6 +186,9 @@ function CraftingLogMgr:OnGameEventLoginRes()
         end
     end
     self:SendMsgQueryVersion()
+    if MajorUtil.IsCrafterProf() then
+        self:CheckShowEsotericaGuide()
+    end
 end
 
 function CraftingLogMgr:OnEventMajorProfSwitch()
@@ -197,12 +197,7 @@ function CraftingLogMgr:OnEventMajorProfSwitch()
     -- end
     --若玩家在笔记外切换职业，重置笔记的配方选择和记忆功能
     if not self.SwitchProfInNote then
-        self.CareerCheckMap = {}
-        self.CareerLastCheckMap = {}
-        self.LastChoiceCareer = nil
-        self.LastHorTabIndex = nil
-        self.LastDropDownIndex = nil
-        self.NowPropData = nil
+        --self:ResetSelectedRecord() 关闭笔记的时候就重置了
     else
         --在笔记内切换职业，当切换为本职业后，刷新按钮状态
         self.SwitchProfInNote = false
@@ -230,7 +225,36 @@ function CraftingLogMgr:SendTutorialFirstCrafted()
     end
 end
 
--- region 职业数据及获取下标
+---@type 新手指南_制作秘籍实装
+function CraftingLogMgr:CheckShowEsotericaGuide(Prof)
+    local EsotericaUnLock = false
+    if Prof ~= nil then
+        --能工巧匠职业升到40级的时候判断一下版本是否开放
+        EsotericaUnLock = self:IsUnLockEsotericaByVersion(Prof)
+    else
+        --刚登录判断一下是否有40级 & 版本是否开放
+        local OwnCareerList = self:GetOwnCareerData()
+        if not table.is_nil_empty(OwnCareerList) then
+            for _, Value in pairs(OwnCareerList) do
+                if Value.ProfLevel >= 40 and self:IsUnLockEsotericaByVersion(Value.Prof) then
+                    EsotericaUnLock = true
+                    break
+                end
+            end
+        end
+    end
+    if EsotericaUnLock then
+        local function ShowEsotericaGuide()
+            local EventParams = _G.EventMgr:GetEventParams()
+            EventParams.Type = TutorialDefine.TutorialConditionType.CraftingLogEsoterica
+            _G.NewTutorialMgr:OnCheckTutorialStartCondition(EventParams)
+        end
+        local Config = {Type = ProtoRes.tip_class_type.TIP_SYS_GUIDE, Callback = ShowEsotericaGuide, Params = {}}
+        _G.TipsQueueMgr:AddPendingShowTips(Config)
+    end
+end
+
+--region 职业数据及获取下标
 
 ---@type 获取已有职业信息 用于显示左侧列表
 function CraftingLogMgr:GetOwnCareerData()
@@ -246,6 +270,7 @@ function CraftingLogMgr:GetOwnCareerData()
                 local ProfData = {}
                 ProfData.ID = ProfInfo.Prof
                 ProfData.Prof = ProfInfo.Prof
+                ProfData.ProfLevel = value.Level
                 ProfData.SortPriority = CareerSortData[ProfData.ID] or 0
                 ProfData.IconPath = VerIconTabIcons.IconPath
                 ProfData.SelectIcon = VerIconTabIcons.SelectIcon
@@ -344,9 +369,9 @@ function CraftingLogMgr:GetChoiceProfID()
     end
 end
 
--- endregion
+--endregion
 
--- region 记忆功能
+--region 记忆功能Get
 
 -- 记录当前职业数据
 function CraftingLogMgr:RecordCareerData()
@@ -438,18 +463,6 @@ function CraftingLogMgr:GetRecipeIndex()
     return NowChoiceIndex == 0 and 1 or NowChoiceIndex
 end
 
--- endregion
-
----设置最后选择的职业
----@param Index number
-function CraftingLogMgr:SetLastChoiceCareer(Index)
-    local AllCareerData = self:GetAllCareerData()
-    if self.LastChoiceCareer == nil or self.LastChoiceCareer ~= AllCareerData[Index].ID then
-        self.LastChoiceCareer = AllCareerData[Index].Prof
-        self:SetLastHorTabIndex(self:GetCareerCheckData().HorIndex or 1)
-    end
-end
-
 ---获取下拉列表下标
 ---@param RecipeID number
 function CraftingLogMgr:GetLastDropDownIndex()
@@ -464,12 +477,21 @@ function CraftingLogMgr:GetLastDropDownIndex()
     end
     if not DropDownIndex then
         --普通页签选中等级段
-        if self.LastHorTabIndex == 1 and MajorUtil.IsCrafterProfByProfID(LastChoiceCareer) then
+        if self.LastHorTabIndex == 1 and MajorUtil.IsCrafterProfByProfID(MajorUtil.GetMajorProfID()) then
             local Level = MajorUtil.GetMajorLevelByProf(LastChoiceCareer) or 1
             DropDownIndex = Level and ((Level - 1)//5 + 1)
             if self.ReverseOrder then
                 local Len = CraftingLogDefine.MaxLevel//5
                 DropDownIndex = Len + 1 - DropDownIndex
+            end
+        elseif self.LastHorTabIndex == FilterALLType.Career then
+            if self.FilterLevelList ~= nil then
+                for index, value in ipairs(self.FilterLevelList) do
+                    if value.TotalNum > 0 then
+                        DropDownIndex = index
+                        break
+                    end
+                end
             end
         else
             DropDownIndex = 1
@@ -478,7 +500,7 @@ function CraftingLogMgr:GetLastDropDownIndex()
     return DropDownIndex or 1
 end
 
--- region DropDownData
+--region DropDown记忆Get(废弃)
 
 ---获取下拉列表下标
 function CraftingLogMgr:GetDropDownIndex()
@@ -524,7 +546,7 @@ function CraftingLogMgr:GetDrowIndexByCareer()
             return key
         end
     end
-    return 1
+   return 1
 end
 
 function CraftingLogMgr:GetDrowIndexByCollect()
@@ -560,6 +582,36 @@ function CraftingLogMgr:GetDrowIndexByCollect()
     -- end
     -- return 1
 end
+--endregion
+
+--endregion
+
+--region 记忆功能Set.&.Reset
+
+--重置笔记所有记忆
+function CraftingLogMgr:ResetSelectedRecord()
+    if _G.CrafterMgr.StartMakeRsp ~= nil then
+        --制作时关闭笔记不重置
+        self:RecordCareerData()
+        return
+    end
+    self.CareerCheckMap = {}
+    self.CareerLastCheckMap = {}
+    self.LastChoiceCareer = nil
+    self.LastHorTabIndex = nil
+    self.LastDropDownIndex = nil
+    self.NowPropData = nil
+end
+
+---设置最后选择的职业
+---@param Index number
+function CraftingLogMgr:SetLastChoiceCareer(Index)
+    local AllCareerData = self:GetAllCareerData()
+    if self.LastChoiceCareer == nil or self.LastChoiceCareer ~= AllCareerData[Index].ID then
+        self.LastChoiceCareer = AllCareerData[Index].Prof
+        self:SetLastHorTabIndex(self:GetCareerCheckData().HorIndex or 1)
+    end
+end
 
 ---设置最后选择的筛选数据
 ---@param HorTabIndex number
@@ -572,8 +624,6 @@ function CraftingLogMgr:SetLastHorTabIndex(HorTabIndex)
     self.NowPropData = nil
     -- end
 end
-
--- endregion
 
 ---设置选择的下拉列表
 ---@param DropDownIndex number
@@ -597,7 +647,9 @@ function CraftingLogMgr:SetLastDropDownIndex(DropDownIndex)
     --end
 end
 
----NowProfData变化
+--endregion
+
+--region NowProfData变化
 function CraftingLogMgr:ChangeNowProfData()
     if self.NowSearchPropData ~= nil then
         self.NowPropData = self.NowSearchPropData
@@ -637,6 +689,8 @@ function CraftingLogMgr:GetNowRecipeID()
 
     return 0
 end
+--endregion
+
 
 ---获取当前最大制作数量
 function CraftingLogMgr:GetMaxMakeCount()
@@ -665,7 +719,7 @@ function CraftingLogMgr:OnShutdown()
     self:Reset()
 end
 
--- region Sever
+--region Sever
 ---注册网络消息
 function CraftingLogMgr:OnRegisterNetMsg()
     -- 获取解锁了的版本号及背包中的秘籍是否使用过
@@ -986,6 +1040,9 @@ function CraftingLogMgr:GetIsDone(RecipeData)
     return LastTime ~= nil
 end
 
+--endregion
+
+
 -- 开始制作   普通制作
 function CraftingLogMgr:SendStartMakeReq(bIsTrain)
     if self:CheckMakeState(bIsTrain) and self:CheckBagCapacity(bIsTrain) and
@@ -996,6 +1053,9 @@ function CraftingLogMgr:SendStartMakeReq(bIsTrain)
 end
 
 function CraftingLogMgr:SendStartSimpleMakeReq()
+    if self.NowPropData == nil then
+        return
+    end
     self.WorkingID = self.NowPropData.ID
     local bFastCraft = self.NowPropData.FastCraft == 1
     _G.CrafterMgr:StartSimpleMake(self.NowPropData.ID, _G.CrafterMgr:GetNowSimpleMakeCount(), bFastCraft)
@@ -1250,11 +1310,11 @@ end
 ---@type 首次制作经验的提示
 function CraftingLogMgr:FirstCraftEXPBonus(Name, Score)
     local EXPValue = Score.Value
-    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e", 0, nil) --获得了
+    local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(70029)), "d1ba8e") --获得了
     local ScoreInfo = ScoreCfg:FindCfgByKey(19000099)
     local IconRichText = RichTextUtil.GetTexture(ScoreInfo.IconName, 40, 40, -10)
-    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF", 0, nil)
-    local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", _G.LootMgr.FormatCurrency(EXPValue)),"d1ba8e", 0, nil)
+    local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF")
+    local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", _G.LootMgr.FormatCurrency(EXPValue)),"d1ba8e")
     local Content = string.format(LSTR(80031), Name, GetRitchText, IconRichText, ScoreRichText,SoceNumRichText) --80031 首次制作了[%s]%s%s%s%s
     if Score.Percent ~= 0 then
         Content = string.format("%s  ( + %d%s)", Content, Score.Percent, "%")
@@ -1303,11 +1363,12 @@ function CraftingLogMgr:GetSearchData(SearchInfo)
     local ScreeningListData = {}
     local Pattern = "^[%p%s]+$"	--清理特殊符号
 	if string.match(SearchInfo, Pattern) or tonumber(SearchInfo) then
-		return ScreeningListData,1
+		return ScreeningListData, 1, false
 	end
     local PropData = RecipeCfg:FindAllCfg()
     local ProfData = {}
-    local PrecisionID = 0
+    local SecretData = {} --未解锁的传承录里匹配的数据
+    local HaveMatchingSecret = false 
     -- local bArraignmentVersion = self.bArraignmentVersion
     for _, value in pairs(PropData) do
         if self:BeIncludedInGameVersion(value.Version)  then
@@ -1319,9 +1380,6 @@ function CraftingLogMgr:GetSearchData(SearchInfo)
                 if value.RecipeType == RecipeType.RecipeTypeRoutine or
                     (value.RecipeType == RecipeType.RecipeTypeSecret and UnlockVolume and value.CategoryNum and UnlockVolume[value.CategoryNum]) or
                     (value.RecipeType == RecipeType.RecipeTypeCollection and _G.GatheringLogMgr:GetQuestStatus() and (ThisProfLevel//10 + 1) * 10 >= value.RecipeLevel) then
-                        if PrecisionID == 0 and RecipeName == SearchInfo then
-                            PrecisionID = value.ID
-                        end
                         local Craftjob = value.Craftjob
                         local ProfInfo = ProfData[Craftjob]
                         if ProfInfo == nil then
@@ -1329,24 +1387,43 @@ function CraftingLogMgr:GetSearchData(SearchInfo)
                             ProfData[Craftjob] = ProfInfo -- 缓存避免重复查找
                         end
                         -- value.ChildTypeFilter = ProfInfo.ProfName
+                        value.Name = RecipeName
+                        local ProfbLock = CraftingLogMgr:GetProfIsLock(value.Craftjob)
+                        local MajorLevel = MajorUtil.GetMajorLevelByProf(value.Craftjob)
+                        value.bLockGray = ProfbLock or (MajorLevel + 10) <= value.RecipeLevel
                         table.insert(ScreeningListData, value)
+                elseif value.RecipeType == RecipeType.RecipeTypeSecret then
+                    --未解锁的传承录里精确搜索到了
+                    if RecipeName == SearchInfo then
+                        HaveMatchingSecret = true
+                        ScreeningListData = {}
+                        self.SearchLineageData = value
+                        break
+                    else
+                        table.insert(SecretData, value)
+                    end
                 end
             end
         end
     end
+
+    --未解锁的传承录里模糊搜索到了，且没有其他合适结果
+    if #ScreeningListData == 0 and #SecretData > 0 then
+        HaveMatchingSecret = true
+        self.SearchLineageData = SecretData[1]
+    end
+
     table.sort(ScreeningListData, self.SortByLevelStar)
 
-    local PrecisionIndex = nil
-    if PrecisionID ~= 0 then
-        for index, value in pairs(ScreeningListData) do
-            value.bLockGray = nil
-            if value.ID == PrecisionID then
-                PrecisionIndex = index
-                break
-            end
+    --优先选择已解锁的
+    local PrecisionIndex = 1
+    for index, value in pairs(ScreeningListData) do
+        if value.bLockGray == false then
+            PrecisionIndex = index
+            break
         end
     end
-    return ScreeningListData, PrecisionIndex or 1
+    return ScreeningListData, PrecisionIndex, HaveMatchingSecret
 end
 
 -- Test 点击tip 自动添加不足道具25个
@@ -1427,24 +1504,25 @@ end
 function CraftingLogMgr:ToGetMakeUpperLimit(MaterialData, CrystalTypeData)
     local NowPropData = self.NowPropData
     if NowPropData == nil then
-        FLOG_ERROR("CraftingLogMgr:ToGetMakeUpperLimit self.NowPropData is nil")
+        _G.FLOG_ERROR("CraftingLogMgr:ToGetMakeUpperLimit self.NowPropData is nil")
         return false
     end
-    if NowPropData.Craftjob ~= MajorUtil.GetMajorProfID() then
-        self.EnoughState = UnEnoughType.Prof
-        return
-    end
     local Level = MajorUtil.GetMajorLevelByProf(NowPropData.Craftjob) or 0
-    if NowPropData.RecipeLevel - Level >= 10  then
-        self.EnoughState = UnEnoughType.ProfLevel
-        return
-    end
-    self.EnoughState = UnEnoughType.Default
     local UpperLimitCount = CraftingLogDefine.NormalUpperLimitCount
+    local EnoughState = nil
+
+    --职业、等级
+    if NowPropData.Craftjob ~= MajorUtil.GetMajorProfID() then
+        EnoughState = UnEnoughType.Prof
+    elseif NowPropData.RecipeLevel - Level >= 10 then
+        EnoughState = UnEnoughType.ProfLevel
+    end
+
+    --素材、水晶
     for i, value in pairs(MaterialData) do
         if value.ItemID ~= 0 then
             local PropHaveNumber = value.IsHQ and BagMgr:GetItemHQNum(value.ItemID) or
-                                       BagMgr:GetItemNumWithHQ(value.ItemID)
+                                        BagMgr:GetItemNumWithHQ(value.ItemID)
             if PropHaveNumber >= value.ItemNum then
                 local CanMakeCount = math.floor(PropHaveNumber / value.ItemNum)
                 if i == 1 then
@@ -1454,13 +1532,11 @@ function CraftingLogMgr:ToGetMakeUpperLimit(MaterialData, CrystalTypeData)
                     UpperLimitCount = CanMakeCount
                 end
             else
-                self.EnoughState = UnEnoughType.Material
-                self:SetMaxMakeNumber(0)
-                return
+                EnoughState = EnoughState or UnEnoughType.Material
+                UpperLimitCount = 0
             end
         end
     end
-
     for _, value in pairs(CrystalTypeData) do
         if value.ItemID ~= 0 then
             local PropHaveNumber = BagMgr:GetItemNum(value.ItemID)
@@ -1470,19 +1546,22 @@ function CraftingLogMgr:ToGetMakeUpperLimit(MaterialData, CrystalTypeData)
                     UpperLimitCount = CanMakeCount
                 end
             else
-                self.EnoughState = UnEnoughType.CrystalType
-                self:SetMaxMakeNumber(0)
-                return
+                EnoughState = EnoughState or UnEnoughType.CrystalType
+                UpperLimitCount = 0
             end
         end
     end
 
-    self:CheckPresicion()
+    --精度
+    if EnoughState == nil then
+        self:CheckPresicion()
+    end
 
     if NowPropData.BatchNum > 0 and UpperLimitCount > NowPropData.BatchNum then
         UpperLimitCount = NowPropData.BatchNum
     end
     self:SetMaxMakeNumber(UpperLimitCount)
+    self.EnoughState = EnoughState or UnEnoughType.Default
 end
 
 function CraftingLogMgr:SetMaxMakeNumber(UpperLimitCount)
@@ -1547,41 +1626,52 @@ local function SortWithFloorlimitlevel(a, b)
     end
 end
 
+-- 根据ReverseOrder决定后续字段的排序方向
+local compareFunc = CraftingLogMgr.ReverseOrder and function(a, b) return a > b end or function(a, b) return a < b end
+
 ---@type 通过等级排序
 function CraftingLogMgr.SortByLevelStar(Left, Right)
-    --搜索
+    -- 搜索状态：优先匹配搜索词的条目
     if CraftingLogMgr.CraftingState == CraftingLogState.Searching and CraftingLogMgr.SearchInfo ~= nil then
         local searchKey = LSTR(CraftingLogMgr.SearchInfo)
         local leftMatch = Left.Name == searchKey
         local rightMatch = Right.Name == searchKey
+
+        -- 处理匹配情况：匹配的条目始终在前
         if leftMatch or rightMatch then
-            return leftMatch and not rightMatch 
+            return leftMatch and not rightMatch  -- 左匹配右不匹配 → 左在前；否则右在前（返回false）
+        end
+
+        -- 非匹配情况：同名时按锁定状态排序（原逻辑保留）
+        if Left.Name == Right.Name then
+            if Left.bLockGray ~= Right.bLockGray then
+                return not Left.bLockGray  -- 未锁定的（false）在前
+            end
         end
     end
+
+    -- 按职业（Craftjob）升序排列（假设Craftjob是数值）
     if Left.Craftjob ~= Right.Craftjob then
         return Left.Craftjob < Right.Craftjob
     end
-    if CraftingLogMgr.ReverseOrder then
-        if Left.CategoryNum ~= Right.CategoryNum then
-            return Left.CategoryNum > Right.CategoryNum
-        elseif Left.RecipeStar ~= Right.RecipeStar then
-            return Left.RecipeStar > Right.RecipeStar
-        elseif Left.RecipeLevel ~= Right.RecipeLevel then
-            return Left.RecipeLevel > Right.RecipeLevel
-        else
-            return Left.ID < Right.ID
-        end
-    else
-        if Left.CategoryNum ~= Right.CategoryNum then
-            return Left.CategoryNum < Right.CategoryNum
-        elseif Left.RecipeStar ~= Right.RecipeStar then
-            return Left.RecipeStar < Right.RecipeStar
-        elseif Left.RecipeLevel ~= Right.RecipeLevel then
-            return Left.RecipeLevel < Right.RecipeLevel
-        else
-            return Left.ID < Right.ID
-        end
+
+    -- 按分类编号（CategoryNum）排序
+    if Left.CategoryNum ~= Right.CategoryNum then
+        return compareFunc(Left.CategoryNum, Right.CategoryNum)
     end
+
+    -- 按食谱星级（RecipeStar）排序
+    if Left.RecipeStar ~= Right.RecipeStar then
+        return compareFunc(Left.RecipeStar, Right.RecipeStar)
+    end
+
+    -- 按食谱等级（RecipeLevel）排序
+    if Left.RecipeLevel ~= Right.RecipeLevel then
+        return compareFunc(Left.RecipeLevel, Right.RecipeLevel)
+    end
+
+    -- 最终按ID升序排列（确保唯一顺序）
+    return Left.ID < Right.ID
 end
 --endregion
 
@@ -1605,9 +1695,7 @@ end
 ---获取配方数据根据ID
 function CraftingLogMgr:GetRecipeDataById(ID)
     local Cfg = RecipeCfg:FindCfgByKey(ID)
-    if Cfg ~= nil then
-        Cfg.Name = ItemUtil.GetItemName(Cfg.ProductID)
-    end
+    Cfg.Name = ItemUtil.GetItemName(Cfg.ProductID)
     return Cfg
 end
 
@@ -1615,9 +1703,8 @@ function CraftingLogMgr:GetRecipeDataByProductID(ProductID)
     if nil == ProductID then return end
     local Cfg = RecipeCfg:FindCfg(string.format("ProductID = %d", ProductID))
         or RecipeCfg:FindCfg(string.format("HQProductID = %d", ProductID))
-    if Cfg ~= nil then
-        Cfg.Name = ItemUtil.GetItemName(Cfg.ProductID)
-    end
+    if nil == Cfg then return end
+    Cfg.Name = ItemUtil.GetItemName(Cfg.ProductID)
     return Cfg
 end
 
@@ -1625,6 +1712,14 @@ end
 ---@param NowProfLevel number 当前职业等级
 function CraftingLogMgr:IsChoiceWithLevel(NowProfLevel)
     self.LastDropDownIndex = self.LastDropDownIndex or 1
+    if self.FilterLevelList == nil then
+        _G.FLOG_ERROR("CraftingLogMgr.FilterLevelList is nil")
+        return
+    end
+    if self.FilterLevelList[self.LastDropDownIndex] == nil then
+        _G.FLOG_ERROR("CraftingLogMgr.FilterLevelList[LastDropDownIndex] is nil")
+        return
+    end
     local FloorLimitLevel, UpperLimitLevel = self.FilterLevelList[self.LastDropDownIndex].FloorLimitLevel,
         self.FilterLevelList[self.LastDropDownIndex].UpperLimitLevel
     local ProfbLock = self:GetProfIsLock(self.LastChoiceCareer)
@@ -1814,7 +1909,7 @@ end
 ---获取筛选等级数据
 function CraftingLogMgr:IsHorIndexChoiceWithLevel()
     local ProfData = self:GetPropDataByProf()
-    local MajorLevel = MajorUtil.GetMajorLevelByProf(self.LastChoiceCareer)
+    local MajorLevel = MajorUtil.GetMajorLevelByProf(self.LastChoiceCareer) or 1
     local ProfbLock = self:GetProfIsLock(self.LastChoiceCareer)
     local TabList = {}
     for _, value in pairs(ProfData) do
@@ -1949,6 +2044,7 @@ function CraftingLogMgr:IsHorIndexChoiceWithCareer()
         local TextStr = string.format("%d/%d", FinishNum, TotalNum)
         value.TextQuantityStr = TextStr
         value.bTextQuantityShow = true
+        value.TotalNum = TotalNum
     end
 end
 
@@ -2187,7 +2283,8 @@ end
 
 ---面板关闭，数据处理
 function CraftingLogMgr:ViewHide()
-    self:RecordCareerData()
+    --self:RecordCareerData()
+    self:ResetSelectedRecord()
     self.bCanRecord = false
     self.CraftingState = CraftingLogState.Picking
     self.NowSearchPropData = nil
@@ -2693,14 +2790,30 @@ function CraftingLogMgr:MajorProfActivate(Params)
     end
 end
 
----@type 当升级时新增普通页签下拉选项红点
+---@type 升级
 function CraftingLogMgr:OnMajorLevelUpdate(Params)
-    local prof = Params.RoleDetail.Simple.Prof
     if not MajorUtil.IsCrafterProf() then
         return
     end
+    local Prof = Params.RoleDetail.Simple.Prof
     local Level = Params.RoleDetail.Simple.Level
-    local OldLevel = Params.OldLevel
+
+    --新增普通页签下拉选项红点
+    self:CheckRedNode(Prof, Level, Params.OldLevel)
+
+    --秘籍新手指南
+    if Level >= 40 then
+        self:CheckShowEsotericaGuide(Prof)
+    end
+
+    --搜索状态下更新Lock状态
+    if CraftingLogMgr.CraftingState ~= CraftingLogDefine.CraftingLogState.Picking then
+        _G.CraftingLogVM:UpdatePropItemLockState(Prof)
+    end
+end
+
+---@type 当升级时新增普通页签下拉选项红点
+function CraftingLogMgr:CheckRedNode(Prof, Level, OldLevel)
     if OldLevel == nil then
         if Level == 1 then
             OldLevel = 0
@@ -2732,12 +2845,12 @@ function CraftingLogMgr:OnMajorLevelUpdate(Params)
     --         end
     --     end
     -- end
-
+    
     -- 当收藏品解锁时新增特殊页签下拉选项红点（收藏品的解锁暂时用等级解锁）
     if _G.GatheringLogMgr:GetQuestStatus() and Level >= CraftingLogDefine.CollectionUnLockLevel and
         OldLevel < CraftingLogDefine.CollectionUnLockLevel then
         --self:SendMsgUpdateDropNewData(prof, nil, SpecialType.SpecialTypeCollection, nil, false, 1)
-        self:SendMsgUpdateDropNewData(prof, 100)
+        self:SendMsgUpdateDropNewData(Prof, 100)
     end
 end
 

@@ -163,7 +163,7 @@ function NewQuestPropItemView:OnClickItemHandle()
     if not ViewModel then
         return
     end
-	ItemTipsUtil.ShowTipsByGID(ViewModel.GID, self)
+	ItemTipsUtil.ShowTipsByGID(ViewModel.GID, self, {X = 12, Y = 0}) --加偏移简易处理
 end
 
 return NewQuestPropItemView

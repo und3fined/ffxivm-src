@@ -18,7 +18,6 @@ local TimeUtil = require("Utils/TimeUtil")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
 local EventMgr = require("Event/EventMgr")
-local UIBinderCommBtnUpdateImage = require("Binder/UIBinderCommBtnUpdateImage")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local ItemTipsUtil = require("Utils/ItemTipsUtil")
 local EffectUtil = require("Utils/EffectUtil")
@@ -26,7 +25,6 @@ local HelpCfg = require("TableCfg/HelpCfg")
 local HelpInfoUtil = require("Utils/HelpInfoUtil")
 local TipsUtil = require("Utils/TipsUtil")
 local UIBinderSetBrushFromAssetPath = require("Binder/UIBinderSetBrushFromAssetPath")
-local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
 
 
 local UIViewID = _G.UIViewID
@@ -43,11 +41,12 @@ local FVector2D = _G.UE.FVector2D
 ---@field CommSingleBox_UIBP CommSingleBoxView
 ---@field CommTab CommMenuView
 ---@field CommonBkg01_UIBP CommonBkg01View
+---@field CommonBkgMask_UIBP CommonBkgMaskView
+---@field CommonTitle CommonTitleView
 ---@field HorizontalBoxTime UFHorizontalBox
 ---@field IconWarning UFImage
 ---@field ImgArmyBG UFImage
 ---@field ImgArmyLogo UFImage
----@field InforBtn CommInforBtnView
 ---@field MoneySlot CommMoneySlotView
 ---@field PanelHint UFCanvasPanel
 ---@field PanelShortList UFCanvasPanel
@@ -61,12 +60,13 @@ local FVector2D = _G.UE.FVector2D
 ---@field TableViewPrize UTableView
 ---@field TableViewShortList UTableView
 ---@field TabviewSubmititem UTableView
+---@field TagGoldBtn UFButton
+---@field TagSilverBtn UFButton
 ---@field TextHint UFTextBlock
 ---@field TextPrize UFTextBlock
 ---@field TextQuantityGold UFTextBlock
 ---@field TextQuantitySilver UFTextBlock
 ---@field TextSelectItem UFTextBlock
----@field TextTitle UFTextBlock
 ---@field WarningBtn UFButton
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
@@ -81,11 +81,12 @@ function CompanySealMainPanelView:Ctor()
 	--self.CommSingleBox_UIBP = nil
 	--self.CommTab = nil
 	--self.CommonBkg01_UIBP = nil
+	--self.CommonBkgMask_UIBP = nil
+	--self.CommonTitle = nil
 	--self.HorizontalBoxTime = nil
 	--self.IconWarning = nil
 	--self.ImgArmyBG = nil
 	--self.ImgArmyLogo = nil
-	--self.InforBtn = nil
 	--self.MoneySlot = nil
 	--self.PanelHint = nil
 	--self.PanelShortList = nil
@@ -99,12 +100,13 @@ function CompanySealMainPanelView:Ctor()
 	--self.TableViewPrize = nil
 	--self.TableViewShortList = nil
 	--self.TabviewSubmititem = nil
+	--self.TagGoldBtn = nil
+	--self.TagSilverBtn = nil
 	--self.TextHint = nil
 	--self.TextPrize = nil
 	--self.TextQuantityGold = nil
 	--self.TextQuantitySilver = nil
 	--self.TextSelectItem = nil
-	--self.TextTitle = nil
 	--self.WarningBtn = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
@@ -119,7 +121,8 @@ function CompanySealMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.CommSingleBox_UIBP)
 	self:AddSubView(self.CommTab)
 	self:AddSubView(self.CommonBkg01_UIBP)
-	self:AddSubView(self.InforBtn)
+	self:AddSubView(self.CommonBkgMask_UIBP)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.MoneySlot)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -142,8 +145,6 @@ function CompanySealMainPanelView:OnInit()
 		{ "ConfimBtnVisible", UIBinderSetIsVisible.New(self, self.Btn) },
 		{ "ConfimBtnText", UIBinderSetText.New(self, self.Btn.TextContent) },
 		{ "TextSub", UIBinderSetText.New(self, self.Btn.TextSubmitted) },
-		{ "BtnColor", UIBinderCommBtnUpdateImage.New(self, self.Btn)},
-		{ "BtnTextColor", UIBinderSetColorAndOpacityHex.New(self, self.Btn.TextContent)},
 		{ "WarningVisible", UIBinderSetIsVisible.New(self, self.WarningBtn, false, true) },	
 		{ "ArmyLogo", UIBinderSetBrushFromAssetPath.New(self, self.ImgArmyLogo) },
 		{ "ArmyBG", UIBinderSetBrushFromAssetPath.New(self, self.ImgArmyBG) },
@@ -167,7 +168,7 @@ function CompanySealMainPanelView:OnShow()
 	if self.ViewModel then
 		self.ViewModel:UpdateBGIcon()
 	end
-	self.TextTitle:SetText(LSTR(1160063))
+	self.CommonTitle:SetTextTitleName(LSTR(1160063))
 	self.TextHint:SetText(LSTR(1160072))--镶嵌魔晶石或已穿戴的装备不会纳入
 	CompanySealMgr:GetBagEquipList()
 	CompanySealMgr:SetRareChoesdList()
@@ -212,6 +213,7 @@ function CompanySealMainPanelView:OnHide()
 
 	self.ViewModel.ToggleButtonState = EToggleButtonState.Unchecked
 	CompanySealMgr:ClearRareTaskList()
+	CompanySealMgr.AllTaskList = {}
 	self.IsFinishing = false
 end
 
@@ -220,6 +222,8 @@ function CompanySealMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.Btn, self.OnClickedSubmitBtn)
 	UIUtil.AddOnClickedEvent(self, self.CommSingleBox_UIBP.ToggleButton, self.OnToggleBtnStateChange)
 	UIUtil.AddOnClickedEvent(self, self.WarningBtn, self.OnClickIconWarning)
+	UIUtil.AddOnClickedEvent(self, self.TagGoldBtn, self.GoldRewardTips)
+	UIUtil.AddOnClickedEvent(self, self.TagSilverBtn, self.SilverRewardTips)
 end
 
 function CompanySealMainPanelView:OnRegisterGameEvent()
@@ -240,7 +244,9 @@ function CompanySealMainPanelView:OnClickedSubmitBtn()
 		if self.IsFinishing or self.CurChoseTaskState == 6 then
 			return
 		end
-		if self.CurChoseTaskState and self.CurChoseTaskState ~= 4 and not self.IsFinishing and self.CurItemMatch then
+
+		--state CompanySealMgr SortRuler
+		if self.CurChoseTaskState and self.CurChoseTaskState ~= 4 and self.CurChoseTaskState ~= 5 and not self.IsFinishing and self.CurItemMatch then
 			local IsCloseToLimit = self.ViewModel.WarningVisible
 
 			if IsCloseToLimit and not self.ViewModel.IsNeverTips then
@@ -355,7 +361,8 @@ function CompanySealMainPanelView:OnTaskSelectChanged(Index, ItemData, ItemView)
 	local List = ItemData.ItemList
 	self:UpdateSelectList(List)
 	self:UpdateRewardsList(List)
-	self:UpdateConfimBtnState(ItemData.State, ItemData.IsHQ, ItemData.Times, true)
+	self:UpdateTaskBtnState(ItemData.State, ItemData.IsHQ, ItemData.Times, true)
+	self.ViewModel:SetCurItemSelectIndex(0)--重置选中态
 	local IsHQ = ItemData.HQItemID ~= 0
 	if ItemData.State ~= CompanySealMgr:GetSortRuler(6) then
 		local NeedNum = ItemData.NeedNum
@@ -393,7 +400,7 @@ function CompanySealMainPanelView:OnRareItemSelectChanged(Index, ItemData, ItemV
 		self.ViewModel:SetAllSlecteBtnState(false)
 		ItemData.CurChosedState = false
 		ItemData.ImgFocusVisible = false
-		for i = 1,#CompanySealMgr.RareChoesdList do
+		for i = #CompanySealMgr.RareChoesdList, 1, -1 do
 			if CompanySealMgr.RareChoesdList[i].Index == Index then
 				CompanySealMgr.RareChoesdList[i].ItemID = nil
 				CompanySealMgr.RareChoesdList[i].Index = 0
@@ -448,13 +455,16 @@ function CompanySealMainPanelView:OnTaskItemSelectChanged(Index, ItemData, ItemV
 	end
 	if not ItemData.IsRare then
 		CompanySealMgr.CurChoseItemIndex = Index
-		CompanySealMgr.CurChoseTaskItemID = ItemData.CurItemID
+		CompanySealMgr.CurChoseTaskItemID = ItemData.CurItemID	
+		if ItemData.IsSelect then
+			ItemTipsUtil.ShowTipsByResID(ItemData.CurItemID, ItemView, {X = -20,Y = -685})
+		end
 		self.ViewModel:SetCurItemSelectIndex(Index)
 		self.ViewModel:UpdateRewardNum(self.CurIndex, ItemData.IsHQ)
 		self:UpdateRewardState(ItemData.IsHQ, ItemData.Times)
 		self.IsHQ = ItemData.IsHQ
 		self.CurItemMatch = ItemData.IsMatch
-		self:UpdateConfimBtnState(self.CurChoseTaskState, ItemData.IsHQ, ItemData.Times, ItemData.IsMatch)
+		self:UpdateTaskBtnState(self.CurChoseTaskState, ItemData.IsHQ, ItemData.Times, ItemData.IsMatch)
 	end
 
 	-- UIUtil.SetIsVisible(self.PanelTagSilver, ItemData.TagSilverVisible)
@@ -510,9 +520,6 @@ function CompanySealMainPanelView:UpdateTabSelect(Index)
 	local PanelSubmit = UIUtil.IsVisible(self.PanelSubmit)
 	local SubTableVisible = UIUtil.IsVisible(self.TabviewSubmititem)
 	if Index ~= 3 then
-		if self.ViewModel.BtnColor ~= 1 then
-			self.ViewModel:UpdateBtnColor(true)
-		end
 		self.TaskTableViewAdapter:SetSelectedIndex(1)
 		self.ViewModel:SetRareListSelectIndex(1)
 		UIUtil.SetIsVisible(self.RichTextBoxChosen, false)
@@ -564,9 +571,8 @@ function CompanySealMainPanelView:UpdateTabSelect(Index)
 				self.ViewModel.ConfimBtnVisible = true
 			end
 			self:UpdateRareView(false, false)
-			self.ViewModel:UpdateBtnColor(false)
-			self.ViewModel.ConfimBtnText = LSTR(1160033)
-			--self.Btn.TextContent:SetText(LSTR(1160033))
+			self.Btn:SetIsDisabledState(true, true)
+			self.Btn:SetText(LSTR(1160033))
 		else
 			UIUtil.SetIsVisible(self.RichTextBoxChosen, false)
 			UIUtil.SetIsVisible(self.TableViewShortList, false)
@@ -580,9 +586,14 @@ function CompanySealMainPanelView:UpdateTabSelect(Index)
 	end
 end
 
-function CompanySealMainPanelView:UpdateTask(List)
+function CompanySealMainPanelView:UpdateTask(List, IsChoedLast)
 	self.ViewModel:UpdateTaskListInfo(List)
-	local Index = self:GetLastChosedTaskIndex(List) or 1
+	local Index
+	if IsChoedLast then
+		Index = self:GetLastChosedTaskIndex(List) or 1
+	else
+		Index = 1
+	end
 	self.TaskTableViewAdapter:SetSelectedIndex(Index)
 	self.TaskTableViewAdapter:ScrollToIndex(Index)
 	if self.TimeID == nil then
@@ -641,12 +652,12 @@ function CompanySealMainPanelView:UpdateRareChoseList()
 	local NumText = string.format("%s：%d/%d", LSTR(1160029), #CompanySealMgr.ExchangeList, CompanySealMgr.RareChoseLimit)
 	self.RichTextBoxChosen:SetText(NumText)
 	if #CompanySealMgr.ExchangeList <= 0 then
-		self.ViewModel:UpdateBtnColor(false)
-	elseif #CompanySealMgr.ExchangeList == CompanySealMgr.RareChoseLimit then
+		self.Btn:SetIsDisabledState(true, true)
+	elseif #CompanySealMgr.ExchangeList == CompanySealMgr.RareChoseLimit or #CompanySealMgr.ExchangeList == #CompanySealMgr.RareTaskList then
 		self.ViewModel.ToggleButtonState = EToggleButtonState.Checked
 		self.ChosedAllBtnState = true
 	else
-		self.ViewModel:UpdateBtnColor(true)
+		self.Btn:SetIsRecommendState(true)
 	end
 end
 
@@ -671,10 +682,6 @@ function CompanySealMainPanelView:UpdateRareExchangedReward(List)
 	Data[1].Num = AllNum
 	Data[1].RareReward = true
 	self.ViewModel:UpdateRewardList(Data)
-end
-
-function CompanySealMainPanelView:UpdateConfimBtnState(State, IsHQ, Times, IsMatch)
-	self.ViewModel:UpdateConfimBtnState(State, IsHQ, Times, IsMatch)
 end
 
 function CompanySealMainPanelView:UpdateRareView(IsPlayAni, IsUpdateEquiList)
@@ -724,8 +731,30 @@ function CompanySealMainPanelView:OnUpdateBag()
 		--self.ViewModel:UpdateTaskHasNum()
 		local List = CompanySealMgr:GetAllTaskInfo(self.CurIndex)
 		if List ~= nil then
-			self:UpdateTask(List)
+			self:UpdateTask(List, true)
 		end
+	end
+end
+
+function CompanySealMainPanelView:UpdateTaskBtnState(State, IsHQ, Times, IsMatch)
+	if not IsMatch and State ~= 5 then
+		self.Btn:SetText(LSTR(1160015))
+		self.Btn:SetIsRecommendState(true)
+		return
+	end
+	
+	if State == 1 or State == 2 or State == 3 then
+		self.Btn:SetText(LSTR(1160033))--提交
+		self.Btn:SetIsRecommendState(true)
+	elseif State == 4 then
+		self.Btn:SetText(LSTR(1160015))--前往
+		self.Btn:SetIsRecommendState(true)
+	elseif State == 5 then
+		self.Btn:SetText(LSTR(1160077))----前往转职
+		self.Btn:SetIsRecommendState(true)
+	elseif State == 6 then
+		self.Btn:SetIsDoneState(true, LSTR(1160028))--已提交
+		self.ViewModel:SetTagState(IsHQ, Times)
 	end
 end
 
@@ -735,6 +764,22 @@ function CompanySealMainPanelView:OnClickIconWarning()
 	local Alignment = FVector2D(0, 0)
 	local Offset = FVector2D(0, 0)
 	TipsUtil.ShowInfoTips(TipsContent, self.WarningBtn, Offset, Alignment, false)
+end
+
+function CompanySealMainPanelView:GoldRewardTips()
+	local HelpCfgs = HelpCfg:FindAllHelpIDCfg(56002)
+	local TipsContent = HelpInfoUtil.ParseText(HelpInfoUtil.ParseContent(HelpCfgs))
+	local Alignment = FVector2D(1.22, -0.3)
+	local Offset = FVector2D(1, 0)
+	TipsUtil.ShowInfoTitleTips(TipsContent, self.TagGoldBtn, Offset, Alignment, false)
+end
+
+function CompanySealMainPanelView:SilverRewardTips()
+	local HelpCfgs = HelpCfg:FindAllHelpIDCfg(56001)
+	local TipsContent = HelpInfoUtil.ParseText(HelpInfoUtil.ParseContent(HelpCfgs))
+	local Alignment = FVector2D(1.22, -0.3)
+	local Offset = FVector2D(1, 0)
+	TipsUtil.ShowInfoTitleTips(TipsContent, self.TagSilverBtn, Offset, Alignment, false)
 end
 
 function CompanySealMainPanelView:GetLastChosedTaskIndex(List)

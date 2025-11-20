@@ -40,6 +40,10 @@ function MarketRemoveWinVM:UpdateVM(Value)
     end
 
     local ItemResID = Value.Stall.ResID
+    local Maker  = nil
+    if Value.Stall.Attr and Value.Stall.Attr.Maker then
+        Maker = Value.Stall.Attr.Maker
+    end
 
     local Cfg = ItemCfg:FindCfgByKey(ItemResID)
 	if nil == Cfg then
@@ -50,6 +54,7 @@ function MarketRemoveWinVM:UpdateVM(Value)
 	self.ItemNameText = CommonUtil.GetTextFromStringWithSpecialCharacter(Cfg.ItemName) 
 	self.ItemDescriptionText = _G.MarketMgr:GetMarketItemDesc(Cfg)
     self.SellItemMV:UpdateVM(ItemResID, "")
+    self.SellItemMV:SetItemMaker(Maker)
 
     self.IncomeText = math.floor((Value.Stall.TotalNum - Value.Stall.SoldNum) * Value.Stall.SinglePrice*(1 - Value.Stall.TaxRate)) 
     self.AmountText = Value.Stall.TotalNum - Value.Stall.SoldNum

@@ -95,7 +95,7 @@ function NewGatheringJobMaterialItemView:OnShow()
 		return
 	end
 
-	local GatherType = CurEntrance.GatherType
+	local GatherType = CurEntrance.GatherType or 1
     local IconPath = _G.GatherMgr.GatherTypeIconConfig[GatherType].Icon
     local DisableIconPath = _G.GatherMgr.GatherTypeIconConfig[GatherType].DisableIcon
 	UIUtil.ImageSetBrushFromAssetPath(self.IconNormal, IconPath, true)
@@ -123,6 +123,10 @@ end
 function NewGatheringJobMaterialItemView:OnRegisterGameEvent()
 	self:RegisterGameEvent(_G.EventID.Major_Attr_Change, self.OnMajorAttrChange)
 	self:RegisterGameEvent(_G.EventID.SkillEnd, self.OnSkillEnd)
+end
+
+function NewGatheringJobMaterialItemView:SimpleItemAddRegisterGameEvent()
+    self:RegisterGameEvent(EventID.NetworkReconnected, self.OnRelayConnected)
 end
 
 function NewGatheringJobMaterialItemView:OnRegisterBinder()
@@ -397,6 +401,17 @@ function NewGatheringJobMaterialItemView:OnSkillEnd(Params)
 			GatheringJobPanelVM:EndSimpleGather()
 		end
 	end
+end
+
+function NewGatheringJobMaterialItemView:OnRelayConnected(Params)
+    if Params.bRelay and self.IsSimpleGathering then	--闪断
+        FLOG_INFO("gather simple bRelay = true")
+
+		self:CancelSkillTimer()
+		GatheringJobPanelVM:BreakSimpleGather()
+		GatheringJobPanelVM:ExitSimpleGatherPanel()
+		self.IsSimpleGathering = false
+    end
 end
 
 return NewGatheringJobMaterialItemView

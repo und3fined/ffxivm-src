@@ -28,8 +28,6 @@ function LoginNewVM:Ctor()
     self.Token = nil
     self.ChannelID = nil
 
-    -- 是否在更新中
-    self.ShowUpdating = false
     -- 好友同玩
     self.ShowFriendList = false
     self.FriendList = UIBindableList.New(FriendItemVM)
@@ -57,6 +55,7 @@ function LoginNewVM:Ctor()
     -- 排队
     self.FakeWaitTotalTime = 0
     self.FakeWaitCountTime = 0
+    self.InitialPeople = 0
     self.FakeWaitPeople = 0
     self.FakeWaitTotalTimeStr = ""
     self.FakeWaitCountTimeStr = ""

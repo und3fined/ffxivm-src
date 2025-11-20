@@ -6,17 +6,19 @@
 local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
+local LocalDef = require("Game/MagicCard/MagicCardLocalDef")
 
 ---@class CardsNumberItemView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
----@field TextDown UFTextBlock
----@field TextLeft UFTextBlock
----@field TextRight UFTextBlock
----@field TextUp UFTextBlock
 ---@field TextureDown TextureTextView
+---@field TextureDown_Light TextureTextView
 ---@field TextureLeft TextureTextView
+---@field TextureLeft_Light TextureTextView
 ---@field TextureRight TextureTextView
+---@field TextureRight_Light TextureTextView
 ---@field TextureUp TextureTextView
+---@field TextureUp_Light TextureTextView
+---@field AnimLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local CardsNumberItemView = LuaClass(UIView, true)
 
@@ -35,7 +37,12 @@ function CardsNumberItemView:OnRegisterSubView()
 end
 
 function CardsNumberItemView:OnInit()
-
+    self.NumTextLightList = {
+        [LocalDef.EnumCardNumberDir.Up] = self.TextureUp_Light,
+        [LocalDef.EnumCardNumberDir.Down] = self.TextureDown_Light,
+        [LocalDef.EnumCardNumberDir.Left] = self.TextureLeft_Light,
+        [LocalDef.EnumCardNumberDir.Right] = self.TextureRight_Light,
+    }
 end
 
 ---@param DownValue integer
@@ -44,9 +51,16 @@ end
 ---@param UpValue integer
 function CardsNumberItemView:SetNumbes(UpValue, DownValue, LeftValue, RightValue)
     self.TextureUp:SetText(string.format("%X", UpValue))
+    self.TextureUp_Light:SetText(string.format("%X", UpValue))
+
     self.TextureDown:SetText(string.format("%X", DownValue))
+    self.TextureDown_Light:SetText(string.format("%X", DownValue))
+
     self.TextureLeft:SetText(string.format("%X", LeftValue))
+    self.TextureLeft_Light:SetText(string.format("%X", LeftValue))
+
     self.TextureRight:SetText(string.format("%X", RightValue))
+    self.TextureRight_Light:SetText(string.format("%X", RightValue))
 end
 
 function CardsNumberItemView:OnDestroy()
@@ -71,6 +85,23 @@ end
 
 function CardsNumberItemView:OnRegisterBinder()
 
+end
+
+function CardsNumberItemView:ShowHightlightNumberText(Dir)
+    local TextWidget = self.NumTextLightList[Dir]
+    if TextWidget == nil then
+        return
+    end
+    UIUtil.SetIsVisible(TextWidget, true)
+end
+
+function CardsNumberItemView:HideHightlightNumberText()
+    if self.NumTextLightList == nil then
+        return
+    end
+    for _, LightTextWidget in ipairs(self.NumTextLightList) do
+        UIUtil.SetIsVisible(LightTextWidget, false)
+    end
 end
 
 return CardsNumberItemView

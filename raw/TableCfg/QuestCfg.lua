@@ -16,6 +16,9 @@ local QuestCfg = {
             {
                 Name = 'TargetGroupDesc',
             },
+            {
+                Name = 'AcceptDesc',
+            },
 		}
     },
     DefaultValues = nil,

@@ -8,11 +8,9 @@ local UIView = require("UI/UIView")
 local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local TimeUtil = require("Utils/TimeUtil")
-local ChocoboRaceUtil = require("Game/Chocobo/Race/ChocoboRaceUtil")
 local ChocoboDefine = require("Game/Chocobo/ChocoboDefine")
-local UIViewMgr = require("UI/UIViewMgr")
-local UIViewID = require("Define/UIViewID")
 local AudioUtil = require("Utils/AudioUtil")
+local LocalizationUtil = require("Utils/LocalizationUtil")
 
 ---@class ChocoboRaceCountDownView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -35,7 +33,7 @@ function ChocoboRaceCountDownView:Ctor()
 	--self.BtnSkip = nil
 	--self.ImgArrived = nil
 	--self.ImgCountDown1 = nil
-	--self.ImgCountDown2 = nil
+	--self.ImgCountDown2 = nil                                                                                                                                                                                                                                
 	--self.ImgCountDown3 = nil
 	--self.ImgStart = nil
 	--self.PanelCountDown = nil
@@ -52,7 +50,13 @@ function ChocoboRaceCountDownView:OnRegisterSubView()
 end
 
 function ChocoboRaceCountDownView:OnInit()
+    local DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Chocobo_Img_Race_Arrived.UI_Chocobo_Img_Race_Arrived'"
+    local LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgArrived, LocalIconPath)
 
+    DefaultPath = "Texture2D'/Game/UI/Texture/Localized/CHS/UI_Gate_Img_Start.UI_Gate_Img_Start'"
+    LocalIconPath = LocalizationUtil.GetLocalizedAssetPath(DefaultPath)
+    UIUtil.ImageSetBrushFromAssetPath(self.ImgStart, LocalIconPath)
 end
 
 function ChocoboRaceCountDownView:OnDestroy()
@@ -74,7 +78,7 @@ function ChocoboRaceCountDownView:OnShow()
         --if ChocoboDefine.DEBUG_RACE then
         --    self:RegisterTimer(function()
         --        local Timer = TimeUtil.GetServerTime() - self.Params.EndTime
-        --        ChocoboRaceUtil.Log("ChocoboRaceCountDownView Ani LeftTime :" .. Timer)
+        --        FLOG_INFO("ChocoboRaceCountDownView Ani LeftTime :" .. Timer)
         --    end,0,0.05,0)
         --end
     elseif self.Params.Mode == "ARRIVED" then
@@ -113,6 +117,7 @@ end
 
 function ChocoboRaceCountDownView:OnClickBtnSkip()
     _G.ChocoboRaceMgr:SetGameState(ChocoboDefine.GAME_STATE_ENUM.RESULT)
+    _G.ChocoboRaceMgr:ReqRaceShowAwardTips()
     self:Hide()
 end
 
@@ -161,7 +166,7 @@ function ChocoboRaceCountDownView:OnAnimationFinished(Animation)
     if Animation == self.AnimCountdown then
         self:Hide()
     elseif Animation == self.AnimArrived then
-        UIUtil.SetIsVisible(self.PanelNoWait, true)
+        self:OnClickBtnSkip()
     end
 end
 

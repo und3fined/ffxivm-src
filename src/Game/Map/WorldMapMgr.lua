@@ -26,6 +26,7 @@ local MapMarkerCfg = require("TableCfg/MapMarkerCfg")
 local MapPlacedMarkerCfg = require("TableCfg/MapPlacedMarkerCfg")
 local MapIconMappingCfg = require("TableCfg/MapIconMappingCfg")
 local MapNpcIconCfg = require("TableCfg/MapNpcIconCfg")
+local HousingMapMarkerInfoCfg = require("TableCfg/HousingMapMarkerInfoCfg")
 
 local ProtoRes = require("Protocol/ProtoRes")
 local ProtoCS = require("Protocol/ProtoCS")
@@ -33,7 +34,7 @@ local MapMarkerPlaced = require("Game/Map/Marker/MapMarkerPlaced")
 local HUDType = require("Define/HUDType")
 local ClientSetupID = require("Game/ClientSetup/ClientSetupID")
 local AutoMoveTargetType = require("Define/AutoMoveTargetType")
-local QuestDefine = require("Game/Quest/QuestDefine")
+local GoldSaucerBlessingDefine = require("Game/GoldSaucerMiniGame/GoldSaucerBlessingDefine")
 
 local MapMarkerType = MapDefine.MapMarkerType
 local MapType = MapDefine.MapType
@@ -44,6 +45,7 @@ local MapMarkerTrackType = ProtoRes.MapMarkerTrackType
 local ClientSetupKey = ProtoCS.ClientSetupKey
 local CS_CMD = ProtoCS.CS_CMD
 local MapNPCIconType = ProtoRes.MapNPCIconType
+local MapMarkerNpc2GameID = GoldSaucerBlessingDefine.MapMarkerNpc2GameID
 
 local UE = _G.UE
 local FVector = _G.UE.FVector
@@ -65,12 +67,15 @@ function WorldMapMgr:OnInit()
 	self.UpperUIMapID = 0
 	self.MapID = 0
 	self.LastUIMapID = 0
+	self.NextUIMapID = 0
+	self.StreetID = 0 -- 当前查看的房屋住宅区街区ID（小区）
 
-	self.PlacedMarkerPos = nil
-	self.PlacedMarkers = {} -- 地图上放置标记列表
-	self.PlacedMarkerSetupValue = ""
-	self.CheckPlacedMarkerTimerID = nil -- 地图放置标记检查定时器
-	self.PlacedMarkerEffectID = nil -- 地图放置标记特效ID
+	-- 地图手动标记 --
+	self.PlacedMarkerPos = nil -- 当前手动标记点UI坐标
+	self.PlacedMarkers = {} -- 地图手动标记列表
+	self.PlacedMarkerSetupValue = "" -- 地图手动标记列表格式化存储的字符串
+	self.CheckPlacedMarkerTimerID = nil -- 地图手动标记检查定时器
+	self.PlacedMarkerEffectID = nil -- 地图手动标记特效ID
 
 	self.FavorTransfer = {} -- 传送水晶收藏列表
 
@@ -87,10 +92,9 @@ function WorldMapMgr:OnInit()
 	self.MapFollowBuoyPos = nil -- 地图追踪浮标坐标，如果目标跨地图则指向传送点，此时非最终目标点
 	self.CheckMapFollowTimerID = nil -- 地图追踪检查定时器
 
-	self.OpenMapAutoPath = false -- （已废弃）是否开启地图自动寻路，后面改成寻路模块提供的统一开关
-
-	self.AllMapIconMapping = {} -- 地图图标映射关系
-	self.AllUIMapIconMapping = {}
+	-- 地图图标映射关系 --
+	self.AllMapIconMapping = {} ---@type table<MapID, MapIconMappingCfg>
+	self.AllUIMapIconMapping = {} ---@type table<UIMapID, MapIconMappingCfg>
 	local AllMapIconMappingCfg = MapIconMappingCfg:FindAllCfg() -- 数据量极少
     for _, Cfg in pairs(AllMapIconMappingCfg) do
 		self.AllMapIconMapping[Cfg.MapID] = Cfg
@@ -193,6 +197,7 @@ end
 
 ---打开当前主角所在的大地图，并以主角标记为中心。目前用于从小地图打开大地图
 function WorldMapMgr:ShowCurrWorldMap()
+	-- 某些副本需要屏蔽大地图
 	if _G.ChocoboRaceMgr:IsChocoboRacePWorld() then
 		return
 	end
@@ -217,7 +222,7 @@ function WorldMapMgr:ShowWorldMap(MapID, OpenSource)
 end
 
 ---打开指定大地图，并找离寻宝点最近的水晶
----@param MapData number 地图打开来源，可以nil，目前主要数据打点使用
+---@param MapData table 地图数据
 function WorldMapMgr:ShowWorldMapTreasureHunt(MapData)
 	if MapData == nil then return end
 
@@ -244,7 +249,8 @@ function WorldMapMgr:ShowWorldMapGather(MapID, GatherPointIDList)
 	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
 end
 
----打开大地图，显示指定Npc位置，用于地图不常显的Npc
+---打开大地图，显示指定Npc位置。用于地图没有配置为常显的Npc
+---@param NpcResID number Npc ResID，要求MapEditCfg里能找到对应MapNPC
 function WorldMapMgr:ShowWorldMapLocationNpc(MapID, NpcResID)
 	self.WorldMapLocationParams = { MapID = MapID, MarkerID = NpcResID, LocationType = MapDefine.MapLocationType.Npc }
 
@@ -254,6 +260,7 @@ function WorldMapMgr:ShowWorldMapLocationNpc(MapID, NpcResID)
 end
 
 ---打开大地图，显示指定EObj位置
+---@param EObjResID number 交互物ResID，要求MapEditCfg里能找到对应MapEObj
 function WorldMapMgr:ShowWorldMapLocationEObj(MapID, EObjResID)
 	self.WorldMapLocationParams = { MapID = MapID, MarkerID = EObjResID, LocationType = MapDefine.MapLocationType.EObj }
 
@@ -262,7 +269,8 @@ function WorldMapMgr:ShowWorldMapLocationEObj(MapID, EObjResID)
 	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
 end
 
----打开大地图，显示指定坐标点位置（占位，未实现）
+---打开大地图，显示指定坐标点位置
+---@param PointID number 坐标点ID，要求MapEditCfg里能找到对应MapPoint
 function WorldMapMgr:ShowWorldMapLocationPoint(MapID, PointID)
 	self.WorldMapLocationParams = { MapID = MapID, MarkerID = PointID, LocationType = MapDefine.MapLocationType.Point }
 
@@ -271,7 +279,7 @@ function WorldMapMgr:ShowWorldMapLocationPoint(MapID, PointID)
 	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
 end
 
----打开大地图，并以指定Npc标记为中心，用于地图常显的Npc
+---打开大地图，并以指定Npc标记为中心。用于地图配置为常显的Npc
 ---@param MapID number
 ---@param NpcResID number 常显的Npc ResID。关卡编辑器里的Npc列表，哪些在地图上常显由策划配表决定
 function WorldMapMgr:ShowWorldMapNpc(MapID, NpcResID)
@@ -281,9 +289,9 @@ function WorldMapMgr:ShowWorldMapNpc(MapID, NpcResID)
 end
 
 ---打开大地图，并以指定固定标记为中心
----@param MapID number
+---@param MapID number 地图ID
 ---@param MarkerID number 策划表格配置的固定标记ID
----@param UIMapID number
+---@param UIMapID number 对于一个地图多个UI地图的情况，需要指定UI地图ID
 function WorldMapMgr:ShowWorldMapFixPoint(MapID, MarkerID, UIMapID)
 	WorldMapVM.MapOpenSource = MapDefine.MapOpenSource.Other
 	local RealUIMapID = UIMapID or MapUtil.GetUIMapID(MapID)
@@ -380,8 +388,8 @@ function WorldMapMgr:SetWorldMapShowQuestID(QuestID)
 	self.WorldMapShowQuestID = QuestID
 end
 
----是否大地图指定显示任务，比如推荐任务、职业任务
----指定任务必然显示，不受地图迷雾、地图缩放等影响，和追踪任务类似
+---是否大地图指定显示任务，比如推荐任务、职业任务、从任务日志查看支线任务
+---指定任务必然显示，不受地图迷雾、地图缩放等影响，和追踪任务表现类似
 ---@param QuestID number 任务ID
 ---@return boolean
 function WorldMapMgr:IsWorldMapShowQuest(QuestID)
@@ -393,6 +401,7 @@ end
 ---@param MapID number 任务要传参MapID
 ---@param UIMapID number 任务要传参UIMapID。比如乌尔达哈来生回廊/政府层MapID相同，但UIMapID不同
 ---@param QuestID number 任务ID。如果仅仅是切换地图，可以为nil
+---@param OpenSource number
 ---@param TargetID numnber 目标ID
 function WorldMapMgr:ShowWorldMapQuest(MapID, UIMapID, QuestID, OpenSource, TargetID)
 	if UIMapID == nil then
@@ -454,14 +463,19 @@ function WorldMapMgr:ShowSendLoctionView()
 	WorldMapVM:ShowSendLoctionView()
 end
 
----根据 地图超链接信息 打开大地图
+---打开大地图，在给定地图UI坐标位置，显示手动标记
 ---@param MapID number
----@param Pos FVector2D
-function WorldMapMgr:OpenMapFromChatHyperlink(MapID, Pos)
+---@param UIPos FVector2D UI坐标位置
+---@param Extra table| nil 预留参数
+function WorldMapMgr:OpenMapFromChatHyperlink(MapID, UIPos, Extra)
 	WorldMapVM.MapOpenSource = MapDefine.MapOpenSource.Other
-	local Params = { MapID = MapID, ContentType = MapContentType.WorldMap, MarkerInitPos = Pos }
+	local Params = { MapID = MapID, ContentType = MapContentType.WorldMap, MarkerInitPos = UIPos }
+	if Extra then
+		Params.UIMapID = Extra.UIMapID
+	end
 	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
 end
+
 
 ---关闭大地图;如果是钓鱼笔记/采集笔记开启的寻路，关闭笔记及跳转前的UI
 function WorldMapMgr:HideWorldMap()
@@ -474,10 +488,40 @@ function WorldMapMgr:HideWorldMap()
 	end
 end
 
+
+---打开独立房屋地图，和默认大地图显示内容有差异
+---@param MapID number 房屋住宅区地图ID
+function WorldMapMgr:ShowIndividualHouseMap(MapID)
+	local UIMapID = MapUtil.GetUIMapID(MapID)
+	local StreetID = 1 -- 默认显示住宅区街区1
+
+	WorldMapVM.MapOpenSource = MapDefine.MapOpenSource.IndividualHouseMap
+	local Params = { ContentType = MapContentType.IndividualHouseMap
+		, MapID = MapID, UIMapID = UIMapID, StreetID = StreetID, }
+	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
+end
+
+---打开大地图，显示房屋快捷传送
+---@param MapID number 房屋住宅区地图ID
+---@param StreetID number 房屋住宅区街区ID（小区）
+---@param BlockID number 房屋住宅区地块ID。注意：地块分初始区和扩建区，初始区BlockID为1~30，扩建区BlockID为31~60，参考AreaBlockBegin
+function WorldMapMgr:ShowWorldMapHouseLand(MapID, StreetID, BlockID)
+	local HousingMapMarkerInfoCfgData = HousingMapMarkerInfoCfg:GetMarkerInfoCfg(MapID, BlockID)
+	if HousingMapMarkerInfoCfgData == nil then
+		return
+	end
+	local UIMapID = HousingMapMarkerInfoCfgData.UIMapID
+
+	WorldMapVM.MapOpenSource = MapDefine.MapOpenSource.HouseLandTransfer
+	local Params = { ContentType = MapContentType.WorldMap
+		, MapID = MapID, UIMapID = UIMapID, StreetID = StreetID, TargetBlockID = BlockID, TargetBlockPos = HousingMapMarkerInfoCfgData.Pos, }
+	UIViewMgr:ShowView(UIViewID.WorldMapPanel, Params)
+end
+
 --endregion 大地图打开
 
 
---region 地图放置标记
+--region 地图手动标记
 
 function WorldMapMgr:SendAddPlacedMakers(Makers)
 	EventMgr:SendEvent(EventID.WorldMapAddPlacedMakers, Makers)
@@ -491,7 +535,7 @@ function WorldMapMgr:SendUpdatePlacedMaker(Maker)
 	EventMgr:SendEvent(EventID.WorldMapUpdatePlacedMaker, Maker)
 end
 
----检查是否开启标记检查定时器
+---检查是否开启手动标记检查定时器
 function WorldMapMgr:CheckEnablePlacedMarkerTimer()
 	local MajorUIMapID = _G.MapMgr:GetUIMapID()
 
@@ -503,7 +547,7 @@ function WorldMapMgr:CheckEnablePlacedMarkerTimer()
 		end
 	end
 
-	-- 当前地图存在追踪标记类型时才开启定时器
+	-- 当前地图存在trace标记类型时才开启定时器
 	if #Markers > 0 then
 		if not self.CheckPlacedMarkerTimerID then
 			self.CheckPlacedMarkerTimerID = self:RegisterTimer(self.OnTimerCheckPlacedMarker, 0, 1.0, 0)
@@ -516,7 +560,7 @@ function WorldMapMgr:CheckEnablePlacedMarkerTimer()
 	end
 end
 
----定时检查追踪标记
+---定时检查手动trace标记
 function WorldMapMgr:OnTimerCheckPlacedMarker()
 	local Major = MajorUtil:GetMajor()
 	if Major == nil then return end
@@ -547,7 +591,7 @@ function WorldMapMgr:OnTimerCheckPlacedMarker()
 	end
 end
 
----更新放置标记追踪状态
+---更新手动标记追踪状态
 function WorldMapMgr:UpdatePlacedMarkerFollow()
 	for i = 1, #self.PlacedMarkers do
 		local Marker = self.PlacedMarkers[i]
@@ -608,7 +652,7 @@ function WorldMapMgr:AddPlacedMarker(MarkerID, CfgID, UIMapID, Name, PosX, PosY,
 	local Marker = MapMarkerPlaced.New()
 	Marker:SetID(MarkerID)
 	Marker:SetUIMapID(UIMapID)
-	Marker:SetAreaUIMapID(UIMapID) -- 真正标记的三级地图UIMapID，区别于要显示的UIMapID
+	Marker:SetAreaUIMapID(UIMapID) -- 记录标记所属的三级地图信息，手动标记的三级地图UIMapID，区别于要显示的UIMapID
 	Marker:SetMapID(MapUtil.GetMapID(UIMapID))
 	Marker:InitMarker(Cfg, Name, PosX, PosY)
 
@@ -661,7 +705,7 @@ function WorldMapMgr:GetPlacedMarkers(UIMapID)
 	return Markers
 end
 
--- 将放置标记重置回默认数据，避免追踪标记在一二级地图显示后数据出错
+-- 将手动标记重置回默认数据，避免手动标记因为追踪在一二级地图显示后数据出错
 function WorldMapMgr:ResetPlacedMarkerUIMapInfo()
 	for i = 1, #self.PlacedMarkers do
 		local Marker = self.PlacedMarkers[i]
@@ -818,7 +862,8 @@ function WorldMapMgr:ParseMapPlacedMarker(Value)
 	self.PlacedMarkerSetupValue = Value
 end
 
----保存放置点，目前是实时保存在服务器。后面看能否保存在本地或玩家手动上传到服务器保存
+---保存手动标记列表
+---目前是实时保存在服务器。后面看能否保存在本地或玩家手动上传到服务器保存
 function WorldMapMgr:SaveMapPlacedMarker()
 	local MarkerSetups = {}
 	for i = 1, #self.PlacedMarkers do
@@ -846,7 +891,7 @@ function WorldMapMgr:GetPlacedMarkerPos()
 	return self.PlacedMarkerPos
 end
 
---endregion 地图放置标记
+--endregion 地图手动标记
 
 
 --region 传送水晶收藏
@@ -879,7 +924,11 @@ function WorldMapMgr:ParseMapTransferFavor(Value)
 
 	local JsonStr = Value
 	if not string.isnilorempty(JsonStr) then
-		self.FavorTransfer = Json.decode(JsonStr) or {}
+		local TempTable = Json.decode(JsonStr) or {}
+		self.FavorTransfer = {}
+		for _, value in pairs(TempTable) do
+			table.insert(self.FavorTransfer, value)
+		end
 	end
 end
 
@@ -923,9 +972,9 @@ end
 ---切换UI地图
 ---@param UIMapID number
 ---@param MapID number
----@param OnShow boolean 是否首次打开地图时切换
+---@param bOnShow boolean 是否首次打开地图时切换
 ---@return boolean 是否切换成功
-function WorldMapMgr:ChangeMap(UIMapID, MapID, OnShow)
+function WorldMapMgr:ChangeMap(UIMapID, MapID, bOnShow)
 	if MapID == nil then
 		-- 切换地图，如果MapID为nil，则MapID优先使用当前主角所在地图
 		if UIMapID == _G.MapMgr:GetUIMapID() then
@@ -939,6 +988,7 @@ function WorldMapMgr:ChangeMap(UIMapID, MapID, OnShow)
 		_G.MsgTipsUtil.ShowTips(_G.LSTR(700011)) -- "未知区域，无法探查"
 		return
 	end
+
 	if UIMapID == self.UIMapID and MapID == self.MapID then
 		-- 已经在当前地图，不需要切换，直接触发相关事件
 		_G.EventMgr:SendEvent(_G.EventID.WorldMapFinishCreateMarkers)
@@ -980,7 +1030,7 @@ function WorldMapMgr:ChangeMap(UIMapID, MapID, OnShow)
 		end
 
 		WorldMapVM.ChageMaping = true
-		if OnShow then
+		if bOnShow then
 			-- 首次打开地图时，直接切地图，避免上次关闭时的地图闪现下
 			FadeOutMapAnimCallback()
 		else
@@ -999,6 +1049,41 @@ function WorldMapMgr:ChangeMap(UIMapID, MapID, OnShow)
 		WorldMapVM:SetMapName("")
 
 		EventMgr:SendEvent(EventID.WorldMapSelectChanged)
+	end
+
+	return true
+end
+
+---切换房屋UI地图
+---@param StreetID number 可以通过切换住宅区街区ID来切换UI地图，所以和上面ChangeMap接口区分开
+function WorldMapMgr:ChangeHouseMap(UIMapID, MapID, StreetID, bOnShow)
+	if WorldMapVM.ChageMaping then
+		return
+	end
+	self.NextUIMapID = UIMapID
+
+	local function FadeOutMapAnimCallback()
+		self.LastUIMapID = self.UIMapID
+		self.UIMapID = UIMapID
+		self.UpperUIMapID = MapUtil.GetUpperUIMapID(UIMapID)
+		self.MapID = MapID
+		self:SetStreetID(StreetID)
+
+		self:UpdateFog(UIMapID, MapID)
+
+		WorldMapVM:ChangeToHouseAreaMap()
+
+		EventMgr:SendEvent(EventID.WorldMapSelectChanged)
+		WorldMapVM.ChageMaping = false
+	end
+
+	WorldMapVM.ChageMaping = true
+	if bOnShow then
+		FadeOutMapAnimCallback()
+	else
+		self:RegisterTimer(FadeOutMapAnimCallback, WorldMapVM:GetOutMapAnimTime())
+		WorldMapVM:PlayOutMapAnim()
+		WorldMapVM:PlayFadeOutMapAnim()
 	end
 
 	return true
@@ -1024,12 +1109,21 @@ function WorldMapMgr:GetNextUIMapID()
 	return self.NextUIMapID
 end
 
+function WorldMapMgr:SetStreetID(_StreetID)
+	self.StreetID = _StreetID
+end
+
+function WorldMapMgr:GetStreetID()
+	return self.StreetID
+end
+
 function WorldMapMgr:ResetUIMapInfo()
 	self.UIMapID = 0
 	self.UpperUIMapID = 0
 	self.NextUIMapID = 0
     self.MapID = 0
 	self.LastUIMapID = 0
+	self:SetStreetID(0)
 end
 
 function WorldMapMgr:UpdateDiscovery()
@@ -1061,6 +1155,7 @@ function WorldMapMgr:SendGMTransfer(TargetX, TargetY)
     end
 
 	local Major = MajorUtil.GetMajor()
+	if Major == nil then return end
     local MajorPos = Major:FGetActorLocation()
 	local GroudZ = MajorPos.Z
 	local Result, GroudPos = self:GetMapGroudPos(TargetX, TargetY, true)
@@ -1159,7 +1254,7 @@ function WorldMapMgr:SetMapFollowInfo(FollowID, FollowType, FollowSubType, Follo
 	FollowInfo.FollowMapID = FollowMapID
 
 	if bUpdateInfo then
-		-- 保证放置标记的追踪状态正确，避免创建放置标记时追踪数据还没获取到的情况，其他类型标记都是在地图显示标记时访问FollowInfo数据
+		-- 保证手动标记的追踪状态正确，避免创建手动标记时追踪数据还没获取到的情况，其他类型标记都是在地图显示标记时访问FollowInfo数据
 		self:UpdatePlacedMarkerFollow()
 	end
 
@@ -1292,15 +1387,14 @@ function WorldMapMgr:GetMapFollowPos(NeedGroudPosZ, ForAutoPath)
 		-- NPC、EObj等可以通过配置参数来追踪
 		if MapMarkerTrackType.MAP_MARKER_TRACK_NPC == MarkerCfg.TrackType then
 			local NpcListID = MarkerCfg.TrackArg
-			local NpcData = _G.MapEditDataMgr:GetNpcByListID(NpcListID, MapEditCfg)
-			if NpcData then
+			local Point, NpcData = MapUtil.GetMapNpcPosByListID(FollowMapID, NpcListID)
+			if Point and NpcData then
 				if ForAutoPath then
 					-- 如果寻路目标是NPC，生成新的寻路坐标
 					TargetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(FollowMapID, NpcData.NpcID)
 					-- 对于NPC目标，不再做寻路通用的终点偏移（避免2个偏移叠加，距离终点太远）
 					IsDstPosRejust = false
 				else
-					local Point = NpcData.BirthPoint
 					TargetPos = FVector(Point.X, Point.Y, Point.Z)
 				end
 				return TargetPos, TargetPosResult, IsDstPosRejust
@@ -1390,6 +1484,8 @@ function WorldMapMgr:GetMapFollowPos(NeedGroudPosZ, ForAutoPath)
 			TargetPos = MapUtil.GetMapNpcPosByResID(FollowMapID, ResID)
 		elseif LocationType == MapDefine.MapLocationType.EObj then
 			TargetPos = MapUtil.GetMapEObjPosByResID(FollowMapID, ResID)
+		elseif LocationType == MapDefine.MapLocationType.Point then
+			TargetPos = MapUtil.GetMapPointPosByID(FollowMapID, ResID)
 		end
 
 	elseif FollowMarkerType == MapMarkerType.Quest then
@@ -1398,13 +1494,10 @@ function WorldMapMgr:GetMapFollowPos(NeedGroudPosZ, ForAutoPath)
 		local QuestParamList = _G.QuestTrackMgr:GetMapQuestParam(FollowMapID, QuestID, 0)
 		if QuestParamList and #QuestParamList > 0 then
 			local QuestParam = QuestParamList[1]
-			TargetPos = QuestParam.Pos
-
 			if ForAutoPath then
-				if QuestParam.NaviType == QuestDefine.NaviType.NpcResID then
-					TargetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(QuestParam.MapID, QuestParam.NaviObjID)
-					IsDstPosRejust = false
-				end
+				TargetPos, IsDstPosRejust = _G.QuestTrackMgr:GetQuestAutoPathPos(QuestParam)
+			else
+				TargetPos = QuestParam.Pos
 			end
 		else
 			TargetPosResult = MapTargetPosResult.Fail_Config
@@ -1442,6 +1535,32 @@ function WorldMapMgr:GetMapFollowPos(NeedGroudPosZ, ForAutoPath)
 			IsDstPosRejust = false
 		else
 			TargetPos = MapUtil.GetMapNpcPosByResID(FollowMapID, NpcResID)
+		end
+	elseif FollowMarkerType == MapMarkerType.GSMiniGame then
+		local GameID = self.FollowInfo.FollowID
+		local TargetNpcResID = 0
+		for NpcResID, ConfigGameID in pairs(MapMarkerNpc2GameID) do
+			if ConfigGameID == GameID then
+				TargetNpcResID = NpcResID
+			end
+		end
+
+		if TargetNpcResID and TargetNpcResID ~= 0 then
+			if ForAutoPath then
+				TargetPos = _G.NavigationPathMgr.GetNavigationPosByNpcID(FollowMapID, TargetNpcResID)
+				IsDstPosRejust = false
+			else
+				TargetPos = MapUtil.GetMapNpcPosByResID(FollowMapID, TargetNpcResID)
+			end
+		end
+	elseif FollowMarkerType == MapMarkerType.HouseLand then
+		local ResidenceNumber = _G.HouseLandMgr:GetResidenceNumber(FollowMapID)
+		local LandNumber = self.FollowInfo.FollowID
+		local LandCondCfg =  require("TableCfg/LandCondCfg")
+        local LandSearchCondition = string.format("EstateID=%d and BlockID=%d ", ResidenceNumber, LandNumber)
+        local LandCfg = LandCondCfg:FindCfg(LandSearchCondition)
+		if LandCfg then
+			TargetPos = _G.HouseInfoMgr:GetRealPosByPopRange(FollowMapID, LandCfg.EtherPopRange)
 		end
 	end
 
@@ -1523,7 +1642,7 @@ function WorldMapMgr:ShowMapFollowPerformance(bClicked)
 	-- 寻路目标点，解决跨地图的追踪
 	local NavPaths = _G.NavigationPathMgr:FindMapPaths(CurrMapID, MajorPos, TargetMapID, TargetPos)
 	if (NavPaths == nil) or (#NavPaths == 0) then
-		FLOG_INFO("[WorldMapMgr:ShowMapFollowPerformance] fail find map path")
+		_G.FLOG_WARNING("[WorldMapMgr:ShowMapFollowPerformance] fail find map path")
 		return
 	end
 
@@ -1542,7 +1661,7 @@ function WorldMapMgr:ShowMapFollowPerformance(bClicked)
 		local EndPos = Paths[1].EndPos
 		local EndVec = FVector(EndPos.X, EndPos.Y, EndPos.Z)
 
-		local AdjacentMapPath = NavPaths[2] -- 跨地图寻路结果的第二个就是下一个地图的数据
+		local AdjacentMapPath = NavPaths[2] -- 和寻路开发确认，跨地图寻路结果的第二个就是下一个地图的数据
 		local AdjacentMapID = AdjacentMapPath and AdjacentMapPath.MapID
 
 		self:CreateMapFollowBuoy(EndVec, true, AdjacentMapID)
@@ -1567,7 +1686,7 @@ function WorldMapMgr:CreateMapFollowBuoy(FollowPos, IsAdjacentMap, MapID)
 	if self.MapFollowBuoyUID == nil then
 		local BuoyUID = BuoyMgr:AddBuoyByPos(FollowPos, HUDType.BuoyMapFollow, IsAdjacentMap, MapID)
 		if BuoyUID then
-			FLOG_INFO("[WorldMapMgr:CreateMapFollowBuoy] FollowPos(%s), IsAdjacentMap=%s, MapID=%s, BuoyUID=%d", FollowPos, IsAdjacentMap, MapID, BuoyUID)
+			--FLOG_INFO("[WorldMapMgr:CreateMapFollowBuoy] FollowPos(%s), IsAdjacentMap=%s, MapID=%s, BuoyUID=%d", FollowPos, IsAdjacentMap, MapID, BuoyUID)
 			self.MapFollowBuoyUID = BuoyUID
 		end
 	else
@@ -1586,7 +1705,7 @@ function WorldMapMgr:RemoveMapFollowBuoy()
 	EventMgr:SendEvent(EventID.MapFollowTargetUpdate)
 
     if self.MapFollowBuoyUID then
-		FLOG_INFO("[WorldMapMgr:RemoveMapFollowBuoy] BuoyUID=%d", self.MapFollowBuoyUID)
+		--FLOG_INFO("[WorldMapMgr:RemoveMapFollowBuoy] BuoyUID=%d", self.MapFollowBuoyUID)
         BuoyMgr:RemoveBuoyByUID(self.MapFollowBuoyUID)
         self.MapFollowBuoyUID = nil
     end
@@ -1597,7 +1716,7 @@ function WorldMapMgr:GetMapFollowBuoyPos()
 end
 
 
----显示放置标记特效
+---显示手动标记在追踪后的场景特效
 function WorldMapMgr:PlayPlacedMarkerSenceEffect()
 	self:StopPlacedMarkerSenceEffect()
 
@@ -1631,7 +1750,7 @@ function WorldMapMgr:PlayPlacedMarkerSenceEffect()
 	end
 end
 
----删除放置标记特效
+---删除手动标记场景特效
 function WorldMapMgr:StopPlacedMarkerSenceEffect()
 	if self.PlacedMarkerEffectID then
 		FLOG_INFO("[WorldMapMgr:StopPlacedMarkerSenceEffect] PlacedMarkerEffectID=%d", self.PlacedMarkerEffectID)
@@ -1654,7 +1773,7 @@ function WorldMapMgr:StartMapFollowAutoPath()
 		return
 	end
 	TargetPos = FVector(TargetPos.X, TargetPos.Y, TargetPos.Z)
-	FLOG_INFO("[WorldMapMgr:StartMapFollowAutoPath] TargetPos(%s), TargetPosResult=%d", TargetPos, TargetPosResult)
+	FLOG_INFO("[WorldMapMgr:StartMapFollowAutoPath] TargetPos(%s), TargetPosResult=%d, TargetMapID=%d", TargetPos, TargetPosResult, TargetMapID)
 
 	-- 根据追踪的标记类型，设置自动寻路的目标类型，用于自动寻路tlog
 	local TargetType = AutoMoveTargetType.Map
@@ -1671,11 +1790,11 @@ function WorldMapMgr:StartMapFollowAutoPath()
 	end
 	self.AutoPathTargetPosResult = TargetPosResult
 
-	-- 寻路成功后关闭大地图;如果是钓鱼笔记/采集笔记开启的寻路，关闭笔记及跳转前的UI
+	-- 寻路成功后关闭大地图
 	self:HideWorldMap()
 end
 
----重新开始地图追踪的自动寻路
+---重新开始地图追踪的自动寻路（未使用）
 function WorldMapMgr:ReStartMapFollowAutoPath()
 	-- 这里要严格限制条件，必须是地图追踪发起的寻路才可以修正寻路，否则会影响任务发起的寻路
 	if not self.AutoPathDstMapID or not self.AutoPathDstPos then

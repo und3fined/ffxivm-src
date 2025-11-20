@@ -25,18 +25,19 @@ local UIBinderSetText = require("Binder/UIBinderSetText")
 --local MsgBoxUtil = require("Utils/MsgBoxUtil")
 local AudioUtil = require("Utils/AudioUtil")
 local MsgTipsUtil = require("Utils/MsgTipsUtil")
+local TipsUtil = require("Utils/TipsUtil")
+--local ProfUtil = require("Game/Profession/ProfUtil")
+--local MajorUtil = require("Utils/MajorUtil")
 local EquipmentMgr = _G.EquipmentMgr
 local KIL = _G.UE.UKismetInputLibrary
 local TimerMgr = _G.TimerMgr
+local FLinearColor = _G.UE.FLinearColor
+local LSTR = _G.LSTR
 
 ---@class MagicsparInlayMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field AttributeDisplay UFCanvasPanel
 ---@field BtnClick UFButton
----@field BtnExceed01 UFButton
----@field BtnExceed02 UFButton
----@field BtnExceed03 UFButton
----@field BtnExceed04 UFButton
 ---@field BtnExceedTipsBG UFButton
 ---@field BtnTipsBG UFButton
 ---@field Btn_BackAttribute CommBackBtnView
@@ -45,22 +46,20 @@ local TimerMgr = _G.TimerMgr
 ---@field Btn_Inlay CommBtnXLView
 ---@field Btn_NormalInlay CommBtnXLView
 ---@field Btn_Remove CommBtnXLView
+---@field CommonTitle CommonTitleView
 ---@field Common_Render2D_UIBP CommonRender2DView
 ---@field EFF UFCanvasPanel
 ---@field FCanvasPanel_0 UFCanvasPanel
----@field FImage_142 UFImage
 ---@field FImg_IconEquip UFImage
 ---@field FImg_RateBkg UFImage
 ---@field FText_Lack UFTextBlock
----@field FVerticalBox_63 UFVerticalBox
----@field ImgExceed01 UFImage
----@field ImgExceed02 UFImage
----@field ImgExceed03 UFImage
----@field ImgExceed04 UFImage
+---@field Green UFCanvasPanel
+---@field ImgBg2 UFImage
 ---@field InforBtnNew CommInforBtnView
 ---@field InforCommItem MagicsparInforItemView
 ---@field InlayPanel UFCanvasPanel
 ---@field InlayPanel1 UFCanvasPanel
+---@field InlaySuccessRate UFCanvasPanel
 ---@field InlayTips CommonTipsView
 ---@field MagicsparInlayTagSlot_UIBP_0 MagicsparInlayTagItemView
 ---@field MagicsparInlayTagSlot_UIBP_1 MagicsparInlayTagItemView
@@ -68,9 +67,12 @@ local TimerMgr = _G.TimerMgr
 ---@field MagicsparInlayTagSlot_UIBP_3 MagicsparInlayTagItemView
 ---@field MagicsparInlayTagSlot_UIBP_4 MagicsparInlayTagItemView
 ---@field MagicsparTips MagicsparTipsView
+---@field PanelAttribute UFCanvasPanel
 ---@field PanelExceedTips UFCanvasPanel
 ---@field PanelTips UFCanvasPanel
+---@field PanelTitle UFCanvasPanel
 ---@field PopupBG CommonPopUpBGView
+---@field Red UFCanvasPanel
 ---@field RichText_Rate URichTextBox
 ---@field RichText_SuccessRate UFTextBlock
 ---@field SlotItem01 MagicsparInlaySlotItemView
@@ -84,20 +86,13 @@ local TimerMgr = _G.TimerMgr
 ---@field SlotItem09 MagicsparInlaySlotItemView
 ---@field SlotItem10 MagicsparInlaySlotItemView
 ---@field SoltEmptyTips UFCanvasPanel
+---@field TableViewList UTableView
 ---@field TableView_Magicspar UTableView
 ---@field TableView_Slot UTableView
 ---@field TextExceed UFTextBlock
 ---@field TextTipsDescription UFTextBlock
----@field Text_Attack UFTextBlock
----@field Text_AttackNum URichTextBox
----@field Text_AttributeTitle UFTextBlock
----@field Text_Belief UFTextBlock
----@field Text_BeliefNum URichTextBox
----@field Text_Crit UFTextBlock
----@field Text_CritNum URichTextBox
----@field Text_Haste UFTextBlock
----@field Text_HasteNum URichTextBox
 ---@field ToogleGroupInlay UToggleGroup
+---@field Yellow UFCanvasPanel
 ---@field icon2 UFImage
 ---@field icon_Pre UFImage
 ---@field AnimIn UWidgetAnimation
@@ -113,10 +108,6 @@ function MagicsparInlayMainPanelView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.AttributeDisplay = nil
 	--self.BtnClick = nil
-	--self.BtnExceed01 = nil
-	--self.BtnExceed02 = nil
-	--self.BtnExceed03 = nil
-	--self.BtnExceed04 = nil
 	--self.BtnExceedTipsBG = nil
 	--self.BtnTipsBG = nil
 	--self.Btn_BackAttribute = nil
@@ -125,22 +116,20 @@ function MagicsparInlayMainPanelView:Ctor()
 	--self.Btn_Inlay = nil
 	--self.Btn_NormalInlay = nil
 	--self.Btn_Remove = nil
+	--self.CommonTitle = nil
 	--self.Common_Render2D_UIBP = nil
 	--self.EFF = nil
 	--self.FCanvasPanel_0 = nil
-	--self.FImage_142 = nil
 	--self.FImg_IconEquip = nil
 	--self.FImg_RateBkg = nil
 	--self.FText_Lack = nil
-	--self.FVerticalBox_63 = nil
-	--self.ImgExceed01 = nil
-	--self.ImgExceed02 = nil
-	--self.ImgExceed03 = nil
-	--self.ImgExceed04 = nil
+	--self.Green = nil
+	--self.ImgBg2 = nil
 	--self.InforBtnNew = nil
 	--self.InforCommItem = nil
 	--self.InlayPanel = nil
 	--self.InlayPanel1 = nil
+	--self.InlaySuccessRate = nil
 	--self.InlayTips = nil
 	--self.MagicsparInlayTagSlot_UIBP_0 = nil
 	--self.MagicsparInlayTagSlot_UIBP_1 = nil
@@ -148,9 +137,12 @@ function MagicsparInlayMainPanelView:Ctor()
 	--self.MagicsparInlayTagSlot_UIBP_3 = nil
 	--self.MagicsparInlayTagSlot_UIBP_4 = nil
 	--self.MagicsparTips = nil
+	--self.PanelAttribute = nil
 	--self.PanelExceedTips = nil
 	--self.PanelTips = nil
+	--self.PanelTitle = nil
 	--self.PopupBG = nil
+	--self.Red = nil
 	--self.RichText_Rate = nil
 	--self.RichText_SuccessRate = nil
 	--self.SlotItem01 = nil
@@ -164,20 +156,13 @@ function MagicsparInlayMainPanelView:Ctor()
 	--self.SlotItem09 = nil
 	--self.SlotItem10 = nil
 	--self.SoltEmptyTips = nil
+	--self.TableViewList = nil
 	--self.TableView_Magicspar = nil
 	--self.TableView_Slot = nil
 	--self.TextExceed = nil
 	--self.TextTipsDescription = nil
-	--self.Text_Attack = nil
-	--self.Text_AttackNum = nil
-	--self.Text_AttributeTitle = nil
-	--self.Text_Belief = nil
-	--self.Text_BeliefNum = nil
-	--self.Text_Crit = nil
-	--self.Text_CritNum = nil
-	--self.Text_Haste = nil
-	--self.Text_HasteNum = nil
 	--self.ToogleGroupInlay = nil
+	--self.Yellow = nil
 	--self.icon2 = nil
 	--self.icon_Pre = nil
 	--self.AnimIn = nil
@@ -197,6 +182,7 @@ function MagicsparInlayMainPanelView:OnRegisterSubView()
 	self:AddSubView(self.Btn_Inlay)
 	self:AddSubView(self.Btn_NormalInlay)
 	self:AddSubView(self.Btn_Remove)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Common_Render2D_UIBP)
 	self:AddSubView(self.InforBtnNew)
 	self:AddSubView(self.InforCommItem)
@@ -223,8 +209,9 @@ end
 
 function MagicsparInlayMainPanelView:OnInit()
 	self.ViewModel = MagicsparInlayVM.New()
-	self.AdapterSlotTableView = UIAdapterTableView.CreateAdapter(self, self.TableView_Slot)
+	self.AdapterSlotTableView = UIAdapterTableView.CreateAdapter(self, self.TableView_Slot, self.OnMagicsparSlotSelect, true)
 	self.AdapterItemTableView = UIAdapterTableView.CreateAdapter(self, self.TableView_Magicspar, self.OnMagicsparSelect, false)
+	self.AdapterAttrTableView =  UIAdapterTableView.CreateAdapter(self, self.TableViewList)
 	self.Btn_BackAttribute:AddBackClick(self, self.OnSelectBackClick)
 	--self.Btn_ClosePopup:SetCallback(self, self.HideModel)
 	-- 屏幕选中
@@ -243,14 +230,11 @@ function MagicsparInlayMainPanelView:OnInit()
 
 	self.bNormalReplace = false
 	--self.MajorActor = nil
-	self.Text_AttributeTitle:SetText(_G.LSTR(1060001)) -- "魔晶石镶嵌"
-	self.FText_Lack:SetText(_G.LSTR(1060020)) -- "缺少魔晶石"
-	self.RichText_SuccessRate:SetText(_G.LSTR(1060021)) --"成功率"
-	self.TextTipsDescription:SetText(_G.LSTR(1060022)) --"角色战斗职业所有穿戴装备所镶嵌的战斗类魔晶石属性具备上限，该上限会随着版本迭代逐步提升。超过上限的魔晶石属性将不会生效。"
-	self.Text_Belief:SetText(_G.LSTR(1060023)) -- "信念"
-	self.Text_Attack:SetText(_G.LSTR(1060024)) -- "直击"
-	self.Text_Haste:SetText(_G.LSTR(1060025)) -- "急速"
-	self.Text_Crit:SetText(_G.LSTR(1060026))  -- "暴击"
+	--self.Text_AttributeTitle:SetText(LSTR(1060001)) -- "魔晶石镶嵌"
+	self.CommonTitle:SetTextTitleName(LSTR(1060001))
+	self.FText_Lack:SetText(LSTR(1060020)) -- "缺少魔晶石"
+	self.RichText_SuccessRate:SetText(LSTR(1060021)) --"成功率"
+	self.TextTipsDescription:SetText(LSTR(1060022)) --"角色战斗职业所有穿戴装备所镶嵌的战斗类魔晶石属性具备上限，该上限会随着版本迭代逐步提升。超过上限的魔晶石属性将不会生效。"
 
 	self.UpdateTimerID = nil
 end
@@ -268,6 +252,8 @@ function MagicsparInlayMainPanelView:OnShow()
 	self.TriggerCount = 3
 	self.Btn_BanInlay.Button.ClickInterval = MagicsparDefine.BanBtnClickInterval
 	_G.LightMgr:EnableUIWeather(27, false)
+	--self:SetAttributeText()
+	self.ViewModel:UpdateAllMagicText()
 end
 
 function MagicsparInlayMainPanelView:OnHide()
@@ -291,12 +277,12 @@ function MagicsparInlayMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.Btn_NormalInlay.Button, self.OnNormalInlayClick)
 	UIUtil.AddOnClickedEvent(self, self.Btn_BanInlay.Button, self.OnBanInlayClick)
 	UIUtil.AddOnClickedEvent(self, self.Btn_Remove.Button, self.OnRemoveClick)
-	-- UIUtil.AddOnClickedEvent(self, self.InforBtn, self.OnInforBtnClick)
+
 	UIUtil.AddOnClickedEvent(self, self.BtnTipsBG, self.OnBtnTipsBGClick)
-	UIUtil.AddOnClickedEvent(self, self.BtnExceed01, self.OnBtnExceed, 1)
-	UIUtil.AddOnClickedEvent(self, self.BtnExceed02, self.OnBtnExceed, 2)
-	UIUtil.AddOnClickedEvent(self, self.BtnExceed03, self.OnBtnExceed, 3)
-	UIUtil.AddOnClickedEvent(self, self.BtnExceed04, self.OnBtnExceed, 4)
+	-- UIUtil.AddOnClickedEvent(self, self.BtnExceed01, self.OnBtnExceed, 1)
+	-- UIUtil.AddOnClickedEvent(self, self.BtnExceed02, self.OnBtnExceed, 2)
+	-- UIUtil.AddOnClickedEvent(self, self.BtnExceed03, self.OnBtnExceed, 3)
+	-- UIUtil.AddOnClickedEvent(self, self.BtnExceed04, self.OnBtnExceed, 4)
 	UIUtil.AddOnClickedEvent(self, self.BtnExceedTipsBG, self.OnBtnTipsBGClick)
 	UIUtil.AddOnClickedEvent(self, self.BtnClick, self.OnSingleClick)
 end
@@ -313,6 +299,8 @@ end
 function MagicsparInlayMainPanelView:OnRegisterBinder()
 	local Binders = {
 		--{ "Title", UIBinderSetText.New(self, self.Text_MagicsparInlay) },
+		-- 属性显示
+		{ "lstMagicsparAttributeDisplayItemVM", UIBinderUpdateBindableList.New(self, self.AdapterAttrTableView) },
 		{ "EquipmentIconPath", UIBinderSetBrushFromAssetPath.New(self, self.FImg_IconEquip) },
 		{ "SelectSlotIconPath", UIBinderSetBrushFromAssetPath.New(self, self.icon2) },
 		{ "SelectSlotIconPath", UIBinderSetBrushFromAssetPath.New(self, self.EFF_SweepMask_Inst_4) },
@@ -329,29 +317,28 @@ function MagicsparInlayMainPanelView:OnRegisterBinder()
 		{ "lstMagicsparInlayRecomItemVM", UIBinderUpdateBindableList.New(self, self.AdapterItemTableView) },
 		--{ "bMagicsparItemEmpty", UIBinderSetIsVisible.New(self, self.SoltEmptyTips) },
 		{ "CurRatio", UIBinderSetTextFormat.New(self, self.RichText_Rate, "%d%%") },
-		{ "bListSelectUse", UIBinderSetIsVisible.New(self, self.Btn_Remove, false) },
+		{ "bShowRemove", UIBinderSetIsVisible.New(self, self.Btn_Remove, false) },
 		{ "bListSelectUse", UIBinderSetIsVisible.New(self, self.InlayPanel1, true) },
-		{ "bRateUse", UIBinderSetIsVisible.New(self, self.RichText_SuccessRate, false) },
-		{ "bRateUse", UIBinderSetIsVisible.New(self, self.RichText_Rate, false) },
-		{ "bRateUse", UIBinderSetIsVisible.New(self, self.FImg_RateBkg, false) },
+		--{ "bRateUse", UIBinderSetIsVisible.New(self, self.RichText_SuccessRate, false) },
+		--{ "bRateUse", UIBinderSetIsVisible.New(self, self.RichText_Rate, false) },
+		--{ "bRateUse", UIBinderSetIsVisible.New(self, self.FImg_RateBkg, false) },
+		{ "bRateUse", UIBinderSetIsVisible.New(self, self.InlaySuccessRate, false) },
+		{ "bRedRate", UIBinderSetIsVisible.New(self, self.Red, false) },
+		{ "bYellowRate", UIBinderSetIsVisible.New(self, self.Yellow, false) },
+		{ "bGreenRate", UIBinderSetIsVisible.New(self, self.Green, false) },
+
 		{ "bSelect", UIBinderSetIsVisible.New(self, self.Btn_ClosePopup, true) },
 		{ "bSelect", UIBinderSetIsVisible.New(self, self.ToogleGroupInlay, false) },
-		{ "bShowMagicValue", UIBinderSetIsVisible.New(self, self.InforBtnNew, nil, true)},
-		{ "bShowMagicValue", UIBinderSetIsVisible.New(self, self.FVerticalBox_63, false) },
-		{ "bShowMagicValue", UIBinderSetIsVisible.New(self, self.FImage_142, false) },
-		--{ "bShowInform", UIBinderSetIsVisible.New(self, self.PanelTips, false) },
-		{ "bShowInform", UIBinderSetIsVisible.New(self, self.BtnTipsBG, nil, true) },
-		{ "bShowExceed", UIBinderSetIsVisible.New(self, self.BtnExceedTipsBG, nil, true) },
 
-		{ "BeliefNumText", UIBinderSetText.New(self, self.Text_BeliefNum)},
-		{ "AttackNumText", UIBinderSetText.New(self, self.Text_AttackNum)},
-		{ "HasteNumText", UIBinderSetText.New(self, self.Text_HasteNum)},
-		{ "CritNumText", UIBinderSetText.New(self, self.Text_CritNum)},
-		{ "bWarningBelief", UIBinderSetIsVisible.New(self, self.BtnExceed01, nil, true) },
-		{ "bWarningAttack", UIBinderSetIsVisible.New(self, self.BtnExceed02, nil, true) },
-		{ "bWarningHaste", UIBinderSetIsVisible.New(self, self.BtnExceed03, nil, true) },
-		{ "bWarningCrit", UIBinderSetIsVisible.New(self, self.BtnExceed04, nil, true) },
-		{ "ExceedText", UIBinderSetText.New(self, self.TextExceed)},
+		-- { "BeliefNumText", UIBinderSetText.New(self, self.Text_BeliefNum)},
+		-- { "AttackNumText", UIBinderSetText.New(self, self.Text_AttackNum)},
+		-- { "HasteNumText", UIBinderSetText.New(self, self.Text_HasteNum)},
+		-- { "CritNumText", UIBinderSetText.New(self, self.Text_CritNum)},
+		-- { "bWarningBelief", UIBinderSetIsVisible.New(self, self.BtnExceed01, nil, true) },
+		-- { "bWarningAttack", UIBinderSetIsVisible.New(self, self.BtnExceed02, nil, true) },
+		-- { "bWarningHaste", UIBinderSetIsVisible.New(self, self.BtnExceed03, nil, true) },
+		-- { "bWarningCrit", UIBinderSetIsVisible.New(self, self.BtnExceed04, nil, true) },
+
 		-- 倒计时button
 		{ "RemoveButtonText", UIBinderSetText.New(self, self.Btn_Remove)},
 		{ "StartButtonText", UIBinderSetText.New(self, self.Btn_Inlay)},
@@ -360,10 +347,31 @@ function MagicsparInlayMainPanelView:OnRegisterBinder()
 
 		-- 获取途径
 		{ "bMagicsparItemEmpty", UIBinderSetIsVisible.New(self, self.MagicsparTips, false) },
+		{ "bMagicsparItemEmpty", UIBinderValueChangedCallback.New(self, nil, self.OnMagicsparEmptyChanged) },
+
+		{ "RateBackgroundIcon", UIBinderSetBrushFromAssetPath.New(self, self.FImg_RateBkg) },
 	}
 	self:RegisterBinders(self.ViewModel, Binders)
 end
 
+-- function MagicsparInlayMainPanelView:SetAttributeText()
+-- 	if self.ViewModel.EquipProfType == self.ViewModel.ProfType.Gather then
+-- 		self.Text_Belief:SetText(_G.LSTR(1060047)) -- "采集力"
+-- 		self.Text_Attack:SetText(_G.LSTR(1060048)) -- "获得力"
+-- 		self.Text_Haste:SetText(_G.LSTR(1060049))  -- "鉴别力"
+-- 		self.Text_Crit:SetText("")
+-- 	elseif self.ViewModel.EquipProfType == self.ViewModel.ProfType.Produce then
+-- 		self.Text_Belief:SetText(_G.LSTR(1060050)) -- "制作力"
+-- 		self.Text_Attack:SetText(_G.LSTR(1060051)) -- "作业精度"
+-- 		self.Text_Haste:SetText(_G.LSTR(1060052))  -- "加工精度"
+-- 		self.Text_Crit:SetText("")
+-- 	else
+-- 		self.Text_Belief:SetText(_G.LSTR(1060023)) -- "信念"
+-- 		self.Text_Attack:SetText(_G.LSTR(1060024)) -- "直击"
+-- 		self.Text_Haste:SetText(_G.LSTR(1060025))  -- "急速"
+-- 		self.Text_Crit:SetText(_G.LSTR(1060026))   -- "暴击"
+-- 	end
+-- end
 -- 关闭商店
 function MagicsparInlayMainPanelView:MagicsparCloseShop()
 	if self.ViewModel == nil then
@@ -391,8 +399,11 @@ function MagicsparInlayMainPanelView:OnMagicsparSwitchEquip(Params)
 	end
 	if self.ViewModel and self.ViewModel.bSelect then
 		self:UpdateSelectedSlot()
+	else
+		self.ViewModel:UpdateAllMagicText()
 	end
 	self.ViewModel.bMagicsparItemEmpty = self.ViewModel.bMagicsparItemEmpty and self.ViewModel.bSelect
+	self.ViewModel.bShowRemove = self.ViewModel.bListSelectUse and self.ViewModel.bSelect
 end
 
 function MagicsparInlayMainPanelView:UpdateUI()
@@ -421,20 +432,21 @@ function MagicsparInlayMainPanelView:UpdateUI()
 	self:UpdateInlayAllSlot()
 	-- 背包和未装备的单独处理
 	if EquipmentMgr:IsEquiped(self.Params.GID) == false then
-		self.ViewModel.bShowMagicValue = false
+		--self.ViewModel.bShowMagicValue = false
 		self.Tag = "Bag"
-	else
-		self.ViewModel.bShowMagicValue = true
+	--else
+		--self.ViewModel.bShowMagicValue = true
 	end
-	self.ViewModel:UpdateAllMagicText()
+	--self.ViewModel:UpdateAllMagicText()
 end
 
 function MagicsparInlayMainPanelView:OnMagicsparSelect(Index, ItemData, ItemView)
 	local MagicsparInlayRecomItemVM = ItemData
 	self.MagicsparItemSelectIndex = Index
-	self.SelectGemResID = MagicsparInlayRecomItemVM.ResID
+	self.ViewModel.SelectGemResID = MagicsparInlayRecomItemVM.ResID
 	self.ViewModel.bListSelectUse = MagicsparInlayRecomItemVM.bUse
 	self.ViewModel.bRateUse = (not self.ViewModel.bListSelectUse) and self.ViewModel.bSelect
+	self.ViewModel.bShowRemove = self.ViewModel.bListSelectUse and self.ViewModel.bSelect
 	--self.ViewModel:UpdateMagicText(Index)
 	--设置预览
 	local bStartPreview = self.ViewModel.bMagicsparItemEmpty == false and
@@ -444,6 +456,7 @@ function MagicsparInlayMainPanelView:OnMagicsparSelect(Index, ItemData, ItemView
 	if bStartPreview then
 		self:SetPreviewState(self.ViewModel.CurSelect, true)
 	end
+	self.ViewModel:UpdateAllMagicText()
 end
 
 -- 获取鼠标点击事件的屏幕坐标
@@ -466,7 +479,7 @@ function MagicsparInlayMainPanelView:SetPreviewState(Index, bPreview)
 	local DisSpeed = 0.0
 	if bPreview == true then
 		-- 设置UMG预览魔晶石图标
-		StoneIconPath = self.ViewModel:GetStoneIconPath(self.SelectGemResID)
+		StoneIconPath = self.ViewModel:GetStoneIconPath(self.ViewModel.SelectGemResID)
 		Opacity = 0.4
 		Displace = 4.0
 		DisSpeed = 0.5
@@ -518,11 +531,14 @@ function MagicsparInlayMainPanelView:UpdateSelectedSlot()
 end
 
 function MagicsparInlayMainPanelView:OnNormalInlayClick()
+	if not EquipmentMgr:CheckCanOperate(LSTR(1050177)) then
+		return
+	end
 	-- 旋转状态无法生效
 	if self.bAnimationPlaying == true then return end
 	-- 普通镶嵌
 	if self.ViewModel.bMagicsparItemEmpty == true then
-		MsgTipsUtil.ShowTips(_G.LSTR(1060006)) --"没有可镶嵌的魔晶石"
+		MsgTipsUtil.ShowTips(LSTR(1060006)) --"没有可镶嵌的魔晶石"
 		return
 	end
 	if self.Item == nil then return end
@@ -533,15 +549,18 @@ function MagicsparInlayMainPanelView:OnNormalInlayClick()
 	else
 		self.bNormalReplace = false
 	end
-	EquipmentMgr:SendEquipInlay(self.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
+	EquipmentMgr:SendEquipInlay(self.ViewModel.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
 end
 
 function MagicsparInlayMainPanelView:OnBanInlayClick()
+	if not EquipmentMgr:CheckCanOperate(LSTR(1050177)) then
+		return
+	end
 	-- 旋转状态无法生效
 	if self.bAnimationPlaying == true then return end
 	-- 禁忌镶嵌
 	if self.ViewModel.bMagicsparItemEmpty == true then
-		MsgTipsUtil.ShowTips(_G.LSTR(1060006))--"没有可镶嵌的魔晶石"
+		MsgTipsUtil.ShowTips(LSTR(1060006))--"没有可镶嵌的魔晶石"
 		return
 	end
 	if self.Item == nil then return end
@@ -552,30 +571,33 @@ function MagicsparInlayMainPanelView:OnBanInlayClick()
 		--local Title = nil
 		--MsgBoxUtil.ShowMsgBoxTwoOp(self, Title,
 		--self.OnTipsSure)
-		local Content = _G.LSTR(1060009) --"是否确认禁忌镶嵌魔晶石？\n会自动卸下当前魔晶石，\n卸下后，重新镶嵌魔晶石有一定成功率"--, self.ViewModel.CurRatio
+		local Content = LSTR(1060009) --"是否确认禁忌镶嵌魔晶石？\n会自动卸下当前魔晶石，\n卸下后，重新镶嵌魔晶石有一定成功率"--, self.ViewModel.CurRatio
 		UIViewMgr:ShowView(UIViewID.MagicsparInlayTips, {self, self.OnTipsSure, Content})
 	else
-		EquipmentMgr:SendEquipInlay(self.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
+		EquipmentMgr:SendEquipInlay(self.ViewModel.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
 	end
 end
 
 function MagicsparInlayMainPanelView:OnTipsSure()
 	if (self.ShowTipsTag == 1) then
-		EquipmentMgr:SendEquipInlay(self.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
+		EquipmentMgr:SendEquipInlay(self.ViewModel.SelectGemResID, self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.ViewModel.EquipmentInUse)
 	elseif (self.ShowTipsTag == 2) then
 		EquipmentMgr:SendEquipUnInlay(self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.Tag)
 	end
 end
 
 function MagicsparInlayMainPanelView:OnRemoveClick()
+	if not EquipmentMgr:CheckCanOperate(LSTR(1050177)) then
+		return
+	end
 	-- 旋转状态无法生效
 	if self.bAnimationPlaying == true then return end
 	if self.ViewModel.MagicsparInlayCfg.Hole[self.ViewModel.CurSelect].Type == ProtoCommon.hole_type.HOLE_TYPE_NORMAL then
 		EquipmentMgr:SendEquipUnInlay(self.Params.GID, self.ViewModel.EquipmentPart, self.ViewModel.CurSelect, self.Tag)
 	else
 		self.ShowTipsTag = 2
-		local Title = _G.LSTR(1060008)--"卸下魔晶石"
-		local Content = _G.LSTR(1060010)--"确认卸下禁忌魔晶石吗？\n重新镶嵌有几率失败"
+		local Title = LSTR(1060008)--"卸下魔晶石"
+		local Content = LSTR(1060010)--"确认卸下禁忌魔晶石吗？\n重新镶嵌有几率失败"
 		UIViewMgr:ShowView(UIViewID.MagicsparInlayTips, {self, self.OnTipsSure, Content, Title})
 	end
 end
@@ -616,6 +638,7 @@ function MagicsparInlayMainPanelView:BackState()
 	self.ViewModel.bRateUse = false
 	self.ViewModel.CurSelect = 1
 	--self.ViewModel:UpdateMagicText(self.ViewModel.CurSelect)
+	self.ViewModel:UpdateAllMagicText()
 	self:ClearTimer()
 end
 
@@ -641,6 +664,7 @@ function MagicsparInlayMainPanelView:OnSlotSelectChange(NewValue, OldValue)
 	-- 处理空列表
 	if self.ViewModel.bMagicsparItemEmpty then
 		self.ViewModel.bListSelectUse = false
+		self.ViewModel.bShowRemove = false
 	end
 end
 
@@ -648,7 +672,7 @@ function MagicsparInlayMainPanelView:OnInlaySucc(Params)
 	UIViewMgr:HideView(UIViewID.MagicsparSucceedTips, true)
 	self:SetEffectToSceen()
 	if (Params.GID == self.Params.GID) then
-		self.ViewModel.SelectSlotIconPath = self.ViewModel:GetStoneIconPath(self.SelectGemResID)
+		self.ViewModel.SelectSlotIconPath = self.ViewModel:GetStoneIconPath(self.ViewModel.SelectGemResID)
 		local bSucc = Params.ResID ~= nil and Params.ResID > 0
 		local Index = self.ViewModel.CurSelect
 		if bSucc then
@@ -656,10 +680,11 @@ function MagicsparInlayMainPanelView:OnInlaySucc(Params)
 			--self:BackState()
 			self.ViewModel:SelectSlot(self.ViewModel.CurSelect)
 			self:OnInlaySlotClick(Index)
+			--MsgTipsUtil.ShowTips(LSTR(1060004))"镶嵌成功"
+			MsgTipsUtil.ShowInfoTextTips(3, LSTR(1060004), "", 3)
 			-- 播放镶嵌成功的动画
 			self:PlayAnimation(self.AnimSuccess)
-			--MsgTipsUtil.ShowTips(LSTR(1060004))"镶嵌成功"
-			UIViewMgr:ShowView(UIViewID.MagicsparSucceedTips)
+			--UIViewMgr:ShowView(UIViewID.MagicsparSucceedTips)
 			-- 控制按钮保护期
 			--self.UpdateTimerID = TimerMgr:AddTimer(self, self.SetButtonText, 0, 1.0, 4, nil, "MagicsparInlayMainPanelView:OnInlaySucc")
 			self.UpdateTimerID = self:RegisterTimer(self.SetButtonText, 0, 1.0, 4)
@@ -708,14 +733,14 @@ function MagicsparInlayMainPanelView:SetButtonText()
 		self:ClearTimer()
 	else
 		self.Btn_Remove:SetIsEnabled(false)
-		self.ViewModel.RemoveButtonText =  string.format(_G.LSTR(1060015), self.TriggerCount) --"卸下（%ds）"
+		self.ViewModel.RemoveButtonText =  string.format(LSTR(1060015), self.TriggerCount) --"卸下（%ds）"
 		self.TriggerCount = self.TriggerCount -1
 	end
 end
 
 function MagicsparInlayMainPanelView:ClearTimer()
 	-- 清除
-	self.ViewModel.RemoveButtonText =  _G.LSTR(1060016) --"卸下"
+	self.ViewModel.RemoveButtonText =  LSTR(1060016) --"卸下"
 	self.Btn_Remove:SetIsEnabled(true)
 	self.TriggerCount = 3
 	if self.UpdateTimerID ~= nil then
@@ -797,8 +822,9 @@ function MagicsparInlayMainPanelView:OnInlaySlotClick(Index, bKeep)
 	if Index ~= self.ViewModel.CurSelect then
 		return
 	end
-
+	local bLastNormal = self.ViewModel.bSelectNomal
 	self.ViewModel:SelectSlot(Index)
+	local bCurNormal = self.ViewModel.bSelectNomal
 	--if self.ViewModel.bSelect == false then
 		--第一次选中
 		--self:SetMagicsparOvalPosOrigin(Index)
@@ -807,7 +833,10 @@ function MagicsparInlayMainPanelView:OnInlaySlotClick(Index, bKeep)
 	local InlayRecomItemVM = self.ViewModel.lstMagicsparInlayRecomItemVM
 	if InlayRecomItemVM ~= nil then
 		for ItemIndex, ItemVM in ipairs(InlayRecomItemVM) do
-			if ItemVM.ResID == self.SelectGemResID then
+			if ItemVM.bUse then
+				CurIndex = ItemIndex
+				break
+			elseif ItemVM.ResID == self.ViewModel.SelectGemResID then
 				CurIndex = ItemIndex
 			end
 		end
@@ -816,6 +845,9 @@ function MagicsparInlayMainPanelView:OnInlaySlotClick(Index, bKeep)
 	if self.ViewModel.bMagicsparItemEmpty == false then
 		--self.AdapterItemTableView:SetSelectedIndex(1)
 		if bKeep == true and CurIndex > 1 and InlayRecomItemVM[CurIndex] ~= nil then
+			self.AdapterItemTableView:SetSelectedIndex(CurIndex)
+		elseif bKeep ~= true and bLastNormal == bCurNormal and InlayRecomItemVM[CurIndex] ~= nil and InlayRecomItemVM[CurIndex].ResID == self.ViewModel.SelectGemResID then
+		    --不同孔位切换时，同类型保持一致
 			self.AdapterItemTableView:SetSelectedIndex(CurIndex)
 		else
 			self.AdapterItemTableView:SetSelectedIndex(1)
@@ -835,6 +867,15 @@ function MagicsparInlayMainPanelView:OnInlaySlotClick(Index, bKeep)
 	if self.ViewModel.EquipmentCfg then
 		self.MagicsparTips:UpdateTipsData(self.ViewModel.EquipmentCfg.MateID, self.ViewModel.bSelectNomal)
 	end
+	self:SetCurRatioStyle()
+end
+
+function MagicsparInlayMainPanelView:SetCurRatioStyle()
+	self.ViewModel:UpdateRateStyle()
+	local LinearColor = FLinearColor.FromHex(self.ViewModel.RatioColor)
+	self.RichText_Rate:SetColorAndOpacity(LinearColor)
+	local OutlineColor = "2121217F"
+	UIUtil.TextBlockSetOutlineColorAndOpacityHex(self.RichText_Rate, OutlineColor)
 end
 
 -- drop
@@ -865,11 +906,16 @@ function MagicsparInlayMainPanelView:OnBtnTipsBGClick()
 	self.ViewModel.bShowExceed = false
 end
 
-function MagicsparInlayMainPanelView:OnBtnExceed(AttrIndex)
-	self.ViewModel.bShowExceed = true
-	self.ViewModel:UpdateExceedInform(AttrIndex)
-	self:PlayAnimation(self.AnimTipsIn)
-end
+-- function MagicsparInlayMainPanelView:OnBtnExceed(AttrIndex)
+-- 	--self.ViewModel.bShowExceed = true
+-- 	self.ViewModel:UpdateExceedInform(AttrIndex)
+-- 	--self:PlayAnimation(self.AnimTipsIn)
+-- 	local Key = "BtnExceed0"..AttrIndex
+-- 	local ItemView = self[Key]
+-- 	if ItemView ~= nil then
+-- 		TipsUtil.ShowInfoTips(self.ViewModel.ExceedText, ItemView, _G.UE.FVector2D(0, 0), _G.UE.FVector2D(0, 0))
+-- 	end
+-- end
 
 -- 加载魔晶石镶嵌三维模型
 function MagicsparInlayMainPanelView:LoadMagicModel()
@@ -891,10 +937,43 @@ function MagicsparInlayMainPanelView:LoadMagicModel()
 			-- 一些状态更新
 			self.ViewModel.bSelect = false
 			self.ViewModel.bListSelectUse = false
+			self.ViewModel.bShowRemove = false
 			self.ViewModel.bMagicsparItemEmpty = self.ViewModel.bMagicsparItemEmpty and self.ViewModel.bSelect
         end
     end
     self.Common_Render2D_UIBP:CreateSimpleRenderActor(MagicsparDefine.RenderActorPath, false, CallBack)
+end
+
+
+function MagicsparInlayMainPanelView:OnMagicsparSlotSelect(Index)
+	-- 右侧孔位跳转
+	-- 过场动画和旋转动画一起
+	if Index == 1 then
+		self:OnInlayClick()
+	else
+		-- 播放音效
+		self:SetMagicAudioState(2, true)
+		self.bPlayRotation = false
+			--self:PlayRotationAnimation(SelectedIndex, nil, false)
+		local function CallBack()
+			-- 过场音效停止
+			self:SetMagicAudioState(2, false)
+			self:PlayActorAnimRotate(false, Index)
+			--print("aaa   self.ViewModel.bSelect=", self.ViewModel.bSelect)
+
+			-- 判断下次开始时间
+			--local GapTime = (self.RotateEndTime - self.RotateStartTime) / 5.0
+			--self.LastEndTime = self.RotateStartTime + GapTime*(SelectedIndex)
+		end
+		-- 过渡动画
+		--self.RenderActor:SetInlayStatusChangeAnimation(true, SelectedIndex)
+		self:PlayActorSequenceByTime(1, 1.0, 2.0, 1.0, false, false, CallBack)
+		self:PlayActorAnimRotate(false, Index)
+		self.ViewModel.bSelect = true
+		self.LastSelectedSlot = Index
+		self.ViewModel.CurSelect = Index
+		self.bPlayRotation = false
+	end
 end
 
 -- 处理点击选中事件
@@ -980,7 +1059,9 @@ function MagicsparInlayMainPanelView:PlayRotationAnimationPositive(SelectedIndex
 			AdditionalCallback()
 		end
 		-- 按钮恢复
-		self:OperateButton(true)
+		if self.ViewModel.bMagicsparItemEmpty == false then
+			self:OperateButton(true)
+		end
 	end
 	-- 按钮置灰
 	if self.LastSelectedSlot ~= SelectedIndex then
@@ -1057,7 +1138,10 @@ function MagicsparInlayMainPanelView:PlayRotationAnimationReverse(SelectedIndex,
 		if AdditionalCallback ~= nil then
 			AdditionalCallback()
 			-- 按钮恢复
-			self:OperateButton(true)
+			--self:OperateButton(true)
+			if self.ViewModel.bMagicsparItemEmpty == false then
+				self:OperateButton(true)
+			end
 		end
 	end
 	-- 按钮置灰
@@ -1157,7 +1241,9 @@ function MagicsparInlayMainPanelView:PlayActorAnimRotate(bBack, SelectedIndex)
     end
 	local function FinishedCallback()
 		-- 按钮恢复
-		self:OperateButton(true)
+		if self.ViewModel.bMagicsparItemEmpty == false then
+		   self:OperateButton(true)
+		end
 		self:ClearTimer()
 	end
 	local SeqPlayer = self.RenderActor:GetSequencePlayer(2)
@@ -1235,6 +1321,12 @@ function MagicsparInlayMainPanelView:SetActorCameraFOV()
     end
     local FOV = self.RenderActor:GetFOV()
     self.Common_Render2D_UIBP:SetCameraFOV(FOV)
+end
+
+function MagicsparInlayMainPanelView:OnMagicsparEmptyChanged(NewValue, OldValue)
+	self.ViewModel.bRateUse = (not self.ViewModel.bListSelectUse) and self.ViewModel.bSelect and (not NewValue)
+	local bEnable = (not self.bAnimationPlaying) and (not NewValue)
+	self:OperateButton(bEnable)
 end
 
 return MagicsparInlayMainPanelView

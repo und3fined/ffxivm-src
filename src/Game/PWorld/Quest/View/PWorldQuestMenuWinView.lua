@@ -179,7 +179,7 @@ function PWorldQuestMenuWinView:OnRegisterUIEvent()
 					_G.PWorldMgr:SendLeavePWorld()
 					self:CustomHide()
 				end,
-				nil, nil, _G.LSTR(1320060))
+				nil, _G.LSTR(1320172), _G.LSTR(1320173))
 		else
 			_G.UIViewMgr:ShowView(_G.UIViewID.PWorldExitTaskWin, {
 				TextTitle = LSTR(1320106),

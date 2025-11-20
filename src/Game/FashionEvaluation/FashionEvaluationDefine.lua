@@ -155,21 +155,6 @@ local PartSortFun = function(a, b)
     return a.Part < b.Part
 end
 
--- 达成奖励条件
-local AwardConditionContent = {
-    [1] = LSTR(1120063), -- ”参与挑战“
-    [2] = LSTR(1120064), -- ”达到%s分“
-    [3] = LSTR(1120064), -- ”达到%s分“
-    [4] = LSTR(1120064), -- ”达到%s分“
-}
-
--- 开场白内容
-local PrologueContent = {
-    [1] = LSTR(1120065), -- ”近期再金蝶游乐场中涌现了许多时尚的年轻人，其中有五位格外亮眼“
-    [2] = LSTR(1120066), -- ”本周的主题是“%s”，先看看时尚达人们的表现吧“
-    [3] = LSTR(1120067), -- ”也许他们的穿搭能够带给你灵感“
-}
-
 -- LCut
 local LCutSequenceList = {
     [1] = {21600119,21600120,21600121}, -- 0-59分
@@ -222,8 +207,6 @@ local FashionEvaluationDefine = {
     OwnScoreUKey = OwnScoreUKey,
     MatchScoreUKey = MatchScoreUKey,
     SuperMatchScoreUKey = SuperMatchScoreUKey,
-    AwardConditionContent = AwardConditionContent,
-    PrologueContent = PrologueContent,
     LCutSequenceList = LCutSequenceList,
     SearchHint = SearchHint,
     TrackRedDotName = TrackRedDotName,

@@ -277,7 +277,7 @@ function GoldRescueChick:ShowInfoAfterSignup(InGameMgr)
                     _G.TipsQueueMgr:AddPendingShowTips(TutorialConfig)
                     -- END
                 end
-                
+
                 do
                     -- 小雏鸟单独的玩法节点
                     local function ShowGoldSauserStageTutorial(Params)

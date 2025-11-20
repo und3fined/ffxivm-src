@@ -29,17 +29,19 @@ local LSTR = _G.LSTR
 ---@field BG Comm2FrameMView
 ---@field BagSlot BagSlotView
 ---@field BtnExpand CommBtnLView
----@field CommSingleBox5 CommSingleBoxView
+---@field BtnIcon UFButton
 ---@field FHorizontalConsume UFHorizontalBox
 ---@field HorizonBox UFHorizontalBox
 ---@field ImgIcon UFImage
 ---@field Money1 CommMoneySlotView
+---@field RichTextHint URichTextBox
 ---@field RichTextNumber URichTextBox
 ---@field TextCurrent UFTextBlock
 ---@field TextExpandto UFTextBlock
----@field TextName UFTextBlock
 ---@field TextNeed UFTextBlock
 ---@field TextNumber1 UFTextBlock
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local NewBagExpandWinView = LuaClass(UIView, true)
 
@@ -48,17 +50,19 @@ function NewBagExpandWinView:Ctor()
 	--self.BG = nil
 	--self.BagSlot = nil
 	--self.BtnExpand = nil
-	--self.CommSingleBox5 = nil
+	--self.BtnIcon = nil
 	--self.FHorizontalConsume = nil
 	--self.HorizonBox = nil
 	--self.ImgIcon = nil
 	--self.Money1 = nil
+	--self.RichTextHint = nil
 	--self.RichTextNumber = nil
 	--self.TextCurrent = nil
 	--self.TextExpandto = nil
-	--self.TextName = nil
 	--self.TextNeed = nil
 	--self.TextNumber1 = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -67,7 +71,6 @@ function NewBagExpandWinView:OnRegisterSubView()
 	self:AddSubView(self.BG)
 	self:AddSubView(self.BagSlot)
 	self:AddSubView(self.BtnExpand)
-	self:AddSubView(self.CommSingleBox5)
 	self:AddSubView(self.Money1)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -75,23 +78,20 @@ end
 function NewBagExpandWinView:OnInit()
 	self.Binders = {
 		{ "ItemNumberText", UIBinderSetText.New(self, self.RichTextNumber) },
-		{ "NameText", UIBinderSetText.New(self, self.TextName) },
 
 		{ "ConsumeScoreVisible", UIBinderSetIsVisible.New(self, self.FHorizontalConsume) },
 		{ "CostScoreText", UIBinderSetTextFormatForMoney.New(self, self.TextNumber1) },
 		{ "CostScoreColor", UIBinderSetColorAndOpacityHex.New(self, self.TextNumber1) },
 		{ "ScoreIconImg", UIBinderSetBrushFromAssetPath.New(self, self.ImgIcon) },
-		{ "ExpandBtnEnable", UIBinderSetIsEnabled.New(self, self.BtnExpand)},
+		{ "ExpandBtnEnable", UIBinderSetIsEnabled.New(self, self.BtnExpand, false, true)},
 
 		{ "CurrentNum", UIBinderSetText.New(self, self.TextCurrent)},
 		{ "EnlargeNum", UIBinderSetText.New(self, self.TextExpandto)},
 	
-		{ "ScoreTipsText", UIBinderSetText.New(self, self.CommSingleBox5.TextContent) },
-		{ "ScoreInfoVisible", UIBinderSetIsVisible.New(self, self.ImgIcon) },
-		{ "ScoreInfoVisible", UIBinderSetIsVisible.New(self, self.TextNumber1) },
 		{ "CostPropsVisible", UIBinderSetIsVisible.New(self, self.HorizonBox) },
-		{ "CostPropsVisible", UIBinderSetIsVisible.New(self, self.CommSingleBox5) },
 	
+		{ "TipsDecText", UIBinderSetText.New(self, self.RichTextHint) },
+		
 	}
 end
 
@@ -102,8 +102,9 @@ end
 function NewBagExpandWinView:OnShow()
 	BagExpandWinVM:UpdateVM(BagMgr.Enlarge)
 	if BagExpandWinVM.ConsumeScoreVisible == true then
-		self.CommSingleBox5:SetChecked(true)
-		BagExpandWinVM:CheckConsumeScore(true)
+		self.BtnExpand:SetButtonText(LSTR(10002))
+	else
+		self.BtnExpand:SetButtonText(LSTR(990077))
 	end
 	local ScoreID = BagExpandWinVM.ScoreID
 	self.Money1:UpdateView(ScoreID, false, nil, true)
@@ -114,9 +115,9 @@ function NewBagExpandWinView:OnHide()
 end
 
 function NewBagExpandWinView:OnRegisterUIEvent()
-	UIUtil.AddOnClickedEvent(self, self.CommSingleBox5.ToggleButton, self.OnBtnClickedSingleBox)
 	UIUtil.AddOnClickedEvent(self, self.BtnExpand.Button, self.OnBtnExpandClick)
 	UIUtil.AddOnClickedEvent(self, self.BagSlot.BtnSlot, self.OnBtnSlotClick)
+	UIUtil.AddOnClickedEvent(self, self.BtnIcon, self.OnBtnMoneyIconClick)
 end
 
 function NewBagExpandWinView:OnRegisterGameEvent()
@@ -128,16 +129,9 @@ function NewBagExpandWinView:OnRegisterBinder()
 	self.BagSlot:SetParams({Data = BagExpandWinVM.BagSlotVM})
 
 	self.TextNeed:SetText(LSTR(990063))
-	self.CommSingleBox5:SetText(LSTR(990050))
 	self.BG:SetTitleText(LSTR(990076))
-	self.BtnExpand:SetButtonText(LSTR(990077))
 end
 
-function NewBagExpandWinView:OnBtnClickedSingleBox(ToggleButton, State)
-	local IsChecked = self.CommSingleBox5:GetChecked()
-	self.CommSingleBox5:SetChecked(IsChecked)
-	BagExpandWinVM:CheckConsumeScore(IsChecked)
-end
 
 function NewBagExpandWinView:OnBtnExpandClick()
 	local NeedCost = BagExpandWinVM.CostScoreText
@@ -161,6 +155,11 @@ function NewBagExpandWinView:OnBtnExpandClick()
 	self:Hide()
 end
 
+function NewBagExpandWinView:OnBtnMoneyIconClick()
+	local ScoreID = BagExpandWinVM.ScoreID
+	ItemTipsUtil.ShowTipsByResID(ScoreID, self.ImgIcon)
+end
+
 function NewBagExpandWinView:OnBtnSlotClick()
 	local CfgRow = BagEnlargeCfg:FindCfgByKey(BagMgr.Enlarge)
 	if CfgRow then
@@ -171,10 +170,6 @@ end
 function NewBagExpandWinView:OnMoneyUpdate()
 	if BagExpandWinVM.ConsumeScoreVisible == true then
 		BagExpandWinVM:UpdateVM(BagMgr.Enlarge)
-		if BagExpandWinVM.ConsumeScoreVisible == true then
-			self.CommSingleBox5:SetChecked(true)
-			BagExpandWinVM:CheckConsumeScore(true)
-		end
 	end
 end
 

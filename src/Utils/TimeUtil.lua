@@ -42,6 +42,33 @@ function TimeUtil.GetTimeFromString(TimeString)
 	return Time
 end
 
+--- 把服务器时区的时间字符串转成玩家本地时间，需要跟服务器时间做计算的推荐用这个
+---@param TimeString string    @"%Y-%m-%d %H:%M:%S"
+---@return number Time          @时间戳（秒）
+function TimeUtil.GetTimeFromServerZoneString(TimeString)
+    local ServerTimeZone = 8    --这里先认为服务器在东8区，后面要以实际布置的服务器时区为准
+	local ServerTimeZoneSec = ServerTimeZone * 3600
+    local TimeNow = os.time()
+	local CurTimeZoneSec = os.difftime(TimeNow, os.time(os.date("!*t", TimeNow)))
+    local IsDst = os.date("*t", TimeNow).isdst    -- 获取玩家是否在夏令时
+	if IsDst then
+		CurTimeZoneSec = CurTimeZoneSec + 3600  -- 夏令时会把时间往后调1个小时，所以计算时也要推迟1小时
+	end
+
+	local Year, Month, Day, Hour, Minute, Second = string.match(TimeString, "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+	local TimeTable = {
+		year = Year,
+		month = Month,
+		day = Day,
+		hour = Hour,
+		min = Minute,
+		sec = Second - ServerTimeZoneSec + CurTimeZoneSec
+	}
+
+	local Time = os.time(TimeTable)
+	return Time
+end
+
 --[[
 -- 暂未使用
 ---GetPlatformTimeSeconds
@@ -188,7 +215,7 @@ end
 ---@return number
 function TimeUtil.GetAozySec()
 	local ServerTime = TimeUtil.GetServerLogicTime()
-	local Sec = math.floor(ServerTime * AozyTimeDefine.RealSec2AozyMin) * 60
+	local Sec = ServerTime / AozyTimeDefine.BellEqRealSecs % AozyTimeDefine.BellsEverySun
 	return Sec
 end
 
@@ -352,10 +379,21 @@ function TimeUtil.GetMondayZero(TimeStamp)
     return Monday_zero
 end
 
---- 根据时间戳计算当天的零点
+--- 根据时间戳计算当天的零点(UTC0)
 function TimeUtil.GetCurTimeStampZero(TimeStamp)
 	if not TimeStamp then return end
 	local DateTable = os.date("!*t", TimeStamp)
+	DateTable.hour = 0
+	DateTable.min = 0
+	DateTable.sec = 0
+
+	return os.time(DateTable)
+end
+
+--- 根据时间戳计算本地的零点
+function TimeUtil.GetCurTimeStampZeroLocal(TimeStamp)
+	if not TimeStamp then return end
+	local DateTable = os.date("*t", TimeStamp)
 	DateTable.hour = 0
 	DateTable.min = 0
 	DateTable.sec = 0
@@ -560,6 +598,56 @@ function TimeUtil.GetOpenServerOffsetTS(OffDay, OffHour)
 	end
 	local OffsetTS = (Days + OffDay) * 86400 + (DayStartHour + OffHour) * 3600
 	return OffsetTS - ZoneTS --转回时区时间
+end
+
+---GetExceedingTime @当前时间是否超过目标时间
+---@param TargetTimeSpan number@目标时间戳
+---@return boolean
+function TimeUtil.GetExceedingTime(TargetTimeSpan)
+	if not TargetTimeSpan then
+		FLOG_ERROR("[TimeUtil] GetExceedingTime TargetTimeSpan is nil")
+		return true
+	end
+	local ServerTime = TimeUtil.GetServerLogicTime()
+	return ServerTime > TargetTimeSpan
+end
+
+function TimeUtil:IsSameDay(timestamp1, timestamp2)
+	if not timestamp1 or timestamp1 == 0 or not timestamp2 or timestamp2 == 0 then
+		return false
+	end
+	local date1 = os.date("*t", timestamp1)
+	local date2 = os.date("*t", timestamp2)
+	return date1.year == date2.year and date1.month == date2.month and date1.day == date2.day
+end
+
+---@return integer
+function TimeUtil.BeijingTime()
+	local utc_time = os.date("!*t")  -- 获取 UTC 时间
+    utc_time.hour = utc_time.hour + 8  -- 增加时区偏移
+    
+    -- 处理跨日计算
+    if utc_time.hour >= 24 then
+        utc_time.hour = utc_time.hour - 24
+        utc_time.day = utc_time.day + 1
+    end
+    
+    return os.time(utc_time)
+end
+
+---@return integer
+function TimeUtil.ParseBeijingTime(str, pattern)
+    local year, month, day, hour, min, sec = str:match(pattern or "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+    local timestamp = os.time({
+        year = tonumber(year),
+        month = tonumber(month),
+        day = tonumber(day),
+        hour = tonumber(hour),
+        min = tonumber(min),
+        sec = tonumber(sec)
+    })
+    local utc_timestamp = timestamp - os.time(os.date("!*t", timestamp))
+    return timestamp + 28800 - utc_timestamp
 end
 
 return TimeUtil

@@ -37,6 +37,7 @@ local GameGlobalCfg = require("TableCfg/GameGlobalCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local EquipmentVM = require("Game/Equipment/VM/EquipmentVM")
 local DataReportUtil = require("Utils/DataReportUtil")
+local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 
 local CS_CMD_TOURING_BAND = ProtoCS.CS_CMD.CS_CMD_TOURING_BAND
 local SUB_MSG_ID = ProtoCS.Game.TouringBand.Cmd
@@ -45,6 +46,7 @@ local GameNetworkMgr = nil
 local PWorldMgr = nil
 local BandTimelineMgr = nil
 local USaveMgr = nil
+local FLOG_INFO = nil
 
 ---@class TouringBand : MgrBase
 local TouringBandMgr = LuaClass(MgrBase)
@@ -58,16 +60,16 @@ function TouringBandMgr:OnBegin()
     PWorldMgr = _G.PWorldMgr
     BandTimelineMgr = _G.BandTimelineMgr
     GameNetworkMgr = _G.GameNetworkMgr
+    FLOG_INFO = _G.FLOG_INFO
     self.CurBandID = 0
     self.TouringBandGuideVM = nil
     self.TouringBandData = {}
     self.IsEnterInteractive = false
-    self.CustomizeRedDotList = {}
     self.BandMapData = {}
     self.IsAreaEnter = false
+    self.IsVisionEnter = false
     self.TgLogListenTime = 0
     self.TestBeginTime = 0
-    self:ReadSaveKeyData()
 end
 
 function TouringBandMgr:OnRegisterNetMsg()
@@ -75,7 +77,7 @@ function TouringBandMgr:OnRegisterNetMsg()
     self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.QueryBandMapData, self.OnNetMsgQueryBandMapData)
     self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.BandCollectedUnlock, self.OnNetMsgBandCollectedUnlock)
     self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.ClickBandEmotion, self.OnNetMsgBandBandClickBandEmotion)
-    self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.BandInteractReport, self.OnNetMsgBandInteractReport)
+    self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.BatchInteractReport, self.OnNetMsgBandInteractReport)
     self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.BandInteractFinish, self.OnNetMsgBandInteractFinish)
     self:RegisterGameNetMsg(CS_CMD_TOURING_BAND, SUB_MSG_ID.BandBirthNotify, self.OnNetMsgBandBirthNotify)
 end
@@ -84,9 +86,12 @@ function TouringBandMgr:OnRegisterGameEvent()
     self:RegisterGameEvent(EventID.RoleLoginRes, self.OnGameEventLoginRes)
     self:RegisterGameEvent(EventID.PWorldMapEnter, self.OnGameEventPWorldMapEnter)
     self:RegisterGameEvent(EventID.PWorldMapExit, self.OnGameEventPWorldMapExit)
+    self:RegisterGameEvent(EventID.AppEnterForeground, self.OnAppEnterForeground)
     self:RegisterGameEvent(EventID.PostEmotionEnter, self.OnGameEventPostEmotionEnter)
 
     self:RegisterGameEvent(EventID.TouringBandAreaEnter, self.OnTouringBandAreaEnter)
+    self:RegisterGameEvent(EventID.TouringBandVisionEnter, self.OnTouringBandVisionEnter)
+    
     self:RegisterGameEvent(EventID.TouringBandStatesNotify, self.OnTouringBandStatesNotify)
     self:RegisterGameEvent(EventID.TouringBandForceExitInteractive, self.OnTouringBandForceExitInteractive)
     
@@ -97,9 +102,9 @@ function TouringBandMgr:OnEnd()
     self.CurBandID = 0
     self.TouringBandData = {}
     self.IsEnterInteractive = false
-    self.CustomizeRedDotList = {}
     self.BandMapData = {}
     self.IsAreaEnter = false
+    self.IsVisionEnter = false
     self.TgLogListenTime = 0
 
     self.TouringBandGuideVM = nil
@@ -112,7 +117,6 @@ function TouringBandMgr:OnEnd()
         self.TouringBandActionBtnVM:OnEnd()
     end
     self.TouringBandActionBtnVM = nil
-    self:CancelReqTimer()
 end
 
 function TouringBandMgr:OnShutdown()
@@ -161,7 +165,6 @@ function TouringBandMgr:OnNetMsgQueryCollection(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgQueryCollection: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgQueryCollection: " .. _G.table_to_string_block(MsgBody, 10))
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -181,7 +184,6 @@ function TouringBandMgr:OnNetMsgQueryBandMapData(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgQueryBandMapData: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgQueryBandMapData: " .. _G.table_to_string_block(MsgBody))
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -208,7 +210,6 @@ function TouringBandMgr:OnNetMsgBandCollectedUnlock(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgBandCollectedUnlock: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgBandCollectedUnlock: " .. _G.table_to_string_block(MsgBody))
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -232,7 +233,6 @@ function TouringBandMgr:OnNetMsgBandBandClickBandEmotion(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgBandBandClickBandEmotion: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgBandBandClickBandEmotion: " .. _G.table_to_string_block(MsgBody))
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -290,6 +290,7 @@ function TouringBandMgr:TryOpenTouringBandStoryUnLockTips()
 
                 -- Tglog 3 解锁乐团故事
                 DataReportUtil.ReportTouringBandFlowData("3", PWorldMgr:GetCurrMapResID(), self.CurBandID, tostring(ID))
+                self:SetMostRecentBandID(self.CurBandID, TouringBandDefine.RECORD_TYPE.STORY, TimeUtil.GetServerLogicTime())
             end
         end
 
@@ -304,7 +305,6 @@ function TouringBandMgr:OnNetMsgBandInteractReport(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgBandInteractReport: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgBandInteractReport: " .. _G.table_to_string_block(MsgBody))
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -341,10 +341,6 @@ function TouringBandMgr:OnNetMsgBandInteractFinish(MsgBody)
         TouringBandUtil.Err("TouringBandMgr:OnNetMsgBandInteractFinish: MsgBody is nil")
         return
     end
-    TouringBandUtil.Log("TouringBandMgr.OnNetMsgBandInteractFinish: " .. _G.table_to_string_block(MsgBody))
-
-    self.bIsReqFinishInteract = false
-    self:CancelReqTimer()
 
     if self:IsTouringBandUnLock() == false then
         return
@@ -391,8 +387,6 @@ function TouringBandMgr:OnNetMsgBandInteractFinish(MsgBody)
     local bFans = self:IsBandFansByID(self.CurBandID)
     local ReportParams = { BandListen = { IsListening = true, IsFans = bFans }}
     _G.ClientReportMgr:SendClientReport(ProtoCS.ReportType.ReportTypeBandListen, ReportParams)
-    
-    self:SetMostRecentBandID(SaveKey.TouringBandFansBandID, self.CurBandID)
 end
 
 function TouringBandMgr:OnNetMsgBandBirthNotify(MsgBody)
@@ -479,30 +473,50 @@ function TouringBandMgr:BandClickEmotionReq(BandID, EmotionID)
     GameNetworkMgr:SendMsg(CS_CMD_TOURING_BAND, Cmd, Params)
 end
 
----BandInteractReportReq
----@param BandID number
----@param ReportType number
----@param InEventID number
-function TouringBandMgr:BandInteractReportReq(BandID, ReportType, InEventID)
+-----BandInteractReportReq
+-----@param BandID number
+-----@param ReportType number
+-----@param InEventID number
+--function TouringBandMgr:BandInteractReportReq(BandID, ReportType, InEventID)
+--    if self:IsTouringBandUnLock() == false then
+--        return
+--    end
+--
+--    local Cmd = SUB_MSG_ID.BandInteractReport
+--    local Params = {}
+--    Params.Cmd = Cmd
+--    Params.InteractReport = {}
+--    Params.InteractReport.BandID = BandID
+--    Params.InteractReport.ReportType = ReportType
+--    Params.InteractReport.EventID = InEventID
+--    GameNetworkMgr:SendMsg(CS_CMD_TOURING_BAND, Cmd, Params)
+--end
+
+-- 批量上报
+function TouringBandMgr:BatchInteractReportReq(BandID, ReportEntries)
     if self:IsTouringBandUnLock() == false then
         return
     end
 
-    local Cmd = SUB_MSG_ID.BandInteractReport
+    if not ReportEntries or #ReportEntries <= 0 then
+        return
+    end
+    
+    local Cmd = SUB_MSG_ID.BatchInteractReport
     local Params = {}
     Params.Cmd = Cmd
-    Params.InteractReport = {}
-    Params.InteractReport.BandID = BandID
-    Params.InteractReport.ReportType = ReportType
-    Params.InteractReport.EventID = InEventID
-    GameNetworkMgr:SendMsg(CS_CMD_TOURING_BAND, Cmd, Params)
-end
+    Params.BatchInteractReport = {}
+    Params.BatchInteractReport.BandID = BandID
+    Params.BatchInteractReport.Report = {}
 
-function TouringBandMgr:CancelReqTimer()
-    if self.ReqFinishInteractTimerID then
-        _G.TimerMgr:CancelTimer(self.ReqFinishInteractTimerID)
+    for _, Entry in ipairs(ReportEntries) do
+        table.insert(Params.BatchInteractReport.Report, {
+            ReportType = Entry.ReportType,
+            EventID = Entry.EventID
+        })
     end
-    self.ReqFinishInteractTimerID = nil
+    
+    GameNetworkMgr:SendMsg(CS_CMD_TOURING_BAND, Cmd, Params)
 end
 
 ---BandInteractFinishReq
@@ -511,19 +525,7 @@ function TouringBandMgr:BandInteractFinishReq(BandID)
     if self:IsTouringBandUnLock() == false then
         return
     end
-
-    -- 重复请求会有报错, 在请求前处理一下
-    if self.bIsReqFinishInteract then
-        return
-    end
-    self.bIsReqFinishInteract = true
-    self:CancelReqTimer()
-    -- 超过300秒还没收到回包就不管了
-    local MaxReqFinishInteractTime = 300
-    self.ReqFinishInteractTimerID = _G.TimerMgr:AddTimer(self, function()
-        self.bIsReqFinishInteract = false
-    end, MaxReqFinishInteractTime, 0, 1)
-
+    
     local Cmd = SUB_MSG_ID.BandInteractFinish
     local Params = {}
     Params.Cmd = Cmd
@@ -556,7 +558,7 @@ function TouringBandMgr:PlayBandSong(SongID)
         return false
     end
 
-    if self.IsAreaEnter then
+    if self.IsVisionEnter then
         local Timeline = BandTimelineMgr:GetCurEffectiveRangeTimeline()
         if Timeline ~= nil then
             self.CurSoundEntityID = Timeline:GetBandEobjEntityID()
@@ -583,7 +585,9 @@ function TouringBandMgr:StopBandSong()
         self.CurSongID = nil
     end
     
-    _G.UE.UBGMMgr.Get():Resume()
+    if not self.IsVisionEnter then
+        _G.UE.UBGMMgr.Get():Resume()
+    end
 
     if self.CurSoundEntityID ~= nil then
         local Actor = ActorUtil.GetActorByEntityID(self.CurSoundEntityID)
@@ -618,12 +622,12 @@ function TouringBandMgr:GetFanWinVM()
     return self.FanWinVM
 end
 
-function TouringBandMgr:OpenTouringBandView(InFromViewID)
+function TouringBandMgr:OpenTouringBandView(InFromViewID, InBandID)
     if self:IsTouringBandUnLock() == false then
         return
     end
 
-    UIViewMgr:ShowView(UIViewID.TouringBandGuidePanelView, { FromViewID = InFromViewID })
+    UIViewMgr:ShowView(UIViewID.TouringBandGuidePanelView, { FromViewID = InFromViewID, BandID = InBandID })
 end
 
 function TouringBandMgr:OpenTouringBandFanWinView(BandID)
@@ -634,7 +638,7 @@ function TouringBandMgr:OpenTouringBandFanWinView(BandID)
     local PosterVM = self:GetPosterVM()
     PosterVM:UpdateVM(BandID, false)
     
-    self:GetFanWinVM():UpdateVM(BandID)
+    self:GetFanWinVM():UpdateVM(BandID) 
     UIViewMgr:ShowView(UIViewID.TouringBandFanWinView)
 end
 
@@ -659,7 +663,7 @@ function TouringBandMgr:GetAllBandData()
     return Ret
 end
 
----IsBandUnLockByID
+---是否相遇，解锁
 ---@param BandID number
 function TouringBandMgr:IsBandUnLockByID(BandID)
     local Data = table.find_item(self.TouringBandData, BandID, "ID")
@@ -674,7 +678,7 @@ function TouringBandMgr:IsBandUnLockByID(BandID)
     return false
 end
 
----IsBandFansByID
+---是否是粉丝，达成了互动条件 
 ---@param BandID number
 function TouringBandMgr:IsBandFansByID(BandID)
     local Data = table.find_item(self.TouringBandData, BandID, "ID")
@@ -798,7 +802,6 @@ function TouringBandMgr:OnGameEventPWorldMapEnter(Params)
     if IsCheck then
         self:QueryBandMapDataReq(MapResID)
     end
-    self:CancelReqTimer()
 end
 
 function TouringBandMgr:OnGameEventPWorldMapExit()
@@ -810,7 +813,30 @@ function TouringBandMgr:OnGameEventPWorldMapExit()
     --EventMgr:SendEvent(EventID.TouringBandMajorHudChanged, { IsVisible = false })
     local ReportParams = { BandListen = { IsListening = false, IsFans = false }}
     _G.ClientReportMgr:SendClientReport(ProtoCS.ReportType.ReportTypeBandListen, ReportParams)
-    self:CancelReqTimer()
+end
+
+function TouringBandMgr:OnAppEnterForeground()
+    if self:IsTouringBandUnLock() == false then
+        return
+    end
+    
+    BandTimelineMgr:CleanAllTimeline()
+
+    local MapResID = PWorldMgr:GetCurrMapResID()
+    local IsCheck = false
+    local AllCfg = TouringBandTimelineCfg:FindAllCfg()
+    local k, v = next(AllCfg)
+    while k do
+        if v.MapID == MapResID then
+            IsCheck = true
+            break
+        end
+        k, v = next(AllCfg, k)
+    end
+
+    if IsCheck then
+        self:QueryBandMapDataReq(MapResID)
+    end
 end
 
 function TouringBandMgr:OnGameEventPostEmotionEnter(Params)
@@ -940,12 +966,14 @@ end
 ---TouringBandConditionMet
 ---@param InReportType number ProtoCS.Game.TouringBand.ReportType
 ---@param InReportID number
+---@param ShouldReport boolean 新增可选参数，默认true保持原上报逻辑
 ---@return boolean
-function TouringBandMgr:TouringBandConditionMet(InReportType, InReportID)
+function TouringBandMgr:TouringBandConditionMet(InReportType, InReportID, ShouldReport)
     if self:IsTouringBandUnLock() == false then
         return false
     end
 
+    ShouldReport = ShouldReport ~= false  -- 当未传参或传true时保持上报
     local Timeline = BandTimelineMgr:GetCurEffectiveRangeTimeline()
     if Timeline == nil then
         return false
@@ -1023,8 +1051,75 @@ function TouringBandMgr:TouringBandConditionMet(InReportType, InReportID)
         end
     end
 
-    self:BandInteractReportReq(BandID, InReportType, InReportID)
+    if ShouldReport then
+        local ReportEntries = {}
+        table.insert(ReportEntries, { ReportType = InReportType, EventID = InReportID})
+        self:BatchInteractReportReq(BandID, ReportEntries)
+    end
     return true
+end
+
+function TouringBandMgr:CheckAndReportConditions(BandCfg)
+    local ReportEntries = {} -- 存储所有需要上报的条目
+    
+    if BandCfg.PetID > 0 then
+        local CompanionID = _G.CompanionMgr:GetCallingOutCompanion()
+        if self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Companion, CompanionID, false) then
+            table.insert(ReportEntries, {
+                ReportType = ProtoCS.Game.TouringBand.ReportType.Companion,
+                EventID = CompanionID
+            })
+        end
+    end
+
+    if BandCfg.AppearanceIDs ~= nil then
+        if nil ~= EquipmentVM.ItemList then
+            for _, Item in pairs(EquipmentVM.ItemList) do
+                if self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Equip, Item.ResID, false) then
+                    table.insert(ReportEntries, {
+                        ReportType = ProtoCS.Game.TouringBand.ReportType.Equip,
+                        EventID = Item.ResID
+                    })
+                    break
+                end
+            end
+        end
+
+        local Suits = _G.WardrobeMgr:GetCurAppearanceList()
+        for _, Value in pairs(Suits) do
+            if self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Appearance, Value.Avatar, false) then
+                table.insert(ReportEntries, {
+                    ReportType = ProtoCS.Game.TouringBand.ReportType.Appearance,
+                    EventID = Value.Avatar
+                })
+                break
+            end
+        end
+    end
+
+    -- 批量上报
+    if #ReportEntries > 0 then
+        self:BatchInteractReportReq(BandCfg.ID, ReportEntries)
+        return true
+    end
+    return false
+end
+
+function TouringBandMgr:OnTouringBandVisionEnter(Params)
+    if self:IsTouringBandUnLock() == false then
+        return
+    end
+
+    local TimelineID = Params.TimelineID
+    local IsVisionEnter = Params.IsVisionEnter
+    
+    local TimelineCfg = TouringBandTimelineCfg:FindCfgByKey(TimelineID)
+    if TimelineCfg == nil then
+        TouringBandUtil.Err("ERROR TouringBandMgr.OnTouringBandVisionEnter TimelineCfg == nil, ID : " .. TimelineID)
+        return
+    end
+    
+    self.IsVisionEnter = IsVisionEnter
 end
 
 function TouringBandMgr:OnTouringBandAreaEnter(Params)
@@ -1091,7 +1186,6 @@ function TouringBandMgr:OnTouringBandAreaEnter(Params)
 
     self.TgLogListenTime = TimeUtil.GetServerLogicTime()
     self.CurBandID = TimelineCfg.BandID
-    self:CancelReqTimer()
 
     local BandCfg = TouringBandCfg:FindCfgByKey(self.CurBandID)
     if BandCfg == nil then
@@ -1108,6 +1202,7 @@ function TouringBandMgr:OnTouringBandAreaEnter(Params)
     local HintText = ""
     if not BandMapData.IsUnlock then
         self:BandCollectedUnlockReq(self.CurBandID)
+        self:SetMostRecentBandID(self.CurBandID, TouringBandDefine.RECORD_TYPE.UNLOCK, TimeUtil.GetServerLogicTime())
         HintText = _G.LSTR(450028)  --首次相遇
         -- Tglog 1 参与巡回乐团玩法
         DataReportUtil.ReportTouringBandFlowData("1", PWorldMgr:GetCurrMapResID(), self.CurBandID)
@@ -1117,32 +1212,7 @@ function TouringBandMgr:OnTouringBandAreaEnter(Params)
     local Status = BandMapData.Status
     local IsMet = false
     if Status == ProtoCS.Game.TouringBand.BandInteractStatus.UnFinish then
-        local PetID = BandCfg.PetID
-        if PetID > 0 then
-            local CompanionID = _G.CompanionMgr:GetCallingOutCompanion()
-            IsMet = self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Companion, CompanionID)
-        end
-
-        if not IsMet and BandCfg.AppearanceIDs ~= nil then
-            if nil ~= EquipmentVM.ItemList then
-                for _, Item in pairs(EquipmentVM.ItemList) do
-                    IsMet = self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Equip, Item.ResID)
-                    if IsMet then
-                        break
-                    end
-                end
-            end
-
-            if not IsMet then
-                local Suits = _G.WardrobeMgr:GetCurAppearanceList()
-                for _, Value in pairs(Suits) do
-                    IsMet = self:TouringBandConditionMet(ProtoCS.Game.TouringBand.ReportType.Appearance, Value.Avatar)
-                    if IsMet then
-                        break
-                    end
-                end
-            end
-        end
+        IsMet = self:CheckAndReportConditions(BandCfg)
     end
 
     if not IsMet then
@@ -1163,8 +1233,8 @@ function TouringBandMgr:OnTouringBandAreaEnter(Params)
     local IsFans = self:IsBandFansByID(self.CurBandID)
     local ReportParams = { BandListen = { IsListening = IsPerformState, IsFans = IsFans }}
     _G.ClientReportMgr:SendClientReport(ProtoCS.ReportType.ReportTypeBandListen, ReportParams)
-
-    self:SetMostRecentBandID(SaveKey.TouringBandMostRecentBandID, self.CurBandID)
+    
+    self:SetMostRecentBandID(self.CurBandID, TouringBandDefine.RECORD_TYPE.MEET, TimeUtil.GetServerLogicTime())
     
     -- 显示UI
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
@@ -1343,32 +1413,42 @@ end
 function TouringBandMgr:CheckActionBtnCanVisible()
     local StateComp = MajorUtil.GetMajorStateComponent()
     if StateComp ~= nil then
-        if StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_DEAD) or
-                StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT) or
-                StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_SPELL) then
+        if StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_DEAD) then
+            FLOG_INFO("[TB] Action button hidden: Player is in dead state")
+            return false
+        elseif StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_COMBAT) then
+            FLOG_INFO("[TB] Action button hidden: Player is in combat state")
+            return false
+        elseif StateComp:IsInNetState(ProtoCommon.CommStatID.COMM_STAT_SPELL) then
+            FLOG_INFO("[TB] Action button hidden: Player is in spell state")
             return false
         end
     end
 
-    if (_G.TutorialGuideMgr:GetGuideQueue() or {})[1] == 59 then
+    if (_G.TutorialGuideMgr:GetGuideQueue() or {})[1] == TouringBandDefine.GUIDE_QUEUE_ID then
+        FLOG_INFO("[TB] Action button hidden: In tutorial guide phase 59")
         return false
     end
 
     local Timeline = BandTimelineMgr:GetTimelineByBandID(self.CurBandID)
     if not Timeline then
+        FLOG_INFO(string.format("[TB] Action button hidden: No timeline found for band ID %d", self.CurBandID))
         return false
     end
 
     local IsMoveInEnd = BandTimelineMgr:GetTimelineState(Timeline.TimelineID, TouringBandDefine.STATES_TYPE.MOVE_IN_END)
     if not IsMoveInEnd then
+        FLOG_INFO(string.format("[TB] Action button hidden: Timeline %d not in MOVE_IN_END phase", Timeline.TimelineID))
         return false
     end
 
     local IsMoveOut = BandTimelineMgr:GetTimelineState(Timeline.TimelineID, TouringBandDefine.STATES_TYPE.MOVE_OUT_READY)
     if IsMoveOut then
+        FLOG_INFO(string.format("[TB] Action button hidden: Timeline %d entered MOVE_OUT_READY phase", Timeline.TimelineID))
         return false
     end
-    
+
+    FLOG_INFO(string.format("[TB] Action button visible: Timeline %d state normal", Timeline.TimelineID))
     return true
 end
 
@@ -1387,6 +1467,7 @@ function TouringBandMgr:OnTouringBandNetStateUpdate(Params)
     local StateType = Params.IntParam1
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
     if HiddenStates[StateType] and Params.BoolParam1 then
+        FLOG_INFO(string.format("[TB] Action button force hidden by state %s and param %s", tostring(StateType), tostring(Params.BoolParam1)))
         ActionBtnVM.IsVisible = false
     else
         ActionBtnVM.IsVisible = self:CheckActionBtnCanVisible()
@@ -1399,6 +1480,7 @@ function TouringBandMgr:OnMajorSingBarBegin(EntityID, SingStateID)
     end
 
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
+    FLOG_INFO("[TB] Action button force hidden by OnMajorSingBarBegin")
     ActionBtnVM.IsVisible = false
 end
 
@@ -1413,6 +1495,7 @@ end
 
 function TouringBandMgr:OnSkillChantViewShow()
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
+    FLOG_INFO("[TB] Action button force hidden by OnSkillChantViewShow")
     ActionBtnVM.IsVisible = false
 end
 
@@ -1423,6 +1506,7 @@ end
 
 function TouringBandMgr:OnGameEventMajorDead()
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
+    FLOG_INFO("[TB] Action button force hidden by OnGameEventMajorDead")
     ActionBtnVM.IsVisible = false
 end
 
@@ -1454,6 +1538,7 @@ function TouringBandMgr:OnMainPanelShowBuffTips(Params)
     local IsShowTips = Params
     local ActionBtnVM = self:GetTouringBandActionBtnVM()
     if IsShowTips then
+        FLOG_INFO("[TB] Action button force hidden by OnMainPanelShowBuffTips")
         ActionBtnVM.IsVisible = false
     else
         ActionBtnVM.IsVisible = self:CheckActionBtnCanVisible()
@@ -1570,48 +1655,83 @@ function TouringBandMgr:OnPlayAction(EmotionID)
     return false
 end
 
-function TouringBandMgr:SetMostRecentBandID(Key, Value)
-    USaveMgr.SetInt(Key, Value, true)
+function TouringBandMgr:SetMostRecentBandID(BandId, Type, Time)
+    local HistoryStr = USaveMgr.GetString(SaveKey.TouringBandRecordsID, "", true)
+    local History = string.split(HistoryStr, ",") or {}
+
+    -- 如果是相遇类型，清理旧记录
+    if Type == TouringBandDefine.RECORD_TYPE.MEET then
+        for i = #History, 1, -1 do
+            local Parts = string.split(History[i], ":")
+            if #Parts == 3 and tonumber(Parts[2]) == Type then
+                table.remove(History, i)
+            end
+        end
+    end
+
+    table.insert(History, string.format("%d:%d:%d", BandId, Type, Time or TimeUtil.GetServerTime()))
+    USaveMgr.SetString(SaveKey.TouringBandRecordsID, table.concat(History, ","), true)
 end
 
 function TouringBandMgr:GetMostRecentBandID()
-    local MostRecentBandID = USaveMgr.GetInt(SaveKey.TouringBandFansBandID, 0, true)
-    if MostRecentBandID == 0 then
-        MostRecentBandID = USaveMgr.GetInt(SaveKey.TouringBandMostRecentBandID, 0, true)
-    end
-    return MostRecentBandID
-end
+    local HistoryStr = USaveMgr.GetString(SaveKey.TouringBandRecordsID, "", true)
+    if HistoryStr == "" then return nil end
 
-function TouringBandMgr:GetCustomizeRedDotList()
-    return self.CustomizeRedDotList or {}
-end
+    -- 使用首字母大写的表结构
+    local HighPriority = { Time = 0, BandId = nil }  -- 处理UNLOCK和STORY类型
+    local LowPriority = { Time = 0, BandId = nil }   -- 处理MEET类型
 
-function TouringBandMgr:AddCustomizeRedDotName(RedDotName)
-    for _, NodeName in pairs(self.CustomizeRedDotList) do
-        if RedDotName == NodeName then
-            return
+    for Entry in string.gmatch(HistoryStr, "[^,]+") do
+        local Parts = string.split(Entry, ":")
+        if #Parts == 3 then
+            local BandId = tonumber(Parts[1])
+            local RecordType = tonumber(Parts[2])
+            local Timestamp = tonumber(Parts[3])
+
+            if BandId and RecordType and Timestamp then
+                -- 处理高优先级类型
+                if RecordType == TouringBandDefine.RECORD_TYPE.UNLOCK or RecordType == TouringBandDefine.RECORD_TYPE.STORY then
+                    if Timestamp > HighPriority.Time then
+                        HighPriority.Time = Timestamp
+                        HighPriority.BandId = BandId
+                    end
+                    -- 处理低优先级类型
+                elseif RecordType == TouringBandDefine.RECORD_TYPE.MEET then
+                    if Timestamp > LowPriority.Time then
+                        LowPriority.Time = Timestamp
+                        LowPriority.BandId = BandId
+                    end
+                end
+            end
         end
     end
 
-    table.insert(self.CustomizeRedDotList, RedDotName)
-    self:WriteSaveKeyData()
+    return HighPriority.BandId or LowPriority.BandId
+end
+ 
+function TouringBandMgr:CleanBandRecord()
+    USaveMgr.SetString(SaveKey.TouringBandRecordsID, "", true)
 end
 
-function TouringBandMgr:ReadSaveKeyData()
-    local HideRedDotStr = USaveMgr.GetString(SaveKey.TouringBandStoryRedDot, "", true)
-    self.CustomizeRedDotList = string.split(HideRedDotStr, ",")
-end
+function TouringBandMgr:RemoveBandRecord(TargetBandId, TargetType)
+    local HistoryStr = USaveMgr.GetString(SaveKey.TouringBandRecordsID, "", true)
+    if HistoryStr == "" then return end
 
-function TouringBandMgr:WriteSaveKeyData()
-    local HideRedDotStr = ""
-    for Index, HideNodeName in pairs(self.CustomizeRedDotList) do
-        if Index == 1 then
-            HideRedDotStr = HideNodeName
-        else
-            HideRedDotStr = string.format("%s,%s", HideRedDotStr, HideNodeName)
+    local NewHistory = {}
+
+    for Entry in string.gmatch(HistoryStr, "[^,]+") do
+        local Parts = string.split(Entry, ":")
+        if #Parts == 3 then
+            local CurrentBandId = tonumber(Parts[1])
+            local CurrentType = tonumber(Parts[2])
+
+            if not (CurrentBandId == TargetBandId and CurrentType == TargetType) then
+                table.insert(NewHistory, Entry)
+            end
         end
     end
-    USaveMgr.SetString(SaveKey.TouringBandStoryRedDot, HideRedDotStr, true)
+
+    USaveMgr.SetString(SaveKey.TouringBandRecordsID, table.concat(NewHistory, ","), true)
 end
 
 function TouringBandMgr:PlaySharedGroup(ID)
@@ -1681,10 +1801,26 @@ function TouringBandMgr:GetTotalFansCount()
     return TotalFans
 end
 
+-- 判断指定乐队是否处于等待互动状态
+-- @param BandID number 乐队唯一标识
+-- @return boolean 是否处于等待状态
+function TouringBandMgr:IsBandWaitStateByID(BandID)
+    local BandMapData = self:GetBandMapDataByID(BandID)
+    if BandMapData ~= nil then
+        return BandMapData.Status == ProtoCS.Game.TouringBand.BandInteractStatus.Wait
+    end
+    
+    return false
+end
+
 -- 静音函数
 function TouringBandMgr:EnterTouringBandSilentMode()
-    if not self:IsCurTouringBandValid() then
-        return
+    if not self:IsTouringBandUnLock() then
+        return false
+    end
+
+    if not self.IsVisionEnter then
+        return false
     end
     
     local Timeline = BandTimelineMgr:GetCurEffectiveRangeTimeline()
@@ -1693,21 +1829,30 @@ function TouringBandMgr:EnterTouringBandSilentMode()
         local Actor = ActorUtil.GetActorByEntityID(self.SilentModeEntityID)
         if Actor then
             _G.UE.UAkGameplayStatics.SetOutputBusVolume(0, Actor)
+            return true
         end
     end
+    return false
 end
 
 -- 恢复函数
 function TouringBandMgr:ExitTouringBandSilentMode()
-    if not self:IsCurTouringBandValid() then
-        return
+    if not self:IsTouringBandUnLock() then
+        return false
+    end
+
+    if not self.IsVisionEnter then
+        return false
     end
 
     if self.SilentModeEntityID ~= nil then
         local Actor = ActorUtil.GetActorByEntityID(self.SilentModeEntityID)
+        _G.UE.UBGMMgr.Get():Pause()
         _G.UE.UAkGameplayStatics.SetOutputBusVolume(1, Actor)
         self.SilentModeEntityID = nil
+        return true
     end
+    return false
 end
 
 ---查询当前是否在聆听状态中
@@ -1739,52 +1884,73 @@ end
 -- 复制的情感动作接口
 function TouringBandMgr:IsEmotionValidState()
     if MajorUtil.GetMajorCurHp() <= 0 then
-        return
+        return false
     end
     if MajorUtil.IsMajorCombat() then
-        return
+        return false
     end
     local Major = MajorUtil.GetMajor()
     if not Major then
-        return
+        return false
     end
     if Major:GetIsSequenceing() then
-        return	--过场动画
+        return false	--过场动画
     end
     --if Major:GetRideComponent():IsInRide() then
     --    return
     --end
     if Major:IsInFly() then
-        return
+        return false
     end
     local Velocity = Major.CharacterMovement.Velocity
     if Velocity:Size() > 0.01 then
-        return
+        return false
     end
     if PWorldMgr:GetCrystalPortalMgr():GetIsTransferring() then
-        return	--传送中
+        return false	--传送中
     end
     if _G.FishMgr:IsInFishState() then
-        return
+        return false
     end
     if _G.SingBarMgr:GetMajorIsSinging() then
-        return	--读条中
+        return false	--读条中
     end
     if _G.NpcDialogMgr:IsDialogPlaying() then
-        return	--对话中
+        return false	--对话中
     end
     if _G.GatherMgr:IsGatherState() then
-        return	--采集中
+        return false	--采集中
     end
     if _G.CrafterMgr:GetIsMaking() then
-        return	--制作中
+        return false	--制作中
     end
     if _G.GoldSaucerMiniGameMgr:CheckIsInMiniGame() then
-        return
+        return false
     end
     return true
 end
 
+function TouringBandMgr:GetCurTimelineLeftTime()
+    if not self:IsCurTouringBandValid() then
+        return 0
+    end
+
+    local Timeline = BandTimelineMgr:GetTimelineByBandID(self.CurBandID)
+    if Timeline == nil then
+        return 0
+    end
+
+    if Timeline.IsLoop then
+        return 0
+    end
+    
+    local CurTime = TimeUtil.GetServerLogicTime()
+    local TimelineEndTime = Timeline.EndTime
+    
+    return math.floor(TimelineEndTime - CurTime);
+end
+
+------------------------------------ 下面是给测试用的GM --------------------------------------------------
 function TouringBandMgr:TestCreateTimeline(ID, Time)
     self.TestBeginTime = TimeUtil.GetServerLogicTime() - (Time or 0)
     BandTimelineMgr:CreateBandTimeline(ID or 1200301001, self.TestBeginTime)
@@ -1792,6 +1958,93 @@ end
 
 function TouringBandMgr:DestroyBandTimeline(ID)
     BandTimelineMgr:DestroyBandTimeline(ID or 1200301001)
+end
+
+function TouringBandMgr:ShowBandConditions(BandID)
+    local Conditions = {}
+
+    local BandCfg = TouringBandCfg:FindCfgByKey(BandID)
+    if not BandCfg then
+        return "无效ID"
+    end
+
+    if #BandCfg.AppearanceIDs > 0 then
+        table.insert(Conditions, BandCfg.AppearanceDesc .. "" .. "("..table.concat(BandCfg.AppearanceIDs, ",")..")")
+        for __, AppID in pairs(BandCfg.AppearanceIDs) do
+            local ClosetData = ClosetCfg:FindCfgByKey(AppID)
+            if ClosetData ~= nil then
+                table.insert(Conditions, "装备ID："..ClosetData.EquipID)
+            end
+        end
+    end
+
+    if BandCfg.PetID > 0 then
+        local PetCfg = require("TableCfg/CompanionCfg"):FindCfgByKey(BandCfg.PetID)
+        if PetCfg then
+            table.insert(Conditions, "宠物名字："..PetCfg.Name .. " 宠物ID："..BandCfg.PetID)
+        end
+    end
+
+    if BandCfg.EmotionID > 0 then
+        local EmotionCfg = require("TableCfg/EmotionCfg"):FindCfgByKey(BandCfg.EmotionID)
+        if EmotionCfg then
+            table.insert(Conditions, "情感动作："..EmotionCfg.EmotionName .. "  情感动作ID："..BandCfg.EmotionID)
+        end
+    end
+
+    return #Conditions > 0 and table.concat(Conditions, "\n") or "无解锁条件"
+end
+
+function TouringBandMgr:GetCurMapTimelineID(BandID)
+    local MapResID = PWorldMgr:GetCurrMapResID()
+    local AllCfg = TouringBandTimelineCfg:FindAllCfg()
+    local Ret = {}
+    local k, v = next(AllCfg)
+    while k do
+        if v.MapID == MapResID and v.BandID == BandID then
+            table.insert(Ret, v.ID)
+        end
+        k, v = next(AllCfg, k)
+    end
+    return Ret
+end
+
+function TouringBandMgr:GetRedDotName(BandID, StoryID)
+    if StoryID ~= nil and StoryID > 0 then
+        return TouringBandDefine.RED_DOT_NAME .. '/' .. tostring(BandID) .. '/Story/' .. tostring(StoryID)
+    end
+    return TouringBandDefine.RED_DOT_NAME .. '/' .. tostring(BandID) .. '/UnLock'
+end
+
+function TouringBandMgr:UpdateBandRedDot()
+    local AllCfg = TouringBandCfg:FindAllCfg()
+    for __, Value in pairs(AllCfg) do
+        local BandID = Value.ID
+        local IsUnLock = self:IsBandUnLockByID(BandID)
+        if IsUnLock then
+            local RedDotName = self:GetRedDotName(BandID)
+            local IsSaveDel = RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+            if not IsSaveDel then
+                RedDotMgr:AddRedDotByName(RedDotName, nil, true, TouringBandDefine.RED_DOT_CHECKID)
+            end
+        end
+        
+        local StoryStateList = self:GetBandStoryLockState(BandID)
+        for Index = 1, #StoryStateList do
+            if not StoryStateList[Index].Lock then
+                local RedDotName = self:GetRedDotName(BandID, Index)
+                local IsSaveDel = RedDotMgr:GetIsSaveDelRedDotByName(RedDotName)
+                if not IsSaveDel then
+                    RedDotMgr:AddRedDotByName(RedDotName, nil, true, TouringBandDefine.RED_DOT_CHECKID)
+                end
+            end
+        end
+    end
+end
+
+function TouringBandMgr:GMCleanBand()
+    _G.GMMgr:ReqGM("entertain band clean")
+    self:CleanBandRecord()
 end
 
 return TouringBandMgr

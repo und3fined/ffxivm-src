@@ -65,7 +65,7 @@ function CraftingLogMaterialListItemVM:UpdataTextNum(MakeCount)
 	end
 	local LabelInfo
 	if SpendNumber > HaveCount then
-		LabelInfo =string.format("<span color=\"#FF0000FF\">%s</>", HaveCount)
+		LabelInfo =string.format("<span color=\"#dc5868\">%s</>", HaveCount)
 	else
 		LabelInfo =string.format("<span color=\"#FFFFFFFF\">%s</>", HaveCount)
 	end

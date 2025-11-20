@@ -105,18 +105,16 @@ function BuddyStatusPageVM:UpdateBuddyHp()
 	end
 
 	local AttributeComponent = ActorUtil.GetActorAttributeComponent(BuddyMgr.BuddyEntityID)
-    if nil == AttributeComponent then
-        return
+    if AttributeComponent then
+        local CurHP = AttributeComponent:GetCurHp()
+    	local MaxHP = AttributeComponent:GetMaxHp()
+		self.HpText = string.format("%d/%d", CurHP, MaxHP)
+		if MaxHP == 0 then
+			self.HPProgressPercent = 0
+		else
+			self.HPProgressPercent = CurHP / MaxHP
+		end
     end
-
-    local CurHP = AttributeComponent:GetCurHp()
-    local MaxHP = AttributeComponent:GetMaxHp()
-	self.HpText = string.format("%d/%d", CurHP, MaxHP)
-	if MaxHP == 0 then
-		self.HPProgressPercent = 0
-	else
-		self.HPProgressPercent = CurHP / MaxHP
-	end
 
 	self:UpdateBuddyTime()
 	self:UpdateBuddyState()
@@ -139,6 +137,7 @@ function BuddyStatusPageVM:UpdateBuddyTime()
 	else
 		self.CallTimeText = string.format("%s/%s", TimeUtil.GetFmtTime_MS(RemainTime), TimeUtil.GetFmtTime_MS(MaxCD))
 	end
+
 	if MaxCD == 0 then
 		self.CallTimePercent = 0
 	else
@@ -146,6 +145,7 @@ function BuddyStatusPageVM:UpdateBuddyTime()
 	end
 
 	local BuddyActivity = BuddyMgr:CanBuddyActivity()
+	
 	self.HPProgressEnable = BuddyActivity
 	self.CallTimeEnable = BuddyActivity
 

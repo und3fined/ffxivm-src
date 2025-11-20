@@ -168,17 +168,6 @@ end
 function FootPrintDataPanelView:OnTableViewTabSelectChanged(_, ItemData, _, byClick)
 	local CurParentType = ItemData.ParentType
 	FootPrintMgr:SelectTheParentType(CurParentType)
-	local Params = self.Params
-	if not Params then
-		return
-	end
-
-	local ViewModel = Params.Data
-	if not ViewModel then
-		return
-	end
-
-	ViewModel.LastSelectedTypeID = 0
 end
 
 function FootPrintDataPanelView:OnTreeViewTabsSelectChanged(Index, ItemData, _)
@@ -225,6 +214,13 @@ function FootPrintDataPanelView:OnNotifyUpdateMapRewardState(NewValue, OldValue)
 		return
 	end
 	self:PlayAnimation(self.AnimLight)
+	local Bottle = self.FootPrintBottleItem_UIBP
+	if Bottle then
+		local BottleLightAnim = Bottle.AnimLight
+		if BottleLightAnim then
+			Bottle:PlayAnimation(BottleLightAnim)
+		end
+	end
 
 	local Params = self.Params
 	if not Params then

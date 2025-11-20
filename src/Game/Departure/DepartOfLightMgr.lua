@@ -115,81 +115,77 @@ function DepartOfLightMgr:OnGotoPlayStyle(Index)
     end
 
     local JumpType =  1
-    local JumpParam = 12
     -- Fate、衣橱、战斗职业直接解锁
     local CurrActivityInfo = DepartOfLightVM:GetCurrActivityInfo()
     local ActivityID = CurrActivityInfo and CurrActivityInfo.ActivityID or 0
-    local NodeInfo = DepartOfLightVM:GetActivityNodeHeadInfo(ActivityID) --NodeList[1]
-    if NodeInfo then
-        local NodeDetail = DepartOfLightVMUtils.GetActivityNodeDetail(NodeInfo.NodeID)
-        JumpType =  NodeDetail and NodeDetail.JumpType  -- 配置
-        JumpParam = NodeDetail and NodeDetail.JumpParam -- 配置
-    end
     local ActivityDescInfo = DepartOfLightVMUtils.GetActivityDescInfoByActivityID(ActivityID)
     local ModuleID = ActivityDescInfo and ActivityDescInfo.ModuleID
+    local JumpParam = ActivityDescInfo and ActivityDescInfo.JumpParam or 0
     -- 制作笔记、采集笔记、钓鱼笔记\金蝶游乐场需要解锁
     local _IsModuelOpen, QuestName = DepartOfLightVM:GetModuleOpenInfo(ModuleID)
     if not _IsModuelOpen then
         -- 冒险系统解锁
         local _IsAdventureOpen, _ = DepartOfLightVM:GetModuleOpenInfo(EModuleID.ModuleIDAdventure)
-        if ModuleID == EModuleID.ModuleIDMakerNote then
-            if _IsAdventureOpen then
-                JumpParam = 22 -- 职业任务界面->最前的能工巧匠职业
-            else
-                JumpParam = 38 -- 角色界面->最前的能工巧匠职业
-            end
-        end
-
-        -- 解锁采矿工/园艺工后开启
-        if ModuleID == EModuleID.ModuleIDGatherNote then
-            if _IsAdventureOpen then
-                _G.AdventureCareerMgr:JumpToTargetProf(EProfType.PROF_TYPE_MINER) -- 职业任务界面->选中最前的采集职业
-                return
-            else
-                JumpParam = 38 -- 角色界面->最前的采矿工职业
-            end
-        end
-
-        -- 解锁捕鱼人后开启
-        if ModuleID == EModuleID.ModuleIDFisherNote then
-            if _IsAdventureOpen then
-                _G.AdventureCareerMgr:JumpToTargetProf(EProfType.PROF_TYPE_FISHER) -- 职业任务界面->选中捕鱼人职业
-                return
-            else
-                JumpParam = 38 -- 角色界面->选中捕鱼人职业
-            end
-        end
 
         -- 金蝶游乐场
         if ModuleID == EModuleID.ModuleIDGoldSauserMain then
-            --local IsFinishPreTask = string.isnilorempty(QuestName) -- 是否完成前置任务（主线11级任务）
-            local IsFinishPreTask = _G.QuestMgr:GetQuestStatus(140553) == QUEST_STATUS.CS_QUEST_STATUS_FINISHED 
+            -- 是否完成前置任务（主线11级任务）
+            local PreQuestID = ActivityDescInfo.PreQuestID
+            local IsFinishPreTask = _G.QuestMgr:GetQuestStatus(PreQuestID) == QUEST_STATUS.CS_QUEST_STATUS_FINISHED 
             if IsFinishPreTask then
-                --JumpParam = 33 -- 前往任务界面
-                self:OpenQuestView(17074)-- 171104
-                return
+                JumpParam = ActivityDescInfo.JumpParam
             else
-                _G.MsgTipsUtil.ShowTips("当前未完成主线11级任务") -- 需完成11级主线任务
+                _G.MsgTipsUtil.ShowTipsByID(260567)--("260567完成10级主线任务后开放") 
                 return
+            end
+        else
+            if _IsAdventureOpen then
+                JumpParam = ActivityDescInfo.JumpParam
+            else
+                JumpParam = ActivityDescInfo.QuestJumpParam
             end
         end
 
-        -- 战斗职业，需判断冒险系统是否已解锁，如果解锁则跳转冒险，否则跳转角色系统
-        if ModuleID == EModuleID.ModuleIDGamePworld then
-            if _IsAdventureOpen then
-                --_G.AdventureCareerMgr:JumpToTargetProf(EProfType.PROF_TYPE_MINER) -- 职业任务界面->选中最前的采集职业
-                _G.UIViewMgr:ShowView(UIViewID.AdventruePanel) -- 冒险系统
-                return
-            else
-                _G.EquipmentMgr:ShowProfDetail() -- 角色界面
-            end
-            return
-        end
+        -- if ModuleID == EModuleID.ModuleIDMakerNote then
+        --     if _IsAdventureOpen then
+        --         JumpParam = ActivityDescInfo.JumpParam -- 5 职业任务界面->最前的能工巧匠职业
+        --     else
+        --         JumpParam = ActivityDescInfo.QuestJumpParam -- 22 角色界面->最前的能工巧匠职业
+        --     end
+        -- end
+
+        -- -- 解锁采矿工/园艺工后开启
+        -- if ModuleID == EModuleID.ModuleIDGatherNote then
+        --     if _IsAdventureOpen then
+        --         JumpParam = ActivityDescInfo.JumpParam --_G.AdventureCareerMgr:JumpToTargetProf(EProfType.PROF_TYPE_MINER) -- 职业任务界面->选中最前的采集职业
+        --     else
+        --         JumpParam = ActivityDescInfo.QuestJumpParam -- 角色界面->最前的采矿工职业
+        --     end
+        -- end
+
+        -- -- 解锁捕鱼人后开启
+        -- if ModuleID == EModuleID.ModuleIDFisherNote then
+        --     if _IsAdventureOpen then
+        --         JumpParam = ActivityDescInfo.JumpParam --_G.AdventureCareerMgr:JumpToTargetProf(EProfType.PROF_TYPE_FISHER) -- 职业任务界面->选中捕鱼人职业
+        --     else
+        --         JumpParam = ActivityDescInfo.QuestJumpParam -- 角色界面->选中捕鱼人职业
+        --     end
+        -- end
+
+        -- -- 战斗职业，需判断冒险系统是否已解锁，如果解锁则跳转冒险，否则跳转角色系统
+        -- if ModuleID == EModuleID.ModuleIDGamePworld then
+        --     if _IsAdventureOpen then
+        --         JumpParam = ActivityDescInfo.JumpParam
+        --     else
+        --         JumpParam = ActivityDescInfo.QuestJumpParam --_G.EquipmentMgr:ShowProfDetail() -- 角色界面
+        --     end
+        -- end
     end
 
-
-    if JumpType == OPS_JUMP_TYPE.TABLE_JUMP then
-        JumpUtil.JumpTo(tonumber(JumpParam))
+    if JumpType == OPS_JUMP_TYPE.TABLE_JUMP and JumpParam > 0 then
+        JumpUtil.JumpTo(tonumber(JumpParam), true)
+    else
+        FLOG_WARNING("光之启程跳转参数为0")
     end
 end
 
@@ -264,11 +260,12 @@ function DepartOfLightMgr:IsShowEntrance()
 end
 
 --- @type 显示主界面
-function DepartOfLightMgr:ShowDepartMainView()
+---@param ItemID number 跳转奖励物品ID
+function DepartOfLightMgr:ShowDepartMainView(InItemID)
     self:SendDepartActivityInfoReq()
     self:SendGetAllTaskProgressReq()
     self:SendGetAllPersonRecordReq()
-    UIViewMgr:ShowView(UIViewID.DepartOfLightMainPanel)
+    UIViewMgr:ShowView(UIViewID.DepartOfLightMainPanel, {ItemID = InItemID})
 end
 
 --- @type 当启程永久关闭

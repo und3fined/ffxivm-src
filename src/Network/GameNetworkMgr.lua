@@ -15,6 +15,8 @@ local EventMgr = require("Event/EventMgr")
 local NetworkUtil = require("Network/NetworkUtil")
 local Json = require("Core/Json")
 
+local IDToName = NetworkUtil.IDToName
+
 local UGameNetworkMgr
 --local EErrorCode
 local FLOG_ERROR
@@ -161,25 +163,13 @@ function GameNetworkMgr:UnRegisterAllMsg()
 	end
 end
 
--- MsgID反查协议名称
-local IdToNameMap = nil
-
-local function IDToName(MsgID)
-	if not IdToNameMap then
-		IdToNameMap = {}
-		local ProtoCS = require("Protocol/ProtoCS")
-		for key, value in pairs(ProtoCS.CS_CMD) do
-			IdToNameMap[value] = key
-		end
-	end
-	return IdToNameMap[MsgID] or "Unknown"
-end
-
 ---SendMsg
----@param MsgID number            @消息ID  ProtoCS.CS_CMD
----@param SubMsgID number        @消息子ID ProtoCS.CS_SUBMSGID_TEAM ProtoCS.CS_COMBAT_CMD
----@param MsgBody table            @消息包内容 不包含包头 packet.proto中定义的cmd_req_name和cmd_res_name对应的内容
-function GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
+---@param MsgID number     @消息ID  ProtoCS.CS_CMD
+---@param SubMsgID number  @消息子ID ProtoCS.CS_SUBMSGID_TEAM ProtoCS.CS_COMBAT_CMD
+---@param MsgBody table    @消息包内容 不包含包头 packet.proto中定义的cmd_req_name和cmd_res_name对应的内容
+---@param Flag number      @服务器用 需要时按服务器要求填写
+---@param RouteKey number  @服务器用 需要时按服务器要求填写
+function GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody, Flag, RouteKey)
 	if not self.bConnected then
 		return
 	end
@@ -191,7 +181,7 @@ function GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 		end
 	end
 
-	--local _ <close> = CommonUtil.MakeProfileTag(string.format("GameNetworkMgr:SendMsg_Log_%s_%d", IDToName(MsgID), SubMsgID))
+	--local _ <close> = CommonUtil.MakeProfileTag(string.format("GameNetworkMgr:SendMsg_%s_%d", IDToName(MsgID), SubMsgID))
 
 	local ProtoName = NetworkUtil.GetProtoReqName(MsgID)
 	if nil == ProtoName then
@@ -199,10 +189,18 @@ function GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 		return
 	end
 
-	local Buffer = ProtoBuff:Encode(ProtoName, MsgBody)
+	local function ProtoBuffError(Error)
+		local Msg = string.format("MsgID=%d SubMsgID=%d MsgBody=%s Error=%s", MsgID, SubMsgID, table.tostring_block(MsgBody), Error)
+		CommonUtil.XPCallLog(Msg)
+	end
+
+	local Status, Buffer = xpcall(ProtoBuff.Encode, ProtoBuffError, ProtoBuff, ProtoName, MsgBody)
+	if not Status then
+		return
+	end
 
 	local bResend = self:IsMsgEnableResend(MsgID, SubMsgID)
-	UGameNetworkMgr:SendData(MsgID, SubMsgID, Buffer, string.len(Buffer), bResend)
+	UGameNetworkMgr:SendData(MsgID, SubMsgID, Buffer, string.len(Buffer), bResend, Flag or 0, RouteKey or 0)
 
 	if nil ~= Impl then
 		Impl:OnSendMsg(MsgID, SubMsgID)
@@ -212,8 +210,8 @@ function GameNetworkMgr:SendMsg(MsgID, SubMsgID, MsgBody)
 		--local _ <close> = CommonUtil.MakeProfileTag("GameNetworkMgr:SendMsg_Log")
 		local Body = ProtoBuff:Decode(ProtoName, Buffer)
 		local ConvertedMsg = table.convert_keys_to_strings(Body)
-		FLOG_INFO("GameNetworkMgr:SendMsg MsgIDKey=%s MsgID=%d SubMsgID=%d MsgLength=%d ClientSeq=%d MsgBody=%s",
-				IDToName(MsgID), MsgID, SubMsgID, string.len(Buffer), UGameNetworkMgr:GetClientMsgSeq(), Json.encode(ConvertedMsg))
+		FLOG_INFO("GameNetworkMgr:SendMsg MsgIDKey=%s MsgID=%d SubMsgID=%d MsgLength=%d ClientSeq=%d bResend=%s MsgBody=%s",
+				IDToName(MsgID), MsgID, SubMsgID, string.len(Buffer), UGameNetworkMgr:GetClientMsgSeq(), bResend, Json.encode(ConvertedMsg))
 	end
 end
 
@@ -255,10 +253,21 @@ function GameNetworkMgr:OnReceiveMsg(MsgID, SubMsgID, BodyBuffer, BodyLen, Serve
 	end
 
 	local MsgName = IDToName(MsgID)
+
+	local function ProtoBuffError(Error)
+		local Msg = string.format("MsgID=%d SubMsgID=%d Error=%s", MsgID, SubMsgID, Error)
+		CommonUtil.XPCallLog(Msg)
+	end
+
 	local MsgBody
+
 	do
 		local _ <close> = CommonUtil.MakeProfileTag("GameNetworkMgr:OnReceiveMsg_Decode")
-		MsgBody = ProtoBuff:Decode(ProtoName, BodyBuffer)
+		local Status
+		Status, MsgBody = xpcall(ProtoBuff.Decode, ProtoBuffError, ProtoBuff, ProtoName, BodyBuffer)
+		if not Status then
+			return
+		end
 	end
 
 	if self:IsEnableLog(MsgID, SubMsgID) then
@@ -364,6 +373,14 @@ function GameNetworkMgr:IsShowNetworkLog(MsgID, SubMsgID)
 		end
 	end
 
+	local SubMsgLogBlackList = NetworkConfig.SubMsgLogBlackList or {}
+	for i = 1, #SubMsgLogBlackList do
+		local Entry = SubMsgLogBlackList[i]
+		if Entry.MsgID == MsgID and Entry.SubMsgID == SubMsgID then
+			return false
+		end
+	end
+	
 	return true
 end
 
@@ -395,6 +412,15 @@ end
 function GameNetworkMgr:SetMsgToDiscard(MsgID, SubMsgID, bDiscard)
 	if UGameNetworkMgr then
 		UGameNetworkMgr:SetMsgToDiscard(MsgID, SubMsgID, bDiscard)
+	end
+end
+
+---SetEnableSendMsg 断线重连后等待重连回包时有小概率包序不对，包序问题后台暂时无法解决，只能在等待重连回包时先缓存不发送消息
+---@param bEnable boolean
+function GameNetworkMgr:SetEnableSendMsg(bEnable)
+	FLOG_INFO("GameNetworkMgr:SetEnableSendMsg bEnable=%s", bEnable)
+	if UGameNetworkMgr then
+		UGameNetworkMgr:SetEnableSendMsg(bEnable)
 	end
 end
 

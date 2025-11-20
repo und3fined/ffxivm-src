@@ -99,7 +99,9 @@ function WorldMapMarkerTipsTransferView:OnShow()
 			local WorldMapPanel = _G.UIViewMgr:FindVisibleView(UIViewID.WorldMapPanel)
 			if WorldMapPanel then
 				WorldMapPanel.MapContent:MoveMapByOffect(OffSetVector2D, function (DeltaPostion)
-					UIUtil.CanvasSlotSetPosition(self.PanelTips, ViewportPosition + DeltaPostion)
+					if _G.CommonUtil.IsObjectValid(self.PanelTips) then
+						UIUtil.CanvasSlotSetPosition(self.PanelTips, ViewportPosition + DeltaPostion)
+					end
 				end)
 			end
 		end
@@ -141,7 +143,9 @@ function WorldMapMarkerTipsTransferView:OnClickedBtnTransfer()
 		-- 然后服务器会下发提示，导致提示界面被隐藏了
 		-- 目前 UIViewID.CommonMsgBox 的层级是 High , UIViewID.ErrorTips 的层级是 Tips, 导致也不能通过层级做排除
 		-- 因此，目前只能一个一个隐藏
-		UIViewMgr:HideAllUIByLayer()
+
+		-- !不在这里隐藏了,水晶传送还有其他途径，在水晶传送请求回包里统一隐藏 edit by sammrli
+		--UIViewMgr:HideAllUIByLayer()
 
 		--[[
 		UIViewMgr:HideView(UIViewID.WorldMapPanel)

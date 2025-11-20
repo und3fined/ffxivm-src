@@ -141,7 +141,8 @@ function ChocoboRaceSkillItemView:OnLongClick()
     end
 
     local SkillID = self.SkillVM.SkillID
-    self.SkillTipsHandle = ChocoboRaceUtil.ShowSkillTips(SkillID, self)
+    local SkillLevel = self.SkillVM.SkillLevel or 1
+    self.SkillTipsHandle = ChocoboRaceUtil.ShowSkillTips(SkillID, self, SkillLevel)
 end
 
 function ChocoboRaceSkillItemView:OnLongClickReleased()

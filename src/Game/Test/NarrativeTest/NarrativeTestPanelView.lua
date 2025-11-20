@@ -19,6 +19,8 @@ local QuestCfgTable = require("TableCfg/QuestCfg")
 local QuestMainVM = require("Game/Quest/VM/QuestMainVM")
 local JumboCactpotDefine = require("Game/JumboCactpot/JumboCactpotDefine")
 local QuestHelper = require("Game/Quest/QuestHelper")
+local CommonUtil = require("Utils/CommonUtil")
+local PathMgr = require("Path/PathMgr")
 
 local AnswerContentIDList = JumboCactpotDefine.AnswerContentIDList
 local NpcDialogMgr = _G.NpcDialogMgr
@@ -28,6 +30,7 @@ local GMMgr = _G.GMMgr
 local TimerMgr = _G.TimerMgr
 local UE = _G.UE
 local QuestMgr = _G.QuestMgr
+local MediaUtil = _G.UE.UMediaUtil
 
 
 local GMType = {
@@ -170,6 +173,30 @@ function NarrativeTestPanelView:OnHide()
 
 end
 
+function NarrativeTestPanelView:TakeScreenshot(ID,ShowText)
+	FLOG_INFO(string.format("koff NarrativeTestPanelView:TakeScreenshot"))
+	print(ShowText)
+	-- FLOG_INFO(string.format("koff NarrativeTestPanelView:TakeScreenshot:%s",ShowText))
+	if ShowText:find("%^") ~= nil then
+		local DateTimestr = os.date("%Y-%m-%d")
+		local CurCultureName = CommonUtil.GetCurrentCultureName()
+		local CfgTableID = tostring(ID)
+		-- local FolderStr = self.ViewType.."_"..CfgTableID
+		local PathStr = DateTimestr.."/"..CurCultureName.."/"..self.ViewType.."/"
+		-- local TextStr = folderStr..string.format("MyScreenShot_%d", self.CfgTableID)
+		local TextStr = string.format("%d", CfgTableID)
+
+		TimerMgr:AddTimer(self, function() 
+			MediaUtil.TakeScreenshotRequest(TextStr, false, true, function(_, Width, Height, Colors)
+				local ScreenshotFilename = MediaUtil.BitmapToSaveFile(Width, Height, Colors, PathStr)
+				self.ScreenshotPath = MediaUtil.GetScreenshotPath() .. PathMgr.GetCleanFilename(ScreenshotFilename)
+				FLOG_INFO(string.format("koff self.ScreenshotPath:%s", self.ScreenshotPath))
+			end)
+		end, 0.5, 1, 1, nil)
+	end
+end
+
+
 function NarrativeTestPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnStart, self.OnBtnStartClicked)
 end
@@ -239,6 +266,8 @@ function NarrativeTestPanelView:OnNPCDialogueStart()
 		self.TextContent:SetText(DialogContent)
 
 		self.PreDialogLibID = DialogLibID
+
+		self:TakeScreenshot(DialogID,DialogContent)
 	end
 
 	if self.GMTimer ~= nil then
@@ -272,6 +301,8 @@ function NarrativeTestPanelView:OnAnimatedTextStart()
 			local Name = string.format("TEXTID:%s", TextID)
 			self.TexTitle:SetText(Name)
 			self.TextContent:SetText(MessageCfg.Content)
+
+			self:TakeScreenshot(TextID,MessageCfg.Content)
 		end
 
 		self.GMStartIndex = self.GMStartIndex + 1
@@ -311,7 +342,9 @@ function NarrativeTestPanelView:OnQuestStart()
 		local GMText = string.format("role quest finishall %s", self.CurQuestID)
 		GMMgr:ReqGM(GMText)
 
-		FLOG_INFO(string.format("role quest finishall %s", self.CurQuestID))
+		-- local TestDesc = self:AddQuestDescVM(self.CurQuestID,nil,false)
+
+		-- FLOG_INFO(string.format("koff role quest finishall TestDesc: %s", TestDesc))
 
 		local function ShowQuestLogMainPanel()
 			local View = UIViewMgr:ShowView(_G.UIViewID.QuestLogMainPanel, { QuestID = self.CurQuestID })
@@ -331,13 +364,15 @@ function NarrativeTestPanelView:OnQuestStart()
 
 			-- FLOG_INFO(string.format("koff #QuestMgr.ChapterMap: %s", count))
 
-			if count > 2 then
-				-- QuestMgr:ClearQuests()
-				GMMgr:ReqGM("role quest clear")
-			else
-				GMText = string.format("role quest do")
-				GMMgr:ReqGM(GMText)
-			end
+			GMMgr:ReqGM("role quest clear")
+
+			-- if count > 2 then
+			-- 	-- QuestMgr:ClearQuests()
+			-- 	GMMgr:ReqGM("role quest clear")
+			-- else
+			-- 	GMText = string.format("role quest do")
+			-- 	GMMgr:ReqGM(GMText)
+			-- end
 		end
 
 		TimerMgr:AddTimer(self, HideQuestLogMainPanel, math.max(1,self.IntervalTime), 1, 1, nil)
@@ -376,8 +411,9 @@ function NarrativeTestPanelView:OnCustomTalkStart()
 		self.Runnum:SetText(self.GMStartIndex)
 
 
+		local Title = CfgTable[self.GMStartIndex].Title
 		local CustomTalkID = CfgTable[self.GMStartIndex].CustomTalkID
-		local GMText = string.format("话题标题:%s,CustomTalkID:%s", CfgTable[self.GMStartIndex].Title,CustomTalkID)
+		local GMText = string.format("话题标题:%s,CustomTalkID:%s", Title,CustomTalkID)
 
 		self.CustomTalk:SetText(GMText)
 	
@@ -394,6 +430,22 @@ function NarrativeTestPanelView:OnCustomTalkStart()
 		_G.InteractiveMgr:SetFunctionList(OptionFunctionList)
 
 		self.GMStartIndex = self.GMStartIndex + 1
+
+		if Title then
+			if Title:find("%^") ~= nil then
+				self:TakeScreenshot(CustomTalkID,Title)
+				return
+			end
+		end
+
+		for _, Func in ipairs(OptionFunctionList) do
+			local Text = Func.DisplayName
+			-- if Text:find("%^") ~= nil then
+				self:TakeScreenshot(CustomTalkID,Text)
+				break
+			-- end
+		end
+
 	end
 
 	if self.GMTimer ~= nil then
@@ -511,9 +563,23 @@ function NarrativeTestPanelView:OnDialogueBranchStart(DialogLibID)
 		UIViewMgr:ShowView(_G.UIViewID.NpcDialogueMainPanel,{ViewType = StoryDefine.UIType.NpcDialog})
 		NpcDialogMgr:NarrativeTest(DialogID)
 
-
-
 		self.GMStartIndex = self.GMStartIndex + 1
+
+		if self.BranchCfg.DialogQuestion then
+			if self.BranchCfg.DialogQuestion:find("%^") ~= nil then
+				self:TakeScreenshot(ID,self.BranchCfg.DialogQuestion)
+				return
+			end
+		end
+
+
+		for _, Func in ipairs(TempUnitList) do
+			local Text = Func.DisplayName
+			-- if Text:find("%^") ~= nil then
+				self:TakeScreenshot(ID,Text)
+				break
+			-- end
+		end
 	end
 
 	if self.GMTimer ~= nil then

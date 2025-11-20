@@ -27,9 +27,12 @@ local RedDotMgr = require("Game/CommonRedDot/RedDotMgr")
 local ClientSetupID = require("Game/ClientSetup/ClientSetupID")
 local HUDActorVM = require("Game/HUD/HUDActorVM")
 local ActorUtil = require("Utils/ActorUtil")
+local HouseLocalDef = require("Game/House/HouseLocalDef")
 
 local ProtoCS = require("Protocol/ProtoCS")
 local RoleGroupState = ProtoCS.RoleGroupState
+local TeamRecruitUtil = require("Game/TeamRecruit/TeamRecruitUtil")
+local ProtoCommon = require("Protocol/ProtoCommon")
 
 local LSTR = _G.LSTR
 local ClientSetupKey = ProtoCS.ClientSetupKey
@@ -98,6 +101,7 @@ function Class:Clear()
         self.ArmySimpleInfo = nil --公会简要信息(group.GroupSimpleInfo)
         self.ArmyLeaderRoleID = nil
         self.OnEquipList = {} -- map<int32, common.Item> @穿戴的装备列表
+        self.Face = {}
         self.IsShowFacade = false
 
 
@@ -126,7 +130,7 @@ function Class:Clear()
 
         self.bIsShowWeapon = true
         self.bIsHoldWeapon = true
-        self.bIsShowHead = false
+        self.bIsShowHead = true
     end
 end
 
@@ -174,6 +178,12 @@ function Class:SetOnEquipList( EquipList )
 	self.OnEquipList = EquipList or {}
 end
 
+---设置头盔可见性
+function Class:SetFace( Face )
+	self.Face = Face or {}
+    self.bIsShowHead = self.Face[ProtoCommon.avatar_personal.AvatarEquipHeadShow] ~= 0
+    self.bIsShowWeapon = self.Face[ProtoCommon.avatar_personal.AvatarEquipHandShow] ~= 0
+end
 -------------------------------------------------------------------------------------------------------
 ---公会
 
@@ -522,6 +532,14 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
         return
     end
 
+    if nil == self.RoleVM then
+        return
+    end
+
+    local MajorRoleVM = MajorUtil.GetMajorRoleVM()
+
+    local bSameWorld = MajorRoleVM.WorldID == self.RoleVM.WorldID
+
     local CBFunc = function()
         -- UIViewMgr:HideView(UIViewID.PersonInfoSimplePanel)
     end
@@ -534,6 +552,8 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
 	if Type == PopupBtnType.Chat then -- 聊天
         UIViewMgr:HideView(UIViewID.PersonInfoSimplePanel)
 		_G.ChatMgr:GoToPlayerChatView(RoleID)
+    elseif Type == PopupBtnType.AddNickName then
+        FriendMgr:SetFriendNickname(RoleID)
     elseif Type == PopupBtnType.ArmyKick then
         _G.ArmyMgr:KickMember(RoleID)
         ReportType = DataReportType.ClickAmryRemove
@@ -541,8 +561,12 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
         _G.ArmyMgr:ArmyTransferLeader(RoleID)
         ReportType = DataReportType.ClickAmryTransCap
     elseif Type == PopupBtnType.TeamInvite then
-        TeamMgr:InviteJoinTeam(RoleID)
-        ReportType = DataReportType.ClickTeamInvite
+        if IsAdd then
+            _G.TeamMgr:InviteJoinTeam(RoleID)
+            ReportType = DataReportType.ClickTeamInvite
+        else
+            TeamRecruitUtil.ShareCurrentRecruitToChat(RoleID)
+        end
 	elseif Type == PopupBtnType.Friend then -- 加为好友/删除好友
         if IsAdd then
             FriendMgr:AddFriend(RoleID, FriendDefine.AddSource.PersonCard)
@@ -558,8 +582,12 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
 
     elseif Type == PopupBtnType.ArmyInvite then -- 公会邀请
         if IsAdd then
-            _G.ArmyMgr:SendArmyInviteMsgByPlayer(RoleID)
-            ReportType = DataReportType.ClickAmryInvite
+            if bSameWorld then
+                _G.ArmyMgr:SendArmyInviteMsgByPlayer(RoleID)
+                ReportType = DataReportType.ClickAmryInvite
+            else
+                MsgTipsUtil.ShowTipsByID(145069)
+            end
         else
             _G.ArmyMgr:OpenArmyQueryListByID(self.ArmySimpleInfo.ID)
             IsHide = true
@@ -613,6 +641,7 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
     elseif Type == PopupBtnType.ArmySign then -- 签 署
         --UIViewMgr:ShowView(UIViewID.ReportPlayerPanel, self.RoleVM)
         _G.ArmyMgr:SendGroupSignInvite(RoleID)
+
     --- obsoleted function
 
     -- elseif Type == PopupBtnType.TransferCaptain then -- 转让队长
@@ -643,6 +672,13 @@ function Class:SimpleViewOnClickButtonFunction(BtnVM)
 
     elseif Type == PopupBtnType.MeetTrade then -- 面对面交易
         _G.MeetTradeMgr:SendMeetTradeRequest(RoleID)
+    elseif Type == PopupBtnType.VisitingHouse then -- 房屋访问
+        if self.RoleVM then
+            _G.HouseInfoMgr:QueryHouseDetail(self.RoleVM.HouseID, function(Basic, Roommates)
+                _G.HouseInfoMgr:TransToHouse(self.RoleVM.HouseID, Basic.Addr, Basic.EtherGid, Basic.WorldID)
+                UIViewMgr:HideView(UIViewID.PersonInfoSimplePanel)
+            end)
+        end
 	end
 
     if IsHide then

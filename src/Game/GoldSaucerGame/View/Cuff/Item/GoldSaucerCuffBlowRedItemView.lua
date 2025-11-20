@@ -143,13 +143,6 @@ end
 function GoldSaucerCuffBlowRedItemView.ArrivalShrinkTime(self)
 	local ShrinkSp = self.ShrinkSp
 	self:PlayAnimation(self.AnimWork, 0, 1, _G.UE.EUMGSequencePlayMode.Forward, ShrinkSp)
-
-	self.ShrinkTimer = self:RegisterTimer(function() 
-		local GameInst = _G.GoldSaucerMiniGameMgr:GetTheCurMiniGameInst()
-		if GameInst ~= nil then
-			GameInst:ResetComboNum()
-		end
-	end, 2 /ShrinkSp)
 end
 
 function GoldSaucerCuffBlowRedItemView:UpdateResult(HitResult)

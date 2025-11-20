@@ -16,9 +16,12 @@ local TeamDefine = require("Game/Team/TeamDefine")
 local RecruitFunctionType = TeamRecruitDefine.RecruitFunctionType
 local ProtoCS = require("Protocol/ProtoCS")
 local ProtoCommon = require("Protocol/ProtoCommon")
+local ChatDefine = require("Game/Chat/ChatDefine")
+local ProfUtil = require("Game/Profession/ProfUtil")
 
 local LSTR = _G.LSTR
 local QUEST_STATUS = ProtoCS.CS_QUEST_STATUS
+local ChatChannel = ChatDefine.ChatChannel
 
 local TeamRecruitUtil = {}
 
@@ -166,7 +169,7 @@ end
 
 --获取招募职能类型
 function TeamRecruitUtil.GetRecruitFunctionType( ProfList )
-    if #ProfList >= #(TeamRecruitUtil.GetAllOpenProf()) then
+    if #ProfList == #(TeamRecruitUtil.GetAllOpenProf()) then
         return RecruitFunctionType.All
     end
 
@@ -194,9 +197,7 @@ end
 function TeamRecruitUtil.GetRecruitProfDesc( ProfVM )
     local RoleID = ProfVM.RoleID
     if RoleID and RoleID ~= 0 then
-        local RoleVM = _G.RoleInfoMgr:FindRoleVM(RoleID)
-        local Name = RoleInitCfg:FindRoleInitProfName(RoleVM.Prof)
-        return Name or ""
+        return RoleInitCfg:FindRoleInitProfName(ProfVM.ProfID) or ""
     end
 
     local FuncType = ProfVM.RecruitFuncType 
@@ -385,26 +386,13 @@ end
 -------------------------------------------------------------------------------------------------------
 ---@see 招募分享
 
---- 招募分享那边需要把Icon转换成ID
-function TeamRecruitUtil.EncodeRecruitMemIconID(HasRole, RoleID, Profs)
-    local IsProf = false
+function TeamRecruitUtil.GetRecruitProfHash(Profs, IsProf)
     local ID = 0
-    if HasRole then
-        local RoleVM = _G.RoleInfoMgr:FindRoleVM(RoleID)
-        if RoleVM then
-            IsProf = true
-            ID = RoleVM.Prof
-        end
-
+    if #Profs == 1 then
+        IsProf = true
+        ID = Profs[1]
     else
-        if table.length(Profs) == 1 then
-            IsProf = true
-            ID = Profs[1]
-        else
-            local RecruitFuncType = TeamRecruitUtil.GetRecruitFunctionType(Profs)
-            ID = RecruitFuncType
-        end
-
+        ID = TeamRecruitUtil.GetRecruitFunctionType(Profs)
     end
 
     local H = ID
@@ -486,24 +474,30 @@ function TeamRecruitUtil.HasDifficultyConfig(ContentID)
     return false
 end
 
-function TeamRecruitUtil.ShareSelfRecruitToChat(ChatType)
-    return TeamRecruitUtil.ShareRecruitToChat(ChatType, _G.TeamRecruitVM.RecruitingDetailVM)
+--- 分享主角招募 @add by xingcaicao 
+function TeamRecruitUtil.ShareSelfRecruitToChat(ChatType, PlayerRoleID)
+    return TeamRecruitUtil.ShareRecruitToChat(ChatType, _G.TeamRecruitVM.RecruitingDetailVM, nil, PlayerRoleID)
 end
 
-function TeamRecruitUtil.ShareRecruitToChat(ChatType, VM, Callback)
-    local RoleID, ResID, IconIDs, LocList, SceneMode = TeamRecruitUtil.GatherShareData(VM)
-	local Succ, Time = _G.ChatMgr:ShareTeamRecruit(ChatType, RoleID, ResID, IconIDs, LocList, SceneMode)
-	if (not Succ) and Time then
-		_G.MsgTipsUtil.ShowTips(string.sformat(LSTR(1310018), Time))
-	end
+--- 分享主角招募给玩家 @add by xingcaicao 
+function TeamRecruitUtil.ShareSelfRecruitToPlayer(PlayerRoleID)
+    if nil == PlayerRoleID then
+        return false
+    end
 
+    return TeamRecruitUtil.ShareSelfRecruitToChat(ChatChannel.Person, PlayerRoleID)
+end
+
+---@param PlayerRoleID Number @玩家RoleID，默认为nil，在Channel为ChatChannel.Person时，会发送私聊消息给指定玩家
+function TeamRecruitUtil.ShareRecruitToChat(ChatType, VM, Callback, PlayerRoleID)
+    local RoleID, ResID, IconIDs, LocList, SceneMode = TeamRecruitUtil.GatherShareData(VM)
+	local Succ = _G.ChatMgr:ShareTeamRecruit(ChatType, RoleID, ResID, IconIDs, LocList, SceneMode, PlayerRoleID)
     if Succ then
        _G.TeamRecruitMgr:AddChatShareCallback(ChatType, RoleID, Callback) 
     end
 
     return Succ
 end
-
 function TeamRecruitUtil.GatherShareData(VM)
     local TeamRecruitDetailVM = VM or _G.TeamRecruitVM.CurRecruitDetailVM
 
@@ -512,13 +506,29 @@ function TeamRecruitUtil.GatherShareData(VM)
 	local IconIDs = {}
 	local LocList = {}
 
-	local Mems = TeamRecruitDetailVM.MemberProfVMList:GetItems()
+	local Mems = {}
+    for _, v in ipairs(TeamRecruitDetailVM.MemberProfVMList:GetItems()) do
+        table.insert(Mems, {
+            RoleID = v.RoleID or 0,
+            MemIconID = v.MemIconID,
+            Profs = v.Profs or {},
+            HasRole = v.HasRole,
+            Loc = v.Loc,
+        })
+    end
+    local NMems = TeamRecruitUtil.RemakeRecruitProfs(ResID, Mems)
+    if NMems then
+        Mems = NMems
+    end
 
 	for _, Mem in pairs(Mems) do
-		if not table.empty(Mem.Profs) then
+		if  Mem.Profs and #(Mem.Profs) > 0 then
 			table.insert(IconIDs, Mem.MemIconID)
 			local Flag = Mem.HasRole and 1 or 0
 			table.insert(LocList, Flag)
+        else
+            table.insert(IconIDs, TeamRecruitUtil.GetRecruitProfHash({}))
+			table.insert(LocList, 0) 
 		end
 	end
 
@@ -553,7 +563,15 @@ end
 
 local function IsCrossServerByRoleVM(WorldID)
     local VM = MajorUtil.GetMajorRoleVM(true)
-    return VM and VM.CurWorldID ~= WorldID
+    local CurWorldID = 0
+    if VM and VM.CurWorldID and VM.WorldID then
+        if VM.CurWorldID ~= 0 then
+            CurWorldID = VM.CurWorldID
+        else
+            CurWorldID = VM.WorldID
+        end
+    end
+    return CurWorldID ~= WorldID
 end 
 
 ---@param Func function | nil
@@ -616,7 +634,6 @@ local function GetSortFuncPriority(F)
 end
 
 local function GetProfsHash(Profs)
-    local ProfUtil = require("Game/Profession/ProfUtil")
     local V = 0
     for _, P in ipairs(Profs) do
         local Priority = GetSortFuncPriority(ProfUtil.Prof2Func(P) or 0)
@@ -633,7 +650,7 @@ local function IsPureProf(Hash)
 end
 
 function TeamRecruitUtil.SortEditProf(a, b)
-    if a.RoleID == b.RoleID and (a.RoleID == 0 or a.RoleID == nil) then
+    if (a.RoleID or 0) == (b.RoleID or 0) then
         local HA = GetProfsHash(a.Prof or a.Profs)
         local HB = GetProfsHash(b.Prof or b.Profs)
         if HA ~= HB and IsPureProf(HA) and IsPureProf(HB) then
@@ -650,9 +667,8 @@ function TeamRecruitUtil.SortEditProf(a, b)
         return false
     end
 
-    local ProfUtil = require("Game/Profession/ProfUtil")
-    local FA = ProfUtil.Prof2Func(_G.TeamMgr:GetTeamMemberProf(a.RoleID)) or 0
-    local FB = ProfUtil.Prof2Func(_G.TeamMgr:GetTeamMemberProf(b.RoleID))  or 0
+    local FA = ProfUtil.Prof2Func(a.ProfID) or 0
+    local FB = ProfUtil.Prof2Func(b.ProfID)  or 0
     if FA ~= FB then
         return GetSortFuncPriority(FA) < GetSortFuncPriority(FB)
     end
@@ -664,7 +680,6 @@ function TeamRecruitUtil.GetViewingOpenProfs(ClassType)
     local ProfInfoList = {}
     local CfgList = RoleInitCfg:GetOpenProfCfgListByClass(ClassType) or {}
     -- a temp solution
-    local ProfUtil = require("Game/Profession/ProfUtil")
     local BaseProfs = {}
     local AdvanceProfs = {}
     local LeftAdvanceProfs = {}
@@ -698,6 +713,115 @@ function TeamRecruitUtil.GetViewingOpenProfs(ClassType)
     end
 
     return ProfInfoList
+end
+
+function TeamRecruitUtil.GetRecruitProfsByDefault(DefaultType)
+    local TEAM_RECRUIT_PROF = ProtoCommon.team_recruit_prof
+    local FunctionType = ProtoCommon.function_type
+
+    if DefaultType == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_GUARD then -- 防护
+        return TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_GUARD)
+    elseif DefaultType == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_ATTACK then -- 进攻
+        return TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_ATTACK)
+    elseif DefaultType == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_RECOVER then -- 回复 
+        return TeamRecruitUtil.GetAllOpenProfByFunctionType(FunctionType.FUNCTION_TYPE_RECOVER)
+    elseif DefaultType == TEAM_RECRUIT_PROF.TEAM_RECRUIT_MODEL_ALL then -- 所有人
+        return TeamRecruitUtil.GetAllOpenProf() 
+    end
+
+    return {}
+end
+
+function TeamRecruitUtil.RemakeRecruitProfs(ID, Profs)
+    if not ID or not Profs then
+        return
+    end
+
+    local Cfg = TeamRecruitCfg:FindCfgByKey(ID)
+    if not Cfg or not Cfg.DefaultProf then
+        return
+    end
+
+    local DefaultProfs <const> = Cfg.DefaultProf
+    if #Profs >= #DefaultProfs then
+        return
+    end
+
+    local ProfPosDict = {}
+    for _, v in ipairs(Profs) do
+        if v.Loc then
+            ProfPosDict[v.Loc] = v
+        end
+    end
+
+    for i = 1, #DefaultProfs do
+        if not ProfPosDict[i] then
+            table.insert(Profs, {
+                Loc = i,
+                Prof = {},
+                RoleID = 0,
+            })
+        end
+    end
+
+    table.sort(Profs, TeamRecruitUtil.SortEditProf)
+
+    return Profs
+end
+
+function TeamRecruitUtil.RestoreRecruitProfs(RecruitData)
+    if not RecruitData then
+        return
+    end
+
+    local Profs = TeamRecruitUtil.RemakeRecruitProfs(RecruitData.ID, RecruitData.Prof or {})
+    if Profs then
+        RecruitData.Prof = Profs
+    end
+end
+
+function TeamRecruitUtil.ShareCurrentRecruitToChat(RoleID)
+    if RoleID == nil or RoleID == MajorUtil.GetMajorRoleID() then
+        return
+    end
+
+    if not _G.TeamRecruitMgr:IsRecruiting() then
+       return 
+    end
+
+    local TeamRecruitVM = require("Game/TeamRecruit/VM/TeamRecruitVM")
+	local ChatParams = _G.TeamRecruitMgr.MakeClipboardData(TeamRecruitUtil.GatherShareData(TeamRecruitVM.RecruitingDetailVM))
+	local Param = _G.ChatMgr:EncodeChatParams({TeamRecruit = ChatParams})
+	local Params = { Type = ProtoCS.PARAM_TYPE_DEFINE.PARAM_TYPE_DEFINE_TEAM_RECRUIT, Direct = true, Param = Param }
+	local ParamList = table.pack(Params)
+	_G.ChatMgr:SendChatMsgPushMessage(ChatDefine.ChatChannel.Person, RoleID, ChatDefine.ChatMacros.TeamRecruit, 0, ParamList)
+	_G.TeamRecruitMgr:AddRecruitShareTipTimer(RoleID)
+end
+
+---@deprecated
+function TeamRecruitUtil.IsPassModuleUnlock(RecruitID, bShowTip)
+    -- local UnLockID
+    -- local TipID
+    -- local RecruitCfg = TeamRecruitCfg:FindCfgByKey(RecruitID)
+    -- if RecruitCfg and RecruitCfg.UnlockModules then
+    --     for _, UnlockParams in ipairs(RecruitCfg.UnlockModules) do
+
+    --         if not _G.ModuleOpenMgr:CheckOpenState(UnlockParams.ModuleID) then
+    --             UnLockID = UnlockParams.ModuleID
+    --             TipID = UnlockParams.ErrCode
+    --             break
+    --         end
+    --     end
+    -- end
+
+    -- if UnLockID then
+    --     if TipID and bShowTip then
+    --         _G.MsgTipsUtil.ShowTipsByID(TipID)
+    --     end
+    --     return
+    -- end
+
+    return true
 end
 
 return TeamRecruitUtil

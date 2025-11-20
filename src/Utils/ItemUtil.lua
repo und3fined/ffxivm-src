@@ -15,6 +15,7 @@ local ItemCfg = require("TableCfg/ItemCfg")
 local EquipImproveCfg = require("TableCfg/EquipImproveCfg")
 local RichTextUtil = require("Utils/RichTextUtil")
 local CommonUtil = require("Utils/CommonUtil")
+local JumpUtil = require("Utils/JumpUtil")
 local ItemDefine = require("Game/Item/ItemDefine")
 local FuncCfg = require("TableCfg/FuncCfg")
 local ITEM_TYPE = ProtoCommon.ITEM_TYPE
@@ -120,6 +121,15 @@ function ItemUtil.IsCanPreviewByResID(ResID)
 	else
 		return false
 	end
+end
+
+function ItemUtil.CheckIsFashionByResID(ResID)
+	local Cfg = ItemCfg:FindCfgByKey(ResID)
+	if Cfg == nil then
+		return false
+	end
+
+	return Cfg.ItemType == ITEM_TYPE_DETAIL.COLLAGE_FASHION
 end
 
 ---CreateItem 根据资源ID创建协议里物品结构common.Item
@@ -232,11 +242,16 @@ function ItemUtil.GetItemGetWayList(ItemID)
 					UnLockIndex = UnLockIndex + 1
 				end
 			else
-				if ViewParams.IsUnLock then
-					table.insert(CommGetWayItems, UnLockIndex, ViewParams)
-					UnLockIndex = UnLockIndex + 1
+				if Cfg.HasShowCondition == 1 then
+					if ItemUtil.QueryConditionShow(Cfg, ItemID) then
+						table.insert(CommGetWayItems,UnLockIndex, ViewParams)
+						UnLockIndex = UnLockIndex + 1
+					end
 				else
-					if Cfg.NotRedirectHide == 0 then
+					if ViewParams.IsUnLock then
+						table.insert(CommGetWayItems, UnLockIndex, ViewParams)
+						UnLockIndex = UnLockIndex + 1
+					else
 						table.insert(CommGetWayItems,ViewParams)
 					end
 				end
@@ -246,6 +261,19 @@ function ItemUtil.GetItemGetWayList(ItemID)
 
 	return CommGetWayItems
 
+end
+
+
+function ItemUtil.QueryConditionShow(Cfg, ItemID)
+	if Cfg == nil then
+		return false
+	end
+
+	if Cfg.FunType == AccessFuntype.Fun_Store then
+		return _G.ShopMgr:CanShowByCondition(Cfg.FunValue)
+	end
+
+	return false
 end
 
 function ItemUtil.QueryIsUnLock(ItemAccessFunType, FunValue, ItemID)
@@ -290,13 +318,17 @@ function ItemUtil.QueryIsUnLock(ItemAccessFunType, FunValue, ItemID)
 		return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDBattle)
 	elseif ItemAccessFunType == AccessFuntype.Fun_ArmyPreparation then
 		return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDCompanySeal)
-	elseif ItemAccessFunType == AccessFuntype.Fun_Market or ItemAccessFunType == AccessFuntype.Fun_Marketbulletinboard then
-		return _G.MarketMgr:CanUnLockMarket()
 	elseif ItemAccessFunType == AccessFuntype.Fun_JumpTableCfgID then
 		local JumpUtil = require("Utils/JumpUtil")
 		return JumpUtil.IsCurJumpIDCanJump(FunValue)
+	elseif ItemAccessFunType == AccessFuntype.Fun_DepartureOfLight then
+		return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLightJourney)
+	elseif ItemAccessFunType == AccessFuntype.Fun_Market or ItemAccessFunType == AccessFuntype.Fun_Marketbulletinboard then
+		return _G.MarketMgr:CanUnLockMarket()
 	elseif ItemAccessFunType == AccessFuntype.Fun_DailyRandomPword then
 		return _G.AdventureMgr:IsCurDailyRandomUnlock(FunValue)
+	elseif ItemAccessFunType == AccessFuntype.Fun_LegendaryWeapon then
+		return _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLegendaryWeapon)
 	else
 		-- 这里包含了默认开启的模块
 		return true
@@ -336,6 +368,26 @@ function ItemUtil.UpdateProfRestrictions(ItemResID)
 		if nil ~= MajorRoleDetail then
 			for _, ProfData in pairs(MajorRoleDetail.Prof.ProfList) do
 				OtherProfWearable = OtherProfWearable or EquipmentMgr:CanEquiped(ResID, false, ProfData.ProfID, ProfData.Level)
+			end
+		end
+	end
+	return CanWearable, OtherProfWearable
+end
+
+function ItemUtil.OnlyProfRestrictions(ItemResID)
+	local ResID = ItemResID
+	local Reason, FailReason= EquipmentMgr:CanEquiped(ResID, false)
+	--tips职业限制过滤掉种族性别的限制
+	local CanWearable = not (FailReason == 1 or FailReason == 2)
+	
+	local OtherProfWearable = false
+	if CanWearable == false then
+		local MajorRoleDetail = _G.ActorMgr:GetMajorRoleDetail()
+		if nil ~= MajorRoleDetail then
+			for _, ProfData in pairs(MajorRoleDetail.Prof.ProfList) do
+				local OtherReason, OtherFailReason = EquipmentMgr:CanEquiped(ResID, false, ProfData.ProfID, ProfData.Level)
+				local ProfWearable = not (OtherFailReason == 1 or OtherFailReason == 2)
+				OtherProfWearable = OtherProfWearable or ProfWearable
 			end
 		end
 	end
@@ -464,27 +516,7 @@ function ItemUtil.GetItemNumText(Num)
 	
 	if Num // 1000000 == 0 then
 		-- 6位数以内
-		local a = Num
-		local NumberTable = {}
-		while (a > 0) do
-			NumberTable[#NumberTable + 1] = tostring(a % 10)
-			a = _G.math.modf(a / 10)
-			iCount = iCount + 1
-			if a > 0 and iCount % 3 == 0 then
-				NumberTable[#NumberTable + 1] = ","
-			end
-		end
-		--倒序
-		local iNumberCount = #NumberTable
-		local Temp
-		for i = 1, iNumberCount / 2 do
-			Temp = NumberTable[i]
-			NumberTable[i] = NumberTable[iNumberCount - i + 1]
-			NumberTable[iNumberCount - i + 1] = Temp
-		end
-		---concat
-		local Text = table.concat(NumberTable)
-		return Text
+		return ItemUtil.GetItemNumTextWithoutBehind(Num)
 	elseif Num // 100000000 == 0 then
 			-- 8位数以内
 			local Text = CommonUtil.IsCurCultureChinese() and  string.format(_G.LSTR(1020062), Num // 10000) or string.format("%dm", Num // 1000000)
@@ -494,6 +526,39 @@ function ItemUtil.GetItemNumText(Num)
 		local Text = CommonUtil.IsCurCultureChinese() and  string.format(_G.LSTR(1020063), Num // 100000000) or string.format("%dm", Num // 1000000)
 		return Text
 	end
+end
+
+---获取数量文本，不显示千、万、亿等后缀
+function ItemUtil.GetItemNumTextWithoutBehind(Num)
+	if Num == nil then
+		return ""
+	end
+	local iCount = 0
+	if Num == 0 then
+		return string.format("%d", Num)
+	end
+	-- 6位数以内
+	local a = Num
+	local NumberTable = {}
+	while (a > 0) do
+		NumberTable[#NumberTable + 1] = tostring(a % 10)
+		a = _G.math.modf(a / 10)
+		iCount = iCount + 1
+		if a > 0 and iCount % 3 == 0 then
+			NumberTable[#NumberTable + 1] = ","
+		end
+	end
+	--倒序
+	local iNumberCount = #NumberTable
+	local Temp
+	for i = 1, iNumberCount / 2 do
+		Temp = NumberTable[i]
+		NumberTable[i] = NumberTable[iNumberCount - i + 1]
+		NumberTable[iNumberCount - i + 1] = Temp
+	end
+	---concat
+	local Text = table.concat(NumberTable)
+	return Text
 end
 
 function ItemUtil.GetNumProgressFormat(Value, Total)
@@ -514,8 +579,22 @@ function ItemUtil.GetNumProgressFormat(Value, Total)
 		return string.format("%d/%d", Value, Total )
 	end
 
-	local curNumRichText = RichTextUtil.GetText(string.format("%d", Value), "dc5868", 0, nil)
-    return string.format("%s/%d", curNumRichText, Total)
+	local curNumRichText = RichTextUtil.GetText(string.format("%d", Value), "dc5868", "0000007F", nil)
+    return string.format("%s/%d", curNumRichText, Total) 
+
+end
+
+function ItemUtil.GetNumProgressFormat2(Value, Total)
+	if Total == nil then
+		return ""
+	end
+
+	if Value >= Total then
+		return string.format("%s/%d", string.formatint(Value), Total )
+	end
+
+	local curNumRichText = RichTextUtil.GetText(string.format("%s", string.formatint(Value)), "dc5868", "0000007F", nil)
+    return string.format("%s/%d", curNumRichText, Total) 
 
 end
 
@@ -582,6 +661,11 @@ function ItemUtil.JumpGetWayByItemData(ItemData)
 		local Params = {AchievemwntID = ItemData.FunValue}
 		_G.AchievementMgr:OpenAchievementMainPanelView(Params)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_EquipExchange then
+		if _G.UIViewMgr:IsViewVisible(UIViewID.EquipmentExchangeWinView) then
+			MsgTipsUtil.ShowTipsByID(ItemData.RepeatJumpTipsID)
+			return
+		end
+
 		if ItemData.ItemID ~= 0 then
 			_G.UIViewMgr:ShowView(UIViewID.EquipmentExchangeWinView, {ItemID = ItemData.ItemID})
 		end
@@ -636,12 +720,6 @@ function ItemUtil.JumpGetWayByItemData(ItemData)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_ArmyPreparation then
 		_G.CompanySealMgr:OpenCompanyTaskView()
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_LegendaryWeapon then
-		local IsModuleOpen = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDLegendaryWeapon)
-		if not IsModuleOpen then
-			print("===== 传奇武器未解锁")
-			MsgTipsUtil.ShowTips(LSTR(1540008))
-			return
-		end
 		local Params = {
 			OpenSource = ItemData.FunValue,
 			ItemID = ItemData.ItemID
@@ -652,7 +730,10 @@ function ItemUtil.JumpGetWayByItemData(ItemData)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_MainLineTask or ItemAccessFunTypeValue == AccessFuntype.Fun_Branch then
 		_G.AdventureCareerMgr:JumpChapterOnMap(ItemData.FunValue)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_JumpTableCfgID then
-		local JumpUtil = require("Utils/JumpUtil")
+		JumpUtil.JumpTo(ItemData.FunValue)
+	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_DepartureOfLight then
+		_G.DepartOfLightMgr:ShowDepartMainView(ItemData.ItemID)
+	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_Activityplay then
 		JumpUtil.JumpTo(ItemData.FunValue)
 	elseif ItemAccessFunTypeValue == AccessFuntype.Fun_DailyRandomPword then
 		PWorldEntUtil.ShowPWorldEntViewDR(ItemData.FunValue)
@@ -742,6 +823,16 @@ function ItemUtil.IsActivated(ItemID)
 			return false
 		end
 		return _G.MagicCardCollectionMgr.CheckMagicCardUnlock(ItemID)
+	elseif FuncType == ProtoRes.FuncType.UnlockFashionDecoration then
+		if nil == _G.FashionDecoMgr then
+			return false
+		end
+		return _G.FashionDecoMgr.IsItemUsed(ItemID)
+	elseif FuncType == ProtoRes.FuncType.UseChocoboArmor then
+		if nil == _G.ChocoboCodexArmorMgr then
+			return false
+		end
+		return _G.ChocoboCodexArmorMgr.CheckArmorItemUsed(ItemID)
 	end
 
 	return false

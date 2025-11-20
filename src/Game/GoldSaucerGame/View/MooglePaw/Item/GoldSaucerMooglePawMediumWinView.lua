@@ -81,6 +81,7 @@ function GoldSaucerMooglePawMediumWinView:OnShow()
 	self.bHideSendMsg = true -- 打开界面时默认关闭界面自动发送不再翻倍挑战协议
 	local RemainTime = Params.RemainTime
 	local RemainTimeContent = string.format(LSTR(360017), TimeUtil.GetTimeFormat("%M:%S", math.ceil(RemainTime))) 
+
 	local RewardChangeContent = ""
 	if GameType == MiniGameType.MooglesPaw then
 		local BaseReward = Params.BaseReward or 1

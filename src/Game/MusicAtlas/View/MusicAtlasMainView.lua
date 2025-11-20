@@ -221,6 +221,7 @@ function MusicAtlasMainView:OnInit()
 	self.LastChosedList = {}
 	self.IsSearching = false
 	self.IsCanDeal = false
+	self.IsChosedLock = false
 end
 
 function MusicAtlasMainView:OnDestroy()
@@ -228,8 +229,10 @@ function MusicAtlasMainView:OnDestroy()
 end
 
 function MusicAtlasMainView:OnShow()
+	self.IsChosedLock = false
 	self.IsOrgin = true
 	self.CurSearchList = {}
+	self.CurChosedLockList = {}
 	self:SetSearchBarHintText()
 	UIUtil.SetIsVisible(self.TableViewWayList, false)
 	self.TextGetWay:SetText(LSTR(1170012)) --获取途径
@@ -535,10 +538,13 @@ end
 --点击已收录
 function MusicAtlasMainView:OnSingleBoxClick(View, State)
 	self.IsUnlock = State
+	MusicPlayerMgr:RemoveCurTabTypeAllRedDot(self.CurAtlasList)
 	if self.IsUnlock == 1 then
+		self.IsChosedLock = true
 		self:GetLockAtlasInfo()
 		return
 	else
+		self.IsChosedLock = false
 		local List
 		if self.IsSearching then
 			List = self.CurSearchList or {}
@@ -565,10 +571,10 @@ end
 --Tab栏选择
 function MusicAtlasMainView:OnTabSelectChanged(Index, ItemData, ItemView)
 	self.IsCanDeal = false
-	if ItemData and ItemData.RedDotData and ItemData.RedDotData.RedDotName and ItemData.RedDotData.RedDotName ~= "" and self.CurTypeIndex ~= nil then
+	if ItemData.RedDotData and ItemData.RedDotData.RedDotName and ItemData.RedDotData.RedDotName ~= "" and self.CurTypeIndex ~= nil then
 		_G.RedDotMgr:DelRedDotByName(ItemData.RedDotData.RedDotName)
 	end
-	if self.LastTabData and self.LastTabData.RedDotData and self.LastTabData.RedDotData.RedDotName and self.LastTabData.RedDotData.RedDotName ~= "" then
+	if self.LastTabData and self.LastTabData.RedDotData.RedDotName and self.LastTabData.RedDotData.RedDotName ~= "" then
 		_G.RedDotMgr:DelRedDotByName(self.LastTabData.RedDotData.RedDotName)
 	end
 	self.CurTypeIndex = Index
@@ -620,13 +626,18 @@ function MusicAtlasMainView:UpdateAtlasInfo()
 		CurAtlasList = MusicPlayerMgr:GetAtlasInfoByType(CurType)
 	end
 
+	self.CurAtlasList = CurAtlasList
+	if self.IsChosedLock then
+		self:GetLockAtlasInfo()
+		CurAtlasList = self.CurChosedLockList
+	end
 	local ListLen 
 	if not CurAtlasList then
 		ListLen = 0
 	else
 		ListLen = #CurAtlasList
 	end
-	self.CurAtlasList = CurAtlasList
+
 	self.CurPage = 1
 
 	if ListLen == 0 then
@@ -764,9 +775,14 @@ function MusicAtlasMainView:ClickNextPage()
 	end
 	AudioUtil.LoadAndPlay2DSound(TurnSoundPath)
 	self:PlayAnimation(self.AnimPageturnLeft)
-
+	local AtlasList 
+	if self.IsChosedLock then
+		AtlasList = self.CurChosedLockList
+	else
+		AtlasList = self.CurAtlasList
+	end
     local function AfterAnimFinish()
-		self.ViewModel:UpdateItemInfo(self.CurAtlasList, self.CurPage)
+		self.ViewModel:UpdateItemInfo(AtlasList, self.CurPage)
 		self.ViewModel:UpdatePageInfo(self.CurPage, self.MaxPage)
 		local Index = self:GetMusicIndex()
 		self.MusicAtlasList:SetSelectedIndex(Index)
@@ -901,10 +917,11 @@ function MusicAtlasMainView:GetLockAtlasInfo()
 		end
 	end
 
+	self.CurChosedLockList = HasUnlockList
+
 	if #HasUnlockList == 0 then
 		self.ViewModel:UpdatePageInfo(1, 1)
 		self.ViewModel:ShowEmptyPanel(true)
-		local Tips = RichTextUtil.GetText(LSTR(1170016), "#313131FF")
 		self.CommEmpty:SetTipsContent(LSTR(1170016))--暂无未收录的乐谱，快去找找吧库啵!
 		UIUtil.SetIsVisible(self.TableViewMusicList, false)
 	else

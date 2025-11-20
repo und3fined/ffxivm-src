@@ -49,7 +49,8 @@ end
 function DepotPageVM:UpdateInfo(Type, Name)
 	self.PageType = Type
 	self.PageName = Name
-	self.PageIcon = DepotConfig.FindDepotIcon(Type + 1)
+
+	self.PageIcon = DepotConfig.FindDepotIcon(Type or 0 + 1)
 end
 
 function DepotPageVM:GetItemCount()

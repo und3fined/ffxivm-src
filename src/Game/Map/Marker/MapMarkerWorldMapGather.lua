@@ -96,7 +96,7 @@ function MapMarkerWorldMapGather:ToggleFollow()
 		local MajorProfID = MajorUtil.GetMajorProfID()
 		local GatherData = _G.GatheringLogMgr:GetSelectGatherData()
 		if GatherData == nil then
-			return nil
+			return
 		end
 		local GatheringItemJobID = GatherData.GatheringJob
 		--若玩家职业与当前所需职业不符，需要弹出切换职业弹窗

@@ -19,6 +19,7 @@ function WhaleMonutItemVM:Ctor()
     self.Super.Ctor(self)
     self.RedDotName = nil
     self.LineVisible = false
+    self.JumpStateCheckCB = nil
 end
 
 function WhaleMonutItemVM:UpdateVM(TaskItem)
@@ -26,6 +27,7 @@ function WhaleMonutItemVM:UpdateVM(TaskItem)
     self.JumpID = TaskItem.JumpID
     self.JumpType = TaskItem.JumpType
     self.JumpButton = TaskItem.JumpButton
+    self.JumpStateCheckCB = TaskItem.JumpStateCheckCB
     self.Super.UpdateVM(self, TaskItem)
     self.RedDotName = TaskItem.RedDotName
     self.LineVisible = TaskItem.TotalNum ~= TaskItem.IndexInList
@@ -35,6 +37,12 @@ function WhaleMonutItemVM:OnClickedGoHandle()
     if self.Locked then
         _G.MsgTipsUtil.ShowTips(_G.LSTR(100042))
         return
+    end
+
+    if self.JumpStateCheckCB ~= nil then
+        if not self.JumpStateCheckCB(self.NodeID, true) then
+            return
+        end
     end
 
     if self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo and self.JumpID then
@@ -59,6 +67,13 @@ function WhaleMonutItemVM:RefreshBtnGoText()
         return
     end
 
+    if self.JumpStateCheckCB ~= nil then
+        if not self.JumpStateCheckCB(self.NodeID) then
+            self.TextBtnGo = LSTR(100043)
+            return
+        end
+    end
+
     if self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo and self.JumpID ~= 0 then
         local Text = string.isnilorempty(self.JumpButton) and LSTR(100035) or self.JumpButton
 		self.TextBtnGo = Text
@@ -73,12 +88,19 @@ end
 
 function WhaleMonutItemVM:SetBtnState(BtnWidget)
     if not BtnWidget then return end
-        
+
     if self.Locked then
         BtnWidget:SetIsDisabledState(true, true)
         return
     end
-    
+
+    if self.JumpStateCheckCB ~= nil then
+        if not self.JumpStateCheckCB(self.NodeID) then
+            BtnWidget:SetIsNormalState(true)
+            return
+        end
+    end
+
     if self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusNo and self.JumpID ~= 0 then
 		BtnWidget:SetIsNormalState(true)
 	elseif self.TaskState == ProtoCS.Game.Activity.RewardStatus.RewardStatusWaitGet then

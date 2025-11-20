@@ -317,6 +317,7 @@ SkillPVPBtnView.PlayerClearSimulateReplace = SkillAbleBtnView.PlayerClearSimulat
 SkillPVPBtnView.IconSkillReplaceClicked = SkillAbleBtnView.IconSkillReplaceClicked
 SkillPVPBtnView.OnAnimChangeAnimationFinished = SkillAbleBtnView.OnAnimChangeAnimationFinished
 
+
 function SkillPVPBtnView:PlayerClearButtonState()
 	self:PlayerClearSimulateReplace()
 	self:PlayerUnselectButton()

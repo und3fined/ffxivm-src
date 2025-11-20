@@ -63,6 +63,7 @@ function BandTimelineBase:Reset()
     self.IsLoop = false
     self.Pos = nil
     self.IsAreaEnter = false
+    self.IsVisionEnter = false
     self.AreaDist = 3000
     self.ListenDist = 3000
 
@@ -88,9 +89,8 @@ function BandTimelineBase:OnShutdown()
         _G.ClientReportMgr:SendClientReport(ProtoCS.ReportType.ReportTypeBandListen, ReportParams)
     end
     
-    if self.NullPlayingID ~= nil then
-        _G.UE.UAudioMgr.Get():StopBGM(self.NullPlayingID)
-        self.NullPlayingID = nil
+    if self.IsVisionEnter then
+        _G.UE.UBGMMgr.Get():Resume()
     end
     
     for _, Cmd in ipairs(self.CmdList) do
@@ -141,7 +141,8 @@ function BandTimelineBase:Init(ID, StartTime, PlayRate)
     self.DurationTime = Cfg.DurationTime
     self.CurrentTime = TimeUtil.GetServerLogicTime()
     self.IsLoop = Cfg.Loop == 1
-    _G.FLOG_INFO("[TouringBand]BandTimelineBase:Init: ID=%d, StartTime=%d, CurrentTime=%d, DurationTime=%d", ID, StartTime, self.CurrentTime, self.DurationTime)
+    _G.FLOG_INFO("[TB] BandTimelineBase:Init: ID=%d, StartTime=%s, CurrentTime=%s, DurationTime=%s", ID, 
+            tostring(StartTime), tostring(self.CurrentTime), tostring(self.DurationTime))
     if self.IsLoop then
         local Divisor = self.CurrentTime - StartTime
         local Truncation = math.floor(Divisor / self.DurationTime)
@@ -419,24 +420,37 @@ function BandTimelineBase:Update(DeltaTime)
             self:End()
         end
     end
-
+    
+    if self.IsVisionEnter ~= IsVisionEnter then
+        _G.FLOG_INFO("[TB] IsVisionEnter | Timeline:%d Old:%s New:%s", self.TimelineID, tostring(self.IsVisionEnter), tostring(IsVisionEnter))
+        self.IsVisionEnter = IsVisionEnter
+        if IsVisionEnter then
+            EventMgr:SendEvent(EventID.TouringBandVisionEnter, { TimelineID = self.TimelineID, IsVisionEnter = IsVisionEnter })
+            _G.UE.UBGMMgr.Get():Pause()
+        else
+            for _, Cmd in ipairs(self.CmdList) do
+                Cmd:VisionLeave()
+            end
+            
+            EventMgr:SendEvent(EventID.TouringBandVisionEnter, { TimelineID = self.TimelineID, IsVisionEnter = IsVisionEnter })
+            _G.UE.UBGMMgr.Get():Resume()
+        end
+    end
+    
     -- 11.4 将消息放在Cmd执行之后
     if self.IsAreaEnter ~= IsAreaEnter then
         if IsAreaEnter then
             -- 只有在进入区域时才需要判断 MangerEntityID > 0
+            _G.FLOG_INFO("[TB] IsAreaEnter check | MangerEntityID:%d Valid:%s", MangerEntityID, tostring(MangerEntityID > 0))
             if MangerEntityID > 0 then
                 self.IsAreaEnter = IsAreaEnter
                 EventMgr:SendEvent(EventID.TouringBandAreaEnter, { TimelineID = self.TimelineID, IsAreaEnter = IsAreaEnter })
-                self.NullPlayingID = _G.UE.UAudioMgr.Get():PlayBGM(1, _G.UE.EBGMChannel.NormalCutscene)
             end
         else
+            _G.FLOG_INFO("[TB] IsAreaExiting | Timeline:%d", self.TimelineID)
             -- 处理离开区域的情况
             self.IsAreaEnter = IsAreaEnter
             EventMgr:SendEvent(EventID.TouringBandAreaEnter, { TimelineID = self.TimelineID, IsAreaEnter = IsAreaEnter })
-            if self.NullPlayingID ~= nil then
-                _G.UE.UAudioMgr.Get():StopBGM(self.NullPlayingID)
-                self.NullPlayingID = nil
-            end
         end
     end
 end
@@ -449,7 +463,7 @@ end
 ---IsInEffectiveRange
 ---@return boolean
 function BandTimelineBase:IsInEffectiveRange()
-    return self.IsAreaEnter
+    return self.IsVisionEnter
 end
 
 ---SetInteractStatus

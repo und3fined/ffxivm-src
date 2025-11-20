@@ -10,7 +10,7 @@ local PworldCfg = require("TableCfg/PworldCfg")
 local PWorldEntUtil = require("Game/PWorld/Entrance/PWorldEntUtil")
 local PWorldEntPol = require("Game/PWorld/Entrance/Policy/PWorldEntPol")
 local PolUtil = require("Game/PWorld/Entrance/Policy/PWorldEntPolUtil")
-local GlobalCfg = require("TableCfg/GlobalCfg")
+local ChocoboGlobalCfg = require("TableCfg/ChocoboGlobalCfg")
 local ProtoRes = require("Protocol/ProtoRes")
 local PWorldEntDefine = require("Game/PWorld/Entrance/PWorldEntDefine")
 local ProtoCommon = require("Protocol/ProtoCommon")
@@ -27,8 +27,8 @@ function PWorldEntPolChocobo:CheckJoinPre(EntID)
 end
 
 function PWorldEntPolChocobo:CheckFilter(EntID)
-    local QID = 150221
-    local Cfg = GlobalCfg:FindValue(ProtoRes.global_cfg_id.GlobalCfgChocoboNewbieQuest, "Value")
+    local QID = 150004
+    local Cfg = ChocoboGlobalCfg:FindValue(ProtoRes.ChocoboGlobalCfgID.ChocoboGlobalCfgIDNewbieQuest, "Value")
     if Cfg ~= nil and Cfg[1] ~= nil then
         QID = Cfg[1]
     end

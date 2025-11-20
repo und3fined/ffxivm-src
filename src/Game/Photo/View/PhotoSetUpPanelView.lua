@@ -130,15 +130,17 @@ end
 function PhotoSetUpPanelView:OnTouchStart(Pos)
 	self.TouchDelY = 0
 	self.TouchY = Pos.Y
-	UIUtil.SetIsVisible(self.ImgRotateLight, true)
-	UIUtil.SetIsVisible(self.PanelScaleNumber, false)
-	UIUtil.SetIsVisible(self.PanelScaleNumber02, true)
-
-
 	-- _G.FLOG_INFO('Andre.PhotoMainView:OnTouchStart X = ' .. tostring(Pos.X) .. " Y = " .. tostring(Pos.Y))
 end
 
 function PhotoSetUpPanelView:OnTouchMove(Pos)
+	if not self.TouchMoveFlag then
+		UIUtil.SetIsVisible(self.ImgRotateLight, true)
+		UIUtil.SetIsVisible(self.PanelScaleNumber, false)
+		UIUtil.SetIsVisible(self.PanelScaleNumber02, true)
+		self.TouchMoveFlag = true
+	end
+
 	self.TouchDelY = Pos.Y - self.TouchY
 	self.TouchY = Pos.Y
 
@@ -151,6 +153,7 @@ function PhotoSetUpPanelView:OnTouchMove(Pos)
 end
 
 function PhotoSetUpPanelView:OnTouchEnd(Pos)
+	self.TouchMoveFlag = nil
 	self.TouchDelY = 0
 	self.TouchY = 0
 	UIUtil.SetIsVisible(self.ImgRotateLight, false)

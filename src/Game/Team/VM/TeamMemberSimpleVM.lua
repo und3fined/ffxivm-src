@@ -12,6 +12,7 @@ local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local TeamDefine = require("Game/Team/TeamDefine")
 local OnlineStatusUtil = require("Game/OnlineStatus/OnlineStatusUtil")
 local ProtoRes = require("Protocol/ProtoRes")
+local MapCfg = require("TableCfg/MapCfg")
 
 local LSTR = _G.LSTR
 
@@ -103,6 +104,7 @@ function TeamMemberSimpleVM:ClearRoleInfo(  )
 	self.MemberItemBg = TeamDefine.TeamMemberEmptyItemBg
 
     self.ProfInfoVM:UpdateVM({})
+	self:SetMapResID(nil)
 end
 
 function TeamMemberSimpleVM:SetVoiceMemberID( MemberID )
@@ -135,6 +137,11 @@ function TeamMemberSimpleVM:UpdateProfInfo(Mgr)
 
 	self.MemberItemBg = string.isnilorempty(Bg) and TeamDefine.TeamMemberEmptyItemBg or Bg
 	self.ProfInfoVM:UpdateVM(self)
+end
+
+function TeamMemberSimpleVM:SetMapResID(MapResID)
+	self.MapResID = MapResID
+	self.MapResName = MapCfg:FindValue(MapResID, "DisplayName") or ""
 end
 
 return TeamMemberSimpleVM

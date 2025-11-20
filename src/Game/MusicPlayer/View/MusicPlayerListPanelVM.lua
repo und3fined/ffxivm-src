@@ -72,7 +72,7 @@ function MusicPlayerListPanelVM:UpdateDropList()
 					local Number = CurTypeMusicList[j].Number
 					MusicInfo.Number = Number
 					MusicInfo.Type = Type
-					if Type == Info[i].Type and MusicInfo.OnOff == 1 and CurTypeMusicList[j].IsUnLock then
+					if Type == Info[i].Type and CurTypeMusicList[j].OnOff == 1 and CurTypeMusicList[j].IsUnLock then
 						table.insert(Info[i].MusicInfo, MusicInfo)
 					end
 				else
@@ -124,7 +124,7 @@ function MusicPlayerListPanelVM:MatchMusic(Input)
 				for _, j in pairs(v.MusicInfo) do
 					if j.Number == Params then
 						j.SearchID = j.Number
-						j.Type = k
+						j.Type = v.Type
 						table.insert(matches, j)
 					end
 				end
@@ -144,7 +144,7 @@ function MusicPlayerListPanelVM:MatchMusic(Input)
 					for _, j in pairs(v.MusicInfo) do
 						if j.MusicName:find(Input) then
 							j.SearchID = j.Number
-							j.Type = k
+							j.Type = v.Type
 							table.insert(matches, j)
 						end
 					end

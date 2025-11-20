@@ -76,8 +76,8 @@ end
 ---@field IsRemoved boolean
 
 ---@return BonusStateUpdateParams
-local function PackBonusStateUpdateParams(ID, EndTime, Enable, IsAdded, IsRemoved)
-    return { ID = ID, EndTime = EndTime, Enable = Enable, IsAdded = IsAdded, IsRemoved = IsRemoved }
+local function PackBonusStateUpdateParams(ID, EndTime, Enable, IsAdded, IsRemoved, ScoreUse)
+    return { ID = ID, EndTime = EndTime, Enable = Enable, IsAdded = IsAdded, IsRemoved = IsRemoved, ScoreUse = ScoreUse }
 end
 
 function BonusStateMgr:UpdateBonusStates(RoleID, States)
@@ -95,9 +95,9 @@ function BonusStateMgr:UpdateBonusStates(RoleID, States)
     for _, State in ipairs(States) do
         local OldState = RoleBonusStates[State.ID]
         -- 有变化的状态才需要更新
-        if nil == OldState or OldState.EndTime ~= State.EndTime or OldState.Enable ~= State.Enable then
+        if nil == OldState or OldState.EndTime ~= State.EndTime or OldState.Enable ~= State.Enable or OldState.ScoreUse ~= State.ScoreUse then
             RoleBonusStates[State.ID] = State
-            table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, nil == OldState, false))
+            table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, nil == OldState, false, State.ScoreUse))
         end
     end
 
@@ -118,7 +118,7 @@ function BonusStateMgr:RemoveBonusStates(RoleID, IDs)
         local OldState = RoleBonusStates[ID]
         if OldState ~= nil then
             RoleBonusStates[ID] = nil
-            table.insert(RemovedStates, PackBonusStateUpdateParams(ID, OldState.EndTime, OldState.Enable, false, true))
+            table.insert(RemovedStates, PackBonusStateUpdateParams(ID, OldState.EndTime, OldState.Enable, false, true, OldState.ScoreUse))
         end
     end
 
@@ -149,15 +149,15 @@ function BonusStateMgr:SetBonusStates(RoleID, States)
             RoleBonusStates[State.ID] = State
 
             -- 有变化的状态才需要更新
-            if nil == OldState or OldState.EndTime ~= State.EndTime or OldState.Enable ~= State.Enable then
-                table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, nil == OldState, false))
+            if nil == OldState or OldState.EndTime ~= State.EndTime or OldState.Enable ~= State.Enable or OldState.ScoreUse ~= State.ScoreUse then
+                table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, nil == OldState, false, State.ScoreUse))
             end
         end
     end
 
     -- 剩下的状态为需要移除的状态
     for _, State in pairs(OldRoleBonusStates) do
-        table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, false, true))
+        table.insert(UpdatedStates, PackBonusStateUpdateParams(State.ID, State.EndTime, State.Enable, false, true, State.ScoreUse))
     end
 
     if #UpdatedStates > 0 then
@@ -357,6 +357,22 @@ end
 ---@return boolean
 function BonusStateMgr:HasBonusStateMajor(StateID)
     return self:HasBonusState(MajorUtil.GetMajorRoleID(), StateID)
+end
+
+---GetBonusStateEndTimeMajor 获取主角某个加成状态的结束时间（这里搭档的加成也算在主角身上）
+---@return number EndTime 单位秒，0为永久加成，小于0为未持有该加成
+function BonusStateMgr:GetBonusStateEndTimeMajor(StateID)
+    local MajorRoleID = MajorUtil.GetMajorRoleID()
+    local State = ((self.BonusStateMap or {})[MajorRoleID] or {})[StateID]
+    return State and State.EndTime or -1
+end
+
+---GetBonusStateScoreUseMajor 获取主角某个加成状态的加成获取数量（这里搭档的加成也算在主角身上）
+---@return number ScoreUse
+function BonusStateMgr:GetBonusStateScoreUseMajor(StateID)
+    local MajorRoleID = MajorUtil.GetMajorRoleID()
+    local State = ((self.BonusStateMap or {})[MajorRoleID] or {})[StateID]
+    return State and State.ScoreUse or 0
 end
 
 ---

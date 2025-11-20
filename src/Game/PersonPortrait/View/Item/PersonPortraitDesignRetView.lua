@@ -35,6 +35,7 @@ local DesignerType = ProtoCommon.DesignerType
 local FVector2D = _G.UE.FVector2D
 local FLOG_INFO = _G.FLOG_INFO
 local ELookAtType = _G.UE.ELookAtType
+local LSTR = _G.LSTR
 
 local SCS_FinalColorLDRHasAlpha = _G.UE.ESceneCaptureSource.SCS_FinalColorLDRHasAlpha or 3
 
@@ -44,9 +45,11 @@ local SCS_FinalColorLDRHasAlpha = _G.UE.ESceneCaptureSource.SCS_FinalColorLDRHas
 ---@field ImgBg UFImage
 ---@field ImgDecoration UFImage
 ---@field ImgFrame UFImage
+---@field LoadingPanel UFCanvasPanel
 ---@field ModelToImage CommonRender2DToImageView
 ---@field PartOnePanel UFCanvasPanel
 ---@field PartTwoPanel UFCanvasPanel
+---@field TextLoading UFTextBlock
 ---@field WarningPanel UFCanvasPanel
 ---@field AnimLoop UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -58,9 +61,11 @@ function PersonPortraitDesignRetView:Ctor()
 	--self.ImgBg = nil
 	--self.ImgDecoration = nil
 	--self.ImgFrame = nil
+	--self.LoadingPanel = nil
 	--self.ModelToImage = nil
 	--self.PartOnePanel = nil
 	--self.PartTwoPanel = nil
+	--self.TextLoading = nil
 	--self.WarningPanel = nil
 	--self.AnimLoop = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -80,6 +85,8 @@ function PersonPortraitDesignRetView:OnInit()
 		{ "CurSelectFrameID", 		UIBinderValueChangedCallback.New(self, nil, self.OnValueChangedFrameID) },
 		{ "IsPositionValid", 		UIBinderSetIsVisible.New(self, self.WarningPanel, true) },
 	}
+
+	self.TextLoading:SetText(LSTR(10069)) -- "资源加载中"
 end
 
 function PersonPortraitDesignRetView:OnDestroy()
@@ -92,7 +99,7 @@ function PersonPortraitDesignRetView:OnShow()
 	self.bIsInitialized = false 
 	self.IsCheckPositionsIsValid = false
 
-	UIUtil.SetIsVisible(self.ModelToImage.ImageRole, false)
+	self:SetLoadingVisible(true)
 
 	--天气灯光 add by sammrli
 	_G.LightMgr:EnableUIWeather(WeatherDefine.SystemID.PersonSystem)
@@ -136,7 +143,7 @@ function PersonPortraitDesignRetView:OnTimer()
 		if CurTime - LastTime >= 3 then
 			local Rotate = PersonPortraitVM.CurModelEditVM.Rotate
 			if Rotate <= MinRotate or Rotate >= MaxRotate then
-				MsgTipsUtil.ShowTips(_G.LSTR(60029)) -- "已旋转到最大角度"
+				MsgTipsUtil.ShowTips(LSTR(60029)) -- "已旋转到最大角度"
 
 				self.RotateTipsTime = CurTime
 			end
@@ -146,7 +153,7 @@ function PersonPortraitDesignRetView:OnTimer()
 	local Ref = self.ShowRoleImgRef or -1 
 	if Ref >= 0 then
 		if Ref == 0 then 
-			UIUtil.SetIsVisible(self.ModelToImage.ImageRole, true)
+			self:SetLoadingVisible(false)
 		end
 
 		self.ShowRoleImgRef = Ref - 1
@@ -160,14 +167,15 @@ function PersonPortraitDesignRetView:InitModel()
 		ModelToImage:SetCameraCaptureSource(SCS_FinalColorLDRHasAlpha)
 		ModelToImage:DisableImageGamma()
 		ModelToImage:SetBlockActionLookAtModeNotice(true)
+		ModelToImage:OpenSelfShadowing()
+		ModelToImage:EnableViewDistPostProcess(false)
 
 		--self:UpdateModelEquipments()
 		self.bIsInitialized = true
-
-		self:UpdateModelData()
+		self:UpdateModelServerData()
 		---更新模型装备,UpdateModelServerData会设置一次装备显隐，清空颜色，把装备设置放在后面来
 		self:UpdateModelEquipments()
-		self.ShowRoleImgRef = 1
+		self.ShowRoleImgRef = (self.ShowRoleImgRef or 0) + 1
     end, false, false)
 
 	local MaxZOffset = PersonPortraitUtil.GetDefaultFarZOffset()
@@ -227,7 +235,17 @@ function PersonPortraitDesignRetView:InitModel()
 	end)
 end
 
-function PersonPortraitDesignRetView:UpdateModelData()
+function PersonPortraitDesignRetView:SetLoadingVisible(b)
+	UIUtil.SetIsVisible(self.LoadingPanel, b)
+	UIUtil.SetIsVisible(self.ModelToImage.ImageRole, not b)
+end
+
+--- 更新模型服务器保存的数据
+function PersonPortraitDesignRetView:UpdateModelServerData()
+	if not self.bModelServerDataNew then
+		return
+	end
+
 	local ModelToImage = self.ModelToImage
 	local CurModelEditVM = PersonPortraitVM.CurModelEditVM
 
@@ -289,6 +307,7 @@ function PersonPortraitDesignRetView:UpdateModelData()
 	end
 
 	self.IsCheckPositionsIsValid = true 
+	self.bModelServerDataNew = false 
 end
 
 function PersonPortraitDesignRetView:OnValueChangedDecorateVisible(Value)
@@ -477,12 +496,14 @@ function PersonPortraitDesignRetView:OnEventGetPortraitDataSuc(IsSaveQueryCallba
 		return
 	end
 
+	self.bModelServerDataNew = true
+
 	if not self.bIsInitialized then
 		-- 初始化模型
 		self:InitModel()
 
 	else
-		UIUtil.SetIsVisible(self.ModelToImage.ImageRole, false)
+		self:SetLoadingVisible(true)
         self:UpdateModelEquipments()
 	end
 
@@ -504,9 +525,9 @@ function PersonPortraitDesignRetView:OnAssembleAllEnd(Params)
 
 	if Params and Params.ULongParam1 == self.ModelToImage:GetActorEntityID() then
 		FLOG_INFO("PersonPortraitDesignRetView:OnAssembleAllEnd, UpdateModelData")
-		self:UpdateModelData()
+		self:UpdateModelServerData()
 
-		self.ShowRoleImgRef = 1
+		self.ShowRoleImgRef = (self.ShowRoleImgRef or 0) + 1
 	end
 end
 

@@ -9,6 +9,7 @@ local RideCfg = require("TableCfg/RideCfg")
 local MountVM = require("Game/Mount/VM/MountVM")
 local StoreDefine = require("Game/Store/StoreDefine")
 
+local JumpUtil = require("Utils/JumpUtil")
 local MountMgr = _G.MountMgr
 ---@class MountCustomMadeSlotVM : UIViewModel
 local MountCustomMadeSlotVM = LuaClass(UIViewModel)
@@ -38,6 +39,7 @@ function MountCustomMadeSlotVM:Ctor()
     self.CameraGroupID = nil
     self.ItemID = nil
     self.ImeChanID = nil
+    self.PatternID = nil
 
     self.OwnState = 0
     self.IconMoneyVisible = nil
@@ -70,6 +72,7 @@ function MountCustomMadeSlotVM:Update(Params, UnlockInfo)
     self.CameraGroupID = 	Params.CameraGroupID
     self.ItemID = 			Params.ItemID
     self.ImeChanID =        Params.ImeChanID
+    self.PatternID =        Params.PatternID
 
     self:UpdateOwnState(UnlockInfo)
 end
@@ -92,7 +95,7 @@ function MountCustomMadeSlotVM:UpdateOwnState(UnlockInfo)
     elseif _G.StoreMgr:GetGoodCfg(self.GoodsID) ~= nil then
         self.OwnState = MountCustomMadeSlotVM.OwnState.NotOwnedCanBuy
         self:UpdatePrice()
-    elseif self.JumpID ~= nil and self.JumpID > 0 and not self:IsFinished() then
+    elseif self.JumpID ~= nil and self.JumpID > 0 and not self:IsFinished() and JumpUtil.IsCurJumpIDCanJump(self.JumpID) then
         self.OwnState =  MountCustomMadeSlotVM.OwnState.NotOwnedCanGet
     else 
         self.OwnState = MountCustomMadeSlotVM.OwnState.NotOwnedCannotGet

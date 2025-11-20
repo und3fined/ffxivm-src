@@ -1,3 +1,9 @@
+--
+-- Author: peterxie
+-- Date:
+-- Description: 地图传送列表地区
+--
+
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local UIBindableList = require("UI/UIBindableList")
@@ -15,9 +21,9 @@ local TELEPORT_CRYSTAL_ACROSSMAP = TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSS
 local WorldMapTransferAreaVM = LuaClass(UIViewModel)
 
 function WorldMapTransferAreaVM:Ctor()
-	self.AreaID = nil
-	self.AreaName = nil
-	self.MapList = UIBindableList.New(WorldMapTransferMapVM)
+	self.AreaID = nil -- 地区ID
+	self.AreaName = nil -- 地区名称
+	self.MapVMList = UIBindableList.New(WorldMapTransferMapVM) -- 隶属该地区的地图列表
 end
 
 function WorldMapTransferAreaVM:IsEqualVM(Value)
@@ -34,18 +40,29 @@ end
 function WorldMapTransferAreaVM:UpdateMapList()
 	local MapList = {}
 	local CrystalMgr = _G.PWorldMgr:GetCrystalPortalMgr()
+	local WorldMapVM = _G.WorldMapVM
 
-	if _G.WorldMapVM.RegionID ~= _G.WorldMapVM.FavorRegionID then
-		local TempList = _G.WorldMapVM.Area2MapTable[self.AreaID]
-		for _, MapInfo in pairs(TempList) do
-			local SearchConditions = string.format("MapID = %d AND Type == %d", MapInfo.ID, TELEPORT_CRYSTAL_ACROSSMAP)
-			local AllCfg = TeleportCrystalCfg:FindAllCfg(SearchConditions)
-			for i = 1, #AllCfg do
-				local CrystalCfg = AllCfg[i]
-				if CrystalCfg and CrystalMgr:IsExistActiveCrystal(CrystalCfg.ID)
-					and MapUtil.IsUIMapOpenByVersion(MapUtil.GetUIMapID(MapInfo.ID)) then
-					local CrystalName = MapUtil.GetTransferCrystalName(CrystalCfg.ID)
-					table.insert(MapList, { ID = CrystalCfg.ID, MapID = MapInfo.ID, MapName = MapInfo.MapName, CrystalName = CrystalName })
+	if WorldMapVM.RegionID ~= WorldMapVM.FavorRegionID then
+		if self.AreaID == WorldMapVM.HouseAreaID then
+			local TransferHouseList = WorldMapVM:GetTransferHouseList()
+			for _, HouseInfo in pairs(TransferHouseList) do
+				if HouseInfo.EtherGid and HouseInfo.EtherGid ~= 0 then
+					HouseInfo.IsHouse = true
+					table.insert(MapList, HouseInfo)
+				end
+			end
+		else
+			local TempMapList = WorldMapVM.Area2MapTable[self.AreaID]
+			for _, MapInfo in pairs(TempMapList) do
+				local SearchConditions = string.format("MapID = %d AND Type == %d", MapInfo.ID, TELEPORT_CRYSTAL_ACROSSMAP)
+				local AllCfg = TeleportCrystalCfg:FindAllCfg(SearchConditions)
+				for i = 1, #AllCfg do
+					local CrystalCfg = AllCfg[i]
+					if CrystalCfg and CrystalMgr:IsExistActiveCrystal(CrystalCfg.ID)
+						and MapUtil.IsUIMapOpenByVersion(MapUtil.GetUIMapID(MapInfo.ID)) then
+						local CrystalName = MapUtil.GetTransferCrystalName(CrystalCfg.ID)
+						table.insert(MapList, { ID = CrystalCfg.ID, MapID = MapInfo.ID, MapName = MapInfo.MapName, CrystalName = CrystalName })
+					end
 				end
 			end
 		end
@@ -79,10 +96,10 @@ function WorldMapTransferAreaVM:UpdateMapList()
 			return WorldMapTransferMapVMLeft.PriorityUI < WorldMapTransferMapVMRight.PriorityUI
 		end
 
-		return WorldMapTransferMapVMLeft.CrystalID < WorldMapTransferMapVMRight.CrystalID
+		return WorldMapTransferMapVMLeft.ID < WorldMapTransferMapVMRight.ID
 	end
 
-	self.MapList:UpdateByValues(MapList, SortMap)
+	self.MapVMList:UpdateByValues(MapList, SortMap)
 end
 
 function WorldMapTransferAreaVM:AdapterOnGetWidgetIndex()
@@ -90,7 +107,7 @@ function WorldMapTransferAreaVM:AdapterOnGetWidgetIndex()
 end
 
 function WorldMapTransferAreaVM:AdapterOnGetChildren()
-	return self.MapList:GetItems()
+	return self.MapVMList:GetItems()
 end
 
 function WorldMapTransferAreaVM:AdapterOnGetCanBeSelected()
@@ -98,7 +115,7 @@ function WorldMapTransferAreaVM:AdapterOnGetCanBeSelected()
 end
 
 function WorldMapTransferAreaVM:AdapterOnGetIsVisible()
-	return self.MapList:Length() > 0
+	return self.MapVMList:Length() > 0
 end
 
 return WorldMapTransferAreaVM

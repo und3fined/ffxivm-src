@@ -76,7 +76,7 @@ end
 function WorldMsgMgr:ForceMarkLastLevelLoadCompleted()
     if (self.IsShowLoadingView and self.DelayLoadingTimerID ~= nil) then
         FLOG_INFO("WorldMsgMgr:ForceMarkLastLevelLoadCompleted")
-        self:MarkLevelLoadCompleted() 
+        self:MarkLevelLoadCompleted()
     end
 end
 
@@ -102,6 +102,7 @@ function WorldMsgMgr:ShowLoadingView(CurWorldName, NextWorldName)
 
     self.LastLoadingMapResID = CurrMapResID
 
+    
     _G.LoadingMgr:ShowLoadingView(UseDefault)
 
     local MaxLoadingTime = 120
@@ -199,6 +200,11 @@ function WorldMsgMgr:OnEnterMapFinish()
                 self:RegisterTimer(function()
                     if not UIViewMgr:IsViewVisible(UIViewID.InfoJobNulockTipsView) then
                         _G.BusinessUIMgr:ShowMainPanel(DefaultWidget)
+                    else
+                       local View = UIViewMgr:FindView(UIViewID.InfoJobNulockTipsView)
+                       if View then
+                           View:PlayAnimIn()
+                       end
                     end
                     _G.DeepLinkMgr:TryDoActionManual()
                 end, 0.5)
@@ -238,10 +244,9 @@ function WorldMsgMgr:PreLoadWorld(CurWorldName, NextWorldName)
     if (_G.PWorldMgr:LoadWorldInClientRestore()) then
         self:ShowLoadingView(CurWorldName, NextWorldName)
 
-    elseif _G.PWorldMgr:IsChangeLine()
-        or _G.PWorldMgr:IsChangePhaseMap()
-        or _G.PWorldMgr:IsCrossWorld() then
-        -- 不显示loading界面：地图切线、跨界传送、相位副本
+    elseif _G.PWorldMgr:IsChangeSameMap()
+        or _G.PWorldMgr:IsChangePhaseMap() then
+        -- 部分场景不显示loading界面，一般会有水波纹动效
         -- loiafeng: 没显示Loading也要记录一下LastLoadingMapResID
         self.LastLoadingMapResID = _G.PWorldMgr:GetCurrMapResID()
     else
@@ -266,6 +271,7 @@ function WorldMsgMgr:PreLoadWorld(CurWorldName, NextWorldName)
     _G.CommonUtil.DisableShowJoyStick(true)
     --清除虚拟摇杆
     _G.CommonUtil.HideJoyStick()
+    MajorUtil.SetDisableMoveReq(true) --刚更新副本实例ID，禁止上报移动，防止后台拉扯坐标
 
     LifeMgrModule.ShutdownLevelLife()
 
@@ -276,7 +282,7 @@ end
 
 --切换地图结束
 function WorldMsgMgr:PostLoadWorld(LastWorldName, CurWorldName, LoadWorldReason)
-    FLOG_INFO("WorldMsgMgr:PostLoadWorld LastWorldName=%s, CurWorldName=%s, LoadWorldReason=%d", LastWorldName, CurWorldName, LoadWorldReason)
+    FLOG_INFO("WorldMsgMgr:PostLoadWorld LastWorldName=%s, CurWorldName=%s, LoadWorldReason=%s", LastWorldName, CurWorldName, tostring(LoadWorldReason))
     self.CurWorldName = CurWorldName
 
     --  --TODO[chaooren] 临时修改究极神兵假想作战副本内怪物数量上限
@@ -507,7 +513,6 @@ function WorldMsgMgr:PostLoadWorld(LastWorldName, CurWorldName, LoadWorldReason)
         LifeMgrModule.StartLevelLife("LevelLife")
 
         _G.PWorldMgr:PostLoadWorld()
-
         -- local SettingsTabPicture = SettingsUtils.GetSettingTabs("SettingsTabPicture")
         -- if SettingsTabPicture then
         --     SettingsTabPicture:RefreshMaxFps()
@@ -949,6 +954,16 @@ end
 --当前地图名称
 function WorldMsgMgr:GetWorldName()
     return _G.UE.UWorldMgr.Get():GetWorldName()
+end
+
+--当前地图完整路径
+function WorldMsgMgr:GetCurrWorldFullPath()
+    local UWorldMgr = _G.UE.UWorldMgr.Get()
+    if (UWorldMgr.GetCurrWorldPath ~= nil) then
+        return UWorldMgr:GetCurrWorldPath()
+    end
+
+    return ""
 end
 
 --是否特殊地图

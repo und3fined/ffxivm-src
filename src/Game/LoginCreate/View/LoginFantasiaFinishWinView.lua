@@ -76,7 +76,7 @@ function LoginFantasiaFinishWinView:OnShow()
 	self.BagSlotVM:UpdateVM(Item, {IsShowNum = false})
 	local HasNum = _G.BagMgr:GetItemNum(ItemID)
 	local NeedNum = 1
-	local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "d5d5d5", 0, nil)
+	local ItemRichText = RichTextUtil.GetText(string.format("%d", HasNum), "d5d5d5")
 	self.ItemNumberText = string.format("%s/%d", ItemRichText, NeedNum)
 	self.TextNum:SetText(self.ItemNumberText)
 	self.BagSlot:SetParams({Data = self.BagSlotVM})

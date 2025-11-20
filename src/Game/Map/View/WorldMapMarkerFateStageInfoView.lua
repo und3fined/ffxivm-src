@@ -1,7 +1,7 @@
 ---
 --- Author: chunfengluo
 --- DateTime: 2023-04-06 14:25
---- Description:
+--- Description: 地图Fate标记tips
 ---
 
 local UIView = require("UI/UIView")

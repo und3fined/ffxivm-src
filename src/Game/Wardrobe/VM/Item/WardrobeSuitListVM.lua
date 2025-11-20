@@ -7,7 +7,7 @@
 local LuaClass = require("Core/LuaClass")
 local UIViewModel = require("UI/UIViewModel")
 local EquipmentCfg = require("TableCfg/EquipmentCfg")
-local WardrobeSuitItemVM = require("Game/Wardrobe/VM/Item/WardrobeSuitItemVM")
+local WardrobeSuitItemVM = require("Game/Wardrobe/VM/Item/WardrobeSuitItem2VM")
 local UIBindableList = require("UI/UIBindableList")
 
 ---@class WardrobeSuitListVM : UIViewModel
@@ -20,6 +20,8 @@ function WardrobeSuitListVM:Ctor()
     self.TitelName = ""
     self.AppItems1 = UIBindableList.New(WardrobeSuitItemVM)
     self.AppItems2 = UIBindableList.New(WardrobeSuitItemVM)
+    self.RedDotName = ""
+    self.IsRed = false
 end
 
 function WardrobeSuitListVM:OnInit()
@@ -55,6 +57,8 @@ function WardrobeSuitListVM:UpdateVM(Value)
         self.AppItems1:UpdateByValues(ItemList1)
         self.AppItems2:UpdateByValues(ItemList2)
     end
+    self.RedDotName = Value.RedDotName
+    self.IsRed = self.RedDotName ~= ""
 end
 
 function WardrobeSuitListVM:OnSelectedChange(IsSelected)

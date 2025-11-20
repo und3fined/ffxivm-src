@@ -66,7 +66,9 @@ function CraftingLogPropItemVM:UpdateVM(Params)
     end
 
     self.CategoryNum = Params.CategoryNum
-    self.bLockGray = Params.bLockGray ~= nil and Params.bLockGray or self:SetLockState(Params)
+    self.Craftjob = Params.Craftjob
+    self.RecipeLevel = Params.RecipeLevel
+    self.bLockGray = Params.bLockGray ~= nil and Params.bLockGray or self:SetLockState()
     self.bSelect = Params.bSelect
     self.bLeveQuestMarked = Params.bLeveQuestMarked
     self.ID = Params.ID
@@ -87,8 +89,6 @@ function CraftingLogPropItemVM:UpdateVM(Params)
     self.ItemQualityImg = ItemUtil.GetSlotColorIcon(ProductID, ItemDefine.ItemSlotType.Item96Slot)
 
     local PropStarShow = CraftingLogDefine.PropStarShow
-    self.Craftjob = Params.Craftjob
-    self.RecipeLevel = Params.RecipeLevel
     self.PropLevel = string.format("%s%s", Params.RecipeLevel, LSTR(70022))
     local PropRecipeStar = Params.RecipeStar
     local PropRecipeType = Params.RecipeType
@@ -111,10 +111,10 @@ function CraftingLogPropItemVM:UpdateVM(Params)
     self:SetImgDoneShow()
 end
 
-function CraftingLogPropItemVM:SetLockState(Value)
-    local ProfbLock = CraftingLogMgr:GetProfIsLock(Value.Craftjob)
-    local MajorLevel = MajorUtil.GetMajorLevelByProf(Value.Craftjob)
-    return ProfbLock or (MajorLevel + 10) <= Value.RecipeLevel
+function CraftingLogPropItemVM:SetLockState()
+    local ProfbLock = CraftingLogMgr:GetProfIsLock(self.Craftjob)
+    local MajorLevel = MajorUtil.GetMajorLevelByProf(self.Craftjob) or 1
+    return ProfbLock or (MajorLevel + 10) <= self.RecipeLevel
 end
 
 --- 设置返回的索引：0

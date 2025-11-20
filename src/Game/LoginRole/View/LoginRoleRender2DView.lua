@@ -53,6 +53,7 @@ end
 function LoginRoleRender2DView:OnShow()
 	FLOG_INFO("LoginRoleRender2DView:OnShow")
 	_G.LoginUIMgr.Common_Render2D_UIBP = self.Common_Render2D_UIBP
+	_G.LoginUIMgr.CommonSceneMaskBkg_UIBP = self.CommonSceneMaskBkg_UIBP
 	self.Common_Render2D_UIBP.bLogin = true
 	_G.LoginUIMgr.Render2DView = self
 	self.Common_Render2D_UIBP:SetCanRotate(true)
@@ -286,7 +287,7 @@ function LoginRoleRender2DView:ChangeFocusType(InFocusType)
 
 	self.Common_Render2D_UIBP:ResetViewDistance()
 
-	if bBackToBody then
+	if bBackToBody and CamControlParams then
 		local Rotation = self.Common_Render2D_UIBP:GetSpringArmRotation()
 		if Rotation.Pitch > CamControlParams.MaxPitch then
 			self.Common_Render2D_UIBP:SetSpringArmRotation(CamControlParams.MaxPitch, -180, 0, true, 4)

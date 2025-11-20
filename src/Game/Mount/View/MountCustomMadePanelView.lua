@@ -9,10 +9,12 @@ local LuaClass = require("Core/LuaClass")
 local UIUtil = require("Utils/UIUtil")
 local UIAdapterTableView = require("UI/Adapter/UIAdapterTableView")
 local MountCustomShotGroupCfg = require("TableCfg/MountCustomShotGroupCfg")
+local RideSkillCfg = require("TableCfg/RideSkillCfg")
 local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local UIBinderValueChangedCallback = require("Binder/UIBinderValueChangedCallback")
 local UIBinderSetTextFormatForMoney = require("Binder/UIBinderSetTextFormatForMoney")
 local UIBinderSetColorAndOpacityHex = require("Binder/UIBinderSetColorAndOpacityHex")
+local UIBinderSetIsChecked = require("Binder/UIBinderSetIsChecked")
 local UIBinderSetIsVisible = require("Binder/UIBinderSetIsVisible")
 local UIBinderSetText = require("Binder/UIBinderSetText")
 local MountVM = require("Game/Mount/VM/MountVM")
@@ -23,11 +25,16 @@ local CameraFocusCfgMap = require("Game/Equipment/VM/CameraFocusCfgMap")
 local MajorUtil = require("Utils/MajorUtil")
 local JumpUtil = require("Utils/JumpUtil")
 local ProtoRes = require("Protocol/ProtoRes")
+local CommonUtil = require("Utils/CommonUtil")
 local DataReportUtil = require("Utils/DataReportUtil")
+local UIViewID = require("Define/UIViewID")
+local EventID = require("Define/EventID")
+local EventMgr = _G.EventMgr
 local EquipmentMgr = _G.EquipmentMgr
 
 local LSTR = _G.LSTR
 local UE = _G.UE
+local EToggleButtonState = _G.UE.EToggleButtonState
 local CameraInitOffsetY = 80
 local GuidelineCount = 3
 
@@ -37,14 +44,19 @@ local GuidelineCount = 3
 ---@field CommBtn CommBtnLView
 ---@field CommMoney CommMoneyBarView
 ---@field CommonTitle CommonTitleView
+---@field DeBugBtn UButton
 ---@field ModelToImage CommonRender2DView
 ---@field Money StoreMoneyItemUBPView
 ---@field MountGuidelineItem1 MountGuidelineItemView
 ---@field MountGuidelineItem2 MountGuidelineItemView
 ---@field MountGuidelineItem3 MountGuidelineItemView
+---@field MountPanelDeBugUI_UIBP MountPanelDeBugUIView
+---@field PanelDebug UFCanvasPanel
 ---@field SingleBox CommSingleBoxView
+---@field TableViewAction UTableView
 ---@field TableViewSkateboard UTableView
 ---@field TextPropsName UFTextBlock
+---@field ToggleBtn UToggleButton
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local MountCustomMadePanelView = LuaClass(UIView, true)
@@ -55,14 +67,19 @@ function MountCustomMadePanelView:Ctor()
 	--self.CommBtn = nil
 	--self.CommMoney = nil
 	--self.CommonTitle = nil
+	--self.DeBugBtn = nil
 	--self.ModelToImage = nil
 	--self.Money = nil
 	--self.MountGuidelineItem1 = nil
 	--self.MountGuidelineItem2 = nil
 	--self.MountGuidelineItem3 = nil
+	--self.MountPanelDeBugUI_UIBP = nil
+	--self.PanelDebug = nil
 	--self.SingleBox = nil
+	--self.TableViewAction = nil
 	--self.TableViewSkateboard = nil
 	--self.TextPropsName = nil
+	--self.ToggleBtn = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
@@ -78,13 +95,16 @@ function MountCustomMadePanelView:OnRegisterSubView()
 	self:AddSubView(self.MountGuidelineItem1)
 	self:AddSubView(self.MountGuidelineItem2)
 	self:AddSubView(self.MountGuidelineItem3)
+	self:AddSubView(self.MountPanelDeBugUI_UIBP)
 	self:AddSubView(self.SingleBox)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
 function MountCustomMadePanelView:OnInit()
-	self.MountCustomTableAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSkateboard, self.OnMountCustomTableViewSelectChange, true)
+	self.MountCustomTableAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewSkateboard, self.OnMountCustomTableViewSelectChange, true, false)
 	self.MountCustomTableAdapter:SetScrollbarIsVisible(false)
+	self.MountActionAdapter = UIAdapterTableView.CreateAdapter(self, self.TableViewAction)
+
 	self.CurrentSelectedCustomMadeID = -1
 	self.ModelToImage:SetClick(self, self.OnSingleClick, self.OnDoubleClick)
 	self.bIsGuidelinesCleared = false
@@ -100,10 +120,13 @@ function MountCustomMadePanelView:OnInit()
 		{"PriceBeforeDiscounted", UIBinderSetText.New(self, self.Money.TextOriginalPrice)},
 		{"bIsDiscounted", UIBinderSetIsVisible.New(self, self.Money.PanelOriginalPrice, false, false, true)},
 		{"bIsDiscounted", UIBinderSetIsVisible.New(self, self.Money.IconCoupons, false, false, true)},
+		{"bIsFlying", UIBinderSetIsChecked.New(self, self.ToggleBtn)},
 		{"CurPriceTextColor", UIBinderSetColorAndOpacityHex.New(self, self.Money.TextPrice) },
 		{"bMoneyVisible", UIBinderSetIsVisible.New(self, self.Money)},
 		{"bShowUnlockedOnly", UIBinderValueChangedCallback.New(self, nil, self.OnShowUnlockedOnlyChanged)},
+		{"bIsFlying", UIBinderValueChangedCallback.New(self, nil, self.OnIsFlyingChanged)},
 		{"NewMap", UIBinderValueChangedCallback.New(self, nil, self.OnCustomMadeNewMapChanged) },
+		{ "MountActionList", UIBinderUpdateBindableList.New(self, self.MountActionAdapter) },
 	}
 
 	self.CommonTitle:SetTextTitleName(LSTR(1100001))
@@ -143,6 +166,11 @@ function MountCustomMadePanelView:OnShow()
 	end
 	self.ModelToImage:SetClick(nil, SingleClick, nil)
 	self:SetMoneyBar()
+
+	-- Debug面板显隐
+	if self.PanelDebug then
+		UIUtil.SetIsVisible(self.PanelDebug, CommonUtil.IsWithEditor())
+	end
 end
 
 function MountCustomMadePanelView:OnHide()
@@ -152,13 +180,16 @@ end
 
 function MountCustomMadePanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.CommBtn, self.OnClickCommBtn)
+	UIUtil.AddOnClickedEvent(self, self.ToggleBtn, self.OnFlyButtonClick)
+	UIUtil.AddOnClickedEvent(self, self.DeBugBtn, self.OnDeBugBtnClick)
 	UIUtil.AddOnStateChangedEvent(self, self.SingleBox, self.OnSingleBoxClick)
 end
 
 function MountCustomMadePanelView:OnRegisterGameEvent()
-	self:RegisterGameEvent(_G.EventID.MountAssembleAllEnd, self.OnMountAssembleAllEnd)
-	self:RegisterGameEvent(_G.EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
-	self:RegisterGameEvent(_G.EventID.BagUpdate, self.OnBagUpdate)
+	self:RegisterGameEvent(EventID.MountAssembleAllEnd, self.OnMountAssembleAllEnd)
+	self:RegisterGameEvent(EventID.Avatar_AssembleAllEnd, self.OnAssembleAllEnd)
+	self:RegisterGameEvent(EventID.BagUpdate, self.OnBagUpdate)
+	self:RegisterGameEvent(EventID.HideUI, self.OnGameEventHideUI)
 end
 
 function MountCustomMadePanelView:OnRegisterBinder()
@@ -185,9 +216,11 @@ function MountCustomMadePanelView:OnSelectIndexChanged()
 	if MountCustomMadeVM == nil or MountCustomMadeVM.CurrentSelectedSlot == nil then return end
 	self:ClearGuidelines()
 	self:UpdateFunctionButton()
+	self:SetMountActionList(self.Params.MountResID, MountCustomMadeVM.CurrentSelectedSlot.ID)
 	self.ShotGroupCfg = MountCustomShotGroupCfg:FindCfgByKey(MountCustomMadeVM.CurrentSelectedSlot.CameraGroupID)
 	self:ResetToGlobalShot(not self.bSetSelectedIndexOnShow)
 	self:UpdateModel()
+	MountCustomMadeVM.bIsFlying = false
 	self.bSetSelectedIndexOnShow = false
 end
 
@@ -202,6 +235,18 @@ end
 
 function MountCustomMadePanelView:OnCustomMadeNewMapChanged()
 	MountCustomMadeVM:UpdateCustomList()
+end
+
+function MountCustomMadePanelView:OnIsFlyingChanged()
+	if MountCustomMadeVM.bIsFlying then
+		self:ClearGuidelines()
+		self:SwitchFly(true)
+		self:ResetToGlobalShot()
+		self:HideGuidelines()
+	else
+		self:SwitchFly(false)
+		self:ResetGuidelines()
+	end
 end
 
 function MountCustomMadePanelView:OnBagUpdate()
@@ -272,6 +317,14 @@ function MountCustomMadePanelView:OnSingleBoxClick(ToggleButton, ButtonState)
 	MountCustomMadeVM.bShowUnlockedOnly = ButtonState == _G.UE.EToggleButtonState.Checked
 end
 
+function MountCustomMadePanelView:OnFlyButtonClick()
+	if MountCustomMadeVM.bIsFlying then
+		MountCustomMadeVM.bIsFlying = false
+	else
+		MountCustomMadeVM.bIsFlying = true
+	end
+end
+
 function MountCustomMadePanelView:SetMoneyBar()
 	UIUtil.SetIsVisible(self.CommMoney.Money1,  true)
 	UIUtil.SetIsVisible(self.CommMoney.Money2,  false)
@@ -280,16 +333,34 @@ function MountCustomMadePanelView:SetMoneyBar()
 	self.CommMoney.Money1:UpdateView(ProtoRes.SCORE_TYPE.SCORE_TYPE_STAMPS, true, -1, true)
 end
 
+function MountCustomMadePanelView:SetMountActionList(MountID, CustomMadeID)
+	local TempActionList = {}
+	local ActionList = _G.MountMgr:GetPlayActionList(MountID, CustomMadeID)
+	if ActionList ~= nil then
+		for i = 1, #ActionList do
+			local SkillID = ActionList[i]
+			if ActionList[i] ~= 0 then
+				local Cfg = RideSkillCfg:FindCfgByKey(SkillID)
+				if nil ~= Cfg then
+					table.insert(TempActionList, {ID = SkillID, Cfg = Cfg, ViewModel = MountCustomMadeVM})
+				end
+			end
+		end
+	end
+	MountCustomMadeVM.MountActionList = TempActionList
+end
+
 --+++++++ 模型相关开始 +++++++++--
 
 function MountCustomMadePanelView:UpdateModel()
 	if MountCustomMadeVM.CurrentSelectedSlot == nil then return end
 	local ImeChanID = MountCustomMadeVM.CurrentSelectedSlot.ImeChanID
+	local PatternID = MountCustomMadeVM.CurrentSelectedSlot.PatternID
 
 	local UIComplexCharacter = self.ModelToImage.UIComplexCharacter
 	if UIComplexCharacter then
 		local RideComponent = UIComplexCharacter:GetRideComponent()
-		RideComponent:SetImeChanID(MountCustomMadeVM.MountID, ImeChanID)
+		RideComponent:SetImeChanID(MountCustomMadeVM.MountID, ImeChanID, PatternID)
 	end
 end
 
@@ -344,6 +415,7 @@ function MountCustomMadePanelView:SetModelSpringArmToDefault(bInterp)
 	MountCustomMadeVM.bIsHoldWeapon = false
 end
 
+--- 切换特写镜头
 function MountCustomMadePanelView:SetShot(Index, bInInterp, bForce)
 	local bInterp = bInInterp
 	if bInterp == nil then bInterp = true end
@@ -449,6 +521,13 @@ function MountCustomMadePanelView:HideGuidelines()
 	end
 end
 
+function MountCustomMadePanelView:ResetGuidelines()
+	self:ResetToGlobalShot()
+	self:InitModelTransform()
+	self:ClearGuidelines()
+	self:InitGuidelines()
+end
+
 function MountCustomMadePanelView:OnClickGuideline(Index)
 	if self.ShotGroupCfg ~= nil then
 		self:SetShot(Index, true)
@@ -477,10 +556,12 @@ end
 
 function MountCustomMadePanelView:SetMountModel(MountID)
 	local ImeChanID = -1
+	local PatternID = -1
 	if MountCustomMadeVM.CurrentSelectedSlot ~= nil then
 		ImeChanID = MountCustomMadeVM.CurrentSelectedSlot.ImeChanID
+		PatternID = MountCustomMadeVM.CurrentSelectedSlot.PatternID
 	end
-	self.ModelToImage:SetUIRideCharacter(MountID, ImeChanID)
+	self.ModelToImage:SetUIRideCharacter(MountID, ImeChanID, PatternID)
 	self.ModelToImage:HidePlayer(true)
 end
 
@@ -537,10 +618,7 @@ end
 
 function MountCustomMadePanelView:OnSingleClick()
 	if self.CurrentShotIndex ~= 0 then
-		self:ResetToGlobalShot()
-		self:InitModelTransform()
-		self:ClearGuidelines()
-		self:InitGuidelines()
+		self:ResetGuidelines()
 	end
 end
 
@@ -552,6 +630,40 @@ function MountCustomMadePanelView:InitGuidelines()
 	end
 end
 
+--- 切换飞行模式
+function MountCustomMadePanelView:SwitchFly(bFly)
+	local UIComplexCharacter = self.ModelToImage.UIComplexCharacter
+	if UIComplexCharacter ~= nil then
+		UIComplexCharacter:SwitchFly(bFly, false)
+		local RideCfg = _G.MountMgr:GetRideCfg(self.Params.MountResID)
+		local UIFlyHeight = RideCfg.UIFlyHeight
+		local NewLocation = self.ModelToImage:GetModelLocation()
+		local Offset = bFly and UIFlyHeight or -UIFlyHeight
+		self.ModelToImage:SetModelLocation(NewLocation.X, NewLocation.Y, NewLocation.Z + Offset, true)
+	else
+		FLOG_WARNING("MountCustomMadePanelView:SwitchFly UIComplexCharacter is nil")
+	end
+end
+
 --------- 模型相关结束 ----------
+
+function MountCustomMadePanelView:OnGameEventHideUI(Params)
+	local ViewID = Params
+	if ViewID and ViewID == UIViewID.CommSkillTipsView then
+		EventMgr:SendEvent(EventID.ActionSelectChanged, { ID = 0 } )
+	end
+end
+
+function MountCustomMadePanelView:OnDeBugBtnClick()
+	if nil ~= self.IsShowDeBugPanel and self.IsShowDeBugPanel then
+		self.IsShowDeBugPanel = false
+	else
+		self.IsShowDeBugPanel = true
+	end
+	if self.MountPanelDeBugUI_UIBP and CommonUtil.IsWithEditor() then
+		self.MountPanelDeBugUI_UIBP.MountView = self
+		UIUtil.SetIsVisible(self.MountPanelDeBugUI_UIBP, self.IsShowDeBugPanel)
+	end
+end
 
 return MountCustomMadePanelView

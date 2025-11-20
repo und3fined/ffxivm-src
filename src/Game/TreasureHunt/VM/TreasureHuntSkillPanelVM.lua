@@ -86,16 +86,20 @@ function TreasureHuntSkillPanelVM:UpdateSkillPanel()
 	mapData.PosID = self.CurMapData.PosID
 
 	mapData.OwnerName = LSTR("")
-	local function Callback(_, RoleVM)
-		if RoleVM ~= nil then
-			mapData.OwnerName = RoleVM.Name
-		end
-	end
-	RoleInfoMgr:QueryRoleSimple(self.CurMapData.RoleID, Callback)
 
 	if self.SkillPanelMapVM ~= nil then
 		self.SkillPanelMapVM:UpdateSkillPanel(mapData)
 	end
+
+	-- 名字回调在更新后再改，防止先触发回调了再UpdateSkillPanel变成了""
+	local function Callback(_, RoleVM)
+		if RoleVM ~= nil then
+			if self.SkillPanelMapVM then
+				self.SkillPanelMapVM.OwnerName = RoleVM.Name
+			end
+		end
+	end
+	RoleInfoMgr:QueryRoleSimple(self.CurMapData.RoleID, Callback)
 end
 
 function TreasureHuntSkillPanelVM:UpdatePosition()
@@ -109,11 +113,14 @@ function TreasureHuntSkillPanelVM:UpdatePosition()
 	local localMapID = _G.PWorldMgr:GetCurrMapResID()
 	if localMapID ~= self.CurMapData.MapResID then 
 		sameMap = false 
-	else 
-		local MajorPos =  MajorUtil.GetMajor():FGetActorLocation()
-		local Pos = self.CurMapData.Pos
-	    local _targetPos = _G.UE.FVector(Pos.X,Pos.Y,Pos.Z)
-	    distance = _G.UE.FVector.Dist(MajorPos, _targetPos)/100
+	else
+		local Major = MajorUtil.GetMajor()
+		if Major then
+			local MajorPos = Major:FGetActorLocation()
+			local Pos = self.CurMapData.Pos
+			local _targetPos = _G.UE.FVector(Pos.X,Pos.Y,Pos.Z)
+			distance = _G.UE.FVector.Dist(MajorPos, _targetPos)/100
+		end
 	end
 
 	self.SkillPanelMapVM:UpdateDist(sameMap,distance)

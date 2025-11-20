@@ -126,6 +126,9 @@ function LootMgr:OnNetMsgLootItemUpdateRes(MsgBody, IgnoreCache)
 			DropReason = "fate.mapach"
 			self:SetDealyState(true)
 			self:ShowForCommonReward(LootList)
+		elseif(string.find(LowerReasonStr, "lotterydraw.reward")) then
+			DropReason = Msg.Reason
+			self:SetDealyState(true)
 		elseif(string.find(LowerReasonStr, "fate.reward")) then
 			-- Fate 结算的时候这里需求延时弹出显示
 			DropReason = "fate.reward"
@@ -149,6 +152,10 @@ function LootMgr:OnNetMsgLootItemUpdateRes(MsgBody, IgnoreCache)
 			DropReason = "fantasycard.tournamentcollect"
 			_G.EventMgr:SendEvent(_G.EventID.MagicCardTourneyLateShowLoot, LootList)
 			return
+		elseif (string.find(LowerReasonStr, "mysterymerchant.investrewards")) then
+			DropReason = "mysterymerchant.investrewards"
+			self:SetDealyState(true)
+			_G.EventMgr:SendEvent(_G.EventID.MysteryMerchantLateShowLoot, LootList)
 		elseif string.find(LowerReasonStr, "fairycolor.raffle") then
 			DropReason = "fairycolor.raffle"
 			_G.LootMgr:SetDealyState(true)
@@ -564,7 +571,7 @@ function LootMgr:ShowSysChatDropList(CommonDropList)
 				return
 			end
 
-			local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1550001)), "d1ba8e", 0, nil)--获得了
+			local GetRitchText = RichTextUtil.GetText(string.format("%s", LSTR(1550001)), "d1ba8e")--获得了
 			if DropReason == "fantasycard.sell" then
 				GetRitchText = MagicCardMgr:GetUseCardSuccStr() or GetRitchText
 			elseif DropReason == "role.chocobo.racefinish" then
@@ -577,8 +584,8 @@ function LootMgr:ShowSysChatDropList(CommonDropList)
 				end
 			end
 			local IconRichText = RichTextUtil.GetTexture(ScoreInfo.IconName, 40, 40, -10)--EEDC83FF
-			local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF", 0, nil)
-			local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", LootMgr.FormatCurrency(Drop.Score.Value)), "d1ba8e", 0, nil)
+			local ScoreRichText = RichTextUtil.GetText(string.format("[%s]", ScoreInfo.NameText), "DAB53AFF")
+			local SoceNumRichText = RichTextUtil.GetText(string.format("x%s", LootMgr.FormatCurrency(Drop.Score.Value)), "d1ba8e")
 			if ScoreInfo.ID == 19000099 then --经验有加成
 
 				if Drop.Score.ProfID == 0 then

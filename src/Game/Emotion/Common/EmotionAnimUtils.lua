@@ -129,6 +129,10 @@ function EmotionAnimUtils.GetActorEmotionAnimPath(EmotionName, Actor, AnimType, 
 		local AttributeComp = Actor:GetAttributeComponent()
 		local RaceName = AvatarComp:GetAttachType()
 		local Gender = AttributeComp.Gender
+		-- 如果有变身，使用变身后的性别
+		if AttributeComp:IsInChangeRole() then
+			Gender = AttributeComp.ChangeRoleGender
+		end
 
 		--c1201 无时，优先调用 c1101（拉拉肥男女）
 		--其他男没有时，优先调用 c0101，其他女没有时，优先调用 c0801，再没有就调用 c0101

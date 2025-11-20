@@ -132,6 +132,9 @@ function CardsTourneyRankNewItemView:OnRankChanged(Value)
 			UIUtil.SetIsVisible(SelfRewardWidget, true)
 			UIUtil.SetIsVisible(SelfRewardWidget.ImgSelect, false)
 			local IsReward = MagicCardTourneyMgr:IsCanGetReward()
+			if self.Params and self.Params.Data then
+				IsReward = IsReward and self.Params.Data.IsPlayerSelf
+			end
 			UIUtil.SetIsVisible(SelfRewardWidget.PanelAvailable, IsReward)
 			SelfRewardWidget:SetClickButtonCallback(self, self.OnRewardClicked)
 			local Cfg = ItemCfg:FindCfgByKey(RankAward.ResID)
@@ -143,7 +146,13 @@ function CardsTourneyRankNewItemView:OnRankChanged(Value)
 			end
 			local RewardNum = RankAward.Num
 			if RewardNum > 1 then
-				SelfRewardWidget:SetNum(RewardNum)
+				local NumText = RewardNum
+				local ProtoCommon = require("Protocol/ProtoCommon")
+				local ITEM_TYPE_DETAIL = ProtoCommon.ITEM_TYPE_DETAIL
+				if Cfg.ItemType == ITEM_TYPE_DETAIL.MISCELLANY_CURRENCY then
+					NumText = _G.ScoreMgr.FormatScore(RewardNum)
+				end
+				SelfRewardWidget:SetNum(NumText)
             else
 				SelfRewardWidget:SetNumVisible(false)
 			end

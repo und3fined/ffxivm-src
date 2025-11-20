@@ -51,6 +51,8 @@ local FateAchievementRewardCfg = require("TableCfg/FateAchievementRewardCfg")
 local SysnoticeCfg = require("TableCfg/SysnoticeCfg")
 local ChatMgr = require("Game/Chat/ChatMgr")
 local EffectUtil = require("Utils/EffectUtil")
+local BuffUtil = require("Utils/BuffUtil")
+local FateMultinpcDialogCfg = require("TableCfg/FateMultinpcDialogCfg")
 
 local UAudioMgr = nil
 local LootMgr = nil
@@ -64,6 +66,13 @@ local EActorType = _G.UE.EActorType
 local FateTipsCheckTimeSpan = 0.5
 local FateNotExitErrorCode = 334035
 local FateNpcErrorCode = 334036
+
+-- 不显示结算界面的FATE
+local FateIDNotShowResultTable = {
+    2002,
+    2003,
+    2004
+}
 
 local FateTipsType = {
     MainTitleTips = 1, -- 大标题文字
@@ -473,6 +482,7 @@ function FateMgr:ResetData(InExitWorldInsID, bNoSendMsg, bResetMapInfo)
     end
 
     self.FateNpcList = {}
+    self.FateMultiNpcList = {}
     self.FateBossList = {}
     self.EnterArea_Record = {} -- 仅记录初次开启/重新登陆进入区域的fate
     self.EnterHintArea_Record = {}
@@ -1210,9 +1220,11 @@ function FateMgr:OnFateNpcStart(InMsgData)
     -- 这里需要修改一下范围，避免检测出离开
     local TempCfg = self:GetFateCfg(FateID)
     if (TempCfg ~= nil) then
+
         local RangeParams = string.split(TempCfg.Range, ",")
         TargetFate.FateRadius = tonumber(RangeParams[5] or 0)
         TargetFate.FateHeight = tonumber(RangeParams[4] or 0)
+        _G.FLOG_ERROR("修改FATE : %s , 范围 : %s", FateID, TargetFate.FateRadius)
     end
 
     self:OnEnterArea(TargetFate)
@@ -1783,6 +1795,7 @@ function FateMgr:InternalProcessFateUpdate(Fate, MsgBody)
     local FateGeneratorCfg = FateGeneratorCfgTable:FindCfgByKey(Fate.ID)
     if FateGeneratorCfg == nil or FateGeneratorCfg.MapID ~= PWorldMgr:GetCurrMapResID() then
         self.CurrActiveFateList[Fate.ID] = nil
+        _G.FLOG_ERROR("无法在 FATE创建参数表 中找到数据 : %s", Fate.ID)
         return
     end
 
@@ -1836,8 +1849,13 @@ function FateMgr:InternalProcessFateUpdate(Fate, MsgBody)
                 Fate.EndTime = 0
             end
         end
+        local NPCLocationString = nil
+        if (not string.isnilorempty(FateCfg.TriggerNPCLocation)) then
+            NPCLocationString = FateCfg.TriggerNPCLocation
+        else
+            NPCLocationString = FateCfg.ExTriggerNPC[1].Location
+        end
 
-        local NPCLocationString = FateCfg.TriggerNPCLocation
         local RangeString = FateCfg.Range
         local bWaitTrigger = Fate.State == ProtoCS.FateState.FateState_WaitNPCTrigger
         if (bWaitTrigger and NPCLocationString ~= "") then
@@ -1895,6 +1913,27 @@ function FateMgr:InternalProcessFateUpdate(Fate, MsgBody)
                     NPCEntityID,
                     ProtoRes.interact_func_type.INTERACT_FUNC_START_FATE
                 )
+            end
+        end
+    end
+
+    do
+        -- 这里是针对多个 TriggerNpc 的
+        local MultiNpcList = self.FateMultiNpcList[Fate.ID]
+        if (MultiNpcList ~= nil) then
+            EventParams.MultiNpcEntityIDList = {}
+            for ResID, EntityID in pairs(MultiNpcList) do
+                -- body
+                if (EntityID ~= nil and EntityID > 0) then
+                    table.insert(EventParams.MultiNpcEntityIDList, EntityID)
+                    _G.HUDMgr:OnFateUpdate({EntityID = EntityID})
+                    if Fate.State ~= ProtoCS.FateState.FateState_WaitNPCTrigger then
+                        _G.InteractiveMgr:HideFunctionItemByFuncType(
+                            EntityID,
+                            ProtoRes.interact_func_type.INTERACT_FUNC_START_FATE
+                        )
+                    end
+                end
             end
         end
     end
@@ -2015,6 +2054,42 @@ function FateMgr:ProcessFateNpcWhenFateStateChange(InFate, InFateCfg)
     if (InFateCfg == nil or InFate == nil) then
         _G.FLOG_ERROR("FateMgr:InternalTryCreateFateNpc 出错，传入的数据无效，请检查")
         return
+    end
+
+    -- 多个NPC
+    for Index = 1, #InFateCfg.ExTriggerNPC do
+        local NpcResID = InFateCfg.ExTriggerNPC[Index].NPC
+        if (NpcResID > 0) then
+            local NpcLocationStr = InFateCfg.ExTriggerNPC[Index].Location
+            if (string.isnilorempty(NpcLocationStr)) then
+                _G.FLOG_ERROR("FATE的多NPC位置不正确，FATE ID 是 : %s", InFateCfg.ID)
+            else
+                local TargetNpcEntityID = nil
+                local TempNpcList = self.FateMultiNpcList[InFate.ID]
+                if (TempNpcList ~= nil) then
+                    TargetNpcEntityID = TempNpcList[NpcResID]
+                end
+                self:InternalProcessSingleFateNpc(
+                    InFate, InFateCfg, TargetNpcEntityID, NpcResID, NpcLocationStr,
+                    function(CallbackFateID, CallbackEntityID, CallbackNpcResID)
+                        -- 创建NPC回调函数
+                        local TargetList = self.FateMultiNpcList[CallbackFateID]
+                        if (TargetList == nil) then
+                            TargetList = {}
+                            self.FateMultiNpcList[CallbackFateID] = TargetList
+                        end
+                        TargetList[CallbackNpcResID] = CallbackEntityID
+                    end,
+                    function(CallbackFateID, CallbackEntityID, CallbackNpcResID)
+                        -- 销毁NPC回调函数
+                        local TargetList = self.FateMultiNpcList[CallbackFateID]
+                        if (TargetList ~= nil) then
+                            TargetList[CallbackNpcResID] = nil
+                        end
+                    end
+                )
+            end
+        end
     end
 
     if (InFateCfg.TriggerNPC ~= nil and InFateCfg.TriggerNPC > 0) then
@@ -2354,7 +2429,6 @@ function FateMgr:OnNetMsgFateEnd(MsgBody)
         end
     end
 
-    -- 如果是庆典2002的FATE，那么需要关闭一下该界面
     if (ID == 2002) then
         UIViewMgr:HideView(UIViewID.FateEmoTipsPanelView)
         -- 已经结束了，就清理记录
@@ -2366,11 +2440,16 @@ function FateMgr:OnNetMsgFateEnd(MsgBody)
     if (FateCfg == nil) then
         _G.FLOG_ERROR("Fate : [%s] 结束的时候，尝试获取表格数据，但是为空，请检查", ID)
     else
-        local bCelebrateFate = FateCfg.IsCelebrateFate and FateCfg.IsCelebrateFate > 0
+        local IsCelebrateFate = FateCfg.IsCelebrateFate and FateCfg.IsCelebrateFate > 0
         if (EndData.PlayerJoinState == ProtoCS.FatePlayerJoinState.FatePlayerJoinState_InRange) then
-            local bBossFight = FateCfg.Type == ProtoRes.Game.FATE_TYPE.FATE_TYPE_BOSS
-            if (bCelebrateFate and not bBossFight) then
-                -- 这里对于不在界面上显示的，默认认为是庆典FATE，不单独显示结算界面，只给个提示
+            local bShowResultPanel = true
+            for _,Value in pairs(FateIDNotShowResultTable) do
+                if (ID == Value) then
+                    bShowResultPanel = false
+                end
+            end
+            if (not bShowResultPanel) then
+                -- 这里属于特殊的，不给结算界面，只显示提示
                 if (bFinished) then
                     local PanelStr = "PanelPositive"
                     MsgTipsUtil.ShowInfoMissionTips(LSTR(190128), nil, PanelStr, nil)
@@ -2382,10 +2461,14 @@ function FateMgr:OnNetMsgFateEnd(MsgBody)
                 self:TryShowRewardPanel(EndData)
             end
         elseif (EndData.PlayerJoinState == ProtoCS.FatePlayerJoinState.FatePlayerJoinState_OutOfRange) then
-            if (bCelebrateFate) then
-                -- 如果是boss
-                local bBossFight = FateCfg.Type == ProtoRes.Game.FATE_TYPE.FATE_TYPE_BOSS
-                if (bBossFight) then
+            if (IsCelebrateFate) then
+                local bShowResultPanel = true
+                for _,Value in pairs(FateIDNotShowResultTable) do
+                    if (ID == Value) then
+                        bShowResultPanel = false
+                    end
+                end
+                if (bShowResultPanel) then
                     if (EndData.Rewards == nil or #EndData.Rewards < 1) then
                         -- 如果奖励是空的，那么不提示
                     else
@@ -2420,6 +2503,20 @@ function FateMgr:InternalCleanFateNpc(InFateID, InFateCfg)
             local NpcEntiyID = self.FateNpcList[InFateID]
             self:InternalRemoveFateNpc(NpcEntiyID, InFateID)
         end
+
+        -- 尝试移除多个单位
+        if (self:CheckCanCreateOrDestroyNpc(InFateCfg)) then
+            local MultiNpcList = self.FateMultiNpcList[InFateID]
+            if (MultiNpcList ~= nil) then
+                for ResID,EntityID in pairs(MultiNpcList) do
+                    if (EntityID ~= nil and EntityID > 0) then
+                        self:InternalRemoveFateNpc(EntityID)
+                    end
+                end
+            end
+
+            self.FateMultiNpcList[InFateID] = nil
+        end
     else
         -- 这里去清理所有的本地创建的NPC
         for Key,EntityID in pairs(self.FateNpcList) do
@@ -2429,7 +2526,20 @@ function FateMgr:InternalCleanFateNpc(InFateID, InFateCfg)
                 self:InternalRemoveFateNpc(EntityID)
             end
         end
+
+        for FateID, Value in pairs(self.FateMultiNpcList) do
+            for ResID, EntityID in pairs(Value) do
+                if (EntityID ~= nil and EntityID > 0) then
+                    local TargetCfg = self:GetFateCfg(FateID)
+                    if (self:CheckCanCreateOrDestroyNpc(TargetCfg)) then
+                        self:InternalRemoveFateNpc(EntityID)
+                    end
+                end
+            end
+        end
+
         self.FateNpcList = {}
+        self.FateMultiNpcList = {}
     end
 end
 
@@ -2608,7 +2718,7 @@ function FateMgr:OnEnterArea(InFate)
     if (FateCfg.Type == ProtoRes.Game.FATE_TYPE.FATE_TYPE_ESCORT) then
         local NPCEntityID = ActorUtil.GetActorEntityIDByResID(FateCfg.TriggerNPC)
         if (NPCEntityID ~= nil) then
-            self:InternalRemoveFateNpc(NPCEntityID, InFate.ID)
+            self:InternalRemoveFateNpc(NPCEntityID, FateCfg.ID)
         end
     end
 
@@ -2654,8 +2764,8 @@ function FateMgr:OnEnterArea(InFate)
         -- 初次开启时/或者重新登陆进入
         self.EnterArea_Record[InFate.ID] = InFate.ID
         if RealLevel < FateCfg.Level then
-            local bIsCelebrateFate = FateCfg.IsCelebrateFate ~= nil and FateCfg.IsCelebrateFate > 0
-            if (not bIsCelebrateFate) then
+            local IsCelebrateFate = FateCfg.IsCelebrateFate ~= nil and FateCfg.IsCelebrateFate > 0
+            if (not IsCelebrateFate) then
                 local TargetID = 190046-- 当前等级较低，无法获得全部报酬
                 if (RealLevel <= FateCfg.Level - 8) then
                     -- 如果小于等于8，提示:冒险者的等级过低，参与本次危命任务将无法获得报酬
@@ -2909,11 +3019,6 @@ function FateMgr:RequireJoinFate(InFateID)
         return
     end
 
-    if (TargetFateID == nil or TargetFateID <= 0) then
-        _G.FLOG_ERROR("尝试加入FATE，但是FATEID为0，请检查")
-        return
-    end
-
     if self.LevelSyncState ~= ELevelSyncState.NotSynchronized and self.LevelSyncState ~= ELevelSyncState.NotJoin then
         _G.FLOG_ERROR("当前状态：%s ， 不符合参与的状态，请检查", self.LevelSyncState)
         return
@@ -3010,18 +3115,12 @@ function FateMgr:TickForFateInfo()
             -- 移除，并发消息
             local TempFate = self.CurrActiveFateList[Record.FateID]
             if (TempFate ~= nil) then
+                _G.FLOG_INFO("[Fate] : %d 已经到时间，将移除", TempFate.ID)
+                local FateCfg = self:GetFateCfg(TempFate.ID)
+                self:InternalCleanAfterFateEnd(TempFate.ID, FateCfg, true)
                 local EventParams = TempFate
                 _G.EventMgr:SendEvent(EventID.FateEnd, EventParams)
-
-                if (self.CurrentFate ~= nil and self.CurrentFate.ID == TempFate.ID) then
-                    _G.FLOG_INFO("[Fate] : %d 已经到时间，将移除", TempFate.ID)
-                    local bNoSendReqest = true
-                    self:OnExitArea(self.CurrentFate, bNoSendReqest)
-                end
-
                 self.CurrActiveFateList[Record.FateID] = nil
-                local InfoStr = string.format("当前FATE ： %s ,超时了，移除掉", Record.FateID)
-                _G.FLOG_INFO(InfoStr)
             end
 
             table.remove(self.FateAlreadyEndTable, Index)
@@ -3193,11 +3292,85 @@ function FateMgr:OnStartFateInteractiveClick(ResID, InEntityID)
     NpcDialogMgr:PlayDialogLib(DialogLibID, InEntityID, false, PlayDialogLibCallback)
 end
 
+function FateMgr:CheckContainsCurrFateBuff(InCurFate)
+    local TempCfg = FateTargetCfg:FindCfgByKey(InCurFate.ID)
+    if (TempCfg == nil) then
+        return false, 0
+    end
+    for _, Value in pairs(TempCfg.Actions) do
+        if (Value.Type == ProtoRes.Game.FATE_EVENT_CONDITION_TYPE.FATE_EVENT_CONDITION_INTERACT_WITH_BUFF) then
+            local TargetBuffID = Value.Params
+            -- 这里去找一下，看玩家身上有没有目标BUFF
+            if (BuffUtil.IsMajorBuffExist(TargetBuffID)) then
+                return true, TargetBuffID
+            end
+        end
+    end
+
+    return false, 0
+end
+
+function FateMgr:TrySubmitWithBuff(InResID, InEntityID)
+    local CurFate = self:GetCurrentFate()
+    if (CurFate == nil) then
+        _G.FLOG_ERROR("TrySubmitWithBuff 错误,当前没有 FATE ，请检查")
+        return
+    end
+    local NpcDialogCfg = FateNpcDialogCfg:FindCfgByKey(CurFate.ID)
+    if not (self:IsJoinFate()) then
+        NpcDialogMgr:PlayDialogLib(NpcDialogCfg.TriggerDialogLibID, InEntityID, false, nil, true)
+        return
+    end
+
+    -- 这里去检测一下这个FATE需要的BUFF
+    local TempCfg = FateTargetCfg:FindCfgByKey(CurFate.ID)
+    if (TempCfg == nil) then
+        _G.FLOG_ERROR("错误，无法获取FATE目标表格数据，ID是:%s", CurFate.ID)
+        return
+    end
+
+    local bSubmitBuff,TargetBuffID = self:CheckContainsCurrFateBuff(CurFate)
+
+    if (bSubmitBuff) then
+        -- 显示提交了BUFF的对话
+        NpcDialogMgr:PlayDialogLib(
+            NpcDialogCfg.ItemSumitFateFinish3,
+            InEntityID,
+            false,
+            function()
+                local MsgID = CS_CMD.CS_CMD_FATE
+                local SubMsgID = SUB_MSG_ID.CS_FATE_CMD_INTERACT_WITH_BUFF
+                local MsgBody = {
+                    Cmd = SubMsgID,
+                    FateID = CurFate.ID,
+                    FateInteractWithBuff = {
+                        BuffID = TargetBuffID
+                    }
+                }
+                self:InternalSendFateReqMsg(MsgID, SubMsgID, MsgBody)
+            end,
+            true
+        )
+    else
+        -- 显示没有能提交BUFF的对话
+        NpcDialogMgr:PlayDialogLib(
+            NpcDialogCfg.ItemSumitFateProcess2,
+            InEntityID,
+            false,
+            nil,
+            true
+        )
+    end
+end
+
 function FateMgr:OnProcessingInteractiveClick(InResID, InEntityID)
     local CurrentFateType = self:GetCurrentFateType()
     if (CurrentFateType == ProtoRes.Game.FATE_TYPE.FATE_TYPE_COLLECT) then
         -- 物品采集fate 提交物品对话逻辑
         self:OnItemCollectInteractive(InResID, InEntityID)
+    elseif(CurrentFateType == ProtoRes.Game.FATE_TYPE.FATE_TYPE_BUFF) then
+        -- 提交的是以身上BUFF为基准的
+        self:TrySubmitWithBuff(InResID, InEntityID)
     elseif (CurrentFateType ~= ProtoRes.Game.FATE_TYPE.FATE_TYPE_INVALID) then
         local UserData = self:TryGetUserData(InEntityID)
         if (UserData == nil) then
@@ -3630,14 +3803,14 @@ function FateMgr:GetLevelSyncState()
 end
 
 ---领取地图奖励相关的内容
-function FateMgr:SendGetMapReward(MapID, Index)
+function FateMgr:SendGetMapReward(MapID, InRewardIndexList)
     local MsgID = CS_CMD.CS_CMD_FATE
     local SubMsgID = SUB_MSG_ID.CS_FATE_CMD_GET_ACH_MAP_REWARD
     local MsgBody = {
         Cmd = SubMsgID,
         FateGetAchMapReward = {
             MapID = MapID,
-            RewardIndex = Index - 1 -- 这里是从0开始的
+            RewardIndex = InRewardIndexList -- 这里是从0开始的
         }
     }
     self:InternalSendFateReqMsg(MsgID, SubMsgID, MsgBody)
@@ -3920,20 +4093,7 @@ function FateMgr:GuardCalcProgressAndPos(InFate, NeedUpdatePos, SendEvent)
     end
 
     if (NeedUpdatePos) then
-        if (TargetActor == nil) then
-            -- 如果没有，那么取获取一下地图点的位置
-            local PathData = _G.MapEditDataMgr:GetPath(InFate.Npc.PatrolPath)
-            if (PathData ~= nil and PathData.Points ~= nil and #PathData.Points > 0) then
-                local TempCenter = PathData.Points[InFate.Npc.PatrolPoint]
-                if (TempCenter ~= nil and TempCenter.Point ~= nil) then
-                    InFate.FateCenter.X = TempCenter.Point.X
-                    InFate.FateCenter.Y = TempCenter.Point.Y
-                    InFate.FateCenter.Z = TempCenter.Point.Z
-                else
-                    FLOG_ERROR("计算的 FateCenter 为空，请检查")
-                end
-            end
-        else
+        if (TargetActor ~= nil) then
             local NPCEntityID = ActorUtil.GetActorEntityIDByResID(InFate.TriggerNPC)
             if (NPCEntityID ~= nil) then
                 self:InternalRemoveFateNpc(NPCEntityID, InFate.ID)
@@ -3945,6 +4105,25 @@ function FateMgr:GuardCalcProgressAndPos(InFate, NeedUpdatePos, SendEvent)
                 InFate.FateCenter = TempCenter
             else
                 FLOG_ERROR("TargetActor的 ActorLocation 为空，请检查")
+            end
+        else
+            if (InFate.Npc.Pos ~= nil) then
+                InFate.FateCenter.X = InFate.Npc.Pos.X
+                InFate.FateCenter.Y = InFate.Npc.Pos.Y
+                InFate.FateCenter.Z = InFate.Npc.Pos.Z
+            else
+                -- 如果没有，那么取获取一下地图点的位置
+                local PathData = _G.MapEditDataMgr:GetPath(InFate.Npc.PatrolPath)
+                if (PathData ~= nil and PathData.Points ~= nil and #PathData.Points > 0) then
+                    local TempCenter = PathData.Points[InFate.Npc.PatrolPoint]
+                    if (TempCenter ~= nil and TempCenter.Point ~= nil) then
+                        InFate.FateCenter.X = TempCenter.Point.X
+                        InFate.FateCenter.Y = TempCenter.Point.Y
+                        InFate.FateCenter.Z = TempCenter.Point.Z
+                    else
+                        FLOG_ERROR("计算的 FateCenter 为空，请检查")
+                    end
+                end
             end
         end
     end
@@ -4011,20 +4190,47 @@ function FateMgr:OnItemCollectInteractive(ResID, InEntityID)
         return
     end
 
+    -- 这里去判断一下是否有多个NPC
+
     local FateCfg = self:GetFateCfg(FateID)
-    local NpcDialogCfg = FateNpcDialogCfg:FindCfgByKey(FateID)
-    if nil == FateCfg or nil == NpcDialogCfg then
-        _G.FLOG_ERROR("FATE ID : %s，没有FateNpc配置对话表，请检查", FateID)
+    if (FateCfg == nil) then
+        _G.FLOG_ERROR("错误，无法找到FATE，ID 是 : %s", tostring(FateID))
         return
     end
 
+    local bMultiNPC = FateCfg.ExTriggerNPC[1].NPC and FateCfg.ExTriggerNPC[1].NPC > 0
+    local TargetDialogCfg = nil
+    if (bMultiNPC) then
+        local TempFateMultinpcDialogCfg = FateMultinpcDialogCfg:FindCfgByKey(ResID)
+        if (TempFateMultinpcDialogCfg == nil) then
+            _G.FLOG_INFO("FATE : %s, 有多NPC，但是没有配置多NPC对话，将启用默认对话", FateID)
+            local NpcDialogCfg = FateNpcDialogCfg:FindCfgByKey(FateID)
+            if nil == NpcDialogCfg then
+                _G.FLOG_ERROR("FATE ID : %s，没有FateNpc配置对话表，请检查", FateID)
+                return
+            end
+
+            TargetDialogCfg = NpcDialogCfg
+        else
+            TargetDialogCfg = TempFateMultinpcDialogCfg
+        end
+    else
+        local NpcDialogCfg = FateNpcDialogCfg:FindCfgByKey(FateID)
+        if nil == NpcDialogCfg then
+            _G.FLOG_ERROR("FATE ID : %s，没有FateNpc配置对话表，请检查", FateID)
+            return
+        end
+
+        TargetDialogCfg = NpcDialogCfg
+    end
+
     if not (self:IsJoinFate()) then
-        NpcDialogMgr:PlayDialogLib(NpcDialogCfg.TriggerDialogLibID, InEntityID, false, nil, true)
+        NpcDialogMgr:PlayDialogLib(TargetDialogCfg.TriggerDialogLibID, InEntityID, false, nil, true)
         return
     end
 
     -- 对话的NPCID
-    local NPCEntityID = self.FateNpcList[FateID]
+    local NPCEntityID = InEntityID
 
     -- 获取背包中采集物品的数量
     local TargetActionList = self:FindItemCollectFateSubmitTargetAction(FateID)
@@ -4044,20 +4250,20 @@ function FateMgr:OnItemCollectInteractive(ResID, InEntityID)
                 self:OpenItemCollectFateSubmitPanel(
                     InteractiveFate,
                     TargetActionList,
-                    NpcDialogCfg,
+                    TargetDialogCfg,
                     FateCfg,
                     NPCEntityID
                 )
             end
             NpcDialogMgr:PlayDialogLib(
-                NpcDialogCfg.ItemSumitFateProcess1,
+                TargetDialogCfg.ItemSumitFateProcess1,
                 InEntityID,
                 false,
                 PlayDialogLibCallback,
                 true
             )
         else
-            NpcDialogMgr:PlayDialogLib(NpcDialogCfg.ItemSumitFateProcess2, InEntityID, false, nil, true)
+            NpcDialogMgr:PlayDialogLib(TargetDialogCfg.ItemSumitFateProcess2, InEntityID, false, nil, true)
         end
     elseif InteractiveFate.State == ProtoCS.FateState.FateState_EndSubmitItem then
         if ItemNum > 0 then
@@ -4065,20 +4271,20 @@ function FateMgr:OnItemCollectInteractive(ResID, InEntityID)
                 self:OpenItemCollectFateSubmitPanel(
                     InteractiveFate,
                     TargetActionList,
-                    NpcDialogCfg,
+                    TargetDialogCfg,
                     FateCfg,
                     NPCEntityID
                 )
             end
             NpcDialogMgr:PlayDialogLib(
-                NpcDialogCfg.ItemSumitFateFinish1,
+                TargetDialogCfg.ItemSumitFateFinish1,
                 InEntityID,
                 false,
                 PlayDialogLibCallback,
                 true
             )
         else
-            NpcDialogMgr:PlayDialogLib(NpcDialogCfg.ItemSumitFateFinish2, InEntityID, false, nil, true)
+            NpcDialogMgr:PlayDialogLib(TargetDialogCfg.ItemSumitFateFinish2, InEntityID, false, nil, true)
         end
     end
 end
@@ -4193,6 +4399,15 @@ function FateMgr:OnItemCollectFateStagePrompt()
     end
 end
 
+function FateMgr:TestMap()
+    local Pos = _G.UE.FVector(480,-8,238)
+    local MapID = 12005
+    local MapUtil = require("Game/Map/MapUtil")
+    local UIX, UIY = MapUtil.GetUIPosByLocation2(Pos, MapID)
+    local UIPos = _G.UE.FVector2D(UIX, UIY)
+    _G.WorldMapMgr:OpenMapFromChatHyperlink(MapID, UIPos)
+end
+
 -- 检查是不是物品采集fate的NPC
 ---CheckIsItemCollectFateNPC
 ---@param InEntityID number
@@ -4230,13 +4445,13 @@ end
 
 -- 检测是不是FATE互动的ID
 function FateMgr:CheckIsFateCollectItem(InteractiveID)
-    return InteractiveID == 500006
+    return InteractiveID == 500006 or InteractiveID == 500466
 end
 
 -- 检查是否能交互-采集物品(未参与/未同步此fate不能采集)
 ---@return boolean
 function FateMgr:CheckCanInteractiveCollectItem(InteractiveID)
-    if InteractiveID ~= 500006 then
+    if (not self:CheckIsFateCollectItem(InteractiveID)) then
         return false
     end
 
@@ -4244,8 +4459,17 @@ function FateMgr:CheckCanInteractiveCollectItem(InteractiveID)
         return false
     end
 
-    if self.CurrentFate.FateType ~= ProtoRes.Game.FATE_TYPE.FATE_TYPE_COLLECT then
+    local bCollectFate = self.CurrentFate.FateType ~= ProtoRes.Game.FATE_TYPE.FATE_TYPE_COLLECT
+    local bCollectBuffFate = self.CurrentFate.FateType ~= ProtoRes.Game.FATE_TYPE.FATE_TYPE_BUFF
+    if not bCollectFate and not bCollectBuffFate then
         return false
+    end
+
+    if (bCollectBuffFate) then
+        -- 如果是BUFF FATE，那么要判断一下，自身是否已经有了BUFF了，不能重复去交互
+        if (self:CheckContainsCurrFateBuff(self.CurrentFate)) then
+            return false
+        end
     end
 
     if self.CurrentFate.State <= ProtoCS.FateState.FateState_WaitNPCTrigger then

@@ -15,8 +15,14 @@ local CommonCloseBtnView = LuaClass(UIView, true)
 function CommonCloseBtnView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Btn_Close = nil
+	--self.IconClose = nil
+	--self.PanelBright = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.AnimIn = nil
+	--self.AnimNewPressed = nil
+	--self.AnimNewReleased = nil
 	--self.AnimPressed = nil
+	--self.BtnBright = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 	self.View = nil
 	self.Callback = nil
@@ -24,6 +30,7 @@ end
 
 function CommonCloseBtnView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -36,7 +43,6 @@ function CommonCloseBtnView:OnDestroy()
 end
 
 function CommonCloseBtnView:OnShow()
-
 end
 
 function CommonCloseBtnView:OnHide()
@@ -66,6 +72,7 @@ function CommonCloseBtnView:OnClickButtonClose()
 	else
 		UIViewMgr:HideView(self.ViewID)
 	end
+	_G.SettingsHandleMgr:SwitchOpenCloseVirtualCursor(false)
 end
 
 --function CommonCloseBtnView:OnPressedButtonClose()

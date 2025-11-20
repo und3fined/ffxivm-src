@@ -103,8 +103,7 @@ function FootPrintRegionVM:UpdateParentTypeList(RegionID)
 end
 
 function FootPrintRegionVM:SelectTheParentType(ParentType)
-    --self.ParentTypeToSelected = ParentType
-    
+    self.LastSelectedTypeID = 0 -- 重新切换父页签时，会自动收起子项，故清除记录的上一个展开项ID
     local ParentTypeListItems = self.ParentTypeListItems
     if not ParentTypeListItems then
         return

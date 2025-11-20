@@ -16,6 +16,7 @@ local StoreDefine = require("Game/Store/StoreDefine")
 local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local HairUnlockCfg = require("TableCfg/HairUnlockCfg")
 local StoreUtil = require("Game/Store/StoreUtil")
+local StoreCfg = require("TableCfg/StoreCfg")
 
 local StoreMall = ProtoRes.StoreMall
 local FLOG_WARNING = _G.FLOG_WARNING
@@ -94,7 +95,7 @@ function StoreGoodVM:IsEqualVM(Value)
     end
     
     local GoodData = Value.GoodData
-    local CurrentTime = TimeUtil.GetServerTime()
+    local CurrentTime = TimeUtil.GetServerLogicTime()
 
 	local OffTime = StoreMgr:GetTimeInfo(GoodData.OffTime)
 
@@ -110,7 +111,6 @@ function StoreGoodVM:UpdateVM(Value, Params)
         FLOG_WARNING("StoreGoodVM:InitVM Value is nil")
         return
     end
-	--- 发型盲盒 ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX
     self.bSelected = false
     self.ItemIndex = Value.ItemIndex or 0
 	if nil == Value.GoodData then
@@ -120,24 +120,33 @@ function StoreGoodVM:UpdateVM(Value, Params)
 	if nil == GoodCfgData then
 		return
 	end
+	local RecommendGoodsCfgData = StoreMgr.GetRecommendGoodsCfgData(GoodCfgData)
+	local SubGoodsCfgData = RecommendGoodsCfgData and StoreCfg:FindCfgByKey(RecommendGoodsCfgData.GoodsIDs[1]) -- 嵌套商品的数据
+	local ExactGoodsCfgData = SubGoodsCfgData or GoodCfgData
 	self.Type = GoodCfgData.Type
 	self.GoodID = GoodCfgData.ID
 	self.VideoPath = GoodCfgData.VideoPath
 	self.Items = GoodCfgData.Items
 	self.LabelMain = GoodCfgData.LabelMain
-	local Discount = GoodCfgData.Discount
 	self.GenderLimit = GoodCfgData.GenderLimit
-    self.ItemNameText = GoodCfgData.Name
+    self.ItemNameText = StoreUtil.GetGoodsName(GoodCfgData.ID)
     self:UpdateIcon(GoodCfgData.Icon, GoodCfgData.Background)
-    local CurrentTime = TimeUtil.GetServerTime()
-	local DiscountStart = StoreMgr:GetTimeInfo(GoodCfgData.DiscountDurationStart)
-	local DiscountEnd = StoreMgr:GetTimeInfo(GoodCfgData.DiscountDurationEnd)
+    local CurrentTime = TimeUtil.GetServerLogicTime()
+	local Discount = ExactGoodsCfgData.Discount
+	local DiscountStart = StoreMgr:GetTimeInfo(ExactGoodsCfgData.DiscountDurationStart)
+	local DiscountEnd = StoreMgr:GetTimeInfo(ExactGoodsCfgData.DiscountDurationEnd)
+	local bShowDiscount = ExactGoodsCfgData.ShowDiscount
     self.PanelOriginalVisible = false
 	self.DiscountPanelVisible = false
     self.HotSaleVisible = false
     self.DeadlinePanelVisible = false
-	local IsCan, CanNotReason = StoreMgr:IsCanBuy(GoodCfgData.ID)
-    local bIsDuringSaleTime = StoreMgr:IsDuringSaleTime(GoodCfgData)
+	local IsCan, CanNotReason = true, ""
+	local bNeedBuyCheck = nil == RecommendGoodsCfgData or RecommendGoodsCfgData.ProductType ==
+		ProtoRes.StoreRecommendType.STORE_RECOMMEND_TYPE_PURCHASE
+	if bNeedBuyCheck then
+		IsCan, CanNotReason = StoreMgr:IsCanBuy(GoodCfgData.ID)
+	end
+    local bIsDuringSaleTime = StoreMgr:IsDuringSaleTime(ExactGoodsCfgData)
 	if not IsCan and _G.StoreMainVM.CurrentStoreMode == StoreDefine.StoreMode.Buy then
 		self.HorizontalPriceVisible = false
 		self.StateTextVisible = true
@@ -147,13 +156,16 @@ function StoreGoodVM:UpdateVM(Value, Params)
 
         if _G.StoreMainVM.CurrentSelectedTabType == ProtoRes.StoreMall.STORE_MALL_MYSTERYBOX then
             self:UpdateDiscount(Discount, 1, bIsDuringSaleTime)
+			if Discount ~= 0 and CurrentTime > DiscountStart and CurrentTime < DiscountEnd then
+				self:UpdateTimeSale(DiscountEnd)
+			end
         end
 	else
 		self.IsOwned = false
 		--- 没配置限制时间或在限制时间内
 		
 
-		self:UpdateDiscount(Discount, GoodCfgData.ShowDiscount, bIsDuringSaleTime)
+		self:UpdateDiscount(Discount, bShowDiscount, bIsDuringSaleTime)
 		--- Params {IsCalculateDisCount} 为true时才计算折扣   否则只显示原价
 		self:UpdatePrice(GoodCfgData, Params)
 		if GoodCfgData.AdvType ~= 0 then
@@ -164,7 +176,6 @@ function StoreGoodVM:UpdateVM(Value, Params)
 		end
 		self:UpdatePurchaseLimit(GoodCfgData.ID)
 	end
-	self.IsBringEquip = GoodCfgData.IsBringEquip
 end
 
 ---@type 更新图标

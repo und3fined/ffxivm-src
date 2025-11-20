@@ -73,13 +73,9 @@ function ChocoboMainPanelView:OnShow()
     ChocoboMgr:ReqQuery()
     ChocoboMgr:ReqQuerySkillList()
     ChocoboMgr:ReqQueryTitle()
+    _G.BuddyMgr:ReqUsedColor()
+    _G.BuddyMgr:ReqUsedArmor()
 
-    local _IsModuelOpen = _G.ModuleOpenMgr:CheckOpenState(ProtoCommon.ModuleID.ModuleIDBuddy)
-    if _IsModuelOpen then
-        _G.BuddyMgr:ReqUsedColor()
-        _G.BuddyMgr:ReqUsedArmor()
-    end
-    
     local PageIndex = 1
     if self.Params ~= nil and self.Params.PageIndex ~= nil then
         PageIndex = self.Params.PageIndex

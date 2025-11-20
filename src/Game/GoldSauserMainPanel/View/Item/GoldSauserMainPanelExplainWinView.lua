@@ -54,6 +54,7 @@ local UWidgetBlueprintLibrary = UE.UWidgetBlueprintLibrary
 ---@field PanelTopInfo UFCanvasPanel
 ---@field RichTextInfo URichTextBox
 ---@field SizeBoxIcon USizeBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field TableViewTask UTableView
 ---@field TextBtnL UFTextBlock
 ---@field TextBtnNoralM1 UFTextBlock
@@ -98,6 +99,7 @@ function GoldSauserMainPanelExplainWinView:Ctor()
 	--self.PanelTopInfo = nil
 	--self.RichTextInfo = nil
 	--self.SizeBoxIcon = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.TableViewTask = nil
 	--self.TextBtnL = nil
 	--self.TextBtnNoralM1 = nil
@@ -121,6 +123,7 @@ end
 function GoldSauserMainPanelExplainWinView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CommSlot)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 
@@ -232,10 +235,16 @@ function GoldSauserMainPanelExplainWinView:OnEnterBtnClicked()
 end
 
 function GoldSauserMainPanelExplainWinView:OnExtend1BtnClicked()
+	if not self.Extend1ClickFunc then
+	    return
+	end
 	self:Extend1ClickFunc()
 end
 
 function GoldSauserMainPanelExplainWinView:OnExtend2BtnClicked()
+	if not self.Extend2ClickFunc then
+		return
+	end
 	self:Extend2ClickFunc()
 end
 

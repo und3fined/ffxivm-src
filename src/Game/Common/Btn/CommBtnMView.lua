@@ -13,6 +13,7 @@ local WidgetCallback = require("UI/WidgetCallback")
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field Button UFButton
 ---@field Img UFImage
+---@field RedDot CommonRedDotView
 ---@field TextContent UFTextBlock
 ---@field AnimPressed UWidgetAnimation
 ---@field AnimReleased UWidgetAnimation
@@ -24,6 +25,7 @@ function CommBtnMView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.Button = nil
 	--self.Img = nil
+	--self.RedDot = nil
 	--self.TextContent = nil
 	--self.AnimPressed = nil
 	--self.AnimReleased = nil

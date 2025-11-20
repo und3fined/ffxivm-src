@@ -3,6 +3,8 @@ local UIViewModel = require("UI/UIViewModel")
 local ItemCfg = require("TableCfg/ItemCfg")
 local ItemUtil = require("Utils/ItemUtil")
 
+
+-- 显示特惠 、全民带芽、SDS芬里尔 在用
 ---@class OpsLimitedTimeSlotItemVM : UIViewModel
 local OpsLimitedTimeSlotItemVM = LuaClass(UIViewModel)
 
@@ -19,14 +21,15 @@ function OpsLimitedTimeSlotItemVM:Ctor()
     self.IconReceivedVisible = false
     self.ItemLevelVisible = false
     self.ImgEmptyVisible = false
+    self.BtnCheckVisible = false
 end
 
 function OpsLimitedTimeSlotItemVM:OnInit()
-    
+
 end
 
 function OpsLimitedTimeSlotItemVM:IsEqualVM(Value)
-    return Value.ResID == self.ResID
+    return false
 end
 
 function OpsLimitedTimeSlotItemVM:OnBegin()
@@ -43,6 +46,7 @@ end
 ---@param Params table @可以在UIBindableList.New函数传递参数，
 function OpsLimitedTimeSlotItemVM:UpdateVM(Value, Params)
     self.ResID = Value.ResID
+    self.BtnCheckVisible = Value.BtnCheckVisible == true
     self.IsSelect = false
     local Cfg = ItemCfg:FindCfgByKey(Value.ResID)
 	if Cfg ~= nil then

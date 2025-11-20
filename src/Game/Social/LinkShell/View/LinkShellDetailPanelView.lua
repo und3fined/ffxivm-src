@@ -433,7 +433,7 @@ end
 ---Component CallBack
 
 function LinkShellDetailPanelView:OnClickButtonCopyNo()
-	local Text = string.format("%s#%s", self.TextName:GetText(), self.TextNumber:GetText())
+	local Text = string.format("%s", self.TextNumber:GetText())
     CommonUtil.ClipboardCopy(Text)
     MsgTipsUtil.ShowTips(LSTR(40067)) -- "通讯贝信息已复制，可于聊天框粘贴分享"
 end

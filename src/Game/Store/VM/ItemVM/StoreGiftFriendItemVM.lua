@@ -16,6 +16,7 @@ function StoreGiftFriendItemVM:Ctor()
 	self.Level = 0
     self.Desc = ""
 	self.IsExpanded = false
+	self.Name = ""
 end
 
 function StoreGiftFriendItemVM:IsEqualVM(Value)
@@ -29,7 +30,7 @@ function StoreGiftFriendItemVM:UpdateVM(Value)
     end
 
 
-	self.Name = Value.Name
+	self.Name = Value.TureName
 	self.ProfID = Value.ProfID
 	self.RoleID = Value.RoleID
 	self.Level = Value.Level

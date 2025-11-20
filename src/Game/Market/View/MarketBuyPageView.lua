@@ -42,6 +42,7 @@ local ClientVisionMgr =_G.ClientVisionMgr
 ---@field BtnNext UFButton
 ---@field BtnNextDisable UFButton
 ---@field BtnPage UFButton
+---@field BtnRefresh UFButton
 ---@field CommDropDownList1 CommDropDownListView
 ---@field CommDropDownList2 CommDropDownListView
 ---@field CommSearchBtn CommSearchBtnView
@@ -74,6 +75,7 @@ function MarketBuyPageView:Ctor()
 	--self.BtnNext = nil
 	--self.BtnNextDisable = nil
 	--self.BtnPage = nil
+	--self.BtnRefresh = nil
 	--self.CommDropDownList1 = nil
 	--self.CommDropDownList2 = nil
 	--self.CommSearchBtn = nil
@@ -140,6 +142,8 @@ function MarketBuyPageView:OnInit()
 		{ "SearchBarVisible", UIBinderSetIsVisible.New(self, self.SearchBar) },
 	
 	}
+
+	self.bClickedItem = false -- 控制列表框同时点击
 end
 
 function MarketBuyPageView:OnDestroy()
@@ -193,6 +197,10 @@ function MarketBuyPageView:SeekJumoToBuyItem(ItemID)
 	end
 
 	self:SetSeletedByMainTypeAndSubType(Cfg.MainType, Cfg.SubType, ItemID)
+
+	self.ViewModel.OpenBuyWinItemID = ItemID
+	MarketMgr:SendStallListMessage(ItemID, 0, MarketMgr.StallListOnePageNum*3 - 1, false)
+
 end
 
 function MarketBuyPageView:SetSeletedByMainTypeAndSubType(MainType, SubType, ItemID)
@@ -205,6 +213,7 @@ function MarketBuyPageView:SetSeletedByMainTypeAndSubType(MainType, SubType, Ite
 	if AllCfg ~= nil and #AllCfg > 0 then
 		--定位选中的筛选器Index
 		self:SetScreenerIndex(AllCfg[1].Screener, ItemID)
+		self.ViewModel.JumpItemID = ItemID
 		self.ViewModel.JumpSubTypeIndex = AllCfg[1].ShowID
 		self.VerIconTabs:SetSelectedIndex(MainTypeCfg.Order)
 	end
@@ -253,7 +262,6 @@ function MarketBuyPageView:SetScreenerIndex(Screener, ItemID)
 					if ScreenerData.ItemID == ItemID then
 						self.ViewModel.JumpDropDown1Index = i
 						self.ViewModel.JumpDropDown2Index = j
-						self.ViewModel.JumpItemID = ItemID
 						return
 					end
 				end
@@ -278,13 +286,14 @@ function MarketBuyPageView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnNextDisable, self.OnClickedNextBtnDisable)
 
 	UIUtil.AddOnClickedEvent(self, self.BtnPage, self.OnBtnPageValueClick)
+	UIUtil.AddOnClickedEvent(self, self.BtnRefresh, self.OnClickedRefreshBtn)
 
 	UIUtil.AddOnSelectionChangedEvent(self, self.CommDropDownList1, self.OnFilter1SelectedChanged)
 	UIUtil.AddOnSelectionChangedEvent(self, self.CommDropDownList2, self.OnFilter2SelectedChanged)
 
 	UIUtil.AddOnClickedEvent(self, self.CommSearchBtn.BtnSearch, self.OnClickedCommSearchBtn)
 	self.SearchBar:SetCallback(self, self.OnChangeCallback, self.OnSearchInputFinish, self.OnCancelSearchClicked)
-	self.SearchBar.BtnCancelAlwaysVisible = true
+
 end
 
 
@@ -300,6 +309,8 @@ function MarketBuyPageView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.MarketRefreshConcernInfo, self.OnRefreshConcernInfo)
 
 	self:RegisterGameEvent(EventID.MarketRefreshStallBriefList, self.OnMarketRefreshStallBriefList)
+
+	self:RegisterGameEvent(EventID.EquipUpdate, self.OnRefreshCurPage)
 end
 
 function MarketBuyPageView:OnRegisterBinder()
@@ -313,17 +324,27 @@ function MarketBuyPageView:OnRegisterBinder()
 end
 
 function MarketBuyPageView:OnTabItemSelectChanged(Index)
+	if self.bClickedItem then
+		return
+	end
+
+	self.bClickedItem = true
 	if self.Searching == true then
 		self:QuitSearch()
 		self.MainType = nil
 	end
+
 	if self.MainType == self.Tabs[Index].MainType then
+		self.bClickedItem = false
 		return
 	end
 	self:PlayAnimation(self.AnimChangeTab)
 
+	self.SearchBar.IsFocusReceived = false
+	self.SearchBar.BtnCancelAlwaysVisible = false
 	self.MainType = self.Tabs[Index].MainType
 	MarketMainVM.SubTitleText = self.Tabs[Index].MainTypeName
+	self.bClickedItem = false
 	self:SetSubTabList(self.MainType)
 end
 
@@ -354,6 +375,7 @@ function MarketBuyPageView:SetSubTabList(MainType)
 				self.ViewModel:SetSubPanelInfo(MainType)
 				self.ViewModel.PageSwitchVisible = false
 				MarketMgr.GoodsList = {}
+				self.AllItemList = {}
 				self.ViewModel:UpdateGoodsList({})
 				self.MarketEmptyPanel:SetConcernEmpty()
 			end
@@ -376,18 +398,28 @@ function MarketBuyPageView:SetSubTabList(MainType)
 end
 
 function MarketBuyPageView:OnSubTabSelectChanged(Index, ItemData, ItemView)
+	if self.bClickedItem then
+		return
+	end
+	self.bClickedItem = true 
+
 	if nil == ItemData then
+		self.bClickedItem = false 
 		return
 	end
 
 	if self.Searching == true then
+		self.bClickedItem = false 
 		self.SubType = ItemData.SubTabData.SubType
 		self:OnCancelSearchClicked()
 		return
 	end
+	self.SearchBar.IsFocusReceived = false
+	self.SearchBar.BtnCancelAlwaysVisible = false
 	self:PlayAnimation(self.AnimChangeSubTab)
 	self.ViewModel:SetSubTabIndex(ItemData.SubTabData.ShowID)
 	self:SetSubPanelBySubType(ItemData.SubTabData)
+	self.bClickedItem = false 
 end
 
 function MarketBuyPageView:SetSubPanelBySubType(SubTabData)
@@ -412,7 +444,15 @@ function MarketBuyPageView:SetCommDropDownList2Item()
 		DefaultIdex, CurFind = self:GetDropDownDefaultIndex(self.ViewModel.SubTabData.ScreenerValue[2], ScreenerList)
 	end
 
+	local LastDropDown2Index = self.ViewModel.DropDown2Index or DefaultIdex
 	self.ViewModel.DropDown2Index = DefaultIdex
+
+	if self.MainType ~= nil then
+		local Cfg = TradeMarketMainTypeCfg:FindCfgByKey(self.MainType)
+		if Cfg ~= nil and Cfg.CacheScreener then
+			self.ViewModel.DropDown2Index = LastDropDown2Index
+		end
+	end
 
 	if self.ViewModel.JumpDropDown2Index then
 		self.ViewModel.DropDown2Index  = self.ViewModel.JumpDropDown2Index
@@ -444,8 +484,17 @@ function MarketBuyPageView:SetCommDropDownList1Item()
 	if self.ViewModel.SubTabData.ScreenerValue then
 		DefaultIdex, CurFind = self:GetDropDownDefaultIndex(self.ViewModel.SubTabData.ScreenerValue[1], ScreenerList)
 	end
-	
+
+	local LastDropDown1Index = self.ViewModel.DropDown1Index or DefaultIdex
+
 	self.ViewModel.DropDown1Index = DefaultIdex
+
+	if self.MainType ~= nil then
+		local Cfg = TradeMarketMainTypeCfg:FindCfgByKey(self.MainType)
+		if Cfg ~= nil and Cfg.CacheScreener then
+			self.ViewModel.DropDown1Index = LastDropDown1Index
+		end
+	end
 
 	if self.ViewModel.JumpDropDown1Index then
 		self.ViewModel.DropDown1Index  = self.ViewModel.JumpDropDown1Index
@@ -526,7 +575,7 @@ function MarketBuyPageView:OnCommoditySelectChanged(Index, ItemData, ItemView)
 		return
 	end
 
-	self.ClickedView = ItemView
+	self.ClickedItemIndex = Index
 	MarketMgr:SendStallListMessage(ItemData.ResID, 0, MarketMgr.StallListOnePageNum*3 - 1, false)
 	--[[if ItemData.CommodityItem.AllSellNum == 0 then
 		_G.MsgTipsUtil.ShowTips(LSTR(1010042))
@@ -541,20 +590,35 @@ function MarketBuyPageView:OnMarketRefreshStallBriefList(StallBriefInfo)
 	if _G.UIViewMgr:IsViewVisible(UIViewID.MarketBuyWin) then
 		return
 	end
-	if self.ClickedView == nil or self.ClickedView.Params == nil then
+
+	if self.ViewModel.OpenBuyWinItemID then
+		if StallBriefInfo.Stalls and #StallBriefInfo.Stalls > 0 then
+			UIViewMgr:ShowView(UIViewID.MarketBuyWin, {ResID = self.ViewModel.OpenBuyWinItemID})
+		else
+			_G.MsgTipsUtil.ShowTips(LSTR(1010042))
+		end
+		self.ViewModel.OpenBuyWinItemID = nil
+		return 
+	end
+
+	if self.ClickedItemIndex == nil or self.GoodsTableViewAdapter == nil then
+		return
+	end
+	local ClickedItemView = self.GoodsTableViewAdapter:GetChildWidget(self.ClickedItemIndex)
+	if ClickedItemView == nil or ClickedItemView.Params == nil then
 		return
 	end
 	if StallBriefInfo.Stalls and #StallBriefInfo.Stalls > 0 then
-		UIViewMgr:ShowView(UIViewID.MarketBuyWin, self.ClickedView.Params.Data)
+		UIViewMgr:ShowView(UIViewID.MarketBuyWin, ClickedItemView.Params.Data)
 	else
 		_G.MsgTipsUtil.ShowTips(LSTR(1010042))
-		if self.ClickedView.Params.Data then
-			ItemTipsUtil.ShowTipsByResID(self.ClickedView.Params.Data.ResID, self.ClickedView)
+		if ClickedItemView.Params.Data then
+			ItemTipsUtil.ShowTipsByResID(ClickedItemView.Params.Data.ResID, ClickedItemView)
 		end
 		
 	end
 
-	self.ClickedView = nil
+	self.ClickedItemIndex = nil
 
 	if #self.AllItemList > 0 then
 		MarketMgr:SendTypeQueryMessage(self.AllItemList)
@@ -642,6 +706,13 @@ function MarketBuyPageView:OnScreenerAction()
 		self.ViewModel.PageSwitchVisible = false
 		MarketMgr.GoodsList = {}
 		self.ViewModel:UpdateGoodsList({})
+	end
+end
+
+function MarketBuyPageView:OnClickedRefreshBtn()
+	if #self.AllItemList > 0 then
+		self:PlayAnimation(self.AnimSearch)
+		MarketMgr:SendTypeQueryMessage(self.AllItemList)
 	end
 end
 
@@ -742,6 +813,7 @@ function MarketBuyPageView:OnRefreshConcernInfo()
 		self.ViewModel:SetSubPanelInfo(ProtoRes.TradeMainType.TRADE_CONCERN_TYPE)
 		self.ViewModel.PageSwitchVisible = false
 		MarketMgr.GoodsList = {}
+		self.AllItemList = {}
 		self.ViewModel:UpdateGoodsList({})
 	end
 
@@ -759,6 +831,8 @@ function MarketBuyPageView:OnClickedCommSearchBtn()
 	self.SearchBar:SetText('')
 	self.SearchBar:SetHintText(LSTR(1010041))
 	self.Searching = true
+
+	self.SearchBar.BtnCancelAlwaysVisible = true
 end
 
 function MarketBuyPageView:OnChangeCallback(Text)
@@ -839,7 +913,6 @@ function MarketBuyPageView:OnCancelSearchClicked()
 		self.MainType = nil 
 		self.SubType = nil
 		self:SetSeletedByMainTypeAndSubType(MainType, SubType)
-
 	end
 end
 
@@ -850,6 +923,9 @@ function MarketBuyPageView:QuitSearch()
 	self.SearchBar:SetText('')
 	self.SearchBar:SetHintText(LSTR(1010041))
 	self.Searching = false
+
+	self.SearchBar.BtnCancelAlwaysVisible = false
+	self.SearchBar.IsFocusReceived = false
 end
 
 return MarketBuyPageView

@@ -22,6 +22,9 @@ local ProtoRes = require("Protocol/ProtoRes")
 ---@field NamedSlotChild UNamedSlot
 ---@field PanelCurrency UFCanvasPanel
 ---@field PopUpBG CommonPopUpBGView
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
+---@field AnimIn UWidgetAnimation
+---@field AnimOut UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local PlayStyleCommFrameMView = LuaClass(UIView, true)
 
@@ -34,6 +37,9 @@ function PlayStyleCommFrameMView:Ctor()
 	--self.NamedSlotChild = nil
 	--self.PanelCurrency = nil
 	--self.PopUpBG = nil
+	--self.SkillHandleCloseBtn = nil
+	--self.AnimIn = nil
+	--self.AnimOut = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -42,6 +48,7 @@ function PlayStyleCommFrameMView:OnRegisterSubView()
 	self:AddSubView(self.CommCurrency01)
 	self:AddSubView(self.CommCurrency02)
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

@@ -34,9 +34,8 @@ local FishIngholeTipsItemVM = require("Game/FishNotes/ItemVM/FishIngholeTipsItem
 local FishNotesWeatherBallItemVM = require("Game/FishNotes/ItemVM/FishNotesWeatherBallItemVM")
 local FishNotesWindowsTimeVM = require("Game/FishNotes/ItemVM/FishNotesWindowsTimeVM")
 local FishNotesClockVM = require("Game/FishNotes/ItemVM/FishNotesClockVM")
-local FishTabItemVM = require("Game/FishNotes/ItemVM/FishTabItemVM")
 local FishIngholeBaitsVM = require("Game/FishNotes/ItemVM/FishIngholeBaitsVM")
-local FishNotesBaitISlotVM = require("Game/FishNotes/ItemVM/FishNotesBaitISlotVM")
+local FishNotesBaitIWinSlotVM = require("Game/FishNotes/ItemVM/FishNotesBaitIWinSlotVM")
 local FishSlotItemVM = require("Game/FishNotes/ItemVM/FishSlotItemVM")
 local FishNotesGridVM = require("Game/FishNotes/ItemVM/FishNotesGridVM")
 local FishNotesDefine = require("Game/FishNotes/FishNotesDefine")
@@ -128,6 +127,9 @@ local LSTR = _G.LSTR
 ---@field SkipLocationInfo table @跳转地点信息
 ---@field bSearch boolean @是否在搜索
 ---@field SearchContent string @搜索内容
+---@field SearchFishContent string @搜索内容（已判断可以搜索到鱼）
+---@field SearchFishIndex number @搜索状态选中的鱼类下标
+---@field SearchHoleData table @搜索状态选中的Area和钓场
 
 local FishIngholeVM = LuaClass(UIViewModel)
 function FishIngholeVM:Ctor()
@@ -142,6 +144,7 @@ function FishIngholeVM:OnInit()
     self.ToggleSwitchState = EToggleButtonState.UnChecked
     --可见性
     self.bClockFishListVisible = false
+    self.bFishClockNumVisible = false
     self.bPanelMapVisible = true
     self.bFishDetailsVisible = false
     self.bFishlistVisible = true
@@ -154,7 +157,8 @@ function FishIngholeVM:OnInit()
     --鱼类信息
     self.FishDetailsInfo = FishNotesGridVM.New()
     self.FishDetailsName = ""
-    --self.FishDetailsNameColor = ""
+    self.SelectFishObtainPower = ""
+    self.SelectFishLv = ""
     self.bBtnBuffVisible = false
     self.BtnCollectVisible = false
     self.bBtnFishInheritVisible = false
@@ -170,7 +174,7 @@ function FishIngholeVM:OnInit()
     self.FishIngholeBaitsInfo = FishIngholeBaitsVM.New()
     self.bFishDetailBaitBtn = false
     self.FishDetailAllBaitData = nil
-    self.FishDetailAllBaitList = UIBindableList.New(FishNotesBaitISlotVM)
+    self.FishDetailAllBaitList = UIBindableList.New(FishNotesBaitIWinSlotVM)
     --捕鱼人之识
     self.bBtnBuffVisible = false
     self.FishDetailStatusBuffIcon = ""
@@ -215,7 +219,6 @@ function FishIngholeVM:OnInit()
     self.SkipLocationInfo = nil
     self.bSearch = false
     self.SearchContent = ""
-    self.SearchState = false
     self.SearchFishContent = nil
     self.SearchFishIndex = nil
     self.SearchHoleData = nil
@@ -266,6 +269,11 @@ function FishIngholeVM:RefreshFishIoreListSecond()
     end
 end
 
+function FishIngholeVM:RefreshTextClockNum()
+    local Num = FishNotesMgr:GetTotalClockNum()
+    self.TextClockNum = string.format(LSTR(180084), Num, FishNotesMgr.MaxClockNum)--"闹钟数量：%d/%d"
+end
+
 ---@type 切换闹钟_钓场信息-----------------------------------------------------------------------------
 function FishIngholeVM:OnClickSwitch(State, BeforSearchSelectData)
     --切换按钮状态
@@ -287,8 +295,7 @@ function FishIngholeVM:OnClickSwitch(State, BeforSearchSelectData)
         self.bFishSearchEmptyVisible = false
         self.bClockNotActiveVisible = not self.bClockIsActive
         self.SelectedFactionName = LSTR(FishNotesDefine.ClockSetTitle)
-        local Num = FishNotesMgr:GetTotalClockNum()
-        self.TextClockNum = string.format(LSTR(180084), Num, FishNotesMgr.MaxClockNum)--"闹钟数量：%d/%d"
+        self:RefreshTextClockNum()
         self:InitClockTabView()
     else
         self.bClockFishListVisible = false
@@ -319,9 +326,7 @@ function FishIngholeVM:RecoverBeforSearchSelect(BeforSearchSelectData)
     self.SelectAreasChildIndex =
     self.SelectFactionsChildIndex and self.SelectFactionsChildIndex[self.SelectFactionIndex] or {}
     self.SelectAreasChildIndex[AreaIndex] = AreaChildIndex
-    if self.SelectFactionIndex then
-        self.SelectFactionsChildIndex[self.SelectFactionIndex] = self.SelectAreasChildIndex
-    end
+    self.SelectFactionsChildIndex[self.SelectFactionIndex] = self.SelectAreasChildIndex
 end
 
 function FishIngholeVM:IsClockView()
@@ -389,12 +394,12 @@ end
 function FishIngholeVM:SelectedTabIndex(Index)
     self.SelectedFactionName = FishNotesMgr:GetFactionInfo(Index)
     self:InitLocationData()
-        if self.SearchHoleData then
-            --选中区域和钓场、鱼类
-            self:SelectSearchData(Index)
-        else
-            self:SelectDefaultAreaAndPlace(Index)
-        end
+    if self.SearchHoleData then
+        --选中区域和钓场、鱼类
+        self:SelectSearchData(Index)
+    else
+        self:SelectDefaultAreaAndPlace(Index)
+    end
     self.IsOpenView = true
     self.SelectFactionIndex = Index
 end
@@ -402,7 +407,6 @@ end
 ---@type 初始化区域和钓场数据
 function FishIngholeVM:InitLocationData()
     local AreaData = FishNotesMgr:GetAreaInfo(self.SelectedFactionName)
-    self.bSearch = false
     if AreaData then
         self.AreaDataList = {}
         local bLock = false
@@ -419,7 +423,7 @@ function FishIngholeVM:InitLocationData()
                 bLock = bLock
             }
         end
-        self:UpdateLocationList()
+        --self:UpdateLocationList()
     end
 end
 
@@ -697,9 +701,34 @@ function FishIngholeVM:GetPlaceIndexByName(PlaceName)
     end
 end
 
+---@type 搜索状态点击区域或钓场回调
+function FishIngholeVM:OnTreeViewPlaceSelectedInSearchState(ItemData)
+    if ItemData.WidgetIndex and ItemData.WidgetIndex == 0 then
+        local AreaIndex = ItemData.Index
+        local SelectAreaData = self.AreaDataList[AreaIndex]
+        if SelectAreaData.bExpand == true then
+            self:CollapseArea(SelectAreaData)
+        else
+            self:ExpandArea(SelectAreaData)
+        end
+        self:UpdateLocationList()
+        self:UpdateLocationList()
+        if self.SearchHoleData.AreaName == SelectAreaData.Name then
+            local AreaChildIndex = self.SelectAreasChildIndex[AreaIndex]
+            self:SelectedLocation(AreaIndex, AreaChildIndex)
+        end
+        return
+    end
+    self:SelectedLocation(ItemData.ParentKey, ItemData.Index)
+end
+
 ---@type 点击区域或钓场回调
 ---@param ItemData FishNotesAreaVM
 function FishIngholeVM:OnTreeViewPlaceSelected(ItemData)
+    if self.bSearch then
+        self:OnTreeViewPlaceSelectedInSearchState(ItemData)
+        return
+    end
     if ItemData.WidgetIndex and ItemData.WidgetIndex == 0 then
         self:AreaStateChanged(self.SelectFactionIndex, ItemData.Index)
         self.SelectAreasChildIndex =
@@ -853,8 +882,8 @@ function FishIngholeVM:SelectedLocation(AreaIndex, AreaChildIndex, FishID, NoSel
         --移除红点
         FishNotesMgr:RemoveRedDot(AreaChildrenItem.ID)
         --如果是搜索，记录选中
-        if self.SearchState then
-            self.SearchHoleData = {PlaceName = AreaChildrenItem.Name,AreaName = AreaChildrenItem.Area}
+        if self.bSearch then
+            self.SearchHoleData = {PlaceName = AreaChildrenItem.Name, AreaName = AreaItem.Name}
         end
     end
 
@@ -912,7 +941,7 @@ function FishIngholeVM:GetSelectLocationMapInfo()
         return self:GetLocationMapInfoByID(self.SelectLocationID)
     end
 
-    local LocationData = self.AreaDataList[self.SelectAreaIndex]
+    local LocationData = self.AreaDataList and self.AreaDataList[self.SelectAreaIndex]
     if LocationData == nil then
         FLOG_WARNING("FishIngholeVM:GetSelectLocationMapInfo LocationData is nil")
         return nil
@@ -1031,7 +1060,7 @@ function FishIngholeVM:UpdateLocationFishList(LocationID, SelectFishID, NoSelect
             local FishID = ResultData[i].ID
             if SelectFishID ~= nil and SelectFishID == FishID then
                 SelectIndex = i
-            elseif self.SearchState and SelectIndex == 0  then
+            elseif self.bSearch and SelectIndex == 0  then
                 local Content = self.SearchFishContent
                 local FishName = FishNotesMgr:GetFishName(FishID)
                 if Content and string.find(FishName,Content) then
@@ -1076,7 +1105,7 @@ function FishIngholeVM:SelectedLocationFish(Index)
         return
     end
 
-    if self.SearchState and self.SearchFishContent ~= nil then
+    if self.bSearch and self.SearchFishContent ~= nil then
 		self.SearchFishIndex = Index
 	end
 
@@ -1113,6 +1142,8 @@ function FishIngholeVM:UpdateSelectedFishInfo(FishID)
     local FishCfg = FishData.Cfg
     self.FishDetailsInfo:UpdateVM(FishCfg)
     self.FishDetailsName = FishCfg.Name
+    self.SelectFishLv = string.format("%s%s", FishCfg.Level, LSTR(70022))
+    self.SelectFishObtainPower = string.format("%s%s", _G.LSTR(180113), tostring(FishCfg.GatheringThreshold or 0))
     self.bBtnFishInheritVisible = FishCfg.NeedFolklore
     self.BtnCollectVisible = FishCfg.CollectItemID ~= 0
 
@@ -1216,13 +1247,19 @@ function FishIngholeVM:UpdateFishBaitsInfo(FishData)
         self.FishIngholeBaitsInfo:UpdateVM(BaitsList, FishData, self.SelectLocationID)
     end
     --钓饵盒子
-    self.bFishDetailBaitBtn = #AllBaitsList > 1
+    self.bFishDetailBaitBtn = #AllBaitsList >= 1
     self.FishDetailAllBaitData = AllBaitsList
 end
 
 ---@type 刷新选中的鱼类对应的鱼饵信息
-function FishIngholeVM:InitFishBaitsList()
-    self.FishDetailAllBaitList:UpdateByValues(self.FishDetailAllBaitData)
+function FishIngholeVM:InitFishBaitsList(FishData)
+    local FishDetailAllBaitData = self.FishDetailAllBaitData
+    if FishData ~= nil then
+        local _, AllBaitsList = _G.FishNotesMgr:GetAllBaitData(FishData, _G.FishMgr.AreaID)
+        FishDetailAllBaitData = AllBaitsList
+        self.FishDetailsName = FishData.Name
+    end
+    self.FishDetailAllBaitList:UpdateByValues(FishDetailAllBaitData)
 end
 
 ---@type 刷新选中的鱼类对应的状态信息
@@ -1386,7 +1423,7 @@ local function AddWindowTime(TimeConditionStartHour, TimeConditionEndHour, Weath
     --当偏移后的时间在天气结束之前
     while (ConvertEndTimeSec <= WeatherEndSec) do
         --此天气的开始时间 按小时向后推移，直到天气开始时间在时间条件的起始之间
-        if WeatherStartSec >= Now and WeatherStartHour >= TimeConditionStartHour and WeatherStartHour <= TimeConditionEndHour then
+        if WeatherStartHour >= TimeConditionStartHour and WeatherStartHour <= TimeConditionEndHour then
             FLOG_INFO(string.format("OffsetAozyHour:%d", OffsetAozyHour))
             FLOG_INFO(string.format("Weather:%dh~%dh", WeatherStartHour, WeatherEndHour))
             --窗口起始时间
@@ -1402,7 +1439,7 @@ local function AddWindowTime(TimeConditionStartHour, TimeConditionEndHour, Weath
             FLOG_INFO(string.format("AddWindowTime.WindowStart:%d ~ WindowEnd:%d", FishNotesMgr:GetAozyHourByTime(WindowStartSec), FishNotesMgr:GetAozyHourByTime(WindowEndSec)))
 
             --添加窗口
-            if WindowStartSec ~= WindowEndSec then
+            if WindowStartSec ~= WindowEndSec and WindowEndSec > Now then
                 table.insert(DetailWindowsList, {StartTime = WindowStartSec, EndTime = WindowEndSec, MapID = MapID, WeatherOffset = WeatherOffset, bChackPre = bChackPre})
             end
             WindowIndex = WindowIndex + 1
@@ -1457,8 +1494,15 @@ function FishIngholeVM:UpdateFishWindowsInfo(FishData, LocationID)
                 EndTime = value.EndTime,
                 MapID = value.MapID,
                 WeatherOffset = value.WeatherOffset,
-                bChackPre = value.bChackPre
+                bChackPre = value.bChackPre,
+                bImgLineShow = true
             })
+        end
+        for index, _ in ipairs(TimeListData) do
+            local TimeChildren = TimeListData[index].Children
+            if not table.is_nil_empty(TimeChildren) then
+                TimeChildren[#TimeChildren].bImgLineShow = false
+            end
         end
         self.TimeList:UpdateByValues(TimeListData)
         self.bFishWindowsVisible = true
@@ -1500,33 +1544,30 @@ function FishIngholeVM:GetWindowsList(FishID, LocationID, bOutTime)
         local AozyDayOffset = 0
         local Start = TimeCondition.Start
         local End = TimeCondition.End
-        --local NowAozyHourToday = TimeUtil.GetAozyHour()
-        if Start > End then
-            --if NowAozyHourToday < End then
-                --Start = NowAozyHourToday
-            --else
-                End = End + FishNotesDefine.DayAllHourValue
-            --end 
-        end
-        while (ShowIndex < FishNotesDefine.WindowItemLength) do
-            local TimeConditionStart =
-                (AozyHour + AozyDayOffset * FishNotesDefine.DayAllHourValue + Start) * AozyTimeDefine.AozyHour2RealSec
-            local TimeConditionEnd =
-                (AozyHour + AozyDayOffset * FishNotesDefine.DayAllHourValue + End) * AozyTimeDefine.AozyHour2RealSec
+        local NowAozyHourToday = TimeUtil.GetAozyHour()
+        local function AddWindowTimeByTimeCondition(StartTime, EndTime)
+            local TimeConditionStart = (AozyHour + AozyDayOffset * FishNotesDefine.DayAllHourValue + StartTime) * AozyTimeDefine.AozyHour2RealSec
+            local TimeConditionEnd = (AozyHour + AozyDayOffset * FishNotesDefine.DayAllHourValue + EndTime) * AozyTimeDefine.AozyHour2RealSec
             if ServerTime < TimeConditionEnd then
-                local WindowStartTime = TimeConditionStart
-                -- if ServerTime > TimeConditionStart then
-                --     WindowStartTime = ServerTime
-                -- end
-
                 local WeatherOffset1 = math.ceil((TimeConditionStart - ServerTime)/AozyTimeDefine.AozyHour2RealSec/8)
                 local WeatherOffset2 = math.ceil((TimeConditionEnd - ServerTime)/AozyTimeDefine.AozyHour2RealSec/8)
                 WeatherOffset2 = (WeatherOffset2 - WeatherOffset1) >= 1 and (WeatherOffset1 + 1) or WeatherOffset1
                 local Weather1 = WeatherUtil.GetMapWeather(MapID, WeatherOffset1)
                 local Weather2 = WeatherUtil.GetMapWeather(MapID, WeatherOffset2)
-                table.insert(WindowsList, {StartTime = WindowStartTime, EndTime = TimeConditionEnd, MapID = MapID, WeatherOffset = WeatherOffset2, bChackPre = Weather1~= Weather2})
+                table.insert(WindowsList, {StartTime = TimeConditionStart, EndTime = TimeConditionEnd, MapID = MapID, WeatherOffset = WeatherOffset2, bChackPre = Weather1~= Weather2})
                 ShowIndex = ShowIndex + 1
             end
+        end
+        if Start > End then
+            --eg：时间条件是[18,6]，如果当前时间在0~5点，要先算进去（AozyDayOffset不用加一天）
+            if NowAozyHourToday < End then
+                AddWindowTimeByTimeCondition(0, End)
+            end
+            --再算当天时间18点之后的
+            End = End + FishNotesDefine.DayAllHourValue
+        end
+        while (ShowIndex < FishNotesDefine.WindowItemLength) do
+            AddWindowTimeByTimeCondition(Start, End)
             AozyDayOffset = AozyDayOffset + 1
         end
     else
@@ -1621,6 +1662,7 @@ end
 ---@param Index number 选中的索引
 function FishIngholeVM:SelectedClockTabItem(Index)
     self.SelectClockTabIndex = Index
+    self.bFishClockNumVisible = Index == 1
     local SortedClockList
     if Index == 1 then
         SortedClockList = FishNotesMgr:GetClockListSorted()
@@ -1903,12 +1945,29 @@ function FishIngholeVM:FishIngholeSearch(Content, Length)
                     bActive = _G.FishNotesMgr:GetIsHaveFishInWindowInLocation(Places[j].ID)
                 }
             )
+            table.sort(self.AreaDataList[i].Children, function(a, b)
+                if a.bActive ~= b.bActive then
+                    return a.bActive == true
+                elseif a.bActive == true then
+                    return a.ID < b.ID
+                end
+                if a.IsUnlockedAllFish ~= b.IsUnlockedAllFish then
+                    return a.IsUnlockedAllFish == true
+                elseif a.IsUnlockedAllFish == true then
+                    return a.ID < b.ID
+                end
+                if a.bLock ~= b.bLock then
+                    return a.bLock == false
+                end
+                return a.ID < b.ID
+            end)
         end
     end
-    self.FishIngholeLocationList:Clear()
+
     self:UpdateLocationList()
     --选中钓场(鱼在每次选中钓场后根据搜索内容再筛选选中)
-    self.SearchFishContent = IsFish and Content
+    self.SearchFishContent = IsFish and Content or nil
+    self:UpdateLocationList()
     self:SelectedLocation(1,1)
     EventMgr:SendEvent(EventID.FishNoteSearchFinished)
 end

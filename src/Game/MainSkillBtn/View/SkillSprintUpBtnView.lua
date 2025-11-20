@@ -18,12 +18,14 @@ local KML = _G.UE.UKismetMathLibrary
 local CommonStateUtil = require("Game/CommonState/CommonStateUtil")
 local ProtoCommon = require("Protocol/ProtoCommon")
 local SettingsTabRole = require("Game/Settings/SettingsTabRole")
+local SettingsHandleDefine = require("Game/Settings/SettingsHandleDefine")
 
 local OneVector2D = _G.UE.FVector2D(1, 1)
 
 ---@class SkillSprintUpBtnView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field BtnRun UFButton
+---@field HandleState SkillHandleStateLView
 ---@field HoldDownBtn SkillJumpUpHoldDownBtnView
 ---@field Icon_Skill UFImage
 ---@field ImgUp UFImage
@@ -35,6 +37,7 @@ local SkillSprintUpBtnView = LuaClass(UIView, true)
 function SkillSprintUpBtnView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.BtnRun = nil
+	--self.HandleState = nil
 	--self.HoldDownBtn = nil
 	--self.Icon_Skill = nil
 	--self.ImgUp = nil
@@ -45,6 +48,7 @@ end
 
 function SkillSprintUpBtnView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
+	self:AddSubView(self.HandleState)
 	self:AddSubView(self.HoldDownBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -64,6 +68,7 @@ function SkillSprintUpBtnView:OnShow()
     self.HoldDownBtn:InitGeometryData()
     UIUtil.SetIsVisible(self.HoldDownBtn, false, false, true)
     self.FirstShow = true
+    self:OnGamePadUpdateCombatType()
 end
 
 function SkillSprintUpBtnView:OnHide()
@@ -76,16 +81,20 @@ end
 function SkillSprintUpBtnView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.BeginTrueJump, self.OnGameEvenBeginTrueJump)
 	self:RegisterGameEvent(EventID.MajorJumpStart, self.OnGameEvenMajorJumpStart)
-	self:RegisterGameEvent(EventID.FightSkillPanelShowed, self.OnFightSkillPanelShowed)
+    -- 技能面板展开时不再限制特殊跳跃
+	-- self:RegisterGameEvent(EventID.FightSkillPanelShowed, self.OnFightSkillPanelShowed)
+    self:RegisterGameEvent(EventID.GamePadJump, self.OnGamePadJump)
+    self:RegisterGameEvent(EventID.GamePadUpdateCombatType, self.OnGamePadUpdateCombatType)
 end
 
 function SkillSprintUpBtnView:OnRegisterBinder()
 
 end
 
-function SkillSprintUpBtnView:OnFightSkillPanelShowed(IfShowed,IsCrafterProf)
-    self.FightState = IfShowed
-end
+-- 技能面板展开时不再限制特殊跳跃
+-- function SkillSprintUpBtnView:OnFightSkillPanelShowed(IfShowed,IsCrafterProf)
+--     self.FightState = IfShowed
+-- end
 
 function SkillSprintUpBtnView:OnMouseButtonDown(MyGeometry, MouseEvent)
     --由于关闭了BtnRun的输入，需要模拟点击的效果
@@ -103,7 +112,9 @@ function SkillSprintUpBtnView:OnMouseButtonDown(MyGeometry, MouseEvent)
 		UIUtil.SetIsVisible(self.HoldDownBtn, true)
         self.SpecialJump = true
         --特殊跳跃时不自动触发跳跃，因为要等摇杆显示结束后才触发跳跃
-        MajorController:NewJumpStartAuto(false)
+        if MajorController then
+            MajorController:NewJumpStartAuto(false)
+        end
 
         -- 第一次显示时，摇杆显示1帧后再初始化，才能正确计算位置和大小
         if self.FirstShow then
@@ -123,10 +134,29 @@ function SkillSprintUpBtnView:OnMouseButtonDown(MyGeometry, MouseEvent)
         self.SpecialJumpStartTime = _G.TimeUtil.GetLocalTimeMS()
         -- print("SkillSprintUpBtnView:OnMouseButtonDown Callback", self.CurPos, self.HoldDownBtn:GetAngle())
         _G.SingBarMgr.HideBreakText = true
-        local SingBarTime = _G.UE.AMajorController:GetMaxJumpPressDuration() * 1000 - _G.SingBarMgr.SingLifeAddTime - 20
+        local SingBarTime = _G.UE.AMajorController:GetMaxJumpPressDuration() * 1000 - _G.SingBarMgr.SingLifeAddTime
         _G.SingBarMgr:MajorSingByParamTable({Time=SingBarTime, UIStyle=ProtoRes.SingStateUIStyle.UISTYLE_NORMAL, SingName=""}, 
             function()  --读条结束或打断后的回调，触发特殊跳跃
+                -- print("MajorSing SpecialJump")
                 self:SetMajorFacingToJumpDirection()
+                if not MajorController then
+                   return
+                end
+                local Percent = self.HoldDownBtn:GetPercent()
+                if Percent <= MoveConfig.SpecialJumpJoystickDeadZoneSize then
+                    --小于死区，不指定跳跃方向，强制跳跃速度为0
+                    MajorController:SetOverrideJumpSpeed(true, 0)
+                    -- print("SetOverrideJumpSpeed", true, 0)
+                else
+                    local UMoveSyncMgr = _G.UE.UMoveSyncMgr:Get()
+                    local Speed = UMoveSyncMgr:GetSpecialJumpMaxSpeed()
+                    local PressPercent = _G.SingBarMgr:GetSingPercent(MajorUtil.GetMajorEntityID())
+                    if PressPercent ~= nil then
+                        --大于死区，指定跳跃方向，修改跳跃速度
+                        MajorController:SetOverrideJumpSpeed(true, math.min(Speed, Speed * PressPercent))
+                        -- print("SetOverrideJumpSpeed ", true, PressPercent)
+                    end
+                end
                 MajorController:NewJumpEnd()
                 self.HasJumped = true
                 _G.SingBarMgr.HideBreakText = false
@@ -142,7 +172,7 @@ function SkillSprintUpBtnView:OnMouseButtonDown(MyGeometry, MouseEvent)
     self.HasJumped = false
     self.SpecialJump = false
     self:UnRegisterTimer(self.SpecialJumpTimer)
-    if EnableSpecialJump and (not IsMoving and not self.FightState) then
+    if EnableSpecialJump and not IsMoving then
         self.SpecialJumpTimer = self:RegisterTimer(DelayShowJoystick, MoveConfig.SpecialJumpJoystickShowTime, 0, 1)
     else
         --移动状态下立刻跳跃
@@ -238,6 +268,9 @@ function SkillSprintUpBtnView:ComputeNewMajorFacing()
 end
 
 function SkillSprintUpBtnView:UpdateMajorNewJumpInfo(NewJumpDirection)
+    if self.HasJumped then
+       return
+    end
     if NewJumpDirection == nil then
         NewJumpDirection = self:ComputeNewMajorFacing()
     end
@@ -251,10 +284,12 @@ function SkillSprintUpBtnView:UpdateMajorNewJumpInfo(NewJumpDirection)
             --小于死区，不指定跳跃方向，强制跳跃速度为0
             MajorController:SetOverrideJumpDirection(false, NewJumpDirection)
             MajorController:SetOverrideJumpSpeed(true, 0)
+            -- print("SetOverrideJumpSpeed ", true, 0)
         else
             --大于死区，指定跳跃方向，不修改跳跃速度
             MajorController:SetOverrideJumpDirection(true, NewJumpDirection)
             MajorController:SetOverrideJumpSpeed(false, 0)
+            -- print("SetOverrideJumpSpeed ", false, 0)
         end
     end
 end
@@ -278,6 +313,34 @@ function SkillSprintUpBtnView:SetMajorFacingToJumpDirection(NewForward)
     local EndRotator = KML.Conv_VectorToRotator(NewForward)
     Major:FSetRotationForServerNoInterp(EndRotator)
     -- print("SkillSprintUpBtnView:SetMajorFacingToJumpDirection", NewForward, EndRotator)
+end
+
+local IE_Pressed = _G.UE.EInputEvent.IE_Pressed
+local IE_Released = _G.UE.EInputEvent.IE_Released
+function SkillSprintUpBtnView:OnGamePadJump(Params)
+    local MajorController = MajorUtil.GetMajorController()
+    if not MajorController then
+        return
+    end
+    --移动状态下立刻跳跃
+    if Params and Params.EventType == IE_Pressed then
+        -- print("SkillSprintUpBtnView:OnGamePadJump", Param)
+        --由于关闭了BtnRun的输入，需要模拟点击的效果
+        self.BtnRun:SetRenderScale(OneVector2D * 0.9)
+        MajorController:NewJumpStart()
+    elseif Params and Params.EventType == IE_Released then
+        -- print("SkillSprintUpBtnView:OnGamePadJump", Param)
+        self.BtnRun:SetRenderScale(OneVector2D)
+        MajorController:NewJumpEnd()
+        self.HasJumped = true
+    end
+end
+
+function SkillSprintUpBtnView:OnGamePadUpdateCombatType()
+    local HandleButtonText = _G.SettingsHandleMgr:GetHandleInputActionTextByCusAction(SettingsHandleDefine.HandleCustomActionType.Jump)
+	if HandleButtonText then
+		self.HandleState:SetHandleButtonText(HandleButtonText)
+	end
 end
 
 return SkillSprintUpBtnView

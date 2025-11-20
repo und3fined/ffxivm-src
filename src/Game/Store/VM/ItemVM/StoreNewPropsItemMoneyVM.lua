@@ -5,6 +5,7 @@ local TimeUtil = require("Utils/TimeUtil")
 local ScoreMgr = require("Game/Score/ScoreMgr")
 local StoreDefine = require("Game/Store/StoreDefine")
 local StoreMgr = require("Game/Store/StoreMgr")
+local StoreUtil = require("Game/Store/StoreUtil")
 
 local FLOG_WARNING = _G.FLOG_WARNING
 
@@ -54,7 +55,8 @@ function StoreNewPropsItemMoneyVM:UpdateVM(Value)
 	if Price and #Price > 0 then
 		for i = 1, #Price do
 			self[string.format("Img%d", i)] = Price[i].ID
-			self[string.format("MoneyNum%d", i)] = (DisCount < StoreDefine.DiscountMaxValue and DisCount > 0 and (IsOnTime or DiscountStart == 0)) and ScoreMgr.FormatScore(Value.DisCountedPrice) or ScoreMgr.FormatScore(Price[i].Count)
+			self[string.format("MoneyNum%d", i)] = (DisCount < StoreDefine.DiscountMaxValue and DisCount > 0 and (IsOnTime or
+				DiscountStart == 0)) and ScoreMgr.FormatScore(StoreUtil.GetGoodsDiscountedPrice(Value.ID)) or ScoreMgr.FormatScore(Price[i].Count)
 			self[string.format("MoneyVisible%d", i)] = true
 		end
 	end

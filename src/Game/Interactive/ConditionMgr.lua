@@ -59,6 +59,7 @@ CondFailReason = CondFailReason or
     GrandCompanyMilitaryRankLimit = 26,  --军衔等级限制
     GroupLimit = 33, --部队限制
     GroupGrandCompanyLimit = 34, --部队国防联军限制
+    HasMount = 39,	    -- 坐骑已解锁
     TouringBandLimit = 42, --乐团应援次数限制
     TouringBandConditionLimit = 43, --乐团关键条件限制
     ModuleUnLockLimit = 45, --模块解锁限制
@@ -235,6 +236,14 @@ function ConditionMgr:CheckSubCond(Cond, ConditionParams, CondFailReasonList)
         Rlt = self:CheckGuessCardPlayerLimit(Cond, CondFailReasonList)
     elseif Cond.Type == ItemCondType.PointlessTeleportationLimit then
         Rlt = self:CheckPointlessTeleportationLimit(Cond, CondFailReasonList)
+	elseif Cond.Type == ItemCondType.HasMount then
+        Rlt = self:CheckHasMountLimit(Cond, CondFailReasonList)
+    elseif Cond.Type == ItemCondType.OwnPersonalHouse then
+        Rlt = self:IsCurAreaHasMajorPersonalHouse()
+    elseif Cond.Type == ItemCondType.OwnGroupHouse then
+        Rlt = self:IsCurAreaHasMajorArmyHouse()
+    elseif Cond.Type == ItemCondType.SelfHaveRoomInVisitGroup then
+        Rlt = self:IsCurRoomIndoorSelfGroup()
     else -- 默认是放开检测的，所以新增类型得如上处理（注意CondFailReasonList）
         CondFailReasonList[Cond.Type] = false
         Rlt = true
@@ -779,7 +788,11 @@ function ConditionMgr:CheckSingScene(Cond, CondFailReasonList)
 
     local SceneType = Cond.Value[1]
     if SceneType > 0 then
-        if _G.PWorldMgr:CurrIsInSingleDungeon() then    --私人
+        if _G.PWorldMgr:CurrIsInHousing() then   -- 房屋
+            if SceneType & (1 << 4) ~= 0 then
+                return true
+            end
+        elseif _G.PWorldMgr:CurrIsInSingleDungeon() then    --私人
             if SceneType & (1 << 3) ~= 0 then
                 return true
             end
@@ -827,12 +840,16 @@ end
 
 function ConditionMgr:CheckMysterMerchant(Cond)
     local LimitValue = Cond.Value[1]
-    if LimitValue == 1 then -- 是否显示提交货物选项
-        return _G.MysterMerchantMgr:IsShowGoodsSubmit()
-    elseif LimitValue == 2 then -- 是否显示神秘商店选项
-        return _G.MysterMerchantMgr:IsShowMysterMerchant()
+    if LimitValue == 0 then
+        return not _G.MysterMerchantMgr:IsFinishMerchatTask() -- 是否未解围
+    elseif LimitValue == 1 then
+        return _G.MysterMerchantMgr:IsFinishMerchatTask() -- 是否已解围
+    elseif LimitValue == 2 then
+        return _G.MysterMerchantMgr:IsShowGoodsSubmit() -- 是否显示提交货物选项
     elseif LimitValue == 3 then -- 是否显示冒险投资选项
         return _G.MysterMerchantMgr:IsShowInvestOption()
+    elseif LimitValue == 4 then -- 是否可领取投资回报
+        return _G.MysterMerchantMgr:IsCanGetReward()
     end
 	
 	return false
@@ -871,15 +888,43 @@ function ConditionMgr:CheckCounterDetection(Cond, CondFailReasonList)
         CounterID = Cond.Value[1]
     end
 
-    local CounterValue = 0
+    local CompareFun = 0
+    if Cond.Value[2] then
+        CompareFun = Cond.Value[2]
+    end
+
+    local CounterValue = 1
     if Cond.Value[3] then
         CounterValue = Cond.Value[3]
     end
 
 	local bSuccess = false
     local CounterCurrValue = CounterMgr:GetCounterCurrValue(CounterID)
-    if CounterCurrValue >= CounterValue then
-        bSuccess = true
+
+    if CompareFun == 1 then
+        if CounterCurrValue > CounterValue then
+            bSuccess = true
+        end
+    elseif CompareFun == 2 then
+        if CounterCurrValue >= CounterValue then
+            bSuccess = true
+        end
+    elseif CompareFun == 3 then
+        if CounterCurrValue == CounterValue then
+            bSuccess = true
+        end
+    elseif CompareFun == 4 then
+        if CounterCurrValue <= CounterValue then
+            bSuccess = true
+        end
+    elseif CompareFun == 5 then
+        if CounterCurrValue < CounterValue then
+            bSuccess = true
+        end
+    else
+        if CounterCurrValue > CounterValue then
+            bSuccess = true
+        end
     end
 
 	CondFailReasonList[CondFailReason.CounterDetection] = not bSuccess
@@ -1037,7 +1082,7 @@ end
 
 function ConditionMgr:CheckGuessCardPlayerLimit(Cond, CondFailReasonList)
     local MajorID = MajorUtil.GetMajorRoleID()
-    local OwnerID = _G.PWorldMgr and _G.PWorldMgr:GetOwnerID() or 0
+    local OwnerID = _G.TreasureHuntHouseWinVM and _G.TreasureHuntHouseWinVM.RoleID or 0
     local bSuccess = MajorID == OwnerID
     CondFailReasonList[CondFailReason.GuessCardPlayerLimit] = not bSuccess
     return bSuccess
@@ -1052,6 +1097,12 @@ function ConditionMgr:CheckPointlessTeleportationLimit(Cond, CondFailReasonList)
     if not ItemResID or not LimitDis then
         CondFailReasonList[CondFailReason.PointlessTeleportationLimit] = false
         return true -- 默认没有限制
+    end
+
+    local Major = MajorUtil.GetMajor()
+    if not Major then
+        CondFailReasonList[CondFailReason.PointlessTeleportationLimit] = false
+        return true -- 查找不到主角时理解为距离无限大，不做限制（默认留给使用逻辑判定主角存在的有效性）
     end
 
 	local ICfg = ItemCfg:FindCfgByKey(ItemResID)
@@ -1114,7 +1165,7 @@ function ConditionMgr:CheckPointlessTeleportationLimit(Cond, CondFailReasonList)
         local Pos = TCfg._Position
         local PosTab = Parse_Position(Pos)--assert(load("return " .. Pos))()
         local TargetLocation = _G.UE.FVector(PosTab.X, PosTab.Y, PosTab.Z)
-        local Major = MajorUtil.GetMajor()
+        
         local MajorLoc = Major:FGetActorLocation()
         if _G.UE.FVector.Dist(MajorLoc, TargetLocation) <= LimitDis then -- 临时后面改配置
             CondFailReasonList[CondFailReason.PointlessTeleportationLimit] = true
@@ -1125,5 +1176,31 @@ function ConditionMgr:CheckPointlessTeleportationLimit(Cond, CondFailReasonList)
     return true
 end
 
+function ConditionMgr:CheckHasMountLimit(Cond, CondFailReasonList)
+	local MountVM = require("Game/Mount/VM/MountVM")
+	local LimitValues = Cond.Value or {}
+    local MountID = LimitValues[1]
+	local bSuccess = false
+	if LimitValues ~= nil and MountID ~= nil then
+		bSuccess = not MountVM:IsNotOwnedMount(MountID)
+    end
+	CondFailReasonList[CondFailReason.HasMount] = bSuccess
+    return bSuccess
+end
+
+--个人房屋判断
+function ConditionMgr:IsCurAreaHasMajorPersonalHouse()
+    return _G.HouseLandMgr:IsCurAreaHasMajorPersonalHouse()
+end
+
+--部队房屋判断
+function ConditionMgr:IsCurAreaHasMajorArmyHouse()
+    return _G.HouseLandMgr:IsCurAreaHasMajorArmyHouse()
+end
+
+--- 当前访问部队房屋 是否为自己的部队
+function ConditionMgr:IsCurRoomIndoorSelfGroup()
+   return _G.HouseInfoMgr.VisitInDoorGroupID == _G.ArmyMgr:GetArmyID()
+end
 
 return ConditionMgr

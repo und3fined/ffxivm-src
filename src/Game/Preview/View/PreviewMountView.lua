@@ -30,15 +30,16 @@ local RotationX = -6 --Yaw值偏移角度，偏移数据以图鉴为基准，而
 ---@class PreviewMountView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
 ---@field CloseBtn CommonCloseBtnView
+---@field CommonTitle CommonTitleView
 ---@field Common_Render2D_UIBP CommonRender2DView
 ---@field HorizontalPeople UHorizontalBox
+---@field PanelMask3 UFCanvasPanel
 ---@field SkillActionBG UFButton
 ---@field TableViewAction UTableView
 ---@field TextDescribe UFTextBlock
 ---@field TextMountName UFTextBlock
 ---@field TextRide UFTextBlock
 ---@field TextRideNumber UFTextBlock
----@field TextTitle UFTextBlock
 ---@field ToggleBtnBGM UToggleButton
 ---@field AnimIn UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
@@ -47,15 +48,16 @@ local PreviewMountView = LuaClass(UIView, true)
 function PreviewMountView:Ctor()
 	--AUTO GENERATED CODE 1 BEGIN, PLEASE DON'T MODIFY
 	--self.CloseBtn = nil
+	--self.CommonTitle = nil
 	--self.Common_Render2D_UIBP = nil
 	--self.HorizontalPeople = nil
+	--self.PanelMask3 = nil
 	--self.SkillActionBG = nil
 	--self.TableViewAction = nil
 	--self.TextDescribe = nil
 	--self.TextMountName = nil
 	--self.TextRide = nil
 	--self.TextRideNumber = nil
-	--self.TextTitle = nil
 	--self.ToggleBtnBGM = nil
 	--self.AnimIn = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
@@ -64,6 +66,7 @@ end
 function PreviewMountView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.CloseBtn)
+	self:AddSubView(self.CommonTitle)
 	self:AddSubView(self.Common_Render2D_UIBP)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
@@ -81,7 +84,7 @@ end
 
 function PreviewMountView:OnShow()
 	self:ShowPlayerMountActor()
-	_G.LightMgr:EnableUIWeather(10, true)
+	_G.LightMgr:EnableUIWeather(10)
 
 	--禁止移动控制(虚拟摇杆)
 	CommonUtil.DisableShowJoyStick(true)
@@ -353,7 +356,7 @@ function PreviewMountView:PlayBGM()
 end
 
 function PreviewMountView:UpdateSkillItem()
-	local RideCfgData = RideCfg:FindCfgByKey(self.ViewModel.SelectedMountID)
+	local RideCfgData = _G.MountMgr:GetRideCfg(self.ViewModel.SelectedMountID)
 	if RideCfgData == nil or nil == RideCfgData.PlayAction then return end
 	if nil == RideCfgData.PlayAction[1] then
 		self.ViewModel.IsShowSkillItem = false
@@ -375,6 +378,7 @@ end
 
 -- 空白处关掉技能弹窗
 function PreviewMountView:OnSkillTipsBGClick()
+	SkillTipsMgr.CurrentTipsType = 4
 	if SkillTipsMgr:HideMountSkillTips() then
 		self.ViewModel.IsShowSkillTips = false
 		self.ViewModel.SkillTagList = nil
@@ -395,7 +399,7 @@ function PreviewMountView:SetLight()
 end
 
 function PreviewMountView:InitPanelStaticText()
-	self.TextTitle:SetText(LSTR(1090037))
+	self.CommonTitle:SetTextTitleName(LSTR(1090037))
 	self.TextRide:SetText(LSTR(1090036))
 end
 

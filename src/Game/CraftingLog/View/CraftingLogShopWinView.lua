@@ -163,7 +163,7 @@ function CraftingLogShopWinView:OnCostNumIsEnoughChanged(IsEnough)
         UIUtil.TextBlockSetColorAndOpacityHex(self.Money1.TextMoneyAmount,TextColor[2])
         self:SetBuyBtnState(false, true)
     else
-        UIUtil.TextBlockSetColorAndOpacityHex(self.Money1.TextMoneyAmount,TextColor[1])
+        UIUtil.TextBlockSetColorAndOpacityHex(self.Money1.TextMoneyAmount,TextColor[4])
         self:SetBuyBtnState(true, true)
     end
 end
@@ -194,7 +194,9 @@ function CraftingLogShopWinView:OnClickedBuyBtn()
 						table.insert(BatchList, {GoodID = value.GoodsID, Num = value.BuyNum})
 					end
 				end
-				_G.ShopMgr:SendMsgMallInfoBatchPruchase(BatchList)
+				if #BatchList > 0 then
+					_G.ShopMgr:SendMsgMallInfoBatchPruchase(BatchList)
+				end
 			end
 			_G.UIViewMgr:HideView(_G.UIViewID.CraftingLogShopWin, true)
 		else

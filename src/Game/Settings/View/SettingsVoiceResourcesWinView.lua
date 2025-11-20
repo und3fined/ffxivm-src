@@ -140,7 +140,10 @@ function SettingsVoiceResourcesWinView:OnConfirmBtnClick()
 			self:Hide()
 		elseif self.CurSelectItemViewData.IsExist then
 			local function OkBtnback()
-				self.Params.CallBack(self.Params.ViewObj, SelectValue)
+				if self.Params.ViewObj and _G.CommonUtil.IsObjectValid(self.Params.ViewObj) then
+					self.Params.CallBack(self.Params.ViewObj, SelectValue)
+				end
+				
 				FLOG_INFO("setting OnConfirmBtnClick Select2 %s - %d", CurName, SelectValue)
 				self:Hide()
 				CommonUtil.QuitGame()
@@ -195,6 +198,8 @@ function SettingsVoiceResourcesWinView:OnBtnCancelBtnClick()
 				return
 			end
 
+			--下面的是未执行的 ：
+			--因为Android开了Pakcahce，在unmount时只会卸载这部分内存，并没有释放文件的句柄。导致删不掉。这是引擎里的机制
 			-- self:Hide()
 			local TipContent = string.format(LSTR(110033), self.CurSelectItemViewData.Text)
 			

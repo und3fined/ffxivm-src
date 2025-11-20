@@ -1,7 +1,7 @@
 ---
 --- Author: sammrli
 --- DateTime: 2024-02-28 09:59
---- Description:
+--- Description: 地图陆行鸟标记tips
 ---
 
 local UIView = require("UI/UIView")

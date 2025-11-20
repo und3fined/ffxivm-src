@@ -76,7 +76,7 @@ function PWorldVoteGiveUpWinView:OnRegisterTimer()
 end
 
 function PWorldVoteGiveUpWinView:OnHide()
-	_G.SidebarMgr:TryOpenSidebarMainWin()
+
 end
 
 function PWorldVoteGiveUpWinView:OnRegisterUIEvent()

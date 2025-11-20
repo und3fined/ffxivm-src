@@ -14,6 +14,7 @@ local UIUtil = require("Utils/UIUtil")
 ---@field NamedSlotChild UNamedSlot
 ---@field PopUpBG CommonPopUpBGView
 ---@field RichTextBox_Title URichTextBox
+---@field SkillHandleCloseBtn SkillHandleCloseBtnView
 ---@field AnimIn UWidgetAnimation
 ---@field AnimOut UWidgetAnimation
 ---@field TextTitle text
@@ -27,6 +28,7 @@ function PlayStyleCommFrameSView:Ctor()
 	--self.NamedSlotChild = nil
 	--self.PopUpBG = nil
 	--self.RichTextBox_Title = nil
+	--self.SkillHandleCloseBtn = nil
 	--self.AnimIn = nil
 	--self.AnimOut = nil
 	--self.TextTitle = nil
@@ -37,6 +39,7 @@ end
 function PlayStyleCommFrameSView:OnRegisterSubView()
 	--AUTO GENERATED CODE 2 BEGIN, PLEASE DON'T MODIFY
 	self:AddSubView(self.PopUpBG)
+	self:AddSubView(self.SkillHandleCloseBtn)
 	--AUTO GENERATED CODE 2 END, PLEASE DON'T MODIFY
 end
 

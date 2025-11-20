@@ -1401,6 +1401,106 @@ local ProfCareerCfg = {
             Prof = 29,
             RewardType = 0,
         },
+        {
+            ChapterID = 19061,
+            EndQuestID = 190188,
+            ID = 260,
+            Prof = 5,
+            RewardType = 1,
+        },
+        {
+            ChapterID = 19062,
+            ID = 261,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19063,
+            ID = 262,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19064,
+            ID = 263,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19065,
+            ID = 264,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19066,
+            ID = 265,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19067,
+            ID = 266,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19068,
+            ID = 267,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19069,
+            ID = 268,
+            Prof = 5,
+        },
+        {
+            ChapterID = 19070,
+            ID = 269,
+            Prof = 5,
+        },
+        {
+            ChapterID = 24013,
+            EndQuestID = 240084,
+            ID = 270,
+            Prof = 5,
+            RewardType = 2,
+        },
+        {
+            ChapterID = 24014,
+            ID = 271,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24015,
+            ID = 272,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24016,
+            ID = 273,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24017,
+            ID = 274,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24018,
+            ID = 275,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24019,
+            ID = 276,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24020,
+            ID = 277,
+            Prof = 15,
+        },
+        {
+            ChapterID = 24021,
+            ID = 278,
+            Prof = 15,
+            RewardType = 4,
+        },
 	},
 }
 

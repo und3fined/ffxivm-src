@@ -37,12 +37,9 @@ local UIBinderUpdateBindableList = require("Binder/UIBinderUpdateBindableList")
 local ClosetCfg = require("TableCfg/ClosetCfg")
 local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local ItemCfg = require("TableCfg/ItemCfg")
-local EquipmentCfg = require("TableCfg/EquipmentCfg")
 local ClosetCharismCfg = require("TableCfg/ClosetCharismCfg")
-local SystemLightCfg = require("TableCfg/SystemLightCfg")
 
 local SystemLightCfg = require("TableCfg/SystemLightCfg")
-local ProtoEnumAlias = require("Protocol/ProtoEnumAlias")
 local EventID = require("Define/EventID")
 local CameraControlDefine = require("Game/Common/Render2D/CameraControlDefine")
 local CameraFocusCfgMap = require("Game/Wardrobe/WardrobeCameraFocusCfgMap")
@@ -61,6 +58,8 @@ local EquipmentBGPath = "Class'/Game/UI/Render2D/Equipment/BP_EquipmentBackgroun
 local EquipmentPartList = ProtoCommon.equip_part
 local SettingsTabRole = nil
 local LSTR = _G.LSTR
+
+local ActorFadeInTime = 0.7
 
 ---@class WardrobeMainPanelView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY
@@ -112,6 +111,7 @@ local LSTR = _G.LSTR
 ---@field PanelContent UFCanvasPanel
 ---@field PanelEmpty UFCanvasPanel
 ---@field PanelMain UFCanvasPanel
+---@field PanelMask3 UFCanvasPanel
 ---@field PanelName UFCanvasPanel
 ---@field PanelReduce UFCanvasPanel
 ---@field PanelSlot UFCanvasPanel
@@ -147,6 +147,10 @@ local LSTR = _G.LSTR
 ---@field WardrobeOperateItem WardrobeOperateItemView
 ---@field AnimBtnUnlock UWidgetAnimation
 ---@field AnimIn UWidgetAnimation
+---@field AnimMask1a UWidgetAnimation
+---@field AnimMask1b UWidgetAnimation
+---@field AnimMask2a UWidgetAnimation
+---@field AnimMask2b UWidgetAnimation
 ---AUTO GENERATED CODE 3 END, PLEASE DON'T MODIFY
 local WardrobeMainPanelView = LuaClass(UIView, true)
 
@@ -200,6 +204,7 @@ function WardrobeMainPanelView:Ctor()
 	--self.PanelContent = nil
 	--self.PanelEmpty = nil
 	--self.PanelMain = nil
+	--self.PanelMask3 = nil
 	--self.PanelName = nil
 	--self.PanelReduce = nil
 	--self.PanelSlot = nil
@@ -235,6 +240,10 @@ function WardrobeMainPanelView:Ctor()
 	--self.WardrobeOperateItem = nil
 	--self.AnimBtnUnlock = nil
 	--self.AnimIn = nil
+	--self.AnimMask1a = nil
+	--self.AnimMask1b = nil
+	--self.AnimMask2a = nil
+	--self.AnimMask2b = nil
 	--AUTO GENERATED CODE 1 END, PLEASE DON'T MODIFY
 end
 
@@ -284,13 +293,14 @@ function WardrobeMainPanelView:OnInit()
 		{ "BtnPoseChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnPose)},
 		{ "BtnHatChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnHat)},
 		{ "BtnHatStyleChecked", UIBinderSetIsChecked.New(self, self.WardrobeOperateItem.BtnHatStyle)},
-		{ "BtnHatStyleVisible", UIBinderSetIsVisible.New(self, self.WardrobeOperateItem.BtnHatStyle, false, true)},
+		-- { "BtnHatStyleVisible", UIBinderSetIsVisible.New(self, self.WardrobeOperateItem.BtnHatStyle, false, true)},
 		{ "BtnSuitSwitchChecked", UIBinderSetIsChecked.New(self, self.ToggleBtnSwitch)},
 
 		{ "BtnSuitVisible", UIBinderSetIsVisible.New(self, self.BtnSuit, false, true)},
 		{ "AppearanceTabText", UIBinderSetText.New(self, self.CommonTitle.TextSubtitle)},
 		{ "CharmNumText", UIBinderSetText.New(self, self.TextCharmNum)},
 		{ "CharmNumText", UIBinderSetText.New(self, self.TextNum)},
+		{ "NewCharmNumText", UIBinderSetText.New(self, self.TextNumCharm)},
 		{ "AppearanceName", UIBinderSetText.New(self, self.TextName)},
 		{ "PanelStainVisible", UIBinderSetIsVisible.New(self, self.PanelStain)},
 		{ "PanelUnStainVisible", UIBinderSetIsVisible.New(self, self.PanelUnStain)},
@@ -365,16 +375,6 @@ function WardrobeMainPanelView:OnInit()
 end
 
 function WardrobeMainPanelView:OnDestroy()
-
-end
-
-
-function WardrobeMainPanelView:OnViewHide(ViewID)
-	if ViewID == UIViewID.LegendaryWeaponPanel then
-		self.Common_Render2D_UIBP.bCameraSwitchedToRenderActor = false
-		self.Common_Render2D_UIBP:ChangeUIState(false)
-	end
-	
 end
 
 function WardrobeMainPanelView:OnShow()
@@ -382,18 +382,20 @@ function WardrobeMainPanelView:OnShow()
 	self.VM.EmptyText = LSTR(1080023)
 	self.VM:InitFavoriteData()
 	UIUtil.SetIsVisible(self.CommonBkg, true)
+	UIUtil.SetIsVisible(self.PanelCharm_1, true)
 	_G.HUDMgr:SetIsDrawHUD(false)
 	self.IsFirstSelect = true 
-	-- UIUtil.SetIsVisible(self.PanelCharmNum, true, false)
+	-- self.Common_Render2D_UIBP.bCreateNewBackground = true
 	self.Common_Render2D_UIBP.bCreateShandowActor = true
 	self.Common_Render2D_UIBP:SetShadowActorType(ActorUtil.ShadowType.Wardrobe)
 	self:CreateRenderActor()
+	self.BackgroundActor = CommonUtil.SpawnActor(_G.ObjectMgr:GetClass(EquipmentBGPath),
+	_G.UE.FVector(-50, 0, 100000))
 	self.Common_Render2D_UIBP:SetShadowActorPos(_G.UE.FVector(-50, 0, 100002))
 
 	-- 灯光设置
 	self.Common_Render2D_UIBP.bIgnoreTodAffective = true
 	_G.LightMgr:EnableUIWeather(4)
-	--_G.LightMgr:LoadLightLevel(LightLevelID.LIGHT_LEVEL_ID_WARDROBE)
 	_G.SpeechBubbleMgr:ShowSpeechBubbleAll(false)
 	_G.BuoyMgr:ShowAllBuoys(false)
 
@@ -413,6 +415,8 @@ function WardrobeMainPanelView:OnShow()
 	--更新列表
 	self.VM:InitAppearanceTabList()
 	self.VM:UpdateCharismNum()
+
+	UIUtil.SetIsVisible(self.PanelMask3, true)
 	-- 
 	local Length = #WardrobeMgr:GetQuickUnlockAppearanceList()
 	if Length > 0 then
@@ -452,8 +456,24 @@ function WardrobeMainPanelView:OnShow()
 	self.RedDotQuickUnlock:SetStyle(RedDotDefine.RedDotStyle.NormalStyle)
 
 	--前往解锁界面
-	if self.Params ~= nil and self.Params.UnlockAppID ~= nil then
-		self:OpenWardrobeUnlockPanel(self.Params.UnlockAppID)
+	if  self.Params ~= nil then
+		if self.Params.UnlockAppID ~= nil then
+			self:OpenWardrobeUnlockPanel(self.Params.UnlockAppID)
+		elseif self.Params.PartID ~= nil then
+			local Index = 1
+			for tabIndex, partID in ipairs(WardrobeDefine.EquipmentTab) do
+				if partID == self.Params.PartID then
+					Index = tabIndex
+				end
+			end
+			self.AppearanceTabListAdapter:SetSelectedIndex(Index)
+		elseif self.Params.SuitID ~= nil then
+			self.VM.BtnSuitSwitchChecked = true
+			self:ShowAllModel(true)
+			UIUtil.SetIsVisible(self.PanelContent, false)
+			self.CurViewPage = UIViewID.WardrobeSuitPanel
+			UIViewMgr:ShowView(UIViewID.WardrobeSuitPanel, {SuperView = self, SuitID = self.Params.SuitID})
+		end
 	end
 
 	WardrobeMgr:SendClosetQueryReq()
@@ -483,6 +503,11 @@ function WardrobeMainPanelView:OnHide()
 		CommonUtil.DestroyActor(self.BackgroundActor)
 		self.BackgroundActor = nil
 	end
+
+	UIViewMgr:HideView(UIViewID.WardrobeUnlockPanel)
+	UIViewMgr:HideView(UIViewID.WardrobeStainPanel)
+	UIViewMgr:HideView(UIViewID.WardrobePresetsPanel)
+	UIViewMgr:HideView(UIViewID.WardrobeSuitPanel)
 end
 
 function WardrobeMainPanelView:OnRegisterUIEvent()
@@ -490,6 +515,7 @@ function WardrobeMainPanelView:OnRegisterUIEvent()
 	UIUtil.AddOnClickedEvent(self, self.BtnUnlock, self.OnClickedBtnUnlock)
 	UIUtil.AddOnClickedEvent(self, self.BtnPresets, self.OnClickedBtnPresets)
 	UIUtil.AddOnClickedEvent(self, self.BtnCharm, self.OnClickedBtnCharm)
+	UIUtil.AddOnClickedEvent(self, self.BtnCharm_1, self.OnClickedBtnCharm1)
 	UIUtil.AddOnClickedEvent(self, self.BtnStain, self.OnClickedBtnStain)
 	UIUtil.AddOnClickedEvent(self, self.BtnReduce, self.OnClickedBtnReduce)
 	UIUtil.AddOnClickedEvent(self, self.BtnUnlock1.Button, self.OnClickSingleEquipmentBtnUnlock)
@@ -516,9 +542,9 @@ function WardrobeMainPanelView:OnRegisterGameEvent()
 	-- 衣橱基本更新
 	self:RegisterGameEvent(EventID.WardrobeUpdate, self.OnWardrobeDataUpdate)
 	-- 衣橱染色更新
-	self:RegisterGameEvent(EventID.WardrobeDyeUpdate, self.OnWardrobeDataUpdate)
+	self:RegisterGameEvent(EventID.WardrobeDyeUpdate, self.OnWardrobeModelUpdate)
 	-- 衣橱染色更新
-	self:RegisterGameEvent(EventID.WardrobeRegionDyeUpdate, self.OnWardrobeDataUpdate)
+	self:RegisterGameEvent(EventID.WardrobeRegionDyeUpdate, self.OnWardrobeModelUpdate)
 	-- 衣橱解锁更新
 	self:RegisterGameEvent(EventID.WardrobeUnlockUpdate, self.OnWardrobeUnlockUpdate)
 	-- 衣橱收藏更新
@@ -539,7 +565,10 @@ function WardrobeMainPanelView:OnRegisterGameEvent()
 	self:RegisterGameEvent(EventID.WardrobeUnlockIDUpdate, self.OnWardrobeAppearnceDataUpdate)
 	-- 魅力值奖励更新
 	self:RegisterGameEvent(EventID.WardrobeCollectReward, self.OnWardrobeCollectReward)
-	self:RegisterGameEvent(_G.EventID.HideUI, self.OnViewHide)
+	-- 监听回到前台事件
+	self:RegisterGameEvent(EventID.AppEnterForeground, self.OnGameEventAppEnterForeground)
+	-- 监听回到后台事件
+	self:RegisterGameEvent(EventID.AppEnterBackground, self.OnGameEventAppEnterBackground)
 end
 
 function WardrobeMainPanelView:OnRegisterBinder()
@@ -556,9 +585,27 @@ function WardrobeMainPanelView:OnInactive()
 end
 
 function WardrobeMainPanelView:OnActive()
+	if self.BackgroundActor == nil then
 	self.BackgroundActor = CommonUtil.SpawnActor(_G.ObjectMgr:GetClass(EquipmentBGPath),self.Common_Render2D_UIBP.RenderActor:K2_GetActorLocation())
 	self.Common_Render2D_UIBP.bCameraSwitchedToRenderActor = false
 	self.Common_Render2D_UIBP:ChangeUIState(false)
+	end
+end
+
+function WardrobeMainPanelView:OnGameEventAppEnterForeground()
+	if self.BackgroundActor == nil then
+	self.BackgroundActor = CommonUtil.SpawnActor(_G.ObjectMgr:GetClass(EquipmentBGPath),self.Common_Render2D_UIBP.RenderActor:K2_GetActorLocation())
+	self.Common_Render2D_UIBP.bCameraSwitchedToRenderActor = false
+	self.Common_Render2D_UIBP:ChangeUIState(false)
+	end
+end
+
+
+function WardrobeMainPanelView:OnGameEventAppEnterBackground()
+	if self.BackgroundActor ~= nil then
+		CommonUtil.DestroyActor(self.BackgroundActor)
+		self.BackgroundActor = nil
+	end
 end
 
 ---------------------------------------- 协议相关逻辑 ----------------------------------------
@@ -591,6 +638,21 @@ function WardrobeMainPanelView:OnWardrobeDataUpdate(Params)
 		self:SelectClothingViewSuit(self.CurPartID)
 		self.IsFirstSelect = false
 	end
+end
+
+function WardrobeMainPanelView:OnWardrobeModelUpdate()
+	-- 更新魅力值
+	self.VM:UpdateCharismNum()
+	-- 更新外观菜单栏
+	self.VM:UpdateAppearanceTabList()
+	-- 更新外观List
+	self.VM:UpdateAppearanceListState(self.CurPartID)
+	-- 更新是否有快速解锁/染色/降低条件的图标显示
+	self.VM:UpdateQuickUnlockState()
+	-- 更新当前选中的外观信息
+	self:UpdateCurrentAppearance()
+
+	-- self:UpdateModelEquipment()
 end
 
 function WardrobeMainPanelView:OnWardrobeUnlockUpdate(Params)
@@ -672,30 +734,6 @@ function WardrobeMainPanelView:OnWardrobeUnClothingUpdate(Params)
 			end
 		end
 	end
-
-	--处理副手
-	-- if  Params.PartID == EquipmentPartList.EQUIP_PART_MASTER_HAND then
-	-- 	for _ , part in pairs(WardrobeDefine.EquipmentTab) do
-	-- 		if part == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
-	-- 			local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
-	-- 			if CurrentAppID ~= 0 then
-	-- 				local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
-	-- 				local ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
-	-- 				local RegionDyes = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
-	-- 				self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, ColorID)
-	-- 				self:StainPartForSection(CurrentAppID, tonumber(part), RegionDyes)
-	-- 			else
-	-- 				local TempEquip = EquipList[part]
-	-- 				if TempEquip ~= nil then
-	-- 					local EquipID = TempEquip.ResID
-	-- 					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
-	-- 				else
-	-- 					self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
-	-- 				end
-	-- 			end
-	-- 		end
-	-- 	end
-	-- end
 end
 
 function WardrobeMainPanelView:OnWardrobeCharismValueUpdate()
@@ -710,7 +748,7 @@ function WardrobeMainPanelView:OnWardrobeCollectReward()
 	local Params = {}
 	Params.AwardList = AwardInfoList
 	Params.AwardSelectIndex = AwardSelectIndex
-	Params.CollectedNum = WardrobeMgr:GetCharismNum()
+	Params.CollectedNum = WardrobeMgr:GetCharmNum()
 	Params.MaxCollectNum = WardrobeMgr:GetCharismTotalNum()
 	local View = UIViewMgr:FindView(UIViewID.CollectionAwardPanel)
 	if View ~= nil then
@@ -719,14 +757,31 @@ function WardrobeMainPanelView:OnWardrobeCollectReward()
 	end
 end
 
-function WardrobeMainPanelView:OnUpdateBag()
-	self.VM:UpdateQuickUnlockState()
-	WardrobeMgr:SetRedDot()
+function WardrobeMainPanelView:OnUpdateBag(UpdateItem)
 	self:UpdateCurrentAppearance()
 	if self.CurAppearanceID ~= nil then
-	self.VM:UpdateCurrentAppearanceInfo(self.CurAppearanceID)
+		self.VM:UpdateCurrentAppearanceInfo(self.CurAppearanceID)
 	end
 
+	local bUpdate = false
+	if UpdateItem ~= nil then
+		for _, v in ipairs(UpdateItem) do
+			local ResID = v.PstItem.ResID
+			local Cfg = ItemCfg:FindCfgByKey(ResID)
+			if Cfg ~= nil then
+				if ResID == WardrobeDefine.NormalItemID or Cfg.ItemType == ProtoCommon.ITEM_TYPE_DETAIL.COLLAGE_FASHION or 
+				Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemArmor or Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemAccessory or
+				Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemArm or Cfg.ItemMainType == ProtoCommon.ItemMainType.ItemTool then
+					bUpdate = true
+					break
+				end
+			end
+		end
+		if bUpdate then
+			self.VM:UpdateQuickUnlockState()
+			WardrobeMgr:SetRedDot()
+		end
+	end
 end
 
 ---------------------------------------- 界面相关逻辑 ----------------------------------------
@@ -749,6 +804,8 @@ function WardrobeMainPanelView:InitText()
 
 	self.CommEmpty.RichTextNone:SetText(_G.LSTR(1080108))  -- 暂无对应外观
 	self.CommEmpty.RichTextNoneBright:SetText(_G.LSTR(1080108)) -- 暂无对应外观
+
+	-- self.TextNumCharm:SetText(_G.LSTR(1080108)) -- 魅力值
 end
 
 --初始化按钮数据
@@ -762,6 +819,11 @@ end
 function WardrobeMainPanelView:InitBtnHatStyleState()
 	local HasGimmick = WardrobeMgr:CheckHeadHasGimmick()
     self.VM.BtnHatStyleVisible = HasGimmick
+	if not HasGimmick then
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+	else
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState( self.VM.BtnHatStyleChecked and _G.UE.EToggleButtonState.Checked  or _G.UE.EToggleButtonState.Unchecked, false)
+	end
 	
     if HasGimmick then
 		self.VM.BtnHatStyleChecked = self:GetSettingsTabRole().SwitchHelmetIdx == 1
@@ -1016,7 +1078,7 @@ function WardrobeMainPanelView:CheckMasterSlaveWeaponSameProf(AppID, PartID)
 	end
 	
 	local CurProfID = self.CurWeaponProfID == nil and MajorUtil.GetMajorProfID() or self.CurWeaponProfID
-	local EquipID = WardrobeUtil.GetIsSpecial(AppID) and WardrobeUtil.GetUnlockCostItemID(AppID) or WardrobeUtil.GetClosetCfgEquipIDByAppearanceID(AppID)
+	local EquipID = WardrobeUtil.GetIsSpecial(AppID) and WardrobeUtil.GetUnlockCostItemID(AppID) or WardrobeUtil.GetEquipIDByAppearanceID(AppID)
 	local SlaveItemCfg = ItemCfg:FindCfgByKey(EquipID)
 	if SlaveItemCfg ~= nil and #SlaveItemCfg.ProfLimit == 0 then
 		return true
@@ -1061,11 +1123,6 @@ function WardrobeMainPanelView:OnAppearanceListChanged(Index, ItemData, ItemView
 			self:PoseStyleSwitch(false)
 		end
     	self:HandleDressingLogic(AppID, PartID, IsUnlock, IsSelected, bByClick)
-	-- else
-	-- 	 -- 主副手武器职业不相同
-	-- 	if PartID == EquipmentPartList.EQUIP_PART_MASTER_HAND or PartID == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
-	-- 		MsgTipsUtil.ShowTipsByID(147035)
-	-- 	end 
 	end
 
 	-- 处理提示信息
@@ -1158,7 +1215,8 @@ function WardrobeMainPanelView:HandleTips(AppID, PartID, IsUnlock, IsSelected, I
 	
 	--主副手不一致
 	if not IsSameProf and (PartID == EquipmentPartList.EQUIP_PART_MASTER_HAND or PartID == EquipmentPartList.EQUIP_PART_SLAVE_HAND)then
-		MsgTipsUtil.ShowTipsByID(147035)
+		-- MsgTipsUtil.ShowTipsByID(147035)
+		MsgTipsUtil.ShowTips(_G.LSTR(1080133))
 		return
 	end
 
@@ -1180,10 +1238,6 @@ function WardrobeMainPanelView:HandleTips(AppID, PartID, IsUnlock, IsSelected, I
 	        elseif bShowConjoinedAppTips then
 	            MsgTipsUtil.ShowTips(ConjoinedAppTips)
 	        else
-				-- local TipsID = WardrobeDefine.EquipOrCanPreviewErrorTips[Reason]
-				-- if TipsID then
-				-- 	MsgTipsUtil.ShowTips(_G.LSTR(TipsID))
-				-- end
 				if bShowSlaveHandTips then
 					MsgTipsUtil.ShowTips(_G.LSTR(1080129))
 				else
@@ -1229,7 +1283,8 @@ function WardrobeMainPanelView:HandleDressingLogic(AppID, PartID, IsUnlock, IsSe
 			end
 		else
 			if WardrobeMgr:GetIsClothing(AppID, PartID) and not self.IsFirstSelect then
-				if not self.NoUnclothing and bByClick ~= nil then
+				-- if not self.NoUnclothing and bByClick ~= nil then
+				if bByClick ~= nil then
 					WardrobeMgr:SendClosetUnClothingReq(PartID)
 				end
 				self.NoUnclothing = false
@@ -1302,15 +1357,20 @@ end
 
 ------------------------------------------------- 创建模型相关 --------------------------------------
 function WardrobeMainPanelView:CreateRenderActor()
-	local AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
+	local AttachType
+	if MajorUtil.GetMajorAvatarComponent() == nil then
+		_G.FLOG_WARNING("[WardrobeMainPanelView:CreateRenderActor] MajorAvatarComponent is nil")
+		return
+	end
+	AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
 	local CameraParams = EquipmentCameraControlDataLoader:GetCameraControlParams(AttachType,
 	CameraControlDefine.FocusType.WholeBody)
 	self.Common_Render2D_UIBP:SetCameraControlParams(CameraParams)
 
 	local CallBack = function()
 		self.VignetteIntensityDefaultValue = self.Common_Render2D_UIBP:GetPostProcessVignetteIntensity()
-		self.BackgroundActor = CommonUtil.SpawnActor(_G.ObjectMgr:GetClass(EquipmentBGPath),
-			self.Common_Render2D_UIBP.RenderActor:K2_GetActorLocation())
+		-- self.BackgroundActor = CommonUtil.SpawnActor(_G.ObjectMgr:GetClass(EquipmentBGPath),
+		-- 	self.Common_Render2D_UIBP.RenderActor:K2_GetActorLocation())
 		UIUtil.SetIsVisible(self.CommonBkg, false)
 		self.Common_Render2D_UIBP:SwitchOtherLights(false)
         self.Common_Render2D_UIBP:ChangeUIState(false)
@@ -1320,6 +1380,7 @@ function WardrobeMainPanelView:CreateRenderActor()
 		self.Common_Render2D_UIBP.bAutoInitSpringArm = false
 		self.Common_Render2D_UIBP:EnableZoom(true)
 		self.Common_Render2D_UIBP.DefaultIsCanZoom = true
+		self.Common_Render2D_UIBP:UpdateFocusLocation(false)
 		self.CreateRenderActorIsOver = true
 		self.IsCreatedActor = true
 		self.bReadyToInitCamera = true
@@ -1392,12 +1453,15 @@ function WardrobeMainPanelView:OnAssembleAllEnd(Params)
 		UIUtil.SetIsVisible(self.CommonBkg, false)
 		
 		if self.bReadyToInitCamera then
-			self.Common_Render2D_UIBP:UpdateFocusLocation(false)
 			self:SetModelSpringArmToDefault(false)
+			UIComplexCharacter:StartFadeIn(ActorFadeInTime, true)
 			self.bReadyToInitCamera = false
 			self:UpdateWeaponHideState()
 			if self.CurViewPage == UIViewID.WardrobeUnlockPanel then
+				self:PlayAnimation(self.AnimMask1a)
 				self:ModelMoveToUnlockPanel(true)
+			elseif self.CurViewPage == UIViewID.WardrobeSuitPanel then
+				_G.EventMgr:SendEvent(EventID.WardrobeSuitIDOpen)
 			end
 		end
 		if self.VM.BtnHatStyleChecked and not self.VM.BtnHatStyleVisible then
@@ -1419,8 +1483,14 @@ function WardrobeMainPanelView:SetModelSpringArmToDefault(bInterp)
 	self.Common_Render2D_UIBP:ResetViewDistance(bInterp)
 	self.Common_Render2D_UIBP:SetPostProcessVignetteIntensity(self.VignetteIntensityDefaultValue)
 	self.Common_Render2D_UIBP:EnableZoom(true)
-	
-	local AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
+
+	local AttachType
+	if MajorUtil.GetMajorAvatarComponent() == nil then
+		_G.FLOG_WARNING("[WardrobeMainPanelView:CreateRenderActor] MajorAvatarComponent is nil")
+		return
+	end
+	AttachType = MajorUtil.GetMajorAvatarComponent():GetAttachTypeIgnoreChangeRole()
+	--local CameraParams = WardrobeMgr:GetCameraControlParams(AttachType, 1)
 	local WeaponProfID = self.CurWeaponProfID == nil and MajorUtil.GetMajorProfID() or self.CurWeaponProfID
 	local CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, WeaponProfID, ProtoCommon.equip_part.EQUIP_PART_BODY)
 
@@ -1485,15 +1555,24 @@ function WardrobeMainPanelView:ModelMoveToStainPanel()
 	local CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, self.CurWeaponProfID, Part)
 	if CameraParams ~= nil then
 		if not self.VM.BtnCameraChecked then
-			CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, self.CurWeaponProfID, 0)
+			-- 非聚焦移动
+			if nil ~= self.Common_Render2D_UIBP.CamControlParams then
+				local DefaultSpringArmLength = self.Common_Render2D_UIBP.CamControlParams.DefaultViewDistance
+				self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 + WardrobeDefine.StainPanelOffsetY, DefaultSpringArmLength)
+			end
 			local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
-			self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 + WardrobeDefine.StainPanelOffsetY, CameraParams.Distance)
 			local CurViewDist = self.Common_Render2D_UIBP:NormalizeTargetArmLength(self.Common_Render2D_UIBP:GetSpringArmDistance() - self.Common_Render2D_UIBP.ZoomScale * 60)
 			self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, self.Common_Render2D_UIBP.CamToTargetRadians * CurViewDist, Location.Z, true)
 		else
+			-- 聚焦移动
+			local DPIScale = _G.UE.UWidgetLayoutLibrary.GetViewportScale(self)
+			local ViewportSize = UIUtil.GetViewportSize() / DPIScale
+			local UIX = ViewportSize.X / 2 + CameraParams.UIX + WardrobeDefine.StainPanelOffsetY
+			local UIY = ViewportSize.Y / 2 + CameraParams.UIY
+			self.Common_Render2D_UIBP:SetCameraFocusScreenLocation(UIX * DPIScale , UIY * DPIScale, CameraParams.SocketName,
+			CameraParams.Distance)
 			local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
 			self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, Location.Y + WardrobeDefine.StainPanelOffsetY, Location.Z, true)
-			self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 + WardrobeDefine.StainPanelOffsetY, CameraParams.Distance)
 		end
 	end
 	self.Common_Render2D_UIBP:EnableZoom(not self.VM.BtnCameraChecked)
@@ -1509,16 +1588,18 @@ function WardrobeMainPanelView:ModelStainPanelMoveToMainPanel(PartID)
 	local CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, self.CurWeaponProfID, Part)
 	if CameraParams ~= nil then
 		if not self.VM.BtnCameraChecked then
-			CameraParams = self.CameraFocusCfgMap:GetCfgByRaceAndProf(AttachType, self.CurWeaponProfID, 0)
+			-- 非聚焦移动
 			local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
-			self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50, CameraParams.Distance)
+			if nil ~= self.Common_Render2D_UIBP.CamControlParams then
+				local DefaultSpringArmLength = self.Common_Render2D_UIBP.CamControlParams.DefaultViewDistance
+				self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50, DefaultSpringArmLength)
+			end
 			self.Common_Render2D_UIBP.SpringArmLocationTarget = nil
 			local CurViewDist = self.Common_Render2D_UIBP:NormalizeTargetArmLength(self.Common_Render2D_UIBP:GetSpringArmDistance() - self.Common_Render2D_UIBP.ZoomScale * 60)
 			self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, self.Common_Render2D_UIBP.CamToTargetRadians * CurViewDist, Location.Z, true)
 		else
-			local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
-			self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, Location.Y - WardrobeDefine.StainPanelOffsetY, Location.Z, true)
-			self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50, CameraParams.Distance)
+			-- 聚焦镜头移动
+			self:ShowModelFocusPart(PartID)
 		end
 	end
 	self.Common_Render2D_UIBP:EnableZoom(not self.VM.BtnCameraChecked)
@@ -1535,9 +1616,12 @@ function WardrobeMainPanelView:ModelMoveToUnlockPanel(bDelay)
 	if CameraParams ~= nil then
 		local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
 		self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, Location.Y + WardrobeDefine.UnlockPanelOffsetY, Location.Z, true)
-		self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-60 +  WardrobeDefine.UnlockPanelOffsetY, CameraParams.Distance)
+		self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 +  WardrobeDefine.UnlockPanelOffsetY, CameraParams.Distance)
 	end
 	self.Common_Render2D_UIBP:EnableZoom(true)
+
+	self.VM.BtnPoseChecked = false
+	self:PoseStyleSwitch(false)
 end
 
 function WardrobeMainPanelView:ModelMoveToPresetPanel()
@@ -1550,9 +1634,11 @@ function WardrobeMainPanelView:ModelMoveToPresetPanel()
 	if CameraParams ~= nil then
 		local Location = self.Common_Render2D_UIBP:GetSpringArmLocation()
 		self.Common_Render2D_UIBP:SetSpringArmLocation(Location.X, Location.Y + WardrobeDefine.PresetPanelOffsetY, Location.Z, true)
-		self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-60 +  WardrobeDefine.UnlockPanelOffsetY, CameraParams.Distance)
+		self.Common_Render2D_UIBP:SetSpringArmCenterOffsetY(-50 +  WardrobeDefine.UnlockPanelOffsetY, CameraParams.Distance)
 	end
 	self.Common_Render2D_UIBP:EnableZoom(true)
+	self.VM.BtnPoseChecked = false
+	self:PoseStyleSwitch(false)
 end
 
 -- 穿戴外观
@@ -1567,7 +1653,7 @@ function WardrobeMainPanelView:WearAppearance(AppID, PartID, IsSelected)
 	if PartID == EquipmentPartList.EQUIP_PART_HEAD then
 		IsPreview = self.VM.BtnHatChecked
 	elseif PartID == EquipmentPartList.EQUIP_PART_MASTER_HAND or PartID == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
-		IsPreview = self.VM.BtnHandChecked
+		IsPreview = self.VM.BtnHandChecked or self.VM.BtnPoseChecked
 	end
 	for _, part in pairs(WardrobeDefine.EquipmentTab) do
 		if PartID == tonumber(part) then
@@ -1617,6 +1703,53 @@ function WardrobeMainPanelView:PreviewAppearance(PartID, AppID)
 	if PartID == EquipmentPartList.EQUIP_PART_HEAD then
 		self:CheckedBtnStyleCheckedState(AppID)
 	end
+	if self.VM.BtnPoseChecked then
+		if self.Common_Render2D_UIBP ~= nil then
+			local ViewSuit = WardrobeMgr:GetViewSuit()
+			local EquipWeaponViewSuit = {0, 0}
+			for key, v in pairs(ViewSuit) do
+				if PartID ~= key and (key == EquipmentPartList.EQUIP_PART_MASTER_HAND or key == EquipmentPartList.EQUIP_PART_SLAVE_HAND) then
+					if EquipWeaponViewSuit[key] then
+						EquipWeaponViewSuit[key] = 1
+					end
+					local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(v.Avatar)
+					local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(v.Avatar)
+					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, key, IsAppRegionDye and 0 or v.Color)
+					-- Todo 区域染色逻辑
+					self:StainPartForSection(v.Avatar, tonumber(key), v.RegionDye)
+				end
+			end
+
+			local EquipList = EquipmentVM.ItemList
+			for _, part in pairs(WardrobeDefine.EquipmentTab) do
+				if  PartID ~= part then
+				if EquipmentPartList.EQUIP_PART_MASTER_HAND == part or EquipmentPartList.EQUIP_PART_SLAVE_HAND == part then
+					-- 判断当前装备
+					if EquipWeaponViewSuit[part] and EquipWeaponViewSuit[part] == 0 then
+						local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
+						if CurrentAppID ~= 0 then
+							local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
+							local ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
+							local RegionDye = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
+							local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(CurrentAppID)
+							self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, IsAppRegionDye and 0 or ColorID)
+							--Todo 区域染色逻辑
+							self:StainPartForSection(CurrentAppID, tonumber(part), RegionDye)
+						else
+							local TempEquip = EquipList[part]
+							if TempEquip ~= nil then
+								local EquipID = TempEquip.ResID
+								self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+							else
+								self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+							end
+						end
+					end
+				end
+				end
+			end
+		end
+	end
 end
 
 function WardrobeMainPanelView:RenderPreviewEquipmentList(Items)
@@ -1658,9 +1791,11 @@ end
 function WardrobeMainPanelView:CheckedBtnStyleCheckedState(AppID)
 	if _G.EquipmentMgr:IsEquipHasGimmick(WardrobeUtil.GetEquipIDByAppearanceID(AppID)) then
 		self.VM.BtnHatStyleVisible = true
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState( self.VM.BtnHatStyleChecked and _G.UE.EToggleButtonState.Checked  or _G.UE.EToggleButtonState.Unchecked, false)
 		self.Common_Render2D_UIBP:SwitchHelmet(self.VM.BtnHatStyleChecked)
 	else
 		self.VM.BtnHatStyleVisible = false
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked,false)
 	end
 end
 
@@ -1776,7 +1911,7 @@ function WardrobeMainPanelView:OnClickedBtnHand(ToggleButton, State)
 			if not HasEquipWeaponViewSuit then
 				local EquipList = EquipmentVM.ItemList
 				for _, part in pairs(WardrobeDefine.EquipmentTab) do
-					if EquipmentPartList.EQUIP_PART_MASTER_HAND == part or EquipmentPartList.EQUIP_PART_MASTER_HAND == part then
+					if EquipmentPartList.EQUIP_PART_MASTER_HAND == part or EquipmentPartList.EQUIP_PART_SLAVE_HAND == part then
 						-- 判断当前装备
 						local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
 						if CurrentAppID ~= 0 then
@@ -1894,10 +2029,23 @@ end
 function WardrobeMainPanelView:OnClickedBtnHatStyle(ToggleButton, State)
 	local LocalTime  = TimeUtil.GetLocalTime()
 	if LocalTime - self.LastHatStyleBtnTime < 2 and self.LastHatStyleBtnTime ~= 0  then
-		self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.VM.BtnHatStyleChecked, false)
+		if State == _G.UE.EToggleButtonState.Locked then
+			self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+			_G.MsgTipsUtil.ShowTips(_G.LSTR(1050226))
+			return false
+		else
+			self.WardrobeOperateItem.BtnHatStyle:SetChecked(self.VM.BtnHatStyleChecked, false)
+		end
 		return false
 	end
+
 	self.LastHatStyleBtnTime = LocalTime
+	if State == _G.UE.EToggleButtonState.Locked then
+		self.WardrobeOperateItem.BtnHatStyle:SetCheckedState(_G.UE.EToggleButtonState.Locked, false)
+		_G.MsgTipsUtil.ShowTips(_G.LSTR(1050226))
+		return false
+	end
+
 	local IsShow = State == _G.UE.EToggleButtonState.Checked
 	self:HatStyleSwitch(IsShow)
 	-- self:ShowHatStyleTips(IsShow)
@@ -1930,6 +2078,54 @@ function WardrobeMainPanelView:OnClickedBtnPose(ToggleButton, State)
 	local bShowPose = State == _G.UE.EToggleButtonState.Checked
 	self:PoseStyleSwitch(bShowPose)
 	-- self:ShowPoseStyleTips(bShowPose)
+
+	if bShowPose then
+		if self.Common_Render2D_UIBP ~= nil then
+			local ViewSuit = WardrobeMgr:GetViewSuit()
+			local EquipWeaponViewSuit = {0, 0}
+			for key, v in pairs(ViewSuit) do
+				if key == EquipmentPartList.EQUIP_PART_MASTER_HAND or key == EquipmentPartList.EQUIP_PART_SLAVE_HAND then
+					if EquipWeaponViewSuit[key] then
+						EquipWeaponViewSuit[key] = 1
+					end
+					local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(v.Avatar)
+					local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(v.Avatar)
+					self.Common_Render2D_UIBP:PreViewEquipment(EquipID, key, IsAppRegionDye and 0 or v.Color)
+					-- Todo 区域染色逻辑
+					self:StainPartForSection(v.Avatar, tonumber(key), v.RegionDye)
+				end
+			end
+
+			local EquipList = EquipmentVM.ItemList
+			for _, part in pairs(WardrobeDefine.EquipmentTab) do
+				if EquipmentPartList.EQUIP_PART_MASTER_HAND == part or EquipmentPartList.EQUIP_PART_SLAVE_HAND == part then
+					-- 判断当前装备
+					if EquipWeaponViewSuit[part] and EquipWeaponViewSuit[part] == 0 then
+						local CurrentAppID = WardrobeMgr:GetEquipPartAppearanceID(part)
+						if CurrentAppID ~= 0 then
+							local EquipID = WardrobeUtil.GetEquipIDByAppearanceID(CurrentAppID)
+							local ColorID = WardrobeMgr:GetCurAppearanceDyeColor(CurrentAppID)
+							local RegionDye = WardrobeMgr:GetCurAppearanceRegionDyes(CurrentAppID)
+							local IsAppRegionDye = WardrobeUtil.IsAppRegionDye(CurrentAppID)
+							self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, IsAppRegionDye and 0 or ColorID)
+							--Todo 区域染色逻辑
+							self:StainPartForSection(CurrentAppID, tonumber(part), RegionDye)
+						else
+							local TempEquip = EquipList[part]
+							if TempEquip ~= nil then
+								local EquipID = TempEquip.ResID
+								self.Common_Render2D_UIBP:PreViewEquipment(EquipID, part, 0)
+							else
+								self.Common_Render2D_UIBP:PreViewEquipment(nil, part, 0)
+							end
+						end
+					end
+				end
+			end
+
+		end
+	end
+
 
 	if self.Common_Render2D_UIBP.ChildActor then
 		local UIComplexCharacter = self.Common_Render2D_UIBP.ChildActor:Cast(_G.UE.AUIComplexCharacter)
@@ -2032,6 +2228,7 @@ function WardrobeMainPanelView:OnClickedBtnSuit()
 		self.VM.BtnSuitSwitchChecked = true
 		self:ShowAllModel(true)
 		UIUtil.SetIsVisible(self.PanelContent, false)
+		self.CurViewPage = UIViewID.WardrobeSuitPanel
 		UIViewMgr:ShowView(UIViewID.WardrobeSuitPanel, {SuperView = self, SuitID = self.CurSuitID})
 	end
 end
@@ -2042,6 +2239,7 @@ function WardrobeMainPanelView:OnClickedBtnSwitch(ToggleButton, State)
 		self.VM.BtnSuitSwitchChecked = true
 		self:ShowAllModel(true)
 		UIUtil.SetIsVisible(self.PanelContent, false)
+		self.CurViewPage = UIViewID.WardrobeSuitPanel
 		UIViewMgr:ShowView(UIViewID.WardrobeSuitPanel, {SuperView = self})
 	end
 end
@@ -2079,8 +2277,8 @@ function WardrobeMainPanelView:OnClickedBtnInfo2()
 	local Data = WardrobeMgr:GetUnlockAppearanceDataByID(ID)
 	local ProfLimit = WardrobeMgr:GetProfLimit(Data)
 	local ClassLimit = WardrobeMgr:GetClassLimits(Data)
-	local Content = WardrobeUtil.GetDetailProfCondText(ProfLimit, ClassLimit)
-	TipsUtil.ShowInfoTips(Content, self.WardrobeJob.BtnInfo2, _G.UE.FVector2D(-20, 0),  _G.UE.FVector2D(1, 1))
+	local Content = WardrobeUtil.GetDetailProfCondText2(ProfLimit, ClassLimit)
+	TipsUtil.ShowInfoTips(Content, self.WardrobeJob.BtnInfo2, _G.UE.FVector2D(-20, 40),  _G.UE.FVector2D(1, 1))
 end
 
 
@@ -2106,6 +2304,7 @@ function WardrobeMainPanelView:OnClickedBtnSearch()
 	self:ResetDropDownList()
 	self.AppearanceListAdapter:CancelSelected()
 	self.SearchBar:SetHintText(string.format(LSTR(1080036), ProtoEnumAlias.GetAlias(ProtoCommon.equip_part, PartID)))
+	self.SearchBar:SetText("")
 end
 
 -- 监听取消搜索事件
@@ -2168,30 +2367,37 @@ end
 
 -- 点击收集奖励界面
 function WardrobeMainPanelView:OnClickedBtnBox()
-	local function OnGetAwardCallBack(Index, ItemData, ItemView)
-        if ItemData then
-			if ItemData.IsGetProgress then
-			WardrobeMgr:SendClosetCharismRewardReq(Index)	
-			end
-        end
-    end
-
 	local LevelAwardInfoList = ClosetCharismCfg:FindAllCfg()
 
 	if LevelAwardInfoList == nil then
 		return
 	end
 
+	local TempMaxIndex = 1
 
 	local function OnClickedItem(Index, ItemData, ItemView)
 		if ItemData ~= nil then
-			ItemTipsUtil.ShowTipsByResID(ItemData.AwardID, ItemView)
+			if ItemData.IsGetProgress then
+				-- 判断最大index
+				WardrobeMgr:SendClosetCharismRewardReq(TempMaxIndex)
+			else
+				ItemTipsUtil.ShowTipsByResID(ItemData.AwardID, ItemView)
+			end
 		end
 	end
 
+	local function OnGetAwardCallBack(Index, ItemData, ItemView)
+        if ItemData then
+			if ItemData.IsGetProgress then
+				-- 判断最大index
+				WardrobeMgr:SendClosetCharismRewardReq(TempMaxIndex)
+			end
+        end
+    end
+
 	local Params = {
 		ModuleID = nil,
-		CollectedNum = WardrobeMgr:GetCharismNum(),
+		CollectedNum = WardrobeMgr:GetCharmNum(),
 		MaxCollectNum = WardrobeMgr:GetCharismTotalNum(),
 		AreaName = nil,
 		OnGetAwardCallBack = OnGetAwardCallBack,
@@ -2199,11 +2405,13 @@ function WardrobeMainPanelView:OnClickedBtnBox()
 		IgnoreIsGetProgress = true,
 		ItemClickCallback = OnClickedItem,
 	}
+	
 
-	local AwardInfoList, AwardSelectIndex = self:GetAwardInfo()
+	local AwardInfoList, AwardSelectIndex, MaxIndex = self:GetAwardInfo()
 
 	Params.AwardList = AwardInfoList
 	Params.AwardSelectIndex = AwardSelectIndex
+	TempMaxIndex = MaxIndex
 
     UIViewMgr:ShowView(UIViewID.CollectionAwardPanel, Params)
 end
@@ -2217,20 +2425,24 @@ function WardrobeMainPanelView:GetAwardInfo()
 	
 	local AwardSelectIndex = 1
 	local AwardInfoList = {}
+	local MaxIndex = 1
 	for index, v in ipairs(LevelAwardInfoList) do
 		local Reward = v.Rewards
 		local AwardInfo = {
 			CollectTargetNum = v.Charism,
 			AwardID = Reward[1].ResID,
 			AwardNum = Reward[1].Num,
-			IsGetProgress =  v.Charism <= WardrobeMgr:GetCharismNum() and  not (index <= WardrobeMgr:GetClaimedCharismReward()), -- 是否已达到奖励进度
+			IsGetProgress =  v.Charism <= WardrobeMgr:GetCharmNum() and  not (index <= WardrobeMgr:GetClaimedCharismReward()), -- 是否已达到奖励进度
 			IsCollectedAward = index <= WardrobeMgr:GetClaimedCharismReward(), -- 是否已领奖
 		}
+		if AwardInfo.IsGetProgress and index >= MaxIndex then
+			MaxIndex = index
+		end
 		AwardSelectIndex = WardrobeMgr:GetClaimedCharismReward() + 1
 		table.insert(AwardInfoList, AwardInfo)
 	end
 
-	return AwardInfoList, AwardSelectIndex
+	return AwardInfoList, AwardSelectIndex, MaxIndex
 end
 
 --- 点击一键解锁
@@ -2247,12 +2459,25 @@ end
 -- 点击预设
 function WardrobeMainPanelView:OnClickedBtnPresets()
 	UIUtil.SetIsVisible(self.PanelContent, false)
+	self:PlayAnimation(self.AnimMask2a)
 	self:ModelMoveToPresetPanel()
 	UIViewMgr:ShowView(UIViewID.WardrobePresetsPanel, {SuperView = self})
 end
 
+function WardrobeMainPanelView:PresetsPanelToMainPanel()
+	self:PlayAnimation(self.AnimMask2b)
+end
+
+function WardrobeMainPanelView:UnlockPanelToMainPanel()
+	self:PlayAnimation(self.AnimMask1b)
+end
+
 function WardrobeMainPanelView:OnClickedBtnCharm()
 	UIViewMgr:ShowView(UIViewID.WardrobeAppearancePanel)
+end
+
+function WardrobeMainPanelView:OnClickedBtnCharm1()
+	HelpInfoUtil.ShowHelpInfo({HelpInfoID = WardrobeDefine.CharismHelpID, BtnInfor = self.PanelCharm_1})
 end
 
 -- 点击染色
@@ -2298,6 +2523,7 @@ function WardrobeMainPanelView:OnClickedBtnReduce()
 	UIUtil.SetIsVisible(self.PanelContent, false)
 	local AppearanceList = WardrobeMgr:GetQuickUnlockAppearanceList()
 	WardrobeMgr:SetPlanUnlockAppearanceList(AppearanceList)
+	self:PlayAnimation(self.AnimMask1a)
 	UIViewMgr:ShowView(UIViewID.WardrobeUnlockPanel, {AppearanceList = AppearanceList, SelectedAppID = self.CurAppearanceID, IsQuickUnlock = false, ReduceCondition = true,  SuperView = self})
 end
 
@@ -2321,6 +2547,10 @@ function WardrobeMainPanelView:OnClickSingleEquipmentBtnUnlock()
 				local ViewModel =  self.VM:UpdateSameEquipmentList(ID)
 				ViewModel.ResID = WardrobeUtil.GetUnlockCostItemID(ID)
 				local Params = {ViewModel = ViewModel, nil, InTagetView = self.BagSlot2, Offset = Offset, Alignment = Alignment, HidePopUpBG = true, ParentViewID = _G.UIViewID.WardrobeMainPanelView}
+				if #ItemUtil.GetItemGetWayList(ViewModel.ResID) <= 0 then
+					MsgTipsUtil.ShowTips(LSTR(1080130))
+					return
+				end
 				ItemTipsUtil.OnClickedToGetBtn(Params)
 				return
 			end
@@ -2342,10 +2572,10 @@ function WardrobeMainPanelView:OnClickSingleEquipmentBtnUnlock()
 		self:ModelMoveToUnlockPanel()
 		UIUtil.SetIsVisible(self.PanelContent, false)
 		WardrobeMgr:SetPlanUnlockAppearanceList(AppearanceList)
+		self:PlayAnimation(self.AnimMask1a)
 		UIViewMgr:ShowView(UIViewID.WardrobeUnlockPanel, {AppearanceList = AppearanceList, SelectedAppID = ID, IsQuickUnlock = false, SuperView = self})
 		return
 	end
-
 
 
 	--- 判断是否能否穿戴
@@ -2440,6 +2670,7 @@ function WardrobeMainPanelView:OpenWardrobeUnlockPanel(AppID)
 	self:ModelMoveToUnlockPanel(true)
 	UIUtil.SetIsVisible(self.PanelContent, false)
 	WardrobeMgr:SetPlanUnlockAppearanceList(AppearanceList)
+	self:PlayAnimation(self.AnimMask1a)
 	UIViewMgr:ShowView(UIViewID.WardrobeUnlockPanel, {AppearanceList = AppearanceList, SelectedAppID = AppID, IsQuickUnlock = false, SuperView = self})
 	end
 end
@@ -2462,10 +2693,7 @@ function WardrobeMainPanelView:UpdateModelEquipment()
 			local AppID = Suit[partID].Avatar
 			local EquipID = WardrobeMgr:IsRandomAppID(AppID) and WardrobeMgr:GetEquipIDByRandomApp(AppID) or WardrobeUtil.GetEquipIDByAppearanceID(AppID)
 			local ColorID =  Suit[partID].Color
-			local RegionDye = {}
-			if  WardrobeUtil.GetRegionDye ~= nil then
-				RegionDye = WardrobeUtil.GetRegionDye(AppID, Suit[partID].RegionDye or {})
-			end
+			local RegionDye = WardrobeUtil.GetRegionDye(AppID, Suit[partID].RegionDye or {})
 			if CurCurrentSuit[partID] ~= nil and CurCurrentSuit[partID].Avatar == Suit[partID].Avatar and CurCurrentSuit[partID].Color ~= Suit[partID].Color then
 				ColorID = CurCurrentSuit[partID].Color
 			end

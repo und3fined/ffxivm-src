@@ -135,6 +135,10 @@ end
 ---@param TitleID Bitset
 ---@private
 function TitleMgr:CacheAndSentEvent(InEntityID, TitleID)
+	if (InEntityID or 0) == 0 then
+		return
+	end
+
 	if InEntityID == MajorUtil.GetMajorEntityID() then
 		if self.CurrentTitle ~= TitleID then
 			-- 报错
@@ -426,13 +430,21 @@ function TitleMgr:QueryUnLockState(Title)
 	return table.contain(self.OwnedTitle, Title)
 end
 
+-- 开启版本判断
+function TitleMgr:CheckOpenVersion(OpenVersion)
+	if string.isnilorempty(OpenVersion) then
+		return false
+	end
+	return _G.ClientVisionMgr:CheckVersionByGlobalVersion(OpenVersion)
+end
+
 -- 读取所有称号数据
 function TitleMgr:ReadAllTitleData()
 	self.AllTitleData = {}
 	local AllTitleID = {}
 	local AllCfgData = TitleCfg:FindAllCfg()
 	for _, Value in pairs(AllCfgData) do
-		if Value.ID ~= nil then
+		if Value.ID ~= nil and self:CheckOpenVersion(Value.OpenVersion) then
 			local TitleType = Value.Type or ""
 			self.AllTitleData[TitleType] = self.AllTitleData[TitleType] or {}
 			if (Value.ItemID or 0) ~= 0 then

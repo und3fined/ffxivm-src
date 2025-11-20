@@ -8,12 +8,15 @@
 local LuaClass = require("Core/LuaClass")
 local EntranceBase = require("Game/Interactive/EntranceItem/EntranceBase")
 local FunctionItemFactory = require("Game/Interactive/FunctionItemFactory")
-local ActorUtil = require("Utils/ActorUtil")
+local MathUtil = require("Utils/MathUtil")
 local MajorUtil = require("Utils/MajorUtil")
+local MapUtil = require("Game/Map/MapUtil")
 local InteractivedescCfg = require("TableCfg/InteractivedescCfg")
 local MountVM = require("Game/Mount/VM/MountVM")
 local ProtoCS = require("Protocol/ProtoCS")
-local TeleportCrystalCfg = require("TableCfg/TeleportCrystalCfg")
+local MapMainCityCfg = require("TableCfg/MapMainCityCfg")
+local ProtoRes = require("Protocol/ProtoRes")
+local TELEPORT_CRYSTAL_TYPE = ProtoRes.TELEPORT_CRYSTAL_TYPE
 local CS_QUEST_STATUS = ProtoCS.CS_QUEST_STATUS
 local LSTR = _G.LSTR
 --local LuaEntranceType = _G.LuaEntranceType
@@ -41,8 +44,10 @@ function EntranceCrystalPortal:OnInit()
         self.DisplayName = _G.LSTR(90008)
     else
         --self.DisplayName = self.Crystal.DBConfig.CrystalName
-        if self.Crystal.DBConfig.Type == 2 then
+        if self.Crystal.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP then
             self.DisplayName = _G.LSTR(90009)
+        elseif  self.Crystal.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN then
+            self.DisplayName = _G.LSTR(540011) --540011("简易以太之光")
         else
             --self.DisplayName = self.Crystal.DBConfig.CrystalName
             self.DisplayName = _G.LSTR(90010)
@@ -53,7 +58,7 @@ function EntranceCrystalPortal:OnInit()
 
     if self.Crystal.DBConfig then
         --水晶都长的一样，这里写死高度
-        if self.Crystal.DBConfig.Type == 1 then
+        if self.Crystal.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP then
             self.EntranceHalf = 1000
         else
             self.EntranceHalf = 150
@@ -79,7 +84,7 @@ function EntranceCrystalPortal:CheckEyeLineBlock()
     return true
 end
 
-function EntranceCrystalPortal:CheckInterative(EnableCheckLog)
+function EntranceCrystalPortal:CheckInterative(EnableCheckLog, IsFromQuestUpdate)
     if not self.Crystal then
         if self.EntityID then --有值,尝试恢复数据
             local CrystalMgr = _G.PWorldMgr:GetCrystalPortalMgr()
@@ -99,12 +104,37 @@ function EntranceCrystalPortal:CheckInterative(EnableCheckLog)
     if not self:CheckEyeLineBlock() then
         return false
     end
+    if self:IsOutOfInteractionRange() then
+        return false
+    end
 
     if MountVM.IsMajorInFly then
         return false
     end
 
     return true
+end
+
+function EntranceCrystalPortal:IsOutOfInteractionRange()
+    local Major = MajorUtil.GetMajor()
+    if Major then
+        local MajorPos = Major:FGetActorLocation()
+        local Crystal = self.Crystal
+        if Crystal then
+            local InteractiveDistance = 300
+            local DBConfig = Crystal.DBConfig
+            if DBConfig then
+                InteractiveDistance = DBConfig.Distance or 300
+            end
+            local CrystalPos = Crystal.Pos
+            if CrystalPos then
+                if MathUtil.Dist(MajorPos, CrystalPos) > InteractiveDistance then
+                    return true
+                end
+            end
+        end
+    end
+    return false
 end
 
 function EntranceCrystalPortal:OnUpdateDistance()
@@ -155,7 +185,7 @@ function EntranceCrystalPortal:OnClick()
         end
     else
         --self:AfterClickEntrance()
-        if self.Crystal.DBConfig.Type == 2 then
+        if self.Crystal.DBConfig.Type ~= TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_ACROSSMAP then
             --小水晶不具备分线查询功能，直接显示当前地图
             _G.WorldMapMgr:ShowWorldMap()
         else
@@ -234,6 +264,20 @@ function EntranceCrystalPortal:OnGenFunctionList()
             end
         end
 
+        local HouseTransferInterativeID = DBConfig.HouseTransferInterativeID
+        if HouseTransferInterativeID and HouseTransferInterativeID > 0 and self:CheckHousingRegionState(DBConfig.MapID) then
+            local HousingListParams = {
+                FuncValue = HouseTransferInterativeID,
+                EntityID = DBConfig.ID,
+                ResID = CrystalID,
+                HouseRegionID = self.HouseRegionID
+            }
+            local HousingListUnit = FunctionItemFactory:CreateInteractiveDescFunc(HousingListParams)
+            if HousingListUnit then
+                table.insert(FunctionList, HousingListUnit)
+            end
+        end
+
         if _G.InteractiveMgr.bHasPWorldBranch then
             local BranchLineParams = {
                 FuncValue = DBConfig.TransferInterativeID,
@@ -283,13 +327,31 @@ function EntranceCrystalPortal:Update()
     else
         self.Distance = 5000
         self.InteractivePriority = 0
-        if self.Crystal.DBConfig.Type == 2 then
+        if self.Crystal.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_CURRENTMAP then
             self.DisplayName = _G.LSTR(90009)
+        elseif  self.Crystal.DBConfig.Type == TELEPORT_CRYSTAL_TYPE.TELEPORT_CRYSTAL_DEFAULT_OPEN then
+            self.DisplayName = _G.LSTR(540011)
         else
             self.DisplayName = _G.LSTR(90010)
         end
     end
     self:UpdateUI()
+end
+
+-- 判断当前主城场景的住宅区解锁任务是否完成
+function EntranceCrystalPortal:CheckHousingRegionState(MapID)
+    if not self.HouseRegionID then
+        local AllCfg = MapMainCityCfg:FindAllCfg()
+        self.HouseRegionID = 0
+        for _, MapMainCityCfgData in ipairs(AllCfg) do
+            if table.contain(MapMainCityCfgData.MapIDList, MapID) then
+                local HousingMapID = MapMainCityCfgData.HousingMapID
+                self.HouseRegionID = MapUtil.GetHouseRegionID(HousingMapID)
+                break
+            end
+        end
+    end
+    return self.HouseRegionID > 0 and _G.HouseLandMianPanelVM:GetEstateIsUnlock(self.HouseRegionID)
 end
 
 return EntranceCrystalPortal

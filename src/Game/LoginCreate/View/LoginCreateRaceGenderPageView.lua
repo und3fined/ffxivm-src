@@ -31,7 +31,7 @@ local RoleInitCfg = require("TableCfg/RoleInitCfg")
 local ProtoCommon = require("Protocol/ProtoCommon")
 
 local LoginConfig = require("Define/LoginConfig")
-local MaxRaceCount = 6
+-- local MaxRaceCount = 6
 
 ---@class LoginCreateRaceGenderPageView : UIView
 ---AUTO GENERATED CODE 3 BEGIN, PLEASE DON'T MODIFY

@@ -17,7 +17,7 @@ local StorageSkillCfg = {
         IsTurn = 0,
         IsVisible = 1,
         LevelCount = 3,
-        _LevelList = '[{"MaxTime":500,"ActionID":"","SkillID":20913},{"MaxTime":2500,"ActionID":"","SkillID":20913},{"MaxTime":5000,"ActionID":"","SkillID":20913},{"MaxTime":0,"ActionID":"","SkillID":0}]',
+        _LevelList = '[{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0}]',
         LimitTime = 1500,
         MaxTime = 1500,
         MinTime = 0,
@@ -30,7 +30,6 @@ local StorageSkillCfg = {
         {
             IsVisible = 0,
             LevelCount = 0,
-            _LevelList = '[{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0},{"MaxTime":0,"ActionID":"","SkillID":0}]',
             LimitTime = 0,
             MaxTime = 0,
             Weight = 0,
@@ -83,15 +82,25 @@ local StorageSkillCfg = {
         },
         {
             ID = 20912,
+            _LevelList = '[{"MaxTime":500,"ActionID":"","SkillID":20913},{"MaxTime":2500,"ActionID":"","SkillID":20913},{"MaxTime":5000,"ActionID":"","SkillID":20913},{"MaxTime":0,"ActionID":"","SkillID":0}]',
             LimitTime = 6500,
             MaxTime = 6500,
             SingID = 20912,
         },
         {
             ID = 20921,
+            _LevelList = '[{"MaxTime":500,"ActionID":"","SkillID":20924},{"MaxTime":2500,"ActionID":"","SkillID":20924},{"MaxTime":5000,"ActionID":"","SkillID":20924},{"MaxTime":0,"ActionID":"","SkillID":0}]',
             LimitTime = 4500,
             MaxTime = 4500,
             SingID = 2092101,
+        },
+        {
+            ID = 21051,
+            _LevelList = '[{"MaxTime":600,"ActionID":"","SkillID":21048},{"MaxTime":1200,"ActionID":"","SkillID":21049},{"MaxTime":1800,"ActionID":"","SkillID":21050},{"MaxTime":0,"ActionID":"","SkillID":0}]',
+            LimitTime = 1800,
+            MaxTime = 1800,
+            ReturnCD = 8000.0,
+            SingID = 21051,
         },
 	},
 }

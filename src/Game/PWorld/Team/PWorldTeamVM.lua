@@ -10,7 +10,6 @@ local PWorldQuestDefine = require("Game/PWorld/Quest/PWorldQuestDefine")
 local OpDef = PWorldQuestDefine.OpDef
 local ATeamVM = require("Game/Team/Abs/ATeamVM")
 local ProfUtil = require("Game/Profession/ProfUtil")
-local TeamDefine = require("Game/Team/TeamDefine")
 local PWorldHelper = require("Game/PWorld/PWorldHelper")
 
 local SceneModeDef = ProtoCommon.SceneMode
@@ -28,20 +27,19 @@ function PWorldTeamVM:Ctor()
 
     self.MatchMems = UIBindableList.New(PWorldTeamMemExpelVM)
     self.MatchMemCount = 0
+    self.VoteBestMems = UIBindableList.New(PWorldTeamMemExpelVM)
 
     self.MemCntGiveUp = 0
     self.GiveUpDesc = ""
     self.HasVoteGiveUp = false
     self.VoteOpGiveUpAccept = false
     self.VoteGiveUpCounter = 0
-    self.VoteGiveUpCounterDescNew = ""
 
     self.MemCntExile = 0
     self.ExileDesc = ""
     self.HasVoteExile = false
     self.VoteOpExileAccept = false
     self.VoteExileCounter = 0
-    self.VoteExileCounterDesc = ""
 
     self.BestPlayerIDVoted = false
     self.ExpelPlayerIDVoted = false
@@ -95,6 +93,7 @@ function PWorldTeamVM:UpdateVM()
     if not table.contain(MatchMemIDList, self.ExpelPlayerIDVoted) then
         self:SetExpelPlayer(nil)
         self:ClearMatchMembersSelection()
+        self.ClearBinderListSelection(self.VoteBestMems)
     end
 
     self:UpdateTeamMembers(table.shallowcopy(self:GetDeclaredOwnerMgr().MemberList or {}, false))
@@ -125,7 +124,7 @@ end
 
 -- Vote
 function PWorldTeamVM:UpdGiveUpDesc()
-    self.GiveUpDesc = string.format("<span color=\"#FFFFFF\">%d</> / %d", self.MemCntGiveUp, self.MemCnt)
+    self.GiveUpDesc = string.sformat(_G.LSTR(1320267), self.MemCntGiveUp, self.MemCnt)
 end
 
 function PWorldTeamVM:UpdMemCntGiveUp()
@@ -135,7 +134,7 @@ end
 
 function PWorldTeamVM:UpdExileDesc()
     local MemCnt = PWorldTeamMgr:GetMemExileVoteCnt()
-    self.ExileDesc = string.format("<span color=\"#FFFFFF\">%d</> / %d", self.MemCntExile, MemCnt)
+    self.ExileDesc = string.sformat(_G.LSTR(1320256), self.ExileMemName, self.MemCntExile, MemCnt)
 end
 
 function PWorldTeamVM:UpdMemCntExile()
@@ -145,12 +144,10 @@ end
 
 function PWorldTeamVM:UpdCounterGiveUp()
     self.VoteGiveUpCounter = self:GetDeclaredOwnerMgr():GetVoteGiveupRemainTime()
-    self.VoteGiveUpCounterDescNew =  string.sformat(PWorldHelper.GetPWorldText("GIVEUP_COUNTDOWN"), self.VoteGiveUpCounter)
 end
 
 function PWorldTeamVM:UpdCounterExile()
     self.VoteExileCounter = self:GetDeclaredOwnerMgr():GetVoteExpelRemainTime()
-    self.VoteExileCounterDesc = string.sformat(PWorldHelper.GetPWorldText("EXPEL_COUTDOWN"), self.ExileMemName, self.VoteExileCounter)
 end
 
 -------------------------------------------------------------------------------------------------------
@@ -191,34 +188,39 @@ function PWorldTeamVM:UpdExileMemName()
 end
 
 function PWorldTeamVM:UpdVoteMVPEnbale()
-    local UdFunc = function(BinderList)
-        local Items = BinderList:GetItems()
-        for _, Item in pairs(Items) do
-            Item:UpdMVPVoteEnable()
+    for _, Item in pairs(self.VoteBestMems:GetItems()) do
+        Item:UpdMVPVoteEnable()
+    end
+
+    local bFlag
+    for _, Item in pairs(self.VoteBestMems:GetItems()) do
+        if Item.MemRoleID == self.BestPlayerIDVoted then
+            bFlag = true
+            break
         end
     end
 
-    UdFunc(self.Mems)
-    UdFunc(self.MemsNoMj)
+    if bFlag then
+        self:SetVoteBestPlayer(nil)
+        self.ClearBinderListSelection(self.VoteBestMems)
+    end
 end
 
 function PWorldTeamVM:ClearMatchMembersSelection()
-    local Items = self.MatchMems:GetItems()
-    for _, Item in pairs(Items) do
+    self.ClearBinderListSelection(self.MatchMems)
+    self.ClearBinderListSelection(self.VoteBestMems)
+end
+
+function PWorldTeamVM.ClearBinderListSelection(BinderList)
+    for _, Item in pairs(BinderList:GetItems()) do
         Item:SetSelected(false)
     end
 end
 
 function PWorldTeamVM:ClearMembersSelection()
-    local ClFunc = function(BinderList)
-        local Items = BinderList:GetItems()
-        for _, Item in pairs(Items) do
-            Item:SetSelected(false)
-        end
-    end
-
-    ClFunc(self.Mems)
-    ClFunc(self.MemsNoMj)
+    self.ClearBinderListSelection(self.Mems)
+    self.ClearBinderListSelection(self.MemsNoMj)
+    self.ClearBinderListSelection(self.VoteBestMems)
 end
 
 function PWorldTeamVM:SetVoteBestPlayer(ID)
@@ -231,6 +233,10 @@ end
 
 function PWorldTeamVM:GetMatchMemberCount()
     return self.MatchMems:Length()
+end
+
+function PWorldTeamVM:GetVoteBestMemsCount()
+    return self.VoteBestMems:Length()
 end
 
 ---@return PWorldTeamMgr | nil
