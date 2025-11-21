@@ -3382,7 +3382,7 @@ local GatherPointCfg = {
             MapID = 12007,
             MapIcon = CS._4_6,
             _PopLife = CS._5_1,
-            _StarTime = CS._6_2,
+            _StarTime = CS._6_1,
             Version = CS._8_2,
         },
         {
@@ -3411,7 +3411,7 @@ local GatherPointCfg = {
             MapID = 12007,
             MapIcon = CS._4_6,
             _PopLife = CS._5_1,
-            _StarTime = CS._6_1,
+            _StarTime = CS._6_2,
         },
         {
             _CommonResourceID = '[]',

@@ -114,7 +114,7 @@ function ProfessionLevelItemView:OnBtnClicked()
 		end
 
 		FLOG_INFO("Request change prof: %d", self.ViewModel.ProfID)
-		_G.EquipmentMgr:SwitchProfByID(self.ViewModel.ProfID)
+		_G.EquipmentMgr:SwitchProfByID(self.ViewModel.ProfID, self)
 	end
 end
 

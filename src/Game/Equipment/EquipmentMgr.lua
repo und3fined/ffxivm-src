@@ -197,7 +197,7 @@ EquipmentMgr.JobBtnClickInterval = 1000
 EquipmentMgr.LastJobBtnClickTime = 0
 EquipmentMgr.JobBtnClickDelayTimerID = nil
 
-function EquipmentMgr:SwitchProfByID(ProfID)
+function EquipmentMgr:SwitchProfByID(ProfID, UIView)
 	-- 检查职业是否被激活
 	local RoleDetail = ActorMgr:GetMajorRoleDetail()
 	if nil == RoleDetail or nil == RoleDetail.Prof.ProfList[ProfID] then
@@ -262,7 +262,7 @@ function EquipmentMgr:SwitchProfByID(ProfID)
 		RawWeaponName = CommonUtil.GetTextFromStringWithSpecialCharacter(RawWeaponName)
 		ReplaceWeaponName = CommonUtil.GetTextFromStringWithSpecialCharacter(ReplaceWeaponName)
 		local Message = string.format(LSTR(1050097), RawWeaponName, ReplaceWeaponName, BindSuffix)
-		MsgBoxUtil.ShowMsgBoxTwoOp(true, "", Message, SwitchProfFunc, function ()
+		MsgBoxUtil.ShowMsgBoxTwoOp(UIView, "", Message, SwitchProfFunc, function ()
 			_G.EventMgr:SendEvent(_G.EventID.ReSelectMajorProf)
 		end)
 	else

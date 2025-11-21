@@ -1429,7 +1429,7 @@ end
 function EquipmentNewMainView:OnSelectionChangedTabs(Index, ItemData, ItemView, bClick)
 	if bClick then
 		local ProfData = self.ViewModel.ProfList[Index]
-		_G.EquipmentMgr:SwitchProfByID(ProfData.ProfID)
+		_G.EquipmentMgr:SwitchProfByID(ProfData.ProfID, self)
 	end
 end
 

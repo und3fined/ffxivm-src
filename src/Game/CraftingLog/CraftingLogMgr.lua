@@ -1073,7 +1073,7 @@ function CraftingLogMgr:ShowProfUnmatchTips()
             end
             self.SwitchProfInNote = true
             self:RegisterTimer(function()
-                _G.EquipmentMgr:SwitchProfByID(self.NowPropData.Craftjob)
+                _G.EquipmentMgr:SwitchProfByID(self.NowPropData.Craftjob, self)
             end, 0.2, 1, 1)
         end, nil, nil, LSTR(10002), {
             HideCloseBtn = true

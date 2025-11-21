@@ -86,7 +86,7 @@ function EquipmentJobBtnItemView:OnSelectChanged(bSelect, IsByClick)
 		local ProfID = self.ViewModel.ProfID
 		FLOG_INFO("EquipmentJobBtnItemView:OnItemClicked  profID:%d", ProfID)
 		self:PlayAnimation(self.AnimSelect)
-		_G.EquipmentMgr:SwitchProfByID(ProfID)
+		_G.EquipmentMgr:SwitchProfByID(ProfID, self)
 	end
 end
 

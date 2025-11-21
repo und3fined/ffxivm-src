@@ -80,6 +80,19 @@ function MirrorEffectMgr:PlayEffect(EffectParam)
 
 	self.MirrorEffectPool[OutEffectID].bIsFree = false
 	local EffectActor = self.MirrorEffectPool[OutEffectID].Actor
+
+	if not CommonUtil.IsObjectValid(EffectActor) then
+		EffectActor = self:GenerateNewMirrorEffect(EffectParam)
+		if nil == EffectActor then
+			-- 创建MirrorEffectActor失败
+			FLOG_WARNING("EffectActor Cached is invalid! ReGenrate failed")
+			return OutEffectID
+		end
+
+		FLOG_WARNING("EffectActor Cached is invalid! ReGenrate")
+		self.MirrorEffectPool[OutEffectID].Actor = EffectActor
+	end
+
 	EffectActor.Param = EffectParam
 	EffectActor:Init()
 	EffectActor:CaptureActor(EffectParam.Target, EffectParam.CameraComp)

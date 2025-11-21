@@ -2134,7 +2134,7 @@ function GatheringLogMgr:ShowProfUnmatchTips(GatheringItemJobID)
         if not _G.ProfMgr:CanChangeProf(GatheringItemJobID) then
             return
         end
-        _G.EquipmentMgr:SwitchProfByID(GatheringItemJobID)
+        _G.EquipmentMgr:SwitchProfByID(GatheringItemJobID, self)
     end
 	_G.MsgBoxUtil.ShowMsgBoxTwoOp(self, Title, Message, RightCB, nil, nil, LSTR(10002))
 end

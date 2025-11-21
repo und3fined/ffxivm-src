@@ -5854,15 +5854,31 @@ end
 
 --- 部队除名弹窗
 function ArmyMgr:KickMemberMsgBox(RoleID)
-    if self.KickMemberRoleID then
-        ---正在等房屋回包，防阻塞用定时器置空
-        if self.KickMemberTimer == nil then
-            self.KickMemberTimer = self:RegisterTimer(self.OnTimerClearKickMember, 2)
-        end
-        return 
+    ---外网版本无房屋服务器，关掉房屋相关的校验
+    -- if self.KickMemberRoleID then
+    --     ---正在等房屋回包，防阻塞用定时器置空
+    --     if self.KickMemberTimer == nil then
+    --         self.KickMemberTimer = self:RegisterTimer(self.OnTimerClearKickMember, 2)
+    --     end
+    --     return 
+    -- end
+    -- self.KickMemberRoleID = RoleID
+    -- _G.HouseInfoMgr:SendPullArmyMemberRoom(self:GetArmyID())
+    local RoleVM = RoleInfoMgr:FindRoleVM(RoleID)
+    if RoleVM == nil then
+        return
     end
-    self.KickMemberRoleID = RoleID
-    _G.HouseInfoMgr:SendPullArmyMemberRoom(self:GetArmyID())
+    --- 删除成员
+    MsgBoxUtil.ShowMsgBoxTwoOp(
+        self,
+        -- LSTR string:提示
+        LSTR(910144),
+        -- LSTR string:确认除名部队成员 %s 吗?
+        string.format(LSTR(910195), RichTextUtil.GetText(RoleVM.Name,  ArmyTextColor.BlueHex)),
+        function()
+            ArmyMgr:SendKickMemberMsg(RoleID)
+        end
+    )
 end
 
 function ArmyMgr:KickMemberByQueryRoomEvent(RoleID)

@@ -2512,7 +2512,7 @@ local CompanionCfg = {
             Scale = 90,
             UISortPriority = 12902,
             UnlockItemID = 61800185,
-            VersionName = CS._6_4,
+            VersionName = CS._6_2,
         },
         {
             CanLookAt = 1,

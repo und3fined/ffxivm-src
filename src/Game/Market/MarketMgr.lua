@@ -158,6 +158,7 @@ function MarketMgr:OnNetMsgSaleGoodRsp(MsgBody)
 	end
 	table.insert(self.StallItemList, Msg.Stall)
 	table.sort(self.StallItemList, self.SortStallItemList)
+	self:UpdateRedDot()
 	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 
 	self.SaleGoodCache[Msg.Stall.ResID] = {Price = Msg.Stall.SinglePrice, Num = Msg.Stall.TotalNum} 
@@ -187,6 +188,8 @@ function MarketMgr:OnNetMsgReSaleGoodRsp(MsgBody)
 			break
 		end
 	end
+
+	self:UpdateRedDot()
 	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	self.SaleGoodCache[Stall.ResID] = {Price = Stall.SinglePrice, Num = Stall.TotalNum} 
 	MsgTipsUtil.ShowTips(LSTR(1010002))
@@ -231,6 +234,7 @@ function MarketMgr:OnNetMsgBatchReSaleGoodRsp(MsgBody)
 		end
 	end
 
+	self:UpdateRedDot()
 	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	MsgTipsUtil.ShowTips(LSTR(1010103))
 
@@ -280,23 +284,23 @@ function MarketMgr:OnNetMsgStallStatusRsp(MsgBody)
 	end
 	self.StallItemList = Msg.StallList or {}
 	table.sort(self.StallItemList, self.SortStallItemList)
-	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 
 	self:UpdateRedDot()
+	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 end
 
 function MarketMgr:UpdateRedDot()
 	if self.StallItemList == nil then
 		return
 	end
-	local StallName = RedDotMgr:GetRedDotNameByID(MarketDefine.MarketRedDotID.Stall)
+
+	local StallName = RedDotMgr:GetRedDotNameByID(MarketDefine.MarketRedDotID.Market) or ""
+	RedDotMgr:DelRedDotByName(StallName)
 	for i, V in ipairs(self.StallItemList) do
-		if self:IsStallExpired(V) or self:GetStallIncome(V) > 0 then
+		if (self:IsStallExpired(V) == true or self:GetStallIncome(V) > 0 ) then
 			RedDotMgr:AddRedDotByName(StallName.. '/' .. tostring(V.SellID))
-		
 		else
 			RedDotMgr:DelRedDotByName(StallName.. '/' .. tostring(V.SellID))
-		
 		end
 	end
 	
@@ -320,8 +324,8 @@ function MarketMgr:OnNetMsgCloseSaleGoodsRsp(MsgBody)
 	end
 
 	table.sort(self.StallItemList, self.SortStallItemList)
-	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	self:UpdateRedDot()
+	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	MsgTipsUtil.ShowTips(LSTR(1010105))
 
 	if self:HasBatchOnOrOffStall() and not self.NotShowBatchOffMsgTip then
@@ -359,9 +363,9 @@ function MarketMgr:OnNetMsgBatchCloseSaleGoodsRsp(MsgBody)
 	end
 
 	table.sort(self.StallItemList, self.SortStallItemList)
+	self:UpdateRedDot()
 	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	MsgTipsUtil.ShowTips(LSTR(1010104))
-	self:UpdateRedDot()
 
 end
 
@@ -391,9 +395,8 @@ function MarketMgr:OnNetMsgStallChgNtfRsp(MsgBody)
 			end
 		end
 	end
-
-	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 	self:UpdateRedDot()
+	EventMgr:SendEvent(EventID.MarketStallInfoUpdata)
 end
 
 
@@ -422,10 +425,10 @@ function MarketMgr:OnNetMsgGetBackMoneyRsp(MsgBody)
 
 	self.StallItemList = ReserveList
 	table.sort(self.StallItemList, self.SortStallItemList)
+	self:UpdateRedDot()
 	EventMgr:SendEvent(EventID.MarketReceiveMoney)
 	MsgTipsUtil.ShowTips(LSTR(1010004))
 
-	self:UpdateRedDot()
 	--MarketMgr:ShowSysChatObtainScoreMsg(ProtoRes.SCORE_TYPE.SCORE_TYPE_GOLD_CODE, Msg.AllMoney)
 end
 

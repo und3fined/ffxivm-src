@@ -96,7 +96,7 @@ function MagicCardCollectionVM:InitAllMagicCard()
             PatchMask = {2,0,0}
         end
 
-        if (PatchMask[1] <= GlobalVersion.Value[1] and PatchMask[2] <= GlobalVersion.Value[2] and PatchMask[3] <= GlobalVersion.Value[3]) then
+        if (not string.isnilorempty(CfgItem.Mask) and _G.ClientVisionMgr:CheckVersionByGlobalVersion(CfgItem.Mask)) then
             local CardData = {
                 IsUnLock = false, 
                 CardID = CfgItem.ID,

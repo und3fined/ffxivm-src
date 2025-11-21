@@ -364,16 +364,32 @@ function ArmyMemberPageView:OnClickedQuitArmy()
             MsgBoxUtil.ShowMsgBoxOneOpRight(self, LSTR(910144), LSTR(910217))
         end
     else
-        if self.IsWaitHouseByQuitArmy then
-            ---正在等房屋回包，防阻塞用定时器置空
-            if self.QuitArmyTimer == nil then
-                self.QuitArmyTimer = self:RegisterTimer(self.OnTimerQuitArmy, 2)
-            end
-            return 
-        end
-        ---获取一次房屋数据，用于退出判断
-        _G.HouseInfoMgr:SendPullMajorMemberRoom(ArmyMgr:GetArmyID())
-        self.IsWaitHouseByQuitArmy = true
+        ---外网版本无房屋服务器，关掉房屋相关的校验
+        -- if self.IsWaitHouseByQuitArmy then
+        --     ---正在等房屋回包，防阻塞用定时器置空
+        --     if self.QuitArmyTimer == nil then
+        --         self.QuitArmyTimer = self:RegisterTimer(self.OnTimerQuitArmy, 2)
+        --     end
+        --     return 
+        -- end
+        -- ---获取一次房屋数据，用于退出判断
+        -- _G.HouseInfoMgr:SendPullMajorMemberRoom(ArmyMgr:GetArmyID())
+        -- self.IsWaitHouseByQuitArmy = true
+
+        ---退出弹窗
+        MsgBoxUtil.ShowMsgBoxTwoOp(
+            self,
+            -- LSTR string:提示
+            LSTR(910144),
+            -- LSTR string:确认要退出部队?
+            LSTR(910191),
+            ArmyMgr.SendArmyQuitMsg,
+            nil,
+            -- LSTR string:取消
+            LSTR(910081),
+            -- LSTR string:退出
+            LSTR(910240)
+        )
     end
 end
 

@@ -3164,7 +3164,7 @@ local SkillTargetSelectCfg = {
             ID = 9232,
         },
         {
-            ConditionExpr = '9264&9265&9266&35&9118&9555',
+            ConditionExpr = '9264&9265&9266&35&9118&9555&9558',
             ID = 9233,
             SelectType = 2,
         },
